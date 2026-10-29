@@ -305,7 +305,5 @@ export class RemoteSession extends MatchSession {
   override get itemSummons(): readonly ItemSummonView[] {
     return this.matchState.phase === 'preparation' && !this.inBattle ? (this.matchState as DisplayMatch).itemSummons ?? [] : [];
   }
-  /** G1-P7: a carousel pick; the room and the rules' carousel decide whether and what this seat takes. */
-  carouselPick(carouselId: string, revision: number, slot: number) { return this.intent({ type: 'carousel-pick', carouselId, revision, slot }); }
   override newMatch(): void { /* the server owns match lifecycle */ }
 }

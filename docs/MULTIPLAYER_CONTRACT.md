@@ -2020,13 +2020,22 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 
 新增 room phase `carousel`：P7-1 撤销 1-1 前奏，仅五次 x-4 替换旧 supply；`roundId` 不重新编号。单次选秀一个权威 CarouselState，使用服务器冻结存活 Match 集合调用 `prepareCarouselParticipants`，再 `createCarousel(pool,roundId,rng)`；共享池和创建收据必须一次发布。在 carousel 期间冻结其他共享池及本席资产写命令，准备/战斗命令返回现有 `wrong-phase`，不另开第二套供给领取路径。
 
-新增 `ClientCommand {type:'carousel-pick'; carouselId:string; revision:number; slot:number}`。seatId 取连接凭证，不能取客户端字段。服务器校验 carouselId/revision（不一致 `stale-carousel`）、整数 slot，推进已到期逻辑时间/自动选取，再调用 `pickFromCarousel` 和 `grantCarouselPick` 原子发布；若 grant 失败，**整个 pick 事务回滚**，不留下已占槽但未发布的网络半事务。机器人与离线玩家调用 `autoPickFromCarousel`，不在 server 重写评分算法。失败沿现行 command-result 带规则 reason；身份/协议失败沿现行边界，领域枚举完整转发，不改成泛化 success。
+v26（2026-10-28 用户批准，取代原直接选取约定）：客户端只能发送既有 `walk` 消息。3D 发送 `{scene:'carousel',to:{x,y}}`，点棋子也取点击处的地面交点；路径固定，不追逐。2D 卡片发送 `{scene:'carousel',slot}`，房间用 `interceptCarouselUnit` 规划一次直线路径，只有与该槽接触才领取。两种路径都通过注入 `Clock` 排接触，收到请求时不改规则状态、不发领取收据。
+
+`Room.handlePlayer(seatId:string,command:SeatCommand):RoomCommandResult` 是 WebSocket `handleCommand` 和 `LocalRoomClient.send` 共用的玩家入口：旧 `carousel-pick`（即使 id/revision 正确）返回现有 `wrong-phase`，未知座位返回 `unknown-seat`，不推进规则时钟、不改 state/pool/RNG/账本；其余命令转给 `handle`。旧消息仍可解析以返回明确拒绝，不变协议版本。`Room.handle` 是服务器内部的可信测试/编排入口，不得用作玩家传输入口；`arriveCarousel` 调用私有 `pickCarousel` 及 `pickCarouselForSeat` 原子发布。机器人、托管和超时继续经 `catchUpCarousel` → `autoPickCarouselForSeat`，评分和领取规则不另实现。
+
+共享判定常量 `CAROUSEL_UNIT_PICK_RADIUS = 0.55`（格）位于 `src/server/legend-motion.ts`，服务器接触规划、到达复核和 3D 可选圈都读取它。小小英雄中心到槽中心距离 ≤ 此半径即接触；9 槽、转盘半径 2.5 格的相邻圈间隙约 0.6101007166 格。依据为本项目现有圈尺寸及上述用户批准值，不声称是拳头公开碰撞参数。步行中接触沿用 10 ms 采样和 24 次二分；停止后的旋转进入用圆周几何求最早时刻，排到同一 `LegendWalkBook.contacts`，截止前站着也能拿。重定向、成功领取、场景清理或 dispose 取消旧接触；领取不修改目的地，领取后仍可地面走路。
+
+`Room.walkLegend(seatId:string,request:LegendWalkRequest)` 返回 `{ok:true,walk:LegendWalk}` 或 `{ok:false,reason:string}`。失败原因为 `settlement-pending | unknown-seat | seat-eliminated | seat-controlled | rate-limited | wrong-phase | carousel-closed | carousel-locked | already-picked | invalid-walk | slot-taken`；沿用 80 ms 节流，不加新真实计时 API。`carouselWalkContact(walk,index,count,openedAt,untilAt=walk.arriveAt):number|null` 返回服务器绝对时钟的最早接触时刻（包含起点/圈边界），`untilAt` 覆盖终点后的静止时间。真人直接选的失败和走路失败都不生成领域事件。
+
+`LocalRoomClient.walk(request):boolean` 调用同一个 `Room.walkLegend`；`subscribeWalks` 转发为 `listeners.legend(walk,serverNow)`，重新监听补发房间保留的路线，detach 退订。`RemoteSession.carouselPick` 和 3D `runTo` 已移除。选秀是否仍在进行作为 `publishCarousel(build,active?)` 的第二参数传给 3D，切到棋盘侧仍隐藏己方、客方及侦察访客的小小英雄；小地图原本只画阵容点，没有小小英雄。选秀退出恢复己方棋盘原位置。领域事件、回放格式和 simulation 数值/内容身份不变。
+
 
 公共 `carousel` 投影为 null 或 `{id,roundId,revision,status,slots:[{slot,definitionId,itemId,pickedBy}],releaseOrder,releaseAtMs,elapsedMs,deadlineMs}`；所有席看到同一槽与放行计划，本席额外 `{eligible,pickedSlot,receiptId,heldCarouselUnits}`。不发送 pool.available、其他席私有资产、RNG、完整收据或种子。公开 HP 本已公开，不能用 carousel 投影扩大私有权限。字段由规则状态派生，每次投影独立复制，不能因 UI 拉取而消耗 RNG 或触发自动选取。
 
 ### 21.2 权威时钟、同时动作与恢复
 
-服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器命令序号先到先得，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
+服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器接触时刻先到先得，同刻按注入时钟的调度插入顺序，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
 
 到达固定 deadline 且全部选完后规则关闭并返还未选槽，服务器等待 2000ms 离场后进入下一准备期；一次性推进收据防止双刷新/双收入。开局直接按免费艾瑞莉娅进入既有 1-2；x-4 原本自然轮经济/刷新恰一次，旧 supply 不再发。规则逻辑状态与池、所有席 Match、receipt、elapsedMs、deadline 和阶段推进收据一起持久化；恢复安装剩余计时器，不重新 create、pick 或 grant，已过截止则按相同冻结顺序补执行尚未提交者。保存中存在内部 reserved 收据时按同一原子 grant 事务完成，严禁发过的 granted 再发；损坏恢复拒绝，不靠重新随机修补。
 
@@ -2071,7 +2080,7 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 
 恢复调用：先 `restoreCarousel(serializedCarousel)`，再逐席 `restoreCarouselSeat(carousel,serializedMatch)`，全部成功后原子安装；不在恢复路径发奖。该席位端口是可信服务器持久化的 P7 资产一致性检查，其他房间/经济/战斗恢复边界沿原有实现；不接收客户端上传 Match。
 
-网络命令允许 G1 按 SR-G1-02 使用 `{type:'carouselPick',slot}`，carouselId/revision 由既有服务器命令信封校验；不要求将此服务器编排命令加进普通 `ClientCommand`。§21.1 的 `carousel-pick` 为旧提案命名，以本行和 G1 实际协议为准。公开槽投影使用 `listCarouselSlots` 的 starLevel/items，不能发送原始 CarouselState。
+早期 SR-G1-02 的 `{type:'carouselPick',slot}` 和直接 `carousel-pick` 玩家入口由 v26 §21.1 的 `walk` 约定取代；只保留服务器内部原子领取编排。公开槽投影使用 `listCarouselSlots` 的 starLevel/items，不能发送原始 CarouselState。
 
 ### 21.6 P7-1 字段迁移与准备期唯一结算（2026-10-15）
 
@@ -2297,7 +2306,7 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 - `Room.startSettlementWork(factory: SettlementWorkFactory): void`，`SettlementWorkFactory = () => Generator<void, void, void>`：统一启动/续算/取消/重建入口；已有工作或 dispose 后不重复启动。工作必须在最后一次不 yield 的提交段前保持状态与回放私有。`planSettlement` 的同步入口与此路径共用 `planSteps`。#382 的流式接入复用该入口与同一 FIFO：流式轮在 `commitStreamSteps` 中重用 finishStreams 暂存的计划，基础变化时经 `planStreamSteps`（逐席位 yield，再 `yield* planSteps`）重规划。
 - #382 评审补充：`finishStreams` 只通过注入 clock 安排下一回调，再以 `startSettlementWork(() => finishStreamSteps())` 切片执行首次 `planStreamSteps`。末拍与首次规划不共用同一回调预算；完整规划成功后才设置 pendingSettlement、发布 battles 和至少 800ms 的 battle 尾段。battles 非空仍表示可通过 `toCombatReplayFor` 读取完整终局回放，部分计划不可见；尾段截止继续复用或切片重建计划。战斗推进和规划均使用 `sliceNow ?? clock.now` 检查预算。
 - `deferDuringSettlement` 同时覆盖 `streamingBoundaryPending`：一拍跨多个分片时沿用上述 FIFO，等全体战斗封口后才执行席位操作、发布状态；此路径不重跑已经完成的 tick。原 round / seatRevision 校验、queued 占位返回值和取消语义不变。
-- 所有外部席位写入口均走同一门：`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
+- 所有外部席位写入口均走同一门：`handlePlayer`（普通命令转 `handle`，直接选秀立即拒绝）、`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
 - PvE live 尾算使用独立的 `LivePveTrack` / `CombatReplayRecorder.fork()`；fork 共享不可变帧，后续逐 tick 写入独立数组，不改规则、帧或事件序号。丢弃工作不会污染已发布回放，也不会重复发奖。所有临时席位/战斗发布与最终 `commitSettlement` 之间不 yield。
 - 冻结期网络命令在提交后的最新状态校验原 `round` / `seatRevision`：同轮旧席位版本返回既有 `seat-revision-mismatch` 回执，若轮次已变则仍优先返回 `stale-round`；显式匹配新版本的请求可继续按规则执行。失败不消耗资源或 RNG，同 ID 重发取得相同失败回执，客户端可用新 ID / 最新版本重试。
 - 删除 `MAX_SETTLEMENT_RESTARTS` 与 `settlement-restart-limit` fault 路径，持续输入不会导致重建饥饿或因命令批次数结束整局。`MAX_STALE_SEAT_RETRIES=3` 保留为内部提交异常防线：首次尝试后至多重试三次；失败 fault 为 `invalid-results` / `detail='stale-seat-retry-limit:3'`，正常排队输入不会触发此路径。

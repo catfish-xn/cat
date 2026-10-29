@@ -37,7 +37,7 @@ import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type Liv
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type CarouselPickCommand, type LittleLegendId, type SeatKind } from '../protocol';
-import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_CONTACT_CELLS, carouselUnitPoint, carouselHome, carouselWalkContact, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
+import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_UNIT_PICK_RADIUS, carouselUnitPoint, carouselHome, carouselWalkContact, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
 import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
@@ -491,7 +491,7 @@ export class Room {
   /**
    * Phase and seat gate only; the rules decide everything else and a refusal changes nothing. A human seat a bot took
    * over refuses its player's commands until the player resumes (one controller at a time, B6). Fill-in bot seats have
-   * no session, so no player command reaches them; server-side callers may still drive them here directly.
+   * no session, so no player command reaches them; server-side callers may still drive them here directly. This is a trusted internal entry; transports use handlePlayer.
    */
   handle(seatId: string, command: SeatCommand): RoomCommandResult {
     if (this.deferDuringSettlement(() => { this.handle(seatId, command); })) return this.deferredResult();
@@ -499,6 +499,15 @@ export class Room {
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
     if (seat.controller === 'takeover') return { ok: false, reason: 'seat-controlled', state: seat.match };
     return this.apply(seat, command);
+  }
+
+  /** Untrusted player entry, shared by WebSocket and the in-browser room. Picks require physical contact. */
+  handlePlayer(seatId: string, command: SeatCommand): RoomCommandResult {
+    if (command.type === 'carousel-pick') {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+      return { ok: false, reason: seat ? 'wrong-phase' : 'unknown-seat', state: seat?.match ?? null };
+    }
+    return this.handle(seatId, command);
   }
 
   /**
@@ -1021,8 +1030,8 @@ export class Room {
   /**
    * A little-legend walk (legend-motion.ts). Changes no rule state and answers only whether it was taken. On the carousel
    * the room plans it from where it left this legend (home on the seat's cradle), only for a released seat
-   * (including after its pick). Active walks pick on contact; a unit click aims at its future position (the same grant as a
-   * click, decided on the carousel as it is then): the first legend to reach a unit takes it. A board walk is display
+   * (including after its pick). Ground paths stay fixed and can pick any first contact, including after stopping.
+   * A 2D card request alone aims at that card's future position and grants on contact with it. A board walk is display
    * only: the room bounds it and relays it to the room, so an opponent can draw that legend.
    */
   walkLegend(seatId: string, request: LegendWalkRequest): { readonly ok: true; readonly walk: LegendWalk } | { readonly ok: false; readonly reason: string } {
@@ -1050,30 +1059,29 @@ export class Room {
     if (alreadyPicked && request.slot !== undefined) return { ok: false, reason: 'already-picked' };
     const index = this.current.seats.findIndex(candidate => candidate.seatId === seatId);
     const from = this.legendWalks.position(seatId, 'carousel', now) ?? carouselHome(index, this.current.seats.length);
+    let to: CellPoint, targetSlot: number | null = null;
     if (request.slot === undefined) {
       if (!request.to) return { ok: false, reason: 'invalid-walk' };
-      const to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
-      const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: null };
-      const contacts = alreadyPicked ? [] : rules.listCarouselSlots(room.state)
-        .flatMap((slot, index, slots) => {
-          if (slot.pickedBy !== null) return [];
-          const at = carouselWalkContact(walk, index, slots.length, room.startedAt);
-          return at === null ? [] : [{ slot: slot.slot, at }];
-        }).sort((a, b) => a.at - b.at || a.slot - b.slot);
-      this.legendWalks.start(walk);
-      const carouselId = room.state.id;
-      this.legendWalks.contacts(walk, contacts.map(contact => ({ at: contact.at,
-        arrive: () => this.arriveCarousel(seatId, carouselId, contact.slot, walk) })));
-      return { ok: true, walk };
+      to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
+    } else {
+      // 2D card accessibility: the server plans one straight interception, never a client-side chase.
+      const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
+      if (target < 0 || slots[target]!.pickedBy !== null) return { ok: false, reason: 'slot-taken' };
+      to = interceptCarouselUnit(from, target, slots.length, elapsed).to;
+      targetSlot = request.slot;
     }
-    const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
-    if (target < 0 || slots[target]!.pickedBy !== null) return { ok: false, reason: 'slot-taken' };
-    const meet = interceptCarouselUnit(from, target, slots.length, elapsed);
-    const walk: LegendWalk = { seatId, scene: 'carousel', from, to: meet.to, startedAt: now, arriveAt: now + meet.ms, slot: request.slot };
-    const carouselId = room.state.id;
-    const contactAt = carouselWalkContact(walk, target, slots.length, room.startedAt) ?? walk.arriveAt;
+    const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: targetSlot };
+    // Ground walks touch any free unit; 2D card walks target that card. Both include standing contact. Replacing the walk cancels these timers.
+    const contacts = alreadyPicked ? [] : rules.listCarouselSlots(room.state)
+      .flatMap((slot, index, slots) => {
+        if (slot.pickedBy !== null || (targetSlot !== null && slot.slot !== targetSlot)) return [];
+        const at = carouselWalkContact(walk, index, slots.length, room.startedAt, room.startedAt + room.state.deadlineMs);
+        return at === null ? [] : [{ slot: slot.slot, at }];
+      }).sort((a, b) => a.at - b.at || a.slot - b.slot);
     this.legendWalks.start(walk);
-    this.legendWalks.contacts(walk, [{ at: contactAt, arrive: () => this.arriveCarousel(seatId, carouselId, walk.slot!, walk) }]);
+    const carouselId = room.state.id;
+    this.legendWalks.contacts(walk, contacts.map(contact => ({ at: contact.at,
+      arrive: () => this.arriveCarousel(seatId, carouselId, contact.slot, walk) })));
     return { ok: true, walk };
   }
   /** A legend reached its unit: the pick as a click on the carousel as it is now. Taken by someone else first: it stays there. */
@@ -1087,7 +1095,7 @@ export class Room {
     if (index < 0 || slots[index]!.pickedBy !== null) return;
     const now = this.options.clock.now(), position = this.legendWalks.position(seatId, 'carousel', now)!;
     const unit = carouselUnitPoint(index, slots.length, now - room.startedAt);
-    if (Math.hypot(position.x - unit.x, position.y - unit.y) > CAROUSEL_CONTACT_CELLS + 1e-6) return;
+    if (Math.hypot(position.x - unit.x, position.y - unit.y) > CAROUSEL_UNIT_PICK_RADIUS + 1e-6) return;
     const result = this.pickCarousel(seat, { type: 'carousel-pick', carouselId, revision: room.state.revision, slot });
     if (result.ok) this.legendWalks.stop(seatId, 'carousel');
   }

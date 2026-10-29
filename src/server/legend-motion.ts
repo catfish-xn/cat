@@ -4,12 +4,12 @@
  * the origin and x/y are the 3D x/z; on a board they are hex widths from the board origin in the owner's orientation.
  *
  * A walk is a straight line at LEGEND_CELLS_PER_SECOND. On the carousel the room plans every walk from where it last
- * left that seat's legend and, for a walk toward a unit, aims where the turning unit will be on arrival; the pick is the
- * room's at that moment, so whoever arrives first takes it. On a board the walk is display only and the room relays it.
+ * left that seat's legend. Ground clicks keep their point; only a 2D card request aims at a unit's future position.
+ * Moving or standing contact asks the rules for a pick at that moment, so whoever touches first takes it. On a board the walk is display only and the room relays it.
  */
 export type LegendScene = 'carousel' | 'board';
 export interface CellPoint { readonly x: number; readonly y: number }
-/** What a client asks: walk to a point, or (carousel) to the unit on `slot`. */
+/** Walk to a fixed point (3D), or ask for server-planned travel to a carousel card (2D `slot`). */
 export interface LegendWalkRequest { readonly scene: LegendScene; readonly to?: CellPoint; readonly slot?: number; readonly from?: CellPoint }
 /** One walk as the room published it; times are the server clock (ms). */
 export interface LegendWalk {
@@ -19,7 +19,7 @@ export interface LegendWalk {
   readonly to: CellPoint;
   readonly startedAt: number;
   readonly arriveAt: number;
-  /** The carousel unit it heads for; the room asks the rules for that pick on arrival. */
+  /** The 2D card it heads for; null for a ground point. The room grants only on circle contact. */
   readonly slot: number | null;
 }
 
@@ -70,29 +70,41 @@ export function interceptCarouselUnit(from: CellPoint, index: number, count: num
   return { to, ms: walkMs(from, to) };
 }
 
-/** Contact footprint in cells, deliberately separate from the much larger pointer hit box. */
-export const CAROUSEL_CONTACT_CELLS = 0.25;
-/** First physical contact during an active ground walk. Standing still never attracts a rotating unit.
- * Sample at most 10 ms apart (under .03 cells of relative motion), then refine the entry time.
- * This plans interaction geometry only; ownership and grants still go through the carousel rules.
+/** v26 approved pickup circle: the legend's center enters this radius, in cells. Shared with the 3D ring. */
+export const CAROUSEL_UNIT_PICK_RADIUS = 0.55;
+/** First contact while walking, then while standing at the destination through `untilAt`.
+ * Moving segments retain the 10 ms sampling and entry refinement; idle orbit contact is solved analytically.
+ * Ownership and grants still go through the carousel rules. No real clock is read here.
  */
-export function carouselWalkContact(walk: LegendWalk, index: number, count: number, openedAt: number): number | null {
-  const span = walk.arriveAt - walk.startedAt;
-  if (span <= 0) return null;
+export function carouselWalkContact(walk: LegendWalk, index: number, count: number, openedAt: number, untilAt = walk.arriveAt): number | null {
+  const end = Math.min(walk.arriveAt, untilAt), span = end - walk.startedAt;
   const touches = (at: number) => {
     const legend = walkPoint(walk, at), unit = carouselUnitPoint(index, count, at - openedAt);
-    return Math.hypot(legend.x - unit.x, legend.y - unit.y) <= CAROUSEL_CONTACT_CELLS;
+    return Math.hypot(legend.x - unit.x, legend.y - unit.y) <= CAROUSEL_UNIT_PICK_RADIUS;
   };
+  if (untilAt < walk.startedAt) return null;
+  if (touches(walk.startedAt)) return walk.startedAt;
   const steps = Math.ceil(span / 10);
-  for (let i = 0; i <= steps; i++) {
+  for (let i = 1; i <= steps; i++) {
     const at = walk.startedAt + span * i / steps;
     if (!touches(at)) continue;
-    let lo = walk.startedAt + span * Math.max(0, i - 1) / steps, hi = at;
+    let lo = walk.startedAt + span * (i - 1) / steps, hi = at;
     for (let refine = 0; refine < 24; refine++) {
       const mid = (lo + hi) / 2;
       if (touches(mid)) hi = mid; else lo = mid;
     }
     return hi;
   }
-  return null;
+  if (untilAt <= walk.arriveAt) return null;
+  const point = walk.to, radius = Math.hypot(point.x, point.y);
+  if (Math.abs(radius - CAROUSEL_UNIT_RADIUS) > CAROUSEL_UNIT_PICK_RADIUS || radius === 0) return null;
+  const half = Math.acos(Math.max(-1, Math.min(1, (radius * radius + CAROUSEL_UNIT_RADIUS ** 2 - CAROUSEL_UNIT_PICK_RADIUS ** 2) / (2 * radius * CAROUSEL_UNIT_RADIUS))));
+  const turn = Math.PI * 2, speed = turn / CAROUSEL_ORBIT_MS;
+  const start = Math.max(walk.startedAt, walk.arriveAt);
+  if (touches(start)) return start;
+  const angle = index / Math.max(1, count) * turn + Math.max(0, start - openedAt) * speed;
+  const entry = Math.atan2(point.x, point.y) - half;
+  const delta = ((entry - angle) % turn + turn) % turn;
+  const at = start + delta / speed;
+  return at <= untilAt ? at : null;
 }

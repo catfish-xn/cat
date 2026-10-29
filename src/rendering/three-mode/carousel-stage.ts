@@ -6,14 +6,13 @@ import { CAROUSEL_TIMER_EFFECT, createCarouselTimerRing } from './carousel-timer
  * instead of the board while board-feed carries a BoardCarousel. The platform pieces load as one group at the shared
  * model scale (no per-piece centering, mirroring or grounding); eight seat legends stand on the outer cradles in public
  * seat order; the units on offer stand on a ring over the glass, in a display group that alone turns slowly from the
- * carousel's start. Everything comes from the server's carousel view as the 2D panel shows it: a click on a unit is the
- * panel's own slot click, and nothing here releases or picks.
+ * carousel's start. Everything comes from the server's carousel view as the 2D panel shows it. Clicks send ground
+ * destinations, and nothing here releases or picks.
  *
  * The legends act it out as in TFT (planning/3d/tft-parity-carousel-scout-ui-2026-10-21.md C1/C2/C5): once my seat is
- * released a click on the ground walks my legend there, and a click on a unit runs it to that unit. The room plans every
+ * released any click walks my legend to its ground point. The room plans every
  * walk (src/server/legend-motion.ts) and sends it to all seats, so every legend is drawn where the room has it; with a
- * room that walks, a unit is picked when its legend reaches it, first come first served. Without one (an in-browser room)
- * a unit click is still the panel's pick at once. A unit leaves the ring only when the view names the seat that took it:
+ * room, a unit is picked only on authoritative contact, first come first served. A unit leaves the ring only when the view names the seat that took it:
  * the unit follows that legend on a tether as it moves freely. A held seat
  * counts down over its head and its chains break at release; the stage opens with a short push-in.
  * Missing models or effects draw stand-ins; a procedural release timer remains readable with incomplete effects.
@@ -25,7 +24,7 @@ import {
 import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
-import type { CellPoint } from '../../server/legend-motion';
+import { CAROUSEL_UNIT_PICK_RADIUS, type CellPoint } from '../../server/legend-motion';
 import { fitModel, standingFeet, type Envelope } from './model-fit';
 
 /** Board units per carousel cell, as the asset review lays out the stage (one grid interval; models and effects at .44). */
@@ -38,8 +37,8 @@ export const CAROUSEL_SCENERY = ['carousel-skybox'] as const;
 const LEGEND_SURFACE = ['carousel-llplatforms'], UNIT_SURFACE = ['carousel-glassdome-a', 'carousel-center'];
 /**
  * Doc's proposed layout, in cells: legends on the cradles, units on a ring inside the glass; feet without a surface. The
- * room aims walks by the same numbers (src/server/legend-motion.ts, not imported here so that the 3D chunk stays apart;
- * tests/rendering3d-carousel.test.ts pins them equal).
+ * room aims walks by the same numbers (tests/rendering3d-carousel.test.ts pins them equal). The pickup ring imports
+ * its radius from legend-motion.ts.
  */
 export const LEGEND_RADIUS = 7.1, UNIT_RADIUS = 2.5, FEET = 0.25;
 /** One turn of the unit ring takes this long; the angle runs from the carousel's own start. */
@@ -81,11 +80,11 @@ const UNIT_SIZE = 1.7;
 /** Their feet rings grow less: on the ring's 9 places (UNIT_RADIUS) larger rings would run into each other. */
 const RING_SIZE = 1.35;
 /**
- * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
- * until the room confirms contact). It waits within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
+ * Ground-walk prediction, display only (cells, seconds), replaced by the authoritative room line.
+ * A confirmed unit trails TETHER_CELLS behind; ground clicks stay inside the cradles' ring.
  */
 export const RUN_CELLS = 2.5;
-const GRAB_CELLS = 0.25, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
+const TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
 /** Opening push-in: the camera starts this much farther and higher and settles on the fixed view. */
 const INTRO_SECONDS = 1.5, INTRO_PULL = 0.45, INTRO_LIFT = 0.5;
 const COUNTDOWN_SIZE = 32;
@@ -136,11 +135,9 @@ export interface CarouselStage {
    * (for the room), or null when it may not move.
    */
   walkTo(client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number }): CellPoint | null;
-  /** A press on a standing unit: my legend starts toward it at once (the room's walk then takes over). False when it may not move. */
-  runTo(slot: number): boolean;
   /** A walk the room took: that legend goes where the room has it, arriving when the room says. */
   walk(walk: BoardLegendWalk): void;
-  /** Acceptance read (?debug3d). Legends read `seat:body[:locked][:chase|:carry|:walk]`; `fetched` names who holds which slot. */
+  /** Acceptance read (?debug3d). Legends read `seat:body[:locked][:carry|:walk]`; `fetched` names who holds which slot. */
   debug(): { platform: string[]; legends: string[]; units: { slot: number; body: string; items: number; ring: string }[]; effects: string[]; angle: number;
     fetched: Record<string, number>; countdowns: Record<string, string> };
   dispose(): void;
@@ -168,8 +165,8 @@ interface SeatView extends Body {
   readonly seatId: string; readonly me: boolean; readonly anchor: Vector3; lock: Loop | null; indicator: Loop | null;
   /** Held until this logical ms (the view's release time); `locked` is the last state drawn, to catch the release. */
   releaseAtMs: number; locked: boolean;
-  /** Running to a unit (mine while my pick is out, or the seat's taken unit), or to a ground point / home; else standing. */
-  chase: UnitView | null; goal: Vector3 | null; speed: number;
+  /** Walking to a fixed ground point; else standing. */
+  goal: Vector3 | null; speed: number;
   /** The room's walk (performance.now() times), followed even while carrying a unit. */
   path: { from: Vector3; to: Vector3; start: number; end: number } | null;
   /** The unit it took, trailing on the tether. */
@@ -199,7 +196,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     disc: own(new CylinderGeometry(7.55 * cell, 7.55 * cell, 0.2 * cell, 64)), glass: own(new CylinderGeometry(3.37 * cell, 3.37 * cell, 0.06 * cell, 48)),
     cradle: own(new CylinderGeometry(0.62 * cell, 0.7 * cell, 0.2 * cell, 24)), wall: own(new CylinderGeometry(4.2 * cell, 4.2 * cell, 0.6 * cell, 48, 1, true)),
     pawn: own(new CylinderGeometry(9, 13, 34, 16)), head: own(new SphereGeometry(10, 16, 12)), legend: own(new SphereGeometry(14, 20, 14)),
-    ring: own(new RingGeometry(20, 26, 32)), cost: own(new RingGeometry(28, 36, 40)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
+    ring: own(new RingGeometry(CAROUSEL_UNIT_PICK_RADIUS * cell * 20 / 26, CAROUSEL_UNIT_PICK_RADIUS * cell, 32)), cost: own(new RingGeometry(28, 36, 40)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
     marker: own(new SphereGeometry(5, 12, 8)),
     // Unit-length tether along +y, stretched and turned between legend and unit each frame.
     tether: own(new CylinderGeometry(1.4, 1.4, 1, 6, 1, true).translate(0, 0.5, 0)),
@@ -409,7 +406,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       ctx.hasEffect?.(CAROUSEL_TIMER_EFFECT) && ctx.loadEffect ? ctx.loadEffect : undefined);
     scene.add(timer.object);
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
-      releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, path: null, carry: null, tether, countdown: null, timer };
+      releaseAtMs: Infinity, locked: false, goal: null, speed: 0, path: null, carry: null, tether, countdown: null, timer };
     // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
     attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
     return view;
@@ -513,7 +510,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const body = new Mesh(geometry.pawn, materials.pawn); body.position.y = 17;
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6)); root.scale.setScalar(UNIT_SIZE);
-    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false; ring.scale.setScalar(RING_SIZE);
+    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false;
     // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
     const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
     if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(RING_SIZE); }
@@ -544,7 +541,6 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
 
   // --- view ------------------------------------------------------------------------------------------------------
   let current: BoardCarousel | null = null, hovered: number | null = null;
-  const claimedSeats = new Set<string>();
   const styleRing = (view: UnitView) => {
     const { takable, pending } = view.data;
     view.ring.visible = takable || pending;
@@ -560,7 +556,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const entry of [...bursts]) endBurst(entry);
     for (const lease of pieces.values()) lease.release();
     pieces.clear(); platform.clear(); scenery.clear(); standIn.clear(); standIn.visible = true; built = false;
-    current = null; hovered = null; intro = 0; claimedSeats.clear();
+    current = null; hovered = null; intro = 0;
   };
   /** Logical ms since the carousel opened, by the view's clock. */
   const elapsedNow = () => current ? current.elapsedMs + (now() - current.at) : 0;
@@ -606,17 +602,15 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   };
   /** A confirmed pick attaches the unit to its legend without changing that legend's destination. */
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
-    claimedSeats.add(seat.seatId);
     unit.takenBy = seat.seatId;
     endLoop(unit.tier); unit.tier = null; unit.ring.visible = false; if (unit.costRing) unit.costRing.visible = false;
     taken.attach(unit.holder);
-    for (const other of seatViews.values()) if (other !== seat && other.chase === unit) { other.chase = null; other.goal = null; }
     // A receipt confirms contact on the server. Never start another chase or replace the walk with a trip home.
     grab(seat, unit, !settled);
     if (settled) trailPoint(seat, unit.holder.position).setY(seat.root.position.y);
   };
   const grab = (seat: SeatView, unit: UnitView, feedback = true) => {
-    seat.chase = null; seat.carry = unit; seat.tether.visible = true;
+    seat.carry = unit; seat.tether.visible = true;
     if (feedback) burst(FX.selected, SELECTED_SECONDS, unit.holder.getWorldPosition(new Vector3()), COLOR.pending);
   };
 
@@ -641,7 +635,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       }
     });
     for (const [seatId, entry] of seatViews) if (!view.seats.some(seat => seat.seatId === seatId)) {
-      for (const unit of [entry.carry, entry.chase]) if (unit?.takenBy === seatId) { dropUnit(unit); unitViews.delete(unit.slot); }
+      for (const unit of [entry.carry]) if (unit?.takenBy === seatId) { dropUnit(unit); unitViews.delete(unit.slot); }
       dropSeat(entry); seatViews.delete(seatId);
     }
     frameCamera();
@@ -672,21 +666,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const [slot, entry] of unitViews) if (!standing.some(candidate => candidate.slot === slot)) { releaseTaken(entry); dropUnit(entry); unitViews.delete(slot); }
     if (hovered !== null && (!unitViews.has(hovered) || unitViews.get(hovered)!.takenBy)) hovered = null;
 
-    // My pick is out: my legend heads for that unit while it still stands; a refusal (no pending, not mine) stops it there.
-    const mine = [...seatViews.values()].find(entry => entry.me);
-    if (mine && !mine.carry) {
-      const pending = standing.find(slot => slot.pending && !slot.pickedBy);
-      const target = pending ? unitViews.get(pending.slot) : undefined;
-      if (target && !target.takenBy && !mine.path) { mine.chase = target; mine.goal = null; mine.speed = RUN_CELLS * cell; }
-      else if (mine.chase && !mine.chase.takenBy) { mine.chase = null; mine.goal = null; }
-    }
   };
   /** A unit about to go: no legend keeps running for it or dragging it. */
   function releaseTaken(unit: UnitView) {
     for (const seat of seatViews.values()) {
-      if (seat.chase === unit) {
-        seat.chase = null;
-      }
       if (seat.carry === unit) { seat.carry = null; seat.tether.visible = false; }
     }
   }
@@ -696,11 +679,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     return (Math.max(0, elapsedNow() / 1000) / ORBIT_SECONDS) * Math.PI * 2;
   };
   const step = new Vector3(), aim = new Vector3(), up = new Vector3(0, 1, 0), from = new Vector3(), to = new Vector3();
-  /** One legend's run: toward its unit (grabbing it on reach when the view says it is this seat's) or its goal. */
+  /** One legend follows its fixed goal or the room's line. Only a receipt attaches a carried unit. */
   const moveSeat = (seat: SeatView, seconds: number) => {
     let target: Vector3 | null = null;
-    if (seat.chase) target = seat.chase.holder.getWorldPosition(aim);
-    else if (seat.goal) target = aim.copy(seat.goal);
+    if (seat.goal) target = aim.copy(seat.goal);
     let moving = false;
     const path = seat.path;
     if (path && !target) {
@@ -713,16 +695,13 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       if (!moving) seat.path = null;
     } else if (target) {
       step.copy(target).sub(seat.root.position).setY(0);
-      const reach = seat.chase ? GRAB_CELLS * cell : 0.5;
+      const reach = 0.5;
       const distance = step.length();
       if (distance > reach) {
         moving = true;
         seat.root.rotation.y = Math.atan2(step.x, step.z);
         seat.root.position.addScaledVector(step, Math.min(1, seat.speed * seconds / distance));
         seat.root.position.y = surfaceAt(seat.root.position.x, seat.root.position.z, [...LEGEND_SURFACE, ...UNIT_SURFACE]);
-      } else if (seat.chase) {
-        // Reached it: mine only once the view says I took it; until then it waits by the turning unit.
-        if (seat.chase.takenBy === seat.seatId) grab(seat, seat.chase);
       } else {
         seat.goal = null;
         // Home: face the center again, as on the cradle.
@@ -788,28 +767,20 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     groundHit.setY(0);
     const limit = ROAM_RADIUS * cell;
     if (groundHit.length() > limit) groundHit.setLength(limit);
-    mine.chase = null; mine.path = null;
+    mine.path = null;
     mine.goal = groundHit.clone().setY(mine.root.position.y); mine.speed = RUN_CELLS * cell;
     return { x: groundHit.x / cell, y: groundHit.z / cell };
   };
   /** Ground movement remains available after a pick. */
   const movable = () => {
     const mine = [...seatViews.values()].find(entry => entry.me);
-    // A panel pick still out (a client without walks) holds it too, as before walks.
-    const out = current?.slots.some(slot => slot.pending && !slot.pickedBy);
-    return current && mine && !out && !mine.locked ? mine : null;
-  };
-  const runTo = (slot: number) => {
-    const mine = movable(), unit = unitViews.get(slot);
-    if (!mine || !unit || unit.takenBy || mine.carry || claimedSeats.has(mine.seatId) || pickedBy(mine.seatId)) return false;
-    mine.chase = unit; mine.goal = null; mine.path = null; mine.speed = RUN_CELLS * cell;
-    return true;
+    return current && mine && !mine.locked ? mine : null;
   };
   /** The room's walk for one seat, including a seat already carrying its unit. */
   const applyWalk = (walk: BoardLegendWalk) => {
     const seat = seatViews.get(walk.seatId);
     if (!current || walk.scene !== 'carousel' || !seat) return;
-    seat.chase = null; seat.goal = null;
+    seat.goal = null;
     const to = new Vector3(walk.to.x * cell, seat.root.position.y, walk.to.y * cell);
     // Draw the authoritative line and timing; easing from a predicted position can make a valid contact look remote.
     seat.path = { from: new Vector3(walk.from.x * cell, seat.root.position.y, walk.from.y * cell),
@@ -849,7 +820,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   return {
     scene, camera,
     get active() { return current !== null; },
-    show, update, slotAt, walkTo, runTo, walk: applyWalk,
+    show, update, slotAt, walkTo, walk: applyWalk,
     descriptionAt(client, area) {
       if (!current) return;
       for (const view of unitViews.values()) {
@@ -877,7 +848,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     debug: () => ({
       platform: [...pieces.keys()].concat(standIn.visible && built ? ['standin'] : []).concat(platformLoading ? [`loading:${platformLoading}`] : []),
       legends: [...seatViews.values()].map(view => `${view.seatId}:${view.lease ? 'model' : 'standin'}${view.lock ? ':locked' : ''}`
-        + (view.chase ? ':chase' : view.carry ? ':carry' : view.goal || view.path ? ':walk' : '')),
+        + (view.carry ? ':carry' : view.goal || view.path ? ':walk' : '')),
       units: [...unitViews.values()].map(view => ({ slot: view.slot, body: view.lease ? 'model' : 'standin', items: view.items.length,
         ring: view.ring.visible ? view.data.pending ? 'pending' : hovered === view.slot ? 'hover' : 'takable' : 'none' })),
       effects: [...loops].map(entry => `${entry.id}:${entry.fx ? 'fx' : 'standin'}`).concat([...bursts].map(entry => `burst:${entry.fx ? 'fx' : 'standin'}`)),

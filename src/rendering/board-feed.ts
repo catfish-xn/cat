@@ -116,8 +116,8 @@ export interface BoardFeedListener {
   unitAt?(client: { x: number; y: number }): string | undefined;
   /** CSS-pixel box of the drawn piece as the layer projects it; undefined when the piece is not drawn or off screen. */
   screenBox?(id: string): BoardScreenBox | undefined;
-  /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
-  carousel?(view: BoardCarousel | null): void;
+  /** Online 选秀 to draw, or null for the board side. `active` keeps board legends absent on either side. */
+  carousel?(view: BoardCarousel | null, active?: boolean): void;
   /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
   scout?(view: BoardScout | null): void;
   /** A little-legend walk the room took (any seat, either scene). */
@@ -203,9 +203,9 @@ export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]):
   if (events.length) listener.events(events);
 }
 /** Only a layer that draws the carousel gets the build called; true when one does (the 2D panel then hides its ring). */
-export function publishCarousel(build: () => BoardCarousel | null): boolean {
+export function publishCarousel(build: () => BoardCarousel | null, active?: boolean): boolean {
   if (!listener?.carousel) return false;
-  listener.carousel(build());
+  listener.carousel(build(), active);
   return true;
 }
 /** Only a layer that draws scouting gets the build called; true when one does (the 2D panel then shrinks to its strip). */

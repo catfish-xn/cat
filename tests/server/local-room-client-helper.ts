@@ -4,6 +4,7 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { RouteClock } from './route-clock';
+import type { LegendWalk } from '../../src/server/legend-motion';
 import type { MatchState } from '../../src/simulation/match-types';
 import { LOCAL_ROOM_DEFAULTS, LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
 import { readLocalRoomOptions } from '../../src/rendering/online/mode';
@@ -19,9 +20,9 @@ function harness(overrides: Partial<LocalRoomOptions> = {}, { carousel = false }
   // The browser's local room opens the rules' carousel like the network server (server/main.ts); most cases here keep it
   // off (OPTIONS) so their rounds stay the pre-P7 ones, and `carousel` turns it on through the client's own option.
   const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides, ...(carousel ? { carousel: true } : {}) });
-  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], replay: [] as CombatReplay[] };
+  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], replay: [] as CombatReplay[], walks: [] as LegendWalk[] };
   const listeners: ClientListeners = { lobby: v => log.lobby.push(v), view: v => log.view.push(v),
-    state: s => log.state.push(s), replay: r => log.replay.push(r) };
+    state: s => log.state.push(s), replay: r => log.replay.push(r), legend: walk => log.walks.push(walk) };
   client.listen(listeners);
   const flush = () => new Promise<void>(resolve => queueMicrotask(resolve));
   /** Fires room timers one at a time (flushing the coalesced pushes) until the predicate holds. */
@@ -75,6 +76,24 @@ describe('LocalRoomClient', () => {
   afterAll(() => { restoreFlush?.(); full?.client.dispose(); full = undefined; });
   if (mode === 'timing') for (let round = 1; round <= 60; round++) for (let part = 1; part <= 16; part++) it(`full-match route toward round ${round}, part ${part}`, async () => {
     await fullThrough(round);
+  });
+
+  if (mode === 'fast') it('forwards authoritative walks, replays them to a new listener and detaches on reset', () => {
+    const { client, clock, log } = harness();
+    client.joinQueue('a'); client.startMatch();
+    const room = client.currentRoom!, before = room.state;
+    expect(client.walk({ scene: 'board', from: { x: 0, y: 0 }, to: { x: 1, y: 1 } })).toBe(true);
+    expect(room.state).toBe(before); expect(log.walks).toEqual(room.walks);
+    const kept: LegendWalk[] = [], times: number[] = [];
+    const off = client.listen({ lobby() {}, view() {}, state() {}, replay() {}, legend: (walk, at) => { kept.push(walk); times.push(at); } });
+    expect(kept).toEqual(room.walks); expect(times).toEqual([clock.now()]);
+    client.reset();
+    clock.advance(80);
+    const me = room.state.seats.find(seat => seat.kind === 'human')!.seatId;
+    expect(room.walkLegend(me, { scene: 'board', to: { x: 2, y: 2 } }).ok).toBe(true);
+    expect(kept).toHaveLength(1);
+    expect(client.walk({ scene: 'board', to: { x: 3, y: 3 } })).toBe(false);
+    off(); client.dispose();
   });
 
   if (mode === 'fast') it('reports transport local-room, queues me, and fills seven bot seats on start', async () => {
@@ -165,7 +184,9 @@ describe('LocalRoomClient', () => {
     // Before my release a pick is refused and changes nothing (no state push, same carousel revision).
     const statesBefore = log.state.length, revisionBefore = room.state.carousel!.state.revision;
     const early = client.send({ type: 'carousel-pick', carouselId: opened.id, revision: opened.revision, slot: 0 });
-    expect(early).toMatchObject({ ok: false, reason: 'seat-locked' });
+    expect(early).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    expect(client.walk({ scene: 'carousel', slot: 0 })).toBe(false);
+    expect(room.walks).toEqual([]);
     await flush();
     expect(room.state.carousel!.state.revision).toBe(revisionBefore); expect(log.state).toHaveLength(statesBefore);
     // My batch is released on the room clock; the view says so.
@@ -174,17 +195,22 @@ describe('LocalRoomClient', () => {
     expect(released.elapsedMs).toBeGreaterThanOrEqual(released.releaseAtMs[me]!);
     const choice = released.slots.find(slot => slot.pickedBy === null)!;
     const stale = client.send({ type: 'carousel-pick', carouselId: released.id, revision: released.revision - 1, slot: choice.slot });
-    expect(stale).toMatchObject({ ok: false, reason: 'stale-carousel' });
-    const picked = client.send({ type: 'carousel-pick', carouselId: released.id, revision: released.revision, slot: choice.slot });
-    expect(picked.ok).toBe(true);
-    await flush();
+    expect(stale).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    expect(room.handle(me, { type: 'carousel-pick', carouselId: released.id, revision: released.revision - 1, slot: choice.slot })).toMatchObject({ ok: false, reason: 'stale-carousel' });
+    const beforeWalk = room.state;
+    expect(client.walk({ scene: 'carousel', slot: choice.slot })).toBe(true);
+    expect(log.walks.at(-1)).toMatchObject({ scene: 'carousel', seatId: me, slot: choice.slot });
+    expect(room.state).toBe(beforeWalk);
+    expect(last().carousel!.pickedSlot).toBeNull();
+    await runUntil(() => last().carousel?.pickedSlot === choice.slot);
     const after = last().carousel!;
     expect(after).toMatchObject({ pickedSlot: choice.slot, eligible: false });
     expect(after.receiptId).not.toBeNull();
     expect(after.slots.find(slot => slot.slot === choice.slot)!.pickedBy).toBe(me);
     // One pick per seat.
     const other = after.slots.find(slot => slot.pickedBy === null)!;
-    expect(client.send({ type: 'carousel-pick', carouselId: after.id, revision: after.revision, slot: other.slot })).toMatchObject({ ok: false, reason: 'already-picked' });
+    expect(client.send({ type: 'carousel-pick', carouselId: after.id, revision: after.revision, slot: other.slot })).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    expect(room.walkLegend(me, { scene: 'carousel', slot: other.slot })).toEqual({ ok: false, reason: 'already-picked' });
     // The carousel closes (bots pick or are auto-picked), and the round goes on to its preparation with my unit.
     await runUntil(() => last().phase.kind === 'preparation' && last().carousel === null);
     // Every seat holds exactly one carousel receipt, from its own pick or the rules' auto-pick.
