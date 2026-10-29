@@ -14,7 +14,8 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, type Envelope } from './model-fit';
+import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { updateModelGrounding } from './model-grounding';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
@@ -156,7 +157,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
-        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope) });
+        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));
@@ -298,6 +299,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const base = piece.state.update(seconds), walking = !!piece.path && (base.state === 'idle' || base.state === 'move');
         const output = walking || piece === visitor ? { ...base, ...(walking ? { state: 'move' as const, loop: true } : {}), revision: base.revision * 2 + (walking ? 1 : 0) } : base;
         if (piece.mixer) { piece.mixer.apply(output); piece.mixer.update(seconds); }
+        if (piece.lease) updateModelGrounding(piece.lease.scene, output.state === 'idle', seconds);
       }
       orbs.forEach((orb, index) => { orb.position.y = ORB_FLOAT + Math.sin(clock * 2 + index) * 2; });
     },

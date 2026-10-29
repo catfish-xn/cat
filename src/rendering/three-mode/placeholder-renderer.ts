@@ -45,7 +45,8 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
@@ -398,7 +399,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         feet: clip.name === nameOf('idle') }));
   };
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
-    if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
+    if ((id.startsWith('pve-') && HOVERING_MODELS.has(id)) || envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
     const envelope = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
     if (envelope === null) return false;
     if (!envelopes.has(id)) envelopes.set(id, envelope);
@@ -408,7 +409,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     upload: uploadModel, prepare: prepareEnvelope, busy: () => !!fighting }) : null;
   const warmList = () => {
     const legends = feed?.legends?.();
-    return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels];
+    return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels,
+      ...Object.keys(models.cache?.manifest.models ?? {}).filter(id => id.startsWith('pve-'))];
   };
   let preloaded = false, hintVersion = 0;
   void models.preloaded?.then(() => { preloaded = true; if (!closed) warmup?.want(warmList()); });
@@ -674,8 +676,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
   const envelopePending = new Set<string>();
   const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
+    // Flying monsters use only their authored bind fit, never an unused animation envelope.
+    if (id.startsWith('pve-') && HOVERING_MODELS.has(id)) return undefined;
     let envelope = envelopes.get(id);
-    if (envelope === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
+    if (envelope === undefined && (fighting || id.startsWith('pve-'))) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
     if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); envelopes.set(id, envelope); }
     return envelope;
@@ -708,7 +712,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (dx * dx + dz * dz < 1) return;
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
+  const attaching = new WeakMap<PieceView, symbol>();
   const attachBody = (view: PieceView) => {
+    const request = Symbol(); attaching.set(view, request);
     cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
@@ -716,8 +722,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
     if (!loadModel || !definitionId) return;
-    void loadModel(definitionId).then(lease => {
-      if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
+    void loadModel(definitionId).then(async lease => {
+      if (view.disposed || view.definitionId !== definitionId || attaching.get(view) !== request) { lease.release(); return; }
+      // A first-seen neutral must not synchronously scan a large mesh on the mount frame.
+      if (!lease.placeholder && monsterFit(definitionId) && readUnitScale(models.cache?.manifest.models, definitionId)
+        && !HOVERING_MODELS.has(definitionId) && !fighting && !envelopes.has(definitionId)) {
+        let measured: Envelope | null;
+        try {
+          measured = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
+            budgetMs: 3, stop: () => closed || view.disposed || attaching.get(view) !== request || !!fighting,
+          });
+        } catch (error) { lease.release(); throw error; }
+        if (closed || view.disposed || view.definitionId !== definitionId || attaching.get(view) !== request) { lease.release(); return; }
+        if (measured) envelopes.set(definitionId, measured);
+      }
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
@@ -730,12 +748,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const monster = monsterFit(definitionId);
       const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
       if (monster && unitScale) {
-        // A monster at its official scale like a champion, no width cap (wolves' tails and the dragon's wings span cells);
-        // its lift stays the same share of its drawn height, and its bar sits on what is drawn.
+        // A monster at its official scale, with no footprint cap (tails/wings span cells); its bar follows its body.
         const before = Math.abs(lease.scene.scale.x) || 1;
         // No height cap either: the official scale is the monster's size (the dragon is 0.44 × 1.75).
-        const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale });
-        view.body = lease.scene; lease.scene.position.y += drawn * monster.lift / monster.height;
+        const envelope = HOVERING_MODELS.has(definitionId) ? undefined : envelopeOf(definitionId, lease);
+        const support = standingSupport(definitionId, envelope);
+        const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale,
+          feet: support ? envelope?.feet : undefined, support });
+        view.body = lease.scene;
+        // Flying dragon retains its authored flight. Grounded monsters use their animated feet instead of bind-box lifts.
+        if (!support) lease.scene.position.y += drawn * monster.lift / monster.height;
         view.starHeight = drawn + STAR_GAP;
         view.modelScale = Math.abs(lease.scene.scale.x) / before;
       } else if (monster) {
@@ -749,7 +771,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // ... and its feet on the idle's lowest point (a bind pose can stand far below it: Darius, Nami floated).
         const envelope = unitScale ? envelopeOf(definitionId, lease) : undefined;
         const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale,
-          envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(definitionId, envelope) });
+          envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(definitionId, envelope), support: standingSupport(definitionId, envelope) });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
         view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
@@ -1534,6 +1556,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
         if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
+        if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
+          updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
