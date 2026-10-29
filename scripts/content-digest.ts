@@ -12,7 +12,7 @@ import { G23_TRAIT_SOURCE } from '../src/simulation/content/g2-3-trait-source';
 import { G23_ANOMALY_SOURCE } from '../src/simulation/content/g2-3-anomaly-source';
 import { G24_ARTIFACT_SOURCE } from '../src/simulation/content/g2-4-artifact-source';
 import { AUGMENT_OFFER_POLICY, AUGMENT_BRONZE_THRESHOLDS, AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
-import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../src/simulation/carousel-policy';
+import { CAROUSEL_RULES, CAROUSEL_COST_POLICY } from '../src/simulation/carousel-policy';
 import { RULES_GAP_MANIFEST } from './augment-content-archive';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../src/simulation/operation-policy';
 import { M8_VERSION } from '../src/simulation/m8/version';
@@ -57,7 +57,7 @@ export function recomputeContentDigest(): string {
   g24Voidspawn:{policy:G24_VOIDSPAWN_POLICY,units:G24_VOIDSPAWN_UNITS},
   rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
   g24:{artifactSource:G24_ARTIFACT_SOURCE,supportDeclarations:G24_SUPPORT_DECLARATIONS,supportItemSource:G24_SUPPORT_ITEM_SOURCE,chestPool:G24_CHEST_POOL},
-  carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
+  carousel:{rules:CAROUSEL_RULES,costPolicy:CAROUSEL_COST_POLICY},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},
   orbs:{rules:ORB_RULES,stagePlan:ORB_STAGE_PLAN},

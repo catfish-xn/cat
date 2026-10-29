@@ -162,7 +162,8 @@ describe('P7 supply and capacity integration', () => {
         const automatic = must(autoPickFromCarousel(unlocked, 's0', match));
         expect(automatic.state.receipts[0].slot).toBe(0);
         expect(automatic.state.rngAfter).toBe(unlocked.rngAfter);
-        expect([1,2]).toContain(UNIT_DEFINITIONS[sample].cost);
+        expect([1,2,3]).toContain(UNIT_DEFINITIONS[sample].cost);
+        expect([1,2,3].map(cost=>unlocked.slots.filter(s=>UNIT_DEFINITIONS[s.definitionId].cost===cost).length)).toEqual([1,4,4]);
     });
 });
 describe('P7 boundary rejection and recovery authentication', () => {

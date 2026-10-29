@@ -2,6 +2,7 @@ import { selectOpeningUnit } from '../../src/simulation/opening-unit';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assertSharedPoolConservation, type SharedPoolState } from '../../src/server-entry';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
+import { SHOP_CATALOG_BY_COST } from '../../src/simulation/match-rules';
 import { CAROUSEL_RULES_BINDING, type CarouselRules } from '../../src/server/room/carousel';
 import { CAROUSEL_DEPARTURE_MS, type Room } from '../../src/server/room/room';
 import { seatPushEvents, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
@@ -53,10 +54,10 @@ function buyAll(room: Room, seatId: string): void {
   for (let slot = 0; slot < 5 && placed(room, seatId, 'bench') < 9; slot++) room.handle(seatId, { type: 'buy', slot, generation: seatOf(room, seatId).match.shop.generation });
 }
 /**
- * Units on the 2-4 carousel of this room (seed 5 since the v13 augment pool; seed 35 left s2/s3 a board place short, seed 42 left s0 one bench card short);
+ * A real two-cost pair on the fixed-composition 2-4 carousel (seed 6 replaces the v25 seed-5 fixture);
  * s1 collects two one-star copies of one of them before it opens, so its pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
  */
-const PAIR_TARGETS = ['nocturne', 'urgot', 'rell', 'renata'];
+const PAIR_TARGETS = SHOP_CATALOG_BY_COST[2];
 const copiesOf = (room: Room, seatId: string, definitionId: string) => unitsOf(room, seatId).filter(unit => unit.definitionId === definitionId && unit.starLevel === 1);
 function collectPairs(room: Room, seatId: string, reroll: boolean): void {
   for (let rolls = 0; ; rolls++) {
@@ -108,7 +109,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
  */
 describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAYER_CONTRACT §21.6)', () => {
   const resolver = new RecordingResolver();
-  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 5 });
+  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 6 });
   const opened: string[] = [];
   room.subscribe(state => { if (state.phase === 'carousel' && opened.at(-1) !== state.roundId) opened.push(state.roundId); });
   const carousel = () => room.state.carousel!.state;
@@ -137,6 +138,8 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
     for (const seat of room.state.seats) expect(rules.opensCarousel(seat.match)).toBe(true);
     const state = carousel();
     expect(state).toMatchObject({ roundId: '2-4', status: 'open', deadlineMs: 30_000 });
+    expect([1, 2, 3, 4, 5, 6].map(cost => state.slots.filter(slot => UNIT_DEFINITIONS[slot.definitionId].cost === cost).length)).toEqual([1, 4, 4, 0, 0, 0]);
+    expect(toPlayerView(room.state, 's0', clock.now()).carousel!.slots.map(slot => slot.starLevel)).toEqual(Array(9).fill(1));
     expect(state.releaseOrder).toEqual([...room.state.seats].sort((a, b) => a.hp - b.hp || a.index - b.index).map(seat => seat.seatId));
     expect(state.releaseOrder.map(seatId => state.releaseAtMs[seatId])).toEqual(RELEASES);
     expect(room.state.deadlineAt).toBe(room.state.carousel!.startedAt + 30_000 + CAROUSEL_DEPARTURE_MS);
@@ -175,7 +178,8 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
 
   it('s0 (bench full, board below its level): the pick goes straight onto the board, with its item', () => {
     advanceTo(room, clock, releaseOf('s0'));
-    const slot = freeSlots(room)[0]!;
+    // Keep s1's real pair available for the following no-merge/next-preparation upgrade assertions.
+    const slot = freeSlots(room).find(candidate => copiesOf(room, 's1', candidate.definitionId).length !== 2)!;
     const before = new Set(unitsOf(room, 's0').map(unit => unit.id));
     const result = pick(room, 's0', slot.slot);
     expect(result).toMatchObject({ ok: true, seatRevision: seatOf(room, 's0').seatRevision });
@@ -194,7 +198,7 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
   it('s1 (bench room): the pick lands on the bench as a third one-star copy; nothing merges during the carousel', () => {
     advanceTo(room, clock, releaseOf('s1'));
     const target = freeSlots(room).find(slot => copiesOf(room, 's1', slot.definitionId).length === 2);
-    expect(target, `s1 holds a pair of a unit still on the carousel (${freeSlots(room).map(slot => slot.definitionId).join(',')})`).toBeDefined();
+    expect(target, `s1 holds a pair of a unit still on the carousel (${freeSlots(room).map(slot => slot.definitionId).join(',')}); owns ${unitsOf(room, 's1').map(unit => `${unit.definitionId}:${unit.starLevel}`).join(',')}`).toBeDefined();
     const before = new Set(unitsOf(room, 's1').map(unit => unit.id));
     const result = pick(room, 's1', target!.slot);
     expect(result.ok).toBe(true);
@@ -217,7 +221,8 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
 
   it('s2 (bench and board full): the pick waits in the holding slot, owned but neither placed nor fighting', () => {
     advanceTo(room, clock, releaseOf('s2'));
-    const slot = freeSlots(room)[0]!;
+    // This case tests a one-star move after a vacancy; the separate s1 case tests a deferred triple.
+    const slot = freeSlots(room).find(candidate => copiesOf(room, 's2', candidate.definitionId).length !== 2)!;
     const before = unitsOf(room, 's2');
     const result = pick(room, 's2', slot.slot);
     expect(result.ok).toBe(true);

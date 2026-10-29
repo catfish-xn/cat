@@ -956,6 +956,8 @@ D1–D8 按推荐 A 签署；公共签名、失败枚举和 shared-deferred 调�
 
 ## P7 共享选秀规则 API（2026-10-15）
 
+2026-10-29 10:55 用户批准的英雄固定构成覆盖旧每槽费用概率，数值见 [S13_RULES_GAP §11.2](S13_RULES_GAP.md#112-费用固定构成2026-10-29-1055-用户批准替换-p7-每槽费用概率)。`createCarousel(pool, roundId, rng)`、恢复、授予、自动选取的签名与失败枚举保持不变；9 槽均为 1 星，库存不足按最近费用／同距离低费优先回退，范围 1–6；总余量不足 9 返回 `pool-exhausted`，原 pool/rng 引用和空事件保留。27 个随机词及装备消费位置保持不变。`CAROUSEL_COST_ODDS` 为旧 server-entry 名称兼容别名，现在指向 `CAROUSEL_COST_POLICY`（固定张数、普通／六费组概率与抽取语义），不得再当作按槽基点表。领域内 `carouselCostCounts(stage:number,groupWord:number):readonly number[]` 返回费用 1–6 的只读名额，stage≥2、groupWord 为 uint32，非法参数抛 `RangeError('invalid-carousel-composition')`；该函数不推进 RNG，也不扩展可玩日程。规则 revision 已升，外层纪元与内容摘要等待 Claude 统一录制，详见 [交付报告](CAROUSEL_COMPOSITION_20261029.md)。
+
 玩法/证据/分布以 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀规则2026-10-15) 为唯一数值来源，联机调用见 MULTIPLAYER_CONTRACT §21。本节接口从 server-entry 导出；服务器接线仍由 G1 完成。所有对象为 JSON 数据；输入不变、失败返回原对象、零事件、RNG 不推进。
 
 ```ts
