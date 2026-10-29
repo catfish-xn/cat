@@ -3,6 +3,7 @@
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
 import type { ReadyUiSprite } from './ui-original-assets';
+import { batchHudRules } from './batch-hud-skin';
 const STYLE = `
 /* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
 body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
@@ -97,5 +98,6 @@ export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fo
   // Override only after a face loaded. Each character outside the Latin range uses the same fallback as before.
   if (fonts.has('body')) rules.push(`${UI_SCOPE} :is(.shop-dock,.online-countdown,#online-sidebar,#panels-root,.hover-card,.choice-overlay,.unit-panel,.render3d-layer),${UI_SCOPE} :is(button,input,select){font-family:Render3dSpiegel,system-ui,sans-serif;}`);
   if (fonts.has('title')) rules.push(`${UI_SCOPE} :is(.hud-level,.hud-gold,.seat-hp,.countdown-round,.online-timer,h2,h3){font-family:Render3dBeaufort,system-ui,sans-serif;}`);
+  const batch = batchHudRules(sprites); if (batch) rules.push(batch);
   return rules.join('\n');
 }

@@ -7,6 +7,29 @@ import { assertEntryPath } from './extract-from-chunks.mjs';
 import { selectChunks } from './fetch-chunks.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
 import { scanLocal, loadPatch, readDictionary, UiSource, VERSION, PATCH_SHA, sha256, json, cliArguments } from './ui-source.mjs';
+import { fontCoverage } from './ui-font-coverage.mjs';
+
+/** Preserve reviewed regions only when their exact atlas bytes and dimensions survive extraction. */
+export function mergeUiReviews(manifest, previous) {
+  if (!previous) return manifest;
+  if (previous.sourceVersion !== manifest.sourceVersion || previous.sourceManifestSha256 !== manifest.sourceManifestSha256)
+    throw new Error('ui-review-version-mismatch');
+  for (const [id, sprite] of Object.entries(previous.sprites ?? {})) {
+    const before = previous.textures?.[sprite.texture], after = manifest.textures[sprite.texture];
+    if (!before || !after || before.sha256 !== after.sha256 || before.width !== after.width || before.height !== after.height)
+      throw new Error(`ui-reviewed-atlas-changed:${id}`);
+    manifest.sprites[id] = sprite;
+  }
+  for (const key of ['regionReviews', 'ui2Review', 'batchReview']) if (previous[key] !== undefined) manifest[key] = previous[key];
+  const reviewedSources = new Set(Object.values(manifest.sprites).map(s => manifest.textures[s.texture].sourcePath));
+  manifest.unavailable = manifest.unavailable.filter(u => u.reason !== 'region-unverified' || !reviewedSources.has(u.id));
+  manifest.limitations = [...new Set([...manifest.limitations, ...(previous.limitations ?? [])])];
+  for (const [id, font] of Object.entries(manifest.fonts)) {
+    const before = previous.fonts?.[id];
+    if (before?.sha256 === font.sha256) manifest.fonts[id] = { ...before, ...font };
+  }
+  return manifest;
+}
 
 const fields = ['hash', 'offset', 'compressedSize', 'size', 'type', 'subchunkCount', 'firstSubchunk'];
 async function immutableWrite(path, bytes) {
@@ -20,6 +43,9 @@ async function immutableWrite(path, bytes) {
 }
 export async function extractUi({ source, paths, plan, out = 'assets3d-local/ui', reportOut = 'assets3d-local/ui-plan' }) {
   await safeOutputPath(out, { directory: true }); await safeOutputPath(reportOut, { directory: true });
+  let previous;
+  try { previous = JSON.parse(await readFile(join(out, 'manifest.json'), 'utf8')); }
+  catch (e) { if (e.code !== 'ENOENT') throw e; }
   const ready = [], unavailable = [], textures = {}, fonts = {}, archives = new Map();
   // Validate ALL plan paths and range declarations before the first mutation.
   for (const wad of plan.wads) {
@@ -77,9 +103,10 @@ export async function extractUi({ source, paths, plan, out = 'assets3d-local/ui'
       const path = `fonts/${entry.hash}${extname(entry.path)}`;
       await immutableWrite(join(out, path), bytes);
       const evidence = plan.references.filter(r => r.path === entry.path && r.localeEvidence).map(r => r.localeEvidence);
+      const coverage = fontCoverage(bytes);
       fonts[entry.hash] = { path, sourcePath: entry.path, bytes: bytes.length, sha256: sha256(bytes), localeEvidence: evidence,
-        coverageVerified: false };
-      unavailable.push({ id: entry.path, reason: 'font-coverage-unverified' });
+        coverageVerified: true, coverage };
+      if (!coverage.chineseProbeCovered) unavailable.push({ id: entry.path, reason: 'font-chinese-unsupported' });
     }
     ready.push(record);
   }
@@ -101,6 +128,8 @@ export async function extractUi({ source, paths, plan, out = 'assets3d-local/ui'
         return texture ? [[r.definitionId, { texture: texture[0], sourceField: r.sourceField, character: r.character }]] : [];
       })), references: plan.references, unavailable,
       limitations: ['No inferred atlas coordinates, nine-slices, states, font family/weight or Chinese glyph coverage. Runtime integration requires review.'] };
+    mergeUiReviews(manifest, previous);
+    if (previous) await writeOutputFileAtomic(join(out, 'manifest.before-extract.local.json'), json(previous), { force: true });
     await writeOutputFileAtomic(join(out, 'extraction.json'), json(report), { force: true });
     await writeOutputFileAtomic(join(out, 'manifest.json'), json(manifest), { force: true });
   }

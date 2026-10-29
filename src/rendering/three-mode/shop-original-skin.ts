@@ -11,12 +11,14 @@ ${SCOPE}[data-original-shop-frame] { border: 0; border-radius: 0; box-shadow: no
 ${SCOPE}[data-original-shop-frame]::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
   background: var(--shop-original-frame) center / 100% 100% no-repeat; }
 ${SCOPE}[data-original-shop-frame]:not(:disabled):is(:hover, :focus-visible)::before { background-image: var(--shop-original-hover, var(--shop-original-frame)); }
+${SCOPE}[data-original-shop-frame]:not(:disabled):active::before { background-image: var(--shop-original-pressed, var(--shop-original-hover, var(--shop-original-frame))); }
+${SCOPE}[data-original-shop-frame]:disabled::before { background-image: var(--shop-original-disabled, var(--shop-original-frame)); }
 ${SCOPE}[data-original-shop-frame] .shop-emblem { bottom: 24%; }
 ${SCOPE}[data-original-shop-frame] .shop-name { position: relative; z-index: 2; display: flex; align-items: center; background: none; border: 0; line-height: normal; }
 ${SCOPE}[data-original-shop-frame] .shop-trait { z-index: 2; }
 ${SCOPE}[data-original-shop-coin] .shop-cost::before { background: var(--shop-original-coin) center / contain no-repeat; border-radius: 0; box-shadow: none; }
 `;
-const PROPERTIES = ['--shop-original-art', '--shop-original-frame', '--shop-original-hover', '--shop-original-coin'] as const;
+const PROPERTIES = ['--shop-original-art', '--shop-original-frame', '--shop-original-hover', '--shop-original-pressed', '--shop-original-disabled', '--shop-original-coin'] as const;
 const ATTRIBUTES = ['data-original-shop-art', 'data-original-shop-frame', 'data-original-shop-coin'] as const;
 
 /**
@@ -80,10 +82,12 @@ export function installShopOriginalSkin(assetBase: string | null, read?: (path: 
           if (!image || !current()) return;
           card.style.setProperty('--shop-original-frame', `url("${image.url}")`); card.setAttribute('data-original-shop-frame', '');
         });
-        const hover = manifest.sprites.get(spriteId)?.states.hover;
-        if (hover) void images!.sprite(hover).then(image => {
-          if (image && current()) card.style.setProperty('--shop-original-hover', `url("${image.url}")`);
-        });
+        for (const state of ['hover', 'pressed', 'disabled']) {
+          const target = manifest.sprites.get(spriteId)?.states[state];
+          if (target) void images!.sprite(target).then(image => {
+            if (image && current()) card.style.setProperty(`--shop-original-${state}`, `url("${image.url}")`);
+          });
+        }
       }
     };
     observer = new MutationObserver(refresh);

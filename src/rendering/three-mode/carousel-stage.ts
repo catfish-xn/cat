@@ -21,7 +21,9 @@ import {
   AmbientLight, Box3, CanvasTexture, Color, CylinderGeometry, DoubleSide, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, Texture, TextureLoader, Vector2, Vector3, type Object3D,
 } from 'three';
-import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
+import { UnitAnimationMixer, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
+import { createOriginalStarMark } from './original-stars';
+import type { OriginalUi } from './ui-original-assets';
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import { CAROUSEL_UNIT_PICK_RADIUS, type CellPoint } from '../../server/legend-motion';
@@ -91,6 +93,7 @@ const COUNTDOWN_SIZE = 32;
 const COLOR = { me: '#7fd8cf', seat: '#e3a08f', takable: '#68ddd0', pending: '#e6bc76', hover: '#ffd782', lock: '#b4a1f5', item: '#c9d4da' } as const;
 
 export interface CarouselStageContext {
+  readonly ui?: Pick<OriginalUi, 'sprite' | 'subscribe'>;
   /** Loaded UI face stack; an unchanged countdown is repainted when it becomes ready. */
   readonly font?: () => string;
   /** A champion's height and width cap (board units), as on the board; a legend stands half a champion. */
@@ -424,7 +427,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const showCountdown = (view: SeatView, text: string) => {
     if (!text) { dropCountdown(view); return; }
     const font = ctx.font?.() ?? 'sans-serif';
-    if (view.countdown?.text === text && view.countdown.font === font) return;
+    const skin = ctx.ui?.sprite('world.countdown'), paintKey = `${font}|${skin?.url ?? ''}`;
+    if (view.countdown?.text === text && view.countdown.font === paintKey) return;
     if (!view.countdown) {
       const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
       if (!canvas?.getContext('2d')) return;
@@ -438,10 +442,11 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     }
     const draw = view.countdown.canvas.getContext('2d')!;
     draw.clearRect(0, 0, 64, 64);
-    draw.fillStyle = 'rgba(10, 16, 24, .72)'; draw.beginPath(); draw.arc(32, 32, 30, 0, Math.PI * 2); draw.fill();
+    if (skin && typeof draw.drawImage === 'function') draw.drawImage(skin.source, 0, 0, 64, 64);
+    else { draw.fillStyle = 'rgba(10, 16, 24, .72)'; draw.beginPath(); draw.arc(32, 32, 30, 0, Math.PI * 2); draw.fill(); }
     draw.fillStyle = view.me ? COLOR.me : '#e6e0f8'; draw.font = `bold 34px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
     draw.fillText(text, 32, 34);
-    view.countdown.texture.needsUpdate = true; view.countdown.text = text; view.countdown.font = font;
+    view.countdown.texture.needsUpdate = true; view.countdown.text = text; view.countdown.font = paintKey;
   };
 
   // --- effects ---------------------------------------------------------------------------------------------------
@@ -514,7 +519,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
     const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
     if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(RING_SIZE); }
-    const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
+    const stars = createOriginalStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor, ui: ctx.ui });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight * UNIT_SIZE + STAR_GAP;
     holder.add(root, ring, stars.object); if (costRing) holder.add(costRing);
     const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, costRing, stars, items: [], data, tier: null, takenBy: null,

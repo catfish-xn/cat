@@ -2,6 +2,8 @@
 import { assetUrl } from '../../rendering3d/contracts';
 import { HUD_SPRITES, readUiManifest as readHudUiManifest, type UiFile, type UiFont, type UiRect, type UiTexture as HudUiTexture } from '../../rendering3d/ui-assets';
 import { originalHudRules } from './hud-style';
+import { BATCH_UI_SPRITES } from './batch-hud-skin';
+import { uiSha256 } from './ui-sha256';
 
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -83,11 +85,7 @@ export function createUiImages(manifest: UiManifest, read: (path: string) => Pro
     if (closed) return null;
     if (blob.size !== t.bytes) throw new Error('ui-byte-length');
     // A sidecar may be absent from precache, or its cached version may lag behind it.
-    if (globalThis.crypto?.subtle) {
-      const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-      const hex = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-      if (hex !== t.sha256) throw new Error('ui-hash-mismatch');
-    }
+    if (await uiSha256(blob) !== t.sha256) throw new Error('ui-hash-mismatch');
     if (closed) return null;
     return remember(await decoder.decode(blob, t));
   });
@@ -144,6 +142,8 @@ const browserPlatform: UiPlatform = {
     let owner = owners.get(key);
     if (!owner) {
       const url = URL.createObjectURL(blob), family = font.role === 'title' ? 'Render3dBeaufort' : 'Render3dSpiegel';
+      // All three client faces have zero basic CJK glyphs. Exclude CJK (including
+      // punctuation) so Chromium uses the existing system-ui/sans-serif fallback.
       const face = new FontFace(family, `url(${JSON.stringify(url)})`, { weight: font.weight, style: 'normal', unicodeRange: 'U+0000-024F' });
       owner = { refs: 0, face, url, ready: Promise.resolve('') };
       const entry = owner;
@@ -167,10 +167,8 @@ const browserPlatform: UiPlatform = {
 async function checkedBlob(read: (path: string) => Promise<Blob>, path: string, file: UiFile, hashUnavailable: () => void): Promise<Blob> {
   const blob = await read(path);
   if (blob.size !== file.bytes) throw new Error('byte-length');
-  if (globalThis.crypto?.subtle) {
-    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()));
-    if (Array.from(digest, n => n.toString(16).padStart(2, '0')).join('') !== file.sha256) throw new Error('sha256');
-  } else hashUnavailable();
+  if (!globalThis.crypto?.subtle) hashUnavailable();
+  if (await uiSha256(blob) !== file.sha256) throw new Error('sha256');
   return blob;
 }
 
@@ -221,7 +219,7 @@ export function startOriginalUi(root: string | null, read?: (path: string) => Pr
     if (closed) return;
     issues.push(...manifest.issues);
     const images = new Map<string, Promise<{ source: CanvasImageSource; dispose(): void }>>();
-    const jobs = HUD_SPRITES.map(async id => {
+    const jobs = [...HUD_SPRITES, ...BATCH_UI_SPRITES].map(async id => {
       const sprite = manifest.sprites.get(id);
       if (!sprite) { issues.push(`${id}:region-unverified`); return; }
       try {
