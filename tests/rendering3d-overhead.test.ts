@@ -148,3 +148,28 @@ describe('3D overhead meters and items', () => {
     expect(dropMaterial).toHaveBeenCalledTimes(1); expect(dropBadge).toHaveBeenCalledTimes(1); expect(dropMap).toHaveBeenCalledTimes(1);
   });
 });
+
+it('marks a parked reserve without combat meters and clears the mark on return',()=>{
+  const overhead=createUnitOverhead({colors:()=>DEFAULT_METER_COLORS,itemTexture:async()=>null});
+  overhead.set('player',undefined,undefined,false,false,true);
+  const label=overhead.object.getObjectByName('render3d-over-encumbered') as Sprite;
+  expect(label.visible).toBe(true);expect(overhead.drawn).toBe(true);
+  overhead.set('player',undefined,undefined,false,false,false);
+  expect(label.visible).toBe(false);expect(overhead.drawn).toBe(false);overhead.dispose();
+});
+
+it('keeps confiscation and parked reserve flags independent when both are present', () => {
+  const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+  const meters = { hp: 1, maxHp: 1, mana: 0, maxMana: 0, shield: 0 };
+  overhead.set('player', meters, undefined, true, true, true);
+  const stamp = overhead.object.getObjectByName('render3d-confiscated-items')!;
+  const parked = overhead.object.getObjectByName('render3d-over-encumbered')!;
+  expect(stamp.visible).toBe(true); expect(parked.visible).toBe(true);
+  expect(parked.position.y).toBeGreaterThan(stamp.position.y);
+  overhead.set('player', undefined, undefined, false, true, true);
+  expect(stamp.visible).toBe(false); expect(parked.visible).toBe(true); expect(overhead.drawn).toBe(true);
+  overhead.set('player', meters, undefined, true, true, false);
+  expect(stamp.visible).toBe(true);
+  expect(overhead.object.getObjectByName('render3d-enforcer-wanted')!.visible).toBe(true);
+  overhead.dispose();
+});

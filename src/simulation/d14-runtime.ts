@@ -1,3 +1,4 @@
+import { usableBenchSlots } from './bench-capacity';
 /** Production adapter: Match/resourceProvenance remain the sole ownership authority.
  * The independent D3/D14 transaction engine is a reference harness, never a second live ledger. */
 import type { MatchState, MatchBase, MatchEvent } from './match-types';
@@ -46,7 +47,9 @@ export function acquireD14(state:MatchState):MatchState {
     temporaryEquipment:d14.held?state.temporaryEquipment.filter(i=>i.holderId!==unit.id):state.temporaryEquipment};
 }
 export function returnLocation(state:MatchState):UnitLocation|null {
-  for(let slot=0;slot<state.preparation.benchSize;slot++)if(!state.preparation.units.some(u=>u.team==='player'&&u.location.kind==='bench'&&u.location.slot===slot))return {kind:'bench',slot};
+  if(state.preparation.overflowUnitIds?.length)return null;
+  for(let slot=0;slot<usableBenchSlots(state.preparation);slot++)if(!state.preparation.units.some(u=>u.team==='player'&&u.location.kind==='bench'&&u.location.slot===slot))return {kind:'bench',slot};
+  if(state.preparation.usableBenchSlots!==undefined)return null;
   if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&countsTowardPopulation(u.definitionId)).length>=deploymentCapFor(state.level,readG23Progress(state)))return null;
   for(let row=0;row<state.preparation.board.rows;row++)for(let col=0;col<state.preparation.board.columns;col++){
     const cell={row,col};if(isDeploymentCell(state.preparation.board,'player',cell)&&!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.row===row&&u.location.cell.col===col))return {kind:'board',cell};

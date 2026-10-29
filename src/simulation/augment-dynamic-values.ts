@@ -19,6 +19,7 @@ import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
+import { isOverflowUnit } from './bench-capacity';
 
 export type DynamicValue = number | { readonly unit: string } | { readonly outcome: string;
  readonly gifts?: readonly { readonly kind: 'unit'|'item'|'consumable'; readonly definitionId: string; readonly starLevel?: number }[];
@@ -104,7 +105,7 @@ export function augmentDynamicValues(state: MatchState): AugmentDynamicValues {
   }
   if (id === 'superstars-i' || id === 'superstars-ii') {
    const effect = AUGMENT_DEFINITIONS[id].effects.find(e => e.kind === 'mechanic' && e.mechanic === 'superstars');
-   if (effect?.kind === 'mechanic') result[id] = { values: [(effect.values.baseBps + state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board' && u.starLevel === 3).length * effect.values.per3StarBps) / 100] };
+   if (effect?.kind === 'mechanic') result[id] = { values: [(effect.values.baseBps + state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board' && !isOverflowUnit(state.preparation,u.id) && u.starLevel === 3).length * effect.values.per3StarBps) / 100] };
   } else if (id === 'rocket-collection' || id === 'rocket-collection-plus' || id === 'scrap-recycling') {
    const total = relevant.reduce((n,r) => n + (r.facts.batch2?.find(f => f.definitionId === id)?.count ?? 0),0);
    const threshold = id === 'scrap-recycling' ? batch2Values(id).NumScrapItemsConverted : 0;

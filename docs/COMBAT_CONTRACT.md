@@ -1,3 +1,9 @@
+## 2026-10-29 D3 暂留棋子（待 D5 注册）
+
+运力不足期间的 `overflowUnitIds` 不计参战人口或羁绊。PvP `snapshotForBattle` 排除它们；PvE 冻结输入将其投影为九格内的后备棋子，保留完整资源认证，Combat 不读取界面标记。九格断言、人口上限、50 ms tick 与所有原战斗规则不变。详见 [D3 合同](D3_OVER_ENCUMBERED.md)。
+
+该投影只用于战斗编译。受限回合另冻结 `CombatInputBasis.resourcePreparation`，保存实际持有位置与容量；B8 掉落重放使用它，不能用战斗投影发奖。恢复保留冻结输入不带覆盖层的断言，额外认证实际持有快照的结构、限制期限及与战斗输入的确定性投影关系。
+
 ## 2026-10-27 v25 H7 历史强化
 
 B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的独立 death event 另判定；不改战斗 tick、事件封套或回放事实。B5-43 仅使用双方已结算的实际玩家 HP 扣减。B5-44 扩展玩家生命上限后，Spirit Link／Comeback Story 按真实缺失生命计算，输入和恢复按拥有条目验证上限。当前版本及接口见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 和 [H7 合同](AUGMENT_BATCH5_H7_DELIVERY.md)；未重录 epoch。

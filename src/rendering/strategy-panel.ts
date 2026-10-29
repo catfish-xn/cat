@@ -1,3 +1,4 @@
+import { usableBenchSlots } from '../simulation/bench-capacity';
 import { attachTextCards, textCard, hoverAction } from '../presentation/text-card';
 import { onTooltipTextChanged } from '../presentation/tooltip-text-loader';
 import { readAugmentText, onAugmentTextChanged } from '../presentation/augment-text-loader';
@@ -985,7 +986,7 @@ export class StrategyPanel {
       const occupant = state.preparation.units.find(unit => unit.location.kind === 'bench' && unit.location.slot === slot);
       bench.append(this.button(`mobile:bench:${slot}`, occupant ? `备 ${slot + 1} ${UNIT_DEFINITIONS[occupant.definitionId].symbol}` : `备 ${slot + 1}`, () => {
         const selected = this.actions.selectedUnit(); if (selected) this.actions.deploy(selected, { kind: 'bench', slot }); else this.actions.status('请先选择一个我方单位');
-      }, !ready));
+      }, !ready || slot >= usableBenchSlots(state.preparation)));
     }
     section.append(bench); this.root.append(section);
   }

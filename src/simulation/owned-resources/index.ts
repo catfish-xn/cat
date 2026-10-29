@@ -1,3 +1,4 @@
+import { usableBenchSlots } from '../bench-capacity';
 import { canonicalContent } from '../content';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { deploymentCapFor } from '../deployment-cap';
@@ -99,9 +100,11 @@ function updateSeat(state: Draft, seat: OwnershipSeat): void {
 /** Explicit mechanism placement: first empty bench, then a free legal player cell within the frozen cap.
  * No merge, upgrade, sale, carousel convention or reward regeneration is hidden here (Q3/Q5). */
 function freeLocation(seat: OwnershipSeat): UnitLocation | null {
-  for (let slot = 0; slot < seat.preparation.benchSize; slot++) {
+  if (seat.preparation.overflowUnitIds?.length) return null;
+  for (let slot = 0; slot < usableBenchSlots(seat.preparation); slot++) {
     if (!seat.preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === slot)) return { kind: 'bench', slot };
   }
+  if (seat.preparation.usableBenchSlots !== undefined) return null;
   if (getPlayerDeploymentCount(seat.preparation) >= seat.deploymentCap) return null;
   const board = seat.preparation.board;
   for (let row = board.deploymentZones.player.firstRow; row <= board.deploymentZones.player.lastRow; row++) {

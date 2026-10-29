@@ -1,3 +1,5 @@
+import { overEncumberedActive, completeOverEncumbered, reconcileOverEncumbered } from './over-encumbered';
+import { isOverflowUnit, combatBenchProjection } from './bench-capacity';
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
@@ -139,6 +141,7 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  const over=completeOverEncumbered(state); state=over.state; events=[...events,...over.events];
   state=applyAngerIssues(state);
   const inventory=drainBatch5Inventory(state);events=[...events,...mechanicGrantEvents(state,inventory)];state=inventory;
   const d14Events:MatchEvent[]=[];state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
@@ -364,6 +367,7 @@ function autoDeployFormation(state: MatchState): MatchCommandResult {
 function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
+  if (overEncumberedActive(state)) return fail(state, 'bench-full');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -386,7 +390,10 @@ function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneratio
 }
 function execute_openAnvil(state:MatchState,unitId:string):MatchCommandResult {
   const result=planOpenAnvil(state,unitId);
-  return result.ok?acceptEquipment(result.state,result.events):result;
+  if(!result.ok)return result;
+  const freedBench=state.preparation.units.some(u=>u.id===unitId&&u.location.kind==='bench');
+  const over=reconcileOverEncumbered(result.state,freedBench);
+  return acceptEquipment(over.state,[...result.events,...over.events]);
 }
 function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if(state.preparation.units.some(u=>u.id===unitId&&isAnvil(u.definitionId)))return openAnvil(state,unitId);
@@ -398,8 +405,9 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
   if (!isSellableUnit(unit.definitionId) || noScoutLockedUnits(state).has(unitId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
-  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
+  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench' && !isOverflowUnit(state.preparation,unitId)) return fail(state, 'wrong-phase');
   let { state: sold, events } = sellPreparedUnit(state, unit, capacity);
+  const over=reconcileOverEncumbered(sold,unit.location.kind==='bench'); sold=over.state; events.push(...over.events);
   const returnedState=sold; sold=salvageSale(state,sold,unitId);
   sold=salvageSoldItems(state,sold,unitId);
   events.unshift(...mechanicGrantEvents(returnedState,sold));
@@ -469,7 +477,7 @@ export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.multiplayer && state.m8.round.kind === 'pvp') return 'wrong-phase';
   if (needsAnomalyRecruitment(state)) return 'missing-player';
   if (getPlayerDeploymentCount(state.preparation) > getDeploymentCap(state)) return 'population-cap';
-  const reason = validateCombatStart(state.preparation);
+  const reason = validateCombatStart(combatBenchProjection(state.preparation));
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
   return reason === 'missing-player' ? undefined : reason;
 }
@@ -517,6 +525,8 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   let committed=combat?grantPveRemover(commitG23Settlement(observed,facts!,unitLootPolicy,hookEvents)):observed;
   committed=drainLootExplosionRewards(committed);
   const contested=drainContestedGold(committed);hookEvents.push(...mechanicGrantEvents(committed,contested));committed=contested;
+  // Unlock stage-end capacity before deferred merges and queued-orb retries.
+  const over=reconcileOverEncumbered(committed); committed=over.state; hookEvents.push(...over.events);
   if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
     const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;
   }
@@ -667,6 +677,8 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  const overPlan=reconcileOverEncumbered({...state,round});
+  const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
   state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round})));
@@ -687,7 +699,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   let prepared = growCarryGolem(growTrainerGolem(enterOpeningCrabs(carousel.state)));
   const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
   prepared = portfolioEvents.state;
-  const openingEvents: MatchEvent[] = [...transformed.events, ...portfolioEvents.events];
+  const openingEvents: MatchEvent[] = [...overEntry.events, ...transformed.events, ...portfolioEvents.events];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
@@ -725,6 +737,8 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const overPlan=reconcileOverEncumbered({...state,round:definition.ordinal});
+    const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
     state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
     state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal})));
     const transformPlan = transformPandorasBench(state, transformStock);
@@ -743,7 +757,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const entry=growCarryGolem(drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))));
     const gifted=entry.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
-    return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
+    return accepted.ok?{...accepted,events:[...overEntry.events,...transformed.events,...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
@@ -819,7 +833,7 @@ function execute_selectAnomalyTarget(state: MatchState, choiceId: string, genera
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
-  if (!target || target.team !== 'player' || isAnvil(target.definitionId) || state.anomalyBinding !== null) return fail(state, 'invalid-target');
+  if (!target || target.team !== 'player' || isOverflowUnit(state.preparation,unitId) || isAnvil(target.definitionId) || state.anomalyBinding !== null) return fail(state, 'invalid-target');
   if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
@@ -901,7 +915,7 @@ function execute_forfeitPendingChoice(state: MatchState, expectedRound: number,
     let current: MatchState = state;
     const events: MatchEvent[] = [];
     if (choice.kind === 'anomaly' && choice.step === 'target') {
-      const target = state.preparation.units.filter(u=>u.team==='player'&&choice.offers.every(id=>eligibleD14Target(u,id))).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
+      const target = state.preparation.units.filter(u=>u.team==='player'&&!isOverflowUnit(state.preparation,u.id)&&choice.offers.every(id=>eligibleD14Target(u,id))).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
       if (!target) return accept({...state,phase:choice.returnPhase ?? 'preparation',combat:null,pendingChoice:null,
         multiplayer:{...state.multiplayer,forfeitedChoices:[...new Set([...state.multiplayer.forfeitedChoices,choice.eventId])]}} as MatchState,
         [{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'empty-anomaly'}]);

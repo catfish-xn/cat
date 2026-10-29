@@ -1,3 +1,5 @@
+import { combatBenchProjection } from './bench-capacity';
+import { completeOverEncumbered } from './over-encumbered';
 import { recordR2PortableBattle } from './augment-pool-batch5-r2-history';
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainSurvivorGold } from './augment-pool-batch5-h4-survivor';
@@ -32,7 +34,7 @@ export const historySeatId = (s: MatchState): string => s.multiplayer?.seatId ??
 export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId)) || maxCapOfferNeedsHistory(s);
 export const needsAugmentPreparationClock = (s: MatchState): boolean => s.augments.some(a => AUGMENT_HISTORY_OWNERS[a.definitionId]?.includes('preparation-time'));
 export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): HistoryRoster {
-  return clonePlainData({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
+  return clonePlainData({ units: combatBenchProjection(s.preparation).units.filter(u => u.team === 'player'), items: s.items });
 }
 export function appendAugmentFact(s: MatchState, fact: AugmentFactData): MatchState {
   if (!s.augmentHistory) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return s; }
@@ -254,7 +256,10 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   if (envelope.ok === false) return result;
   const after = envelope.state ?? result as unknown as MatchState;
   if (!after || after === before || !('augments' in after)) return result;
-  const tracker = completeTraitTrackerCommand(name, after);
+  const over = completeOverEncumbered(after);
+  let overSequence = over.state.nextMatchEventSeq;
+  const overEvents = over.events.map(event => ({...event,domain:'match' as const,eventSeq:overSequence++}));
+  const tracker = completeTraitTrackerCommand(name, overEvents.length ? {...over.state,nextMatchEventSeq:overSequence} : over.state);
   const rewarded = drainBatch5H7Gold(recordAugmentTransition(before, tracker.state, [...(envelope.events ?? []), ...tracker.events]));
   let next = rewarded.state;
   if (next.roundResults.length > before.roundResults.length) {
@@ -288,7 +293,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { origin, commands, tail: command, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  const extraEvents = [...tracker.events, ...rewarded.events, ...payoutEvents, ...effectEvents];
+  const extraEvents = [...overEvents, ...tracker.events, ...rewarded.events, ...payoutEvents, ...effectEvents];
   return (envelope.state ? { ...envelope, state: next, ...(extraEvents.length ? { events: [...(envelope.events ?? []), ...extraEvents] } : {}) } : next) as T;
 }
 

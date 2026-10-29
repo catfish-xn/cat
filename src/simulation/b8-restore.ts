@@ -1,5 +1,6 @@
 import { brbGiftPlan } from './augment-brb';
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { reconcileOverEncumbered } from './over-encumbered';
 import { r2CopyKills } from './augment-pool-batch5-r2-history';
 import { replayAngerConversion } from './augment-pool-batch5-r2';
 import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
@@ -499,7 +500,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const direct = frozen?.encounterPlan.drops ?? [], choices = [...(frozen?.choices ?? [])].sort(compareLootChoices);
   const earned = new Set(loot.earnedEvidence.map(entry => entry.dropId)), receipts = new Map(loot.receipts.map(receipt => [receipt.dropId,receipt]));
   const actualReceiptOrder: string[] = [], expectedProgress = new Map<string,string>();
-  let preparation = structuredClone(basis.inputs.preparation), items = structuredClone(basis.inputs.items), binding = structuredClone(basis.inputs.anomalyBinding);
+  let preparation = structuredClone(basis.resourcePreparation ?? basis.inputs.preparation), items = structuredClone(basis.inputs.items), binding = structuredClone(basis.inputs.anomalyBinding);
   let nextUnit = basis.nextUnitSerial, nextItem = basis.nextItemSerial, cursor = basis.provenancePrefixLength, saleGold = 0;
   let committed = false;
   const heldIds=new Set(d14HeldAtPrefix(state,basis.provenancePrefixLength).heldItemIds);
@@ -570,6 +571,10 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
   committed = true;
+  // Direct drops use the still-restricted holdings, including on x-7. Economy
+  // (including Contested gold, which has no resource fact) is authenticated by
+  // the settlement checks. Only this post-settlement boundary releases capacity.
+  preparation = reconcileOverEncumbered({ ...state, preparation }).state.preparation;
   // Mechanic/G23 authority and provenance have already validated these receipts.
   // Replay every post-freeze birth in receipt order, even if later consumed.
   // Automatic rewards commit before loot choices; mechanic choices follow them.
@@ -637,13 +642,16 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
           preparation=plan.preparation;items=plan.items;binding=plan.anomalyBinding;nextUnit=plan.nextUnitSerial;
         }
       }else if(fact?.kind==='anvil-opened'){
-        check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
+        const unit = preparation.units.find(u=>u.id===fact.unitId&&isAnvil(u.definitionId));
+        check(unit,'anvil consumption');
         preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        preparation=reconcileOverEncumbered({...state,preparation},unit.location.kind==='bench').state.preparation;
         take({kind:'anvil-opened',unitId:fact.unitId,choiceId:fact.choiceId});
       }else if(fact?.kind==='unit-removed'&&fact.definitionId===undefined){
         // Batch-3 Support Mining retires its own training dummy in the settlement drain; the dummy ledger authenticates it.
         check(preparation.units.some(u=>u.id===fact.unitId&&u.definitionId==='training-dummy'),'dummy retirement');
         preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        preparation=reconcileOverEncumbered({...state,preparation}).state.preparation;
         take({kind:'unit-removed',unitId:fact.unitId,receiptId:fact.receiptId});
       }else if(!mechanicBirth())break;
       combinations();
@@ -666,6 +674,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     take({kind:'unit-sold',unitId:sale.unitId,context:'settlement-capacity',goldGranted:sale.goldGranted});
     saleGold += sale.goldGranted;
     preparation = {...preparation,units:preparation.units.filter(value => value.id !== sale.unitId)};
+    preparation = reconcileOverEncumbered({ ...state, preparation }, unit.location.kind === 'bench').state.preparation;
     items = items.map(item => item.location.kind === 'unit' && item.location.unitId === sale.unitId ? {...item,location:{kind:'inventory'}} : item);
     combinations();
     if (binding?.unitId === sale.unitId) binding = null;
@@ -673,7 +682,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   }
   check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
   items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
-  check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
+  check(equal({ ...preparation, units: sorted(preparation.units) }, { ...state.preparation, units: sorted(state.preparation.units) }) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
   check(equal(actualReceiptOrder,loot.receipts.filter(receipt => direct.some(slot => slot.dropId === receipt.dropId)
