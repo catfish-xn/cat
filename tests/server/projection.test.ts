@@ -32,10 +32,15 @@ describe('toPlayerView', () => {
     expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
-    expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'legend', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId']);
+    for (const entry of view.seats) {
+      expect(Object.keys(entry).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'legend', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId', 'streak']);
+      expect(Object.keys(entry.streak!).sort()).toEqual(['count', 'kind']);
+      expect(entry.streak).toEqual(room.state.seats.find(seat => seat.seatId === entry.seatId)!.streak);
+      expect(Number.isSafeInteger(entry.streak!.count) && entry.streak!.count >= 0).toBe(true);
+    }
     // v15: unclaimed orbs show only as the rules' public count and tiers.
     for (const entry of view.seats) expect(Object.keys(entry.orbs!).sort()).toEqual(['count', 'tiers']);
-    // `publicBoard` is the one public build (C5 + 2026-10-20 scouting); everything else stays private.
+    // `publicBoard` is the public build; V26 exposes only kind/count separately on SeatPublic.streak.
     // v23 fmix32: this room's seed opens with the public shared Golden Gala ("golden-gala", "GoldAll"), so the shared
     // opening is checked on its own for a gold key instead of by substring.
     const { openingEncounter, ...rest } = view;
@@ -78,6 +83,55 @@ describe('toPlayerView', () => {
     expect(view.ranking!.map(seat => seat.seatId)[0]).toBe('s5');
     expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(view.seats.find(seat => seat.seatId === 's5')).toMatchObject({ hp: 100, alive: true, rank: 1 });
+    const spectator = toPlayerView(room.state, 's0', clock.now());
+    expect(spectator.seats).toEqual(view.seats); expect(spectator.ranking).toEqual(view.ranking);
+    for (const entry of view.ranking!) expect(entry.streak).toEqual(room.state.seats.find(seat => seat.seatId === entry.seatId)!.streak);
+  });
+});
+
+describe('V26 public streak', () => {
+  it('copies only kind/count, invalidates changed seats and preserves old views without recounting', () => {
+    const { room, clock } = makeRoom(new DamageResolver(() => 0));
+    room.start();
+    const base = room.state, original = JSON.stringify(base), seat = base.seats[1]!;
+    const history = [];
+    const uncommittedMatch = { ...seat.match, streak: { kind: 'loss' as const, count: 99 } };
+    // Committed ledgers may change streak without changing HP; the public cache follows the seat identity.
+    const sequence = [{ kind: null, count: 0 }, { kind: 'win', count: 1 }, { kind: 'win', count: 4 },
+      { kind: 'loss', count: 1 }, { kind: 'loss', count: 3 }, { kind: 'win', count: 1 }] as const;
+    for (const expected of sequence) {
+      const streak = { ...expected, gold: 999, rngState: 123, history: ['private'] };
+      // A different live Match streak must never bypass the committed ledger, even on a new SeatState/cache key.
+      const next = { ...seat, streak, match: uncommittedMatch };
+      const state = { ...base, seats: base.seats.map(entry => entry === seat ? next : entry) };
+      const publicSeat = toSeatPublic(next);
+      expect(publicSeat.streak).toEqual(expected); expect(publicSeat.streak).not.toBe(streak);
+      expect(toSeatPublic(next)).toBe(publicSeat);
+      for (const viewer of state.seats) {
+        const view = toPlayerView(state, viewer.seatId, clock.now());
+        expect(view.seats[1]).toBe(publicSeat);
+        expect(JSON.parse(JSON.stringify(view)).seats[1].streak).toEqual(expected);
+      }
+      history.push(publicSeat);
+    }
+    expect(history.map(entry => entry.streak)).toEqual(sequence);
+    expect(JSON.stringify(base)).toBe(original);
+    room.dispose();
+  });
+
+  it('keeps the last authoritative streak visible for an eliminated seat and an eliminated spectator', () => {
+    const { room, clock } = makeRoom(new DamageResolver(() => 0));
+    room.start();
+    const state = { ...room.state, seats: room.state.seats.map((seat, index) => ({ ...seat,
+      ...(index < 2 ? { hp: 0, alive: false, rank: 8 - index, eliminatedRound: room.state.round } : {}),
+      streak: { kind: 'loss' as const, count: index + 1 },
+      match: { ...seat.match, ...(index < 2 ? { playerHp: 0 } : {}), streak: { kind: 'loss' as const, count: index + 1 } },
+    })) };
+    const spectator = toPlayerView(state, 's0', clock.now()), player = toPlayerView(state, 's2', clock.now());
+    expect(spectator.seats).toEqual(player.seats);
+    expect(spectator.seats[1]).toMatchObject({ alive: false, hp: 0, streak: { kind: 'loss', count: 2 } });
+    expect(toPlayerView(state, 's0', clock.now() + 5).seats).toEqual(spectator.seats);
+    room.dispose();
   });
 });
 

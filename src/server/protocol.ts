@@ -50,6 +50,14 @@ export interface SeatPublic {
   /** The seat's little legend (cosmetic). Optional so older views and tests stay valid; absent means `default`. */
   readonly legend?: LittleLegendId;
   /**
+   * V26: this seat's authoritative win/loss streak, public to every player and spectator.
+   * Copied field by field from the room's committed SeatState.streak ledger, published with HP at settlement;
+   * acquiring Called Shot updates it immediately with the public augment.
+   * An empty streak is { kind: null, count: 0 }.
+   * Optional for older views; the room always fills it, including for eliminated seats.
+   */
+  readonly streak?: { readonly kind: 'win' | 'loss' | null; readonly count: number };
+  /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
    * Board and bench units with the items and anomaly they hold, unequipped items and owned augments (2026-10-20 scouting).
    * Never the shop, gold, XP, streak, pending choices or RNG. Optional so older views and tests stay valid; the room always fills it.

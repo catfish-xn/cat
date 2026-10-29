@@ -21,6 +21,7 @@ import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { needsOpponentHp } from '../../simulation/augment-settlement-gold';
 import { settlementLevelUpHealth } from '../../simulation/augment-xp';
 import { explainedHp, liveHpAfterSettlement } from '../../simulation/player-hp';
+import { batch5Streak } from '../../simulation/augment-pool-batch5-progress';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
@@ -421,7 +422,7 @@ export class Room {
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
       return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, legend: spec.legend ?? seatLegend(spec.kind, index), connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
-        alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
+        streak: { kind: match.streak.kind, count: match.streak.count }, alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
       deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, pairingHistory: {}, opponentCandidates: {}, carousel: null, carouselLedger: [], battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
@@ -810,7 +811,7 @@ export class Room {
       basis: { poolRevision: state.poolRevision, seatRevisions: Object.fromEntries(alive.map(seat => [seat.seatId, seat.seatRevision])) } } };
   }
 
-  /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
+  /** Publishes the staged round once: HP and streak from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
   commitSettlement(settlement: RoundSettlement): CommitResult {
     if (!this.publishingSettlement && this.deferDuringSettlement(() => { this.commitSettlement(settlement); })) return { ok: false, reason: 'settlement-pending', state: this.current };
     const state = this.current;
@@ -830,6 +831,7 @@ export class Room {
       const rank = ranks.get(seat.seatId) ?? null;
       const stillAlive = outcome.hpAfter > 0;
       return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1,
+        streak: { kind: outcome.match.streak.kind, count: outcome.match.streak.count },
         serverEvents: { seatRevision: seat.seatRevision + 1, events: outcome.events } };
     });
     this.replace({ ...state, seats: recordRoomSettlementTable(seats), pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
@@ -1868,8 +1870,9 @@ export class Room {
     let seats = advanced.map((seat): SeatState => {
       if (!before.has(seat.seatId)) return seat;
       const rank = eliminated.get(seat.seatId);
-      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
-      return { ...seat, hp: 0, alive: false, rank, eliminatedRound: seat.match.round };
+      const streak = { kind: seat.match.streak.kind, count: seat.match.streak.count };
+      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, streak, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
+      return { ...seat, hp: 0, streak, alive: false, rank, eliminatedRound: seat.match.round };
     });
     const unknown = [...eliminated.keys(), ...survivors.keys()].find(seatId => !before.has(seatId));
     // Cross-check against the rules' own seat states: a previously alive seat is out (HP gone or marked eliminated)
@@ -2012,7 +2015,9 @@ export class Room {
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
-    const synced = this.syncedSeatHp(next);
+    const hpSynced = this.syncedSeatHp(next);
+    if (typeof hpSynced === 'string') return this.fail({ kind: 'invalid-results', detail: hpSynced });
+    const synced = this.syncedSeatStreak(hpSynced);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
     let recorded: RoomState;
     try { recorded = recordRoomPublication(this.current, synced); }
@@ -2060,6 +2065,31 @@ export class Room {
       if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
       changed = true;
       return { ...seat, hp: after.playerHp };
+    });
+    const bad = seats.find(seat => typeof seat === 'string');
+    if (typeof bad === 'string') return bad;
+    return changed ? { ...next, seats: seats as SeatState[] } : next;
+  }
+
+  /** Publishes a non-settlement streak change only when a newly acquired Called Shot explains it. The rules own the
+   * value; an already owned augment cannot explain another rewrite. Live battle results wait for the room commit. */
+  private syncedSeatStreak(next: RoomState): RoomState | string {
+    if (next.seats === this.current.seats) return next;
+    let changed = false;
+    const seats = next.seats.map(seat => {
+      const prev = this.current.seats.find(candidate => candidate.seatId === seat.seatId);
+      if (!prev || seat.match === prev.match || seat.streak.kind !== prev.streak.kind || seat.streak.count !== prev.streak.count || !seat.alive) return seat;
+      const before = prev.match, after = seat.match;
+      if (after.streak.kind === before.streak.kind && after.streak.count === before.streak.count) return seat;
+      if (after.roundResults.length !== before.roundResults.length) return seat;
+      const acquired = after.augments.some(augment => augment.definitionId === 'called-shot' && augment.acquiredRound === after.round
+        && !before.augments.some(owned => owned.choiceId === augment.choiceId));
+      const explained = acquired ? batch5Streak(after, after.round, before.streak) : before.streak;
+      if (after.streak.kind !== explained.kind || after.streak.count !== explained.count) return `seat ${seat.seatId}: rules streak has no explained source`;
+      // As with HP, a seat already settled by the rules must not publish that battle result through a later command.
+      if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
+      changed = true;
+      return { ...seat, streak: { kind: after.streak.kind, count: after.streak.count } };
     });
     const bad = seats.find(seat => typeof seat === 'string');
     if (typeof bad === 'string') return bad;

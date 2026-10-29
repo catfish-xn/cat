@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
 import { ROOM_COMMAND_GATE } from '../../src/server/room/room';
-import { seatPushEvents } from '../../src/server/room/projection';
+import { seatPushEvents, toPlayerView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleInput, BattleResult, RoomPhase, RoomState, SeatState, SharedPoolState } from '../../src/server/room/types';
 import type { MatchState } from '../../src/simulation/match-types';
@@ -244,11 +244,18 @@ describe('T10 PvE seat the rules settle when its battle starts (empty board) —
     for (const unit of own(seat(room.state, 's0').match)) expect(room.handle('s0', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
     expect(own(seat(room.state, 's0').match)).toHaveLength(0);
     const hpBefore = seat(room.state, 's0').hp;
+    const publicBefore = toPlayerView(room.state, 's1', clock.now()).seats[0]!;
+    expect(publicBefore).toMatchObject({ seatId: 's0', hp: 100, streak: { kind: 'win', count: 1 } });
+    const publications: RoomState[] = [];
+    const unsubscribe = room.subscribe(state => publications.push(state));
     clock.runNext(); // deadline → battle
     expect(room.state.phase).toBe('battle');
     const live = seat(room.state, 's0').match;
     expect(live.phase).toBe('settlement');
     expect(live.roundResults.at(-1)?.round).toBe(2);
+    expect(live.streak).toEqual({ kind: 'loss', count: 1 });
+    expect(live.playerHp).toBe(97);
+    expect(toPlayerView(room.state, 's1', clock.now()).seats[0]).toMatchObject({ hp: publicBefore.hp, streak: publicBefore.streak });
     let bought: string | null = null;
     if (operate === 'shopLock') {
       expect(room.handle('s0', { type: 'shopLock', locked: true, generation: live.shop.generation })).toMatchObject({ ok: true });
@@ -261,6 +268,16 @@ describe('T10 PvE seat the rules settle when its battle starts (empty board) —
     const operated = seat(room.state, 's0').match;
     expect(operated === live).toBe(operate === 'none');
     runUntil(room, clock, state => state.round === 2 && state.phase !== 'battle');
+    unsubscribe();
+    expect(room.state.phase).toBe('settlement');
+    expect(toPlayerView(room.state, 's1', clock.now()).seats[0]).toMatchObject({ hp: 97, streak: { kind: 'loss', count: 1 } });
+    // Even the frozen/start and operation publications must keep the old public ledger until the room commits.
+    for (const state of publications) {
+      const committed = state.settlements.includes('test-room:round-2');
+      for (const viewer of ['s0', 's1']) expect(toPlayerView(state, viewer, clock.now()).seats[0]).toMatchObject(committed
+        ? { hp: 97, streak: live.streak } : { hp: publicBefore.hp, streak: publicBefore.streak });
+    }
+    expect(publicBefore).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
     return { room, clock, hpBefore, operated, bought, settled: seat(room.state, 's0') };
   }
 
