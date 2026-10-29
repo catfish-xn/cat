@@ -73,6 +73,54 @@ describe('equal-distance tie break', () => {
     expect(result.state.rngDraws).toBe(2);
     expect(step([...units].reverse(), 653637408).state.rngState).toBe(result.state.rngState);
   });
+
+  it('stops drawing for a tied unit after it dies during combat', () => {
+    let state = step([
+      actor('p', { hp: 1 }),
+      actor('survivor', { cell: { col: 6, row: 7 } }),
+      enemy('a', 3, 3, { attackDamage: 40, cooldownTicks: 2 }),
+      enemy('z', 2, 3),
+    ]).state;
+    expect(get(state).alive).toBe(true);
+    const killed = stepCombat(state);
+    state = killed.state;
+    expect(killed.events).toContainEqual({ type: 'death', tick: 2, unitId: 'p' });
+    expect(get(state)).toMatchObject({ alive: false, hp: 0, targetId: null });
+
+    // Only the corpse's cell changes: live target pools and occupancy stay identical.
+    const withoutTie = structuredClone(state);
+    get(withoutTie).cell = { col: 0, row: 7 };
+    let control = withoutTie;
+    const drawsAtDeath = state.rngDraws;
+    for (let tick = 3; tick <= 6; tick++) {
+      expect(ordinaryNearestTies(get(state) as S13Unit, state.units as S13Unit[], tick).map(u => u.id)).toEqual(['a', 'z']);
+      expect(ordinaryNearestTies(get(control) as S13Unit, control.units as S13Unit[], tick)).toHaveLength(1);
+      state = stepCombat(freeze(state)).state;
+      control = stepCombat(freeze(control)).state;
+      expect(state.status).toBe('running');
+      expect(state.tick).toBe(tick);
+      expect(state.rngDraws).toBe(drawsAtDeath);
+      expect(state.rngDraws).toBe(control.rngDraws);
+      expect(state.rngState).toBe(control.rngState);
+      expect(state.units.filter(u => u.alive)).toEqual(control.units.filter(u => u.alive));
+    }
+  });
+
+  it.each([{ alive: false, hp: 100 }, { alive: true, hp: 0 }])(
+    'does not draw in either decision phase for alive=$alive, hp=$hp', life => {
+      const p = actor('p', life);
+      const units = [p,
+        actor('survivor', { cell: { col: 3, row: 0 }, attackRange: 7, targetId: 'a' }),
+        enemy('a', 3, 3, { moveCooldownTicks: 0 }),
+        enemy('b', 2, 3), enemy('z', 4, 4)];
+      expect(ordinaryNearestTies(p, units, 1).map(u => u.id)).toEqual(['a', 'b', 'z']);
+      const result = step(units);
+      expect(result.events).toContainEqual({ type: 'movement', tick: 1, unitId: 'a', from: { col: 3, row: 3 }, to: { col: 3, row: 2 } });
+      // Moving 'a' removes the predecision winner, leaving a fresh action-phase tie.
+      expect(ordinaryNearestTies(p, result.state.units as S13Unit[], 1).map(u => u.id)).toEqual(['b', 'z']);
+      expect(result.state.rngDraws).toBe(0);
+      expect(result.state.rngState).toBe(0);
+    });
 });
 
 describe('hard-control target hold', () => {
