@@ -16,6 +16,8 @@ export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
   /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
   readonly effectiveStarLevel?: 4;
+  /** The combat snapshot's frozen form, independent of movement/tween coordinates. */
+  readonly form?: 'melee' | 'ranged';
   /** A PvE monster (hero-identity `neutral`, from the neutral catalog); the 3D layer gives it no star row. */
   readonly neutral?: true;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */

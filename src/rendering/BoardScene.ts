@@ -1512,6 +1512,7 @@ export class BoardScene extends Phaser.Scene {
   private boardFrame(): BoardFrame {
     const state = this.session.state, combat = this.session.combatView;
     const board = this.state.board, fallen = new Set(combat?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const forms = new Map(combat?.units.map(unit => [unit.id, unit.form]));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
     const result = state.roundResults?.at(-1);
     // A result freezes income before it is paid; entering a later round is the authoritative payment boundary.
@@ -1522,6 +1523,7 @@ export class BoardScene extends Phaser.Scene {
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), effectiveStarLevel: token.getData('effectiveStarLevel') === 4 ? 4 as const : undefined,
+        ...(forms.get(id) ? { form: forms.get(id) } : {}),
         neutral: token.getData('neutral') === true || undefined,
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,

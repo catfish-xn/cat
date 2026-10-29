@@ -22,7 +22,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   let callbacks: Map<number, FrameRequestCallback>, now: number, nextId: number;
   let loads: MockInstance<EffectLibrary['load']>, consumes: MockInstance<UnitActionState['consume']>;
   let textureDisposed: ReturnType<typeof vi.fn<() => void>>;
-  type DebugPiece = { root: import('three').Object3D; state: UnitActionState; mixer: UnitAnimationMixer; lease: ModelLease; disposed: boolean };
+  type DebugPiece = { root: import('three').Object3D; state: UnitActionState; mixer: UnitAnimationMixer; lease: ModelLease; disposed: boolean; form: 'front' | 'back' };
   const debug = () => (window as unknown as { __render3d: { pieces: Map<string, DebugPiece>; scene: import('three').Scene;
     ltk: ReturnType<typeof createLtkRuntime> } }).__render3d;
   const frame: BoardFrame = { rows: 4, columns: 4, hexRadius: 34, origin: { x: 50, y: 50 }, bench: [], dragging: null, fighting: true,
@@ -156,6 +156,15 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(debug().ltk.queued).toBe(self ? 1 : 2); await advance();
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual([self ? '44c9516a' : 'f2d605de']);
     expect(loads).not.toHaveBeenCalled();
+  });
+
+  it('keeps the authoritative form while movement crosses deployment rows', async () => {
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'melee', y: -1000 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('front');
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'melee', y: 2000 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('front');
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'ranged', y: 130 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('back');
   });
 
   it.each([

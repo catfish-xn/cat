@@ -1412,7 +1412,7 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | attack | attackerId, targetId；普攻动画 |
 | targetChanged | unitId, before, after；目标标记 |
 | death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
-| packetDamage | sourceId, targetId, damageType, sourceKind, definitionId, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字和特效归属，不执行规则 |
+| packetDamage | sourceId, targetId, damageType, sourceKind, definitionId, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字和特效归属。这三个来源字段只供表现区分技能和装备，不执行规则，不下发完整 Source。旧回放缺字段时不当作技能伤害 |
 | heal | targetId, actual, shares: {sourceId, actual}[]；实际治疗与施加者份额 |
 | manaChanged | targetId, before, after；表现事实 |
 | cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |

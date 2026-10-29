@@ -6,7 +6,7 @@ export interface TimelineCue {
   readonly action?: TimelineAction;
   /** Observed presentation form; untagged cues belong only to the default form. */
   readonly variant?: TimelineVariant;
-  readonly event: 'cast-start' | 'projectile' | 'hit';
+  readonly event: 'cast-start' | 'projectile' | 'hit' | 'link';
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
