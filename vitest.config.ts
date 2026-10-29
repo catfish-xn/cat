@@ -32,7 +32,7 @@ class RouteFirstSequencer extends BaseSequencer {
     };
     return sorted.sort((a, b) => weight(b) - weight(a));
   }
-  // CI runs the fast project as four `--shard` machines. Vitest's own shard cuts the
+  // CI runs the fast project as eight `--shard` machines. Vitest's own shard cuts the
   // hash-sorted file list into equal counts, which left one shard with over twice the
   // work of another. Assign files greedily by measured duration instead (longest first,
   // to the least-loaded shard), so every file still lands in exactly one shard.
@@ -51,14 +51,16 @@ class RouteFirstSequencer extends BaseSequencer {
     return mine;
   }
 }
-// Seconds per fast-project file from one full local run (8 workers); refresh with
-// `node scripts/update-shard-weights.cjs <vitest json report>`. Files not listed count as
+// Seconds per fast-project file (hooks included) from one full local run; refresh with
+// `node scripts/update-shard-weights.cjs` (see its header). Files not listed count as
 // UNKNOWN_WEIGHT, so a stale table only costs balance, never coverage.
 const SHARD_WEIGHTS: Record<string, number> = JSON.parse(readFileSync(new URL('./tests/fixtures/shard-weights.json', import.meta.url), 'utf8'));
 const UNKNOWN_WEIGHT = 2;
 const shardWeight = (path: string): number => SHARD_WEIGHTS[path] ?? UNKNOWN_WEIGHT;
 // Shard 1 also runs the timing project after its fast tests (ci.yml, full tier): 150-250 s
 // on CI, which is about 900 of these table seconds (CI shards finish ~4.8 table seconds per second).
+// With eight shards that exceeds a shard's share, so shard 1 gets no fast files (ci.yml passes
+// --passWithNoTests for it).
 const SHARD_ONE_HEADSTART = 900;
 export default defineConfig({
   test: {
