@@ -205,6 +205,7 @@ export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
   private readonly disposers: (() => void)[] = [];
+  private plannerButton?: HTMLButtonElement;
   /** G2: always-visible trait column above the panel (its own mount, so render() replacing the panel keeps it). */
   private readonly traitColumn: TraitColumn;
   /** TFT HUD: the owned augments as a row of icons over the trait column (hover for the text). */
@@ -430,7 +431,7 @@ export class StrategyPanel {
   }
   private dropDragGhost(): void { this.dragGhost?.remove(); this.dragGhost = null; }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; } this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
+  destroy(): void { this.cancel(); this.plannerButton?.remove(); if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; } this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void {
     if (this.statusText) this.statusText.textContent = message;
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
@@ -1413,6 +1414,7 @@ export class StrategyPanel {
     for (const text of this.eventTexts.slice().reverse()) this.eventList.append(element('p', text));
   }
   private renderShop(state: MatchState, ready: boolean): void {
+    this.plannerButton?.remove();
     if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; }
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
     this.shopDock?.toggleAttribute('data-anvil-choice', Boolean(choice && isAnvilArmory(choice)));
@@ -1452,6 +1454,12 @@ export class StrategyPanel {
     });
     // TFT's odds line: one cost-coloured figure per cost; the "Lv.N 概率" label and 费 names are for the 2D panel (3D hides them).
     const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
+    const planner = this.button('planner:open', '阵容规划', () => {
+      import('../presentation/team-planner/team-planner').then(module => {
+        try { module.openPlanner(this.shopDock ?? this.root, () => this.actions.state().preparation.units); }
+        catch { this.actions.status('阵容规划打开失败，请重试'); }
+      }, () => this.actions.status('阵容规划加载失败，请重试'));
+    }); planner.className = 'shop-planner-open';
     getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
       cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
     // v19: the six-cost chance per slot once the rules unlock it (the seat view's figure; nothing when the server sent none; not part of the 1–5 split).
@@ -1461,7 +1469,9 @@ export class StrategyPanel {
       const back = this.button('shop-choice-back', `返回${readChoiceExtras(choice!).title ?? '选择'}`, () => { this.shopChoiceAway = ''; this.render(); });
       back.className = 'shop-choice-toggle'; odds.append(back);
     }
+    this.plannerButton = planner;
     section.append(shop, odds); (this.shopDock ?? this.root).append(section);
+    if (this.shopDock) this.shopDock.after(planner); else section.append(planner);
   }
   /**
    * TFT's black market and Junker King upgrades replace the shop cards; 保留 (keep the 微光) is its own card (the rules' skip option), and

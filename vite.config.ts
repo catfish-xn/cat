@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
   build: { rollupOptions: { output: {
     // One build key: a second one silently replaced this whole block and dropped the Phaser chunk (v16 trim).
     manualChunks: id => (AUGMENT_UI_DATA.test(id) ? 'augment-text' : TOOLTIP_UI_DATA.test(id) ? 'tooltip-text' : THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
-    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel', 'team-planner'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
     // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
     assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },
