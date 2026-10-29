@@ -1232,6 +1232,15 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 请求：规则层基于锁定的 14.24b 数值确定冲刺落格/占格冲突/撤离距离与时序，沿用公开 `movement {unitId,from,to,tick,eventSeq}`；若施法与普通走路必须区分，增加公开展示字段（如 movement 的 cause / actionSeq），并同步 combat replay 白名单。客户端不挑落格、不决定命中对象。
 - 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
 - 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
+
+## SR-V26-SIDEBAR 右侧玩家栏公开连胜（2026-10-29，待后端）
+
+- 现状：`src/server/protocol.ts` 的 `SeatPublic` 没有 streak，`src/server/room/projection.ts::toSeatPublic` 也没有投影；`publicBoard` 明确不含连胜/连败。不能根据掉血、胜负回放或其他玩家私有状态补算。
+- 请求字段：`PlayerView.seats[].streak?: { readonly kind: 'win' | 'loss' | null; readonly count: number }`，位置在 **SeatPublic 顶层**，直接逐字段复制本席权威 `match.streak`。count 是非负整数；无连胜/连败时 `{kind:null,count:0}`；不含金币、收入、历史记录或随机流。现有 `publicBoard` 白名单与禁止泄漏断言保持不变。
+- 推送：权威连胜/连败改变时与该席 HP 同一份视图发布；首帧、重连快照及观战视图均包含同样的公开结果，不因本地玩家身份改变。PvE/选秀/重复推送沿用后端权威值，前端不增加计数。
+- 已接入的前端：`PlayersSidebar` 接受这个可选字段；缺字段即不显示，存活且 `kind:'win',count>=4` 时显示头像火焰和连胜提示，连败不显示头像特效，淘汰立即清除。`tests/presentation/sidebar.test.ts` 用其他席位的字段注入验证；本任务未修改 server/simulation。
+- 后端验收：其他玩家的公开 streak 与该席权威状态一致；连续胜负及打断、淘汰、重连均不滞后或重计；允许新增 SeatPublic 顶层字段，但不删除/弱化原有私有数据隔离断言。
+- 排序、素材和版本证据限制见 [V26_SIDEBAR.md](V26_SIDEBAR.md)。火焰的 4 连胜门槛目前是历史实机观察值，未得到 14.24 一手数值确认；不得把它误写成已确认的原版规则。
 - 本轮仅修改表现；未修改 simulation、server。
 
 ### Codex 核查结果（2026-10-23，缺证暂停）
