@@ -1,4 +1,5 @@
 import { BATCH3_SUMMON_ABILITIES } from './content/batch3-summons';
+import { B5_G4_SUMMON_ABILITIES } from './content/augment-pool-batch5-g4';
 import { SIX_COST_ABILITIES } from './content/v19-six-cost';
 import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
@@ -11,12 +12,14 @@ import { ABILITY_DISPLAY_SOURCE } from './ability-display-source';
 import { getUnitStats } from './unit-stats';
 import type { StarLevel } from './unit-types';
 import { d14UnitBase } from './d14-anomalies/projection';
+import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
 
 export interface AbilityDisplayStats {
   readonly abilityPower?: number;
   readonly attackDamage?: number;
 }
 function sourceFor(id: string): {readonly name:string;readonly variables:Readonly<Record<string,readonly number[]>>} {
+  if(Object.hasOwn(B5_G4_SUMMON_ABILITIES,id+'-ability'))return B5_G4_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(SIX_COST_ABILITIES,id+'-ability'))return SIX_COST_ABILITIES[id+'-ability'];
   if(Object.hasOwn(S13_ANOMALY_SUMMON_ABILITIES,id+'-ability'))return S13_ANOMALY_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
@@ -52,9 +55,12 @@ function displayValues(definitionId: string, starLevel: StarLevel,
   const ad = stats.attackDamage ?? base.attack, ap = stats.abilityPower ?? 100;
   if (![ad, ap].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 1_000_000))
     throw new RangeError('Display AD/AP must be integers in [0, 1000000]');
-  const values: Record<string, number> = projection?.ability.kind === 's13'
-    ? Object.fromEntries(Object.entries(projection.ability.variables).map(([key, value]) => [key, value / 10000]))
+  // Certified rank-4 metadata includes tooltip-only fields absent from combat
+  // (e.g. Zyra's Experiment branch). Never fall back to rank-3 coefficients.
+  const values: Record<string, number> = promoted ? { ...D14_FOURTH_ABILITY[definitionId] }
     : Object.fromEntries(Object.entries(source.variables).map(([k, v]) => [k, v[starLevel - 1]]));
+  if (projection?.ability.kind === 's13') Object.assign(values,
+    Object.fromEntries(Object.entries(projection.ability.variables).map(([key, value]) => [key, value / 10000])));
   const v = (key: string): number => {
     if (!Object.hasOwn(values, key)) throw new RangeError(`Missing display source variable: ${definitionId}/${key}`);
     return values[key];

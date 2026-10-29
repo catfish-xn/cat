@@ -8,7 +8,7 @@ import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
-  previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
+  freeRerollsAvailable, previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
 import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
@@ -173,12 +173,14 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
  * `toPrivateSeatView` plus `economyPreview` (SR-G5-02, contract §14.4), the rules' `previewRoundEconomy` of the same state
  * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
  * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
+ * `freeRerollsAvailable` is the rules' remaining shop reroll count; its supporting history never leaves the room.
  */
 const privateSeats = new WeakMap<MatchState, SeatStateView>();
 export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoiceDeadline): SeatStateView {
   let view = privateSeats.get(match);
   if (!view) {
-    view = { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+    view = { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match),
+      freeRerollsAvailable: freeRerollsAvailable(match) };
     privateSeats.set(match, view);
   }
   // v22 anvil units: the seat's own anvil deadline, only while it still names the open choice.

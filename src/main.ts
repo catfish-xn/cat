@@ -21,7 +21,7 @@ const threeMode = mountThreeMode(board);
 async function startGame(): Promise<void> {
   if (!isOnlineMode()) await loadSoloApplication();
   new Phaser.Game({
-  type: Phaser.AUTO, parent: 'board-root', width: BOARD_LAYOUT.width, height: BOARD_LAYOUT.height, backgroundColor: '#101923',
+  type: Phaser.CANVAS, parent: 'board-root', width: BOARD_LAYOUT.width, height: BOARD_LAYOUT.height, backgroundColor: '#101923',
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   // CSS touch-action:none controls canvas gestures. Phaser must still track
   // cancellation without preventDefault on a noncancelable touchcancel event.

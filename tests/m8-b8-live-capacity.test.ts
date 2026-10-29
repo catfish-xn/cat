@@ -5,14 +5,30 @@ import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
+import {installB1Offers} from './fixtures/b1-scripted-offers';
+import {reachRound} from './match-helpers';
 import {accepted,advanceTerminalRoute,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// Seed3155 has no opening encounter, a lone Akali reward sharing an orb, four components and a full bench.
-// The v24 pool selects All For One II + Lineup. The independent driver ledger checks each paid command:
-// the actual reserve banks12G; first reveal/final ticks61/86 are recorded public-combat checkpoints, not rule constants.
-const prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
+// v25 batch-5 expands the 2-1 gold pool from 80 (100589ca) to 98 candidates while
+// generateChoices still consumes three RNG words. Seed3155 now naturally selects
+// Pandora's Items II + Blistering Strikes instead of All For One II + Lineup.
+// Capacity rejection uses only the non-merging acquisition and full bench, not either augment;
+// their acquisition is checked separately below, with no scripted offers in this B8 witness.
+// Keep the already checked-in seed3155: an independent oracle scan of 0..100 finds no
+// no-encounter seed with four item drops and exactly one hero. No new seed outside 0..100 is selected.
+// Its public route still earns a lone Akali sharing an orb and four components. A real
+// 1G Irelia sale, 2G refresh and 2G Vander purchase preserve nine reserves and the original 12G premise.
+// Reveal/final ticks61/122 are exact checkpoints of this natural combat (v24's final tick was86).
+let prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
+const reserve=bench(prepared).find(u=>u.definitionId==='irelia'&&u.starLevel===1)!;
+expect(getUnitSellPrice(reserve)).toBe(1);
+prepared=accepted(api.sellUnit(prepared,reserve.id));
+prepared=accepted(api.rerollShop(prepared));
+const replacement=prepared.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='vander');
+expect(replacement).toBeGreaterThanOrEqual(0);
+prepared=accepted(api.buyUnit(prepared,replacement,prepared.shop.generation));
 const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 const soldUnit=bench(waiting).find(u=>!waiting.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
@@ -21,9 +37,24 @@ function command(s:MatchState,f:(s:MatchState)=>api.MatchCommandResult){const sa
 function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
+ it('acquires All For One II and Lineup through scripted offers (fixture self-check)',()=>{
+  const priorities=['all-for-one-ii','lineup'],restoreOffers=installB1Offers(priorities);
+  try {
+   const before=reachRound('3-2',false,3155,priorities),choice=before.pendingChoice!;
+   expect(before.augments.map(a=>a.definitionId)).toEqual(['all-for-one-ii']);
+   expect(before.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2')).toHaveLength(3);
+   expect(choice.kind).toBe('augment');
+   // Fixture self-check only: installB1Offers supplies Lineup; this is not a natural-RNG witness.
+   expect(choice.offers).toContain('lineup');
+   const acquired=accepted(api.selectChoice(before,choice.choiceId,choice.generation,'lineup'));
+   expect(acquired.augments.map(a=>a.definitionId)).toEqual(['all-for-one-ii','lineup']);
+   // Scripted offer history must restore while the generator wrapper is still installed.
+   roundTrip(acquired);
+  } finally {restoreOffers();}
+ });
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
   expect(openingEncounter(prepared.seed)).toBe('none');
-  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['all-for-one-ii','lineup']);
+  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['pandoras-items-ii','blistering-strikes']);
   expect(prepared.gold).toBe(12);expect(bench(prepared)).toHaveLength(9);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(prepared.seed,17).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
   expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='item')).toHaveLength(4);
@@ -31,7 +62,7 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   expect(prepared.preparation.units.some(u=>u.team==='player'&&u.definitionId==='akali')).toBe(false);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(86);
+  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(122);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);

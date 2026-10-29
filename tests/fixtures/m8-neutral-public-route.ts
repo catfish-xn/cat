@@ -1,17 +1,16 @@
-import ionicRaw from './v24-online-rules-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './v24-online-rules-herald-raw/evenshroud.json?raw';
-import dualRaw from './v24-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './v24-online-rules-herald-raw/quicksilver.json?raw';
-import edgeRaw from './v24-online-rules-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './v25-online-rules-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './v25-online-rules-herald-raw/evenshroud.json?raw';
+import dualRaw from './v25-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './v25-online-rules-herald-raw/quicksilver.json?raw';
+import edgeRaw from './v25-online-rules-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v24-online-rules-herald-support/generate';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v25-online-rules-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
-// v23: seed 42 draws the Golden Gala opening under the fmix32 selection, and v22's seed 2192 now draws Loot
-// Subscription. Seed 2423 is the first seed from 2190 with no opening encounter whose 6-7 is the authored
-// rift-herald-v1, whose sniper route wins all 33 battles, and whose five raw Herald cases all build.
-const HERALD_ROUTE_SEED = 2423;
+// v25: seed 65 has no opening encounter; its sniper route wins all 33 battles,
+// reaches the authored Rift Herald, and supports all five raw equipment cases.
+const HERALD_ROUTE_SEED = 65;
 const preparations = new Map<string, api.MatchState>();
 let equipmentFork: api.MatchState | undefined;
 // Execute the command-only driver once, retaining only the actual preparation
@@ -26,10 +25,9 @@ const route = await run(api, { build: 'sniper', seed: HERALD_ROUTE_SEED, onStep(
 if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
 
-// Consumers that exercise the authored minion/monster encounters take prefixes from this second
-// command-only route; v24 seed 7301 is the first from 7296 with no opening
-// encounter whose sniper route still completes 6-7 (1-2 is Irelia against minions-a-v1).
-const AUTHORED_ENCOUNTER_SEED = 7301;
+// Seed 78 has no opening encounter, starts 1-2 with Irelia, and wins the
+// complete route without history-dependent or combat-copy augments.
+const AUTHORED_ENCOUNTER_SEED = 78;
 const authoredPreparations = new Map<string, api.MatchState>();
 const authoredRoute = await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')

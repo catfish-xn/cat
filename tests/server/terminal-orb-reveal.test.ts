@@ -106,7 +106,7 @@ describe('terminal orb server integration', () => {
       expect(queued.m8.loot.receipts).toEqual(before.m8.loot.receipts);
       expect(() => validateMultiplayerOrbLedger(queued)).not.toThrow();
       expect(() => validateB8Loot(queued)).not.toThrow();
-      const restored = restoreSharedOrbSnapshot(room.state.pool, json(queued));
+      const restored = restoreSharedOrbSnapshot(room.state.pool, json(queued), room.augmentHistoryAuthority('s0'));
       expect(toSeatPrivateView(restored)).toEqual(toSeatPrivateView(queued));
       room.setConnected('s0', false); room.setConnected('s0', true);
       expect(toSeatPrivateView(room.state.seats[0].match).unclaimedOrbs!.find(o => o.orbId === orb.orbId)?.queued).toBe(true);

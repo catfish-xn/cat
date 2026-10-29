@@ -1,3 +1,4 @@
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 import { expect, it } from 'vitest';
 import { createMatch, deployMatchUnit, startMatchCombat, stepMatch, equipItem } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -108,7 +109,8 @@ it('P-EX3: same-tick triggers resolve in numeric unit id order (unit-9 before un
 });
 
 function matchArmy():MatchState{
- let s=emptyBoard(reachRound('2-1'));
+ // This fixture injects test resources after acquisition, so select a history-independent offer.
+ let s=emptyBoard(reachRound('2-1',true,42,[],Object.keys(AUGMENT_HISTORY_OWNERS)));
  const grant=(r:ReturnType<typeof grantMechanicUnit>)=>{expect(r.ok).toBe(true);return r.state;};
  for(const [i,id] of [outsider,natives[0],natives[1]].entries())s=grant(grantMechanicUnit(s,{receiptId:'ex-unit-'+i,source:'test',definitionId:id}));
  s=grant(grantMechanicItem(s,{receiptId:'ex-emblem',source:'test',definitionId:EMBLEM.id}));

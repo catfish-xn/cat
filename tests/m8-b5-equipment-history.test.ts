@@ -1,7 +1,7 @@
 import { M8_VERSION } from '../src/simulation/m8/version';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
@@ -9,8 +9,10 @@ import { initializeStreams, validateEquipmentState } from '../src/simulation/m8/
 import { TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { BattleHistory, validateBattleCollection } from '../src/replay';
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
+import { installAugmentReplayCommandCache } from './fixtures/augment-replay-command-cache';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { accepted, emptyBoard } from './match-helpers';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices as choices } from './fixtures/b8-public-equipment';
 import { vi } from 'vitest';
@@ -19,14 +21,16 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const AUGMENTS=['fractured-crystals'];
 function start(equipped = true, history?: BattleHistory): MatchState {
-  // xp/batch-3 merge: seed 42's 2-1 offer is now crimson-pact, crownguard-spirit, fractured-crystals and the default
-  // first pick (crimson-pact) leaves this army dead at 4-3. Prefer fractured-crystals (then the route's own 3-2/4-2
-  // picks): it reaches 4-5 at 14 HP (6 unequipped) with the unchanged level history and seed-42 equipment rolls.
+  // v25 no longer naturally offers this card on seed 42. The suite scripts the
+  // 2-1 draw only: once acquired, eligibility excludes it from all later draws.
   let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15, augmentPriorities:AUGMENTS });
   if(history){
     const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15,augmentPriorities:AUGMENTS});
     expect(shared).toEqual(state); expect(shared).not.toBe(state);
   }
+  // Fixture self-check under installB1Offers, not a natural-RNG assertion.
+  expect(state.augments.filter(a=>a.definitionId==='fractured-crystals'))
+    .toEqual([{definitionId:'fractured-crystals',choiceId:'round:2-1:augment',acquiredRound:4}]);
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
   const parent = `item-${state.nextItemSerial}`;
   state = accepted(combineItems(state, gloves[0].id, gloves[1].id));
@@ -38,6 +42,18 @@ function settle(state: MatchState, history?: BattleHistory): MatchState {
   // Retain the original holder and its independent seed-42 equipment stream.
   const protectedDefinition=state.preparation.units.find(u=>u.id==='unit-1')!.definitionId;
   const targets=['darius','vander','maddie','zyra','rell'].filter(id=>id!==protectedDefinition);
+  const roster=state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>
+    (b.starLevel-a.starLevel)||Number(b.id==='unit-1')-Number(a.id==='unit-1'));
+  for(const unit of roster){
+    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
+    if(unit.location.kind!=='bench')continue;
+    const ranged=['maddie','zyra','lux','powder'].includes(unit.definitionId);
+    const cells=Array.from({length:28},(_,i)=>({col:[3,2,4,1,5,0,6][i%7],row:ranged?7-Math.floor(i/7):4+Math.floor(i/7)}));
+    const cell=cells.find(c=>!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===c.col&&u.location.cell.row===c.row))!;
+    state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell}));
+  }
+  // Deploy before buying: emptyBoard can fill all nine bench slots. Buying
+  // first then aborts on bench-full and leaves the survival army at one star.
   if(state.roundDefinitionId >= '2-5'){
     const budget=state.gold-20;
     let spent=0;
@@ -48,16 +64,6 @@ function settle(state: MatchState, history?: BattleHistory): MatchState {
       const result=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);
       if(!result.ok)break;state=result.state;spent+=before-state.gold;
     }
-  }
-  const roster=state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>
-    (b.starLevel-a.starLevel)||Number(b.id==='unit-1')-Number(a.id==='unit-1'));
-  for(const unit of roster){
-    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
-    if(unit.location.kind!=='bench')continue;
-    const ranged=['maddie','zyra','lux','powder'].includes(unit.definitionId);
-    const cells=Array.from({length:28},(_,i)=>({col:[3,2,4,1,5,0,6][i%7],row:ranged?7-Math.floor(i/7):4+Math.floor(i/7)}));
-    const cell=cells.find(c=>!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===c.col&&u.location.cell.row===c.row))!;
-    state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell}));
   }
   // New v17 drops are real surplus components. Spend them on the paid army,
   // retaining the original TG parent and every natural XP/roll boundary.
@@ -110,14 +116,43 @@ function rejectWithoutRepair(raw: MatchState): void {
   expect(() => serializeMatch(raw)).toThrow(/equipment.*level/);
   expect(JSON.stringify(raw)).toBe(before);
 }
+function mutableObjects(root: unknown): object[] {
+  const seen = new Set<object>(), pending = [root], mutable: object[] = [];
+  while (pending.length) {
+    const value = pending.pop();
+    if (!value || typeof value !== 'object' || seen.has(value)) continue;
+    seen.add(value);
+    if (!Object.isFrozen(value)) mutable.push(value);
+    pending.push(...Object.values(value));
+  }
+  return mutable;
+}
 
 describe('B5 audit R1: equipment roll level belongs to its round history', () => {
+  let restoreOffers = () => {};
+  let replayCache: ReturnType<typeof installAugmentReplayCommandCache>;
+  // Keep the same pure draw policy for construction and every history replay.
+  beforeAll(() => { restoreOffers = installB1Offers(AUGMENTS); replayCache = installAugmentReplayCommandCache(); });
+  afterAll(() => { replayCache?.restore(); restoreOffers(); });
   const archiveHistory = new CompletedBattleHistory('b5-r1');
   let archivedState: MatchState;
+  let independentlyReplayedState: MatchState;
   // Generate the public command/history fixture separately from its save assertions.
   // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。钩子 10 秒 → 20 秒（CI 上钩子超时 3 次）。
   beforeAll(() => { archivedState = historicalProgression(true, archiveHistory); }, 20_000);
   beforeAll(() => { historicalProgression(false); }, 20_000);
+  beforeAll(() => {
+    // Only independent restore replay may populate the cache. Equal serialized
+    // live states can have different trace/preparation/acquisition side data.
+    expect(replayCache.counts.recorded).toBe(0);
+    const mutable = mutableObjects(archivedState);
+    expect(restoreMatch(archivedState)).toEqual(archivedState);
+    expect(replayCache.counts.hits).toBe(0);
+    expect(replayCache.counts.recorded).toBeGreaterThan(0);
+    expect(mutable.filter(Object.isFrozen)).toEqual([]);
+    independentlyReplayedState = replayCache.lastReplayState!;
+    replayCache.seal();
+  }, 20_000);
   it('rejects a historical level5 roll forged as level7 with RNG-consistent two completed items', () => {
     const state = historicalProgression();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -185,10 +220,19 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     let envelope: SaveEnvelope;
     beforeAll(async () => {
       envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
-        runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: archivedState,
+        runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: structuredClone(archivedState),
         battles: archiveHistory.completedRecords, currentBattle: null };
       // Fully validate the shared control before exercising the forged copy.
+      replayCache.resetBattleCounts();
+      const priorHits = replayCache.counts.hits;
+      const mutable = mutableObjects(envelope.match);
       await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
+      expect(mutable.filter(Object.isFrozen)).toEqual([]);
+      // Memoization is confined to augment proof reconstruction. Every archived
+      // battle still starts and executes every original replay tick here.
+      expect(replayCache.counts.battleStarts).toBe(envelope.battles.length);
+      expect(replayCache.counts.battleTicks).toBe(envelope.battles.reduce((ticks, battle) => ticks + battle.endTick, 0));
+      expect(replayCache.counts.hits).toBeGreaterThan(priorHits);
     }, 20_000);
     it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
       expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
@@ -201,6 +245,50 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
       await expect(validateEnvelope(raw, validateBattleCollection)).rejects.toThrow(/equipment.*level/);
       expect(JSON.stringify(raw)).toBe(before);
     });
+  });
+  it.each(['origin', 'command', 'facts'] as const)('rejects a forged augment proof %s after warming shared replay prefixes', field => {
+    const raw = structuredClone(archivedState), history = raw.augmentHistory!;
+    if (history.proof.kind !== 'solo') throw new Error('Expected a solo fixture proof');
+    if (field === 'origin') Object.assign(history.proof.origin, { gold: history.proof.origin.gold + 1 });
+    else if (field === 'command') {
+      // A suffix command must select another branch, even after the authentic
+      // origin and every earlier command have been replayed and cached.
+      const command = [...history.proof.commands].reverse().find(command => command.name === 'buyXp')!;
+      Object.assign(command, { name: 'rerollShop' });
+    } else Object.assign(history, { facts: history.facts.slice(0, -1) });
+    const before = JSON.stringify(raw);
+    const failure = () => {
+      try { restoreMatch(raw); return null; }
+      catch (error) { if (!(error instanceof Error)) throw error; return error.message; }
+    };
+    const priorHits = replayCache.counts.hits;
+    const priorMisses = replayCache.counts.misses;
+    const priorExecutions = replayCache.counts.executions;
+    const cachedFailure = failure();
+    expect(cachedFailure).not.toBeNull();
+    expect(cachedFailure).toBe('Invalid augment history: replayed facts/state mismatch');
+    if (field !== 'origin') expect(replayCache.counts.hits).toBeGreaterThan(priorHits);
+    const replayed = replayCache.lastReplayState!;
+    if (field === 'origin') {
+      expect(replayCache.counts.hits).toBe(priorHits);
+      expect(replayCache.counts.misses).toBeGreaterThan(priorMisses);
+      expect(replayCache.counts.executions - priorExecutions).toBe(history.proof.commands.reduce((n, c) => n + c.count, 0));
+      expect(replayed.augmentHistory!.proof).toEqual(history.proof);
+      expect(replayed.gold).toBeGreaterThan(archivedState.gold);
+    } else if (field === 'command') {
+      expect(replayCache.counts.misses - priorMisses).toBe(1);
+      expect(replayCache.counts.executions - priorExecutions).toBe(1);
+      expect(replayed.augmentHistory!.proof).toEqual(history.proof);
+      expect(replayed.gold).toBe(archivedState.gold + 2); // Reroll costs 2; the replaced XP purchase costs 4.
+      expect(replayed.shop.generation).toBe(archivedState.shop.generation + 1);
+    } else {
+      expect(replayCache.counts.misses).toBe(priorMisses);
+      expect(replayCache.counts.executions).toBe(priorExecutions);
+      expect(replayed).toEqual(archivedState);
+      expect(replayed).toBe(independentlyReplayedState); // Preserve every WeakMap association on recall.
+      expect(replayed.augmentHistory!.facts).toHaveLength(history.facts.length + 1);
+    }
+    expect(JSON.stringify(raw)).toBe(before);
   });
 });
 

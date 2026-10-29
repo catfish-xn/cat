@@ -1,5 +1,7 @@
 # 10-22 第二轮试玩规则核对
 
+> 2026-10-28 更新：本文为历史记录；卓尔不群现按14.24精确阶段表240/330/420/530生命、45/50/55/60%攻速，安慰剂+各阶段固定15金币、1%攻速。覆盖本文相应旧值；普通安慰剂不变。详见 [数值对齐报告](AUGMENT_14_24_ALIGNMENT.md)。
+
 【完成】
 
 基线：`codex/rules-playtest-1022b@7937f241`，开工工作区干净；角色 Codex。仅修改 simulation/tests/docs；不联网、不改服务器/界面/CI、不提交、不录 epoch。候选外层身份仍为 `s13-g2-3-v21-opening-encounters-battle-equipment`，新增收入细分政策进入共同 manifest，运行时 digest 自动更新，PR9 统一录制。

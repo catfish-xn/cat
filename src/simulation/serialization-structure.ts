@@ -1,4 +1,10 @@
-import { validateShopHistory } from './shop-history';
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
+import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
+import { validateCarryGolem } from './restore-checks/carry-golem-check';
+import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
+import { carryRestoredAugmentTrace } from './augment-history';
+import { atWhatCostHistoricalXp, skipsFutureAugment } from './augment-pool-batch5-s1b';
+import { validateShopHistory } from './restore-checks/shop-history-check';
 import { batch5Streak } from './augment-pool-batch5-progress';
 import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
 import { batch4B4xpRecordedExtra, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -10,13 +16,14 @@ import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome } from './deferred-income';
 import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
-import { validateAugmentOfferHistory } from './augment-offers';
+import { validateAugmentOfferHistory } from './restore-checks/augment-offer-history-check';
 import { withResourceReceiptReuse } from './resource-provenance';
 import { augmentAcquisitionXpAtRound } from './choice-acquisition';
 import { batch3EntryXp, xpPurchaseAmount, acquisitionLevels, levelAtExperience } from './augment-xp';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
-import {readG23Progress,validateG23RewardSources} from './g2-3-state';
+import { readG23Progress } from './g2-3-state';
+import { validateG23RewardSources } from './restore-checks/g23-state-check';
 import { crownTeamSizeBonus } from './deployment-cap';
 import { validateResistsShields } from './m8/resists-shield-restore';
 import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
@@ -43,7 +50,7 @@ import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
 import { validateAbilityStatusFacts, validateTaskAndSummonFacts } from './combat-runtime-facts';
 import { createRestoreCombatReplay } from './restore-combat-replay';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
-import { validateMatchEquipment } from './temporary-equipment';
+import { validateMatchEquipment } from './restore-checks/match-equipment-check';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
@@ -69,7 +76,7 @@ import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
-import { validateCombatItemGrants } from './m8/combat-item-grants';
+import { validateCombatItemGrants } from './restore-checks/combat-item-grants-check';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 import { validateSeatMechanicsState } from './seat-mechanics/state';
@@ -121,15 +128,15 @@ function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
   return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
 }
-function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount):boolean {
-  const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
+function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount,maxLevel:number=MATCH_RULES.maxLevel):boolean {
+  const after=totalExperience(level,xp),cap=totalExperience(maxLevel,0);
   return after>=before && (after===cap || (after-before)%purchase===0);
 }
 /** Experience on entering `round` and taking its augment, before any purchase; also fixes recorded acquisition levels
  * (offline purchases wait for the round's augment choice). */
 function preparationExperience(state:MatchState,after:number,round:number):number {
-  const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
-    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)
+  const before=Math.min(totalExperience(augmentLevelCap(state.augments,round),0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
+    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)+atWhatCostHistoricalXp(state,round)
     +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0));
   const levels=acquisitionLevels(state);
   for(const a of state.augments)if(a.acquiredRound===round&&Object.hasOwn(levels,a.choiceId))requireValue(levels[a.choiceId]===levelAtExperience(before),'augment acquisition level');
@@ -148,19 +155,22 @@ export function validateMatchStructure(input: unknown): MatchState {
 function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
   const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
   const raw: unknown = decoded.value;
+  // Online snapshots are outside this format even when their seat-bound history is invalid.
+  if (raw && typeof raw === 'object')
+    requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
+  if (raw && typeof raw === 'object' && 'augmentHistory' in raw) preflightAugmentHistory(raw as MatchState);
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
   const same = typeof input === 'string' ? equalValidatedContent
     : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
-  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
   integer(raw.round, 1);
-  requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
+  requireValue((raw.playerHp as number) <= maximumPlayerHp(Array.isArray(raw.augments) ? raw.augments as MatchState['augments'] : []), 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
   if(parsedImmutable)registerG23RestoreOwner(state);
@@ -174,6 +184,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+  // Validate asset containers before mechanic validators traverse their unit arrays.
+  mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
@@ -181,7 +193,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
-  requireValue(state.level === MATCH_RULES.maxLevel ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(state.level<=augmentLevelCap(state.augments) && (state.level === augmentLevelCap(state.augments) ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level]), 'current XP');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -261,6 +273,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   requireValue(same(receiptOrder, expectedReceiptOrder), 'receipt order');
   let stopped = false;
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
+    if (event.kind === 'augment' && skipsFutureAugment(state, round)) { requireValue(!receipts.has(event.id) && state.pendingChoice?.eventId !== event.id, 'skipped augment'); continue; }
     if (state.pendingChoice?.eventId === event.id) stopped = true;
     if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
       requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost * (slot.starLevel === 2 ? 3 : 1) <= state.gold), 'anomaly recruitment affordability');
@@ -281,11 +294,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     streak=batch5Streak(state,result.round,streak);
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
+    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round),augmentLevelCap(state.augments,result.round)), 'history XP preparation chain');
     let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
-    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
+    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore,augments:state.augments.filter(a=>a.acquiredRound<=result.round)},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     const progress=readG23Progress(state),save=progress?.economyReceipts.find(r=>r.kind==='mel-save'&&r.round===result.round);
     const rescued=!!save&&expected.hpAfter===0&&result.roundKind==='pvp';
@@ -309,11 +322,12 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round)), 'current XP preparation chain');
+  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round),augmentLevelCap(state.augments)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
   validateShopHistory(state);
+  validateAugmentHistory(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
@@ -453,7 +467,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);
-  return restored;
+  return carryRestoredAugmentTrace(state,restored);
 }
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */

@@ -57,10 +57,10 @@ class Route {
  * v23 batch 3: a seat picks Golemify online (a 3-2 card by its 14.24 stage tags) with pool conservation asserted on every
  * commit. The search plays a room per seed to 3-2 (~10 s for one seed) and the found room then plays on to 4-1 (~3 s), so
  * both routes run a few battle slices per case over one cached search; a filtered case plays the earlier slices first.
- * Seed 3 is the first seed (of 1-199) whose 3-2 offers Golemify (2026-10-25), so it is tried first; the other seeds stay
+ * Public seed 4 / s4 offers Golemify directly in v25, so it is tried first; the other seeds stay
  * the fallback search in their order.
  */
-const SEEDS = [3, ...Array.from({ length: 198 }, (_, index) => index + 1).filter(seed => seed !== 3)];
+const SEEDS = [4, ...Array.from({ length: 198 }, (_, index) => index + 1).filter(seed => seed !== 4)];
 const SLICES_PER_CASE = 2, SEARCH_CASES = 32, PLAY_ON_CASES = 16;
 type Search = { seedIndex: number; room: Room; route: Route; picker?: string; playOn?: Route };
 let search: Search | undefined;

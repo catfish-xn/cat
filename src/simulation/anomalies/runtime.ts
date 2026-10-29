@@ -18,7 +18,10 @@ function each(unit: S13Unit, apply: (module: AnomalyModule, source: CombatOrigin
 }
 export function startAnomalies(ctx: AbilityContext): void {
   ctx.anomalyOpening = ctx.units.map(u => ({ id: u.id, health: u.maxHp, attackDamage: ad(u) }));
-  for (const unit of [...ctx.units]) each(unit, (m, source) => m.start?.(ctx, unit, source));
+  for (const unit of [...ctx.units]) each(unit, (m, source) => {
+    // An earlier holder can sacrifice this one during the same opening batch.
+    if (unit.alive && unit.hp > 0) m.start?.(ctx, unit, source);
+  });
   for (const unit of ctx.units) if (unit.anomalySummon && unit.anomalySummon.kind !== 'crab')
     (unit.anomalyState ??= {}).attackStream = seedAnomalyStream(ctx.anomalySeed ?? 0, unit.id);
 }

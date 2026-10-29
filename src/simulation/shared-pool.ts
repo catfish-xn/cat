@@ -1,17 +1,55 @@
-import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
+import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
+import { validateTombRaider } from './restore-checks/tomb-raider-check';
+import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
+import { AUGMENT_BATCH5_R6 } from './content/augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1 } from './content/augment-pool-batch5-g1';
+import { validateMatchEquipment } from './restore-checks/match-equipment-check';
+import { AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G4 } from './content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5 } from './content/augment-pool-batch5-g5';
+import { validateLootExplosionRewards } from './restore-checks/loot-explosion-check';
+import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
+import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
+import { validateBatch5H7Gold } from './restore-checks/batch5-h7-check';
+import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
+import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
+import { headStartShopDisabled } from './augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
+import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
+import { validateCarryGolem } from './restore-checks/carry-golem-check';
+import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
+import { validateSharedR3Combat } from './augment-pool-batch5-r3-restore';
+import { advanceAugmentPreparationTime, validateAugmentAuthority, type AugmentHistoryAuthority } from './augment-history';
+import { batch5InventoryPlan, BATCH5_S3A_SOURCE } from './augment-pool-batch5-s3a';
+import { validateBatch5Inventory } from './restore-checks/batch5-inventory-check';
+import { AUGMENT_BATCH5_S3A } from './content/augment-pool-batch5-s3a';
+import { hasS3bInventory } from './augment-pool-batch5-s3b-restore';
+import { validateHistoricalEquipment } from './b8-restore';
+import { validateAnvils } from './restore-checks/anvils-check';
+import { AUGMENT_BATCH5_S3D } from './content/augment-pool-batch5-s3d';
+import { liveHpAfterSettlement } from './player-hp';
+import { AUGMENT_BATCH5_S6C } from './content/augment-pool-batch5-s6c';
+import { BATCH5_S6C_SOURCE } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C } from './content/augment-pool-batch5-s8c';
+import { recordShopDraw, recordShopRelease } from './shop-history';
+import { validateShopHistory } from './restore-checks/shop-history-check';
 import type { ShopDrawCause } from './shop-history-types';
+import { AUGMENT_BATCH5_S8A } from './content/augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
+import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { buyXpWithShopRefresh } from './match';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
-import { validateBatch1Gifts } from './augment-pool-grants';
-import { validateAugmentOfferHistory } from './augment-offers';
+import { validateBatch1Gifts, trustedPoolGiftRequiresAuthority } from './restore-checks/batch1-gifts-check';
+import { validateAugmentOfferHistory } from './restore-checks/augment-offer-history-check';
 import { spendFreeReroll } from './free-rerolls';
-import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit,
-  recordShopReroll, starryUpgrade, validateShopAugments } from './shop-augments';
+import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit, recordShopReroll, starryUpgrade } from './shop-augments';
+import { validateShopAugments } from './restore-checks/shop-augments-check';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
-import { validateEpicForges } from './epic-forges';
-import { validateConsumableState } from './consumables';
+import { validateAnvils as validateEpicForges } from './restore-checks/anvils-check';
+import { validateConsumableState } from './restore-checks/consumable-state-check';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
@@ -44,16 +82,32 @@ export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservatio
 export type * from './shared-pool-types';
 
 /** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
-export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):MatchState {
+export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,authority?:AugmentHistoryAuthority):MatchState {
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
-  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);
+  preflightAugmentHistory(state);
+  validateCarryGolem(state);
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);
+  if(trustedPoolGiftRequiresAuthority(pool,state))validateAugmentAuthority(state,authority,true);
+  validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
+  validateMadChemistOnlineSave(pool, state, authority);
+  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
-    r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
+  if(state.augments.some(a=>a.definitionId==='loot-explosion'||Object.hasOwn(AUGMENT_BATCH5_G5,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G2,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+    r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')||r.source==='augment-pool-batch5-g5'||r.receiptId.includes('expected-unexpectedness')||r.receiptId.includes('prismatic-pipeline')||Object.keys(AUGMENT_BATCH5_G4).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_G2).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H12).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H10).some(id=>r.receiptId.includes(id))||r.source==='augment-batch5-h8-forward-thinking'||r.source==='augment-batch5-h8-monetization'||Object.keys(AUGMENT_BATCH5_H8).some(id=>r.receiptId.includes(id))||r.receiptId.includes('hard-commit')||r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`)||Object.keys(AUGMENT_BATCH5_S8B).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S8A).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
+  if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
+    validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
+  }
+  if(hasS3bInventory(state)){
+    validateBatch1Gifts(state);validateAnvils(state);validateHistoricalEquipment(null,state);
+  }
+  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId))){
+    const result=state.roundResults.find(r=>r.round===state.round);
+    if(result&&state.playerHp!==liveHpAfterSettlement(state,state.round,result.hpAfter))throw new RangeError('Invalid S6C settlement health');
+  }
   return state;
 }
 
@@ -205,7 +259,7 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
-    requirePool(canOperateMatch(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
@@ -214,7 +268,7 @@ export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
-    requirePool(canOperateMatch(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
@@ -222,6 +276,16 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
     const next=drawShop(draft,recordShopReroll(spent.state),events,'reroll',state);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
     return {ok:true,...stamp({...next,gold:state.gold-cost})};
+  });
+}
+/** Advance the preparation clock and replace each due shop within one pool transaction. */
+export function advanceSharedAugmentPreparationTime(pool:SharedPoolState,state:MatchState,elapsedMs:number):SharedPoolResult {
+  return transact(pool,state,(draft,_policy,events)=>{
+    const next=advanceAugmentPreparationTime(state,elapsedMs,current=>{
+      releaseShop(draft,current.sharedPool!.seatId);
+      return drawShop(draft,current,events,'shop-glitch',current);
+    });
+    return {ok:true,...stamp(next)};
   });
 }
 /** Compatibility entry: every XP purchase uses the same shared transaction. */
@@ -321,7 +385,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
       const blocked=externalAugmentBlocks(state.sharedPool!.seatId,[...opened,...states.slice(index)]);
-      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked);if(!result.ok)throw new PoolError(result.reason);
+      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked,draft.available);if(!result.ok)throw new PoolError(result.reason);
       reconcileHoldings(draft,state,result.state,poolEvents);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.

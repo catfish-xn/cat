@@ -1,3 +1,5 @@
+import { maximumPlayerHp, titanicTitanRoundGain } from './augment-pool-batch5-h7-health';
+import { applyRecordedDhampyrHealing } from './augment-pool-batch5-h8-health';
 import type { MatchState } from './match-types';
 import { getCatalogRoundById } from './round-selectors';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -6,14 +8,14 @@ import { settlementLevelUpHealth, preparationLevelUpHealth, preparationHealthLos
 function healBetween(state:MatchState,hp:number,from:number,to:number):number {
  const a=state.augments.find(a=>a.definitionId==='crimson-pact');if(!a)return hp;
  for(const r of (state.seatMechanics?.receipts??[]).slice(from,to))if(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.skipped&&r.round>=a.acquiredRound)
-  hp=Math.min(100,hp+batch2Values(a.definitionId).Heal);
+  hp=Math.min(maximumPlayerHp(state.augments,r.round),hp+batch2Values(a.definitionId).Heal);
  return hp;
 }
 export function batch2HpAfterSettlement(state:MatchState,round:number,hp:number):number {
  const result=state.roundResults.find(r=>r.round===round);if(!result)return hp;
  const receipts=state.seatMechanics?.receipts??[];
  const end=receipts.findIndex(r=>r.round>round);
- return settlementLevelUpHealth(state,round,healBetween(state,hp,result.mechanicReceiptPrefixLength??0,end<0?receipts.length:end));
+ return applyRecordedDhampyrHealing(state,round,settlementLevelUpHealth(state,round,healBetween(state,hp,result.mechanicReceiptPrefixLength??0,end<0?receipts.length:end)));
 }
 export function batch2HpBeforeBattle(state:MatchState,roundId:string,hp:number):number {
  const round=getCatalogRoundById(roundId).ordinal,result=state.roundResults.find(r=>r.round===round),receipts=state.seatMechanics?.receipts??[];
@@ -22,7 +24,7 @@ export function batch2HpBeforeBattle(state:MatchState,roundId:string,hp:number):
  // Risky Moves splits the window: entry level-ups heal before its selection, the loss lands, then this round's market
  // choices and later level-ups heal (offline, the augment choice opens before any other preparation choice).
  const loss=preparationHealthLoss(state,round);
- if(!loss)return preparationLevelUpHealth(state,round,market(hp));
+ if(!loss)return preparationLevelUpHealth(state,round,market(hp+titanicTitanRoundGain(state,round)));
  const selected=applyAcquisitionHealthLoss({...state,playerHp:preparationLevelUpHealth(state,round,hp,{to:loss.level})},loss.augment).playerHp;
  return preparationLevelUpHealth(state,round,market(selected),{from:loss.level});
 }

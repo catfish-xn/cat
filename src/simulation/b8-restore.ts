@@ -1,3 +1,19 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { replayAngerConversion } from './augment-pool-batch5-r2';
+import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
+import { combatHistoryGrowth } from './augment-pool-batch5-h3';
+import { pilferRewardPlan } from './augment-pool-batch5-s8a';
+import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
+import { getMultiplayerRoundById } from './multiplayer-round';
+import { batch5InventoryPlan, projectBatch5Items } from './augment-pool-batch5-s3a';
+import { validateBatch5Inventory } from './restore-checks/batch5-inventory-check';
+import { s3bInventoryReplay, hasS3bInventory } from './augment-pool-batch5-s3b-restore';
+import { isS3bConversion } from './augment-pool-batch5-s3b-conversions';
+import { academicItems, academicCraft } from './augment-pool-batch5-s3b';
+import { readSniperOpening } from './augment-pool-batch5-h10-sniper';
+import { readCabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { soloPveLoot } from './shop-orbs';
 import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
@@ -9,16 +25,18 @@ import { familyOrbs } from './family-orbs';
 import { deriveTraits } from './trait-snapshot';
 import type { G23GrantEvidence } from './g2-3-grant-evidence';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { validateD14,d14OwnedUnits,d14OwnedItems,d14HeldAtPrefix,d14CertificateAtCombat } from './d14-runtime';
-import {validateAnomalyAcquisition} from './anomaly-acquisition';
+import { d14OwnedUnits, d14OwnedItems, d14HeldAtPrefix, d14CertificateAtCombat } from './d14-runtime';
+import { validateD14 } from './restore-checks/d14-check';
+import { validateAnomalyAcquisition } from './restore-checks/anomaly-acquisition-check';
 import {readItemSummonPositions} from './g2-4b-voidspawn';
-import {validateG23GrantEvidence} from './g2-3-grant-evidence';
+import { validateG23GrantEvidence } from './restore-checks/g23-grant-check';
 import { selectOpeningUnit } from './opening-unit';
 import {validateG23Restoration} from './g2-3-restore';
 import {readG23Progress,epicCrownsAtResourcePrefix} from './g2-3-state';
 import {g23RadiantRound} from './g2-3-settlement';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
-import { validateConsumableState, replayConsumableItems } from './consumables';
+import { replayConsumableItems } from './consumables';
+import { validateConsumableState } from './restore-checks/consumable-state-check';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
 import { LOOT_POLICY_VERSION } from './content/loot';
@@ -26,7 +44,9 @@ import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
 import { makeLootPendingChoice, orderedUnresolvedLootChoices } from './loot-choice';
 import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } from './combat-input';
-import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
+import { replayH13Transform } from './augment-pool-batch5-h13-transforms';
+import { validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
+import { foldResourceProvenance } from './restore-checks/fold-provenance';
 import { getCatalogRoundById } from './round-selectors';
 import { transferUpgradeResources } from './upgrades';
 import { planUnitAcquisition } from './unit-acquisition';
@@ -39,6 +59,7 @@ import { planCombine, planEquip } from './inventory';
 import type { ItemInstance } from './strategy-types';
 import type { GameState } from './game';
 import { validateMultiplayerOrbLedger } from './orb-restore';
+import { openingEncounterId } from './opening-encounter';
 export { validateMultiplayerOrbLedger } from './orb-restore';
 
 function check(condition: unknown, message: string): asserts condition {
@@ -58,17 +79,17 @@ const allChoices = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(ro
 /** Replay only the legal inventory/in-place combination. Frozen equipped inputs
  * cannot be freely detached or borrowed from another unit during restoration. */
 function replayCombination(items: readonly ItemInstance[], preparation: GameState, nextItemSerial: number,
-  fact: Extract<ResourceFact, { kind: 'item-combined' }>) {
+  fact: Extract<import('./resource-provenance').ResourceProvenanceEntry, { kind: 'item-combined' }>, state:MatchState, angerIssues=false) {
   const inputs = fact.event.consumedIds.map(id => items.find(item => item.id === id));
   check(inputs.length === 2 && inputs.every(item => item), 'combination ownership');
   const held = inputs.filter(item => item!.location.kind === 'unit');
   check(held.length <= 1, 'combination requires inventory input');
   const target = held[0], incoming = inputs.find(item => item!.location.kind === 'inventory')!;
   const plan = target?.location.kind === 'unit'
-    ? planEquip(items, preparation, incoming.id, target.location.unitId, target.location.slot, nextItemSerial)
+    ? planEquip(items, preparation, incoming.id, target.location.unitId, target.location.slot, nextItemSerial,angerIssues)
     : planCombine(items, nextItemSerial, inputs[0]!.id, inputs[1]!.id);
   check(plan.ok && equal(plan.events.find(event => event.type === 'itemCombined'), fact.event), 'combination transaction');
-  return plan;
+  return {...plan,items:academicItems(state,plan.items,fact)};
 }
 
 /** Exact projection: every ordinary placement now has an ordered resource fact. */
@@ -87,13 +108,16 @@ function replayEquipment(items: readonly ItemInstance[], preparation: GameState,
 /** Carry exact equipment bindings through the ordered resource ledger.
  * Before the first battle, start empty and rebuild units/items from validated births. */
 export function validateHistoricalEquipment(previous: MatchState | null, next: MatchState): void {
+  const inventoryPlan=batch5InventoryPlan(next);
+  let inventoryPrefix=previous?.resourceProvenance.entries.length??-1,inventoryRound=previous?.round??0;
   let items: readonly ItemInstance[] = previous?d14OwnedItems(previous):[], serial = previous?.nextItemSerial ?? 1;
   let preparation = previous?.preparation ?? {...next.preparation, units:[]};
+  let historicalBinding=previous?.anomalyBinding??null;
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
   const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
-  const absentItems=new Set<string>();
+  const absentItems=new Set<string>(),s3b=s3bInventoryReplay(next,previous);
   const checkOpening = (prefixLength: number) => {
     for(const evidence of (next.seatMechanics?.hidden.grantEvidence??[]) as readonly G23GrantEvidence[]) {
       if(evidence.resourcePrefixLength!==prefixLength||!evidence.receiptId.startsWith('g23:academy:'))continue;
@@ -108,6 +132,9 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
     }
   };
   for (const fact of next.resourceProvenance.entries.slice(previous?.resourceProvenance.entries.length ?? 0)) {
+    items=projectBatch5Items(items,inventoryPlan,fact.sequence,getMultiplayerRoundById(fact.roundId).ordinal,inventoryPrefix,inventoryRound);
+    inventoryPrefix=fact.sequence;inventoryRound=getMultiplayerRoundById(fact.roundId).ordinal;
+    s3b.beforeFact(fact,items,serial);
     checkOpening(fact.sequence);
     if(fact.kind==='item-combined')check(fact.event.consumedIds.every(id=>!absentItems.has(id)),'D14 hidden combine');
     if(fact.kind==='consumable-used')check(fact.record.affectedItems.every(i=>!absentItems.has(i.id)),'D14 hidden consumable');
@@ -133,15 +160,20 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
       case 'item-acquired': {
         const birth = birthById.get(fact.itemId);
         check(birth, 'historical item birth');
+        if(portableAnomalyId(birth.definitionId)!==null){const chosen=next.scheduleReceipts.find(r=>r.kind==='anomaly')!;historicalBinding={definitionId:chosen.definitionId!,choiceId:chosen.eventId,unitId:chosen.unitId!,boundRound:chosen.round};}
         items = [...items, {id:fact.itemId,definitionId:birth.definitionId,location:{kind:'inventory'}}];
         serial++;
         break;
       }
       case 'anvil-opened':
       case 'unit-sold':
+        if(historicalBinding?.unitId===fact.unitId)historicalBinding=null;
         items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
           ? {...item,location:{kind:'inventory'}} : item);
         preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
+        break;
+      case 'unit-transformed':
+        preparation = {...preparation, units:preparation.units.map(unit => unit.id === fact.unitId ? {...unit,definitionId:fact.to} : unit)};
         break;
       case 'unit-removed':
         // Dummify/Golemify forming removals (they record definitionId) return the unit's items to the inventory like
@@ -159,7 +191,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         // current bindings until their ordered resource fact changes them; using
         // next.items here would let future equips occupy the migration slots.
         const upgrades = 'event' in fact ? [fact.event] : fact.upgrades;
-        items = transferUpgradeResources(items, null, upgrades).items;
+        const transfer=transferUpgradeResources(items,historicalBinding,upgrades);items=transfer.items;historicalBinding=transfer.anomalyBinding;
         for (const event of upgrades) preparation = {...preparation,units:preparation.units
           .filter(unit => !event.consumedIds.includes(unit.id))
           .map(unit => unit.id === event.survivorId ? {...unit,starLevel:event.toStar} : unit)};
@@ -171,20 +203,27 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         break;
       }
       case 'item-equipped': {
+        check(!items.some(i=>i.id===fact.itemId&&portableAnomalyId(i.definitionId)!==null)||historicalBinding?.unitId!==fact.unitId,'portable anomaly original equipment');
         items = replayEquipment(items, preparation, serial, fact).items;
         break;
       }
       case 'item-combined': {
-        const plan = replayCombination(items, preparation, serial, fact);
+        const plan = replayCombination(items, preparation, serial, fact, next, next.resourceProvenance.entries[fact.sequence+1]?.kind==='anger-item-converted');
         items = plan.items; serial = plan.nextItemSerial;
         break;
       }
+      case 'augment-item-transform': {
+        const plan=replayH13Transform(items,serial,fact);items=plan.items;serial=plan.nextItemSerial;break;
+      }
+      case 'anger-item-converted':
       case 'g23-item-converted':
         items = items.map(item => item.id === fact.itemId ? {...item,definitionId:fact.to} : item);
         break;
       case 'combat-growth-committed': break;
     }
   }
+  items=projectBatch5Items(items,inventoryPlan,next.resourceProvenance.entries.length,next.round,inventoryPrefix,inventoryRound);
+  s3b.finish(items);
   checkOpening(next.resourceProvenance.entries.length);
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
@@ -214,18 +253,20 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
   const combat = state.combat!;
   const receipts = [...combat.equipmentReceipts ?? [], ...combat.pendingEquipment ?? []];
   let cursor = 0, items = basis.inputs.items, serial = basis.nextItemSerial, inputs = basis.inputs;
+  const inventoryPlan=batch5InventoryPlan(state);let inventoryPrefix=basis.provenancePrefixLength;
   for (const fact of state.resourceProvenance.entries.slice(basis.provenancePrefixLength)) {
+    items=projectBatch5Items(items,inventoryPlan,fact.sequence,state.round,inventoryPrefix,state.round);inventoryPrefix=fact.sequence;
     if (fact.kind === 'combat-growth-committed') break;
     const before = items;
     if (fact.kind === 'item-equipped') items = replayEquipment(items, basis.inputs.preparation, serial, fact).items;
     else if (fact.kind === 'item-combined') {
-      const plan = replayCombination(items, basis.inputs.preparation, serial, fact); items = plan.items; serial = plan.nextItemSerial;
+      const plan = replayCombination(items, basis.inputs.preparation, serial, fact, state, basis.inputs.augments.some(a=>a.definitionId==='anger-issues')); items = plan.items; serial = plan.nextItemSerial;
     } else if (fact.kind === 'consumable-used') {
       const plan = replayConsumableItems(items, serial, fact.record, basis.inputs.preparation); items = plan.items; serial = plan.nextItemSerial;
-    } else if (fact.kind === 'g23-item-converted') items = replayG23Conversion(items, fact);
+    } else if ((fact.kind === 'anger-item-converted'||fact.kind === 'g23-item-converted')) items = replayG23Conversion(items, fact);
     else continue;
     const equippedId = fact.kind === 'item-equipped' ? fact.itemId : fact.kind === 'item-combined' ? fact.event.itemId : null;
-    const equipped = items.find(i => i.id === equippedId);
+    const equipped = items.find(i => i.id === equippedId) ?? (fact.kind==='item-combined'&&academicCraft(state,fact)?before.find(i=>fact.event.consumedIds.includes(i.id)&&i.location.kind==='unit'):undefined);
     const unitId = equipped?.location.kind === 'unit' ? equipped.location.unitId : null;
     if (!('tick' in fact) || fact.tick === undefined || !unitId
       || !basis.inputs.preparation.units.some(u => u.id === unitId && u.team === 'player' && u.location.kind === 'board')) continue;
@@ -237,16 +278,15 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
       : fact.kind === 'item-combined' && fact.event.consumedIds.includes(receipt.input.itemId)
         && before.find(i => i.id === receipt.input.itemId)?.location.kind === 'inventory', 'battle equipment command ownership');
     const plan = planEquip(before, basis.inputs.preparation, receipt.input.itemId, unitId, receipt.input.slot,
-      fact.kind === 'item-combined' ? serial - 1 : serial);
-    check(plan.ok && equal(plan.items, items), 'battle equipment command slot');
+      fact.kind === 'item-combined' ? serial - 1 : serial,basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
+    check(plan.ok && equal(fact.kind==='item-combined'?academicItems(state,plan.items,fact):plan.items, items), 'battle equipment command slot');
     // acceptEquipment may immediately convert the new permanent item to radiant.
     let through = fact.sequence;
     const converted = state.resourceProvenance.entries[through + 1];
-    if (converted?.kind === 'g23-item-converted' && converted.itemId === equippedId) {
+    if ((converted?.kind === 'anger-item-converted'||converted?.kind === 'g23-item-converted') && converted.itemId === equippedId) {
       items = replayG23Conversion(items, converted); through++;
     }
-    const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? state.equipmentState.rolls
-      .filter(r => r.parentItemInstanceId === item.id && r.roundId === basis.roundId)
+    const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? [equipmentRollFor(state.equipmentState.rolls,basis.roundId,item,{...state,preparation:basis.inputs.preparation})].filter((r): r is NonNullable<typeof r> => !!r)
       .flatMap(r => projectTemporaryEquipment(r, item.location.kind === 'unit' ? item.location.unitId : '')) : []);
     const source = { ...state, items, temporaryEquipment,
       gold: combatBankGold(state),
@@ -374,9 +414,10 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   validateG23Restoration(state,parsedJsonInput);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
-    throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
+  const context: ResourceProvenanceContext = { pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory, s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+    throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply' && !(state.multiplayer && result.roundKind === 'pvp'))
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
+  const inventoryPlan=batch5InventoryPlan(state);validateBatch5Inventory(state,inventoryPlan);
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   validateG23GrantEvidence(state,context,parsedJsonInput);
   validateAnomalyAcquisition(state,context,parsedJsonInput);
@@ -388,11 +429,11 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   // for ordinary saves with completed battles and no externally supplied replay.
   const hasAcademyEvidence = ((state.seatMechanics?.hidden.grantEvidence ?? []) as readonly G23GrantEvidence[])
     .some(evidence => evidence.receiptId.startsWith('g23:academy:'));
-  if (state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
+  if (state.multiplayer || inventoryPlan.conversions.length || hasS3bInventory(state) || state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);
-  check(combat.status === 'finished' ? commits.length === 1 : commits.length === 0, 'current growth commit count');
+  check(combat.status === 'finished' && !state.pendingCombatTerminal ? commits.length === 1 : commits.length === 0, 'current growth commit count');
   const commit = commits[0];
   check(!commit || commit.kind === 'combat-growth-committed', 'growth commit');
   const candidate = state.combatInputBasis;
@@ -403,36 +444,50 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const shared = state.sharedPool && state.multiplayer ? { openingId: openingEncounterId(state), twoSidedRounds: state.multiplayer.receipts.map(receipt => {
+    const result = state.roundResults[receipt.round - 1];
+    check(receipt.seatId === state.sharedPool!.seatId && receipt.round < state.round && result?.roundKind === 'pvp'
+      && result.roundId === receipt.roundId && result.settlementId === receipt.settlementId, 'shared battle seed history');
+    return receipt.round;
+  }) } : undefined;
+  const openingResources=parsedJsonInput&&prefixLength===entries.length?current:foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput);
+  const basis = restoreCombatInput(state.combatInputBasis,{...(shared?{shared}:{}),ghostFriendsGrowth:ghostFriendsGrowth(state),augmentCopyKills:r2CopyKills(state,openingResources.items),cabalGrowth:readCabalGrowth(state),sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
-    resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput),equipmentRolls:state.equipmentState.rolls,
+    resources:openingResources,equipmentRolls:state.equipmentState.rolls,
     equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults}, parsedJsonInput, deferInputFreeze);
   check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');
   validateBattleEquipmentHistory(state, basis);
-  if (combat.status === 'running') {
+  if (combat.status === 'running' || state.pendingCombatTerminal) {
     const { items: _items, temporaryEquipment: _children, ...live } = readCombatStrategyInputs(state);
     const { items: originalItems, temporaryEquipment: _frozenChildren, ...frozenInputs } = basis.inputs;
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
+    let inventoryPrefix=prefixLength;
     for (const fact of entries.slice(prefixLength)) {
-      check((fact.kind==='g23-item-converted'||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
-      if(fact.kind==='g23-item-converted'){items=replayG23Conversion(items,fact);continue;}
-      const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
+      items=projectBatch5Items(items,inventoryPlan,fact.sequence,state.round,inventoryPrefix,state.round);inventoryPrefix=fact.sequence;
+      check(((fact.kind==='anger-item-converted'||fact.kind==='g23-item-converted')||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      if((fact.kind==='anger-item-converted'||fact.kind==='g23-item-converted')){items=replayG23Conversion(items,fact);continue;}
+      const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact, state, basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
       items = plan.items; serial = plan.nextItemSerial;
     }
+    items=projectBatch5Items(items,inventoryPlan,entries.length,state.round,inventoryPrefix,state.round);
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
     return {basis,saleGold:0};
   }
-  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && (unit.runtime?.permanentAdBps ?? 0) > 0)
+  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && !unit.r3Mirror && (unit.runtime?.permanentAdBps ?? 0) > 0)
     .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
   for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&basis.inputs.preparation.units.some(u=>u.id===split.ownerId&&u.team==='player'))
     deltas.push({sourceUnitId:split.ownerId,attackDamageBps:split.permanentAdBps});
   deltas.sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
   check(commit && equal(commit.sourceDeltas,deltas), 'original combat growth deltas');
+  // Shared orb claims have their own ordered ledger and may occur after economy.
+  // The resource fold and equipment history above authenticate their continuation;
+  // replayCurrentSuffix below retains the solo-only immediate terminal grant order.
+  if (state.multiplayer) return {basis,saleGold:0};
   return {basis,saleGold:replayCurrentSuffix(state,basis)};
 }
 
@@ -452,24 +507,28 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const take = (fact: ResourceFact) => {
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
+  const inventoryPlan=batch5InventoryPlan(state);
+  let inventoryPrefix=basis.provenancePrefixLength;
   const combinations = () => {
-    while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+    items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
+    while (entries[cursor]?.kind==='augment-item-transform'||entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='anger-item-converted'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
+      if(tool.kind==='augment-item-transform'){const plan=replayH13Transform(items,nextItem,tool);items=plan.items;nextItem=plan.nextItemSerial;cursor++;continue;}
       if(tool.kind==='item-equipped'){
         check(!committed||state.phase!=='gameOver','terminal equipment operation');
         items=replayEquipment(items,preparation,nextItem,tool).items;
         take({kind:tool.kind,itemId:tool.itemId,unitId:tool.unitId,slot:tool.slot,
           ...(tool.tick === undefined ? {} : {tick:tool.tick})});continue;
       }
-      if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
+      if((tool.kind==='anger-item-converted'||tool.kind==='g23-item-converted')){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
         check(!committed||state.phase!=='gameOver','terminal consumable operation');
         const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record,...(tool.tick === undefined ? {} : {tick:tool.tick})});
         items=plan.items;nextItem=plan.nextItemSerial;continue;
       }
       check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');
-      const fact = entries[cursor] as Extract<ResourceFact, { kind: 'item-combined' }>;
-      const plan = replayCombination(items, preparation, nextItem, fact);
+      const fact = entries[cursor] as Extract<import('./resource-provenance').ResourceProvenanceEntry, { kind: 'item-combined' }>;
+      const plan = replayCombination(items, preparation, nextItem, fact, state, basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
       take({ kind: 'item-combined', event: fact.event, ...(fact.tick === undefined ? {} : {tick:fact.tick}) });
       items = plan.items; nextItem = plan.nextItemSerial;
     }
@@ -607,10 +666,12 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     saleGold += sale.goldGranted;
     preparation = {...preparation,units:preparation.units.filter(value => value.id !== sale.unitId)};
     items = items.map(item => item.location.kind === 'unit' && item.location.unitId === sale.unitId ? {...item,location:{kind:'inventory'}} : item);
+    combinations();
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
   check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
+  items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
@@ -620,7 +681,8 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   return saleGold;
 }
 
-function replayG23Conversion(items:readonly import('./strategy-types').ItemInstance[],fact:Extract<ResourceFact,{kind:'g23-item-converted'}>){
- check(items.some(i=>i.id===fact.itemId&&i.definitionId===fact.from)&&g23RadiantDefinitionId(fact.from)===fact.to,'G23 conversion source');
+function replayG23Conversion(items:readonly import('./strategy-types').ItemInstance[],fact:Extract<ResourceFact,{kind:'g23-item-converted'|'anger-item-converted'}>){
+ if(fact.kind==='anger-item-converted')return replayAngerConversion(items,fact);
+ check(items.some(i=>i.id===fact.itemId&&i.definitionId===fact.from)&&(isS3bConversion(fact)||g23RadiantDefinitionId(fact.from)===fact.to),'G23 conversion source');
  return items.map(i=>i.id===fact.itemId?{...i,definitionId:fact.to}:i);
 }

@@ -1,7 +1,7 @@
-【完成】独立离线阶段禁用审计（P，2026-10-25）；不修改生产表、规则或存档。
-统计：{"sourceRows":312,"poolAugments":180,"shippedRows":134,"regeneratedRows":139,"unrestricted":68,"errors":5,"crossVersionDifferences":8,"communityDifferences":2}
+【完成】独立离线阶段禁用审计；比较 14.24 标签与现行规则，含 U 2026-10-27 餐桌剩菜覆盖。
+统计：{"sourceRows":312,"poolAugments":209,"shippedRows":162,"regeneratedRows":167,"unrestricted":69,"errors":6,"crossVersionDifferences":8,"communityDifferences":2}
 
-规范化字节一致：false；范围外研究记录：105。
+规范化字节一致：false；范围外研究记录：76。
 
 已知案例（独立预期）：
 - {"apiName":"TFT13_Augment_CabalCrest","expected":["2-1"],"ok":true}
@@ -13,19 +13,20 @@
 - {"apiName":"TFT_Augment_Placebo","expected":["3-2","4-2"],"ok":true}
 - {"apiName":"TFT_Augment_PlaceboPlus","expected":["2-1","4-2"],"ok":true}
 
-【未完成】禁用表修订按任务仅列提案，未应用：
+【未完成】与 14.24 标签的差异（含用户已决定的覆盖）：
 - TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT13_Augment_Academy","expected":["4-2"],"actual":[],"recordIndex":70,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":12,"enabled":false}]}
 - TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT13_Augment_Cabal","expected":["2-1","4-2"],"actual":[],"recordIndex":115,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":154,"enabled":false}]}
 - TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT13_Augment_Experiment","expected":["2-1"],"actual":[],"recordIndex":188,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":271,"enabled":false}]}
 - TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT13_Augment_Formswapper","expected":["2-1"],"actual":[],"recordIndex":215,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":334,"enabled":true}]}
 - TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT13_TeamupAugment_BloodBrothers","expected":["2-1","4-2"],"actual":[],"recordIndex":301,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":590,"enabled":true}]}
+- TABLE_MISMATCH: {"code":"TABLE_MISMATCH","apiName":"TFT_Augment_TableScraps","expected":["2-1","3-2","4-2"],"actual":["3-2","4-2"],"recordIndex":62,"locations":[{"file":"src/simulation/content/augment-pool-batch5-h5.ts","line":7,"enabled":true}]}
 
-【需要我决定】无需补充决定；建议待规则修改获授权后按 expected 修表。
+【需要我决定】餐桌剩菜已按用户决定覆盖；其余差异按独立审计列出。
 
-【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得直接用于覆盖 14.24：
+【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得自行用于覆盖 14.24；餐桌剩菜的例外来自用户决定：
 - {"apiName":"TFT_Augment_GlassCannonI","expected14_24":[],"archiveBans":["2-1"],"inPool":true,"laterOfficialFacts":["OFFICIAL-13.4-TFT_Augment_GlassCannonI"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
-- {"apiName":"TFT_Augment_TableScraps","expected14_24":["2-1","3-2","4-2"],"archiveBans":["3-2","4-2"],"inPool":false,"laterOfficialFacts":[],"conclusion":"unexplained; do not override 14.24"}
-- {"apiName":"TFT9_Augment_YoungAndWildAndFree","expected14_24":["4-2"],"archiveBans":["3-2","4-2"],"inPool":false,"laterOfficialFacts":["OFFICIAL-13.4-TFT9_Augment_YoungAndWildAndFree"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
+- {"apiName":"TFT_Augment_TableScraps","expected14_24":["2-1","3-2","4-2"],"archiveBans":["3-2","4-2"],"inPool":true,"laterOfficialFacts":[],"conclusion":"user override 2026-10-27: offered at 2-1"}
+- {"apiName":"TFT9_Augment_YoungAndWildAndFree","expected14_24":["4-2"],"archiveBans":["3-2","4-2"],"inPool":true,"laterOfficialFacts":["OFFICIAL-13.4-TFT9_Augment_YoungAndWildAndFree"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
 - {"apiName":"TFT13_Augment_AnotherAnomaly","expected14_24":["2-1","3-2"],"archiveBans":["2-1","3-2","4-2"],"inPool":false,"laterOfficialFacts":["OFFICIAL-13.8-TFT13_Augment_AnotherAnomaly"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
 - {"apiName":"TFT_Augment_GlassCannonII","expected14_24":[],"archiveBans":["2-1"],"inPool":true,"laterOfficialFacts":["OFFICIAL-13.4-TFT_Augment_GlassCannonII"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
 - {"apiName":"TFT_Augment_ShopGlitch","expected14_24":["4-2"],"archiveBans":["3-2","4-2"],"inPool":false,"laterOfficialFacts":["OFFICIAL-13.4-TFT_Augment_ShopGlitch"],"conclusion":"later-patch-same-direction; exact archive patch unconfirmed"}
@@ -43,7 +44,7 @@
 - {"code":"SHEET_NAME_UNMATCHED_OR_AMBIGUOUS","name":"Salvage Bin","matches":2}
 - {"code":"SHEET_NAME_UNMATCHED_OR_AMBIGUOUS","name":"Void Swarm","matches":2}
 
-【下一步】修表后重跑 node scripts/audit-augment-stage-bans.cjs；退出码 1 表示审计发现错误，2 表示执行失败。
+【下一步】其他差异经确认后再修表；重跑 node scripts/audit-augment-stage-bans.cjs，退出码 1 表示存在标签差异，2 表示执行失败。
 
 证据文件（SHA-256）：
 - /home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json: 2ce78dba16d45fe466ef9929d35ddcb916d6cb25c18f4bc7007fec007463b6a0
@@ -68,6 +69,9 @@
 - {"apiName":"TFT11_Augment_RadiantRefactor","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d02ae323}"],"recordIndex":281,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":836,"enabled":true}]}
 - {"apiName":"TFT11_Augment_RainingGold","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{24d36c27}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":157,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":261,"enabled":true}]}
 - {"apiName":"TFT11_Augment_RainingGoldPlus","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{24d36c27}","{d22ae649}","{d02ae323}","{7aaa3b47}"],"recordIndex":158,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":276,"enabled":true}]}
+- {"apiName":"TFT11_Augment_Reinfourcement","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{24d36c27}","{d02ae323}","{d12ae4b6}"],"recordIndex":160,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":51,"enabled":true}]}
+- {"apiName":"TFT11_Augment_Slammin","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":175,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4xp.ts","line":47,"enabled":true}]}
+- {"apiName":"TFT11_Augment_Slammin_Plus","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d02ae323}","{7aaa3b47}"],"recordIndex":176,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4xp.ts","line":68,"enabled":true}]}
 - {"apiName":"TFT11_Augment_WanderingTrainerGold","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d12ae4b6}"],"recordIndex":209,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":471,"enabled":true}]}
 - {"apiName":"TFT13_Augment_Academy","status":"missing-ban","tags":["{ce1fd21c}","{b72bd3bf}","{39baf1c1}","{3754d0ae}","{d22ae649}"],"recordIndex":70,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":12,"enabled":false}]}
 - {"apiName":"TFT13_Augment_AcademyCrest","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}","{3754d0ae}","{39baf1c1}"],"recordIndex":71,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":291,"enabled":true}]}
@@ -112,6 +116,7 @@
 - {"apiName":"TFT13_Augment_FirelightCrown","status":"explicitly-unrestricted","tags":["{cf1fd3af}","{b72bd3bf}","{3754d0ae}","{38baf02e}"],"recordIndex":250,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":1130,"enabled":true}]}
 - {"apiName":"TFT13_Augment_FishCarry","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{ec068228}","{d12ae4b6}","{84a6d904}","{38baf02e}"],"recordIndex":10,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":159,"enabled":true}]}
 - {"apiName":"TFT13_Augment_Formswapper","status":"missing-ban","tags":["{ce1fd21c}","{b72bd3bf}","{38baf02e}","{3754d0ae}","{84a6d904}","{d02ae323}"],"recordIndex":215,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":334,"enabled":true}]}
+- {"apiName":"TFT13_Augment_Grant6Cost_MissMage","status":"restricted","tags":["{cf1fd3af}","{d02ae323}","{d12ae4b6}","{b72bd3bf}","{84a6d904}","{92e7310e}","{86d6da1b}"],"recordIndex":217,"locations":[{"file":"src/simulation/content/augment-pool-batch5.ts","line":33,"enabled":true}]}
 - {"apiName":"TFT13_Augment_IreliaCarry","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{ec068228}","{d12ae4b6}","{84a6d904}","{38baf02e}"],"recordIndex":3,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":181,"enabled":true}]}
 - {"apiName":"TFT13_Augment_PitFighter","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{39baf1c1}","{3754d0ae}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":194,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":359,"enabled":true}]}
 - {"apiName":"TFT13_Augment_PitFighterCrest","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}","{3754d0ae}","{38baf02e}"],"recordIndex":150,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":530,"enabled":true}]}
@@ -145,6 +150,8 @@
 - {"apiName":"TFT13_Augment_WatcherCrown","status":"explicitly-unrestricted","tags":["{cf1fd3af}","{b72bd3bf}","{3754d0ae}","{38baf02e}"],"recordIndex":309,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":1340,"enabled":true}]}
 - {"apiName":"TFT13_TeamupAugment_Betrayal","status":"restricted","tags":["{ce1fd21c}","{d22ae649}","{d02ae323}","{b72bd3bf}","{38baf02e}"],"recordIndex":196,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":561,"enabled":true}]}
 - {"apiName":"TFT13_TeamupAugment_BloodBrothers","status":"missing-ban","tags":["{cf1fd3af}","{d02ae323}","{38baf02e}","{3754d0ae}","{b72bd3bf}","{d22ae649}","{7aaa3b47}"],"recordIndex":301,"locations":[{"file":"src/simulation/content/augment-pool-batch2.ts","line":590,"enabled":true}]}
+- {"apiName":"TFT6_Augment_ClearMind","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{24d36c27}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":95,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4xp.ts","line":14,"enabled":true}]}
+- {"apiName":"TFT6_Augment_GachaAddict","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d22ae649}"],"recordIndex":277,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":67,"enabled":true}]}
 - {"apiName":"TFT6_Augment_ItemGrabBag1","status":"explicitly-unrestricted","tags":["{d11fd6d5}","{b72bd3bf}"],"recordIndex":28,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":81,"enabled":true}]}
 - {"apiName":"TFT6_Augment_MaxLevel10","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{1f815778}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":265,"locations":[{"file":"src/simulation/content/augment-pool-batch3-xp.ts","line":48,"enabled":true}]}
 - {"apiName":"TFT6_Augment_OneTwoFive","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{24d36c27}","{d02ae323}","{d12ae4b6}"],"recordIndex":40,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":99,"enabled":true}]}
@@ -152,8 +159,14 @@
 - {"apiName":"TFT6_Augment_TradeSector","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{1f815778}","{7aaa3b47}"],"recordIndex":193,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":862,"enabled":true}]}
 - {"apiName":"TFT6_Augment_Traitless2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{d22ae649}","{d12ae4b6}"],"recordIndex":90,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT7_Augment_BandOfThieves1","status":"explicitly-unrestricted","tags":["{d11fd6d5}","{b72bd3bf}"],"recordIndex":1,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":125,"enabled":true}]}
+- {"apiName":"TFT7_Augment_BirthdayPresents","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{24d36c27}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":227,"locations":[{"file":"src/simulation/content/augment-pool-batch4.ts","line":56,"enabled":true}]}
+- {"apiName":"TFT7_Augment_ClutteredMind","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{24d36c27}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":99,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4xp.ts","line":27,"enabled":true}]}
+- {"apiName":"TFT7_Augment_LategameSpecialist","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{92e7310e}","{24d36c27}","{d22ae649}","{d02ae323}","{7aaa3b47}"],"recordIndex":30,"locations":[{"file":"src/simulation/content/augment-pool-batch4.ts","line":28,"enabled":true}]}
 - {"apiName":"TFT7_Augment_LivingForge","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{1f815778}","{7aaa3b47}"],"recordIndex":266,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":1151,"enabled":true}]}
 - {"apiName":"TFT9_Augment_ArmyBuilding","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{7aaa3b47}"],"recordIndex":63,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":1006,"enabled":true}]}
+- {"apiName":"TFT9_Augment_BardPlaybook1","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{1f815778}","{d12ae4b6}","{d22ae649}"],"recordIndex":8,"locations":[{"file":"src/simulation/content/augment-pool-batch4.ts","line":16,"enabled":true}]}
+- {"apiName":"TFT9_Augment_BardPlaybook2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{1f815778}","{d12ae4b6}","{d22ae649}"],"recordIndex":92,"locations":[{"file":"src/simulation/content/augment-pool-batch4.ts","line":41,"enabled":true}]}
+- {"apiName":"TFT9_Augment_BardPlaybook3","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{1f815778}","{d12ae4b6}","{d22ae649}"],"recordIndex":238,"locations":[{"file":"src/simulation/content/augment-pool-batch4.ts","line":72,"enabled":true}]}
 - {"apiName":"TFT9_Augment_BigGrabBag","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}","{8fba48a3}"],"recordIndex":83,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":701,"enabled":true}]}
 - {"apiName":"TFT9_Augment_BuildingACollectionPlusPlus","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{1f815778}","{d22ae649}","{8fba48a3}"],"recordIndex":235,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":674,"enabled":true}]}
 - {"apiName":"TFT9_Augment_Commander_RollingForDays","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":55,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":808,"enabled":true}]}
@@ -165,6 +178,7 @@
 - {"apiName":"TFT9_Augment_HighEndSector","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{1f815778}"],"recordIndex":288,"locations":[{"file":"src/simulation/content/augment-pool-batch3-xp.ts","line":51,"enabled":true}]}
 - {"apiName":"TFT9_Augment_IronAssets","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d12ae4b6}","{d22ae649}"],"recordIndex":26,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":166,"enabled":true}]}
 - {"apiName":"TFT9_Augment_LearningFromExperience2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{1f815778}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":147,"locations":[{"file":"src/simulation/content/augment-pool-batch3-xp.ts","line":39,"enabled":true}]}
+- {"apiName":"TFT9_Augment_LongDistanceRelationship2","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}"],"recordIndex":131,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4combat.ts","line":8,"enabled":true}]}
 - {"apiName":"TFT9_Augment_LongTimeCrafting","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{1f815778}","{7aaa3b47}"],"recordIndex":31,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":1036,"enabled":true}]}
 - {"apiName":"TFT9_Augment_MissedConnections","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":38,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":184,"enabled":true}]}
 - {"apiName":"TFT9_Augment_OneTwosThree","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{24d36c27}","{d12ae4b6}","{d22ae649}","{1f815778}"],"recordIndex":41,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":199,"enabled":true}]}
@@ -179,6 +193,7 @@
 - {"apiName":"TFT9_Augment_SupportCache","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}"],"recordIndex":186,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":751,"enabled":true}]}
 - {"apiName":"TFT9_Augment_WanderingTrainer","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d22ae649}","{d12ae4b6}"],"recordIndex":308,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":492,"enabled":true}]}
 - {"apiName":"TFT9_Augment_WhatDoesntKillYou","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{24d36c27}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":214,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":1181,"enabled":true}]}
+- {"apiName":"TFT9_Augment_YoungAndWildAndFree","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{d7a60eba}","{7aaa3b47}"],"recordIndex":67,"locations":[{"file":"src/simulation/content/augment-pool-batch5-h5.ts","line":14,"enabled":true}]}
 - {"apiName":"TFT_Augment_AnExaltedAdventure","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{84a6d904}","{7aaa3b47}"],"recordIndex":220,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":337,"enabled":true}]}
 - {"apiName":"TFT_Augment_Backup","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":0,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_BadLuckProtection","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{7b2d141a}","{d02ae323}"],"recordIndex":81,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":541,"enabled":true}]}
@@ -190,23 +205,30 @@
 - {"apiName":"TFT_Augment_BulkyBuddies1","status":"explicitly-unrestricted","tags":["{d11fd6d5}","{b72bd3bf}"],"recordIndex":6,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_BulkyBuddies2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":91,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_BulkyBuddies3","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d02ae323}"],"recordIndex":234,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
+- {"apiName":"TFT_Augment_CalledShot","status":"restricted","tags":["{b72bd3bf}","{d22ae649}","{d12ae4b6}","{d11fd6d5}","{7aaa3b47}"],"recordIndex":7,"locations":[{"file":"src/simulation/content/augment-pool-batch5.ts","line":8,"enabled":true}]}
+- {"apiName":"TFT_Augment_CategoryFive","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{8fba48a3}","{7b2d141a}"],"recordIndex":93,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4combat.ts","line":20,"enabled":true}]}
 - {"apiName":"TFT_Augment_ClimbTheLadder1","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":9,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_ClimbTheLadder2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":96,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_ClockworkAccelerator","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}"],"recordIndex":97,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_Coronation","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d02ae323}"],"recordIndex":241,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":15,"enabled":true}]}
 - {"apiName":"TFT_Augment_Corrosion","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":12,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":659,"enabled":true}]}
+- {"apiName":"TFT_Augment_CraftedCrafting","status":"restricted","tags":["{d11fd6d5}","{d12ae4b6}","{d22ae649}","{b72bd3bf}"],"recordIndex":13,"locations":[{"file":"src/simulation/content/augment-pool-batch5.ts","line":21,"enabled":true}]}
 - {"apiName":"TFT_Augment_DarkAlleyDealings","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d22ae649}","{d02ae323}","{8fba48a3}"],"recordIndex":242,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":1121,"enabled":true}]}
+- {"apiName":"TFT_Augment_DualPurpose","status":"restricted","tags":["{b72bd3bf}","{cf1fd3af}","{d12ae4b6}","{7aaa3b47}","{d22ae649}"],"recordIndex":244,"locations":[{"file":"src/simulation/content/augment-pool-batch5.ts","line":50,"enabled":true}]}
 - {"apiName":"TFT_Augment_Dummify","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{92e7310e}","{d02ae323}","{d22ae649}"],"recordIndex":17,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":52,"enabled":true}]}
 - {"apiName":"TFT_Augment_DuoQueue","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}","{d12ae4b6}"],"recordIndex":108,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":768,"enabled":true}]}
 - {"apiName":"TFT_Augment_EyeForAnEye","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":18,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":977,"enabled":true}]}
 - {"apiName":"TFT_Augment_EyeForAnEyePlus","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}","{d22ae649}","{8fba48a3}","{7aaa3b47}"],"recordIndex":19,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":879,"enabled":true}]}
 - {"apiName":"TFT_Augment_FinalPolish","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{24d36c27}","{d02ae323}","{d12ae4b6}","{8fba48a3}"],"recordIndex":249,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":1363,"enabled":true}]}
 - {"apiName":"TFT_Augment_FindYourCenter","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":20,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
+- {"apiName":"TFT_Augment_FiresalePlus","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{24d36c27}","{d22ae649}","{d02ae323}","{7aaa3b47}"],"recordIndex":22,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":19,"enabled":true}]}
 - {"apiName":"TFT_Augment_Flexible","status":"restricted","tags":["{cf1fd3af}","{92e7310e}","{d22ae649}","{d12ae4b6}","{7aaa3b47}","{b72bd3bf}"],"recordIndex":251,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":772,"enabled":true}]}
 - {"apiName":"TFT_Augment_GlassCannonI","status":"explicitly-unrestricted","tags":["{d11fd6d5}","{b72bd3bf}"],"recordIndex":23,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_GlassCannonII","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}"],"recordIndex":118,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_GoldForDummies","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":120,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":513,"enabled":true}]}
 - {"apiName":"TFT_Augment_Golemify","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}","{d02ae323}","{d22ae649}"],"recordIndex":121,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":72,"enabled":true}]}
+- {"apiName":"TFT_Augment_InvestedPlus","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{24d36c27}","{d02ae323}","{d22ae649}","{7aaa3b47}"],"recordIndex":262,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4reroll.ts","line":22,"enabled":true}]}
+- {"apiName":"TFT_Augment_InvestedPlusPlus","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{24d36c27}","{d12ae4b6}","{d02ae323}","{7aaa3b47}"],"recordIndex":263,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4reroll.ts","line":39,"enabled":true}]}
 - {"apiName":"TFT_Augment_InvestmentStrategy1","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":127,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_ItemCollector1","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}"],"recordIndex":27,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_ItemCollector2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":128,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
@@ -220,13 +242,21 @@
 - {"apiName":"TFT_Augment_Mentorship2","status":"explicitly-unrestricted","tags":["{ce1fd21c}","{b72bd3bf}","{92e7310e}"],"recordIndex":136,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_NobleSacrifice","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":139,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":594,"enabled":true}]}
 - {"apiName":"TFT_Augment_OneBuffTwoBuff","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d02ae323}","{8fba48a3}"],"recordIndex":270,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":1382,"enabled":true}]}
+- {"apiName":"TFT_Augment_Overheal","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":143,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4combat.ts","line":39,"enabled":true}]}
+- {"apiName":"TFT_Augment_PatienceIsAVirtue","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{24d36c27}","{d22ae649}","{d12ae4b6}","{7aaa3b47}"],"recordIndex":45,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4reroll.ts","line":7,"enabled":true}]}
 - {"apiName":"TFT_Augment_Placebo","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{d12ae4b6}"],"recordIndex":46,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
 - {"apiName":"TFT_Augment_PlaceboPlus","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{d02ae323}"],"recordIndex":47,"locations":[{"file":"src/simulation/content/source-manifest.ts","line":93,"enabled":true}]}
+- {"apiName":"TFT_Augment_RiggedShopPlus","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{d02ae323}"],"recordIndex":53,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":35,"enabled":true}]}
+- {"apiName":"TFT_Augment_SatedSpellweaver","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{b2be200a}","{d02ae323}"],"recordIndex":167,"locations":[{"file":"src/simulation/content/augment-pool-batch4-b4combat.ts","line":55,"enabled":true}]}
 - {"apiName":"TFT_Augment_ShimmerscaleEssence","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":287,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":947,"enabled":true}]}
+- {"apiName":"TFT_Augment_StarryNight","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{24d36c27}"],"recordIndex":183,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":99,"enabled":true}]}
+- {"apiName":"TFT_Augment_StarryNightPlus","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}","{d22ae649}","{24d36c27}"],"recordIndex":184,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":124,"enabled":true}]}
+- {"apiName":"TFT_Augment_SubscriptionService","status":"restricted","tags":["{cf1fd3af}","{d22ae649}","{d12ae4b6}","{7aaa3b47}","{b72bd3bf}"],"recordIndex":293,"locations":[{"file":"src/simulation/content/augment-pool-shop.ts","line":82,"enabled":true}]}
 - {"apiName":"TFT_Augment_Superstars","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{92e7310e}","{d12ae4b6}"],"recordIndex":185,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":843,"enabled":true}]}
 - {"apiName":"TFT_Augment_SuperstarsSilver","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d22ae649}","{92e7310e}","{d12ae4b6}"],"recordIndex":58,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":824,"enabled":true}]}
 - {"apiName":"TFT_Augment_SupportMining","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{7aaa3b47}"],"recordIndex":59,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":379,"enabled":true}]}
 - {"apiName":"TFT_Augment_SupportMiningPlus","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d02ae323}","{d22ae649}","{7aaa3b47}"],"recordIndex":60,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":411,"enabled":true}]}
+- {"apiName":"TFT_Augment_TableScraps","status":"restricted","tags":["{d11fd6d5}","{b72bd3bf}","{d12ae4b6}","{d22ae649}","{7aaa3b47}","{84a6d904}","{d02ae323}"],"recordIndex":62,"locations":[{"file":"src/simulation/content/augment-pool-batch5-h5.ts","line":7,"enabled":true}]}
 - {"apiName":"TFT_Augment_TacticiansKitchen","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{8fba48a3}","{d12ae4b6}","{d22ae649}"],"recordIndex":295,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":34,"enabled":true}]}
 - {"apiName":"TFT_Augment_TowerDefense","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}"],"recordIndex":192,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":293,"enabled":true}]}
 - {"apiName":"TFT_Augment_TwoTrick","status":"restricted","tags":["{ce1fd21c}","{24d36c27}","{d12ae4b6}","{d22ae649}","{b72bd3bf}"],"recordIndex":204,"locations":[{"file":"src/simulation/content/augment-pool-batch1.ts","line":793,"enabled":true}]}
@@ -236,12 +266,3 @@
 - {"apiName":"TFT_Augment_WealthyRehab2","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d02ae323}"],"recordIndex":122,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":633,"enabled":true}]}
 - {"apiName":"TFT_Augment_WorthTheWaitGold","status":"restricted","tags":["{ce1fd21c}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{92e7310e}"],"recordIndex":216,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":708,"enabled":true}]}
 - {"apiName":"TFT_Augment_WorthTheWaitPrismatic","status":"restricted","tags":["{cf1fd3af}","{b72bd3bf}","{d22ae649}","{d12ae4b6}","{84a6d904}"],"recordIndex":311,"locations":[{"file":"src/simulation/content/augment-pool-batch3.ts","line":741,"enabled":true}]}
-
-验证记录（2026-10-25）：
-- `npm test -- tests/augment-stage-bans-audit.test.ts --configLoader runner`：10/10 通过，整文件 2.84 秒；无新增 timeout。合成反例与独立 CLI 入口：`tests/augment-stage-bans-audit.test.ts:58`，真实资料精确发现断言：`tests/augment-stage-bans-audit.test.ts:129`。
-- `node --check scripts/audit-augment-stage-bans.cjs`：通过。
-- 新增测试文件定向 TypeScript 严格检查：通过（`tsc --noEmit --skipLibCheck --strict --target ES2022 --module ESNext --moduleResolution Bundler --noUnusedLocals --noUnusedParameters tests/augment-stage-bans-audit.test.ts`）。
-- `node scripts/audit-augment-stage-bans.cjs -o docs/AUGMENT_STAGE_BANS_AUDIT_REPORT.md`：退出 1，精确报告上述 5 个 TABLE_MISMATCH；不是执行异常。生产表的 134 条已有记录逐项一致，所有 8 个已知案例通过。
-- `--configLoader runner` 用于避开只读共享 node_modules 中的 Vite 临时配置写入失败；未改配置或测试断言。未运行全套测试，未修改禁用表、版本、存档、界面或 Git 元数据。
-- P 约定：`docs/S13_RULES_GAP.md:5`；重建、逐项差异与规范化字节比较：`scripts/audit-augment-stage-bans.cjs:137`；独立 14.24 原始节点读取：`scripts/audit-augment-stage-bans.cjs:174`；跨版本/社区/补丁转述检查：`scripts/audit-augment-stage-bans.cjs:219`。
-- 修正新增测试数据的 TypeScript 窄类型推断后，重新运行 `npm run typecheck`：全项目通过（退出 0）。

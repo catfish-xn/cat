@@ -1,3 +1,5 @@
+import { bindBatch5R6Stock } from './augment-pool-batch5-r6';
+import { encodePrimitiveTuple } from './primitive-tuple';
 import { validateOpeningEncounterContext, validateOpeningEncounterState } from './opening-encounter';
 import { d14OwnedUnits } from './d14-runtime';
 import {findMechanicReceipt} from './seat-mechanics/state';
@@ -22,7 +24,7 @@ export function requirePool(condition:unknown, reason:SharedPoolFailure='invalid
   if (!condition) throw new PoolError(reason);
 }
 export const safe = (n:number,min=0) => Number.isSafeInteger(n) && n>=min;
-export const sourceKey=(...parts:(string|number)[])=>JSON.stringify(parts);
+export const sourceKey=(...parts:(string|number)[])=>encodePrimitiveTuple(parts);
 export const shopSource=(r:ShopReservation)=>sourceKey('shop',r.seatId,r.generation,r.slot);
 /** One key per reserved copy; a 2-star offer holds three. */
 export const shopSources=(r:ShopReservation)=>r.starLevel===2?[0,1,2].map(i=>i?sourceKey('shop',r.seatId,r.generation,r.slot,i):shopSource(r)):[shopSource(r)];
@@ -48,6 +50,12 @@ export function releaseShop(pool:PoolDraft,seatId:string):void {
   pool.shops=pool.shops.filter(r=>r.seatId!==seatId);
 }
 
+// Membership tables for the invariant check, allocated once instead of per row.
+const HOLDING_SIZES:readonly number[]=[1,3,9];
+const STAR_LEVELS:readonly number[]=[1,2,3];
+const OFFER_STATUSES:readonly string[]=['available','purchased'];
+const REWARD_RESOLUTIONS:readonly string[]=['held','gold','capacity-sold','forfeited'];
+const CAROUSEL_STATUSES:readonly string[]=['reserved','granted','released'];
 /** Read-only invariant check. Optional states must match their registered shops/holdings. */
 export function assertSharedPoolConservation(pool:SharedPoolState,states:readonly MatchState[]=[]):void {
   requirePool(pool.version===SHARED_POOL_VERSION && typeof pool.poolId==='string' && pool.poolId.length>0);
@@ -56,10 +64,13 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   requirePool(restoreOrbLayout(pool.orbLayout).seed===pool.seed);
   requirePool(safe(pool.revision)&&safe(pool.naturalRound)&&safe(pool.seatCount,1)&&pool.seatCount<=8);
   requirePool(Object.keys(pool.initial).length===SHOP_CATALOG.length && Object.keys(pool.available).length===SHOP_CATALOG.length);
-  const totals:Record<string,number>={};
+  // Sixty catalog ids keep both records in dictionary mode; read each once and
+  // keep the running totals in a Map instead of a third such record.
+  const totals=new Map<string,number>();
   for(const id of SHOP_CATALOG) {
-    requirePool(Object.hasOwn(pool.initial,id)&&Object.hasOwn(pool.available,id)&&safe(pool.initial[id])&&pool.initial[id]<=POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]&&safe(pool.available[id]));
-    totals[id]=pool.available[id];
+    const initial=pool.initial[id],available=pool.available[id];
+    requirePool(Object.hasOwn(pool.initial,id)&&Object.hasOwn(pool.available,id)&&safe(initial)&&initial<=POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]&&safe(available));
+    totals.set(id,available);
   }
   // Index once per validation; never cache mutable caller-owned pool/state data.
   const reservations = new Map<string, Map<number, ShopReservation[]>>();
@@ -79,7 +90,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     seatIds.add(seat.seatId);indices.add(seat.seatIndex);
     requirePool(seat.shop.slots.length===MATCH_RULES.shopSize);
     for(const [slot,offer] of seat.shop.slots.entries()) {
-      requirePool(['available','purchased'].includes(offer.status));
+      requirePool(OFFER_STATUSES.includes(offer.status));
       const reserved=(reservations.get(seat.seatId)?.get(slot) ?? []);
       requirePool(offer.status==='available'?reserved.length===1&&reserved[0].generation===seat.shop.generation&&reserved[0].definitionId===offer.definitionId&&reserved[0].starLevel===offer.starLevel:reserved.length===0);
     }
@@ -88,9 +99,10 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   requirePool(pool.order.length===0 || pool.order.length===pool.seatCount&&new Set(pool.order).size===pool.seatCount&&pool.order.every(s=>seatIds.has(s)));
   const sources=new Set<string>(),units=new Set<string>(),rewards=new Set<string>();
   const count=(seatId:string,definitionId:string,keys:readonly string[])=>{
-    requirePool(seatIds.has(seatId)&&Object.hasOwn(totals,definitionId)&&keys.length>0);
+    const total=totals.get(definitionId);
+    requirePool(seatIds.has(seatId)&&total!==undefined&&keys.length>0);
     for(const key of keys) {requirePool(typeof key==='string'&&!sources.has(key));sources.add(key);}
-    totals[definitionId]+=keys.length;
+    totals.set(definitionId,total+keys.length);
   };
   for(const r of pool.shops) {
     const seat=seats.get(r.seatId);
@@ -99,32 +111,32 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     count(r.seatId,r.definitionId,shopSources(r));
   }
   for(const h of pool.holdings) {
-    const key=sourceKey(h.seatId,h.unitId);requirePool(!units.has(key)&&[1,3,9].includes(h.sources.length));units.add(key);
+    const key=sourceKey(h.seatId,h.unitId);requirePool(!units.has(key)&&HOLDING_SIZES.includes(h.sources.length));units.add(key);
     count(h.seatId,h.definitionId,h.sources);
   }
   for(const p of pool.pending) {
-    requirePool([1,2,3].includes(p.starLevel??1)&&p.receiptId===lootReceiptId(p.dropId));count(p.seatId,p.definitionId,rewardSources(p));
+    requirePool(STAR_LEVELS.includes(p.starLevel??1)&&p.receiptId===lootReceiptId(p.dropId));count(p.seatId,p.definitionId,rewardSources(p));
   }
   for(const r of pool.rewards) {
-    const key=rewardSource(r);requirePool(!rewards.has(key)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)
-      &&[1,2,3].includes(r.starLevel??1)&&r.receiptId===lootReceiptId(r.dropId)&&['held','gold','capacity-sold','forfeited'].includes(r.resolution)
+    const key=rewardSource(r);requirePool(!rewards.has(key)&&seatIds.has(r.seatId)&&totals.has(r.definitionId)
+      &&STAR_LEVELS.includes(r.starLevel??1)&&r.receiptId===lootReceiptId(r.dropId)&&REWARD_RESOLUTIONS.includes(r.resolution)
       &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:r.resolution==='capacity-sold'?rewardSalePrice(r.definitionId,r.starLevel??1):0)
       &&!pendingRewards.has(key));rewards.add(key);
   }
   const carouselKeys=new Set<string>();
   requirePool(Array.isArray(pool.carouselParticipants)&&Array.isArray(pool.carouselRounds)&&new Set(pool.carouselRounds).size===pool.carouselRounds.length);
   for(const r of pool.carouselReservations) {
-    requirePool(typeof r.carouselId==='string'&&r.reservationId===`${r.carouselId}:slot:${r.slot}`&&safe(r.slot)&&r.slot<9&&!carouselKeys.has(r.reservationId)&&Object.hasOwn(totals,r.definitionId));
-    requirePool(r.seatId===null||seatIds.has(r.seatId));carouselKeys.add(r.reservationId);totals[r.definitionId]++;
+    requirePool(typeof r.carouselId==='string'&&r.reservationId===`${r.carouselId}:slot:${r.slot}`&&safe(r.slot)&&r.slot<9&&!carouselKeys.has(r.reservationId)&&totals.has(r.definitionId));
+    requirePool(r.seatId===null||seatIds.has(r.seatId));carouselKeys.add(r.reservationId);totals.set(r.definitionId,totals.get(r.definitionId)!+1);
   }
   const receiptKeys=new Set<string>();
   for(const r of pool.carouselReceipts) {
-    requirePool(r.id===`${r.carouselId}:${r.seatId}`&&r.holdingSource===r.id&&!receiptKeys.has(r.id)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)&&['reserved','granted','released'].includes(r.status));receiptKeys.add(r.id);
+    requirePool((r.id===`${r.carouselId}:${r.seatId}`||Array.from({length:8},(_,i)=>`${r.carouselId}:${r.seatId}:extra:${i+1}`).includes(r.id))&&r.holdingSource===r.id&&!receiptKeys.has(r.id)&&seatIds.has(r.seatId)&&totals.has(r.definitionId)&&CAROUSEL_STATUSES.includes(r.status));receiptKeys.add(r.id);
     const reservation=pool.carouselReservations.find(p=>p.carouselId===r.carouselId&&p.slot===r.slot);
     requirePool(r.status==='reserved'?!!reservation&&reservation.seatId===r.seatId&&reservation.definitionId===r.definitionId:!reservation);
     requirePool(r.status==='granted'?typeof r.unitId==='string'&&typeof r.itemInstanceId==='string':r.unitId===null&&r.itemInstanceId===null);
   }
-  for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
+  for(const id of SHOP_CATALOG) requirePool(totals.get(id)===pool.initial[id]);
   const provided=new Set<string>();
   for(const state of states) {
     try { validateOpeningEncounterState(state,pool.openingEncounter); } catch { requirePool(false,'invalid-seat-state'); }
@@ -185,6 +197,11 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       }
       pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:sources??[source]});
+    } else if (fact.kind === 'unit-transformed') {
+      const held = pool.holdings.find(h => h.seatId === seatId && h.unitId === fact.unitId), copies = 3 ** (fact.starLevel - 1);
+      requirePool(held && held.definitionId === fact.from && held.sources.length === copies && pool.available[fact.to] >= copies, 'invalid-seat-state');
+      pool.available[fact.from] += copies; pool.available[fact.to] -= copies;
+      pool.holdings = pool.holdings.map(h => h === held ? { ...h, definitionId: fact.to } : h);
     } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
       const e=fact.event;if(UNIT_DEFINITIONS[e.definitionId]?.summon)continue;const ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
@@ -204,7 +221,7 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
   }
 }
 export function rewardPolicy(pool:PoolDraft,state:MatchState,events:SharedPoolEvent[]):UnitLootPolicy {
-  return (drop,capacitySold)=>{
+  return bindBatch5R6Stock((drop,capacitySold)=>{
     requirePool(drop.payload.kind==='unit'&&drop.payload.quantity===1,'invalid-loot');
     const seatId=state.sharedPool!.seatId,definitionId=drop.payload.definitionId;
     const starLevel=drop.payload.starLevel??1,copies=3**(starLevel-1);
@@ -223,5 +240,5 @@ export function rewardPolicy(pool:PoolDraft,state:MatchState,events:SharedPoolEv
     const gold=UNIT_DEFINITIONS[definitionId].cost,receipt:PoolRewardReceipt={...p,resolution:'gold',gold};
     pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
     return {kind:'gold',quantity:gold,resolution:'gold'};
-  };
+  }, pool.available);
 }

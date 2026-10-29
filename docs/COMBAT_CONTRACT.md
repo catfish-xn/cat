@@ -1,3 +1,24 @@
+## 2026-10-27 v25 H7 历史强化
+
+B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的独立 death event 另判定；不改战斗 tick、事件封套或回放事实。B5-43 仅使用双方已结算的实际玩家 HP 扣减。B5-44 扩展玩家生命上限后，Spirit Link／Comeback Story 按真实缺失生命计算，输入和恢复按拥有条目验证上限。当前版本及接口见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 和 [H7 合同](AUGMENT_BATCH5_H7_DELIVERY.md)；未重录 epoch。
+
+## 2026-10-27 v25-h8：吸血与死亡收据
+
+吸血生机编译为既有 `wealthyRehab` 全能吸血机制，数值1200 Bps，使用同一伤害／治疗流水线，保留来源与完整 heal 事件；不新增战斗字段。恶意货币化使用 augment-history 的真实死亡旁路样本，按 eventSeq 计次，复活再死独立计数，正式英雄身份来自死亡现场。两项玩家层奖励在战后处理，不回写战斗回放；具体事务、来源与认证见 [MATCH_CONTRACT v25-h8](MATCH_CONTRACT.md#2026-10-27-v25-h8三项历史依赖强化)。
+
+## 2026-10-27 B5-60 狙神之巢（H10）
+
+P-B5-60：取得后每个实际参战的狙神（含正式装备纹章）首次以某格开战即获得 800 Bps，连续相同开战格每战 +800，封顶 3200；换开战格或离场后重上回到 800，合星继承主实例，出售重买清零。PvE/PvP 均计，供给轮／未参战不加层，准备期移格再移回不改变开战格。
+
+`augment-pool-batch5-h10-sniper.ts` 只读已认证历史，`readCombatStrategyInputs` 和 `snapshotForBattleSteps` 冻结可选 `sniperOpening`；`compileSideSteps` 按各席单位命名空间映射，`buildStrategySnapshotSteps` 为相应玩家单位绑定已有 `damageAmp` mechanic。战斗沿用整数增伤及伤害流水线，没有新 tick 逻辑。每场只算一次，同轮开战后的 positions 不改写冻结输入；`restoreCombatInput` 以历史重推值精确认证，双边 snapshot 校验拥有者、单位 ID 和 800/1600/2400/3200 范围。结构化双边 snapshot 不是客户端历史认证接口，联机保存仍需独立服务器 authority。
+## 2026-10-27 H11 临时成装（候选；不重录 epoch）
+
+开放拾荒者／白蹭，分别在真实死亡清理后和tick0开场执行。永久装备由历史roster API冻结，死亡使用 `augment-history-v1` 同源采样；临时成装复用现有装备载荷、事件和收据，完整重演认证，下一轮不进入永久物品账本。无新命令或wire类型；内部函数签名、失败原因及完整联机调用点见 [H11合同补充](AUGMENT_BATCH5_H11.md)。本次内容摘要重算，旧摘要拒绝；用户要求保留历史epoch录制。
+
+## 2026-10-27 v25 B5-56／B5-58
+
+规则／内容为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 保持 12/8/8/7，网络规则协议 5。金色收获（4-2）与禁忌魔法（3-2、黑玫棋盘）按 P-B5-56／58 开放。唯一历史证据为按持有者写入的 `augment-history-v1`：开战异常绑定、真实致死来源、实际参与者与玩家级赛恩成长。每三杀发二金和每三次参与击杀 +150 AD 基点／10 生命均由规则层战后唯一收据执行，成长从下一战生效。无新增玩家命令，旧身份拒绝续玩，未重录 epoch。接口、失败语义与全部接线点以 [强化历史合同](AUGMENT_HISTORY_DESIGN.md) 的 B5-56／B5-58 节为准。
+
 ## 2026-10-25 v23 当前战斗与恢复合同
 
 本节以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际实现为准，优先于下文保留的历史版本／WIP 说明；Match、经验、资源发放、历史门槛和单人按需包见 [MATCH_CONTRACT 的 v23 节](MATCH_CONTRACT.md#2026-10-25-v23-当前合同索引基线-2b434e28--0797f3fe)。当前 schema/save/replay/command＝**12/8/8/7**，rules/content＝`s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，NET5、50 ms、lcg32-v1；精确摘要必须一致，旧身份拒绝，无迁移。本次文档更新不改变这些版本，epoch 重录／验收由独立任务负责。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)。
@@ -89,7 +110,7 @@ Batch 3 继续复用 `CombatUnit.batch2` 和原 mechanismState／shieldLayers／
 
 ## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
 
-用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+现按用户 2026-10-28 批准对齐 14.24 存档，**各阶段固定15金币**，全队 **1%攻速**不变（覆盖10-23暂定15/18/22）。逐字段来源和对照见 [14.24 对齐报告](AUGMENT_14_24_ALIGNMENT.md)。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
 
 每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
 
@@ -371,3 +392,35 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 ### Batch 4 B4Combat（P，2026-10-25）
 
 四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。
+
+
+## B5-67 炼金术士（v25，2026-10-27）
+
+依据 `research/report_data.json` 的 B5-67（总量、AP 与回蓝公式已证实）及 P-B5-67 / P-B5-67-EXEC（约定）。最强辛吉德不再普攻，也不派生普攻计数/普攻回蓝；奔跑继续服从既有控制、存活、落点占用与共享预留。朝最近可选敌人跑，等距按 ID；接敌穿过目标格并落在另一侧可用格，沿途格各留下宽1格的毒云，不扩成邻格范围。云留存60 tick，同格只刷新；云接触按 `areaEnemies` 的在场资格判定，隐身/不可选中仍可接触，死亡/缺席/攻击代理不接触；寻敌保持可选目标资格。每个目标只保留一份同源毒伤，重入不重置跳相位或叠层。
+
+1–4星5秒总毒伤140/210/315/420，乘首次接触时AP/100后取整；每10 tick跳一次，首跳接触+10，末跳+100，用累计差分分摊整数余数。云与既存毒伤在来源死亡后持续，来源不能再移动、落新云或回蓝。毒伤走既有 `ability-periodic` 魔法包、抗性/盾/技能暴击授权/吸血链，绝不直接扣HP。回蓝在幸存者法力屏障逐tick提交10×当前原始攻速/20，携带有界整数余数，遵守施法锁蓝；施法仅以自己为目标，持续80 tick的20%全能吸血与平坦+250移速替换原始减伤和友军攻速。网格映射细节见 P-B5-67-EXEC，未声称原版逐帧路径已证实。
+
+附着毒伤服从既有 G11 净化：净化同步移除该目标的所有敌方辛吉德附着毒伤，来源已死亡时也移除；不清除云、其他目标的毒伤或友方来源，不回滚本 tick 已规划的包。若后续仍接触云，可重新附着，首跳从新接触后10 tick开始。夜之锋刃的不可选中与伤害防止仍各自判定，不代替净化。
+
+现有签名 `advanceS13Tick(state) → CombatStep`、`planS13Cast(ctx,unit,target,seq) → string[]` 不变；新增规则内部入口为 `compileMadChemist(state,unit,board,effect) → Effect[]`、`moveMadChemist(ctx,unit,occupied) → readonly HexCell[] | undefined`、`advanceMadChemist(ctx,unit,nextSeq) → void`。本强化战斗必须按可信输入完整重演验证；删除/插入毒云、改跳次/伤害/目标/回蓝余数/施法到期、改冻结 mechanic 均不能通过恢复。保持 v25 候选规则/格式号，R4 内部清单版本升为 `augment-pool-batch5-r4-v25-r1`，重算内容和战利品身份；不重录历史 epoch。
+## Batch 5 G2 死亡与复制体（P，2026-10-27）
+
+老友幽魂使用实际死亡事件而非击杀归属；坦克／其他角色给5生命，AD类给80 Bps AD，AP类给1 AP。非英雄召唤物不贡献；英雄复制体及同实例复活后的再次死亡贡献。死亡屏障更新同队当前单位，死亡单位不被该加成复活；后续战斗的当前／未来英雄从强化历史获得全队永久累计，合星不重复相加这份全队值。后出生的英雄复制体继承本战已累积的AD／AP；复制体已把原单位当前最大生命写入基础时，不再次叠入同一份生命成长。
+
+爆蓝之城每队每战前5次原始蓝发英雄死亡各消耗一次：按低一星（最低1星）重编译非装备／非异常声明，再减400最大生命、保底100。保留冻结有效羁绊和永久强化；已触发的蓝发羁绊继承永久收益及剩余爆发时长，不重新对全队发奖。复制体不继承原单位临时施法、装备、异常或冷却状态；原格优先，冲突按六角距离／行／列取最近空格；满盘时消费该次额度而不出生。复制体不占五次额度、不递归，但其死亡进入其他死亡触发链。
+
+出生使用既有 `unitSpawned`／回放 `unitEntered`；在本 tick 死亡效果结算后、胜负判断前加入，下一 tick 才行动。无随机抽取。`rebelCopy`、`batch5RebelSummons`、`ghostFriends` 和必要的蓝发脉冲时点均为规则内部战斗状态，由整份 Match 的独立服务器 authority 及外部战斗的完整冷重演认证，不靠候选收据自证。数字及证据分级以 S13_RULES_GAP 的 P-B5-63-G2／P-B5-70-G2 为准。
+## 2026-10-27 Batch 5 G3 战斗接线
+
+P-B5-68-G3 的空战：每次野火帮起飞调用 `startAerialDash(ctx,unit):void`；所有 S13 行走、技能、强制位移、传送及开场移动提交后、下一个动作前调用 `recordAerialMovement(ctx,unit,to,from?):void`。只对已编译 `aerialWarfare` 的成员生效。`CombatUnit.aerialWarfare?:{hexes:number,dashes:number}` 是本战可重演状态，hexes 封顶 99，两个计数分别派生 AD Bps／AP 后参与原有加法属性池；每次变化发已有 `statChanged`，没有新事件类别或时钟。
+
+P-B5-71-G3 的物竞天择：`mutationSacrificeCell(team?:Team,board?:Board):HexCell` 返回固定献祭坐标；`mutationDonor(state:CombatStrategyInputs,traits:readonly TraitSnapshot[]):Unit|undefined` 用开战前的正式成员快照判断资格（无持有者、空格或非成员均 undefined）。`compileMutationEffect` 编译 1200 Bps HP 和仅献祭者的 `mutationSacrifice` 标记；`mutationEquipmentProjection` 过滤战斗投影的装备／异常，保留原输入供加成分享。`addMutationDonation` 把额外自身试验品加成叠到普通实验室成员；7 档加倍；原生／纹章成员和克隆能力沿用既有羁绊规则。
+
+召唤描述的身份与占格先按献祭前的正式阵容投影，与策略编译使用同一依据；献祭最早获得的黑玫瑰成员时，仍保留以它命名且已经编译的唯一赛恩，不按剩余成员重命名或追加第二个赛恩。单边、双边及镜像均沿用此顺序。`excludeMutationSacrifice(units:readonly Unit[],strategy?:StrategySnapshot):readonly Unit[]` 随后在实际战斗单位生成及任何开战钩子前排除明确标记的献祭者及其 Jayce Forge；没有死亡、单位资源移除或奖励。双边 `sideResult` 仅允许 `isMutationSacrifice(strategy,id)` 明确认可的原始单位缺席，其余缺席仍报 `invalid-result`，献祭者不进入存活者与成长结算。新辅助函数只供已验证领域数据内部调用，无新增公共失败枚举或客户端参数。相关 Match 战斗恢复及双边结果使用已有 `invalid-result`／权威 replay 拒绝错误的计数、捐赠、增删字段或缺席。服务器无需增加规则或编排调用。
+## Batch 5 G4 虚灵（P，2026-10-27）
+
+`augment-pool-batch5-g4.ts` 内部入口 `castB5Voidcaller(ctx,caster,spent,counters,pending):void` 只接成功施法实际扣蓝；冻结有效先知成员（含纹章，无需激活2档）共享每队池，每275扣除阈值、结转余数；每战累计成功出生最多5只，死亡不返名额，满格不召唤且该阈值已消费。`spawnB5Voidlings(ctx,state,pending):void` 在原演员规划动作后发布既有unitSpawned事件，新生儿下一tick行动。生命2–6+为400/450/500/550/600，AD60、AS0.8、双抗30、近战无技能；不进入永久资源或卡池，不计玩家伤害。
+
+`augment-pool-batch5-g4-swarm.ts / b5PortalEffects(state,itemId,effects):readonly Effect[]` 只给持有本强化的已装备、未被执法没收传送门编译开战声明；`startB5VoidSwarm(ctx,state):void` 在完整双方开战阵容就绪后按持有者前方最近空格生成，HP1000/1500/2000/2500/3000、AD80/80/115/150/180（2–6+），基础AS0.8／双抗30／射程1，无空格跳过。2格开战嘲讽为目标锁（最近召唤物、同距ID），目标失效即释放；`b5VoidSwarmTarget(unit,units,tick)` 供既有目标入口调用；不编造持续秒数。`b5VoidSwarmVamp(unit):VampRate[]` 通过原伤害／治疗管线给大小虚灵4000Bps全能吸血，AS额外4000Bps，小虚灵不继承大型数表／嘲讽，普通英雄不获这两项加成。无本强化的旧传送门继续原规则。
+
+可选 `CombatState.voidcaller` 为每队 `{team,remainder,summoned}` 数组；`CombatUnit.voidSwarmTaunt?:string` 为开战锁定目标。可信strategy包含voidcaller／voidSwarm／b5VoidPortal时，恢复从可信开战输入完整重演到保存tick，比较全部单位、属性、计数、目标锁、事件序号及RNG；删除字段／虚构合法范围内数值／少一个出生同样拒绝，无该来源却添字段亦拒绝。没有新增战斗事件类型、tick长度或随机词；失败仍为既有恢复异常及规则入口失败语义。保存／协议纪元不重录；本任务末统一重算content／loot identities。

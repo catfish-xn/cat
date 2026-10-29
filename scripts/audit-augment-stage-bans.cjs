@@ -7,6 +7,10 @@ const crypto = require('node:crypto');
 const STAGES = ['2-1', '3-2', '4-2'];
 // P 2026-10-25: preserve the documented inference, not a decoded Riot identifier.
 const TAGS = ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'];
+// P-FINE-VINTAGE-STAGE (user decision 2026-10-27): retain source checks, override production expectation only.
+// P-LOOT-EXPLOSION-STAGE (user decision 2026-10-27): Loot Explosion is offered at 2-1 and 3-2 only; the source carries no stage tags.
+const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' },
+  TFT13_Augment_Ambusher: { source: [], expected: ['4-2'], decision: 'P-LOOT-EXPLOSION-STAGE' } };
 const DEFAULT_DATA = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const DEFAULT_CROSS = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const KNOWN = {
@@ -17,7 +21,8 @@ const KNOWN = {
 };
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const bans = tags => STAGES.filter((_, i) => tags.includes(TAGS[i]));
-const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
+// An explicit empty row and an omitted row both mean no stage restriction.
+const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).filter(k => table[k].length).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
 function tokens(text) {
   const result = [];
   const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*|-?\d+(?:\.\d+)?|[^\s]/g;
@@ -67,7 +72,7 @@ function audit(options = {}) {
   const root = options.root || path.resolve(__dirname, '..');
   const data = options.data || DEFAULT_DATA;
   const cross = options.crossversion || DEFAULT_CROSS;
-  const result = { errors: [], warnings: [], sources: [], knownCases: [], coverage: [], crossVersionDifferences: [], proposedChanges: [] };
+  const result = { errors: [], warnings: [], sources: [], knownCases: [], coverage: [], overrides: [], crossVersionDifferences: [], proposedChanges: [] };
   const error = (code, detail) => result.errors.push({ code, ...detail });
   function json(file, required = false, decode = bytes => JSON.parse(bytes)) {
     if (!fs.existsSync(file)) {
@@ -86,7 +91,7 @@ function audit(options = {}) {
     if (start < 0) throw Error('missing freezeContent object');
     shipped = literal(ts, start + 2);
     for (const [apiName, nodes] of Object.entries(shipped)) {
-      if (!Array.isArray(nodes) || !nodes.length || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
+      if (!Array.isArray(nodes) || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
         error('INVALID_TABLE_ROW', { apiName, nodes });
       }
     }
@@ -107,9 +112,12 @@ function audit(options = {}) {
     if (!pool.has(apiName)) pool.set(apiName, []);
     pool.get(apiName).push({ file: path.relative(root, file), line, enabled });
   }
-  // Inspect lexical property names, including disabled inventory rows. Comments
-  // and unrelated apiName mentions cannot create fake coverage.
-  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f)).sort()) {
+  // Inspect augment inventory modules, including disabled rows. Companion
+  // *-items.ts modules define equipment (ItemDefinition), not augments; classify
+  // by module role, never by an individual apiName. Do not exclude mixed modules
+  // merely because they import ItemDefinition alongside augment definitions.
+  // Comments and unrelated apiName mentions cannot create fake coverage.
+  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f) && !/-items\.ts$/.test(f)).sort()) {
     const file = path.join(content, fileName), ts = tokens(fs.readFileSync(file, 'utf8'));
     let count = 0;
     for (let i = 0; i < ts.length; i++) {
@@ -139,7 +147,10 @@ function audit(options = {}) {
   for (const apiName of scope) {
     const r = source.get(apiName);
     if (!r) { error('SOURCE_AUGMENT_MISSING', { apiName }); continue; }
-    const expected = bans(r.item_tags_raw);
+    const sourceBans = bans(r.item_tags_raw), override = OVERRIDES[apiName];
+    if (override && !equal(sourceBans, override.source)) error('OVERRIDE_SOURCE_MISMATCH', { apiName, expected: override.source, actual: sourceBans });
+    const expected = override ? override.expected : sourceBans;
+    if (override) result.overrides.push({ apiName, source: sourceBans, expected, decision: override.decision });
     if (expected.length) generated[apiName] = expected;
     const actual = shipped[apiName] || [];
     if (!equal(expected, STAGES.filter(s => actual.includes(s)))) {
@@ -226,7 +237,7 @@ function audit(options = {}) {
       const expected = bans(r.item_tags_raw), actual = STAGES.filter((_, i) => !t.picks[i]);
       if (!equal(expected, actual)) {
         const later = facts.filter(f => f.api_name === r.apiName && /13\.[0-9]/.test(f.source_version || '') && ((STAGES.includes(f.stage) && f.offered_at_this_stage_after_change === false && actual.includes(f.stage) && !expected.includes(f.stage)) || (f.change_type === 'disable_augment' && actual.length === 3)));
-        result.crossVersionDifferences.push({ apiName: r.apiName, expected14_24: expected, archiveBans: actual, inPool: pool.has(r.apiName), laterOfficialFacts: later.map(f => f.id), conclusion: later.length ? 'later-patch-same-direction; exact archive patch unconfirmed' : 'unexplained; do not override 14.24' });
+        result.crossVersionDifferences.push({ apiName: r.apiName, expected14_24: expected, archiveBans: actual, inPool: pool.has(r.apiName), laterOfficialFacts: later.map(f => f.id), conclusion: r.apiName === 'TFT_Augment_TableScraps' ? 'user override 2026-10-27: offered at 2-1' : later.length ? 'later-patch-same-direction; exact archive patch unconfirmed' : 'unexplained; do not override 14.24' });
       }
     }
   }
@@ -271,17 +282,19 @@ function audit(options = {}) {
   return result;
 }
 function report(r) {
-  const lines = ['【完成】独立离线阶段禁用审计（P，2026-10-25）；不修改生产表、规则或存档。', `统计：${JSON.stringify(r.summary || {})}`, ''];
+  const lines = ['【完成】独立离线阶段禁用审计；比较 14.24 标签与现行规则，含 U 2026-10-27 餐桌剩菜覆盖。', `统计：${JSON.stringify(r.summary || {})}`, ''];
   lines.push(`规范化字节一致：${r.canonical?.equal ?? false}；范围外研究记录：${r.outOfScope?.length ?? 0}。`, '', '已知案例（独立预期）：');
   for (const c of r.knownCases) lines.push(`- ${JSON.stringify(c)}`);
-  lines.push('', '【未完成】禁用表修订按任务仅列提案，未应用：');
+  lines.push('', '已记录的产品覆盖：');
+  for (const override of r.overrides || []) lines.push(`- ${JSON.stringify(override)}`);
+  lines.push('', '【未完成】与 14.24 标签的差异（含用户已决定的覆盖）：');
   for (const e of r.errors) lines.push(`- ${e.code}: ${JSON.stringify(e)}`);
   if (!r.errors.length) lines.push('- 无。');
-  lines.push('', '【需要我决定】无需补充决定；建议待规则修改获授权后按 expected 修表。', '', '【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得直接用于覆盖 14.24：');
+  lines.push('', '【需要我决定】餐桌剩菜已按用户决定覆盖；其余差异按独立审计列出。', '', '【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得自行用于覆盖 14.24；餐桌剩菜的例外来自用户决定：');
   for (const d of [...r.crossVersionDifferences, ...(r.communityDifferences || [])]) lines.push(`- ${JSON.stringify(d)}`);
   for (const d of r.patchTextChecks || []) lines.push(`- 14.24补丁转述校验 ${JSON.stringify(d)}`);
   for (const w of r.warnings) lines.push(`- ${JSON.stringify(w)}`);
-  lines.push('', '【下一步】修表后重跑 node scripts/audit-augment-stage-bans.cjs；退出码 1 表示审计发现错误，2 表示执行失败。', '', '证据文件（SHA-256）：');
+  lines.push('', '【下一步】其他差异经确认后再修表；重跑 node scripts/audit-augment-stage-bans.cjs，退出码 1 表示存在标签差异，2 表示执行失败。', '', '证据文件（SHA-256）：');
   for (const s of r.sources) lines.push(`- ${s.file}: ${s.sha256}`);
   lines.push('', '逐项池覆盖（零基 source recordIndex；无阶段标签才明确列为 unrestricted）：');
   for (const c of r.coverage) lines.push(`- ${JSON.stringify(c)}`);

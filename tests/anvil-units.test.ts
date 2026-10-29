@@ -3,7 +3,7 @@ import {createMatch,openAnvil,sellUnit,deployMatchUnit,autoDeployToCap,selectCho
 import {isAnvil,anvilDisplay} from '../src/simulation/content/anvils';
 import {createOpeningEncounter,openingForgeOffers} from '../src/simulation/opening-encounter';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {validateAnvils} from '../src/simulation/anvils';
+import { validateAnvils } from '../src/simulation/restore-checks/anvils-check';
 import {getPlayerDeploymentCount} from '../src/simulation/game';
 import {toPrivateSeatView} from '../src/simulation/private-seat-view';
 import {createSharedPool,initializeSharedSeat,runSharedMatchCommand,restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';

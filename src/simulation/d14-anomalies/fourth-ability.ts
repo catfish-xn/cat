@@ -1,5 +1,5 @@
 // 14.24 CDragon en_us.setData TFTSet13 one-cost ability.variables[*].value[4].
-// Generated raw rank-4 coefficients; 14.24b override is applied by projection.ts.
+// Generated raw rank-4 coefficients; 14.24b override is applied by fourth-star-ability.ts.
 import { freezeContent } from '../content/freeze';
 export const D14_FOURTH_ABILITY: Readonly<Record<string, Readonly<Record<string, number>>>> = freezeContent({
   "singed": {

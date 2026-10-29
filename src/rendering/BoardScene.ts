@@ -4,6 +4,7 @@ import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
+import { readFreeRerollsAvailable } from './online/seat-view-adapter';
 import { xpPurchaseAmount, xpPurchaseCost } from '../simulation/augment-xp';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
@@ -63,6 +64,8 @@ import { readOrbLoot } from './online/loot-fields';
 import { OpeningEncounterHud } from './opening-encounter-hud';
 import { readOpeningEncounterView, readOpeningForgeProgress, readOpeningMelProgress } from '../simulation/match';
 import { readOpeningDisplay } from '../presentation/opening-encounter-text';
+import { drawMutationCell, mutationCellForBoard } from './online/mutation-cell';
+import type { DisplayMatch } from './online/seat-view-adapter';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -740,11 +743,20 @@ export class BoardScene extends Phaser.Scene {
     const layer = this.specialCellLayer;
     if (!layer?.active) return;
     layer.clear();
+    const paint = (cell: HexCell, hex: string) => {
+      const color = toNumber(hex), corners = this.layout.corners(cell);
+      layer.fillStyle(color, 0.18).lineStyle(2, color, 0.9).fillPoints(corners, true).strokePoints(corners, true);
+    };
     for (const { kind, cell } of this.specialCells) {
       if (cell.col < 0 || cell.row < 0 || cell.col >= this.state.board.columns || cell.row >= this.state.board.rows) continue;
-      const color = toNumber(SPECIAL_CELL_COLORS[kind] ?? THEME.color.focus), corners = this.layout.corners(cell);
-      layer.fillStyle(color, 0.18).lineStyle(2, color, 0.9).fillPoints(corners, true).strokePoints(corners, true);
+      paint(cell, SPECIAL_CELL_COLORS[kind] ?? THEME.color.focus);
     }
+    drawMutationCell(this.mutationCell(), this.state.board, paint);
+  }
+  private mutationCell(): HexCell | null {
+    const remote = this.session instanceof RemoteSession ? this.session : null;
+    return mutationCellForBoard(this.session.state as DisplayMatch, this.online && !!remote && !remote.spectating
+      && !remote.watchedSeat && !this.session.combatView && this.session.phase !== 'gameOver');
   }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
   private target(point: Point): UnitLocation | undefined {
@@ -980,6 +992,7 @@ export class BoardScene extends Phaser.Scene {
 
   private sync() {
     this.reconcileTokens(); this.syncHud(); this.syncSoloOpening();
+    this.drawSpecialCells();
     this.strategyPanel?.render();
     this.syncOrbs();
     if (this.session.phase !== 'preparation') {
@@ -1035,8 +1048,8 @@ export class BoardScene extends Phaser.Scene {
     const canContinue = readLootView(match).canContinue;
     this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
     if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
-    const freeRerolls = freeRerollsAvailable(match);
-    this.rerollButton.setText(freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
+    const freeRerolls = this.online ? readFreeRerollsAvailable(match) : freeRerollsAvailable(match);
+    this.rerollButton.setText(freeRerolls === null ? 'D · 刷新' : freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${xpPurchaseCost(match.augments, match.round)} 金币 → ${xpPurchaseAmount(match.augments, match.round)} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
@@ -1088,7 +1101,7 @@ export class BoardScene extends Phaser.Scene {
   /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
     this.melSave?.push(change.events);
-    if (this.session instanceof RemoteSession) { if (!this.session.combatView) this.feedback?.reset(); return; }
+    if (this.session instanceof RemoteSession) { this.drawSpecialCells(); if (!this.session.combatView) this.feedback?.reset(); return; }
     const combat = change.after.combat;
     if (!combat) { this.activeStats = null; this.feedback?.reset(); return; }
     if (!this.activeStats || this.activeStats.combatId !== combat.combatId) {
@@ -1432,6 +1445,7 @@ export class BoardScene extends Phaser.Scene {
       orbs: this.feedOrbs(),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       orbRefusals: this.orbRefusalsOf(),
+      mutationSacrificeCell: this.mutationCell(),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
       ...this.feedMechanics() };
   }

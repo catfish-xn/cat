@@ -18,7 +18,7 @@ import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {createCombat} from '../src/simulation/combat';
 import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
-import {foldResourceProvenance} from '../src/simulation/resource-provenance';
+import { foldResourceProvenance } from '../src/simulation/restore-checks/fold-provenance';
 import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
 import {accept,room,fullBench,fight,batch,syntheticSharedRound} from './tp-helpers';

@@ -1,6 +1,6 @@
+import { familyCombatBase } from '../family-reunion';
 import { overtimeReceivedBps } from '../combat-overtime';
 import { MAX_COMBAT_TICKS } from '../combat-types';
-import { d14UnitBase } from '../d14-anomalies/projection';
 import { p2Bonus } from '../s13-augments-p2-combat';
 import { g23FormStats } from '../g2-3-forms';
 import type { TraitSnapshot } from '../strategy-types';
@@ -30,7 +30,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const basis = unit.maxHpBasis;
   // G2-4b: health of items gained during combat is part of the basis from their grant on.
   const granted = grantedMaxHpBasis(unit);
-  const expectedBasis = { base: unit.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.itemSummon?.formCell.row ?? unit.startingCell?.row ?? unit.cell.row).health,
+  const expectedBasis = { base: unit.effectiveStarLevel?familyCombatBase(unit,unit.effectiveStarLevel).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.itemSummon?.formCell.row ?? unit.startingCell?.row ?? unit.cell.row).health,
     flat: p2Bonus(unit,'health')+granted.flat+(unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
     bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0)+granted.bps, bonusBps: 0 };
   if(unit.itemSummon?.kind==='mirror'){

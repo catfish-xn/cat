@@ -1,3 +1,5 @@
+import { recordAugmentSettlementTable } from '../../src/server-entry';
+import { tableFacts } from '../../src/server/room/augment-history';
 import { expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleInput } from '../../src/server/room/types';
@@ -23,6 +25,6 @@ it.each([false, true])('seed 42: streaming Mel rescue is byte-identical to full-
   runUntil(room, clock, state => state.settlements.includes('test-room:round-4'), 20_000);
   expect(room.state.fault).toBeNull();
   expect(JSON.stringify(room.state.seats.map(seat => seat.match)))
-    .toBe(JSON.stringify(expected.settlement.seats.map(seat => seat.match)));
+    .toBe(JSON.stringify(expected.settlement.seats.map(seat => recordAugmentSettlementTable(seat.match,tableFacts(room.state.seats)).state)));
   expect(JSON.stringify(room.state.pool)).toBe(JSON.stringify(expected.settlement.pool));
 }, 60_000);

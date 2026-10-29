@@ -1,7 +1,10 @@
+import { excludeMutationSacrifice } from './augment-pool-batch5-g3-mutation';
+import { carryAugmentCombatDeaths } from './augment-death-samples';
+import { initializeR3Copies, projectR3Preparation } from './augment-pool-batch5-r3';
+import { initializeHallOfMirrors } from './augment-pool-batch5-r3-mirrors';
 import { drainSetup } from './setup-work';
 import { installBattleEquipmentBatch } from './battle-equipment';
 import { familyCombatBase } from './family-reunion';
-import { d14UnitBase } from './d14-anomalies/projection';
 import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
 import {createG23Forge} from './combat-g2-3-summons';
 import {projectItemSummons,initializeMirrorHealth} from './g2-4b-summons';
@@ -43,9 +46,18 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
   return drainSetup(snapshotCombatSteps(preparationState, strategy, combatId, rngState));
 }
-function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): Generator<void, CombatStep, void> {
+function combatPreparation(preparationState: GameState, strategy?: StrategySnapshot): GameState {
   const forgeCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.slice(0,-':g23-forge'.length),u.summonCell]]:[])):undefined;
-  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits,forgeCells),strategy);
+  // Freeze summon identities/placement from the same formal army as the strategy compiler.
+  // A sacrificed Black Rose may still name Sion; excluding it first would request a second, uncompiled Sion.
+  preparationState=projectG23Summons(projectR3Preparation(preparationState,strategy),strategy?.traits,forgeCells);
+  const participants = excludeMutationSacrifice(preparationState.units, strategy);
+  if (participants !== preparationState.units) preparationState = { ...preparationState, units: participants };
+  return projectItemSummons(preparationState,strategy);
+}
+function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42,
+  originalHealth?: ReadonlyMap<string, number>): Generator<void, CombatStep, void> {
+  preparationState=combatPreparation(preparationState,strategy);
   const createUnit = (unit: GameState['units'][number]): CombatUnit[] => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -56,9 +68,10 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
     const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
     const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
-    return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
+    return [{ ...(resolved?.augmentEquipment ? {equipment: structuredClone(resolved.augmentEquipment)} : {}), ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel, ...(resolved?.familyReunion?{familyReunion:resolved.familyReunion}:{}), ...(resolved?.effectiveStarLevel?{effectiveStarLevel:resolved.effectiveStarLevel}:{}),
       ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
+      ...(resolved?.r3Mirror ? { r3Mirror: resolved.r3Mirror, itemSummonOpeningMaxHp: originalHealth?.get(unit.id) } : {}),
       ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
       ...(resolved?.openingItemBankGold===undefined?{}:{openingItemBankGold:resolved.openingItemBankGold,currentItemBankGold:resolved.openingItemBankGold}),
@@ -73,7 +86,7 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: resolved?.familyReunion?familyCombatBase(unit,resolved.familyReunion.combatStarLevel).base.health:resolved?.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
+        maxHpBasis: { base: resolved?.familyReunion?familyCombatBase(unit,resolved.familyReunion.combatStarLevel).base.health:resolved?.effectiveStarLevel?familyCombatBase(unit,resolved.effectiveStarLevel).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
@@ -86,6 +99,8 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
   units.sort(compareIds);
   for(const copy of [...units].filter(u=>u.itemSummon?.kind==='mirror')){const forge=createG23Forge(copy,units,preparationState.board);if(forge)units.push(forge);}
   initializeMirrorHealth(units);
+  initializeR3Copies(units);
+  initializeHallOfMirrors(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud')))units=initializeShroud(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr')))units=initializeZephyr(units,preparationState.board);
   for (const unit of units) { freezeCombatDeclarations(unit, false, true); yield; }
@@ -107,7 +122,7 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
   const events:CombatEvent[]=[];
   for(const unit of summons){
     const ownerId=unit.itemSummon?.ownerId??unit.id.replace(/:g23-(sion|forge)$/, '');
-    const spawned=spawnCombatUnit(state,unit,unit.itemSummon?{ownerId,sourceKind:'item',definitionId:unit.itemSummon.kind==='mirror'?'TFT9_Item_OrnnTrickstersGlass':'TFT5_Item_ZzRotPortalRadiant',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0}:{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
+    const spawned=spawnCombatUnit(state,unit,unit.itemSummon?{ownerId,sourceKind:unit.itemSummon.kind==='cloning-facility'?'augment':'item',definitionId:unit.itemSummon.kind==='cloning-facility'?'cloning-facility':unit.itemSummon.kind==='mirror'?'TFT9_Item_OrnnTrickstersGlass':'TFT5_Item_ZzRotPortalRadiant',instanceId:unit.itemSummon.itemInstanceId,effectIndex:0}:{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
     state=spawned.state;events.push(...spawned.events);
     if(unit.definitionId==='g23-sion')events.push({type:'bindingChanged',tick:0,unitId:unit.id,bound:true,reason:'combat-start'});
   }
@@ -120,7 +135,26 @@ export function createCombatWithEvents(preparation: GameState, strategy: Strateg
 }
 export function* createCombatWithEventsSteps(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42, context?:TraitProjectionContext): Generator<void, CombatStep, void> {
   const projected=projectEffectiveMembership(preparation,context);
-  const spawned=yield* snapshotCombatSteps(projected.preparation,strategy,combatId,rngState);
+  let originalHealth: ReadonlyMap<string, number> | undefined;
+  if (strategy.r3Original?.length) {
+    const prepared = combatPreparation(projected.preparation,strategy);
+    const armies = strategy.r3Original.map(a => ({ ...a, preparation: combatPreparation(a.preparation,a.strategy) }));
+    const replaced = new Set(armies.map(a => a.team));
+    const retained = new Set(prepared.units.filter(u => !replaced.has(u.team)).map(u => u.id));
+    // Original armies are compiler-owned and contain no Hall declaration, so this cannot recurse.
+    const originalPreparation = { ...prepared, units: [...prepared.units.filter(u => retained.has(u.id)),
+      ...armies.flatMap(a => a.preparation.units.filter(u => u.team === a.team))] };
+    const originalStrategy = { traits: [...strategy.traits.filter(t => !replaced.has(t.team)),
+      ...armies.flatMap(a => a.strategy.traits.filter(t => t.team === a.team))],
+      units: [...strategy.units.filter(u => retained.has(u.unitId)), ...armies.flatMap(a => {
+        const ids = new Set(a.preparation.units.filter(u => u.team === a.team).map(u => u.id));
+        return a.strategy.units.filter(u => ids.has(u.unitId));
+      })] };
+    const original = yield* createCombatWithEventsSteps(originalPreparation,originalStrategy,combatId,rngState);
+    originalHealth = new Map(original.state.units.map(u => [u.id,u.maxHp]));
+    yield;
+  }
+  const spawned=yield* snapshotCombatSteps(projected.preparation,strategy,combatId,rngState,originalHealth);
   yield;
   const start=applyCombatStart(spawned.state);
   yield;
@@ -130,10 +164,11 @@ export function* createCombatWithEventsSteps(preparation: GameState, strategy: S
   return started;
 }
 export function stepCombat(state: CombatState): CombatStep {
+  const original = state;
   if (state.status === 'finished') return { state, events: [] };
   if (state.pendingEquipment?.length) {
     const { pendingEquipment, ...base } = state;
     state = installBattleEquipmentBatch(base, pendingEquipment);
   }
-  return recordNeutralReceipts(advanceCombatTick(state));
+  return carryAugmentCombatDeaths(original, recordNeutralReceipts(advanceCombatTick(state)));
 }

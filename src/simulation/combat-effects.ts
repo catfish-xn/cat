@@ -1,3 +1,8 @@
+import { openingH11 } from './augment-pool-batch5-h11';
+import { startB5VoidSwarm } from './augment-pool-batch5-g4-swarm';
+import { carryAugmentDeathSample } from './augment-death-samples';
+import { initializeR3Copies } from './augment-pool-batch5-r3';
+import { initializeHallOfMirrors } from './augment-pool-batch5-r3-mirrors';
 import { startExperimentClones } from './combat-experiment-clone';
 import { startV20Traits } from './combat-v20-traits';
 import { startSixCost } from './combat-six-cost';
@@ -18,7 +23,7 @@ export function stampCombatStep(state: CombatState, events: readonly CombatEvent
   if (!state.strategy) return { state, events };
   const first = state.nextEventSeq ?? 0;
   return { state: { ...state, nextEventSeq: first + events.length },
-    events: events.map((event, i) => ({ ...event, domain: 'combat', combatId: state.combatId!, eventSeq: first + i })) };
+    events: events.map((event, i) => carryAugmentDeathSample(event, { ...event, domain: 'combat', combatId: state.combatId!, eventSeq: first + i })) };
 }
 export function invocationEvent(invocation: EffectInvocation, tick: number): CombatEvent {
   return { type: 'effectTriggered', tick, source: { ...invocation.trigger.source }, effectKey: invocation.trigger.key,
@@ -83,8 +88,15 @@ export function applyCombatStart(state: CombatState): CombatStep {
     startSixCost({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Six-cost opening cannot draw RNG');}});
     startV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 opening cannot draw RNG');}});
     startV20Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V20 opening cannot draw RNG');}});
+    openingH11({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
+      const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
+    }}, state);
+    startB5VoidSwarm({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Void Swarm opening cannot draw RNG');}},state);
+    for (const unit of mechanismUnits) if (!units.some(u=>u.id===unit.id)) units.push(unit);
     // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
+    initializeHallOfMirrors(mechanismUnits,shields);
+    initializeR3Copies(mechanismUnits,shields);
     startExperimentClones(mechanismUnits);
   }
   return stampCombatStep({ ...state, units, rngState, rngDraws, startEffectsApplied: true }, [...effects, ...shields, ...mana]);

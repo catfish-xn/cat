@@ -112,6 +112,7 @@ it('rejects missing Climb groups, partial grants, mismatched death times and wro
   const changed=structuredClone(s) as any;changed.units.find((u:any)=>u.id==='p0').definitionId='darius';expect(()=>validate(changed)).toThrow();
 });
 import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
@@ -119,14 +120,18 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // seed is the first non-Trainer-Golem seed whose offer at the card's first node holds it (Trainer Golem openings block
 // the route's empty-board helper); death cards still see an ally death. Climb the Ladder I is a 3-2/4-2 card, so its seed
 // is a 3-2 seed. The Blistering Strikes 16/648 ignite restore regression lives in tests/blistering-restore.test.ts.
+// v25 batch-5 pool (285 cards): re-searched first public routes in 0..100 without Trainer-Golem openings.
 it.each([
- ['blistering-strikes',61],['clockwork-accelerator',58],['lone-hero',94],['climb-the-ladder-i',17],['inspiring-epitaph',63],
+ ['blistering-strikes',61],['clockwork-accelerator',40],['lone-hero',70],['climb-the-ladder-i',46],['inspiring-epitaph',21],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
+ const run=()=>{
  // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.
  expect(createMatch(seed).preparation.units.some(u=>u.definitionId==='trainer-golem')).toBe(false);
  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seed):reachRound('3-2',false,seed);
  expect(s.roundDefinitionId).toBe(offeredAt(id,'2-1')?'2-1':'3-2');
- const choice=s.pendingChoice!;expect(choice.offers).toContain(id);
+ const choice=s.pendingChoice!;
+ // Scripted draw only for Blistering: toContain is a fixture self-check; combat/restore below use real commands.
+ expect(choice.offers).toContain(id);
  s=accepted(selectChoice(s,choice.choiceId,choice.generation,id));
  const first=s.preparation.units.find(u=>u.team==='player')!;
  const traits=M5_UNIT_DEFINITIONS[first.definitionId].traits;
@@ -163,6 +168,8 @@ it.each([
  expect(triggered).toBe(true);expect(checks).toBeGreaterThan(3);
  if(['climb-the-ladder-i','inspiring-epitaph'].includes(id))expect(deathCheckpoint).toBe(true);
  expect(s.scheduleReceipts.filter(r=>r.eventId===choice.eventId)).toHaveLength(1);
+ };
+ if(id==='blistering-strikes')withB1Offers(['blistering-strikes'],run);else run();
 });
 
 it('Bulky Buddies I/II/III each grant their own shield on the same buddy death, without repetition',()=>{

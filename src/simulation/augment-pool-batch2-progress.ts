@@ -1,3 +1,4 @@
+import { SHOP_CATALOG } from './match-rules';
 import type { CombatState } from './combat-types';
 import type { Team } from './board';
 import type { MatchState } from './match-types';
@@ -10,7 +11,7 @@ import { grantMechanicGold } from './seat-mechanics/grants';
 export type Batch2BattleFacts=readonly {readonly definitionId:string;readonly count:number}[];
 const counterIds=['rocket-collection','rocket-collection-plus','enforce','welcome-to-the-playground','scrap-recycling','betrayal','blood-brothers','blood-brothers-deaths'];
 export function validateBatch2Facts(f:Batch2BattleFacts):void {
- if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||(!counterIds.includes(x.definitionId)&&x.definitionId!=='spoils-of-war')||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1)||f.some(x=>x.definitionId==='blood-brothers')!==f.some(x=>x.definitionId==='blood-brothers-deaths'))throw new RangeError('Invalid batch2 battle facts');
+ if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||(!counterIds.includes(x.definitionId)&&x.definitionId!=='spoils-of-war'&&x.definitionId!=='pilfer')||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||x.definitionId==='pilfer'&&x.count>SHOP_CATALOG.length||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1)||f.some(x=>x.definitionId==='blood-brothers')!==f.some(x=>x.definitionId==='blood-brothers-deaths'))throw new RangeError('Invalid batch2 battle facts');
 }
 /** Facts are projected from the authoritative combat, including inactive trait members and permanent emblems. */
 export function batch2BattleFacts(combat:CombatState,team:Team):Batch2BattleFacts|undefined {
@@ -52,7 +53,7 @@ export function batch2RewardPlan(state:MatchState):AugmentGift[] {
   }return gifts;
  });
 }
-function goldPlan(state:MatchState){
+export function goldPlan(state:MatchState){
  const market=state.augments.find(a=>a.definitionId==='crimson-pact');
  const marketPlan=(state.seatMechanics?.receipts??[]).flatMap(r=>market&&r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.skipped&&r.round>=market.acquiredRound?[{receiptId:JSON.stringify(['augment-pool-batch2',market.choiceId,'market',r.receiptId]),source:'augment-pool-batch2',amount:batch2Values(market.definitionId).Gold,round:r.round}]:[]);
  const a=state.augments.find(a=>a.definitionId==='enforce');if(!a)return marketPlan;
@@ -68,11 +69,4 @@ export function drainBatch2Gold(initial:MatchState):MatchState {
   const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
  }return state;
 }
-export function validateBatch2Gold(state:MatchState):void {
- const plan=goldPlan(state),receipts=state.seatMechanics?.receipts??[];
- for(const r of receipts.filter(r=>r.source==='augment-pool-batch2'||r.receiptId.startsWith('["augment-pool-batch2",'))){
-  const p=plan.find(p=>p.receiptId===r.receiptId);
-  if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch2 gold authority');
- }
- for(const p of plan)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch2 gold receipt');
-}
+

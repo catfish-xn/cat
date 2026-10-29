@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { advanceMultiplayerRound, buyXp, selectChoice, type MatchState } from '../src/simulation/match';
-import { batch5XpPurchases, validateBatch5Gold } from '../src/simulation/augment-pool-batch5-progress';
+import { batch5XpPurchases } from '../src/simulation/augment-pool-batch5-progress';
+import { validateBatch5Gold } from '../src/simulation/restore-checks/batch5-progress-check';
 import { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION } from '../src/simulation/round-settlement';
 import { firstNodeSeed } from './augment-stage-helpers';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';

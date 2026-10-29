@@ -19,12 +19,12 @@ import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { CONSUMABLE_DEFINITIONS } from './content/consumables';
 import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, SPOILS_OF_WAR_TABLES, type Batch3LootTable } from './content/augment-pool-batch3-loot';
 export const AUGMENT_BATCH3_SOURCE='augment-pool-batch3';
-const DUMMY_SOURCE='augment-pool-batch3-dummy';
+export const DUMMY_SOURCE='augment-pool-batch3-dummy';
 interface Batch3Event {readonly augment:MatchState['augments'][number];readonly schedule:number;readonly ordinal:number;readonly round:number}
 /** Every threshold crossing is derived from immutable battle receipts, never from a client counter.
  * Counting starts with the acquisition round's own battle; draws are not losses. Allied deaths count every
  * combat (PvE included) and carry their remainder; one battle may cross several thresholds. */
-function batch3Events(state:MatchState):Batch3Event[] {
+export function batch3Events(state:MatchState):Batch3Event[] {
  const battles=readG23Progress(state)?.economyReceipts.filter(r=>r.kind==='battle')??[];
  return state.augments.flatMap(augment=>{
   const row=AUGMENT_BATCH3[augment.definitionId];if(!row)return [];
@@ -162,10 +162,10 @@ export function ownDummyId(state:MatchState,augment:MatchState['augments'][numbe
  const r=gift&&state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
  return r?.kind==='unit'&&r.unitId?r.unitId:undefined;
 }
-const retireId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'retire-dummy']);
+export const retireId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'retire-dummy']);
 /** Distinct emblems (an emblem cannot be held twice), drawn by a partial shuffle of the sorted emblem pool on a
  * source/seat/choice-bound stream; P 2026-10-24. Own receipt namespace: never part of the batch-1 inventory plan. */
-const emblemGifts=(state:MatchState,augment:MatchState['augments'][number])=>{
+export const emblemGifts=(state:MatchState,augment:MatchState['augments'][number])=>{
  const row=AUGMENT_BATCH3[augment.definitionId];
  const fixed=chaosDummyItems(state,augment);
  if(fixed.length)return fixed.map((definitionId,slot)=>({receiptId:JSON.stringify([DUMMY_SOURCE,augment.choiceId,slot]),definitionId}));
@@ -197,41 +197,7 @@ export function drainBatch3Dummies(initial:MatchState):MatchState {
  }
  return state;
 }
-export function validateBatch3Dummies(state:MatchState):void {
- const fail=(why:string)=>{throw new RangeError('Invalid batch3 dummy authority: '+why);};
- const removals=state.resourceProvenance.entries.filter(e=>e.kind==='unit-removed') as readonly Extract<(typeof state.resourceProvenance.entries)[number],{kind:'unit-removed'}>[];
- const expected=new Map<string,string>();
- for(const augment of state.augments){
-  const unitId=ownDummyId(state,augment),row=AUGMENT_BATCH3[augment.definitionId];if(!row)continue;
-  if(emblemGifts(state,augment).length&&unitId){
-   const present=state.preparation.units.some(u=>u.id===unitId);
-   for(const [slot,gift] of emblemGifts(state,augment).entries()){
-    const r=state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
-    if(!r){if(present&&state.phase!=='combat')fail('missing emblem');continue;}
-    if(r.kind!=='item'||r.definitionId!==gift.definitionId||r.source!==DUMMY_SOURCE)fail('emblem receipt');
-    if(r.kind==='item'&&present&&!state.items.some(i=>i.id===r.itemId&&i.location.kind==='unit'&&i.location.unitId===unitId&&i.location.slot===slot))fail('emblem detached');
-   }
-  }
-  if(unitId&&batch3Events(state).some(e=>e.augment===augment&&row.schedules[e.schedule].retireDummy))expected.set(retireId(augment),unitId);
- }
- // A reached threshold requires retirement, too: validating only the removals supplied by the save lets it
- // delete the retirement fact and put the dummy back while retaining the already-granted support item.
- for(const [receiptId,unitId] of expected){
-  if(!removals.some(e=>e.definitionId===undefined&&e.receiptId===receiptId&&e.unitId===unitId)
-   ||state.preparation.units.some(u=>u.id===unitId))fail('missing retirement');
- }
- // Forming removals: only under an owned forming augment's receipt, all within its acquisition round.
- const forming=new Map(state.augments.filter(a=>AUGMENT_BATCH3[a.definitionId]?.forming).map(a=>[formingRemovalId(a),a]));
- for(const e of removals.filter(e=>e.definitionId!==undefined)){
-  const a=forming.get(e.receiptId);if(!a||getMultiplayerRoundById(e.roundId).ordinal!==a.acquiredRound)fail('unexpected forming removal');
-  expected.set(e.receiptId,e.unitId);
- }
- const emblems=new Set(state.augments.flatMap(a=>emblemGifts(state,a).map(g=>g.receiptId)));
- for(const r of state.seatMechanics?.receipts??[])if((r.source===DUMMY_SOURCE||r.receiptId.startsWith(`["${DUMMY_SOURCE}",`))&&!emblems.has(r.receiptId))fail('unexpected emblem');
- for(const e of removals)if(e.definitionId===undefined&&expected.get(e.receiptId)!==e.unitId)fail('unexpected removal');
- const retired=removals.filter(e=>e.definitionId===undefined);
- if(new Set(retired.map(e=>e.receiptId)).size!==retired.length||new Set(removals.map(e=>e.unitId)).size!==removals.length)fail('duplicate removal');
-}
+
 /** Dummify/Golemify: base health/attack (panel × star, no items or traits; P 2026-10-24) of the champions removed. */
 export type FormingTotals=Readonly<Partial<Record<'dummify'|'golemify',{readonly health:number;readonly attack:number}>>>;
 export const formingRemovalId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'forming']);
@@ -261,7 +227,7 @@ export function drainBatch3Forming(initial:MatchState):MatchState {
    state={...state,items:returned.items,anomalyBinding:state.anomalyBinding?.unitId===unit.id?null:state.anomalyBinding,
     persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),
     preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)},
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel})};
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel as 1|2|3})};
   }
   state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
  }
@@ -298,7 +264,7 @@ export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy)
  }
  return state;
 }
-function goldPlan(state:MatchState){
+export function goldPlan(state:MatchState){
  return batch3Events(state).flatMap(e=>{
   const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule],key=schedule.gold;
   if(schedule.counter==='enemy-kills')return [{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:spoilsGold(spoilsTable(state,e.augment,row.spoilsTier!),e.ordinal),round:e.round}];
@@ -314,14 +280,7 @@ export function drainBatch3Gold(initial:MatchState):MatchState {
   const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
  }return state;
 }
-export function validateBatch3Gold(state:MatchState):void {
- const plan=goldPlan(state),receipts=state.seatMechanics?.receipts??[];
- for(const r of receipts.filter(r=>r.source===AUGMENT_BATCH3_SOURCE||r.receiptId.startsWith(`["${AUGMENT_BATCH3_SOURCE}",`))){
-  const p=plan.find(p=>p.receiptId===r.receiptId);
-  if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch3 gold authority');
- }
- for(const p of plan)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch3 gold receipt');
-}
+
 
 /** Magic Roll: three fair six-sided dice on a source/seat/choice-bound stream (P 2026-10-24, the S14 table's ratios). */
 export function magicRollDice(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly [number,number,number] {

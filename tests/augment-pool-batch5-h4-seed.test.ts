@@ -1,0 +1,80 @@
+import { deferredRoundIncome } from '../src/simulation/deferred-income';
+import { deriveTraits } from '../src/simulation/trait-snapshot';
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
+import { existsSync, readFileSync } from 'node:fs';
+import { expect, it } from 'vitest';
+import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, rerollShop, deployMatchUnit, getDeploymentCap, rerollAugment, type MatchState } from '../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5-h4';
+import { offeredAt } from './augment-stage-helpers';
+import { accepted, emptyBoard, resolveM5Choices, reachRound } from './match-helpers';
+const id='diversified-portfolio-plus';
+/** v25 batch-5 pool drift: seed 1 with three public slot rerolls (re-searched 0..100). */
+function offerPortfolioPlus(): MatchState {
+ let state=reachRound('3-2',false,1);
+ for (const slot of [0,1,2]) {
+  if (state.pendingChoice!.offers.includes(id)) break;
+  const c=state.pendingChoice!; state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));
+ }
+ expect(state.pendingChoice!.offers).toContain(id);
+ return state;
+}
+const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
+it.skipIf(!existsSync(RESEARCH_FILE))('B5-33 source numbers',()=>{
+ const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((x:any)=>x.apiName===AUGMENT_BATCH5_H4[id].apiName);
+ expect(source.effects).toEqual(AUGMENT_BATCH5_H4[id].values);
+});
+it('B5-33 offer, public selection, next natural round and authenticated restore',()=>{
+ expect(['2-1','3-2','4-2'].filter(n=>offeredAt(id,n as '2-1'|'3-2'|'4-2'))).toEqual(['3-2']);
+ let s=offerPortfolioPlus(),c=s.pendingChoice!;expect(c.offers).toContain(id);
+ const gold=s.gold;s=accepted(selectChoice(s,c.choiceId,c.generation,id));expect(s.gold).toBe(gold+4);
+ s=resolveM5Choices(s);s=accepted(startMatchCombat(emptyBoard(s)));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
+ expect(s.augmentHistory!.facts.filter(f=>f.kind==='round-entry'&&f.round===s.round)).toHaveLength(1);
+ for(const format of ['object','json','serialized'] as const){
+  const input=(v:typeof s)=>format==='object'?v:format==='json'?JSON.stringify(v):serializeMatch(v);
+  expect(restoreMatch(input(s))).toEqual(s);
+  for(const edit of [(v:any)=>{v.augmentHistory.facts.find((f:any)=>f.kind==='round-entry').roster.items.push({id:'forged'});},(v:any)=>{delete v.augmentHistory;},(v:any)=>{v.gold++;}]){
+   const bad=structuredClone(s);edit(bad);expect(()=>restoreMatch(input(bad))).toThrow();
+  }
+ }
+});
+let rewarded:MatchState;
+it('B5-33 pays its first recurring gold from an actual three-trait board',()=>{
+ let s=offerPortfolioPlus(),c=s.pendingChoice!;
+ s=accepted(selectChoice(s,c.choiceId,c.generation,id));s=resolveM5Choices(s);
+ // The merged first augment changes the gifted heroes. Build the same three-trait
+ // witness with paid public shop commands instead of relying on incidental gifts.
+ const roster=['irelia','rell','draven','vex','morgana'];
+ const owns=(id:string)=>s.preparation.units.some(u=>u.team==='player'&&u.definitionId===id);
+ for(let refresh=0;refresh<=20&&!roster.every(owns);refresh++){
+  for(const [index,slot] of s.shop.slots.entries())if(slot.status==='available'&&roster.includes(slot.definitionId)&&!owns(slot.definitionId))
+   s=accepted(buyUnit(s,index,s.shop.generation));
+  if(!roster.every(owns)&&refresh<20)s=accepted(rerollShop(s));
+ }
+ expect(roster.every(owns)).toBe(true);
+ while(s.gold>=4&&getDeploymentCap(s)<5){const r=buyXp(s);if(!r.ok)break;s=r.state;}
+ for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&roster.includes(u.definitionId))){
+  if(s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=getDeploymentCap(s))break;
+  for(let col=0;col<7;col++){if(s.preparation.units.some(v=>v.team==='player'&&v.location.kind==='board'&&v.location.cell.col===col&&v.location.cell.row===4))continue;
+   const r=deployMatchUnit(s,u.id,{kind:'board',cell:{col,row:4}});if(r.ok){s=r.state;break;}}
+ }
+ const active=deriveTraits(s.preparation,'player',TRAIT_DEFINITIONS,undefined,s.items).filter(t=>t.tier>0&&!(TRAIT_DEFINITIONS[t.traitId].tiers.length===1&&TRAIT_DEFINITIONS[t.traitId].tiers[0].threshold===1)).map(t=>t.traitId);
+ expect(active).toEqual(['conqueror','sentinel','visionary']);
+ s=accepted(startMatchCombat(s));while(s.phase==='combat')s=stepMatch(s).state;s=resolveM5Choices(s);
+ const before=s,r=nextRound(s,s.round);s=accepted(r);
+ expect(s.gold).toBe(before.gold+deferredRoundIncome(before.roundResults.at(-1)!)+1);
+ expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-h4')).toMatchObject([{round:s.round,kind:'gold',amount:1}]);
+ expect(r.ok&&r.events.some(e=>e.type==='mechanicGranted'&&e.receipt.source==='augment-pool-batch5-h4')).toBe(true);
+ rewarded=s;
+});
+
+let serializedReward:string;
+it('B5-33 serializes the real recurring reward',()=>{serializedReward=serializeMatch(rewarded);expect(typeof serializedReward).toBe('string');});
+for(const format of ['object','json','serialized'] as const){
+ const input=(v:MatchState)=>format==='object'?v:format==='serialized'&&v===rewarded?serializedReward:JSON.stringify(v);
+ it(`B5-33 ${format} restores the real recurring reward`,()=>expect(restoreMatch(input(rewarded))).toEqual(rewarded));
+ it(`B5-33 ${format} rejects a forged recurring reward`,()=>{
+  const bad:any=structuredClone(rewarded);bad.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch5-h4').amount++;
+  expect(()=>restoreMatch(input(bad))).toThrow();
+ });
+}

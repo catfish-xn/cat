@@ -7,7 +7,10 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat} from '../src/simulation/match';
+import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat,nextRound,claimOrDiscardLoot,advanceMultiplayerRound,selectAnomalyTarget,rerollAnomaly,forfeitPendingChoice} from '../src/simulation/match';
+import {enableMultiplayerSettlement} from '../src/simulation/round-settlement';
+import {FINAL_ROUND} from '../src/simulation/round-schedule';
+import {validateShopHistory} from '../src/simulation/restore-checks/shop-history-check';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {planOrbClaim} from '../src/simulation/orb-claim';
@@ -20,7 +23,8 @@ import {CONSUMABLE_DEFINITIONS,REFORGE_POOLS} from '../src/simulation/content/co
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {appendMechanicReceipt,grantMechanicItem,grantMechanicUnit} from '../src/simulation/seat-mechanics';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
-import {epicForgeOffers,openEpicForge,EPIC_REWARD_NAMES,validateEpicForges,settleTerminalEpicForges} from '../src/simulation/epic-forges';
+import { epicForgeOffers, openEpicForge, EPIC_REWARD_NAMES, settleTerminalEpicForges } from '../src/simulation/epic-forges';
+import { validateAnvils as validateEpicForges } from '../src/simulation/restore-checks/anvils-check';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {publicAuthoredPreparation} from './fixtures/m8-neutral-public-route';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
@@ -29,6 +33,7 @@ import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/
 import type {MatchState} from '../src/simulation/match-types';
 import type {ConsumableDefinitionId} from '../src/simulation/consumable-types';
 import {accepted} from './fixtures/r3r4-public';
+import {accepted as onlineAccepted} from './t5r-helpers';
 import {room,syntheticSharedRound,accept,fullBench,conserved} from './tp-helpers';
 import {runSharedMatchCommand,restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
 function tool(state:MatchState,definitionId:ConsumableDefinitionId):MatchState{
@@ -184,20 +189,67 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(useConsumable(full,full.consumables.at(-1)!.consumableId,{kind:'unit',unitId:'unit-1'})).toEqual({ok:false,state:full,reason:'bench-full'});
  });
  it('a real 5-7 command path restores new forge receipts and never repeats the rewards',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v24-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v25-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='5-7'&&s.phase==='preparation'));
   let state:MatchState=battle(initial).ended;
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
   expect(state.phase).toBe('settlement');expect(restoreMatch(serializeMatch(state))).toEqual(state);
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
+ it('authenticates a paid online anomaly reroll after selling the target and timing out',()=>{
+  let state=publicAuthoredPreparation('4-5');
+  // Board units cannot be sold during an anomaly choice; clear them in the preceding preparation.
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))state=accepted(sellUnit(state,unit.id));
+  state=battle(state).ended;
+  while(state.phase==='choice'){const choice=state.pendingChoice!;state=accepted(selectChoice(state,choice.choiceId,choice.generation,choice.offers[0]));}
+  state=onlineAccepted(enableMultiplayerSettlement(state,'A'));
+  state=accepted(nextRound(state,state.round));
+  expect(state.shopHistory).toBeDefined();
+  let c=state.pendingChoice!;expect(c.kind).toBe('anomaly');
+  const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;expect(target).toBeDefined();
+  state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,target.id));
+  c=state.pendingChoice!;const gold=state.gold;
+  state=accepted(rerollAnomaly(state,c.choiceId,c.generation));expect(state.gold).toBe(gold-1);
+  expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,unit.id));
+  c=state.pendingChoice!;expect(c).toMatchObject({kind:'anomaly',step:'target',targetId:null});
+  const result=forfeitPendingChoice(state,state.round,c.choiceId,c.generation);
+  expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
+  expect(result.events).toContainEqual(expect.objectContaining({type:'choiceTimedOut',choiceId:c.choiceId,resolution:'empty-anomaly'}));
+  expect(result.state.multiplayer!.forfeitedChoices).toContain(c.choiceId);
+  expect(result.state.scheduleReceipts.some(r=>r.eventId===c.choiceId)).toBe(false);
+  expect(result.state.pendingChoice).toBeNull();
+  validateShopHistory(JSON.parse(JSON.stringify(result.state)));
+  const forged=structuredClone(result.state),fee=forged.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  Object.assign(fee,{choiceId:'round:6-7:anomaly'});
+  Object.assign(forged.multiplayer!,{forfeitedChoices:[...forged.multiplayer!.forfeitedChoices,'round:6-7:anomaly']});
+  expect(()=>validateShopHistory(forged)).toThrow('Invalid shop history: anomaly fee');
+ });
+ it('rejects a forged anomaly fee in online overtime with the anomaly fee error',()=>{
+  let state=onlineAccepted(enableMultiplayerSettlement(publicAuthoredPreparation('6-7'),'A'));
+  state=battle(state).ended;
+  while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
+  state=onlineAccepted(claimOrDiscardLoot(state,state.round));
+  state=onlineAccepted(advanceMultiplayerRound(state,state.round));
+  expect(state.round).toBe(FINAL_ROUND+1);
+  validateShopHistory(state);
+  const forged=structuredClone(state),history=forged.shopHistory!;
+  const point={round:forged.round,level:forged.level,xp:forged.xp,resourcePrefix:forged.resourceProvenance.entries.length,
+   owners:forged.augments.map(a=>a.choiceId),gold:forged.gold,mechanicPrefix:forged.seatMechanics?.receipts.length??0,
+   lootPrefix:forged.m8.loot.receipts.length,schedulePrefix:forged.scheduleReceipts.length,economyPrefix:forged.roundResults.length};
+  Object.assign(history,{entries:[...history.entries,{kind:'anomaly-reroll',point,choiceId:'round:4-6:anomaly'}]});
+  expect(()=>validateShopHistory(forged)).toThrow('Invalid shop history: anomaly fee');
+ });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
   // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
   // take the 6-7 prefix from the crab-free public route instead (Rift Herald keeps its opening state).
   let state=publicAuthoredPreparation('6-7');
+  const anomalyHolder=state.anomalyBinding!.unitId;
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
   // Keep only the aura target fielded so the restore reaches the neutral opening check, not the V19 trait replay.
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.id!==target.id))state=accepted(sellUnit(state,u.id));
+  expect(anomalyHolder).not.toBe(target.id);expect(state.anomalyBinding).toBeNull();
+  expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
   state=accepted(equipItem(state,state.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,target.id,0));
   // v22: a lone holder reaches overtime (tick 600), where the full overtime replay authenticates first;
@@ -206,13 +258,22 @@ describe('v17 epic rewards and unified consumables',()=>{
   while(checkpoint.phase==='combat'&&checkpoint.combat!.tick<S13_COMBAT_RULES.overtimeStartTick-1)checkpoint=stepMatch(checkpoint).state;
   expect(checkpoint.combat!.openingState!.initialUnits.length).toBeGreaterThan(0);
   expect(restoreMatch(serializeMatch(checkpoint))).toEqual(checkpoint);
+  const forgedFee=structuredClone(checkpoint),fee=forgedFee.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  Object.assign(fee,{choiceId:'round:6-7:anomaly'});
+  expect(()=>restoreMatch(forgedFee)).toThrow('anomaly fee');
+  const forgedAfterReceipt=structuredClone(checkpoint),afterFee=forgedAfterReceipt.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  const receiptIdx=forgedAfterReceipt.scheduleReceipts.findIndex(r=>r.kind==='anomaly'&&r.eventId===afterFee.choiceId&&r.round===afterFee.point.round);
+  expect(receiptIdx).toBeGreaterThanOrEqual(0);
+  expect(afterFee.point.schedulePrefix).toBe(receiptIdx);
+  Object.assign(afterFee.point,{schedulePrefix:receiptIdx+1});
+  expect(()=>restoreMatch(forgedAfterReceipt)).toThrow('anomaly fee');
   const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
   expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v24-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v25-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const heroes=initial.m8.loot.frozen.rounds.at(-1)!.encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);expect(heroes.length).toBeGreaterThan(0);
   const state=battle(fillBench(initial,heroes)).ended;expect(state.phase).toBe('gameOver');
@@ -233,9 +294,9 @@ describe('v17 epic rewards and unified consumables',()=>{
  it('uses exact approved zh_cn names and rejects prior-epoch state identities without migration',()=>{
   expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器',TFT_Consumable_MasterworkUpgrade:'杰作升级',TFT13_Crime_Consumable_LesserShimmerDuplicator:'次级微光复制器'});
   expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
-  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v24-online-rules');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
+  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v25-online-rules');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const){
-    const previous=state[field].replace('v24-online-rules','v19');
+    const previous=state[field].replace('v25-online-rules','v19');
     expect(previous).not.toBe(state[field]);
     expect(()=>restoreMatch({...state,[field]:previous})).toThrow();
   }

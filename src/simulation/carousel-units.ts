@@ -26,6 +26,10 @@ export function validateCarouselMetadata(state: MatchState): void {
     if(!receipt || !fact || getCatalogRoundById(receipt.carouselId.split(':').at(-1)!).ordinal>=(state.multiplayer
       ? getMultiplayerRoundById(fact.roundId) : getCatalogRoundById(fact.roundId)).ordinal) invalid();
   }
+  for (const receipt of metadata.receipts) if (receipt.id !== `${receipt.carouselId}:${receipt.seatId}`) {
+    if (!state.augmentHistory?.facts.some(f => f.kind === 'carousel' && f.source === 'augment' && f.choiceId !== null
+      && state.augments.some(a => a.choiceId === f.choiceId) && canonicalContent(f.receipt) === canonicalContent(receipt))) invalid();
+  }
   const ids=new Set<string>();
   for(const unit of metadata.heldCarouselUnits){
     if(ids.has(unit.unitId) || state.preparation.units.some(u=>u.id===unit.unitId)

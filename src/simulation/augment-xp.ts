@@ -1,3 +1,5 @@
+import { batch5S6cSettlementHealth } from './augment-pool-batch5-s6c';
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import type { MatchState, RoundResult } from './match-types';
 import type { OwnedAugment } from './strategy-types';
@@ -9,9 +11,9 @@ import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 
 /** Owner-visible acquisition levels, `{choiceId: level}`, of the augments that count later level-ups. */
 export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
-type AcquisitionLevels=Readonly<Record<string,number>>;
+export type AcquisitionLevels=Readonly<Record<string,number>>;
 const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
-const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return !!AUGMENT_BATCH4[a.definitionId]||row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
+export const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return !!AUGMENT_BATCH4[a.definitionId]||row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
 
 /** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
  * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought
@@ -60,17 +62,17 @@ export function xpPurchaseCost(augments:readonly OwnedAugment[],round:number):nu
  return Math.max(0,augments.reduce<number>((cost,a)=>cost-(a.acquiredRound<=round?AUGMENT_BATCH3_XP[a.definitionId]?.xpCostReduction??0:0),MATCH_RULES.xpPurchaseCost));
 }
 const healthPerLevel=(a:OwnedAugment)=>{const key=AUGMENT_BATCH3_XP[a.definitionId]?.levelUpHealth;return key?batch3XpValue(a.definitionId,key):0;};
-const heal=(hp:number,amount:number)=>hp>0&&amount>0?Math.min(MATCH_RULES.initialHp,hp+amount):hp;
-/** Upward Mobility: a living player heals per level gained from `before` to `after` (P: capped at 100). */
+const heal=(hp:number,amount:number,maxHp:number)=>hp>0&&amount>0?Math.min(maxHp,hp+amount):hp;
+/** Upward Mobility: a living player heals per level gained, capped at the owned maximum HP. */
 export function applyLevelUpHealth(before:Pick<MatchState,'level'>,after:MatchState):MatchState {
  const amount=after.augments.reduce((n,a)=>n+healthPerLevel(a),0)*Math.max(0,after.level-before.level);
- const playerHp=heal(after.playerHp,amount);
+ const playerHp=heal(after.playerHp,amount,maximumPlayerHp(after.augments));
  return playerHp===after.playerHp?after:{...after,playerHp};
 }
 /** Restore: level-up health during round `round`'s settlement (settlement XP), applied to the settled HP. */
 export function settlementLevelUpHealth(state:MatchState,round:number,hp:number):number {
  const result=state.roundResults.find(r=>r.round===round);if(!result)return hp;
- return heal(hp,state.augments.filter(a=>a.acquiredRound<=round).reduce((n,a)=>n+healthPerLevel(a),0)*(result.levelAfter-result.levelBefore));
+ return batch5S6cSettlementHealth(state,round,heal(hp,state.augments.filter(a=>a.acquiredRound<=round).reduce((n,a)=>n+healthPerLevel(a),0)*(result.levelAfter-result.levelBefore),maximumPlayerHp(state.augments,round)));
 }
 /** Restore: level-up health from the previous settlement to round `round`'s battle (entry XP, acquisition XP, purchases).
  * Levels before an acquisition in this round never heal: offline, the recorded level is the round-entry level. */
@@ -82,7 +84,7 @@ export function preparationLevelUpHealth(state:MatchState,round:number,hp:number
   if(a.acquiredRound>round||!healthPerLevel(a))return n;
   const low=Math.max(a.acquiredRound===round?levels[a.choiceId]??end:start,segment.from??-Infinity),high=Math.min(end,segment.to??Infinity);
   return n+healthPerLevel(a)*Math.max(0,high-low);
- },0));
+ },0),maximumPlayerHp(state.augments,round));
 }
 /** Risky Moves: health lost on selection, never below 1 (P), never to a player already at 0. */
 export function applyAcquisitionHealthLoss(state:MatchState,a:OwnedAugment):MatchState {
@@ -100,13 +102,4 @@ export function preparationHealthLoss(state:MatchState,round:number):{readonly l
 export function levelAtExperience(total:number):number {
  return grantXp(1,0,total).level;
 }
-/** Shape and bounds; the offline chain additionally checks each value against its acquisition round entry. */
-export function validateAcquisitionLevels(state:MatchState):void {
- const raw=state.seatMechanics?.seat[AUGMENT_ACQUISITION_LEVEL_KEY],owners=state.augments.filter(countsLevels);
- if(raw===undefined&&!owners.length)return;
- const fail=()=>{throw new RangeError('Invalid augment acquisition levels');};
- if(!raw||typeof raw!=='object'||Array.isArray(raw))fail();
- const levels=raw as AcquisitionLevels;
- if(Object.keys(levels).sort().join('\n')!==owners.map(a=>a.choiceId).sort().join('\n'))fail();
- for(const a of owners){const level=levels[a.choiceId];if(!Number.isSafeInteger(level)||level<1||level>state.level)fail();}
-}
+

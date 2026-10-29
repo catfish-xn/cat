@@ -7,7 +7,7 @@ import {createCombat} from '../src/simulation/combat';
 import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {epicForgeOffers} from '../src/simulation/epic-forges';
-import {validateAnvils} from '../src/simulation/anvils';
+import { validateAnvils } from '../src/simulation/restore-checks/anvils-check';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
 import {createOpeningEncounter,applyOpeningEffects,planOpeningRound} from '../src/simulation/opening-encounter';
 import {subscriptionBucket,openingRewardAtoms,openingRewardOffers,claimOpeningReward} from '../src/simulation/opening-batch-rewards';

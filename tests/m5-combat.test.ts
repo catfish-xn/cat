@@ -1,4 +1,5 @@
 import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
+import { B5_G4_SUMMON_UNITS } from '../src/simulation/content/augment-pool-batch5-g4';
 import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
@@ -45,10 +46,10 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 }
 
 describe('M5 independent finite combat rules', () => {
-  it('resolves all 70 admitted abilities as integer-only isolated snapshots', () => {
+  it('resolves every admitted ability as an integer-only isolated snapshot', () => {
     // v23 batch 3: the training and tower dummies own their abilities (the forming dummy and Golemify golem reuse
     // the training-dummy and trainer-golem abilities).
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS,
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS, ...B5_G4_SUMMON_UNITS,
       [TRAINING_DUMMY_ID]: BATCH3_SUMMON_UNITS[TRAINING_DUMMY_ID], [TOWER_DUMMY_ID]: BATCH3_SUMMON_UNITS[TOWER_DUMMY_ID]};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);

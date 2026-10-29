@@ -48,13 +48,13 @@ function assertGrowth(before:CombatState,after:CombatState,id:string,grants:numb
   expect(amounts).toEqual(Array(grants).fill(300));
 }
 
-it('Built Different: only the emblem Lux loses +300 HP/+45% AS; the other same-definition copy keeps both',()=>{
+it('Built Different: only the emblem Lux loses +240 HP/+45% AS; the other same-definition copy keeps both',()=>{
   const s=inputs(['darius','lux','lux'],'built-different');
   const context=ctx([{...lifetime,sourceId:'lux-emblem',kind:'emblem',unitId:'p1',traitId:'conqueror',itemInstanceId:'emblem'}]);
   const strategy=buildStrategySnapshot(s,undefined,context),luxA=strategy.units.find(u=>u.unitId==='p1')!,luxB=strategy.units.find(u=>u.unitId==='p2')!;
   expect(strategy.traits.find(t=>t.traitId==='conqueror'&&t.team==='player')).toMatchObject({tier:2,memberUnitIds:['p0','p1']});
   expect(luxA.stats.health).toBe(500);expect(luxA.stats.attackSpeedBonusBps).toBe(0);
-  expect(luxB.stats.health).toBe(800);expect(luxB.stats.attackSpeedBonusBps).toBe(4500);
+  expect(luxB.stats.health).toBe(740);expect(luxB.stats.attackSpeedBonusBps).toBe(4500);
 });
 it('Built Different: removing native membership grants the bonus to one copy while the other still activates Conqueror',()=>{
   const s=inputs(['darius','darius','draven'],'built-different');
@@ -62,7 +62,7 @@ it('Built Different: removing native membership grants the bonus to one copy whi
   const strategy=buildStrategySnapshot(s,undefined,context);
   // Two Darius copies alone are only one Bruiser; p1 + Draven keep Conqueror2.
   const a=strategy.units.find(u=>u.unitId==='p0')!,b=strategy.units.find(u=>u.unitId==='p1')!;
-  expect(a.stats.health-b.stats.health).toBe(300);
+  expect(a.stats.health-b.stats.health).toBe(240);
   expect(a.stats.attackSpeedBonusBps! - b.stats.attackSpeedBonusBps!).toBe(4500);
 });
 it('Built Different: temporary member/whole-unit entry and removal affect only the effective board, expire at the boundary',()=>{
@@ -75,7 +75,7 @@ it('Built Different: temporary member/whole-unit entry and removal affect only t
   const membershipRemoval:TraitProjectionSource={...lifetime,sourceId:'absence',kind:'remove-unit',unitId:'p0'};
   const strategy=buildStrategySnapshot(s,undefined,ctx([source,membershipRemoval]));
   expect(strategy.units.some(u=>u.unitId==='p0')).toBe(false);
-  expect(strategy.units.find(u=>u.unitId==='p1')?.stats.health).toBe(800); // only one Conqueror remains
+  expect(strategy.units.find(u=>u.unitId==='p1')?.stats.health).toBe(740); // only one Conqueror remains
 });
 it('Climb: a temporary emblem shares an otherwise inactive trait with the dead unit; unrelated same-definition Lux gets no grant',()=>{
   const context=ctx([{...lifetime,sourceId:'lux-emblem',kind:'emblem',unitId:'p1',traitId:'conqueror',itemInstanceId:'emblem'}]);

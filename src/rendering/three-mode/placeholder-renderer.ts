@@ -38,6 +38,12 @@ import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
+// Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
+// so the 2D entry statically imports all of three.js (rendering3d-isolation). Mirrors ../online/mutation-cell.
+const MUTATION_CELL_COLOR = '#c47cff';
+function isMutationCell(cell: { readonly col: number; readonly row: number }, marker: { readonly col: number; readonly row: number } | null | undefined, ownBoard: boolean): boolean {
+  return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
+}
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
@@ -508,7 +514,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
     () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
-  let boardKey = '';
+  let boardKey = '', showingOwnBoard = true;
   /**
    * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
    * of on the 2D bench coordinates, and points over them are handed back to BoardScene as its own bench slots.
@@ -555,7 +561,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     lastFrame = frame;
     arena?.place(frame);
     const overlay = !!arena?.ready;
-    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}`;
+    const marker = showingOwnBoard ? frame.mutationSacrificeCell : null;
+    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}|${marker?.col ?? ''},${marker?.row ?? ''}`;
     if (key === boardKey) return;
     boardKey = key;
     benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
@@ -566,9 +573,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       ? { color, roughness: 0.85, transparent: true, opacity: 0.22, depthWrite: false } : { color, roughness: 0.85 };
     const own0 = ownBoard(new MeshStandardMaterial(tileLook('#2d5c7a')));
     const foe = ownBoard(new MeshStandardMaterial(tileLook('#5a3a48')));
+    const mutation = ownBoard(new MeshStandardMaterial(tileLook(MUTATION_CELL_COLOR)));
     const grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
-      const mesh = new Mesh(tile, row < frame.rows / 2 ? foe : own0);
+      const mesh = new Mesh(tile, isMutationCell({ col, row }, marker, true) ? mutation : row < frame.rows / 2 ? foe : own0);
       mesh.position.copy(hexCenter({ col, row }, grid)).setY(overlay ? 1 : -3);
       if (overlay) mesh.scale.y = 0.2;
       boardGroup.add(mesh);
@@ -1166,6 +1174,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Watching its battle: that battle is on my board (the frames carry it), so no static build is drawn over it.
     if (view?.seatId !== scoutView?.seatId || view?.watching !== scoutView?.watching) clearDescription();
     scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
+    showingOwnBoard = !view;
+    if (lastFrame) buildBoard(lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active);
     goldMines?.away(!!view);

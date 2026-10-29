@@ -1274,3 +1274,11 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 - 验收：持有双重目的时，成功买经验刷新共享商店且守恒；同轮仅首笔回2金币；免费刷新额度不消耗；锁定保留；失败池/state 原引用不变。原任务未修改服务器，本次 Review K 的用户授权覆盖此一处接线。
 
 **2026-10-27 合并更新：**双重目的唯一内容行迁到 `src/simulation/content/augment-pool-batch5.ts`，显示名称/说明保留。权威行为为每次成功买经验强制刷新、保留锁定开关，实际刷新也触发棱彩门票；房间入口已统一共享事务。原八项商店数据需求继续有效，无新增界面接线请求。
+
+## B5-34-SETTLEMENT-EVENT（2026-10-27，已完成：h4w 用户授权 Codex 接线）
+
+**已完成：**`recordRoomSettlementTable` 改调规则公开入口 `recordAugmentSettlementTable`，由规则层比较 receiptId、生成并编号 `mechanicGranted`，在 `Room.commitSettlement` 的同一次发布中追加到原结算事件。网络 `state.events` 按 session/room/receiptId 去重，成功发送后才记账，重连沿用记录。接口及失败边界见 `MULTIPLAYER_CONTRACT.md` 的 B5-34 结算事件接线节；验收和调用点见 `B5_H4W_REPORT.md`。以下保留原请求。
+
+- `Room.commitSettlement` 调用 `recordRoomSettlementTable` 时，规则层可在该调用中给存活的幸存者持有者写入唯一 60 金收据及金币；当前服务器 `serverEvents` 仍只携带原结算事件，未包含该次新收据的 `mechanicGranted` 事件。
+- 请求服务器流水线在整桌淘汰/排名确定后比较该席位结算表记录前后的机制收据，将新事件按 Match 的事件序号规则与原结算事件一并原子发布；不在服务器重算获奖条件或金币。若需要显式携带已编号事件，请由规则层另提供适配接口，不从客户端状态推断。
+- 验收：三人同轮出局时，存活持有者只收到一次正确编号的 `mechanicGranted`；同时出局的持有者无奖励和事件；重复结算及重连不补发。金币和唯一收据已由规则层发放，此请求仅补事件传递。

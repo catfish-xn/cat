@@ -1,4 +1,5 @@
 import { reachRound } from './match-helpers';
+import { boundedFirstNodeOffer } from './augment-stage-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { createMatch, selectChoice, setShopLock, rerollShop, buyXp, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
@@ -26,10 +27,10 @@ describe('M5 Match atomic integration', () => {
     expect(initial.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)).toEqual(['irelia']);
     expect(initial.pendingChoice).toBeNull();expect(initial.items).toHaveLength(0);expect(initial.augments).toHaveLength(0);
     expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
-    const before=reachRound('2-1',false),c=before.pendingChoice!;
+    const before=boundedFirstNodeOffer('two-trick'),c=before.pendingChoice!;
     expect(c.kind).toBe('augment');expect(restoreMatch(serializeMatch(before))).toEqual(before);
     // Two Trick is actually offered and grants no items; keep the item-free acquisition invariant.
-    const pick='two-trick';expect(c.offers).toContain(pick);
+    const pick='two-trick';expect(c.offers).toContain(pick); // bounded 0..100 rerolls; v25 pool seed 1 (was default 42).
     const selected=selectChoice(before,c.choiceId,c.generation,pick);
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
     const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);

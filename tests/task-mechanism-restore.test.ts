@@ -1,3 +1,4 @@
+import { installB1Offers, withB1Offers } from './fixtures/b1-scripted-offers';
 import { beforeAll, expect, it, vi } from 'vitest';
 import * as replayCombat from '../src/simulation/combat';
 import * as content from '../src/simulation/content';
@@ -72,8 +73,9 @@ it.each([
   // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
   { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
   { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
-])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
-  // Public augment acquisition stays intact; the assertions below require a real summon kill and the exact contribution flag.
+])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
+  // Script only the draw; the augment equality is a fixture self-check. All commands,
+  // summon kills, contribution facts and restore checks remain real.
   let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'sentinel-crest' : 'watcher-crest'] });
   expect(state.augments.map(a=>a.definitionId)).toEqual([contribution ? 'sentinel-crest' : 'watcher-crest']);
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
@@ -141,7 +143,7 @@ it.each([
     expect(() => serializeMatch(bad)).toThrow(reason);
     for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow(reason);
   }
-}, 30000);
+}), 30000);
 
 function morganaCurseSave(twoOwners = false): MatchState {
   let state = cursePreparation();
@@ -294,37 +296,41 @@ it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce 
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
   // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
   // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
-  // v24 pool: seed 78 offers Bulky Buddies I and preserves the Forge death/revival boundary.
-  let state = prepare(['rod'], { seed: 78, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
-  expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
-  for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
-    for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));
-  const jayce = state.preparation.units.find(u => u.definitionId === 'jayce')!;
-  state = accepted(deployMatchUnit(state, jayce.id, { kind: 'board', cell: { col: 0, row: 7 } }));
-  state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 0, row: 4 } }));
-  state = accepted(startMatchCombat(state));
-  const forgeId = `${jayce.id}:g23-forge`;
-  expect(state.combat!.units.find(u => u.id === 'unit-1')!.mechanics).toContainEqual(expect.objectContaining({ mechanic: 'bulkyBuddies', targetId: forgeId }));
-  let beforeDeath: MatchState | undefined, afterDeath: MatchState | undefined, revived: MatchState | undefined;
-  while (state.phase === 'combat') {
-    const before = state, result = stepMatch(state); state = result.state;
-    if (result.events.some(e => e.type === 'death' && e.unitId === forgeId)) { beforeDeath = before; afterDeath = state; }
-    if (result.events.some(e => e.type === 'unitRevived' && e.unitId === forgeId)) { revived = state; break; }
-  }
-  expect(beforeDeath).toBeDefined(); expect(afterDeath).toBeDefined(); expect(revived).toBeDefined();
-  expect(afterDeath!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(false);
-  expect(afterDeath!.combat!.units.find(u => u.id === 'unit-1')!.runtime!.buddyTriggered).toBe(true);
-  expect(revived!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(true);
-  expect(revived!.combat!.units.find(u => u.id === 'unit-1')).toMatchObject({ alive: true, runtime: { buddyTriggered: true } });
-  expectRestoredTicks([beforeDeath!, afterDeath!, revived!]);
-  // A Forge binding alone authorizes neither an early flag nor deleting a real
-  // trigger after revival: validate the historical event in both directions.
-  for (const checkpoint of [beforeDeath!, revived!]) {
-    const bad = structuredClone(checkpoint), holder = bad.combat!.units.find(u => u.id === 'unit-1')!;
-    Object.assign(holder.runtime!, { buddyTriggered: !holder.runtime!.buddyTriggered });
-    expect(() => serializeMatch(bad)).toThrow('buddy trigger binding facts');
-    for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('buddy trigger binding facts');
-  }
+  // v25: script Bulky Buddies I for seed 78 to preserve the Forge death/revival boundary.
+  // The selected-card assertion is a fixture self-check, not real-RNG availability.
+  const restoreOffers = installB1Offers(['bulky-buddies-i']);
+  try {
+    let state = prepare(['rod'], { seed: 78, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
+    expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
+    for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
+      for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));
+    const jayce = state.preparation.units.find(u => u.definitionId === 'jayce')!;
+    state = accepted(deployMatchUnit(state, jayce.id, { kind: 'board', cell: { col: 0, row: 7 } }));
+    state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 0, row: 4 } }));
+    state = accepted(startMatchCombat(state));
+    const forgeId = `${jayce.id}:g23-forge`;
+    expect(state.combat!.units.find(u => u.id === 'unit-1')!.mechanics).toContainEqual(expect.objectContaining({ mechanic: 'bulkyBuddies', targetId: forgeId }));
+    let beforeDeath: MatchState | undefined, afterDeath: MatchState | undefined, revived: MatchState | undefined;
+    while (state.phase === 'combat') {
+      const before = state, result = stepMatch(state); state = result.state;
+      if (result.events.some(e => e.type === 'death' && e.unitId === forgeId)) { beforeDeath = before; afterDeath = state; }
+      if (result.events.some(e => e.type === 'unitRevived' && e.unitId === forgeId)) { revived = state; break; }
+    }
+    expect(beforeDeath).toBeDefined(); expect(afterDeath).toBeDefined(); expect(revived).toBeDefined();
+    expect(afterDeath!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(false);
+    expect(afterDeath!.combat!.units.find(u => u.id === 'unit-1')!.runtime!.buddyTriggered).toBe(true);
+    expect(revived!.combat!.units.find(u => u.id === forgeId)!.alive).toBe(true);
+    expect(revived!.combat!.units.find(u => u.id === 'unit-1')).toMatchObject({ alive: true, runtime: { buddyTriggered: true } });
+    expectRestoredTicks([beforeDeath!, afterDeath!, revived!]);
+    // A Forge binding alone authorizes neither an early flag nor deleting a real
+    // trigger after revival: validate the historical event in both directions.
+    for (const checkpoint of [beforeDeath!, revived!]) {
+      const bad = structuredClone(checkpoint), holder = bad.combat!.units.find(u => u.id === 'unit-1')!;
+      Object.assign(holder.runtime!, { buddyTriggered: !holder.runtime!.buddyTriggered });
+      expect(() => serializeMatch(bad)).toThrow('buddy trigger binding facts');
+      for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('buddy trigger binding facts');
+    }
+  } finally { restoreOffers(); }
 }, 30000);
 
 it.each([

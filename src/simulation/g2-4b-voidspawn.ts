@@ -1,3 +1,4 @@
+import { hasB5VoidSwarm } from './augment-pool-batch5-g4-swarm';
 import type {TraitSnapshot} from './strategy-types';
 import {isCombatRosterLocked,canOperateMatch} from './operation-policy';
 import type {CombatStrategyInputs} from './combat-input';
@@ -39,7 +40,7 @@ export function voidspawnStage(round:number){
 export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly TraitSnapshot[]){
  const preparation=projectG23Summons(state.preparation,traits,state.itemSummonPositions),units=[...preparation.units],origins:ItemSummonOrigin[]=[];
  const equipment=g22Equipment(state).filter(i=>i.definitionId===VOIDSPAWN_ITEM).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
- if(!equipment.length)return {preparation,origins};
+ if(!equipment.length||hasB5VoidSwarm(state))return {preparation,origins};
  const stats=voidspawnStage(state.round);
  for(const item of equipment){
   const owner=units.find(u=>u.id===item.unitId);if(!owner||owner.location.kind!=='board')continue;

@@ -1,11 +1,14 @@
+export { maximumPlayerHp } from '../simulation/augment-pool-batch5-h7-health';
+export { recordR2PortableBattle } from '../simulation/augment-pool-batch5-r2-history';
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
+export { drainBatch5H7Gold } from '../simulation/augment-pool-batch5-h7';
 export {
   openAnvil, grantAnvilUnit, anvilDisplay, ANVIL_POLICY, createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
-  readItemSummons, moveItemSummon, d14PublicUnitMark,
+  readItemSummons, moveItemSummon, d14PublicUnitMark, recordAugmentSettlementTable,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export type { MovableSummon } from '../simulation/g2-4b-voidspawn';
@@ -49,6 +52,7 @@ export { decideBotAction, claimBotPreparationOrbs, BOT_POLICY_VERSION, BOT_MAX_S
 export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
+export { freeRerollsAvailable } from '../simulation/free-rerolls';
 export type { PrivateSeatView, ConsumableTargetView } from '../simulation/private-seat-view';
 export { createCombatReplayRecorder, toCombatViewState, toCombatViewEvents, startCombatReplay, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
 export type { CombatReplayRecorder, CombatViewState, CombatViewUnit, CombatViewStatus, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';
@@ -86,3 +90,16 @@ export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState
 export { readOpeningMelProgress, readOpeningForgeProgress, readMasterworkOptions } from '../simulation/match';
 export type { OpeningMelProgress, OpeningForgeProgress } from '../simulation/match';
 export type { OpeningRoundResolution } from '../simulation/shared-pool-types';
+
+export { appendAugmentFact, prepareAugmentAcquisition, bindAugmentPreviousBattle, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, needsAugmentHistory, needsAugmentPreparationClock, captureAugmentHistoryAuthority, advanceAugmentPreparationTime, type AugmentHistoryAuthority } from '../simulation/augment-history';
+export { readAugmentCombatDeaths, augmentDeathsFromEvents } from '../simulation/augment-death-samples';
+export type { HistorySeat, PreviousAugmentBattle } from '../simulation/augment-history-types';
+export { completeTraitTrackerCommand } from '../simulation/augment-pool-batch5-h10-tracker';
+export { grantAdditionalCarouselPick } from '../simulation/carousel';
+export { applyDhampyrSettlement } from '../simulation/augment-pool-batch5-h8-health';
+export { drainBatch5H8Deaths } from '../simulation/augment-pool-batch5-h8-deaths';
+export { readAugmentPlayerHealth } from '../simulation/augment-history';
+
+export { settleBatch5H9History } from '../simulation/augment-pool-batch5-h9';
+
+export { hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, tombRaiderOpportunities } from '../simulation/augment-pool-batch5-r1';

@@ -7,7 +7,8 @@ import {G23_CONQUEROR_CHESTS,G23_DEFERRED_CONQUEROR_ITEMS,g23ConquerorReward} fr
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
-import {readG23Progress,writeG23Progress,validateG23MechanicLinks} from '../src/simulation/g2-3-state';
+import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
+import { validateG23MechanicLinks } from '../src/simulation/restore-checks/g23-state-check';
 import {commitG23Settlement} from '../src/simulation/g2-3-settlement';
 import {openG23Choice,drainG23Rewards,claimG23Atom} from '../src/simulation/g2-3-runtime';
 import type {G23BattleFacts} from '../src/simulation/g2-3-economy';

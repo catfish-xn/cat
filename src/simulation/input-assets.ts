@@ -62,7 +62,7 @@ export function validateInputAssets(
     requireValue(!isAnvil(unit.definitionId)||(unit.team==='player'&&unit.location.kind==='bench'&&unit.starLevel===1),'anvil bench unit');
     definitionId(unit.definitionId, unit.team === 'player'&&!UNIT_DEFINITIONS[unit.definitionId]?.summon ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
-    requireValue([1, 2, 3].includes(unit.starLevel), 'star'); record(unit.location);
+    requireValue(([1, 2, 3].includes(unit.starLevel) || unit.definitionId === 'carry-golem' && unit.starLevel === 4), 'star'); record(unit.location);
     if (unit.team === 'player') checkSerial(unit.id, 'unit', boundary.nextUnitSerial);
     if (unit.location.kind === 'bench') { integer(unit.location.slot); requireValue(unit.team === 'player' && unit.location.slot < benchSize, 'bench location'); }
     else { requireValue(unit.location.kind === 'board', 'location kind'); record(unit.location.cell); integer(unit.location.cell.col); integer(unit.location.cell.row);

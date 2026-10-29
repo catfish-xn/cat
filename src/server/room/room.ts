@@ -1,3 +1,7 @@
+import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomBattleDeaths, recordRoomSettlementTable, recordRoomEliminations, tableFacts } from './augment-history';
+import { completeTraitTrackerCommand, captureAugmentHistoryAuthority, prepareAugmentAcquisition, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
+import { advanceSharedAugmentPreparationTime } from '../../simulation/shared-pool';
+import { nextShopGlitchPreparationTime } from '../../simulation/augment-pool-batch5-h1';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
@@ -27,7 +31,6 @@ import {
 } from '../../server-entry';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
-import { toCombatReplayFor } from './projection';
 import { readOpeningEncounterView } from '../../server-entry';
 import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
@@ -218,13 +221,15 @@ function seatLegend(kind: SeatKind, index: number): LittleLegendId {
  * the caller). Each step is the shared-pool wrapper of a public command (§12.4: a first offer or a claim may
  * award a unit); a refusal is reported, never forced or worked around.
  */
-export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, stage: TimeoutStage): TimeoutOutcome {
+export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, stage: TimeoutStage, prepareAcquisition?: (state: MatchState) => void): TimeoutOutcome {
   let current = match, latest = pool;
   const events: MatchEvent[] = [];
   let lootClaimed = false;
   for (let step = 0; step < MAX_TIMEOUT_STEPS; step++) {
     if (current.phase === 'choice' && current.pendingChoice) {
       const pending = current.pendingChoice;
+      // Each augment timeout needs the server table on this state, including one opened by an earlier step.
+      if (pending.kind === 'augment') prepareAcquisition?.(current);
       const result = runSharedMatchCommand(latest, current, { type: 'timeoutChoice', round: current.round, choiceId: pending.choiceId, generation: pending.generation });
       if (!result.ok) return { ok: false, pool: latest, state: current, reason: `forfeit:${result.reason}` };
       current = result.state; latest = result.pool; events.push(...result.events); continue;
@@ -353,6 +358,10 @@ export class Room {
    */
   private frozenClaims: { readonly seatId: string; readonly command: Extract<SeatCommand, { type: 'claimOrb' }> }[] = [];
   private disposed = false;
+  private augmentHistoryTimer: ClockHandle | null = null;
+  private augmentPreparationStartedAt = 0;
+  private augmentPreparationObserved = false;
+  private readonly previousAugmentBattles = new Map<string, PreviousAugmentBattle>();
   private extensions = 0;
   /** Clock time the current battle phase began (tick 0 of every battle's playback); null outside it. */
   private battleStartedAt: number | null = null;
@@ -425,11 +434,11 @@ export class Room {
   /** One notification after every battle has sealed the boundary; never once per source or slice. */
   subscribeStreams(listener: () => void): () => void { this.streamListeners.add(listener); return () => { this.streamListeners.delete(listener); }; }
   /**
-   * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
-   * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
+   * D11 live bank: called when a two-sided battle got new authoritative frames after an accepted bank change
+   * (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
    */
   subscribeLive(listener: (battleId: string) => void): () => void { this.liveListeners.add(listener); return () => { this.liveListeners.delete(listener); }; }
-  /** Side A's live frames of a battle from the first tick that differs from its frozen replay; null when there are none. */
+  /** Side A's live frames from the tick after the first accepted bank change; null before that change. */
   liveFrames(battleId: string): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
     return this.livePvp.get(battleId)?.liveFrames ?? null;
   }
@@ -447,6 +456,7 @@ export class Room {
    */
   dispose(): void {
     this.disposed = true;
+    if (this.augmentHistoryTimer !== null) this.options.clock.cancel(this.augmentHistoryTimer);
     this.clearTimer();
     this.clearChoiceTimers();
     this.listeners.clear();
@@ -520,13 +530,16 @@ export class Room {
     const claimed = claimBotPreparationOrbs(this.current.pool, seat.match);
     if (!claimed.ok) return { ok: false, reason: claimed.reason, state: seat.match };
     if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
-    const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
+    const result = this.completeAugmentCommand('claimOrb', this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events }));
     const seatRevision = seat.seatRevision + 1;
     if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
 
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
+    if (!this.advanceAugmentClock()) return { ok: false, reason: 'room-phase', state: seat.match };
+    seat = this.current.seats.find(s => s.seatId === seat.seatId)!;
+    this.prepareAugmentAcquisition(seat);
     const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
@@ -566,7 +579,7 @@ export class Room {
     const operated = live?.events.length ? { ...applied, events: [...live.events, ...applied.events] } : applied;
     // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held
     // carousel units in, in the same publication.
-    const result = this.withPendingResolved(operated);
+    const result = this.completeAugmentCommand(command.type, this.withPendingResolved(operated));
     const seatRevision = seat.seatRevision + 1;
     if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     if (phase === 'battle' && result.state.gold !== seat.match.gold) this.sampleLiveBank(seatId, result.state.gold);
@@ -711,7 +724,8 @@ export class Room {
       if (job.kind === 'receipt') {
         yield;
         const base = seat.hp;
-        const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
+        const observed = recordRoomBattleDeaths(seat.match,results);
+        const applied = runSharedMatchCommand(pool, observed, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
         // HP must match the room's damage unless exactly one Mel save from this battle explains a lethal rescue.
         const raw = Math.max(0, base - job.damage), saves = applied.events.filter(event => event.type === 'playerSaved');
@@ -758,6 +772,7 @@ export class Room {
       if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
       seats.push(settled(seat.match, outcome.damage, null, []));
     }
+    seats = [...recordRoomBattleFacts(seats, results)];
     // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
     const unbalanced = conservationProblem(pool, seats.map(seat => seat.match));
     if (unbalanced) return { ok: false, detail: `shared pool: ${unbalanced}` };
@@ -770,6 +785,7 @@ export class Room {
       .sort((a, b) => b.hpAfter - a.hpAfter || b.hpBefore - a.hpBefore || index(a) - index(b));
     let rank = alive.length;
     const eliminated: RankEntry[] = dying.map(seat => ({ seatId: seat.seatId, rank: rank-- }));
+    seats = [...recordRoomEliminations(state, seats, eliminated)];
     // §12.4: after this round's ranking and before the next natural refresh, every seat the rules eliminated returns its
     // shop, holdings and pending rewards to the pool once. A repeated release is refused by the rules and ignored. A
     // seat only the room zeroed (a test placeholder outcome the rules never settled) is not eliminated by the rules and
@@ -816,7 +832,7 @@ export class Room {
       return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1,
         serverEvents: { seatRevision: seat.seatRevision + 1, events: outcome.events } };
     });
-    this.replace({ ...state, seats, pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
+    this.replace({ ...state, seats: recordRoomSettlementTable(seats), pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
     return { ok: true, state: this.current };
   }
 
@@ -1106,6 +1122,11 @@ export class Room {
         seats: this.current.seats.map(candidate => candidate.seatId === seat.seatId ? { ...candidate, match: resolved.state, seatRevision, serverEvents: { seatRevision, events: resolved.events } } : candidate) });
     }
   }
+  /** Complete the rules transaction after shared commands and held-carousel placement, before publication. */
+  private completeAugmentCommand<T extends { readonly state: MatchState; readonly events: readonly MatchEvent[] }>(name: string, result: T): T {
+    const completed = completeTraitTrackerCommand(name, result.state);
+    return completed.state === result.state ? result : { ...result, state: completed.state, events: [...result.events, ...completed.events] };
+  }
   /**
    * §21.6: in preparation, units in the holding slot are moved to the bench or the board (and merged) by the rules'
    * `resolvePendingCarouselUnits` whenever the seat may have room; the room only asks, never decides where a unit goes
@@ -1154,7 +1175,8 @@ export class Room {
   /** Runs the rules' timeout commands for every alive seat (§11.4), one seat transaction after the other on the latest pool; a refusal is a seat-stuck fault. */
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
-      const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
+      this.prepareAugmentAcquisition(seat);
+      const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage, state => this.prepareAugmentAcquisition({ ...seat, match: state }));
       if (outcome.state !== seat.match && !this.commitSeat(seat.seatId, outcome.state, outcome.pool)) return false;
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
     }
@@ -1168,6 +1190,7 @@ export class Room {
    * the complete tick-zero state is published; the legacy resolver retains its frozen-phase refusals.
    */
   private freezeAndResolve(): void {
+    if (!this.advanceAugmentClock()) return;
     this.setPhase('frozen', null);
     if (!this.applyTimeouts('preparation')) return;
     // §15.4: deploy every human seat up to its cap, freeze every input on the deployed states, then lock the live seats.
@@ -1177,7 +1200,10 @@ export class Room {
     if (!deployed) return;
     this.deployed = deployed;
     this.drawRound();
-    this.frozenInputs = this.buildInputs(deployed);
+    const inputs = this.buildInputs(deployed);
+    if (this.current.roundKind !== 'supply') for (const input of inputs) for (const seat of input.seats) this.previousAugmentBattles.set(seat.seatId, {status:'recorded',round:input.round,roundId:input.roundId,battleId:input.battleId,roster:historyRoster(seat.state)});
+    this.deployed = recordRoomPvpRosters(this.current, deployed, inputs);
+    this.frozenInputs = inputs.map(input => ({ ...input, seats: input.seats.map(seat => ({ ...seat, state: this.deployed.get(seat.seatId)?.match ?? seat.state })) }));
     if (this.options.combatStreaming && this.current.roundKind !== 'supply') return this.openStreams();
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
     this.resolution = { results: [], pool: this.current.pool, job: null };
@@ -1506,7 +1532,7 @@ export class Room {
       // A battle the playback already finished cannot change any more.
       if (!envelope || target > battle.battle.terminal.tick) return;
       try {
-        track = new LivePvpTrack(envelope, battle, toCombatReplayFor(this.current, battle.battle.a.seatId)!.replay);
+        track = new LivePvpTrack(envelope);
       } catch (error) { return this.failLive(battle.battleId, error); }
       // The rules' readers: no seat of this battle reads its gold (no avarice-incarnate on its board, a mirror's copy).
       if (!battle.participants.some(participant => track!.reads(participant))) { this.liveIgnored.add(battle.battleId); return; }
@@ -1918,18 +1944,94 @@ export class Room {
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). False when the
    * room refused it instead (an unexplained HP change faults the room, syncedSeatHp): nothing of it was published. */
   private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): boolean {
+    const revision = this.current.seats.find(s => s.seatId === seatId)!.seatRevision + 1;
     this.replace({ ...this.current, pool, poolRevision: pool.revision,
       seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
-    return this.current.seats.find(candidate => candidate.seatId === seatId)?.match === match;
+    const published = this.current.seats.find(candidate => candidate.seatId === seatId);
+    return published?.match === match || !!match.augmentHistory && this.current.pool === pool && published?.seatRevision === revision;
+  }
+  private advanceAugmentClock(): boolean {
+    if (this.disposed || this.current.phase !== 'preparation') return true;
+    const now = this.options.clock.now();
+    // A delayed callback cannot turn time after the preparation deadline into preparation time.
+    const sampledAt = this.current.deadlineAt === null ? now : Math.min(now, this.current.deadlineAt);
+    const elapsed = Math.floor(sampledAt) - this.augmentPreparationStartedAt;
+    let pool = this.current.pool, changed = false;
+    const seats: SeatState[] = [];
+    // Stage in seat order against the latest draft pool; publish all shops and their reservations together.
+    for (const seat of this.current.seats) {
+      if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) { seats.push(seat); continue; }
+      const result = advanceSharedAugmentPreparationTime(pool, seat.match, elapsed);
+      if (!result.ok) {
+        this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: `augment-clock:${result.reason}` });
+        return false;
+      }
+      pool = result.pool;
+      if (result.state === seat.match) { seats.push(seat); continue; }
+      changed = true; seats.push({ ...seat, match: result.state, seatRevision: seat.seatRevision + 1 });
+    }
+    if (changed) this.replace({ ...this.current, pool, poolRevision: pool.revision, seats });
+    return true;
+  }
+  private prepareAugmentAcquisition(seat: SeatState): void {
+    if (!seat.match.multiplayer || seat.match.pendingChoice?.kind !== 'augment') return;
+    prepareAugmentAcquisition(seat.match, this.previousAugmentBattles.get(seat.seatId) ?? {status:this.current.round===1?'none':'unavailable'},
+      Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt), tableFacts(this.current.seats));
+  }
+  private scheduleAugmentClock(): void {
+    if (this.disposed || this.current.phase !== 'preparation' || !this.current.seats.some(s => s.alive && s.match.augmentHistory && needsAugmentPreparationClock(s.match))) {
+      if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
+      return;
+    }
+    // A connection or command publication at the due instant must retain the queued sample.
+    if (this.augmentHistoryTimer !== null) return;
+    const elapsed = Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt;
+    // Retain the first preparation observation, then sample only while the domain has a future boundary.
+    // Polling every 50 ms even in PvP creates history/publication churn and starves bounded clock drivers.
+    const boundary = this.augmentPreparationObserved
+      ? Math.min(...this.current.seats.filter(s => s.alive && s.match.augmentHistory)
+        .map(s => nextShopGlitchPreparationTime(s.match, elapsed) ?? Infinity))
+      : elapsed + 50;
+    if (!Number.isFinite(boundary)) return;
+    // Keep the existing short sampling cadence and same-instant command ordering during active PvE time.
+    const nextElapsed = Math.min(boundary, (Math.floor(elapsed / 50) + 1) * 50);
+    const next = this.augmentPreparationStartedAt + nextElapsed;
+    // The phase deadline samples its own boundary before freezing, even when delivered late.
+    if (this.current.deadlineAt !== null && next >= this.current.deadlineAt) return;
+    this.augmentHistoryTimer = this.options.clock.schedule(next, () => {
+      this.augmentHistoryTimer = null; this.augmentPreparationObserved = true; this.advanceAugmentClock();
+      // A command may already have sampled this instant, leaving no changed state to publish.
+      this.scheduleAugmentClock();
+    });
+  }
+  /** For server persistence/reconnect verification; never accept this handle from a client. */
+  augmentHistoryAuthority(seatId: string): AugmentHistoryAuthority {
+    const seat = this.current.seats.find(s => s.seatId === seatId);
+    if (!seat) throw new RangeError('Unknown seat');
+    return captureAugmentHistoryAuthority(seat.match);
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
     const synced = this.syncedSeatHp(next);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
-    const published = { ...this.withChoiceDeadlines(synced), roomRevision: this.current.roomRevision + 1 };
+    let recorded: RoomState;
+    try { recorded = recordRoomPublication(this.current, synced); }
+    catch (error) {
+      // A committed tomb-raider seat with no acquisition table must fault the room.
+      // replace is re-entered by fail(); that publication keeps the same seats and does not throw again.
+      if (!(error instanceof RangeError) || error.message !== 'Invalid tomb raider acquisition table' || this.current.phase === 'ended') throw error;
+      return this.fail({ kind: 'invalid-results', detail: error.message });
+    }
+    const published = { ...this.withChoiceDeadlines(recorded), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
+    if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) {
+      this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());
+      this.augmentPreparationObserved = false;
+      if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
+    }
     this.current = published;
+    this.scheduleAugmentClock();
     for (const listener of this.listeners) listener(this.current);
     this.syncChoiceTimers();
     this.fitDeadlineToChoices();
@@ -2048,6 +2150,7 @@ export class Room {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     const pending = seat?.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
     if (!seat || !pending || pending.choiceId !== choiceId || pending.generation !== generation) { this.syncChoiceTimers(); return; }
+    this.prepareAugmentAcquisition(seat);
     const result = runSharedMatchCommand(this.current.pool, seat.match, { type: 'timeoutChoice', round: seat.match.round, choiceId, generation });
     if (!result.ok) return this.fail({ kind: 'seat-stuck', seatId, reason: `forfeit:${result.reason}` });
     const resolved = this.withPendingResolved(result);

@@ -16,7 +16,7 @@ import type { TestClient } from '../../src/server/net/test-client';
 import { LocalRoomClient } from '../../src/rendering/online/local-room-client';
 import { toDisplayMatch } from '../../src/rendering/online/seat-view-adapter';
 import { ManualClock } from '../../src/server/room/clock';
-import { expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { expectUniqueRanking, makeRoom, runUntil, answerOpenChoices } from './helpers';
 import { expectOk, flush, seatTwo, startServer, type NetHarness } from './net/helpers';
 
 /** Fields of MatchState that must never reach a client (contract §14.1, work order B7 item 2). */
@@ -255,8 +255,8 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Seed 5 under v14: idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 5 });
+    // Public seed 0 reaches overtime-3 with the combined v25 pool.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 0 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();
@@ -283,13 +283,16 @@ describe('B7 overtime (§11.5)', () => {
   }, 60_000);
 
   it('ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP)', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    // Seed 0 now chooses I'm the Carry Now at 4-2: its unsellable carry-golem breaks the empty-board precondition.
+    // Seed 3 keeps all eight PvP boards empty through public sell commands; the zero-unit assertion below stays exact.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
     room.start();
     const hpByRound: { kind: string | null; hp: number }[] = [];
     let lastCleared = -1;
     const clearBoards = (state: RoomState) => {
       if (state.phase !== 'preparation' || state.round === lastCleared) return;
       lastCleared = state.round;
+      answerOpenChoices(room);
       // Sell every own unit: a benched one would be put back on the board at the deadline (T10 auto-deploy).
       for (const seat of state.seats) {
         if (!seat.alive) continue;

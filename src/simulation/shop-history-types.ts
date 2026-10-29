@@ -2,7 +2,7 @@ import type { Shop } from './match-types';
 
 /** Conditional evidence, not a new outer save/replay envelope. Never emitted without a shop augment. */
 export const SHOP_HISTORY_VERSION = 'shop-history-v1';
-export type ShopDrawCause = 'reroll' | 'dual-purpose' | 'natural' | 'subscription';
+export type ShopDrawCause = 'reroll' | 'dual-purpose' | 'natural' | 'subscription' | 'shop-glitch';
 export interface ShopHistoryPoint {
  readonly round:number; readonly level:number; readonly xp:number; readonly resourcePrefix:number;
  readonly owners:readonly string[];

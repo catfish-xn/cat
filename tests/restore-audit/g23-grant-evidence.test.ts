@@ -8,9 +8,12 @@ import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mec
 import {publicPendingArmory} from '../fixtures/g2-3-armory-public';
 import {publicAcademyGrant} from '../fixtures/g2-3-academy-public';
 import {roundRouteCache} from '../fixtures/round-route-cache';
+import {historyFreeRerollPriorities} from '../fixtures/history-free-augments';
 let junker:MatchState,academy:MatchState;
 const armoryRoute=roundRouteCache(onRound=>publicPendingArmory(3,onRound));
-const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound));
+// Seed 42 has prismatic 4-2 offer-level history; seed 25 and public rerolls
+// isolate grant evidence without changing either the corruptions or their errors.
+const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound,historyFreeRerollPriorities,25));
 describe('grant evidence at public route endpoints',()=>{
 // Ordered, bounded hooks own the prefix, including filtered and shuffled runs.
 for(const [route,lastRound] of [[armoryRoute,27],[academyRoute,24]] as const){
@@ -26,6 +29,8 @@ beforeAll(async()=>{
  const choice=chooseG23Junker(pending,pending.pendingChoice!.choiceId,'spare-parts');
  if(!choice.ok)throw Error(choice.reason);junker=choice.state;
  academy=await academyRoute.finish();
+ expect(junker.augmentHistory).toBeUndefined();
+ expect(academy.augmentHistory).toBeUndefined();
 });
 const evidence=(s:MatchState)=>s.seatMechanics!.hidden.grantEvidence as G23GrantEvidence[];
 // Object, JSON and serializeMatch are all restore entries; each must reject the same save.

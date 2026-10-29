@@ -15,15 +15,16 @@ export function getShopOdds(level: number): readonly [number, number, number, nu
   return SHOP_ODDS[level];
 }
 
-export function grantXp(level: number, xp: number, amount: number): ProgressionResult {
-  const threshold = getXpToNextLevel(level);
+export function grantXp(level: number, xp: number, amount: number, maxLevel: number = MATCH_RULES.maxLevel): ProgressionResult {
+  if(!Number.isInteger(maxLevel)||maxLevel<1||maxLevel>MATCH_RULES.maxLevel||level>maxLevel)throw new RangeError('Invalid player level cap');
+  const threshold = level===maxLevel ? null : getXpToNextLevel(level);
   if (!Number.isSafeInteger(xp) || xp < 0 || (threshold === null ? xp !== 0 : xp >= threshold)
     || !Number.isSafeInteger(amount) || amount < 0 || !Number.isSafeInteger(xp + amount)) {
     throw new RangeError('Experience must be a normalized nonnegative integer');
   }
   const initialLevel = level;
   let remaining = amount;
-  while (level < MATCH_RULES.maxLevel) {
+  while (level < maxLevel) {
     const required = XP_TO_NEXT_LEVEL[level] - xp;
     if (remaining < required) { xp += remaining; remaining = 0; break; }
     remaining -= required;

@@ -40,8 +40,8 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
     expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(11);
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
-    const state=await prepareB6Opening(pageAdapter(307),'2-5');
-    // v24 seed 307's Superstars II grants no equipment; the real 2-4 sword remains the only item.
+    const state=await prepareB6Opening(pageAdapter(1),'2-5',{augment:'superstars-ii'});
+    // v25 seed 1: Superstars II grants no equipment; the real 2-4 sword remains the only item.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
     expect(state.augments.map(augment=>augment.definitionId)).toEqual(['superstars-ii']);
     expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);

@@ -97,11 +97,10 @@ it('G-C05 binds a genuinely damaged ordinary shield even when both projections c
 });
 
 it('G-C06 binds the real absorption value even when its status is forged coherently', async () => {
-  // The expanded anomaly pool exhausts seed 4's paid rerolls. Seed 1 now opens
-  // with Crab Rave, whose 4-7 crabs never kill the ally the absorption needs;
-  // seed 66 (Golden Gala, ordinary 4-7 neutrals) and the normal 4-5 gold
-  // reserve acquire the same anomaly through public commands.
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 66, goldReserveByRound: { '4-5': 40 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia' });
+  // v25 seed 66 is Prismatic Party: its replay/item-transform route no longer
+  // isolates the ordinary G23 guard. Seed 1 has a gold 4-2 node and ordinary 4-7
+  // neutrals; reserve public earnings to buy the requested anomaly without fallback.
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 1, goldReserveByRound: { '4-5': 80 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia' });
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
   // Public bench sales leave room to move the seeded roster off the board.
@@ -230,12 +229,11 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  // v24: first route seed from 1 acquiring this anomaly and a full-replay
-  // augment (Wealthy Rehab II). This keeps the original counter forgery on the
-  // Mirror-labelled dynamic replay path; an ordinary route stops at G23 instead.
-  // Reserve enough gold to actually select Eagle Eye, without a fallback.
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 3, anomalyDefinitionId,
-    ...(anomalyDefinitionId==='eagle-eye'?{goldReserveByRound:{'4-5':80}}:{}) });
+  // v25: seed 3 no longer owns Wealthy Rehab II. Seed 49 naturally offers it at
+  // 3-2; the driver selects that real card (no scripted offers).
+  // Keep the original Mirror-labelled dynamic replay path and reserve for paid anomaly rerolls.
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 49, anomalyDefinitionId,
+    augmentPriorities:['wealthy-rehab-ii'],goldReserveByRound:{'4-5':150} });
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   expect(prep.augments.map(a => a.definitionId)).toContain('wealthy-rehab-ii');
   const id = prep.anomalyBinding!.unitId;

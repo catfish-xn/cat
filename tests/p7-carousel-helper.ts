@@ -1,6 +1,7 @@
 import {createSharedPool,initializeSharedSeat,refreshSharedShops as importRefresh,runSharedMatchCommand,nextSharedRound} from '../src/simulation/shared-pool';
 import {createCarouselMatch,prepareCarouselParticipants} from '../src/simulation/carousel';
 import type {MatchState} from '../src/simulation/match-types';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 export function must<T extends {
     ok: boolean;
 }>(r: T): Extract<T, {
@@ -21,8 +22,19 @@ export function supplySeats(seats:number) {
         let state=initial,guard=0;
         while(state.phase!=='settlement'){
           if(++guard>1500)throw Error('fixture round guard');
+          // This carousel-only fixture uses synthetic PvP receipts. History-dependent
+          // combat augments require a real room; choose another genuinely offered card.
+          if(state.pendingChoice?.kind==='augment'&&Object.hasOwn(AUGMENT_HISTORY_OWNERS,state.pendingChoice.offers[0])){
+            const c=state.pendingChoice;
+            const definitionId=c.offers.find(id=>!Object.hasOwn(AUGMENT_HISTORY_OWNERS,id));
+            if(!definitionId)throw Error('carousel fixture has no history-independent offer');
+            const selected=must(runSharedMatchCommand(pool,state,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId}));
+            pool=selected.pool;state=selected.state;continue;
+          }
           const command = state.phase === 'choice' ? { type: 'timeoutChoice' as const, round: state.round, choiceId: state.pendingChoice!.choiceId, generation: state.pendingChoice!.generation } : state.m8.round.kind === 'pvp' ? { type: 'settleRound' as const, receipt: { version: 'multiplayer-settlement-v1' as const, settlementId: `p7-${i}-${state.round}`, battleId: `battle-${i}-${state.round}`, seatId: `s${i}`, round: state.round, roundId: state.roundDefinitionId, settlementEligible: true, result: 'win' as const, damage: 0, baseDamage: 2, opposingSurvivors: 0, growth: [], combatTicks: 1, combatEventCount: 1 } } : { type: state.phase === 'combat' ? 'step' as const : 'startCombat' as const };
-          const result=must(runSharedMatchCommand(pool,state,command));pool=result.pool;state=result.state;
+          const attempted=runSharedMatchCommand(pool,state,command);
+          if(!attempted.ok)throw Error(`carousel fixture s${i} ${state.roundDefinitionId}/${state.phase} ${command.type}: ${attempted.reason}; augments=${state.augments.map(a=>a.definitionId).join(',')}`);
+          const result=must(attempted);pool=result.pool;state=result.state;
         }
         return state;
       });

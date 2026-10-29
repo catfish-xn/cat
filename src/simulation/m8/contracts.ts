@@ -400,7 +400,9 @@ export interface EquipmentRoundRoll {
   readonly parentItemInstanceId: string;
   readonly roundId: string;
   readonly playerLevelSnapshot: number;
-  readonly poolVersion: 'tg-01-v1';
+  readonly poolVersion: 'tg-01-v1' | 'lucky-gloves-v1';
+  /** Lucky Gloves adds immutable per-holder/form rolls; ordinary parent/round receipts remain unchanged. */
+  readonly lucky?: { readonly choiceId:string; readonly holderId:string; readonly definitionId:string; readonly role:string; readonly radiant:boolean };
   readonly children: readonly [string, string];
   readonly rngDrawStart: number;
   readonly rngDrawEnd: number;
@@ -493,8 +495,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v24-online-rules';
-  readonly contentVersion: 's13-14.24b-g2-3-v24-online-rules';
+  readonly rulesVersion: 's13-g2-3-v25-online-rules';
+  readonly contentVersion: 's13-14.24b-g2-3-v25-online-rules';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
   readonly replayFormatVersion: 8;

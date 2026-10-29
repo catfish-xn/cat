@@ -1,5 +1,7 @@
+import { B5_G4_SUMMON_UNITS } from './content/augment-pool-batch5-g4';
 import { BATCH3_SUMMON_UNITS } from './content/batch3-summons';
 import { ANVIL_UNITS, isAnvil } from './content/anvils';
+import { CARRY_GOLEM_ID, CARRY_GOLEM_UNIT } from './content/augment-pool-batch5-g6';
 import { TRAINER_ID, TRAINER_UNIT } from './content/opening-batch-b';
 import { SIX_COST_UNITS } from './content/v19-six-cost';
 import {G24_VOIDSPAWN_UNITS} from './content/g2-4b-voidspawn';
@@ -611,7 +613,7 @@ export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition
     baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
   }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...ANVIL_UNITS,[TRAINER_ID]:TRAINER_UNIT,...S13_ANOMALY_SUMMON_UNITS,...G23_SUMMON_UNITS,...BATCH3_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ [CARRY_GOLEM_ID]:CARRY_GOLEM_UNIT,...B5_G4_SUMMON_UNITS,...ANVIL_UNITS,[TRAINER_ID]:TRAINER_UNIT,...S13_ANOMALY_SUMMON_UNITS,...G23_SUMMON_UNITS,...BATCH3_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;

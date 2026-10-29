@@ -109,12 +109,13 @@ describe('T5R private own-seat whitelist',()=>{
   });
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
+    // This synthetic choice has no corresponding offer history, so no slot is rerollable.
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'round:4-2:augment',
       generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
       augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],augmentOptions:[
         {optionIndex:0,definitionId:'placebo',rerollAvailable:false},
-        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:true},
-        {optionIndex:2,definitionId:'backup',rerollAvailable:true},
+        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:false},
+        {optionIndex:2,definitionId:'backup',rerollAvailable:false},
       ]});
     expect(view.temporaryEquipment).toEqual(state.temporaryEquipment);expect(view.augments).toEqual(state.augments);
     expect(view.anomalyBinding).toEqual(state.anomalyBinding);expect(view.roundResults).toHaveLength(38);
@@ -124,7 +125,8 @@ describe('T5R private own-seat whitelist',()=>{
     expect(Object.keys(view).sort()).toEqual(['openingMelProgress','openingEncounter','schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
       'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
-      'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds'].sort());
+      'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds','augmentDynamicValues'].sort());
+    expect(view.augmentDynamicValues).toEqual({'pumping-up-i':{attackSpeedBps:600}});
     expect(view.unclaimedOrbs).toEqual([]);expect(view.orbClaimReceipts).toEqual([]);
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{

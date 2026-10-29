@@ -8,16 +8,17 @@ import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
+import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
 import { roundRouteCache } from './fixtures/round-route-cache';
 
 // Every consuming describe owns its setup. Hooks run even with -t and are not
 // shuffled with tests; each hook advances only one bounded live-tick segment.
 // Assertion cases can only read completed routes, never finish a cold route.
-function routeFixture(build:string,seed=42){
+function routeFixture(build:string,seed=42,augmentPriorities:string[]=[]){
  let result:Awaited<ReturnType<typeof run>>|undefined;
  const progress=roundRouteCache(async onRound=>{
   // The existing driver implements these callbacks; its older declaration only lists onStep.
-  const options={build,seed,onRound,onBattleProgress:onRound};
+  const options={build,seed,...routeOptions(build,seed),augmentPriorities,onRound,onBattleProgress:onRound};
   result=await run(api,options);return result.final;
  });
  for(let round=1;round<=FINAL_ROUND;round++)for(const tick of [300,600,900,1200,1201])beforeAll(async()=>{
@@ -32,7 +33,8 @@ function routeFixture(build:string,seed=42){
 describe('M5 ordinary three-build routes and independent resource ledger',()=>{
  for(const build of ['sniper-caitlyn','cannon','sniper','mage'])describe(build,()=>{
   const ordinary=routeFixture(build);
-  const alternate=build==='sniper-caitlyn'?routeFixture(build,44):build==='sniper'?routeFixture(build,782):ordinary;
+  // These real first offers avoid unrelated history owners on the alternate routes.
+  const alternate=build==='sniper-caitlyn'?routeFixture(build,44,['pit-fighter-crest']):build==='sniper'?routeFixture(build,782,['rebel-crest']):ordinary;
  if(build==='sniper-caitlyn'){
  it('normally buys five-cost Caitlyn and fields her for at least two real battles',()=>{
   const goldenRoute=ordinary();assertGolden(goldenRoute);

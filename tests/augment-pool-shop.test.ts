@@ -1,3 +1,5 @@
+import { firstNodeSeed } from './augment-stage-helpers';
+import { recordAugmentAcquisition } from '../src/simulation/augment-history';
 import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
 import { BATCH5_SOURCE } from '../src/simulation/augment-pool-batch5-progress';
 import { shopOwner } from './fixtures/shop-history-match';
@@ -17,9 +19,10 @@ import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { drawSoloAugmentShop, planFiresale, stealFiresaleUnit, validateShopAugments, starryChanceBps, SHOP_AUGMENT_KEY, SHOP_AUGMENT_SOURCE } from '../src/simulation/shop-augments';
+import { drawSoloAugmentShop, planFiresale, stealFiresaleUnit, starryChanceBps, SHOP_AUGMENT_KEY, SHOP_AUGMENT_SOURCE } from '../src/simulation/shop-augments';
+import { validateShopAugments } from '../src/simulation/restore-checks/shop-augments-check';
 import { freeRerollsAvailable, freeRerollsGranted } from '../src/simulation/free-rerolls';
-import { validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 import { readSeatMechanic, writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { sixCostShopContext } from '../src/simulation/six-cost-shop';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
@@ -30,7 +33,7 @@ import { applySeatCommand } from '../src/server/room/room';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accept, batch, room, conserved, fight } from './tp-helpers';
 
-const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>({...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
+const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>recordAugmentAcquisition(s,{...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
 const record=(s:MatchState)=>readSeatMechanic(s,SHOP_AUGMENT_KEY) as unknown as {credits:number;rolls?:number;rigAnchor?:number;reinforced?:number}|undefined;
 const costOf=(s:MatchState)=>s.shop.slots.map(x=>x.status==='available'?UNIT_DEFINITIONS[x.definitionId].cost:0);
 
@@ -203,7 +206,7 @@ it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserv
 });
 it('a 2-star shop purchase folds to a 2-star unit on restore; a forged star on a 3-cost is rejected', ()=>{
  const three=SHOP_CATALOG_BY_COST[3][0];
- let s=accepted(grantMechanicGold(shopOwner(18,'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
+ let s=accepted(grantMechanicGold(shopOwner(firstNodeSeed('starry-night', 10000),'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
  const eligible=()=>s.shop.slots.findIndex(x=>x.status==='available'&&x.starLevel===2&&UNIT_DEFINITIONS[x.definitionId].cost===1);
  for(let i=0;i<40&&eligible()<0;i++)s=accepted(rerollShop(s));
  const slot=eligible();expect(slot).toBeGreaterThanOrEqual(0);

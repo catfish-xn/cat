@@ -148,7 +148,8 @@ it('mechanism selector is detached, idempotent and excludes deferred radiant glo
  for(let seed=0;seed<100;seed++)for(const atom of g23RewardAtoms({id:'g23:conqueror:14',round:1,source:'conqueror',tier:14,reward:g23ConquerorReward(chest)},seed))expect(atom.options).not.toContain('TFT5_Item_ThiefsGlovesRadiant');
 });
 
-import {planTemporaryEquipment,validateMatchEquipment} from '../src/simulation/temporary-equipment';
+import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
+import { validateMatchEquipment } from '../src/simulation/restore-checks/match-equipment-check';
 it('radiant conversion preserves glove parent slots and its already receipted finite temporary pair',()=>{
  const state=formation(['lux']);
  const equipped=planTemporaryEquipment({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'unit',unitId:'lux',slot:0}}]}).state;

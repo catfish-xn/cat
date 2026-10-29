@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { occupiesCell } from './anomalies/availability';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {hexDistance} from './board';
@@ -34,7 +35,7 @@ export function advanceG23Anomalies(ctx:AbilityContext):void{
       const t=byDistance(u,enemies(u,ctx.units))[0];
       if(t&&hexDistance(u.cell,t.cell)>range(u)&&!g23Anomaly(t,'deep-roots')){
        const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(u.cell,c)<=range(u)&&!ctx.units.some(other=>occupiesCell(other,ctx.tick)&&other.cell.col===c.col&&other.cell.row===c.row)).sort((a,b)=>hexDistance(t.cell,a)-hexDistance(t.cell,b)||a.row-b.row||a.col-b.col);
-       if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:t.id,from:t.cell,to:cells[0]});t.cell=cells[0];}
+       if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:t.id,from:t.cell,to:cells[0]}); recordAerialMovement(ctx, t, cells[0]);t.cell=cells[0];}
       }
     }
     const eagle=g23Anomaly(u,'eagle-eye');

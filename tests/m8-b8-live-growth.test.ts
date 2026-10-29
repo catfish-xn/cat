@@ -5,6 +5,8 @@ import type { ResourceProvenanceEntry } from '../src/simulation/resource-provena
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, plan, reserveExcept } from './fixtures/t13-loot-public';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
+import { reachRound } from './match-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -29,12 +31,12 @@ function bounceFacts(before:MatchState, after:MatchState, events:readonly MatchE
 const priorFacts:ReturnType<typeof bounceFacts>=[];
 let captured:MatchState|undefined;
 const stop=new Error('captured genuine 3-7 preparation');
-// v22: seed 49 draws the scuttle-crab opening (crabs carry the 3-7 wolf orbs) and no longer reaches Radiant
-// Relics. v22's seed 2279 draws Artifact Anvil under v23 fmix32; seed 6019 has no opening encounter, two paid
-// 1-star Tristanas with prior growth, a real Giant Slayer and Gargoyle Stoneplate, and a 3-7 Tristana reward.
-// Explicit All for One II keeps the original three parent-overkill growth events on the 224-card pool.
-try { await run(api,{seed:6019,build:'cannon',augmentPriorities:['all-for-one-ii'],supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
- if(command?.type==='select'&&before.roundDefinitionId==='2-1'&&before.pendingChoice?.kind==='augment'){expect(before.pendingChoice.offers).toContain('all-for-one-ii');expect(command.definitionId).toBe('all-for-one-ii');}
+// v25 batch-5 expands 2-1 gold candidates from 80 (100589ca) to 98, with the same three RNG words:
+// seed 6019's former All for One II draw now offers Two Trick.
+// Search restricted to 0..100: seed 3 naturally buys two 1-star Tristanas (4 and 1 prior bounce kills),
+// earns Giant Slayer/Gargoyle and a 3-7 Tristana drop, then earns exactly three current bounce kills.
+// No scripted offers in this growth route; All for One II acquisition is a separate fixture self-check below.
+try { await run(api,{seed:3,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}
@@ -43,7 +45,12 @@ const initial=captured;
 const originals=initial.preparation.units.filter(u=>u.definitionId==='tristana'&&u.starLevel===1).map(u=>u.id).sort();
 expect(originals).toHaveLength(2);
 const [SURVIVOR,DONOR]=originals;
-const REWARD=`unit-${initial.nextUnitSerial}`;
+// Predict the reward ID from the frozen grant order, independently of live receipts/upgrades.
+// Seed 3 grants Kog'Maw and Blitzcrank before the Tristana that consumes the original pair.
+const rewardOffset=plan(initial).encounterPlan.drops.filter(d=>d.payload.kind==='unit')
+ .findIndex(d=>d.payload.kind==='unit'&&d.payload.definitionId==='tristana');
+expect(rewardOffset).toBeGreaterThanOrEqual(0);
+const REWARD=`unit-${initial.nextUnitSerial+rewardOffset}`;
 const OTHER=initial.preparation.units.find(u=>!originals.includes(u.id))!.id;
 const priorBySource=originals.map(unitId=>({unitId,attackDamageBps:priorFacts.filter(f=>f.unitId===unitId).length*GAIN}));
 const STOCK=priorBySource.reduce((n,g)=>n+g.attackDamageBps,0);
@@ -72,7 +79,23 @@ const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
 describe('B8 live growth plus immediate randomized loot merge',()=>{
- it('pins real v23 seed6019 prior stock and original-source current delta independently',()=>{
+ it('acquires All for One II through scripted offers (fixture self-check)',()=>{
+  const restoreOffers=installB1Offers(['all-for-one-ii']);
+  try {
+   const before=reachRound('2-1',false,3),choice=before.pendingChoice!;
+   expect(choice.kind).toBe('augment');
+   // Fixture self-check only: installB1Offers supplies this card; this is not a natural-RNG witness.
+   expect(choice.offers).toContain('all-for-one-ii');
+   const command={definitionId:choice.offers.find(id=>id==='all-for-one-ii')!};
+   expect(command.definitionId).toBe('all-for-one-ii');
+   const acquired=accepted(selectChoice(before,choice.choiceId,choice.generation,command.definitionId));
+   expect(acquired.augments.map(a=>a.definitionId)).toContain('all-for-one-ii');
+   expect(acquired.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2')).toHaveLength(3);
+   // Scripted offer histories restore only while their generator wrapper is installed.
+   roundTrip(acquired);
+  } finally {restoreOffers();}
+ });
+ it('pins natural v25 seed3 prior stock and original-source current delta independently',()=>{
   expect(prepared.persistentGrowth).toEqual(priorBySource);
   const totals=new Map<string,number>();
   expect(live.events.filter(e=>e.type==='growth')).toEqual(currentFacts.map(f=>{const total=(totals.get(f.unitId)??0)+GAIN;totals.set(f.unitId,total);return {...f,totalBps:total};}));
