@@ -6,6 +6,12 @@ import type { VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 
+/** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
+function needsLivingSource(spawn: TimelineSpawn): boolean {
+  if (spawn.event === 'hit') return false;
+  return !(spawn.point && spawn.event !== 'projectile');
+}
+
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
@@ -23,7 +29,7 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean }
-interface Running { source: string; target?: string; until: number; fx: LtkParticles; persistent?: boolean }
+interface Running { source: string; target?: string; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
@@ -70,7 +76,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board);
       if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
       const independent = spawns.every(s => s.point && s.event !== 'projectile');
-      if (!independent && (!source?.alive || source.disposed)) return false;
+      // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.
+      if (spawns.some(needsLivingSource) && (!source?.alive || source.disposed)) return false;
       // All targets are required before suppressing the old cast; later disappearance cancels its visual.
       if (spawns.some(spawn => {
         if (spawn.targetId === undefined) return false;
@@ -90,8 +97,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       return true;
     },
     stopUnit(id: string) {
-      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === id || (!waiting[at].snapshot && waiting[at].spawn.targetId === id)) waiting.splice(at, 1);
-      for (const run of running) if (run.source === id || run.target === id) run.fx.stop();
+      for (let at = waiting.length - 1; at >= 0; at--) {
+        const row = waiting[at];
+        if ((needsLivingSource(row.spawn) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
+      }
+      for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) run.fx.stop();
     },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
@@ -109,8 +119,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         waiting.splice(at, 1);
         if (clock - when > 0.3 || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
-        const independent = spawn.point && spawn.event !== 'projectile';
-        if ((!independent && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
+        if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
         const host = spawn.event === 'hit' ? target : source;
         const fixed = snapshot ?? spawn.point;
@@ -128,7 +137,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.ltkSystem = spawn.system;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += slots;
-          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, until: when + spawn.duration, fx, persistent }); starts++;
+          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn) }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       const claims = [...running].flatMap(run => run.fx.stencils);

@@ -1,6 +1,7 @@
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
+import { toCombatViewEvents } from '../src/simulation/combat-replay-view';
 import { createBatch2VfxBridge, batch2BoardPoint } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
@@ -23,8 +24,10 @@ const point = batch2BoardPoint(board)!;
 const cast = (sourceId: string, actionSeq = 1, tick = 0): Extract<DisplayCombatEvent,{type:'cast'}> => ({
   type: 'cast', eventSeq: 1, tick, sourceId, actionSeq, targetIds: ['target'], completed: true, actualManaSpent: 0, refundedMana: 0, completionCell: { col: 0, row: 0 },
 });
+/** Viktor's own storm packet. Equipment, rays and untagged magic must not use this shape. */
 const stormDamage = (tick = 40): Extract<DisplayCombatEvent, { type: 'packetDamage' }> => ({
   type: 'packetDamage', eventSeq: tick + 1, tick, sourceId: 'v', targetId: 'target', damageType: 'magic',
+  sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct',
   hit: true, hpDamage: 100, absorbed: 0, critical: false, killingPacket: false,
 });
 function bridge(champion: string, form: 'front' | 'back' = 'front') {
@@ -95,7 +98,7 @@ describe('batch 2 exact display stages', () => {
     b.event({type:'devoured',eventSeq:2,tick:1,unitId:'w',targetId:'dead'},true);
     expect(play.mock.calls[0]?.[5]).toMatchObject({skill:'warwick-devour',snapshotTargets:true});
   });
-  it('starts Viktor full-board slam from the later damage event and does not mistake an attack tick for it', () => {
+  it('starts Viktor full-board slam from the later ability packet and does not mistake an attack tick for it', () => {
     const {bridge:b,play}=bridge('viktor'), c=cast('v');
     b.begin([c]);b.event(c,true);b.action('cast','v',['target'],0,c);play.mockClear();
     const damage = stormDamage();
@@ -136,6 +139,53 @@ describe('batch 2 exact display stages', () => {
     b.begin([stormDamage(121)]); b.event(stormDamage(121), true);
     expect(play).toHaveBeenCalledTimes(1);
   });
+  it('ignores Deathfire magic, death-ray magic and untagged magic, then plays the ability packet once', () => {
+    const { bridge: b, play } = bridge('viktor'), c = cast('v', 1, 241);
+    b.begin([c]); b.event(c, true);
+    const earlier: DisplayCombatEvent[] = [
+      { ...stormDamage(250), delivery: 'basic-attack' },
+      { ...stormDamage(260), sourceKind: 'item', definitionId: 'TFT9_Item_OrnnDeathfireGrasp', delivery: 'equipment-proc' },
+      { type: 'packetDamage', eventSeq: 9, tick: 270, sourceId: 'v', targetId: 'target', damageType: 'magic', hit: true, hpDamage: 40, absorbed: 0, critical: false, killingPacket: false },
+    ];
+    for (const event of earlier) { b.begin([event]); b.event(event, true); }
+    expect(play).not.toHaveBeenCalled();
+    b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(play.mock.calls[0]?.[5].skill).toBe('viktor-slam');
+    b.begin([stormDamage(282)]); b.event(stormDamage(282), true);
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+  it('still requests surviving target hits when Viktor is dead or already gone', () => {
+    const units = new Map<string, { definitionId: string; form: 'front'; alive: boolean; starLevel: number }>([
+      ['v', { definitionId: 'viktor', form: 'front', alive: true, starLevel: 3 }],
+      ['target', { definitionId: 'dummy', form: 'front', alive: true, starLevel: 1 }],
+    ]);
+    const play = vi.fn((_champion: string, _source: string, _targets: readonly string[], _index: number, _action: 'cast' | 'attack', _context: LtkPlayOptions) => true);
+    const b = createBatch2VfxBridge({ unit: id => units.get(id), board: () => board, play });
+    const c = { ...cast('v', 1, 241), targetIds: ['target'] };
+    b.begin([c]); b.event(c, false);
+    units.get('v')!.alive = false;
+    b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
+    expect(play.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor-slam-3star', boardOnly: false }]);
+    play.mockClear(); b.clear();
+    units.set('v', { definitionId: 'viktor', form: 'front', alive: true, starLevel: 3 });
+    b.begin([c]); b.event(c, false);
+    units.delete('v');
+    b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
+    expect(play.mock.calls[0]?.[2]).toEqual(['target']);
+    expect(play.mock.calls[0]?.[5]).toMatchObject({ skill: 'viktor-slam-3star', boardOnly: false });
+  });
+  it('projects ability-versus-item packet tags and leaves the rest of the source off the view', () => {
+    const event = { domain: 'combat', combatId: 'c', eventSeq: 8, tick: 281, type: 'packetDamage' as const, outcome: {
+      context: { source: { ownerId: 'v', sourceKind: 'ability' as const, definitionId: 'viktor-ability', instanceId: 'secret-instance', effectIndex: 4, parentItemInstanceId: null },
+        targetId: 'target', damageType: 'magic' as const, delivery: 'ability-direct' as const, packetId: 'SECRET', permissions: ['do-not-send'],
+        actionSeq: 1, rootActionSeq: 1, parentPacketId: null, triggeringCastActionSeq: 1, packetOrdinal: 2, equipmentDepth: 0 as const, redirected: false, area: true, critEligibility: 'never' as const },
+      hit: true, hpDamage: 10, absorbed: 1, critical: false, killingPacket: false, raw: 10, prevented: 0, mitigated: 0, overkill: 0 } };
+    const [view] = toCombatViewEvents([event as never]);
+    expect(view).toEqual({ type: 'packetDamage', tick: 281, eventSeq: 8, sourceId: 'v', targetId: 'target', damageType: 'magic',
+      sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', hit: true, hpDamage: 10, absorbed: 1, critical: false, killingPacket: false });
+    expect(JSON.stringify(view)).not.toMatch(/SECRET|do-not-send|secret-instance|parentItem/);
+  });
   it('does not register future casts before earlier damage and clears pending storms between battles', () => {
     const { bridge: b, play } = bridge('viktor'), c = cast('v'), damage = stormDamage();
     b.begin([damage, c]); b.event(damage, true); expect(play).not.toHaveBeenCalled();
@@ -174,6 +224,31 @@ describe('batch 2 runtime boundaries', () => {
     expect(play.mock.results[0]?.value).toBe(true); expect(runtime.queued).toBe(1);
     runtime.update(.01, new Camera());
     expect(scene.children.map(child => child.userData.ltkSystem)).toEqual([boardSystem]);
+    runtime.dispose(); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0);
+  });
+  it('keeps Viktor slam board and target hits after the caster dies, and still rejects a caster-bound cast', async () => {
+    const skills = viktorSkills, systems = Object.fromEntries(Object.values(skills).flatMap(c => c.map(x => [x.system, 'a.json'])));
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems, assets: { 'synthetic.tex': 'a.png' }, skills } : syntheticSystem(), readTexture: async () => new Texture() });
+    const unit = (alive: boolean) => ({ root: new Group(), body: null, alive, definitionId: 'viktor', form: 'front' as const, starLevel: 1 as const });
+    const units = new Map([['v', unit(true)], ['target', unit(true)]]);
+    const scene = new Scene(), runtime = createLtkRuntime(library, scene, id => units.get(id));
+    await runtime.warm('viktor');
+    expect(runtime.play('viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor', board: point })).toBe(true);
+    runtime.clear();
+    units.get('v')!.alive = false;
+    expect(runtime.play('viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor', board: point })).toBe(false);
+    expect(runtime.queued).toBe(0);
+    const play = vi.fn(runtime.play), b = createBatch2VfxBridge({ unit: id => units.get(id), board: () => board, play });
+    const c = { ...cast('v', 1, 241), targetIds: ['target'] };
+    b.begin([c]); b.event(c, false);
+    b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
+    expect(play.mock.calls[0]?.[2]).toEqual(['target']);
+    expect(play.mock.calls[0]?.[5]).toMatchObject({ skill: 'viktor-slam', boardOnly: false });
+    expect(play.mock.results[0]?.value).toBe(true); expect(runtime.queued).toBe(2);
+    runtime.stopUnit('v'); expect(runtime.queued).toBe(2);
+    runtime.update(.01, new Camera());
+    expect(scene.children.map(child => child.userData.ltkSystem).sort()).toEqual(['607d7b6b', 'c4ef93f3'].sort());
     runtime.dispose(); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0);
   });
   it('keeps original-space mesh births on the triangle, samples deterministically and rejects skin/invalid indices', () => {

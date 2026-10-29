@@ -84,14 +84,17 @@ export function createBatch2VfxBridge(host: Host) {
       }
       if (event.type === 'packetDamage') {
         const storm = storms.get(event.sourceId);
-        // The view carries owner and damage type, but no packet origin/actionSeq.
-        // Storm is magic on a receipted target; true burn/extra ray damage is not
-        // a landing. Same-tick attacks remain ambiguous, so wait conservatively.
-        if (storm && event.damageType === 'magic' && storm.targets.includes(event.targetId)
+        // Slam is Viktor's own later ability-direct magic (viktor-ability). Deathfire
+        // Grasp and other item pulses share the owner, magic type and target, and
+        // must not consume the landing. A same-tick attack stays ambiguous.
+        const ownStorm = event.damageType === 'magic' && event.sourceKind === 'ability'
+          && event.definitionId === 'viktor-ability' && event.delivery === 'ability-direct';
+        if (storm && ownStorm && storm.targets.includes(event.targetId)
           && event.tick > storm.tick && !attacks.has(`${event.sourceId}:${event.tick}`)) {
           storms.delete(event.sourceId);
           if (current) {
             const targets = storm.targets.filter(id => { const unit = host.unit(id); return unit?.alive && !unit.disposed; });
+            // Caster death does not drop the board point or surviving target hits.
             play('viktor', event.sourceId, targets, storm.star >= 3 ? 'viktor-slam-3star' : 'viktor-slam', 0, 'cast', false, undefined, !targets.length);
           }
         }
