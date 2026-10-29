@@ -43,3 +43,13 @@ listed above differ; no digest is patched and neither earlier fixture is changed
 The regression still requires exact serialized byte equality and continued replay
 of both following rounds. This is a settlement compatibility fixture, not epoch
 evidence or an old-identity save migration.
+
+### v25 Starry Night identity refresh
+
+At `e0147d72`, both pre-Spoils parameter cases were independently checked against
+the retained v25 bytes before updating this fixture. Only `contentDigest`,
+`combatInputBasis.contentDigest` (`229d9f7e` → `f671ab88`), and the derived
+`m8.loot.frozen.replayDigest` (`55f72339` → `36ebfac2`) differ. Reversing those
+identity substitutions restores the old file byte for byte. No gameplay data was
+regenerated; v23/v24 files remain unchanged. Full hashes and the corresponding
+Swarm/B9 proofs are recorded in [V25_STARRY_PINS.md](../../../docs/V25_STARRY_PINS.md).

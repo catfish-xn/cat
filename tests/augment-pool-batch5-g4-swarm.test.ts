@@ -41,9 +41,10 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
     ]);
   // Independently exported with 97068956's unmodified match.ts and these same
   // public commands. Hash the entire serialization, including history sequences.
+  // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
   const save=serializeMatch(started);
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('ea42cda1eeab49ebc9c4e012b17214218092cf55d5653adb6b41ebc6f4e760bc');
+    .toBe('8dedd86620e10240b954970b1f2c544e9dc8275ab65c5c5a2bb59c889bd8178d');
   expect(restoreMatch(save)).toEqual(started);
 });
 
