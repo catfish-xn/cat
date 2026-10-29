@@ -133,4 +133,20 @@ describe('batch 1 catalogue and runtime forms', () => {
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(0);
     runtime.dispose(); expect(scene.children).toEqual([]); expect(budget.live).toBe(0);
   });
+  it('does not pull empowered or self cues into an options-object play of the default form', async () => {
+    const cues = BATCH1_TIMELINES.zeri;
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? {
+      version: 1, systems: Object.fromEntries(cues.map(c => [c.system, c.system + '.json'])), assets: { 'synthetic.tex': 'same.png' }, skills: { zeri: cues },
+    } : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, scene = new Scene();
+    const runtime = createLtkRuntime(library, scene, () => source); await runtime.warm('zeri');
+    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack', { skill: 'zeri' })).toBe(true);
+    runtime.update(8 / 30, new Camera());
+    expect(scene.children.map(object => object.userData.ltkSystem)).toEqual(['215abe6e']);
+    runtime.clear();
+    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack', 'empowered')).toBe(true);
+    runtime.update(8 / 30, new Camera());
+    expect(scene.children.map(object => object.userData.ltkSystem)).toEqual(['d160dfa9']);
+    runtime.dispose();
+  });
 });

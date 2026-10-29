@@ -36,6 +36,24 @@ describe('LTK static emission surfaces', () => {
     const fx = createLtkParticles(prepared, {anchor,target:null,joints:()=>null,duration:1,seed:7});
     expect(fx.driver.surfaces()).toBe(prepared.surfaces); fx.update(.1, new Camera()); fx.dispose(); library.dispose();
   });
+  it('keeps both the birth mesh and the emission surface when one emitter names both', async () => {
+    const meshAsset = { type: 'asset' as const, path: 'triangle.scb', asset: null };
+    const surfaceAsset = { type: 'asset' as const, path: 'surface.scb', asset: null };
+    const document = syntheticSystem({ birthVelocity: constant(vec(0, 0, 0)), birthScale0: constant(vec(1, 1, 1)),
+      emissionMeshName: meshAsset, emissionSurfaceDefinition: struct('VfxEmissionMeshData', { meshName: surfaceAsset }) });
+    const reads: string[] = [];
+    const library = createVfxLibrary('/', { readJson: async url => url.endsWith('index.json') ? { version: 1, systems: { s: 's.json' },
+      assets: { 'synthetic.tex': 't.png', 'triangle.scb': 'm.ltkg', 'surface.scb': 's.ltkg' }, skills: {} } : document,
+    readTexture: async () => new Texture(), readBinary: async url => { reads.push(url); return binaryFixture('mesh', false); } });
+    const prepared = await library.load('s'), held = prepared.surfaces?.get('')?.get(0);
+    expect(held?.mesh ?? null).not.toBeNull();
+    expect(held?.surface ?? null).not.toBeNull();
+    expect(reads).toHaveLength(2);
+    const point = output();
+    expect(held!.mesh!.sample(0, new Rng(1), point)).toBe(true);
+    expect(held!.surface!.sample(0, new Rng(1), point)).toBe(true);
+    library.dispose();
+  });
   it('retains fallback for a missing mesh or an unposed skeletal surface', async () => {
     for (const value of [struct('VfxEmissionMeshData', {meshName:{type:'asset',path:'missing.scb',asset:null}}), struct('VfxEmissionSkeletonData', {})]) {
       const library = createVfxLibrary('/', {readJson: async url => url.endsWith('index.json') ? {version:1, systems:{s:'s.json'}, assets:{'synthetic.tex':'t.png'}, skills:{}} : syntheticSystem({emissionSurfaceDefinition:value}), readTexture: async()=>new Texture(), readBinary:async()=>binaryFixture('mesh',false)});

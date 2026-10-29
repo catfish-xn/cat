@@ -96,7 +96,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (skill !== champion && !skill.startsWith(champion + '-')) return false;
       const available = catalog.index?.skills[skill];
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
-        && (extra === undefined || typeof extra === 'string' ? cue.variant === form : true)
+        && cue.variant === form
         && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {

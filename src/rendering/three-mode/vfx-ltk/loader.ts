@@ -215,10 +215,12 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
           if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
             throw new VfxLoadError('unsupported', 'surface-host-pose');
-          const mesh = e.emissionMesh ? await emission(e.emissionMesh.mesh) : null;
-          const sampled = surface ? await emission(surface.mesh!, surface.submeshes) : null;
-          let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
-          held.set(e.index, { mesh, surface: sampled });
+          // Mesh bytes stay on the birth-mesh loop below. This pass only installs the surface so that loop can keep it.
+          if (surface) {
+            const sampled = await emission(surface.mesh!, surface.submeshes);
+            let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
+            held.set(e.index, { mesh: held.get(e.index)?.mesh ?? null, surface: sampled });
+          }
         }
         const slots = { base: e.texture, mult: e.multTexture, color: e.colorTexture, palette: e.palette?.texture ?? null, erosion: e.erosion?.map ?? null,
           normal: e.distortion?.map ?? null, reflection: e.reflection?.map ?? null };
@@ -257,7 +259,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         if (!pending) { pending = reader.readBinary(url).then(readEmissionMesh); birthMeshes.set(url, pending); }
         const sampler = await pending; ensureOpen();
         let system = surfaces.get(path); if (!system) { system = new Map(); surfaces.set(path, system); }
-        system.set(e.index, { mesh: sampler, surface: null });
+        system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
       }
       const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty }; prepared.set(id, result); return result;
     })().catch(error => {

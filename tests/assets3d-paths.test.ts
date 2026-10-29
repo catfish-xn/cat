@@ -74,7 +74,7 @@ describe('assets3d filesystem boundaries', () => {
     const modulePath = join(scripts, 'safe-path.mjs');
     await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
     await linkDirectory(external, join(repo, 'assets3d-local'));
-    const isolated = await import(pathToFileURL(modulePath + '?symlink-root=' + Date.now()));
+    const isolated = await import(pathToFileURL(modulePath + '?symlink-root=' + Date.now()).href);
     const output = join(external, 'report.json');
     expect(await isolated.safeOutputPath('assets3d-local/report.json', { force: true })).toBe(output);
     await isolated.writeOutputFile('assets3d-local/nested/report.json', '{}', { force: true });
@@ -110,7 +110,7 @@ describe('assets3d filesystem boundaries', () => {
     const modulePath = join(scripts, 'safe-path.mjs');
     await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
     await linkDirectory(external, join(repo, 'assets3d-local'));
-    const isolated = await import(pathToFileURL(modulePath + '?symlink-escape=' + Date.now()));
+    const isolated = await import(pathToFileURL(modulePath + '?symlink-escape=' + Date.now()).href);
     const inner = join(external, 'workspace');
     await mkdir(inner, { recursive: true });
     await linkDirectory(await temporary(), join(inner, 'escape'));
