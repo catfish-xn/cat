@@ -10,19 +10,13 @@ import type { CombatViewState } from './combat-display';
 import type { GearExtras } from './equipment-feedback';
 import type { PlayerView, PublicBoard } from '../rendering/online/protocol';
 
-export interface ConfiscationDependencies {
-  enforcerConfiscates: typeof enforcerConfiscates;
-  units: typeof UNIT_DEFINITIONS;
-  items: typeof ITEM_DEFINITIONS;
-  deriveTraits: typeof deriveTraits;
-  combatEquipmentDisplay: typeof combatEquipmentDisplay;
-}
-
 export default class ConfiscationDisplay {
   private view: PlayerView | null = null;
   private round = -1;
   private battles = new Map<string, { initial: CombatViewState; seat: string | null; victims?: Map<string, boolean> }>();
-  constructor(private readonly dependencies: ConfiscationDependencies) {}
+  constructor(private readonly confiscates: typeof enforcerConfiscates,
+    private readonly units: typeof UNIT_DEFINITIONS, private readonly items: typeof ITEM_DEFINITIONS,
+    private readonly traits: typeof deriveTraits, private readonly equipment: typeof combatEquipmentDisplay) {}
   observe(view: PlayerView): void {
     if (view.phase.round !== this.round) { this.battles.clear(); this.round = view.phase.round; }
     // Keep the first received combat view through settlement, even before a replay has arrived.
@@ -35,23 +29,23 @@ export default class ConfiscationDisplay {
   }
   gear(combatId: string | undefined, unitId: string, equipped: readonly string[], extras: GearExtras) {
     if (!combatId) return { equipped, extras, confiscated: false };
-    const { units: UNIT_DEFINITIONS, items: ITEM_DEFINITIONS, enforcerConfiscates } = this.dependencies;
+    const { confiscates: enforcerConfiscates, units: UNIT_DEFINITIONS, items: ITEM_DEFINITIONS } = this;
     // Matches strategy-snapshot keeps(): unknown item definitions are confiscated too, unless an emblem is known.
     const confiscatable = (id: string) => !ITEM_DEFINITIONS[id]?.emblemTrait;
     const battle = this.battles.get(combatId), view = this.view;
     if (battle && !battle.victims && view?.phase.kind === 'combat') {
-      const { initial, seat } = battle, home = seat ?? view.mySeatId;
-      const board = (id: string | null) => view.seats.find(s => s.seatId === id)?.publicBoard;
-      const owned = board(home);
-      // Watched replays omit their pairing: match the opening formation without parsing opaque ids.
-      // Ambiguous/missing public data stays unknown rather than inventing a confiscation notice.
-      const enemyChampions = initial.units.filter(u => u.team === 'enemy' && !UNIT_DEFINITIONS[u.definitionId]?.summon && UNIT_DEFINITIONS[u.definitionId]?.unitKind !== 'neutral');
-      const matches = (candidate: PublicBoard) => candidate.units.filter(u => !u.summon).length === enemyChampions.length && candidate.units.filter(u => !u.summon).every(u => initial.units.some(v =>
-        v.team === 'enemy' && v.definitionId === u.definitionId && v.starLevel === u.starLevel
-        && (v.startingCell ?? v.cell).col === u.cell.col && initial.board.rows - 1 - (v.startingCell ?? v.cell).row === u.cell.row));
-      const candidates = view.seats.filter(s => s.seatId !== home && s.publicBoard?.units.length && matches(s.publicBoard));
-      const enemy = seat ? candidates.length === 1 ? candidates[0].publicBoard : undefined : board(view.opponentSeatId);
       try {
+        const { initial, seat } = battle, home = seat ?? view.mySeatId;
+        const board = (id: string | null) => view.seats.find(s => s.seatId === id)?.publicBoard;
+        const owned = board(home);
+        // Watched replays omit their pairing: match the opening formation without parsing opaque ids.
+        // Ambiguous/missing public data stays unknown rather than inventing a confiscation notice.
+        const enemyChampions = initial.units.filter(u => u.team === 'enemy' && !UNIT_DEFINITIONS[u.definitionId]?.summon && UNIT_DEFINITIONS[u.definitionId]?.unitKind !== 'neutral');
+        const matches = (candidate: PublicBoard) => candidate.units.filter(u => !u.summon).length === enemyChampions.length && candidate.units.filter(u => !u.summon).every(u => initial.units.some(v =>
+          v.team === 'enemy' && v.definitionId === u.definitionId && v.starLevel === u.starLevel
+          && (v.startingCell ?? v.cell).col === u.cell.col && initial.board.rows - 1 - (v.startingCell ?? v.cell).row === u.cell.row));
+        const candidates = view.seats.filter(s => s.seatId !== home && s.publicBoard?.units.length && matches(s.publicBoard));
+        const enemy = seat ? candidates.length === 1 ? candidates[0].publicBoard : undefined : board(view.opponentSeatId);
         const traits = ([['player', owned], ['enemy', enemy]] as const).flatMap(([team, b]) =>
           b ? this.publicTraitSnapshots(b, initial.board).map(t => ({ ...t, team })) : []);
         battle.victims = new Map(initial.units.flatMap(u => {
@@ -74,7 +68,7 @@ export default class ConfiscationDisplay {
   /** Public roster + held emblems only; no private augment/orb/mirror membership projection. */
   private publicTraitSnapshots(board: PublicBoard, layout: Board) {
     const units = board.units.filter(unit => !unit.summon);
-    return this.dependencies.deriveTraits({ board: layout, benchSize: 0, units: units.map((unit, index) => ({
+    return this.traits({ board: layout, benchSize: 0, units: units.map((unit, index) => ({
       id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
     })) }, 'player', undefined, undefined, units.flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
       id: `public-${index}-${slot}`, definitionId, location: { kind: 'unit' as const, unitId: `public-${index}`, slot },
@@ -82,7 +76,7 @@ export default class ConfiscationDisplay {
   }
   /** One on-demand path updates both the 2D icons and the fields published to the 3D board feed. */
   sync(view: CombatViewState, views: ReadonlyMap<string, UnitView>): boolean {
-    syncCombatEquipment(view, views, this.dependencies.combatEquipmentDisplay, this);
+    syncCombatEquipment(view, views, this.equipment, this);
     return true;
   }
 }

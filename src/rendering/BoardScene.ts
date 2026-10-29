@@ -1343,7 +1343,7 @@ export class BoardScene extends Phaser.Scene {
     if (!(this.application instanceof OnlineApplication && this.application.confiscation?.sync(view, this.views))) for (const unit of view.units) {
       const drawn = this.views.get(unit.id);
       if (!drawn || unit.equipment === undefined) continue;
-      const gear = combatEquipmentDisplay(unit.equipment, drawn.equipped, drawn.extras);
+      const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
       drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
         gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
     }

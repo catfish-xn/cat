@@ -1,7 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('phaser', () => ({ default: {} }));
+// Only the unrelated DOM widgets are passive; the application loader and push handlers stay real.
+const widgets = vi.hoisted(() => {
+  class Widget {
+    root = { querySelector: () => null };
+    render() {} update() {} show() {} close() {} dispose() {}
+    createToggle() { return {}; }
+  }
+  return { Widget };
+});
+vi.mock('../src/rendering/online/lobby', () => ({ Lobby: widgets.Widget }));
+vi.mock('../src/rendering/online/players-sidebar', () => ({ PlayersSidebar: widgets.Widget }));
+vi.mock('../src/rendering/online/opponent-board', () => ({ OpponentBoardPanel: widgets.Widget }));
+vi.mock('../src/rendering/online/scout-minimap', () => ({ ScoutMinimap: widgets.Widget }));
+vi.mock('../src/rendering/online/carousel-panel', () => ({ CarouselPanel: widgets.Widget, CarouselHoldingSlot: widgets.Widget }));
+vi.mock('../src/rendering/online/battle-summary', () => ({ BattleSummaryPanel: widgets.Widget }));
+vi.mock('../src/rendering/online/economy-hint', () => ({ EconomyHint: widgets.Widget }));
+vi.mock('../src/rendering/online/left-panel-toggle', () => ({ LeftPanelToggle: widgets.Widget }));
+vi.mock('../src/rendering/online/sound', () => ({ OnlineSound: widgets.Widget }));
+vi.mock('../src/rendering/online/ranking', () => ({ RankingOverlay: widgets.Widget, EliminationCard: widgets.Widget }));
+vi.mock('../src/rendering/online/battle-outcome', () => ({ BattleOutcome: widgets.Widget }));
+vi.mock('../src/rendering/opening-encounter-hud', () => ({ OpeningEncounterHud: widgets.Widget }));
 import type { UnitView } from '../src/presentation/unit-view';
-import { loadConfiscationDisplay } from '../src/rendering/online/confiscation-display';
+import { OnlineApplication } from '../src/rendering/online/online-application';
 import ConfiscationDisplay, { syncCombatEquipment } from '../src/presentation/confiscation-display';
 import { enforcerConfiscates } from '../src/simulation/strategy-snapshot';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
@@ -12,8 +33,33 @@ import { createMatch, startMatchCombat } from '../src/simulation/match';
 import { toCombatViewState, type CombatViewState } from '../src/presentation/combat-display';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import type { PlayerView, PublicBoard } from '../src/server/protocol';
+import type { ClientListeners, GameClient } from '../src/rendering/online/protocol';
+import type { RemoteSession } from '../src/rendering/online/remote-session';
+import type { CombatReplay } from '../src/simulation/combat-replay-view';
 
-const dependencies = { enforcerConfiscates, units: UNIT_DEFINITIONS, items: ITEM_DEFINITIONS, deriveTraits, combatEquipmentDisplay };
+const applications: OnlineApplication[] = [];
+afterEach(() => {
+  for (const app of applications.splice(0)) app.dispose();
+  vi.restoreAllMocks(); vi.unstubAllGlobals();
+});
+function mountApplication() {
+  const root = { prepend() {} };
+  vi.stubGlobal('document', { body: { dataset: {} }, getElementById: (id: string) => id === 'app' ? root : null,
+    addEventListener() {}, removeEventListener() {} });
+  // Phase/HUD/scouting behavior has its own suites; isolate only those unrelated updates.
+  type Peripheral = 'syncMode' | 'syncScout' | 'syncSpectating' | 'syncCarousel' | 'syncBattleViews' | 'syncStatus' | 'syncOpening' | 'viewSound' | 'noteOutcome';
+  const prototype = OnlineApplication.prototype as unknown as Record<Peripheral, () => void>;
+  for (const method of ['syncMode', 'syncScout', 'syncSpectating', 'syncCarousel', 'syncBattleViews', 'syncStatus', 'syncOpening', 'viewSound', 'noteOutcome'] as const)
+    vi.spyOn(prototype, method).mockImplementation(() => {});
+  let listeners!: ClientListeners;
+  const client = { transport: 'websocket', listen(value: ClientListeners) { listeners = value; return () => {}; }, dispose() {} } as unknown as GameClient;
+  const session = { pause() {}, resume() {}, subscribe: () => () => {}, receiveReplay: vi.fn(), dispose() {} } as unknown as RemoteSession;
+  const app = new OnlineApplication(session, client, { refresh() {}, clearInput() {}, status() {} });
+  applications.push(app);
+  return { app, listeners, session };
+}
+
+const dependencies: ConstructorParameters<typeof ConfiscationDisplay> = [enforcerConfiscates, UNIT_DEFINITIONS, ITEM_DEFINITIONS, deriveTraits, combatEquipmentDisplay];
 const emblem = Object.values(EMBLEM_ITEMS).find(item => item.emblemTrait === 'enforcer')!.id;
 const empty = { reserved: 0, temporary: [] };
 const enforcers = ['maddie', 'loris', 'caitlyn', 'camille', 'steb', 'twistedfate', 'vi'];
@@ -34,7 +80,7 @@ function fixture(left = victim, right = army()) {
   const initial: CombatViewState = { ...base, combatId: 'test-confiscation', units };
   const view = { mySeatId: 'me', opponentSeatId: 'other', phase: { kind: 'combat', round: 5 },
     seats: [{ seatId: 'me', publicBoard: left }, { seatId: 'other', publicBoard: right }] } as unknown as PlayerView;
-  const display = new ConfiscationDisplay(dependencies); display.observe(view); display.capture(initial);
+  const display = new ConfiscationDisplay(...dependencies); display.observe(view); display.capture(initial);
   return { display, initial, view };
 }
 
@@ -52,7 +98,7 @@ describe('v26 confiscation presentation', () => {
   it('does not label lower tiers or missing/legacy public data as confiscation', () => {
     const { display, initial } = fixture(victim, army(false));
     expect(display.gear(initial.combatId, '0:0', ['deathblade'], empty).confiscated).toBe(false);
-    const unknown = new ConfiscationDisplay(dependencies); unknown.capture(initial);
+    const unknown = new ConfiscationDisplay(...dependencies); unknown.capture(initial);
     expect(unknown.gear(initial.combatId, '0:0', ['deathblade'], empty).equipped).toEqual(['deathblade']);
   });
   it('supports mutual confiscation and latches the stamp when gear arrives during combat', () => {
@@ -73,13 +119,13 @@ describe('v26 confiscation presentation', () => {
   });
   it('identifies a watched opponent from its unique opening formation', () => {
     const { initial, view } = fixture();
-    const display = new ConfiscationDisplay(dependencies);
+    const display = new ConfiscationDisplay(...dependencies);
     display.observe({ ...view, mySeatId: 'spectator', opponentSeatId: null }); display.capture(initial, 'me');
     expect(display.gear(initial.combatId, '0:0', [], empty).confiscated).toBe(true);
   });
   it('keeps the first combat view when settlement arrives before the replay or the first gear read', () => {
     const { initial, view } = fixture();
-    const display = new ConfiscationDisplay(dependencies);
+    const display = new ConfiscationDisplay(...dependencies);
     display.observe(view);
     display.observe({ ...view, seats: [], phase: { ...view.phase, kind: 'settlement' } });
     display.capture(initial);
@@ -97,7 +143,7 @@ describe('v26 confiscation presentation', () => {
         if (selector.mock.calls.length === failAt) throw new RangeError('invalid public formation');
         return deriveTraits(...args);
       });
-      const display = new ConfiscationDisplay({ ...dependencies, deriveTraits: selector });
+      const display = new ConfiscationDisplay(enforcerConfiscates, UNIT_DEFINITIONS, ITEM_DEFINITIONS, selector, combatEquipmentDisplay);
       display.observe(view); display.capture(initial);
       const equipped = ['deathblade', emblem], extras = { reserved: 2, temporary: ['belt'] };
       for (let frame = 0; frame < 3; frame++) {
@@ -110,13 +156,33 @@ describe('v26 confiscation presentation', () => {
   });
   it('ignores missing and empty combat ids without reading public traits', () => {
     const { initial, view } = fixture();
-    const selector = vi.fn(deriveTraits), display = new ConfiscationDisplay({ ...dependencies, deriveTraits: selector });
+    const selector = vi.fn(deriveTraits), display = new ConfiscationDisplay(enforcerConfiscates, UNIT_DEFINITIONS, ITEM_DEFINITIONS, selector, combatEquipmentDisplay);
     display.observe(view);
     for (const combatId of [undefined, '']) {
       display.capture({ ...initial, combatId });
       expect(display.gear(combatId, '0:0', ['deathblade'], empty)).toEqual({ equipped: ['deathblade'], extras: empty, confiscated: false });
     }
     expect(selector).not.toHaveBeenCalled();
+  });
+  it.each(['board', 'enemyChampions', 'matches', 'candidates'] as const)('caches an empty victim table when %s lookup fails, without retrying each frame', stage => {
+    const { initial, view } = fixture();
+    const display = new ConfiscationDisplay(...dependencies);
+    display.observe(view); display.capture(initial);
+    const failure = stage === 'board' ? vi.spyOn(view.seats, 'find')
+      : stage === 'enemyChampions' ? vi.spyOn(initial.units, 'filter')
+      : stage === 'matches' ? vi.spyOn(view.seats[1].publicBoard!.units, 'filter')
+      : vi.spyOn(view.seats, 'filter');
+    failure.mockImplementation(() => { throw new TypeError('invalid public formation'); });
+    const equipped = ['deathblade', emblem], extras = { reserved: 2, temporary: ['belt'] };
+    for (let frame = 0; frame < 3; frame++) {
+      const gear = display.gear(initial.combatId, '0:0', equipped, extras);
+      expect(gear).toEqual({ equipped, extras, confiscated: false });
+      expect(gear.equipped).toBe(equipped); expect(gear.extras).toBe(extras);
+    }
+    expect(failure).toHaveBeenCalledTimes(1);
+    failure.mockRestore();
+    display.capture({ ...initial, combatId: 'recovered' });
+    expect(display.gear('recovered', '0:0', equipped, extras)).toEqual({ equipped: [emblem], extras: empty, confiscated: true });
   });
   it('confiscates unknown item definitions just like the authoritative snapshot, while retaining known emblems', () => {
     const left: PublicBoard = { units: [{ ...victim.units[0], items: ['future-item', emblem] }] };
@@ -126,21 +192,25 @@ describe('v26 confiscation presentation', () => {
     expect(display.gear(initial.combatId, '0:0', ['future-item', emblem], { reserved: 2, temporary: ['future-temporary', emblem] }))
       .toEqual({ equipped: [emblem], extras: { reserved: 0, temporary: [emblem] }, confiscated: true });
   });
-  it('buffers combat and settlement pushes until the lazy display loads, then creates and clears the moving-body stamp', async () => {
+  it('skips pushes before the lazy display loads, then creates and clears the moving-body stamp from later pushes', async () => {
     const { initial, view } = fixture();
     const tag = { visible: true, setVisible: vi.fn(function (this: { visible: boolean }, on: boolean) { this.visible = on; }), setOrigin: vi.fn() };
     tag.setOrigin.mockReturnValue(tag);
     const drawn = { equipped: ['deathblade', emblem], extras: empty, body: { add: vi.fn() }, update: vi.fn(),
       token: { scene: { add: { text: vi.fn(() => tag) } } }, confiscationTag: undefined };
     const views = new Map([['0:0', drawn as unknown as UnitView]]);
-    let display: ConfiscationDisplay | undefined;
-    const pending = loadConfiscationDisplay(dependencies).then(value => display = value);
-    void pending.then(value => value?.observe(view));
-    void pending.then(value => value?.observe({ ...view, seats: [], phase: { ...view.phase, kind: 'settlement' } }));
-    void pending.then(value => value?.capture(initial));
-    expect(display?.sync(initial, views) ?? false).toBe(false); // The normal authoritative gear path remains active.
+    const { app, listeners, session } = mountApplication();
+    const replay = { initial } as CombatReplay;
+    const settlement = { ...view, seats: [], phase: { ...view.phase, kind: 'settlement' as const } };
+    listeners.view?.(view); listeners.view?.(settlement); listeners.replay?.(replay);
+    expect(session.receiveReplay).toHaveBeenCalledWith(replay, []);
+    expect(app.confiscation?.sync(initial, views) ?? false).toBe(false); // The normal authoritative gear path remains active.
     expect(drawn.update).not.toHaveBeenCalled(); expect(drawn.token.scene.add.text).not.toHaveBeenCalled();
     await vi.dynamicImportSettled();
+    const display = app.confiscation;
+    expect(display).toBeInstanceOf(ConfiscationDisplay);
+    expect(display!.gear(initial.combatId, '0:0', ['deathblade'], empty)).toEqual({ equipped: ['deathblade'], extras: empty, confiscated: false });
+    listeners.view?.(view); listeners.view?.(settlement); listeners.replay?.(replay);
     expect(display!.sync(initial, views)).toBe(true);
     expect(drawn.update).toHaveBeenCalledWith(expect.objectContaining({ id: '0:0' }), [emblem], [], empty, 1, initial.units[0].itemStacks);
     expect(drawn.body.add).toHaveBeenCalledWith(tag); expect(tag.visible).toBe(true);
@@ -161,7 +231,10 @@ describe('v26 confiscation presentation', () => {
 
   it('leaves the optional display unavailable when its chunk fails, so the normal gear path stays active', async () => {
     vi.doMock('../src/presentation/confiscation-display', () => { throw new Error('UI chunk unavailable'); });
-    try { await expect(loadConfiscationDisplay(dependencies)).resolves.toBeUndefined(); }
+    try {
+      const { app } = mountApplication();
+      await expect(vi.dynamicImportSettled().then(() => app.confiscation)).resolves.toBeUndefined();
+    }
     finally { vi.doUnmock('../src/presentation/confiscation-display'); }
   });
 
