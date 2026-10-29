@@ -1,5 +1,40 @@
+import { AUGMENT_BATCH5_R1_TIERS } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_TIERS } from './augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3_TIERS } from './augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4_TIERS } from './augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6_TIERS } from './augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1_TIERS } from './augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2_TIERS } from './augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3_TIERS } from './augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G4_TIERS } from './augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5_TIERS } from './augment-pool-batch5-g5';
+import { AUGMENT_BATCH5_H1_TIERS } from './augment-pool-batch5-h1';
+import { AUGMENT_BATCH5_H3_TIERS } from './augment-pool-batch5-h3';
+import { AUGMENT_BATCH5_H4_TIERS } from './augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_G6_TIERS } from './augment-pool-batch5-g6';
+import { AUGMENT_BATCH5_H6_TIERS } from './augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_B5A_TIERS } from './augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A_TIERS } from './augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B_TIERS } from './augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A_TIERS } from './augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3D_TIERS } from './augment-pool-batch5-s3d';
+import { AUGMENT_BATCH5_H7_TIERS } from './augment-pool-batch5-h7';
+import { AUGMENT_BATCH5_H8_TIERS } from './augment-pool-batch5-h8';
+import { AUGMENT_BATCH5_H10_TIERS } from './augment-pool-batch5-h10';
+import { AUGMENT_BATCH5_H11_TIERS } from './augment-pool-batch5-h11';
+import { AUGMENT_BATCH5_H12_TIERS } from './augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_H9_TIERS } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7_TIERS } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP_TIERS } from './augment-pool-shop';
+import { AUGMENT_BATCH5_S3B_TIERS } from './augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S6C_TIERS } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B_TIERS } from './augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C_TIERS } from './augment-pool-batch5-s8c';
+import { AUGMENT_BATCH5_S11A_TIERS } from './augment-pool-batch5-s11a';
+import { AUGMENT_BATCH5_S8A_TIERS } from './augment-pool-batch5-s8a';
+import { AUGMENT_BATCH5_H13_TIERS } from './augment-pool-batch5-h13';
 import { AUGMENT_BATCH5_TIERS } from './augment-pool-batch5';
+import { AUGMENT_BATCH5_H5_TIERS } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4_TIERS } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP_TIERS } from './augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4REROLL_TIERS } from './augment-pool-batch4-b4reroll';
@@ -93,6 +128,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  ...AUGMENT_BATCH5_R2_TIERS,
   ...AUGMENT_BATCH1_TIERS,
   ...AUGMENT_BATCH2_TIERS,
   ...AUGMENT_BATCH3_TIERS,
@@ -101,6 +137,40 @@ export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismat
   ...AUGMENT_BATCH3_XP_TIERS,
   ...AUGMENT_BATCH4_TIERS,
   ...AUGMENT_BATCH5_TIERS,
+  ...AUGMENT_BATCH5_H1_TIERS,
+  ...AUGMENT_BATCH5_G1_TIERS,
+  ...AUGMENT_BATCH5_H3_TIERS,
+  ...AUGMENT_BATCH5_R6_TIERS,
+  ...AUGMENT_BATCH5_H4_TIERS,
+  ...AUGMENT_BATCH5_H5_TIERS,
+  ...AUGMENT_BATCH5_H6_TIERS,
+  ...AUGMENT_BATCH5_B5A_TIERS,
+  ...AUGMENT_BATCH5_S1A_TIERS,
+  ...AUGMENT_BATCH5_S1B_TIERS,
+  ...AUGMENT_BATCH5_S3A_TIERS,
+  ...AUGMENT_BATCH5_S3B_TIERS,
+  ...AUGMENT_BATCH5_S3D_TIERS,
+  ...AUGMENT_BATCH5_S6C_TIERS,
+  ...AUGMENT_BATCH5_S8A_TIERS,
+  ...AUGMENT_BATCH5_S8B_TIERS,
+  ...AUGMENT_BATCH5_S8C_TIERS,
+  ...AUGMENT_BATCH5_S11A_TIERS,
+  ...AUGMENT_BATCH5_H7_TIERS,
+  ...AUGMENT_BATCH5_H8_TIERS,
+  ...AUGMENT_BATCH5_H10_TIERS,
+  ...AUGMENT_BATCH5_H11_TIERS,
+  ...AUGMENT_BATCH5_H12_TIERS,
+  ...AUGMENT_BATCH5_H13_TIERS,
+  ...AUGMENT_BATCH5_H9_TIERS,
+  ...AUGMENT_BATCH5_R1_TIERS,
+  ...AUGMENT_BATCH5_R3_TIERS,
+  ...AUGMENT_BATCH5_R4_TIERS,
+  ...AUGMENT_BATCH5_G2_TIERS,
+  ...AUGMENT_BATCH5_G3_TIERS,
+  ...AUGMENT_BATCH5_G4_TIERS,
+  ...AUGMENT_BATCH5_G5_TIERS,
+  ...AUGMENT_BATCH5_G6_TIERS,
+  ...AUGMENT_BATCH5_G7_TIERS,
   ...AUGMENT_BATCH4_B4XP_TIERS,
   ...AUGMENT_BATCH4_B4REROLL_TIERS,
   sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'prismatic',menaces:'gold','unlikely-duo':'gold',

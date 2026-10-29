@@ -1,3 +1,12 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { UNIT_DEFINITIONS } from './units';
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
+import { combatHistoryGrowth } from './augment-pool-batch5-h3';
+import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
+import { readSniperOpening, validSniperOpeningSnapshot } from './augment-pool-batch5-h10-sniper';
+import { readCabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -49,9 +58,13 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const s = value as unknown as PlayerBattleSnapshot;
     if(s.itemSummonPositions)validateItemSummonPositions(s.itemSummonPositions);
     if(s.bankGold!==undefined)integer(s.bankGold);
-    if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
+    if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=maximumPlayerHp(s.augments,getMultiplayerRoundById(s.roundId).ordinal));}
     if(s.g23)yield* validateG23ProgressSteps(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
+    if(s.cabalGrowth){record(s.cabalGrowth);integer(s.cabalGrowth.healthFlat);integer(s.cabalGrowth.attackDamageBps);
+      requireSnapshot(s.augments.some(a=>a.definitionId==='forbidden-magic')&&Object.keys(s.cabalGrowth).length===2
+        &&s.cabalGrowth.healthFlat%10===0&&s.cabalGrowth.attackDamageBps===s.cabalGrowth.healthFlat*15);}
+    else requireSnapshot(!s.augments.some(a=>a.definitionId==='forbidden-magic'));
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
     if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
@@ -84,6 +97,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
         && !augmentIds.has(augment.definitionId) && !choices.has(augment.choiceId));
       augmentIds.add(augment.definitionId); choices.add(augment.choiceId);
     }
+    requireSnapshot(validSniperOpeningSnapshot(s.augments, { units: s.units, items: s.items }, s.sniperOpening));
     if (s.anomalyBinding !== null) {
       record(s.anomalyBinding); const binding = s.anomalyBinding; id(binding.choiceId); integer(binding.boundRound, 1);
       requireSnapshot(binding.boundRound <= round.ordinal && units.has(binding.unitId) && Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId));
@@ -98,11 +112,33 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       requireSnapshot(c.phase!=='returned'||round.ordinal>=b!.boundRound+3);
       requireSnapshot(Object.keys(c).length===3);
     }
+    if (s.ghostFriendsGrowth !== undefined) {
+      requireSnapshot(augmentIds.has('ghost-of-friends-past')); record(s.ghostFriendsGrowth);
+      requireSnapshot(Object.keys(s.ghostFriendsGrowth).sort().join(',') === 'abilityPower,attackDamageBps,healthFlat');
+      for (const v of Object.values(s.ghostFriendsGrowth)) integer(v);
+    } else requireSnapshot(!augmentIds.has('ghost-of-friends-past'));
+    if(s.h6Growth!==undefined){
+      requireSnapshot(augmentIds.has('scoreboard-scrapper') && Array.isArray(s.h6Growth) && s.h6Growth.length===s.units.length);
+      const ids=new Set<string>();
+      for(const g of s.h6Growth){record(g);id(g.unitId);requireSnapshot(units.has(g.unitId)&&!ids.has(g.unitId));ids.add(g.unitId);
+        for(const k of ['healthFlat','healthBps','attackDamageBps','abilityPowerCenti'] as const)integer(g[k]);
+        requireSnapshot(Object.keys(g).length===5);
+      }
+    } else requireSnapshot(!augmentIds.has('scoreboard-scrapper'));
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
-      requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+      requireSnapshot(units.has(growth.unitId) && !UNIT_DEFINITIONS[units.get(growth.unitId)!.definitionId]?.summon
+        && (units.get(growth.unitId)!.definitionId === 'tristana' || augmentIds.has('pandoras-bench') || augmentIds.has('recombobulator')) && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
+    }
+    if(s.augmentCopyKills){list(s.augmentCopyKills);const seen=new Set<string>();for(const g of s.augmentCopyKills){record(g);id(g.itemId);integer(g.count,1);requireSnapshot(s.items.some(i=>i.id===g.itemId)&&!seen.has(g.itemId)&&Object.keys(g).sort().join(',')==='count,itemId');seen.add(g.itemId);}requireSnapshot(s.augmentCopyKills.length>0);}
+    if (s.augmentHistoryGrowth) {
+      const seen = new Set<string>(); list(s.augmentHistoryGrowth);
+      for (const g of s.augmentHistoryGrowth) { record(g); id(g.unitId); requireSnapshot(units.has(g.unitId) && !seen.has(g.unitId)); seen.add(g.unitId);
+        for (const v of [g.healthFlat,g.healthBps,g.attackDamageBps,g.abilityPowerCenti]) integer(v);
+        requireSnapshot(Object.keys(g).sort().join(',') === 'abilityPowerCenti,attackDamageBps,healthBps,healthFlat,unitId'); }
+      requireSnapshot(s.augmentHistoryGrowth.length>0);
     }
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
     requireSnapshot(Object.keys(s.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming','magicRoll'].includes(k)));
@@ -119,6 +155,10 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:{...s.ghostFriendsGrowth}}:{}),
+      ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g}))}:{}),
+      ...(s.sniperOpening ? { sniperOpening: structuredClone(s.sniperOpening) } : {}),
+      ...(s.cabalGrowth?{cabalGrowth:structuredClone(s.cabalGrowth)}:{}),
       ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
       ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
@@ -134,6 +174,8 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       anomalyBinding: s.anomalyBinding === null ? null : { definitionId:s.anomalyBinding.definitionId,
         unitId:s.anomalyBinding.unitId, choiceId:s.anomalyBinding.choiceId, boundRound:s.anomalyBinding.boundRound },
       persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
+      ...(s.augmentCopyKills?{augmentCopyKills:s.augmentCopyKills.map(g=>({...g}))}:{}),
+      ...(s.augmentHistoryGrowth ? {augmentHistoryGrowth:s.augmentHistoryGrowth.map(g=>({...g}))} : {}),
       augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp,
         ...(s.augmentProgress.magicRoll === undefined ? {} : { magicRoll: [s.augmentProgress.magicRoll[0], s.augmentProgress.magicRoll[1], s.augmentProgress.magicRoll[2]] as const }),
         ...(s.augmentProgress.forming === undefined ? {} : { forming: Object.fromEntries(Object.entries(s.augmentProgress.forming).map(([k, t]) => [k, { health:t!.health, attack:t!.attack }])) }) },
@@ -162,18 +204,27 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
+  const cabalGrowth = readCabalGrowth(state);
   const wins = priorPvpWins(state.roundResults, state.round);
   // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
+  const h6Growth=scoreboardCombatGrowth(state,units.map(u=>u.id));
+  const sniperOpening = readSniperOpening(state);
   return yield* restorePlayerBattleSnapshotSteps({
+    ...(ghostFriendsGrowth(state)?{ghostFriendsGrowth:ghostFriendsGrowth(state)}:{}),
+    ...(h6Growth?{h6Growth}:{}),
+    ...(sniperOpening ? { sniperOpening } : {}),
+    ...(cabalGrowth?{cabalGrowth}:{}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
-    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>portableAnomalyId(i.definitionId)==='avarice-incarnate')||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)), augmentProgress: state.augmentProgress,
+    ...((kills=>kills.length?{augmentCopyKills:kills}:{})(r2CopyKills(state).filter(g=>state.items.some(i=>i.id===g.itemId&&i.location.kind==='unit'&&ids.has(i.location.unitId))))),
+    ...((growth=>growth.length?{augmentHistoryGrowth:growth}:{})(combatHistoryGrowth(state,[...ids]))),
   });
 }

@@ -116,6 +116,8 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
  * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
  */
 export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[];
+  /** Remaining shop rerolls, computed by the rules on the authoritative seat; history stays on the server. */
+  readonly freeRerollsAvailable: number;
   /**
    * v22 anvil units: present only while my open anvil choice (pendingChoice.payload.source 'anvil-unit') runs on its own
    * server deadline. `endsAt` is server time like PlayerViewPhase.endsAt (compare with its `serverNow`); the choice is

@@ -1,4 +1,6 @@
+import { isMutationSacrifice } from './augment-pool-batch5-g3-mutation';
 import { MAX_COMBAT_TICKS } from './combat-types';
+import { isR3Copy, projectR3Preparation } from './augment-pool-batch5-r3';
 import { drainSetup } from './setup-work';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
@@ -17,6 +19,7 @@ import { createScopedContentFreezer, freezeContent, freezeContentSteps } from '.
 import { buildStrategySnapshotSteps, enforcerConfiscates } from './strategy-snapshot';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
+import { createScopedLedgerCertifier } from './immutable-json';
 import { effectKey } from './effects';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateSeed } from './rng';
@@ -51,8 +54,12 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   // effects use the owner's preparation coordinates before B is mirrored to the upper half.
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
+    ...(s.cabalGrowth?{cabalGrowth:s.cabalGrowth}:{}),
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:s.ghostFriendsGrowth}:{}),
+    ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g,unitId:map('unit',g.unitId)}))}:{}),
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
+    ...(s.sniperOpening ? { sniperOpening: Object.fromEntries(Object.entries(s.sniperOpening).map(([id, bps]) => [map('unit', id), bps])) } : {}),
     ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
@@ -61,6 +68,8 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
     augments:s.augments.map(augment=>({...augment,choiceId:map('augment',augment.choiceId)})),
     anomalyBinding:s.anomalyBinding ? {...s.anomalyBinding,unitId:map('unit',s.anomalyBinding.unitId),choiceId:map('anomaly',s.anomalyBinding.choiceId)} : null,
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
+    ...(s.augmentCopyKills?{augmentCopyKills:s.augmentCopyKills.map(g=>({...g,itemId:map('item',g.itemId)}))}:{}),
+    ...(s.augmentHistoryGrowth?{augmentHistoryGrowth:s.augmentHistoryGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)}))}:{}),
   };
   let compiled: StrategySnapshot;
   try { compiled = yield* buildStrategySnapshotSteps(inputs, undefined, undefined, undefined, confiscated ? ['player'] : []); }
@@ -69,18 +78,23 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   const source = (value: EffectSource): EffectSource => value.sourceKind === 'trait'
     ? {...value,sourceInstanceId:localId(s.seatId,'trait',value.sourceInstanceId)} : value;
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
+  const sideUnit = (unit: typeof preparation.units[number]) => ({ ...unit, team, location: unit.location.kind === 'board'
+    ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}} : unit.location });
+  const sideStrategy = (compiled: StrategySnapshot): StrategySnapshot => ({
+    ...(compiled.r3Original?.length ? { r3Original: compiled.r3Original.map(a => ({ team, preparation: { ...a.preparation, units: a.preparation.units.map(sideUnit) }, strategy: sideStrategy(a.strategy) })) } : {}),
+    traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
+    units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
+      unit:sideUnit(unit.itemSummon.unit),
+      formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),
+      ...(unit.r3Mirror ? {r3Mirror:{...unit.r3Mirror,unit:sideUnit(unit.r3Mirror.unit)}} : {}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
+      const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
+    }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
+      ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})),
+  });
   return {
     mapping, inputs,
-    units:projectItemSummons(projectG23Summons(preparation,undefined,inputs.itemSummonPositions),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
-      ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
-      : unit.location})),
-    strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
-      units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
-        unit:{...unit.itemSummon.unit,team,location:unit.itemSummon.unit.location.kind==='board'?{kind:'board' as const,cell:{col:unit.itemSummon.unit.location.cell.col,row:team==='player'?unit.itemSummon.unit.location.cell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.unit.location.cell.row}}:unit.itemSummon.unit.location},
-        formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
-        const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
-      }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
-        ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})) },
+    units:projectItemSummons(projectG23Summons(projectR3Preparation(preparation,compiled),compiled.r3Original?.length||compiled.units.some(u=>isR3Copy(u.itemSummon))?compiled.traits:undefined,inputs.itemSummonPositions),compiled).units.map(sideUnit),
+    strategy:sideStrategy(compiled),
   };
 }
 
@@ -114,7 +128,7 @@ export function* compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnap
   return yield* freezeContentSteps({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
-    strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
+    strategy:{...((x.strategy.r3Original?.length || y.strategy.r3Original?.length) ? { r3Original: [...x.strategy.r3Original ?? [],...y.strategy.r3Original ?? []] } : {}),traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
   });
 }
 
@@ -153,24 +167,24 @@ export interface BattleLiveGoldReader {
   readonly team: Team;
   readonly readsLiveGold: boolean;
 }
-/** Trusted snapshots or a compiled input. B is always frozen in a mirror battle. */
+/** Opening eligibility from trusted snapshots or a compiled input. Later installations are sampled from the live combat. B is frozen in a mirror battle. */
 export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>): readonly BattleLiveGoldReader[] {
   const reads = (side: PlayerBattleSnapshot) => readsLiveGold(side.anomalyBinding, side.units
-    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id));
+    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id),side.items);
   return [
     { seatId: input.a.seatId, team: 'player', readsLiveGold: reads(input.a) },
     { seatId: input.b.seatId, team: 'enemy', readsLiveGold: input.mirrorOfSeatId === null && reads(input.b) },
   ];
 }
 function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, initial: CombatState, isMirror = false): BattleSideResult {
-  const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId).map(entry=>{
+  const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId && !isMutationSacrifice(initial.strategy, entry.combatId)).map(entry=>{
     const origin=initial.units.find(unit=>unit.id===entry.combatId);
     if(!origin||origin.itemSummon)throw new BattleValidationError('invalid-result');
     const unit=terminal.units.find(unit=>unit.id === entry.combatId);
     const split=terminal.trenchSplits?.find(split=>split.ownerId===entry.combatId);
     if(!unit&&(!split||!terminal.removedUnitIds?.includes(entry.combatId)))throw new BattleValidationError('invalid-result');
     if(unit&&split)throw new BattleValidationError('invalid-result');
-    return {originalId:entry.originalId,unit,growth:unit?.runtime?.permanentAdBps??split?.permanentAdBps??0};
+    return {originalId:entry.originalId,unit,growth:unit?.r3Mirror ? 0 : unit?.runtime?.permanentAdBps??split?.permanentAdBps??0};
   }).sort((a,b)=>order(a.originalId,b.originalId));
   return { seatId, survivors:units.flatMap(({originalId,unit})=>unit&&countsG23SurvivorDamage(unit)?[{unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp}]:[]),
     growth:isMirror ? [] : units.filter(({growth})=>growth>0).map(({originalId,growth})=>({unitId:originalId,attackDamageBps:growth})),
@@ -184,15 +198,15 @@ function validateDynamicResult(result:BattleResult):void {
   try { validateBattleEquipmentLog(result.inputLog, result.terminal.equipmentReceipts, result.terminal.tick); }
   catch { throw new BattleValidationError('battle-input-invalid'); }
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
-    || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
+    || result.terminal.units.some(u => u.equipment && (!u.rebelCopy || u.equipment.length > 0) && !result.initial.strategy?.units.find(s => s.unitId === u.id)?.augmentEquipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
-  if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
+  const enabled=!!result.bankSamples?.length || !!result.inputLog?.length || !!result.initial.strategy?.r3Original?.length || result.initial.strategy?.units.some(u=>isR3Copy(u.itemSummon)||u.mechanics?.some(m=>m.mechanic==='mutationSacrifice'||m.mechanic==='aerialWarfare'||m.mechanic==='ghostFriends'||m.mechanic==='rebelResurgence'||m.mechanic==='scavenger'||m.mechanic==='sponging'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null))throw new BattleValidationError('invalid-result');
   if(!enabled){
-    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
+    if(result.terminal.batch5RebelSummons!==undefined||result.terminal.units.some(u=>u.rebelCopy||u.ghostFriends)||result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
     return;
   }
-  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
+  if(result.initial.tick!==0||result.initial.batch5RebelSummons!==undefined||result.initial.units.some(u=>u.rebelCopy)||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
     ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;
@@ -208,7 +222,7 @@ function validateDynamicResult(result:BattleResult):void {
     expected=installBattleEquipmentBatch(expected, result.terminal.equipmentReceipts?.filter(r => r.input.effectiveTick === expected.tick + 1) ?? []);
     const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
   }
-  if(canonicalContent(expected)!==canonicalContent(result.terminal)
+  if(bankCursor!==(result.bankSamples?.length??0)||canonicalContent(expected)!==canonicalContent(result.terminal)
     ||canonicalContent(events)!==canonicalContent(result.events.slice(result.initial.nextEventSeq??0)))throw new BattleValidationError('invalid-result');
 }
 
@@ -256,15 +270,19 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   yield;
   const start = yield* createCombatWithEventsSteps(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
   yield;
-  const freezeBattle = createScopedContentFreezer();
+  const ledger = createScopedLedgerCertifier();
+  const freezeBattle = ledger.freeze;
   freezeBattle(start.state);
   yield* canonicalContentSteps(start.state);
   yield;
   const events: BattleResult['events'][number][] = [];
   const appendEvents = (step: CombatStep) => {
     for (const event of toLedgerEvents(step.events)) {
-      freezeBattle(event);
-      canonicalContent(event);
+      // One traversal freezes the event and proves the complete deeply frozen
+      // plain-data graph (rejecting accessors, sparse arrays and non-finite
+      // values). Encoding an unused canonical string adds no evidence. Exotic
+      // graphs still take the original encoder after the immutable-data check.
+      if (!ledger.certify(event)) canonicalContent(event);
       events.push(event);
     }
   };
@@ -275,7 +293,6 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   let replay: CombatReplay | null = null;
   let terminal = start.state;
   const bankSamples:CombatBankSample[]=[];
-  const readers = readBattleLiveGoldReaders(checked);
   let latestFrame: CombatReplayTick | null = null;
   let result: BattleResult | null = null;
   const pending: BattleEquipmentReceipt[] = [];
@@ -301,8 +318,10 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   }, sampleBankGold(seatId,liveGold){
     if(result||terminal.status!=='running')throw new BattleValidationError('wrong-phase');
     if(!Number.isSafeInteger(liveGold)||liveGold<0||bankSamples.length>=100000||seatId!==checked.a.seatId&&seatId!==checked.b.seatId)throw new BattleValidationError('invalid-bank-sample');
-    if(!readers.find(reader=>reader.seatId===seatId)!.readsLiveGold)return false;
+    if(seatId===checked.b.seatId&&checked.mirrorOfSeatId!==null)return false;
     const team=seatId===checked.a.seatId?'player':'enemy';
+    // Installed equipment can introduce the first Avarice reader after tick zero.
+    // The sampler checks current mechanics; opening roster eligibility is stale here.
     const sampled=sampleD11CombatGold(terminal,team,liveGold);
     if(sampled===terminal)return false;
     bankSamples.push({tick:terminal.tick,team,liveGold});terminal=sampled;
@@ -334,7 +353,7 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
     // Initial and each ledger element were fully checked and frozen before
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.
-    canonicalContent({...candidate,initial:null,events:[]});
+    if (!ledger.certify(candidate)) canonicalContent({...candidate,initial:null,events:[]});
     const candidateReplay = recorder ? recorder.finish(terminal) : null;
     // Publish only after validation and replay finalization both succeed.
     result = candidate;

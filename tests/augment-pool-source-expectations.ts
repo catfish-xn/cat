@@ -69,7 +69,7 @@ for(const [id,api,item,crestIndex,units,crownIndex,rewards] of emblems){
  BATCH1_SOURCE.push(r(`${id}-crown`,crownIndex,`TFT13_Augment_${api}Crown`,'prismatic',id==='scrap'?{NumComponents:2}:{},[emblem,...rewards]));
 }
 export const BATCH2_SOURCE:SourceExpectation[]=[
- r('academic-research',70,'TFT13_Augment_Academy','gold',{NumItems:1,NumOptions:2},['ri:component:1','u:lux','u:ezreal'],0,0,0,false,'build -> 2 options: sponsored + built item'),
+ r('academic-research',70,'TFT13_Augment_Academy','gold',{NumItems:1,NumOptions:2},['ri:component:1','u:lux','u:ezreal'],0,0,0,true,'P-B5-S3B: build -> 2 options: sponsored + built item'),
  r('loot-explosion',132,'TFT13_Augment_Ambusher','gold',{'{51972fee}':2,'{a59e2760}':.5,'{c209103c}':0.10999999940395355,'{ca332ec1}':.5,'{d89481f4}':1.75},['u:camille','u:powder'],0,0,0,false,'kill -> unknown loot table'),
  r('rocket-collection',162,'TFT13_Augment_Artillerist','gold',{IncreasedRocketDamage:0.15000000596046448,MaxItems:2,RocketDamageThreshold:75},['u:tristana','u:urgot'],0,0,0,true,'75 rockets -> collector; max 2'),
  r('rocket-collection-plus',163,'TFT13_Augment_ArtilleristPlus','gold',{IncreasedRocketDamage:0.15000000596046448,MaxItems:2,RocketDamageThreshold:65},['u:tristana','u:urgot'],0,0,0,true,'65 rockets -> collector; max 2'),
@@ -96,9 +96,9 @@ export const BATCH2_SOURCE:SourceExpectation[]=[
  r('betrayal',196,'TFT13_TeamupAugment_Betrayal','gold',{NumKills:2},['u:maddie','u:ambessa'],0,0,0,true,'either partner 2 kills -> maddie'),
  r('blood-brothers',301,'TFT13_TeamupAugment_BloodBrothers','prismatic',{APGainPerDeath:6,MaxHealthGainPerCast:30},['u:vander:2','u:silco','i:shojin'],0,0,0,true,'silco cast -> vander +30 max HP; vander death -> silco +6 AP; player-owned totals'),
 ];
-// The two remaining batch-1 exclusions have no executable row; keep their known
-// source amounts explicit without pretending that the unresolved artifact pool exists.
-export const BATCH1_BLOCKED_SOURCE:SourceExpectation[]=[
- r('all-that-shimmers',74,'TFT9_Augment_AllThatShimmers','gold',{ArmoryChoiceCount:3,InterestCap:5},['c:magnetic-remover:1'],0,0,0,false,'choose 1 of 3 gold-generating artifacts; pool/InterestCap unresolved'),
- r('all-that-shimmers-plus',75,'TFT_Augment_AllThatShimmersPlus','gold',{ArmoryChoiceCount:3,GoldGranted:4,InterestCap:5},['c:magnetic-remover:1'],4,0,0,false,'choose 1 of 3 gold-generating artifacts; pool/InterestCap unresolved'),
+// Former batch-1 exclusions, reclassified by P-B5-50/51 on 2026-10-27.
+export const BATCH1_BLOCKED_SOURCE:SourceExpectation[]=[];
+export const BATCH1_RECLASSIFIED_SOURCE:SourceExpectation[]=[
+ r('all-that-shimmers',74,'TFT9_Augment_AllThatShimmers','gold',{ArmoryChoiceCount:3,InterestCap:5},['c:magnetic-remover:1'],0,0,0,false,'P-B5-50/51: choose 1 of 3 fixed artifacts, existing interest policy'),
+ r('all-that-shimmers-plus',75,'TFT_Augment_AllThatShimmersPlus','gold',{ArmoryChoiceCount:3,GoldGranted:4,InterestCap:5},['c:magnetic-remover:1'],4,0,0,false,'P-B5-50/51: choose 1 of 3 fixed artifacts, existing interest policy'),
 ];

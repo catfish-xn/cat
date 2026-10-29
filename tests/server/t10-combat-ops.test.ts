@@ -210,7 +210,8 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     const copies = () => own(s4().match).filter(unit => unit.definitionId === definitionId);
     expect(copies().map(unit => [unit.starLevel, unit.location.kind]).sort()).toEqual([[1, 'bench'], [1, 'board']]);
     const boardCopy = copies().find(unit => unit.location.kind === 'board')!;
-    clock.runNext(); // deadline → battle
+    // The augment-history clock may sample preparation before its deadline; cross the actual phase boundary.
+    clock.advance(room.state.deadlineAt! - clock.now()); // deadline → battle
     expect(room.state.phase).toBe('battle');
     const battle = room.state.battles.find(result => result.kind === 'two-sided' && result.participants.includes(seatId))!;
     const bought = room.handle(seatId, { type: 'buy', slot: offers[1]!, generation: s4().match.shop.generation });

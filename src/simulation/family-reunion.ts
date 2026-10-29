@@ -2,8 +2,7 @@ import type { CombatStrategyInputs } from './combat-input';
 import { UNIT_DEFINITIONS } from './units';
 import { getUnitStats } from './unit-stats';
 import { resolveAbility } from './combat-abilities';
-import { S13_ABILITY_DATA } from './content/abilities';
-import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
+import { resolveFourthStarAbility } from './fourth-star-ability';
 import type { Unit } from './unit-types';
 import { freezeContent } from './content/freeze';
 
@@ -24,9 +23,7 @@ export function familyCombatBase(unit:Pick<Unit,'definitionId'|'starLevel'>,effe
   if(effectiveStarLevel===4){
     const def=UNIT_DEFINITIONS[unit.definitionId],bps=def.cost===6?64800:58320;
     base={...base,health:Math.floor(def.baseStats.health*bps/10000),attack:Math.floor(def.baseStats.attack*bps/10000)};
-    const archived=D14_FOURTH_ABILITY[unit.definitionId],raw=S13_ABILITY_DATA[base.abilityId];
-    const variables=Object.fromEntries(Object.entries(raw.variables).map(([key,v])=>[key,Math.round((archived?.[key]??(v[0]===v[2]?v[2]:v[2]*1.8))*10000)]));
-    ability={id:base.abilityId,amount:0,kind:'s13',championId:unit.definitionId,variables};
+    ability=resolveFourthStarAbility(unit.definitionId,base.abilityId);
   }
   return {base,ability};
 }

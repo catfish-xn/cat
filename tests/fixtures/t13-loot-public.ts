@@ -1,4 +1,5 @@
 import * as api from '../../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import type { MatchState, MatchCommandResult, MatchEvent } from '../../src/simulation/match';
 import { createRequire } from 'node:module';
@@ -44,11 +45,11 @@ export function battle(prepared: MatchState) {
   return {prepared,started,revealed,beforeFinal,ended,events,revealPrefix,startEvents:start.events};
 }
 const prefixes=new Map<string,MatchState>();
-export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[]):Promise<MatchState> {
-  const key=JSON.stringify([roundId,seed,build,augmentPriorities]);
+export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[],augmentRerollPriorities:Readonly<Record<string,readonly string[]>>={}):Promise<MatchState> {
+  const key=JSON.stringify([roundId,seed,build,augmentPriorities,augmentRerollPriorities]);
   if(!prefixes.has(key)) {
     const captured=new Error('captured');let prefix:MatchState|undefined;
-    try {await run(api,{build,seed,augmentPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+    try {await run(api,{build,seed,augmentPriorities,augmentRerollPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
       if(before.roundDefinitionId===roundId && (command?.type==='start'||before.phase==='choice')) {prefix=before;throw captured;}
     }});}catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error(`Missing public prefix ${key}`);prefixes.set(key,prefix);
@@ -65,22 +66,23 @@ export function fillBench(input:MatchState,excluded:readonly string[]=[]):MatchS
   }
   return s;
 }
-export async function configuredPrefix(roundId:string, options:Record<string,unknown>):Promise<MatchState> {
+export async function configuredPrefix(roundId:string, options:Record<string,unknown>, checkpointRound?:string):Promise<MatchState> {
   const captured=new Error('captured configured preparation');let prefix:MatchState|undefined;
-  try {await run(api,{...options,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+  const routeApi=checkpointRound ? {...api,startMatchCombat(s:MatchState){return api.startMatchCombat(s.roundDefinitionId===checkpointRound ? restoreMatch(serializeMatch(s)) : s);}} : api;
+  try {await run(routeApi,{...options,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
     if(command?.type==='start'&&before.roundDefinitionId===roundId){prefix=before;throw captured;}
   }});}catch(e){if(e!==captured)throw e;}
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
-export async function transferPreparation({equipGloves=true}={}) {
-  // Keep seed 4 and two paid copies. Its independent v17 box oracle yields
+export async function transferPreparation({equipGloves=true,checkpointRound,onProgress}:{equipGloves?:boolean;checkpointRound?:string;onProgress?:(state:MatchState)=>Promise<void>}={}) {
+  // Seed 4 rerolls for a non-unit-gifting first augment, preserving two paid copies. Its independent v17 box oracle yields
   // Tristana at 4-7 (no Ezreal/remover), so target that real reward for transfer.
   // Equip the original glove recipe here; the offline variant freezes a vest
   // on the donor and equips the gloves during combat without inventing a remover.
-  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',augmentRerollPriorities:{'2-1':['pumping-up-i','manaflow-i','backup','bronze-for-life-i','bulky-buddies-i','placebo','lineup','little-buddies','bulky-buddies-ii','blistering-strikes']},equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'tristana',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
-    goldReserveByRound:{'4-5':19,'4-7':0}});
+    goldReserveByRound:{'4-5':19,'4-7':0},onRound:onProgress,onBattleProgress:onProgress},checkpointRound);
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
   const pair=players(s).filter(u=>u.definitionId==='tristana'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
   if(equipGloves)s=accepted(api.equipItem(s,s.items.find(i=>i.definitionId==='thiefs-gloves')!.id,donor.id,0));
@@ -97,6 +99,7 @@ export async function transferPreparation({equipGloves=true}={}) {
 // deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
 // 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
 const TERMINAL_SEED=2253;
+export const TERMINAL_EMPTY_BOARD_ROUNDS=['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2'] as const;
 // A route that pauses after each complete battle (generate-m5-route's awaited onRound), so one long public
 // campaign can be played a round per test case. Pausing never changes a command or a state.
 export function pausableRoute(start:(onRound:(state:MatchState)=>Promise<void>)=>Promise<void>) {
@@ -121,7 +124,7 @@ export async function advanceTerminalRoute(round:number,seed=TERMINAL_SEED) {
   if(prefixes.has(key))return;
   let through=terminalRoutes.get(seed);
   if(!through) {
-    const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
+    const losses=new Set(TERMINAL_EMPTY_BOARD_ROUNDS);
     through=pausableRoute(async onRound=>{
       const captured=new Error('terminal capture');let prefix:MatchState|undefined;
       try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[],onRound});

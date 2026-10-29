@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -106,8 +107,9 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    // v22 augment tier table and mana rules: seed 3151248 now opens with a single kill; seed 84 keeps the tick-60 double kill.
-    let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});
+    // v25: seed 84 publicly offers inert Hedge Fund; avoid falling through to Tiniest Titan,
+    // whose replay authority conflicts with the later boundary grants. Keep the tick-60 double kill.
+    let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['hedge-fund']});
     for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));
@@ -447,6 +449,10 @@ describe.each([
   { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
   { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
+  // Script only the draw; the following equality checks the fixture, not real-RNG availability.
+  let restoreOffers: () => void;
+  beforeAll(() => { restoreOffers = installB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest']); });
+  afterAll(() => restoreOffers());
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
     // Keep the selected public route and require the exact Sion/holder contribution facts.

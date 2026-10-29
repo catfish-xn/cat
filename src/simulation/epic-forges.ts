@@ -6,7 +6,7 @@ export const epicForgeId=(receiptId:string)=>JSON.stringify(['epic-forge',receip
 export function epicForgeOffers(seed:number,receiptId:string,selector:string):readonly string[]{
   return sampleG24Reward(resolveG24ForgePool(selector),`${seed}:${epicForgeId(receiptId)}`,G24_FORGE_POLICY.choices);
 }
-export { validateAnvils as validateEpicForges } from './anvils';
+
 
 /** Kept for callers of the old hook; anvils never auto-open or auto-select. */
 export function openEpicForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{return {state,events:[]};}

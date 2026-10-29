@@ -64,7 +64,7 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
       const crit=spellCrit({...initial,id:u.id,ability:resolved.ability});
       const mana=projectCombatStartMana({...initial,id:u.id,triggers:resolved.triggers,effectRuntime:initializeEffectRuntime(resolved.triggers)}).after;
       if(u.location.kind!=='board') throw new RangeError('Enemy preview requires board deployment');
-      return {unitId:u.id,definitionId:u.definitionId,name:d.name,starLevel:u.starLevel,cell:{...u.location.cell},
+      return {unitId:u.id,definitionId:u.definitionId,name:d.name,starLevel:u.starLevel as 1|2|3,cell:{...u.location.cell},
         unitKind:neutral?'neutral':'champion',monsterFamily:neutral?.monsterFamily ?? null,
         stats:{maxHp:opening?.units.find(unit=>unit.id===u.id)!.maxHp??stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
           attackRange:stats.attackRange,attackIntervalTicks:stats.attackIntervalTicks,critChanceBps:crit.chanceBps,critMultiplierBps:crit.multiplierBps,

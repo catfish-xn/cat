@@ -1,7 +1,8 @@
+import { batch5AnvilSpecification, BATCH5_S3A_SOURCE } from './augment-pool-batch5-s3a';
+import { academicAnvilOffers } from './augment-pool-batch5-s3b';
 import { batch1AnvilSpecification } from './augment-pool-grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isAnvil } from './content/anvils';
-import { canonicalContent } from './content';
 import type { MatchState, MatchCommandResult } from './match-types';
 import { grantMechanicUnit, type MechanicGrantRequest } from './seat-mechanics/grants';
 import { openMechanicChoice } from './seat-mechanics/choices';
@@ -34,13 +35,14 @@ export function g23AnvilOrbs(state:MatchState){
  }));
 }
 export const anvilChoiceId=(unitId:string)=>JSON.stringify(['anvil',unitId]);
-function specification(state:MatchState,unitId:string) {
+export function specification(state:MatchState,unitId:string) {
   const loot=state.m8.loot.receipts.find(r=>r.payload.kind==='forge'&&r.grantedUnitIds.includes(unitId));
   if(loot?.payload.kind==='forge')return {definitionId:loot.payload.definitionId,offers:epicForgeOffers(state.seed,loot.receiptId,loot.payload.definitionId)};
   const r=state.seatMechanics?.receipts.find(r=>r.kind==='unit'&&r.unitId===unitId);
   if(!r||r.kind!=='unit'||!isAnvil(r.definitionId))throw new RangeError('Invalid anvil birth');
   let offers:readonly string[]|undefined;
-  if(r.source==='augment-pool-batch1'){
+  if(r.source===BATCH5_S3A_SOURCE){const spec=batch5AnvilSpecification(state,r.receiptId);if(spec?.definitionId===r.definitionId)offers=spec.offers;}
+  else if(r.source==='augment-pool-batch1'){
     const spec=batch1AnvilSpecification(state,r.receiptId);if(spec?.definitionId===r.definitionId)offers=spec.offers;
   }else if(r.source==='opening-encounter')offers=openingForgeOffers(state,r.receiptId);
   else if(r.source==='opening-encounter-batch-a'){
@@ -52,7 +54,7 @@ function specification(state:MatchState,unitId:string) {
     if(p)for(const b of p.rewards)for(const a of g23RewardAtoms(b,p.seed,!!state.multiplayer))
       if(r.receiptId.startsWith(`${a.id}:copy:`)&&a.forgeDefinitionId===r.definitionId)offers=a.options;
   }
-  if(!offers||offers.length!==(r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
+  if(!offers||offers.length!==(academicAnvilOffers(state,r.receiptId)?2:r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
   return {definitionId:r.definitionId,offers};
 }
 export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult {
@@ -68,28 +70,4 @@ export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult
   return {...opened,state:{...opened.state,preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unitId)},
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'anvil-opened',unitId,choiceId})}};
 }
-/** Choice receipts and live units must reconcile with one authenticated birth and one consumption. */
-export function validateAnvils(state:MatchState):void {
-  const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid anvil ledger');};
-  const births=[...state.m8.loot.receipts.filter(r=>r.payload.kind==='forge'&&r.resolution!=='forfeited').flatMap(r=>r.grantedUnitIds),
-    ...state.seatMechanics?.receipts.flatMap(r=>r.kind==='unit'&&isAnvil(r.definitionId)&&r.resolution==='held'&&r.unitId?[r.unitId]:[])??[]];
-  check(new Set(births).size===births.length);
-  const opened=state.resourceProvenance.entries.filter(e=>e.kind==='anvil-opened');
-  check(new Set(opened.map(e=>e.unitId)).size===opened.length);
-  for(const id of births){
-    check(state.preparation.units.some(u=>u.id===id)||opened.some(e=>e.unitId===id));
-    check(state.resourceProvenance.entries.some(e=>e.kind==='unit-acquired'&&e.unitId===id));
-  }
-  for(const u of state.preparation.units)if(isAnvil(u.definitionId)){
-    check(u.team==='player'&&u.location.kind==='bench'&&u.starLevel===1&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id));
-    check(specification(state,u.id).definitionId===u.definitionId&&!opened.some(e=>e.unitId===u.id));
-  }
-  for(const e of opened){
-    const {offers}=specification(state,e.unitId),r=state.seatMechanics?.receipts.find(r=>r.receiptId===e.choiceId),c=state.pendingChoice;
-    check(births.includes(e.unitId)&&e.choiceId===anvilChoiceId(e.unitId));
-    if(r)check(r.kind==='choice'&&r.source==='anvil-unit'&&r.choiceKind==='forge'&&!r.skipped&&r.price===0&&r.itemId!==null&&offers.includes(r.optionId)&&(!r.timedOut||r.optionId===offers[0]));
-    else check(c?.choiceId===e.choiceId&&c.kind==='forge'&&canonicalContent(c.offers)===canonicalContent(offers)&&canonicalContent(c.payload)===canonicalContent({kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}));
-  }
-  for(const r of state.seatMechanics?.receipts??[])if(r.source==='anvil-unit'||r.receiptId.startsWith('["anvil",'))check(opened.some(e=>e.choiceId===r.receiptId));
-  if(state.pendingChoice?.payload?.source==='anvil-unit'||state.pendingChoice?.choiceId.startsWith('["anvil",'))check(opened.some(e=>e.choiceId===state.pendingChoice!.choiceId));
-}
+

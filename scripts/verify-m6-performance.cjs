@@ -8,6 +8,7 @@ const {execFileSync}=require('node:child_process'),{chromium}=require('playwrigh
 const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evidence.cjs');
 const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-fixture-transport.cjs');
 const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
+const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
 (async()=>{
  const output=process.env.M6_EVIDENCE_DIR??'artifacts/m6-performance';fs.mkdirSync(output,{recursive:true});
  const started=performance.now();const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),sourceFingerprint:sourceFingerprint(),scriptHash:hash(fs.readFileSync(__filename,'utf8')),node:process.version,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),startedAt:new Date().toISOString(),passed:false,acceptanceScope:'original F4 performance gates at the catalog capacity (B9, issue #23)',method:'Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.'};
@@ -36,7 +37,8 @@ const {wallClockEnforced,recordWallClock}=require('./wallclock-gate.cjs');
    const runId=`performance-${build}`,history=new replay.BattleHistory(runId);let currentMax=null,currentBytes=0;
    const runner=build==='full-load'?require('./verify-m6-full-load-helper.cjs'):require('./generate-m5-route.cjs');
    // v14 seed42 offers Going Long at 4-2: its XP restores nine units without Radiant Relics' extra item.
-   const routeOptions=build==='full-load'?{augmentPriorities:['going-long']}:{};
+   // Seed-42 cannon and mage use the same public rerolls as the v25 golden recorder; full-load's build name is not cannon, so those rerolls stay off and Going Long remains the 4-2 priority.
+   const routeOptions=build==='full-load'?{augmentPriorities:['going-long'],...v25RouteOptions(build,42)}:v25RouteOptions(build,42);
    const route=await runner.run(api,{build,seed:42,...routeOptions,onStep(before,result,command){
     history.observe({before,after:result.state,events:result.events.filter(e=>e.domain==='combat'),reason:command?'command':'tick'});
     // Select the last legal running tick of each battle (largest event prefix for that battle).

@@ -15,6 +15,7 @@ export function settleFamilyReunionDeaths(ctx: AbilityContext, roster: readonly 
       u.familyReunion = { ...reunion, downgradedAtTick: ctx.tick };
       if (!u.alive || u.hp <= 0) continue;
       const star = reunion.unboostedStarLevel;
+      if (star === reunion.combatStarLevel && u.sources?.some(s => s.source.sourceKind === 'augment' && ['moonlight','greater-moonlight'].includes(s.source.sourceDefinitionId) && s.source.sourceInstanceId.endsWith(':bonus'))) continue;
       const boosted = familyCombatBase(u, reunion.combatStarLevel), restored = familyCombatBase(u, star);
       const beforeMax = u.maxHp, beforeHp = u.hp, beforeAd = ad(u);
       const basis = { ...u.maxHpBasis!, base: restored.base.health };

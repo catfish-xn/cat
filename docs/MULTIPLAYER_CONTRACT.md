@@ -1,3 +1,15 @@
+## 2026-10-27 B5-07 商店故障房间计时器
+
+B5-07 已开放（2-1、3-2 可投放，4-2 禁用）。采用 P-B5-07：仅 PvE 准备期，每2500ms跨界免费刷新，至30000ms最多12次；锁店时消费该边界且不补刷，离开准备期停止。沿用原准备期时长，未延长 PvE 默认20000ms；在该默认时长下最多8次。房间不计算次数、金币或随机数。
+
+公共领域导出 `advanceSharedAugmentPreparationTime(pool: SharedPoolState, state: MatchState, elapsedMs: number): SharedPoolResult` 位于 `src/simulation/shared-pool.ts`。输入为同一权威快照的池、席位及本轮单调整数逻辑毫秒（0～600000）。成功返回 `{ok:true,pool,state,events,poolEvents}`：旧商店返池、有限抽卡、RNG、商店历史、准备期事实同一事务提交；不扣金币、不消耗免费刷新额度。重复同值返回原 pool/state 与空事件。失败返回 `{ok:false,pool,state,reason}`，保留原引用、不消耗资源/RNG；沿用 `SharedPoolFailure`，此路径主要为 `invalid-pool`（含时钟倒退/越界/错误阶段）、`invalid-seat-state`、`stale-seat`、`seat-eliminated`，不新增网络失败枚举。
+
+`src/server/room/room.ts` 的 `advanceAugmentClock()` 经上述公共导出，按席序暂存全部结果，成功后一次 `replace({pool,poolRevision,seats})` 发布。`apply()`、`freezeAndResolve()` 和 `scheduleAugmentClock()` 复用房间注入时钟；50ms采样对齐准备期入口，其他命令、断线状态发布保留已排定的回调，不能推迟边界。同刻命令先采样后的无变化回调仍续排；换轮或离开准备期取消旧回调。采样时间不超过房间当前准备期截止点，延迟交付不会多算已结束的准备时间；截止点本身的刷新在冻结前完成。失败按 `seat-stuck / augment-clock:<reason>` 结束房间且不发布任何该批池/席位变更；命令和冻结入口随即返回。
+
+断线与重连保留计时及席位，断线期间照常刷新。持久化须成对保存共享池与席位，再以 `restoreSharedOrbSnapshot(pool,input,authority)` 恢复；`input` 可为 object 或 JSON，`authority` 必须是独立保留的服务端 `room.augmentHistoryAuthority(seatId)`，不得从候选存档生成。重复逻辑时间不得重刷，时钟/取得事实/商店/RNG/金币/池或缺失历史的篡改必须拒绝。单人继续使用 `restoreMatch/serializeMatch`，不能以它们绕过多人权威。
+
+内容身份：`fnv1a32-utf16:5e8ea7cd`；战利品回放身份：`fnv1a32-utf16:6546f4ff`。沿用本分支 v25 规则/内容版本及 schema12/save8/replay8/command7 封套，未录制新纪元，不接受旧 digest 续玩。
+
 ## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
 
 本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
@@ -1480,6 +1492,14 @@ ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相�
 
 Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
 
+### 14.5 v25 H1 可用免费刷新次数私有投影（2026-10-27）
+
+`server-entry` 新增导出 `freeRerollsAvailable(state: MatchState): number`，只接受权威席位状态，原样调用领域查询。返回所有来源累计授予次数减去已消费次数，不推进回合、不消费次数、金币或 RNG。无新增业务失败枚举；所需历史缺失等非法状态仍抛出领域异常（如 `missing augment-history-v1`），不降级为零。
+
+`toSeatPrivateView(match, choiceDeadline?)` 的 `SeatStateView` 新增必填白名单字段 `freeRerollsAvailable: number`，所有阶段均取同一权威状态的查询结果。仅发给本席，公共 `PlayerView` / `SeatPublic` 不携带；`augmentHistory`、事实与证明仍不下发。初始、增量、重连、拒绝后的状态同步共用此入口，缓存按不可变 MatchState 更新。
+
+客户端 `toDisplayMatch` 保留字段，`readFreeRerollsAvailable(state: MatchState): number | null` 只读取投影中的非负安全整数。在线 `BoardScene.syncHud` 使用该读取函数；私有状态尚未到达或字段缺失/非法时返回 null，按钮只显示“D · 刷新”，不推算费用、不调用领域历史查询。单人原有读取不变。协议版本维持 1；客户端与服务器应一起交付本次字段变更，规则、内容版本与 digest 不变。
+
 ## 15 T10：战斗运营与准备截止自动上场（2026-10-13）
 
 本节按用户本次确认的 TFT 行为定稿，覆盖 §9 的旧 preparation-only 限制、§11.3 的“运行中拒绝修改席位”和 §12.4 的 PvP 直接结算接法。只允许更新本席当前运营资产，绝不改写已冻结的本场战斗输入。Codex 交付 simulation、纯 Node 导出、测试和合同；`src/server/room/room.ts` 阶段闸门、截止调用及服务器并发编排由 Claude 接入，本次不修改 `src/server/` 或 `src/rendering/`。
@@ -2299,3 +2319,20 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 - `withBatch4B4xp(state: Pick<MatchState,'level'|'xp'>, plan: RoundEconomyPlan, extra: number): RoundEconomyPlan`：将额外经验合入结算 progression，统一封顶。
 - `batch4B4xpRecordedExtra(state: Pick<MatchState,'augments'>, result: RoundResult, base: number): number`：结构预检历史经验增量；非法增量抛出 `RangeError('Invalid batch4 b4xp settlement XP')`；结果本身不是历史条件证明。
 - `needsBatch4B4xpHistory(state: Pick<MatchState,'augments'|'roundResults'>): boolean`：本组持有者在玩家战斗后的恢复/独立回放准入需要现有完整 battles。`restoreMatch(input, battles?)`、`serializeMatch(state, battles?)` 签名不变；无历史证据抛出含 `missing historical evidence` 的错误；经验与历史条件不符由确定性回放拒绝。取得时尚无本组玩家战斗则不增加历史要求。其余 P 口径见 `docs/S13_RULES_GAP.md` 的 P-B4XP。
+
+### v25 动态强化只读显示投影（2026-10-27）
+
+`augmentDynamicValues(state: MatchState): AugmentDynamicValues` 返回按强化 ID 索引的只读显示值；`values` 按描述占位符顺序提供数字、`{unit: definitionId}`、`{outcome: string, gifts?, gold?, xp?, rerolls?, health?}` 或 `null`（尚未确定），攻速、伤害增幅和坚韧使用 `attackSpeedBps`、`damageAmpBps`、`durabilityBps`。无对应显示值时不提供该键，无失败枚举、不改变状态或随机数。持有强化和当前强化候选均可投影；随机奖励仅在获得后揭示。战斗计数使用已经结算的战斗收据，棋盘数值表示当前布阵对下一场战斗的效果；当前战斗冻结输入不随它更新。被禁用且缺少认证账本的禁忌魔法显示未确定。
+
+`toPrivateSeatView` 增加 `augmentDynamicValues`；`src/server/room/projection.ts` 的 `toSeatPrivateView` 经既有私有推送、重连和故障快照传输。公共 `toPublicBoard` 和其他席位不包含此字段，侦察他人强化时未知动态值不冒充本席数据；不增加存档字段。`pumpingUpRounds` 与战斗编译共享原有回合口径，不更改 II/III 的累计规则。
+## B5-34 结算事件接线（2026-10-27，h4w）
+
+新增规则公开导出 `recordAugmentSettlementTable(state: MatchState, seats: readonly HistorySeat[]): MatchStep`，经 `src/server-entry/index.ts` 提供给房间。输入为规则已结算的本席状态和整轮淘汰/名次已确定的服务器全桌快照，不能接受客户端提交的全桌事实。输出 `{state, events}`：复用 `recordAugmentTable` 记录历史和既有幸存者奖励逻辑，复用单人 `mechanicGrantEvents` 按 receiptId 比较前后收据，再由同一个 `stampMatchEvents` 分配 `domain:'match'` / `eventSeq` 并推进 `nextMatchEventSeq`。服务器不计算奖励资格、金币或事件序号。
+
+没有 augmentHistory、本席尚未结算当前轮、或已有当前轮 settlement table 时，返回原 state 引用和空 events，不改变金币、收据、RNG 或事件序号。不存在新增 command/wire 失败 reason；非法权威历史、越界或缺少应付款等沿用既有 `RangeError`，不返回部分结果。该接口是服务器可信事实入口，不替代 `restoreSharedOrbSnapshot(pool,input,authority?)` 的独立权威认证。
+
+`Room.commitSettlement` 仍先确定整桌淘汰，再调用 `recordRoomSettlementTable`；后者将新接口的 events 追加到该 seatRevision 的原结算 events，匹配 state 与收据一起原子发布。重复 settlementId 仍拒绝 `duplicate-settlement`；已恢复的 settlement table 不重发事件，后续轮也由唯一收据阻止再次付款。同轮出局的持有者不发金币、不产出幸存者事件。选择时已满足条件的既有付款路径不变。
+
+网络 `pushRoom` 仅对 `state.events` 中的 `mechanicGranted` 按 session/room/receiptId 去重；同一消息重复项和同席后续重复发布都只发送一次。发送成功才登记，旧连接关闭后，同凭证重连沿用登记；从未发送过且仍在当前 serverEvents 中的事件可随首次恢复快照发送一次。其他类型事件、完整领域账本、状态快照和原命令回执的去重/重放合同保持原行为。此处“发送成功”是传输层接受写入，不是客户端 ACK；当前系统无跨进程 Room/session 持久化，恢复 Match 不重建瞬时推送队列。
+
+未改变玩法、数值、事件形状、保存封套或协议版本；内容/loot digest 保持原身份。验收覆盖真实房间公开出售/选择/战斗自然致死、存活/同轮出局持有者、事件顺序与编号、重复提交、对象/JSON 权威恢复及篡改、回放、跨轮、重连和发送失败重试，见 `B5_H4W_REPORT.md`。

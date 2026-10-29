@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -10,11 +10,23 @@ const crossversion = '/home/aiapps/workspace/augment-crossversion-research-2026-
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 
+// Capture the real CLI through files: sandboxed Node may forbid the sockets used
+// by spawnSync's default pipes. Preserve the exit, stderr and stdout assertions.
+function runAudit(args: string[], root: string) {
+  const stdout = join(root, 'stdout.txt'), stderr = join(root, 'stderr.txt');
+  const out = openSync(stdout, 'w'), err = openSync(stderr, 'w');
+  try {
+    const result = spawnSync(process.execPath, [script, ...args], { stdio: ['ignore', out, err] });
+    return { ...result, stdout: readFileSync(stdout, 'utf8'), stderr: readFileSync(stderr, 'utf8') };
+  } finally { closeSync(out); closeSync(err); }
+}
+
 // Handwritten mini-source and expected vectors. No game/production imports.
 const cases = [
   ['TFT13_Augment_CabalCrest', ['{d02ae323}'], ['2-1']],
   ['TFT13_Augment_CabalCrown', ['{d02ae323}'], ['2-1']],
   ['TFT9_Augment_RiskyMoves', ['{d12ae4b6}', '{d22ae649}'], ['3-2', '4-2']],
+  ['TFT11_Augment_FineVintage', ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'], ['3-2', '4-2']],
   ['TFT11_Augment_Epoch', ['{d12ae4b6}', '{d22ae649}'], ['3-2', '4-2']],
   ['TFT11_Augment_EpochPlus', ['{d02ae323}', '{d22ae649}'], ['2-1', '4-2']],
   ['TFT13_Augment_Watcher', ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'], ['2-1', '3-2', '4-2']],
@@ -34,7 +46,7 @@ function fixture() {
   const saveTable = () => put(content + 'augment-stage-bans.ts', `import { freezeContent } from './never-execute';\nexport const AUGMENT_STAGE_BANS = freezeContent(${JSON.stringify(table)});\nthrow Error('must not execute production');`);
   const saveRows = () => put('research/data/augments-14.24.json', rows);
   saveTable(); saveRows();
-  put(content + 'augment-pool-mini.ts', `// apiName:'FakeFromComment'\nconst x = { a: {apiName:'TFT_Augment_Free'}, b:{apiName:'TFT11_Augment_Epoch',enabled:false} };`);
+  put(content + 'augment-pool-mini.ts', `// apiName:'FakeFromComment'\nconst x = { a: {apiName:'TFT_Augment_Free'}, b:{apiName:'TFT11_Augment_Epoch',enabled:false}, c:{apiName:'TFT11_Augment_FineVintage'} };`);
   put(content + 'source-manifest.ts', `const SOURCE_MANIFEST = { augmentApiNames:{placebo:'TFT_Augment_Placebo'} };`);
   put('research/data/map22-augment-item-nodes.json', { nodes: Object.fromEntries(rows.map(r => [r.map22_node, { mName: r.apiName, ItemTags: r.item_tags_raw }])) });
   put('cross/raw/common/14.24-map22.bin.json', Object.fromEntries(rows.map(r => [r.map22_node, { mName: r.apiName, nested: { text: 'braces } { and escaped " quote' }, ItemTags: r.item_tags_raw }])));
@@ -42,13 +54,13 @@ function fixture() {
   put('cross/excerpts/stage-audit/official-stage-changes.json', { records: [] });
   put('cross/excerpts/stages/tactics-tools-s13-augment-stage-records.json', {
     stage_index_order: ['2-1', '3-2', '4-2'],
-    records: Object.fromEntries(rows.map(r => [r.apiName.replace(/^TFT(\d*)_Augment_/, '$1'), { picks: Object.hasOwn(table, r.apiName) ? ['2-1', '3-2', '4-2'].map(n => !table[r.apiName].includes(n)) : [true, true, true] }])),
+    records: Object.fromEntries(rows.map(r => [r.apiName.replace(/^TFT(\d*)_Augment_/, '$1'), { picks: ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'].map(tag => !r.item_tags_raw.includes(tag)) }])),
   });
   put('cross/excerpts/stages/s13-community-stage-sheet-excerpt.json', { records: [{ name_en: 'Free', raw_stage_cells: ['2-1', '3-2', '4-2'] }] });
   put('research/report.zh-CN.md', '| 黑色玫瑰之徽 | 不再于 2-1 提供。 |\n| 黑色玫瑰之冕 | 重新启用，但不于 2-1 提供。 |');
   function run() {
     const out = join(root, 'report.txt');
-    const p = spawnSync(process.execPath, [script, '--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out], { encoding: 'utf8' });
+    const p = runAudit(['--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out], root);
     expect(p.error).toBeUndefined(); expect(p.stderr).toBe('');
     return { status: p.status, result: JSON.parse(p.stdout), report: readFileSync(out, 'utf8') };
   }
@@ -62,13 +74,41 @@ it('runs the independent CLI, compares canonical bytes, and explicitly accounts 
   expect(result.canonical.equal).toBe(true); expect(result.canonical.generated).toBe(result.canonical.shipped);
   expect(result.knownCases.map((c: { ok: boolean }) => c.ok)).toEqual(Array(8).fill(true));
   expect(result.coverage.map((r: { apiName: string; status: string }) => [r.apiName, r.status])).toEqual([
-    ['TFT11_Augment_Epoch', 'restricted'], ['TFT_Augment_Free', 'explicitly-unrestricted'], ['TFT_Augment_Placebo', 'restricted'],
+    ['TFT11_Augment_Epoch', 'restricted'], ['TFT11_Augment_FineVintage', 'restricted'], ['TFT_Augment_Free', 'explicitly-unrestricted'], ['TFT_Augment_Placebo', 'restricted'],
   ]);
   expect(result.coverage[0].locations[0].enabled).toBe(false);
+  expect(result.overrides).toEqual([{apiName:'TFT11_Augment_FineVintage',source:['2-1','3-2','4-2'],expected:['3-2','4-2'],decision:'P-FINE-VINTAGE-STAGE'}]);
+  expect(report).toContain('P-FINE-VINTAGE-STAGE');
   expect(report).toContain('【完成】'); expect(report).toContain('【风险】');
   // Reordering object properties/ban arrays changes presentation, not meaning.
   f.table.TFT11_Augment_Epoch.reverse(); f.saveTable();
   const reordered = f.run(); expect(reordered.status).toBe(0); expect(reordered.result.canonical.equal).toBe(true);
+});
+
+
+it('normalizes explicit unrestricted rows while still rejecting a missing required ban', () => {
+  const f = fixture();
+  f.table.TFT_Augment_Free = []; f.saveTable();
+  const unrestricted = f.run();
+  expect(unrestricted.status).toBe(0); expect(unrestricted.result.canonical.equal).toBe(true);
+  expect(unrestricted.result.coverage).toContainEqual(expect.objectContaining({ apiName: 'TFT_Augment_Free', status: 'explicitly-unrestricted' }));
+  f.table.TFT11_Augment_Epoch = []; f.saveTable();
+  const missing = f.run();
+  expect(missing.status).toBe(1);
+  expect(missing.result.errors).toContainEqual(expect.objectContaining({ code: 'TABLE_MISMATCH', apiName: 'TFT11_Augment_Epoch', expected: ['3-2', '4-2'] }));
+});
+
+it('rejects a wrong override table or a change in its underlying source tags', () => {
+  const f = fixture();
+  f.table.TFT11_Augment_FineVintage = ['2-1', '3-2', '4-2']; f.saveTable();
+  let result = f.run();
+  expect(result.status).toBe(1);
+  expect(result.result.errors).toContainEqual(expect.objectContaining({code:'TABLE_MISMATCH',apiName:'TFT11_Augment_FineVintage',expected:['3-2','4-2']}));
+  f.table.TFT11_Augment_FineVintage = ['3-2', '4-2']; f.saveTable();
+  f.rows.find(r => r.apiName === 'TFT11_Augment_FineVintage')!.item_tags_raw = ['{d12ae4b6}', '{d22ae649}']; f.saveRows();
+  result = f.run();
+  expect(result.status).toBe(1);
+  expect(result.result.errors).toContainEqual(expect.objectContaining({code:'OVERRIDE_SOURCE_MISMATCH',apiName:'TFT11_Augment_FineVintage'}));
 });
 
 it('reports every missing/extra/wrong ban without writing any production file', () => {
@@ -93,6 +133,32 @@ it('rejects unknown pool identities and missing stage restrictions, including di
   expect(result.errors).toContainEqual({ code: 'SOURCE_AUGMENT_MISSING', apiName: 'TFT_Augment_Missing' });
   expect(result.proposedChanges.map((e: { apiName: string }) => e.apiName)).toEqual(['TFT_Augment_Disabled']);
   expect(result.proposedChanges[0].locations[0].enabled).toBe(false);
+});
+
+it('excludes companion equipment tables by file role while retaining augment inventories that import ItemDefinition', () => {
+  const f = fixture();
+  for (const batch of ['future', 'other']) {
+    f.put(f.content + `augment-pool-${batch}-items.ts`, `
+      import type { ItemDefinition } from '../strategy-types';
+      export const ITEMS: Readonly<Record<string, ItemDefinition>> = freezeContent({
+        ordinary: { apiName: 'Equipment_${batch}', kind: 'completed' },
+        augmentLikeName: { apiName: 'TFT_Augment_Equipment_${batch}', kind: 'completed' },
+      });
+    `);
+  }
+  f.put(f.content + 'augment-pool-mixed.ts', `
+    import type { ChoiceDefinition, ItemDefinition } from '../strategy-types';
+    export const AUGMENTS = freezeContent({ free: { apiName: 'TFT_Augment_Free', tier: 'silver' } });
+  `);
+  const { status, result } = f.run();
+  expect(status).toBe(0); expect(result.errors).toEqual([]);
+  expect(result.summary.poolAugments).toBe(4);
+  expect(result.coverage.map((r: { apiName: string }) => r.apiName)).toEqual([
+    'TFT11_Augment_Epoch', 'TFT11_Augment_FineVintage', 'TFT_Augment_Free', 'TFT_Augment_Placebo',
+  ]);
+  expect(result.coverage.find((r: { apiName: string }) => r.apiName === 'TFT_Augment_Free').locations).toContainEqual({
+    file: f.content + 'augment-pool-mixed.ts', line: 3, enabled: true,
+  });
 });
 
 it.each([
@@ -124,21 +190,29 @@ it('reports missing research as an error rather than claiming an empty audit pas
   const { status, result } = f.run(); expect(status).toBe(1); expect(result.errors[0].code).toBe('SOURCE_MISSING');
 });
 
-// Characterize findings, not a waiver: the CLI must exit 1 for the five defects.
+// Characterize findings, not a waiver: keep the three table/source differences
+// and intentional user overrides visible.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
-  const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
+  const root = mkdtempSync(join(tmpdir(), 'stage-bans-archive-')); dirs.push(root);
+  const p = runAudit([], root);
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // 207 pool apiNames after batch-4 and the seven shop augments and four batch-5 augments; still exactly the five defects.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 207, shippedRows: 160, regeneratedRows: 165, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // Batch 5 adds augment inventory and bans; companion equipment is excluded.
+  expect(r.summary).toEqual({ sourceRows: 312, poolAugments: 270, shippedRows: 221, regeneratedRows: 221, unrestricted: 76, errors: 3, crossVersionDifferences: 8, communityDifferences: 2 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
-    ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
-    ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],
-    ['TABLE_MISMATCH', 'TFT13_Augment_Experiment', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Formswapper', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_TeamupAugment_BloodBrothers', ['2-1', '4-2']],
+    ['TABLE_MISMATCH', 'TFT_Augment_TableScraps', ['2-1', '3-2', '4-2']],
   ]);
+  expect(r.overrides).toContainEqual({apiName:'TFT11_Augment_FineVintage',source:['2-1','3-2','4-2'],expected:['3-2','4-2'],decision:'P-FINE-VINTAGE-STAGE'});
+  expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_Cabal');
+  expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_AGoldenFind');
+  expect(r.errors.find((e: { apiName: string }) => e.apiName === 'TFT_Augment_TableScraps').actual).toEqual(['3-2', '4-2']);
+  expect(JSON.parse(r.canonical.shipped)).toMatchObject({ TFT13_Augment_Academy: ['4-2'], TFT13_Augment_Cabal: ['2-1', '4-2'],
+    TFT11_Augment_FineVintage: ['3-2', '4-2'], TFT_Augment_TableScraps: ['3-2', '4-2'],
+    TFT13_Augment_Ambusher: ['4-2'], TFT_Augment_HallOfMirrors: ['2-1', '3-2', '4-2'] });
+  expect(r.overrides).toContainEqual({apiName:'TFT13_Augment_Ambusher',source:[],expected:['4-2'],decision:'P-LOOT-EXPLOSION-STAGE'});
   expect(r.knownCases.every((c: { ok: boolean }) => c.ok)).toBe(true);
   expect(r.crossVersionDifferences.map((d: { apiName: string }) => d.apiName).sort()).toEqual([
     'TFT13_Augment_AnotherAnomaly', 'TFT9_Augment_PandorasRadiantBox', 'TFT9_Augment_YoungAndWildAndFree', 'TFT_Augment_GlassCannonI', 'TFT_Augment_GlassCannonII', 'TFT_Augment_ShopGlitch', 'TFT_Augment_TableScraps', 'TFT_Augment_TwoMuchValue',

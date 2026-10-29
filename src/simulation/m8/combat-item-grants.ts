@@ -1,3 +1,5 @@
+
+import { angerCombatItem } from '../augment-pool-batch5-r2-combat';
 /** G2-4b Unstable Treasure Chest executor and its restore receipt. A grant appends one record to the receiver; the item's
  * program comes from the frozen pool (combat-item-programs.ts) and joins the receiver's compiled mechanisms, so every later
  * tick, save and restore treats it exactly like an item compiled at combat start. Conventions G24-CHEST-01…04. */
@@ -8,7 +10,6 @@ import { G24_CHEST_PAYLOADS, G24_CHEST_POOL } from '../content/g2-4-chest-pool';
 import { shareGeneratedDeclaration } from '../immutable-json';
 import type { Source, SurvivalSample } from './contracts';
 import { canonicalSource } from './identity';
-import { isG23NonCombatant, isG23Summon } from '../g2-3-summons';
 import { compileItemCrit } from './item-program';
 import { grantedItemInstanceId, grantedItemSource } from './combat-item-programs';
 import { resolveMana } from './mana';
@@ -25,7 +26,13 @@ const maxHpOf = (basis: NonNullable<CombatUnit['maxHpBasis']>, unit: CombatUnit)
 export function grantCombatItem(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number): void {
   const word = ctx.draw(); integer(word);
   if (word > 0xffffffff) throw new RangeError('Invalid combat random word');
-  const payload = G24_CHEST_POOL[word % G24_CHEST_POOL.length], key = canonicalSource(chest);
+  grantCombatItemDefinition(ctx, chest, target, seq, angerCombatItem(target, G24_CHEST_POOL[word % G24_CHEST_POOL.length].definitionId));
+}
+
+/** Internal rule transaction; the caller owns item selection and eligibility. */
+export function grantCombatItemDefinition(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number, definitionId: string): void {
+  const payload = G24_CHEST_PAYLOADS[definitionId], key = canonicalSource(chest);
+  if (!payload) throw new RangeError('Invalid combat item payload');
   const ordinal = ctx.units.reduce((n, u) => n + (u.combatItemGrants ?? []).filter(g => canonicalSource(g.chest) === key).length, 0);
   const grant: CombatItemGrant = { chest: { ...chest }, ordinal, definitionId: payload.definitionId, grantedAtTick: ctx.tick };
   target.combatItemGrants = [...target.combatItemGrants ?? [], grant];
@@ -65,48 +72,4 @@ export function grantCombatItem(ctx: AbilityContext, chest: Source, target: S13U
   }
 }
 
-/** Restore: every grant names a fired chest trigger of a dead ally, a pool item and a tick; a chest's grants share one
- * tick, number 0…n−1, go to distinct receivers and never exceed its target count. Runs before any unit is compiled, so a
- * malformed record (or a malformed holder declaration it points at) is always reported as an invalid save. */
-export function validateCombatItemGrants(units: readonly CombatUnit[], tick: number, compiledEventTriggers: (unit: CombatUnit) => readonly import('./contracts').TriggerDefinition[]): void {
-  try { checkCombatItemGrants(units, tick, compiledEventTriggers); } catch (error) {
-    if (error instanceof Error && error.message.startsWith('Invalid Match save')) throw error;
-    throw new Error('Invalid Match save: combat item grants');
-  }
-}
-function checkCombatItemGrants(units: readonly CombatUnit[], tick: number, compiledEventTriggers: (unit: CombatUnit) => readonly import('./contracts').TriggerDefinition[]): void {
-  const fail = (message: string): never => { throw new Error(`Invalid Match save: ${message}`); };
-  const isInt = (value: unknown, minimum = 0) => Number.isSafeInteger(value) && (value as number) >= minimum;
-  const isRecord = (value: unknown, keys: string): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).sort().join() === keys;
-  const byChest = new Map<string, { receiver: CombatUnit; grant: CombatItemGrant }[]>();
-  for (const receiver of units) {
-    const grants: unknown = receiver.combatItemGrants;
-    if (grants === undefined) continue;
-    if (!Array.isArray(grants)) fail('combat item grants');
-    for (const grant of grants as unknown[]) {
-      if (!isRecord(grant, 'chest,definitionId,grantedAtTick,ordinal')) return fail('combat item grant shape');
-      const chest = grant.chest;
-      if (!isRecord(chest, 'definitionId,effectIndex,instanceId,ownerId,parentItemInstanceId,sourceKind') || chest.sourceKind !== 'item' || chest.parentItemInstanceId !== null
-        || typeof chest.ownerId !== 'string' || typeof chest.definitionId !== 'string' || typeof chest.instanceId !== 'string' || !isInt(chest.effectIndex)) return fail('combat item chest source');
-      if (!isInt(grant.ordinal) || !isInt(grant.grantedAtTick, 1) || (grant.grantedAtTick as number) > tick
-        || typeof grant.definitionId !== 'string' || !Object.hasOwn(G24_CHEST_PAYLOADS, grant.definitionId)) fail('combat item grant item/tick');
-      const valid = grant as unknown as CombatItemGrant;
-      const holder = units.find(u => u.id === valid.chest.ownerId);
-      if (!holder || holder.alive || holder.team !== receiver.team || holder.id === receiver.id) return fail('combat item chest holder');
-      const triggers: unknown = compiledEventTriggers(holder), runtimes: unknown = holder.triggerLedger?.runtimes;
-      if (!Array.isArray(triggers) || !Array.isArray(runtimes)) return fail('combat item chest declaration');
-      const trigger = (triggers as import('./contracts').TriggerDefinition[]).find(d => canonicalSource(d.source) === canonicalSource({ ...valid.chest, effectIndex: d.source.effectIndex })
-        && d.effects[valid.chest.effectIndex - d.source.effectIndex]?.kind === 'grant-combat-item');
-      if (!trigger || trigger.event !== 'holder-death') return fail('combat item chest declaration');
-      if (trigger.selector.excludeSummons && (isG23Summon(receiver) || isG23NonCombatant(receiver))) fail('combat item summon receiver');
-      if (!(runtimes as { source: Source; triggerCount: number; startsAtTick: number }[]).some(r => canonicalSource(r.source) === canonicalSource(trigger.source) && r.triggerCount === 1 && r.startsAtTick === valid.grantedAtTick)) fail('combat item chest receipt');
-      const list = byChest.get(canonicalSource(valid.chest)) ?? [];
-      list.push({ receiver, grant: valid }); byChest.set(canonicalSource(valid.chest), list);
-      if (list.length > trigger.selector.maxTargets) fail('combat item grant count');
-    }
-  }
-  for (const list of byChest.values()) {
-    const ordinals = list.map(e => e.grant.ordinal).sort((a, b) => a - b);
-    if (ordinals.some((n, i) => n !== i) || new Set(list.map(e => e.receiver.id)).size !== list.length || new Set(list.map(e => e.grant.grantedAtTick)).size !== 1) fail('combat item grant set');
-  }
-}
+

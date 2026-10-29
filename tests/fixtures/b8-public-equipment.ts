@@ -1,3 +1,4 @@
+import { b1OfferCacheKey } from './b1-offer-cache-key';
 import { readRunFixture, writeRunFixture } from './g4-run-cache';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import {
@@ -96,7 +97,7 @@ function preparationKey(components: readonly string[], options: PublicEquipmentO
   // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
   // glove recipes, leaving real supply choices for their other ingredients.
   const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42);
-  return {seed,key:JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4,options.rerollForAugment??false])};
+  return {seed,key:JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4,options.rerollForAugment??false,b1OfferCacheKey()])};
 }
 /** T13: requested assets come from random PvE drops plus the five real supply choices.
  * Extra drops are retained. Route timing and item IDs are discovered, never rewritten.

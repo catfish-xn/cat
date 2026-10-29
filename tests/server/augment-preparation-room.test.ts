@@ -71,7 +71,7 @@ describe('v22: the augment choice opens inside a 50 s preparation (2-1, 3-2, 4-2
     expect(s1.augments.find(a => a.choiceId === 'round:2-1:augment')!.definitionId).toBe(s1First);
     expect(s1.pendingChoice).toBeNull();
     expect(room.state.fault).toBeNull();
-    for (const s of room.state.seats.filter(s => s.alive)) expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(s.match))).toEqual(s.match);
+    for (const s of room.state.seats.filter(s => s.alive)) expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(s.match), room.augmentHistoryAuthority(s.seatId))).toEqual(s.match);
   });
 
   it('other rounds keep their own preparation time, and 3-2 merges the same way', { timeout: 600_000 }, () => {

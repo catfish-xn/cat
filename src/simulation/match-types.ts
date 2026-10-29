@@ -9,6 +9,7 @@ export type MatchEvent = LedgerCombatEvent | (({readonly type:'openingRewardReso
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
+  | {readonly type:'carousel-picked';readonly receipt:import('./carousel-types').CarouselReceipt}
   | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'|'default-option'}
   | import('./seat-mechanics/types').SeatMechanicMatchEvent) & { readonly domain?: 'match'; readonly eventSeq?: number });
 /** `starLevel: 2` (Starry Night) is three pool copies sold at three times the unit cost. */
@@ -79,6 +80,7 @@ export interface MatchBase {
   readonly scheduleReceipts: readonly ScheduleReceipt[]; readonly choiceRngState: number; readonly rewardRngState: number; readonly nextMatchEventSeq: number;
   readonly seed: number; readonly rngState: number; readonly round: number; readonly gold: number;
   readonly level: number; readonly xp: number; readonly playerHp: number;
+  readonly augmentHistory?: import('./augment-history-types').AugmentHistory;
   readonly shopHistory?: import('./shop-history-types').ShopHistory;
   readonly shop: Shop; readonly nextUnitSerial: number; readonly preparation: GameState; readonly roundResults: readonly RoundResult[];
 }

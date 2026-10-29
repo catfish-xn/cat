@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { drainBatch2Gold } from './augment-pool-batch2-progress';
 import { batch2Values } from './content/augment-pool-batch2';
 import { grantAnvilUnit } from './anvils';
@@ -87,7 +88,7 @@ export function finishG23Choice(before:MatchState,after:MatchState,optionId:stri
  }
  if(choice.kind==='blackMarket'&&p.chem.offer?.id===choice.choiceId){
   const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round,optionId));
-  if(optionId==='@skip'&&before.augments.some(a=>a.definitionId==='crimson-pact'))return drainBatch2Gold({...next,playerHp:Math.min(100,next.playerHp+batch2Values('crimson-pact').Heal)});
+  if(optionId==='@skip'&&before.augments.some(a=>a.definitionId==='crimson-pact'))return drainBatch2Gold({...next,playerHp:Math.min(maximumPlayerHp(next.augments),next.playerHp+batch2Values('crimson-pact').Heal)});
   return next;
  }
  return after;

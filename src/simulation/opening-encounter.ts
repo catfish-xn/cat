@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { grantAnvilUnit } from './anvils';
 import { batchEncounter, subscriptionFact, subscriptionReceipts, grantOpeningRewards, validateOpeningRewards, melBranch } from './opening-batch-rewards';
 import { getMultiplayerRoundById } from './multiplayer-round';
@@ -362,8 +363,8 @@ export function readOpeningEncounterView(state: OpeningEncounterReadState, share
 export type OpeningEncounterView = ReturnType<typeof readOpeningEncounterView>;
 
 /** Approved project convention, applied to HP AFTER the six-cost Mel save. */
-export function isMelBlessingCrossing(oldHp: number, newHp: number): boolean {
-  if (![oldHp, newHp].every(hp => Number.isSafeInteger(hp) && hp >= 0 && hp <= 100))
+export function isMelBlessingCrossing(oldHp: number, newHp: number, maxHp = 100): boolean {
+  if (![oldHp, newHp].every(hp => Number.isSafeInteger(hp) && hp >= 0 && hp <= maxHp))
     throw new RangeError('Invalid opening encounter HP');
   const threshold = OPENING_ENCOUNTER_CONFIG.melThreshold.hp;
   return oldHp > threshold && newHp > 0 && newHp <= threshold;
@@ -373,7 +374,7 @@ function expectedMelThresholdReceipts(state: MatchState): readonly OpeningMelThr
   if (opening.mode === 'shared-deferred') return [];
   const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
   if (selection.encounterId !== 'mels-blessing') return [];
-  const first = state.roundResults.find(record => isMelBlessingCrossing(record.hpBefore, record.hpAfter));
+  const first = state.roundResults.find(record => isMelBlessingCrossing(record.hpBefore, record.hpAfter, maximumPlayerHp(state.augments,record.round)));
   if (!first) return [];
   const instanceId = opening.mode === 'solo' ? JSON.stringify(['solo', state.seed]) : JSON.stringify(['shared', opening.poolId]);
   const seatId = opening.mode === 'solo' ? 'solo' : opening.seatId;

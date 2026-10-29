@@ -2,7 +2,7 @@
  * G3 operations: a room that ends abnormally (resolver error, stalled phase, every player gone) hands the queue back
  * without a restart; GET /healthz reports build identity and live counts; the structured log never carries a credential.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { Lobby, type LobbyWatchdog } from '../../src/server/room/lobby';
 import type { Room } from '../../src/server/room/room';
@@ -62,12 +62,17 @@ describe('G3 lobby watchdog', () => {
     expect(next.room.state.phase).toBe('preparation');
   });
 
-  it('never fires while the room keeps publishing, even when phases outlast the stall limit', () => {
-    const { clock, open } = makeLobby({ stallMs: 50, abandonMs: 0 });
-    const { room } = open();
-    // TIMINGS phases are far longer than 50 ms: the limit counts from the phase deadline, not from the last publication.
-    for (let round = room.state.round; room.state.round < round + 3 && room.state.phase !== 'ended';) clock.runNext();
-    expect(room.state.fault).toBeNull();
+  describe('never fires while the room keeps publishing, even when phases outlast the stall limit',()=>{
+    let clock:ManualClock,room:Room,firstRound:number;
+    beforeAll(()=>{
+      const lobby=makeLobby({stallMs:50,abandonMs:0});clock=lobby.clock;room=lobby.open().room;firstRound=room.state.round;
+    });
+    // Keep the same three-round trajectory and default per-case limit.
+    for(let leg=1;leg<=3;leg++)it(`continues publishing through round leg ${leg}`,()=>{
+      // TIMINGS phases are far longer than 50 ms: the limit counts from the phase deadline, not the last publication.
+      while(room.state.round<firstRound+leg&&room.state.phase!=='ended')clock.runNext();
+      expect(room.state.fault).toBeNull();
+    });
   });
 
   it('ends a room once every human seat stayed disconnected for abandonMs; a reconnect in between resets the count', () => {

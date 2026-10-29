@@ -5,9 +5,16 @@ import { grantMechanicGold } from '../src/simulation/seat-mechanics';
 import { accepted, publicPrefix } from './fixtures/t13-loot-public';
 import { anomalyId } from './helpers/s13-anomalies';
 import type { MatchState } from '../src/simulation/match-types';
+import { historyFreeRerollPriorities } from './fixtures/history-free-augments';
 
 let targetPrefix: MatchState;
-beforeAll(async () => { targetPrefix = await publicPrefix('4-6', 42, 'cannon'); }, 60000);
+// Seed 42's prismatic 4-2 records Max Cap offer-level history even without an
+// owned history augment. The fixture-only gold grant is not a replay command;
+// seed 25 and real rerolls keep the anomaly authenticator independently reachable.
+beforeAll(async () => {
+  targetPrefix = await publicPrefix('4-6', 25, 'cannon', [], historyFreeRerollPriorities);
+  expect(targetPrefix.augmentHistory).toBeUndefined();
+}, 60000);
 function prepared(suffix: string, solo = false): MatchState {
   let state = accepted(grantMechanicGold(structuredClone(targetPrefix), { receiptId: 'review-anomaly-budget', source: 'test', amount: 500 }));
   const owner = state.preparation.units.find(u => u.team === 'player')!;

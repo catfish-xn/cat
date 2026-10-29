@@ -8,6 +8,31 @@ const result = (run: () => unknown) => {
     throw e;
   }
 };
+it('direct encoding matches the cooperative encoder, including exotic reads and failures', () => {
+  const fixtures = [
+    () => ({ z: [false, null, -0, '\ud800', { b: 2, a: 1 }], a: 1e21 }),
+    () => ({ '10': [3], '2': -0, '0x': { value: 'x' } }),
+    () => [1, , 3], () => ({ value: NaN }), () => ({ value: undefined }),
+    () => Object.assign(Object.create(null), { a: 1 }),
+    () => Object.assign([1, 2], { map: () => ['custom-map'] }),
+  ];
+  for (const make of fixtures)
+    expect(result(() => canonicalContent(make()))).toEqual(result(() => drainSetup(canonicalContentSteps(make()))));
+  const fixture = () => {
+    const reads: string[] = [], array = [0, 2];
+    Object.defineProperty(array, 0, { enumerable: true, get: () => { reads.push('index'); delete array[1]; return 1; } });
+    return { reads, value: { get a() { reads.push('a'); return 1; }, get z() { reads.push('z'); return array; } } };
+  };
+  const direct = fixture(), cooperative = fixture();
+  expect(canonicalContent(direct.value)).toBe(drainSetup(canonicalContentSteps(cooperative.value)));
+  expect(direct.reads).toEqual(['a', 'z', 'index']);
+  expect(cooperative.reads).toEqual(direct.reads);
+  // Encoding synchronously must not warm away cooperative scheduling work.
+  const large = Array.from({ length: 200 }, () => ({ a: [] }));
+  const chunks = () => [...canonicalContentSteps(large)].length;
+  const before = chunks(); canonicalContent(large);
+  expect(before).toBeGreaterThan(0); expect(chunks()).toBe(before);
+});
 it('synchronous restore encoding retains canonical bytes and every data rejection', () => {
   const values: unknown[] = [null, true, -0, 1e21, '\ud800', undefined, Infinity, NaN, 1n,
     { z: [1, { a: -0, b: '\\"' }], a: false }, { '10': 1, '2': 2, '0x': 3, '__proto__': null },

@@ -14,11 +14,12 @@ import { enableMultiplayerSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VER
 import { d14UnitBase } from '../src/simulation/d14-anomalies/projection';
 import { getUnitStats } from '../src/simulation/unit-stats';
 
+const combatAugments = ['pumping-up-iii','bulky-buddies-iii','pumping-up-ii','bulky-buddies-ii','manaflow-ii','pumping-up-i','bulky-buddies-i','manaflow-i'];
 let prefix:MatchState|undefined;
 const stop=Error('public 4-5 prefix');
-// v22: seed 42's route (scuttle-puddle opening, v22 economy) leaves 75 gold for the paid anomaly rerolls, and Into the
-// Unknown first appears after 110. Seed 92 (crab-free opening) reaches both anomalies within the paid budget.
-try{await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:92,copyLimits:{irelia:9,maddie:9,darius:9},onStep(_before:MatchState,result:{state:MatchState}){
+// Seed 43 has no 4-2 prismatic offer-history replay and reaches both D14 cards
+// inside the unchanged 56 paid-reroll budget. Every target copy is still bought.
+try{await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:43,augmentPriorities:combatAugments,copyLimits:{irelia:9,maddie:9,darius:9},onStep(_before:MatchState,result:{state:MatchState}){
   if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation'){prefix=result.state;throw stop;}
 }});}catch(e){if(e!==stop)throw e;}
 if(!prefix)throw Error('Missing paid army');
@@ -45,6 +46,9 @@ function restored(s:MatchState){const text=serializeMatch(s);expect(restoreMatch
 const cases=['ultimate-hero','into-the-unknown'].map(id=>{
   let s=choose(id);const checkpoints=[{label:'acquisition',state:s}];
   for(let count=1;count<=3;count++){
+    // Seed 43's 4-7 loot leaves five reserves. Make the same three-slot
+    // return-placement fixture with real sales before the third settlement.
+    if(id==='into-the-unknown'&&count===3)for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.location.slot>=3))s=accepted(api.sellUnit(s,u.id));
     s=accepted(api.startMatchCombat(s));checkpoints.push({label:`combat-${count}`,state:s});
     while(s.phase==='combat')s=api.stepMatch(s).state;
     checkpoints.push({label:`settled-${count}`,state:s});

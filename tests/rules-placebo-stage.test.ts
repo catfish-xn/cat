@@ -5,7 +5,7 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit, stepMatch, sellUnit, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
-import { openingEncounter } from './fixtures/m5/oracle.g2.cjs';
+import { augmentGold, openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { firstNodeSeed, offeredAt } from './augment-stage-helpers';
 
 // v22 crab openings can fill all nine bench slots with loot heroes (e.g. seed 56);
@@ -40,13 +40,15 @@ function reachChoice(roundId: string, seed: number) {
   return state;
 }
 const vectors = [
-  ['2-1', 8, 15], ['3-2', 11, 18], ['4-2', 15, 22], ['5-1', 15, 22], ['5-7', 15, 22],
+  ['2-1', 8, 15], ['3-2', 11, 15], ['4-2', 15, 15], ['5-1', 15, 15], ['5-7', 15, 15],
 ] as const;
-describe('10-23 project Placebo acquisition amounts', () => {
+describe('project Placebo / 14.24 fixed placebo-plus acquisition amounts', () => {
   it.each(vectors)('%s has independent stage amounts %i / %i', (roundId, ordinary, plus) => {
     const round = getCatalogRoundById(roundId).ordinal;
     expect(choiceAcquisitionGold(AUGMENT_DEFINITIONS.placebo, round)).toBe(ordinary);
     expect(choiceAcquisitionGold(AUGMENT_DEFINITIONS['placebo-plus'], round)).toBe(plus);
+    // Independent oracle keeps its own fixed 15-Gold literal, not production content.
+    expect(augmentGold('placebo-plus', roundId)).toBe(plus);
     for (const id of ['placebo', 'placebo-plus']) {
       expect(AUGMENT_DEFINITIONS[id].effects[0]).toEqual({ kind: 'attackSpeedBps', bps: 100 });
     }
@@ -57,7 +59,7 @@ describe('10-23 project Placebo acquisition amounts', () => {
   ] as const).filter(([roundId, id]) => offeredAt(id, roundId as '2-1' | '3-2' | '4-2')))('%s %s public choice grants exactly %i once and authenticates its receipt', (roundId, id, gold) => {
     // Real public routes and offers; no forged schedule node or injected resources.
     let state = roundId === '2-1' ? reachChoice(roundId, firstNodeSeed(id)) : reachChoice(roundId, 0), found = state.pendingChoice?.offers.includes(id) ?? false;
-    for (let seed = 0; !found && seed < 1500; seed++) {
+    for (let seed = 0; !found && seed <= 100; seed++) {
       // v23 fmix32 openings: Trainer Golem seeds are skipped; the golem can be neither benched nor sold to concede.
       if (openingEncounter(seed) === 'trainer-golems') continue;
       // Seed 56 (now Component Anvils) leaves pending loot capacity at 1-4 on the 4-2 route, which never sells.

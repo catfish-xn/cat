@@ -1,3 +1,4 @@
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import { describe, expect, it } from 'vitest';
 import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, selectChoice, startMatchCombat } from '../src/simulation/match';
@@ -65,10 +66,10 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     const state = reachRound('2-5');
     expect(nextRandom(state.battleSeedRngState).word).toBe(890455596);
   });
-  it('binds public later-round inputs, skips supply battle seeds and preserves original G12 children', () => {
-    // v24: first seed from 0 whose unchanged public route holds exactly the
-    // two scheduled gloves at 3-5 and whose two TG children both contribute
-    // strategy sources. Seed 36 has the gloves but only one contributing child.
+  it('binds public later-round inputs, skips supply battle seeds and preserves original G12 children', () => withB1Offers(['superstars-ii', 'sated-spellweaver'], () => {
+    // v25 draws Sorcerer Crest first, adding an emblem. Script item-free gold
+    // cards so seed 42 keeps the two scheduled gloves and original TG children.
+    // This tests combat-input authority, not natural augment availability.
     let state = createMatch(42);
     while (state.roundDefinitionId !== '3-5') {
       if (state.phase === 'choice') {
@@ -101,7 +102,7 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     expect(() => restoreCombatInput(wrongChild,authority)).toThrow();
     expect(() => restoreCombatInput({...basis,battleSeed:nextRandom(basis.battleSeed).word},authority)).toThrow();
     expect(() => restoreCombatInput({...basis,equipmentRollPrefixLength:0},authority)).toThrow();
-  });
+  }));
   it('rejects non-JSON inputs and never mutates authoritative resource references', () => {
     const { basis, authority } = fixture(), before = structuredClone(authority);
     expect(() => restoreCombatInput({...basis,extra:undefined},authority)).toThrow();

@@ -1,14 +1,22 @@
+import { AUGMENT_BATCH5_G4 } from '../src/simulation/content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G7 } from '../src/simulation/content/augment-pool-batch5-g7';
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
-import { acquireAugment, fieldedLegCases, fieldedRoute, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { acquireAugment, fieldedLegCases, fieldedRoute, FIELDED_LEGS, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
-import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED } from '../src/simulation/content/augment-pool-batch2';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
+import { AUGMENT_BATCH5_G2 } from '../src/simulation/content/augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3 } from '../src/simulation/content/augment-pool-batch5-g3';
+import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED, AUGMENT_BATCH2_BLOCKED } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
-import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/match';
+import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit, nextRound, type MatchState } from '../src/simulation/match';
 import { augmentCandidates, resolveAugmentTier, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
-import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { batch1GiftPlan, drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 import { planAugmentGifts } from '../src/simulation/augment-gift-plan';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
@@ -16,18 +24,23 @@ import { readCombatStats } from '../src/simulation/combat-s13';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2ExecuteReward, batch2AutomataBlast, batch2Bonus } from '../src/simulation/augment-pool-batch2-combat';
 import { type AbilityContext, type S13Packet } from '../src/simulation/combat-s13-abilities';
 import { type S13Unit } from '../src/simulation/combat-s13-state';
-import { accepted, reachRound } from './match-helpers';
+import { accepted, fieldBench, finish, reachRound, resolveM5Choices } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { validateEffect } from '../src/simulation/validate-content';
 import { cloneEffect } from '../src/simulation/effects';
 
-const names=['Academy','Ambusher','Artillerist','ArtilleristPlus','Automata','Bruiser','Cabal','Chembaron','Conqueror','Dominator','Enforcer','Experiment','Family','Firelight','Formswapper','PitFighter','Quickstriker','Rebel','Scrap','Sentinel','Sniper','Sorcerer','Visionary','Watcher'];
-it('takes exactly the 26 batch-2 classification entries, with no disabled offers',()=>{
+const names=['Academy','Ambusher','Artillerist','ArtilleristPlus','Automata','Bruiser','Cabal','Chembaron','Conqueror','Dominator','Enforcer','Experiment','Family','Firelight','Formswapper','PitFighter','Quickstriker','Rebel','Scrap','Sentinel','Sorcerer','Visionary','Watcher'];
+it('takes exactly the 25 remaining batch-2 classification entries (Sniper migrated to H10), with no disabled offers',()=>{
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');
-  if(!row.enabled){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if((!row.enabled && id !== 'academic-research' && id !== 'forbidden-magic' && !Object.hasOwn(AUGMENT_BATCH5_G2,id) && !Object.hasOwn(AUGMENT_BATCH5_G3,id) && !Object.hasOwn(AUGMENT_BATCH5_G7,id) && id !== 'visionary-voidlings') || Object.hasOwn(AUGMENT_BATCH2_BLOCKED,id)){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if(id === 'academic-research') { expect(AUGMENT_DEFINITIONS[id]).toBeDefined(); expect(Object.values(AUGMENT_POOL_API_NAMES)).toContain(row.apiName); }
+  // G4 implements this gap under the id 'voidcaller'; the archived batch-2 row keeps the same API name.
+  if(id==='visionary-voidlings'){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(AUGMENT_BATCH5_G4.voidcaller.apiName).toBe(row.apiName);expect(AUGMENT_POOL_API_NAMES['voidcaller']).toBe(row.apiName);}
+  if(id==='rebel-resurgence'){expect(AUGMENT_DEFINITIONS[id]?.name).toBe('爆蓝之城');expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);}
  }
+ expect(AUGMENT_DEFINITIONS['forbidden-magic'].id).toBe('forbidden-magic');
  expect(AUGMENT_BATCH2['heavy-hitters'].source.values).toMatchObject({RefreshSeconds:4,SlamPercentHealth:expect.closeTo(.07,6)});
  expect(AUGMENT_BATCH2['quickstriker-boost'].source.values).toMatchObject({AttackSpeed:expect.closeTo(.85,6),BuffDuration:2.5,TimeBetweenProcs:6});
 });
@@ -124,7 +137,32 @@ it('real combat steps reproduce exactly and preserve the prior checkpoint',()=>{
  const before=opening('heavy-hitters','trundle'),copy=structuredClone(before),a=stepCombat(before),b=stepCombat(before);
  expect(before).toEqual(copy);expect(a).toEqual(b);expect(stepCombat(JSON.parse(JSON.stringify(a.state)))).toEqual(stepCombat(a.state));
 });
+// An explicit Artillerist carrier makes this grant/replay fixture independent
+// of both shop draws and the expanding augment catalog. Its receipt is real.
+let rocketLast=accepted(grantMechanicUnit(createMatch(8),{receiptId:'b1-artillerist',source:'test',definitionId:'tristana'}));
+const rocketEntries=new Map<string,MatchState>();
+function rocketRoute(roundId:string):MatchState {
+ let state=rocketEntries.get(roundId)??rocketLast;
+ while(state.roundDefinitionId!==roundId){
+  state=resolveM5Choices(state,[],Object.keys(AUGMENT_HISTORY_OWNERS));
+  if(state.phase==='preparation')state=finish(accepted(startMatchCombat(fieldBench(state))));
+  state=resolveM5Choices(state,[],Object.keys(AUGMENT_HISTORY_OWNERS));
+  if(state.phase!=='settlement')throw Error(`Rocket route stopped at ${state.roundDefinitionId}/${state.phase}`);
+  state=accepted(nextRound(state,state.round));rocketEntries.set(state.roundDefinitionId,state);rocketLast=state;
+ }
+ return state;
+}
 function acquire(id:string){
+ if(id==='rocket-collection-plus'){
+  const state=rocketRoute('3-2'),choice=state.pendingChoice!;
+  expect(choice.offers).toContain(id);
+  return accepted(selectChoice(state,choice.choiceId,choice.generation,id));
+ }
+ if(id==='betrayal'){
+  const state=fieldedRoute(52,'3-2'),choice=state.pendingChoice!;
+  expect(state.roundDefinitionId).toBe('3-2');expect(choice.kind).toBe('augment');expect(choice.offers).toContain(id);
+  return accepted(selectChoice(state,choice.choiceId,choice.generation,id));
+ }
  if(!offeredAt(id,'2-1'))return acquireAugment(id); // 14.24 stage tags: first offering round instead of 2-1
  for(let seed=0;seed<10000;seed++){
   const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
@@ -135,14 +173,15 @@ function acquire(id:string){
  }
  throw Error('missing seed '+id);
 }
-// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS); it is played in cached legs, one case each,
+// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS or PINNED_FIELDED_SEED); it is played in cached legs, one case each,
 // so each selection case below stays inside the default timeout (acquireAugment resumes the same cached route).
-const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&STAGE_SEEDS[id]?.fielded);
-it.each(FIELDED_SELECTIONS.flatMap(id=>fieldedLegCases(id).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>{
- expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
-});
+const PINNED_FIELDED_SEED:Readonly<Record<string,number>>={'betrayal':52,'rocket-collection-plus':8};
+const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&(STAGE_SEEDS[id]?.fielded||id in PINNED_FIELDED_SEED));
+it.each(FIELDED_SELECTIONS.flatMap(id=>(id in PINNED_FIELDED_SEED?FIELDED_LEGS.slice(0,FIELDED_LEGS.indexOf('3-2')+1).map(leg=>[PINNED_FIELDED_SEED[id],leg] as const):fieldedLegCases(id)).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>withB1Offers(_id==='rocket-collection-plus'?[_id]:[],()=>{
+ expect((_id==='rocket-collection-plus'?rocketRoute(leg):fieldedRoute(seed,leg)).roundDefinitionId).toBe(leg);
+}));
 // Watcher Growth carries all three 14.24 stage tags (S13 archive agrees): never offered, so no public selection.
-it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!=='watcher-growth')])('%s selects through Match, restores, and combat replay rejects altered runtime',id=>{
+it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!=='watcher-growth')])('%s selects through Match, restores, and combat replay rejects altered runtime',id=>withB1Offers(id==='rocket-collection-plus'?[id]:[],()=>{
  let s=acquire(id);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const definition=AUGMENT_BATCH2[id]?.gifts.find(g=>g.kind==='unit');
  const gift=s.preparation.units.find(u=>u.location.kind==='bench'&&(!definition||'definitionId' in definition&&u.definitionId===definition.definitionId));if(gift)s=accepted(deployMatchUnit(s,gift.id,{kind:'board',cell:{col:2,row:4}}));
@@ -151,7 +190,7 @@ it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!==
  if(id!=='branching-out'){
   const changed=structuredClone(combat) as any;changed.combat.units[0].batch2={executions:99};expect(()=>restoreMatch(serializeMatch(changed))).toThrow();
  }
-});
+}));
 it('actual Family settlement persists the authoritative reward fact, restores, and repeated stepping never pays twice',()=>{
  let s=acquire('welcome-to-the-playground');
  for(const [i,id] of ['powder','violet'].entries()){

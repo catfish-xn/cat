@@ -1,3 +1,4 @@
+import { maximumPlayerHp, explainedTitanicTitanGain } from './augment-pool-batch5-h7-health';
 import type { MatchState } from './match-types';
 import { batch2Values } from './content/augment-pool-batch2';
 import { applyLevelUpHealth, applyAcquisitionHealthLoss } from './augment-xp';
@@ -11,10 +12,10 @@ export function explainedHp(before:MatchState,after:MatchState):number {
  let hp=before.playerHp;
  const pact=after.augments.find(a=>a.definitionId==='crimson-pact');
  if(pact)for(const r of (after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0))
-  if(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.skipped&&r.round>=pact.acquiredRound)hp=Math.min(100,hp+batch2Values('crimson-pact').Heal);
+  if(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.skipped&&r.round>=pact.acquiredRound)hp=Math.min(maximumPlayerHp(after.augments),hp+batch2Values('crimson-pact').Heal);
  let state=applyLevelUpHealth(before,{...after,playerHp:hp});
  for(const a of after.augments.filter(a=>!before.augments.some(b=>b.choiceId===a.choiceId)))state=applyAcquisitionHealthLoss(state,a);
- return state.playerHp;
+ return state.playerHp + explainedTitanicTitanGain(before,after);
 }
 /** A seat the rules already settled for `round`: HP after `damageHp` plus the settlement's and every later explained heal. */
 export function liveHpAfterSettlement(state:MatchState,round:number,damageHp:number):number {

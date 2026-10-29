@@ -1,3 +1,9 @@
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { compileMadChemist } from './augment-pool-batch5-r4';
+import { compileMutationEffect } from './augment-pool-batch5-g3-mutation';
+import { compileBatch5G3Effect } from './augment-pool-batch5-g3';
+import { b5VoidlingHealth } from './augment-pool-batch5-g4';
+import { carryGolemEffects } from './augment-pool-batch5-g6-stats';
 import { getUnitForm } from './seat-mechanics/forms';
 import { EMBLEM_ITEMS } from './content/emblems';
 import { HERO_UNITS, magicRollKind } from './content/augment-pool-batch3';
@@ -20,6 +26,12 @@ const flat = (stat: 'maxHp'|'armor'|'magicResist'|'abilityPower', amount:number)
 const speed = (bps:number):Effect => ({kind:'attackSpeedBps',bps});
 const mechanic = (name:string,values:Record<string,number>):Effect => ({kind:'mechanic',mechanic:name,values});
 const serialOf=(id:string)=>{const m=/(\d+)$/.exec(id);return m?Number(m[1]):Number.MAX_SAFE_INTEGER;};
+/** The established Pumping Up counter, shared by combat and the owner-only display. */
+export function pumpingUpRounds(state:Pick<CombatStrategyInputs,'round'|'augmentProgress'>, augment:OwnedAugment):number {
+  return augment.definitionId==='pumping-up-i'?state.augmentProgress.pumpingRounds
+    :ROUND_CATALOG.filter(r=>r.ordinal>=augment.acquiredRound&&r.ordinal<state.round&&r.kind!=='supply').length
+      +Math.max(0,state.round-Math.max(ROUND_CATALOG.at(-1)!.ordinal+1,augment.acquiredRound));
+}
 /** P-AG5 (P, 2026-10-24): one Vander and one Silco on board bind; with several copies
  * the earliest acquired (lowest unit serial, then ID) of each binds. */
 export function bloodBrothersPair(allies:readonly Unit[]):readonly [string,string]|undefined {
@@ -43,6 +55,11 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 'madChemist': return compileMadChemist(state,unit,board,effect);
+    case 'mutationSurvives': return compileMutationEffect(effect, state, unit, traits);
+    case 'aerialWarfare': return compileBatch5G3Effect(effect, unit, traits);
+    case 'voidcaller': return traits.some(t=>t.traitId==='visionary'&&isTraitSnapshotMember(t,unit))?[{...effect,values:{...v,health:b5VoidlingHealth(state.round)}}]:[];
+    case 'carryGolem': return carryGolemEffects(state.round, augment, unit);
     case 'coronation': {
       const count=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length+state.temporaryEquipment.filter(i=>i.holderId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length;
       const v=AUGMENT_BATCH1.coronation.source.values;
@@ -116,15 +133,14 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'pumpingUp': {
       // I retains its established receipt-validated counter; II/III count completed
       // combat nodes from acquisition, including online overtime, never supply nodes.
-      const count=augment.definitionId==='pumping-up-i'?state.augmentProgress.pumpingRounds
-        :ROUND_CATALOG.filter(r=>r.ordinal>=augment.acquiredRound&&r.ordinal<state.round&&r.kind!=='supply').length
-          +Math.max(0,state.round-Math.max(ROUND_CATALOG.at(-1)!.ordinal+1,augment.acquiredRound));
+      const count=pumpingUpRounds(state,augment);
       return [speed(count*v.attackSpeedBpsPerRound)];
     }
     case 'mentorship': return allies.some(other=>other.id!==unit.id&&UNIT_DEFINITIONS[other.definitionId].cost>UNIT_DEFINITIONS[unit.definitionId].cost&&other.location.kind==='board'&&unit.location.kind==='board'&&hexDistance(other.location.cell,unit.location.cell)===1)?[flat('maxHp',v.health),speed(v.attackSpeedBps)]:[];
     case 'itemCollector': {
       const ids=new Set(allies.map(u=>u.id));
-      const count=new Set([...state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)).map(i=>i.definitionId),...state.temporaryEquipment.filter(i=>ids.has(i.holderId)).map(i=>i.definitionId)]).size;
+      const converted=(id:string)=>state.augments.some(a=>a.definitionId==='anger-issues')&&isAngerIssuesConvertibleItem(id)?'rageblade':id;
+      const count=new Set([...state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)).map(i=>i.definitionId),...state.temporaryEquipment.filter(i=>ids.has(i.holderId)).map(i=>i.definitionId)].map(converted)).size;
       return [flat('maxHp',v.baseHealth+count*v.healthPerItem),{kind:'statPercentBps',stat:'attackDamage',bps:count*v.adBpsPerItem},mechanic('fractionalFlat',{armorCenti:0,magicResistCenti:0,abilityPowerCenti:count*v.apCentiPerItem})];
     }
     case 'backup': return allies.filter(u=>row(u)>=zone.lastRow-1).length>=v.minimum?[speed(v.attackSpeedBps)]:[];

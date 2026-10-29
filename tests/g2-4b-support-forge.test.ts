@@ -10,7 +10,8 @@ import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import {drainG23Rewards,openG23Choice,claimG23Atom} from '../src/simulation/g2-3-runtime';
-import {previewUseConsumable,validateConsumableState} from '../src/simulation/consumables';
+import { previewUseConsumable } from '../src/simulation/consumables';
+import { validateConsumableState } from '../src/simulation/restore-checks/consumable-state-check';
 import {REFORGE_POOLS} from '../src/simulation/content/consumables';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 import {publicConsumables} from './fixtures/r3r4-public';

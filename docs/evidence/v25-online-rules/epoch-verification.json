@@ -1,0 +1,167 @@
+{
+  "baseCommit": "100589ca41d78a4671c8675ec30057a9ea5ea684",
+  "steps": [
+    {
+      "name": "check-identities",
+      "args": [
+        "scripts/update-content-identities.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4860,
+      "log": "artifacts/v25-online-rules-recording/check-identities.log"
+    },
+    {
+      "name": "record-battle-start",
+      "args": [
+        "scripts/record-v25-online-rules-battle-start.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 53121,
+      "log": "artifacts/v25-online-rules-recording/record-battle-start.log"
+    },
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v25-online-rules-release.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 158289,
+      "log": "artifacts/v25-online-rules-recording/record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v25-online-rules-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 151427,
+      "log": "artifacts/v25-online-rules-recording/record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v25-online-rules-inputs.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7445,
+      "log": "artifacts/v25-online-rules-recording/record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v25-online-rules-live-reveal.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 63295,
+      "log": "artifacts/v25-online-rules-recording/record-live-reveal.log"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v25-online-rules-transfer.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 24498,
+      "log": "artifacts/v25-online-rules-recording/record-transfer.log"
+    },
+    {
+      "name": "check-transfer",
+      "args": [
+        "scripts/record-v25-online-rules-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 22212,
+      "log": "artifacts/v25-online-rules-recording/check-transfer.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v25-online-rules-inputs.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7671,
+      "log": "artifacts/v25-online-rules-recording/check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 145267,
+      "log": "artifacts/v25-online-rules-recording/check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v25-online-rules-fixture-audit.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4522,
+      "log": "artifacts/v25-online-rules-recording/check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v25-online-rules-live-reveal.cjs",
+        "--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 59504,
+      "log": "artifacts/v25-online-rules-recording/check-live-reveal.log"
+    },
+    {
+      "name": "record-chest-trial",
+      "args": [
+        "scripts/record-chest-trial-v25.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 28822,
+      "log": "artifacts/v25-online-rules-recording/record-chest-trial.log"
+    },
+    {
+      "name": "consumer-byte-audit",
+      "args": [
+        "scripts/audit-v25-online-rules-adaptations.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 1045,
+      "log": "artifacts/v25-online-rules-recording/consumer-byte-audit.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v25-online-rules-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5789,
+      "log": "artifacts/v25-online-rules-recording/compare-digests.log"
+    }
+  ],
+  "complete": true
+}

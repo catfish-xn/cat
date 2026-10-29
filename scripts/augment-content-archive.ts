@@ -500,14 +500,21 @@ const B4COMBAT_NOTES = {
   }
 };
 const B4COMBAT_ARCHIVED=Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4COMBAT).map(([id,row])=>{const n=B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES];return [id,{...row,name:n.name,description:n.description,source:{...row.source,description_en_us:n.description_en_us}}];}));
+// B5-60 moved out of the disabled batch-2 inventory; retain its archived prose under its new owner.
+const { 'snipers-nest': SNIPER_NOTES, ...BATCH2_REMAINING_NOTES } = BATCH2_NOTES;
+const H10_NOTES: Record<string, object> = {
+  'snipers-nest': SNIPER_NOTES,
+  'trait-tracker': { description_en_us: 'The first time you activate 8 non-unique traits for 1 combat, gain 6 random emblems.' },
+};
 export const RULES_GAP_MANIFEST = {
   ...runtimeManifest,
+  augmentPoolBatch5H10: { ...runtimeManifest.augmentPoolBatch5H10, content: Object.fromEntries(Object.entries(runtimeManifest.augmentPoolBatch5H10.content).map(([id,row]) => [id, { ...row, source: { ...row.source, ...H10_NOTES[id] } }])) },
   augmentPoolBatch5:{...runtimeManifest.augmentPoolBatch5,content:Object.fromEntries(Object.entries(AUGMENT_BATCH5).map(([id,row])=>{const t=BATCH5_ARCHIVE[id as keyof typeof BATCH5_ARCHIVE];return [id,{...row,name:t.name,description:t.description,source:{...row.source,description_en_us:t.description_en_us}}];}))},
   augmentPoolBatch4B4Combat:{...runtimeManifest.augmentPoolBatch4B4Combat,content:B4COMBAT_ARCHIVED},
   augmentPoolBatch4B4xp:{...runtimeManifest.augmentPoolBatch4B4xp,content:Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4XP).map(([id,row])=>{const text=B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE];return [id,{...row,...text,source:{...row.source,...text.source}}];}))},
 
   augmentPoolBatch1: { ...runtimeManifest.augmentPoolBatch1, content: restoreBatch(AUGMENT_BATCH1, BATCH1_NOTES) },
-  augmentPoolBatch2: { ...runtimeManifest.augmentPoolBatch2, content: restoreBatch(AUGMENT_BATCH2, BATCH2_NOTES) },
+  augmentPoolBatch2: { ...runtimeManifest.augmentPoolBatch2, content: restoreBatch(AUGMENT_BATCH2, BATCH2_REMAINING_NOTES) },
   augmentPoolBatch4B4reroll: { ...runtimeManifest.augmentPoolBatch4B4reroll, content: B4REROLL_ARCHIVE },
   augmentPoolBatch3Xp: { ...runtimeManifest.augmentPoolBatch3Xp, content: restoreBatch(AUGMENT_BATCH3_XP, BATCH3_XP_NOTES) },
   augmentPoolBatch3: { ...runtimeManifest.augmentPoolBatch3, content: restoreBatch(AUGMENT_BATCH3, BATCH3_NOTES) },

@@ -15,7 +15,7 @@ import type { Room } from '../../src/server/room/room';
 import { seatPushEvents, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import type { MatchState } from '../../src/simulation/match-types';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
-import { validateG23MechanicLinks } from '../../src/simulation/g2-3-state';
+import { validateG23MechanicLinks } from '../../src/simulation/restore-checks/g23-state-check';
 import { readChoiceExtras } from '../../src/presentation/choice-fallback';
 import { makeRoom, runUntil } from './helpers';
 import { ANVIL, atomOptions, claimAnvils, countOf, openAnvil, seatOf, toChestSettlement } from './anvil-room-helpers';

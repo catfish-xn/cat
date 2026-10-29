@@ -4,6 +4,7 @@ import type { MatchState } from './match-types';
 
 /** Historical counters, including zero counts, require independent battle replay. */
 export function needsCrownHistory(state: MatchState): boolean {
+  if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='salvage-bin'&&state.roundResults.some(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound&&r.round<state.round)))return true;
   // Acquisition + settled rounds also bind the requirement when both rows are deleted.
   if (state.augments.some(augment => augment.definitionId === 'blood-brothers'
     && state.roundResults.some(result => result.roundKind !== 'supply' && result.round >= augment.acquiredRound))) return true;
@@ -13,7 +14,7 @@ export function needsCrownHistory(state: MatchState): boolean {
   if(!state.multiplayer&&readG23Progress(state)!.economyReceipts.some(r=>r.kind==='battle'
     &&spoils.some(a=>r.facts.round>=a.acquiredRound)
     &&!(r.facts.round===state.round&&state.combat?.status==='finished')))return true;
-  if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='a-change-of-fate'&&state.roundResults.some(r=>r.round>=a.acquiredRound)))return true;
+  if(!state.multiplayer&&state.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='pilfer')&&state.roundResults.some(r=>r.round>=a.acquiredRound)))return true;
   return needsBatch4B4xpHistory(state) || readG23Progress(state)!.economyReceipts.some(action =>
     action.kind === 'battle' && (action.facts.crowns !== undefined || action.crownGold !== undefined || action.facts.d11Headhunter !== undefined || action.facts.family?.eligible===true || action.facts.melCasts!==undefined || action.facts.batch2?.some(fact => fact.definitionId === 'blood-brothers' || fact.definitionId === 'blood-brothers-deaths')));
 }

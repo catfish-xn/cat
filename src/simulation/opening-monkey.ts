@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { batch2HpAfterSettlement, batch2HpBeforeBattle } from './augment-pool-batch2-health';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import { nextRandom, validateSeed } from './rng';
@@ -93,7 +94,7 @@ export function validateMonkeyGrants(state: MatchState, fact?: OpeningEffectFact
   });
   if (outcome === 'damage') {
     const hpBefore = state.roundResults.find(r => r.round === MONKEY_ROUND - 1)?.hpAfter;
-    check(Number.isSafeInteger(receipt.hpBefore) && receipt.hpBefore! > 0 && receipt.hpBefore! <= 100
+    check(Number.isSafeInteger(receipt.hpBefore) && receipt.hpBefore! > 0 && receipt.hpBefore! <= maximumPlayerHp(state.augments,MONKEY_ROUND-1)
       && (hpBefore === undefined || receipt.hpBefore === batch2HpAfterSettlement(state,MONKEY_ROUND-1,hpBefore)));
     const hpAfter = Math.max(0, receipt.hpBefore! - 10);
     const result = state.roundResults.find(r => r.round === MONKEY_ROUND);

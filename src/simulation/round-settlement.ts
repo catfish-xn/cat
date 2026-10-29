@@ -1,3 +1,10 @@
+import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
+import { drainContestedGold } from './augment-pool-batch5-h6';
+import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
+import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
+import { MAX_SUPPORTED_PLAYER_HP } from './augment-pool-batch5-h7-health';
+import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
+import { drainLootExplosionRewards } from './augment-pool-batch5-g7';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -150,7 +157,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
     if(r.opponentHp!==undefined)fields.push('opponentHp');
-    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>100)) return fail(state,'invalid-receipt');
+    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>MAX_SUPPORTED_PLAYER_HP)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
     const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
@@ -176,16 +183,25 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
     let settled=drainSettlementGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
-    if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||a.definitionId==='a-change-of-fate')){
+    settled=drainLootExplosionRewards(settled);
+    const contested=drainContestedGold(settled);hookEvents.push(...mechanicGrantEvents(settled,contested));settled=contested;
+    if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||a.definitionId==='a-change-of-fate'||a.definitionId==='void-swarm')){
       const gifted=drainBatch1Gifts(settled,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(settled,gifted));settled=gifted;
     }
+    settled=drainBatch5H8Gold(settled);
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
+    if (state.m8.round.kind === 'pvp') settled = settleNoScoutGrowth(settled,r.battleId);
+    settled={...settled,playerHp:batch5S6cSettlementHealth(settled,r.round,settled.playerHp)};
+    const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
+    hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
     const merged = resolveDeferredUpgrades(settled);
-    const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
+    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
+    const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
-    const opened=openG23Choice(forfeited.state);
-    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
+    const inventory=drainBatch5Inventory(forfeited.state);hookEvents.push(...mechanicGrantEvents(forfeited.state,inventory));
+    const opened=openG23Choice(inventory);
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,rewarded),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

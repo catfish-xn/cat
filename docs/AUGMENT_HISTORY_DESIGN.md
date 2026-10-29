@@ -1,0 +1,280 @@
+# 强化历史证据设计与实现（方案 A）
+
+B5-69接入（P，2026-10-27）：`loot-explosion` 登记为deaths持有者；真实死亡观察增加可选 `lootExplosion{ killerUnitId, originalKillerUnitId, killerSeatId, critChanceBps }`。击杀包产生时采样、真实death落地时归档，沿既有WeakMap传递，战斗事件和回放字节无新增字段。联机在共享结算前以已验证执行结果记录死亡，结算后玩家伤害仍按原时序记录；没有B5-69的席位保持原时序。任何历史读取使用 `requireAugmentFacts`，联机恢复仍绑定独立authority。规则和奖励见 `augment-pool-batch5-g7.ts` 与 `MATCH_CONTRACT.md`；不是从候选收据补造历史。
+
+基线：`codex/v25-augment-history`，`ee2b019cc8d60fb11679d9ce8c54338f5ea4ea57`，来自 `claude/v24-integration`（PR #456）。本任务只提供历史基础设施，不新增任何强化定义、报价、奖励公式或现有内容数值，不提交 Git。
+
+## 2026-10-27 H10 使用与扩展
+
+B5-60 狙神之巢读取 `acquire/positions/round-entry/combat-roster/pvp-roster`，由开战格与实例身份推导 800～3200 Bps，不另存累计计数。`readSniperOpening` 是 Match 到战斗输入的唯一推导入口；`CombatStrategyInputs`、`PlayerBattleSnapshot` 的可选 `sniperOpening` 仅携带冻结结果，后者按双边命名空间映射单位 ID。当前轮开战后的阵容记录只影响下一轮，恢复仍认证原开战结果。
+
+B5-61 羁绊追踪者在同一个 `augment-history-v1` 内新增事实 `{kind:'trait-activation',choiceId,roster}`，继承 sequence/seatId/round/roundId/resourcePrefix；每个持有 choiceId 仅一次。事实在首次达标的成功准备期命令内、发奖前记录正式阵容，不保存客户端计数或抽奖结果。奖励计划从该事实和固定 seed/seat/choice 子流重推，复用六份原机制物品收据。单人按命令重演事实和奖励；联机完整候选与独立服务器 authority 比较，缺失／添加／改写事实或收据均拒绝。外层版本不变，内容 digest 由身份脚本更新；未重录 epoch。
+
+联机 `Room.apply / claimBotOrbs → completeAugmentCommand` 经 `server-entry` 调用 `completeTraitTrackerCommand(name,state)`，在共享刷新、经验、选秀暂存落位及机器人法球领取完成后、发布前补齐不经过普通 Match 包装器的路径；只对成功命令执行，服务器不计算羁绊、随机或奖励。普通 Match 包装器也调用同一幂等规则。截止自动布阵、开战／战中／结算、自然入轮和准备计时不能触发；下一次合法准备期操作才检查。历史保持服务器私有，不进入玩家投影。
+
+### H10 接线清单
+
+| 文件／调用点 | 用途 |
+| --- | --- |
+| `content/augment-pool-batch5-h10.ts`；`augment-pool-batch5-h10-sniper.ts`；`augment-pool-batch5-h10-tracker.ts` | 两项数值、赠礼、历史推导、冻结值结构校验与一次性奖励规则 |
+| `augment-history-owners.ts`；`augment-history-types.ts` | 两持有者登记；增加同版本 `trait-activation` 事实 |
+| `augment-history.ts / traceHistoryCommand` | 成功外层命令追加 tracker 结果、连续事件与事实，仍由原 proof 重演 |
+| `augment-pool-grants.ts / batch1GiftPlan → drainBatch1Gifts / validateBatch1Gifts` | 泽丽礼物与 tracker 六份计划纳入原奖励、资源和收据验证 |
+| `combat-input.ts / readCombatStrategyInputs, restoreCombatInput`；`b8-restore.ts / validateB8Resources` | 狙神值冻结／按历史重推认证 |
+| `two-sided-types.ts / PlayerBattleSnapshot`；`two-sided-snapshot.ts / snapshotForBattleSteps, restorePlayerBattleSnapshotSteps` | 私有冻结值字段及拥有者、英雄资格、整数层数校验 |
+| `two-sided-battle.ts / compileSideSteps`；`strategy-snapshot.ts / buildStrategySnapshotSteps` | A/B 双边 ID 映射与原 damageAmp 来源绑定 |
+| `shared-pool.ts / restoreSharedOrbSnapshot` | 两持有者及孤立 H10 收据进入原 gift validator，完整历史仍使用独立 authority |
+| `src/server-entry/index.ts`；`src/server/room/room.ts / Room.apply, claimBotOrbs, completeAugmentCommand` | 导出并编排规则完成钩子；在暂存选秀落位之后发布；人／机器人／接管共用，不新增 wire 命令 |
+| `content/{augments,augment-policy,augment-offer-rules,augment-stage-bans,rules-manifest}.ts`；`validate-content.ts` | 注册、黄金档、来源报价规则、tracker 3-2 限制、约定身份与计数 |
+| `content/augment-pool-batch2.ts`；`scripts/augment-content-archive.ts` | 狙神从旧禁用库存迁出，英文档案保留在 H10；不降低旧档案集合检查 |
+| `tests/fixtures/m5/{oracle.g2,augment-rewards-oracle}.cjs`；`tests/augment-stage-helpers.ts` | 独立报价／互斥／礼物与纹章抽样表、固定 3-2 种子 |
+| `content/identity-constants.ts`；`scripts/tests/production-size.test.ts` | 重算并同步完整 content/loot 摘要，未改 epoch |
+
+除 `src/`、`scripts/`、`tests/` 开头的路径外，本表路径相对 `src/simulation/`。B5-60 复用既有 `src/server/room/augment-history.ts` 冻结名单及 `two-sided-resolver/CombatStream` 路径，这些文件没有修改。联机 object/JSON/canonical serialized 三种输入均要求真实 `Room.augmentHistoryAuthority`，伪造同形句柄拒绝。
+
+## 保存边界与版本
+
+唯一新增的持久字段为 `MatchState.augmentHistory?: AugmentHistory`，内部版本严格为 `augment-history-v1`。只有 `augment-history-owners.ts` 登记的持有者才写入；登记的 ID 是后续任务的集成约定，不是开放候选池。未持有者既不写空数组，也不写版本占位。以基线程序独立生成的四个 SHA-256 检查点验证原始保存字节不变，另验证旧档恢复再保存不变。
+
+沿用 MATCH_CONTRACT A2/A4/A5 和 `shop-history-v1` 的条件证据规则：外层 **schema/save/replay/command=12/8/8/7**，规则联机协议 **5**、WebSocket 封套 **6**，rules/content/digest 均不变。没有新增客户端命令；死亡采样不扩展 `CombatState` 或战斗事件 JSON，不改变战斗回放协议。选秀附加收据仍使用现有字段，仅增加有证据绑定的唯一收据 ID 形式。本任务不需要重录原有 epoch。以后实际开放强化、更改战斗输入/数值时，由该任务按版本规则另行处理。
+
+持有者缺字段的错误：`Invalid augment history: missing augment-history-v1; history-dependent augment saves cannot be authenticated`。不推测迁移、不把旧进度补成零。不认识的版本、无持有者却有历史、错席位/回合/资源前缀、增删改事实、无法认证的证据均拒绝。
+
+## 数据与归属
+
+### H11 实际持有者接入（2026-10-27）
+
+`scavenger`、`sponging` 已开放并登记，继续使用本节的开战阵容与完整死亡事实。`historyRoster` 的输入收窄为 `Pick<MatchState,'preparation'|'items'>`，允许从已认证的双边战斗输入采样同一永久阵容；保存结构不变。新增战中读取器 `augment-death-samples.readAugmentFirstHeroDeaths(state,events)`，在事实对外发布前读取同源真实死亡样本及已重演认证的首次死亡前缀，恢复后无需私有缓存即可继续。每次真实死亡事实仍完整保留，去重仅属于读取视图。详细接口、时序、三入口认证和服务端复用点见 [H11说明](AUGMENT_BATCH5_H11.md)。没有新增版本节或补造历史。
+
+完整 TypeScript 定义在 `src/simulation/augment-history-types.ts`。顶层为 `{version,seatId,facts,proof}`；单人席位 ID 为 `solo`，联机为服务器凭证对应的实际席位 ID。每个 fact 都包含连续 `sequence`、`seatId`、自然轮 `round/roundId` 与 `resourcePrefix`。单位始终使用实例 ID；板上格、备战席槽位、星级、定义 ID、装备实例和位置均保留。位置不是按数组顺序猜测。
+
+| 事实 | 记录时点与含义 | 需求 |
+| --- | --- | --- |
+| `acquire` | 选择事务中，获得拥有条目后、执行专属获取效果前；冻结选择前金币/玩家 HP、正式单位/装备、choiceId、逻辑准备时间及上一场真实开战阵容的可用性 | B5-10、26/29/30、45；本金不会从战后余额倒算 |
+| `trait-activation` | B5-61 首次准备期成功命令达标、发奖前；choiceId 与正式阵容快照，只写一次 | B5-61；沿同一节重演／服务器权威认证 |
+| `round-entry` | 下一自然轮入口：上一轮收入已付，新的被动经验、商店、选秀放置和本轮奖励之前；完整正式棋盘和备战席 | B5-32/33、38、57；多次 Continue 不能重复 |
+| `positions` | 成功公共命令或房间原子发布改变正式单位/装备后；覆盖手动部署、购买/合星、售出、装备、选秀后放置 | B5-26/29/30、37 |
+| `combat-roster` | 单人真实开战时，包含 PvE 和 PvP；取得时还携带之前一场的冻结快照 | B5-10 的“上一对战”不局限 PvP |
+| `pvp-roster` | 联机自动布阵后、锁名单及编译战斗前；全桌八席含已淘汰席，另存本战 ID、mirrorOfSeatId；单人为实际自身阵容 | B5-31、37；镜像源不会作为额外真人重复计数 |
+| `table` | 每次取得历史依赖强化的事务内、专属获取效果前，以及后续入轮、整轮淘汰/排名原子提交时；淘汰表在排名确定、资源回收前冻结，每席 HP、存活、名次、淘汰轮、阵容 | B5-34、37、38、39、40；取得时可读取以前淘汰席，盗墓者以取得时存活名单为起点，不凭缺行判断存活 |
+| `growth` | 未来强化领域事务调用通用 API；唯一 receiptId、choiceId、每普通英雄的 HP flat/Bps、AD Bps、AP **百分之一点** `abilityPowerCenti` | B5-31、38、57；150 centi=1.5 AP，150 Bps=1.5%，没有浮点保存 |
+| `carousel` | 每笔真实选取并授予完成后；完整收据、同轮 ordinal、manual/bot/timeout/disconnected/augment 来源、可选来源 choiceId、落位快照、放行逻辑毫秒及持有资格 choiceId 列表 | B5-26/29/30、35/36、44；同席同轮可有多笔且独占不同槽 |
+| `preparation-time` | 显式、单调的整数准备期逻辑时间；不读取墙钟，不复用战斗 tick | B5-07 |
+| `deaths` | 真实死亡事件产生时保存装备及普通英雄身份；按战斗 ID＋eventSeq 唯一，携带 tick、单位、team、实际 ownerSeatId、原始实例 ID；完整 tick 边界即使零死亡也保存 | B5-42、46；复活后再次死亡不会被 unitId 去重 |
+| `player-damage` | 双边结算全部完成后，读取对手 RoundResult.hpBefore/hpAfter/hpLost；后续治疗不抵销已发生扣血 | B5-43、47；过杀已截断，Mel 保命已应用；镜像明确为0 |
+| `player-health` | 为 B5-44 的后续领域事务预留强类型事实：choiceId、唯一收据、实际 HP 和最大 HP 的前后值 | 不在本任务实现 +20、提前放行或改变 HP 上限 |
+
+`previousBattle` 显式区分 `recorded / none / unavailable`。运行中的单人命令链和房间会保留上一场阵容，直到取得强化后才把证据写进节。**从旧的、不含历史的准备期快照恢复，无法凭当前棋盘倒推出上一战**；`readPreviousAugmentBattle` 对 unavailable 抛错，未来依赖上一战的选择逻辑须在提交奖励前检查，或使用已有已验证战斗档案补足，不得当作零人。现有无历史旧档本身仍可原样读取。
+
+单人 PvP 是规则生成的敌方阵容，现有模型没有“敌方玩家 HP 账户”。因此单人 `player-damage` 的 opponent/HP/actualDamage 明确为 `null`，不是0。B5-43/47 后续任务不得把这个未知值解释为真实在线玩家扣血，也不得用未截断的 `SideProposal.damage` 代替实际扣血。
+
+## 认证，而非自签名
+
+### 单人
+
+`proof.kind='solo'` 保存无历史持有者的合法起点 `origin`，以及成功公共命令 `{name,args,count}`。连续 stepMatch 可压缩 count。起点不允许嵌套 augmentHistory 或多人状态。命令参数和事实均脱离调用者对象；激活时起点复制并冻结。未持有时的命令跟踪仅在 WeakMap 中，不改变存档字节；恢复旧普通快照则以已经验证的快照为起点。
+
+对象、JSON、`serializeMatch` 三入口最终走同一检查：先界限/结构校验，再认证起点，按固定白名单重演公共命令，重建事实和最终完整 Match，逐字段比较。资源、位置、金币、本金、成长来源、时间、战斗结果必须同时吻合。独立调用 `recordAugmentGrowth` 后拼进保存，不能替代合法规则事务；重演会拒绝。外部战斗档案验证还检查强化历史和命令的已认证前缀只能延长。
+
+这里采用与现有账本一致的规则一致性证明，不是签名。不能识别将整份输入改写为另一条完整合法轨迹的文件作者；也不声称认证旧普通快照格式从未保存过的事实。
+
+### 联机
+
+单席文件无法自行证明其它七席的历史。恢复使用 **独立的服务器权威对象**，不接受候选 JSON 自带的“authority”/摘要。`Room.augmentHistoryAuthority(seatId)` 从当前服务器席位捕获独立副本；`captureAugmentHistoryAuthority` 是服务器持久化集成内部入口。返回的是 WeakMap 品牌句柄，冻结或 JSON 反序列化一个同形对象不构成授权。
+
+`restoreSharedOrbSnapshot(pool,input,authority?)` 先校验权威池、所有既有账本，再比较整个候选 Match 与独立副本。`restoreCarouselSeat(carousel,input,authority?)` 同样认证。持有历史强化时缺 authority 报 `missing independent server authority`；缺历史节先报旧档缺证据。没有相关强化的既有调用无需新增参数。
+
+服务器必须从自身私有检查点/可信执行重建该 authority；**不能把客户端上传的 candidate 传给 capture 当证明**。当前仓库没有房间整局持久化/重启格式，本任务没有假造一个可独立导入的全桌档案。离线 restoreMatch 继续拒绝多人存档。
+
+## 时钟、成长、选秀的通用接口
+
+- `recordAugmentAcquisition(before,after): MatchState`：初始化节及获取证据；已接 selectChoice，专属效果调用通用 API 时节已存在。
+- `prepareAugmentAcquisition(state: MatchState, previousBattle: PreviousAugmentBattle, elapsedMs: number, seats: readonly HistorySeat[]): void`：房间在手选/机器人/超时选取前注入自身私有上一战、时钟及完整全桌上下文，复制后仅写 WeakMap；`recordAugmentAcquisition` 在专属获取效果前把 acquire 和 table 写入同一成功事务。全桌须为 1～8 个唯一席位且包含当前席位，错误为 `Invalid augment history: server acquisition table`；时钟或多人身份错误仍为 `server acquisition context`。取得效果执行期间即可读取此前淘汰席，不能延迟到发布后才提供。非房间调用不可把候选档当可信上下文；失败选择不写持久事实、不改变资源或 RNG。
+- `recordAugmentRoundEntry(state): MatchState`、`recordAugmentTransition(before,after,events?): MatchState`：只记录成功事务；失败保持原 state，不发事件、不用 RNG。
+- `requireAugmentFacts(state,kind,round)`：返回指定族的脱离对象副本；没有该轮记录即抛 `missing <kind> for round <n>`。空 `deaths:[]` 是有完整性边界的零，缺失一整行不是零。
+- `findAugmentFacts(state,kind,round)`（H7，2026-10-27）：仅查询可选收据或尚在进行的战斗边界，返回脱离副本；缺历史节仍拒绝，空查询不能证明完成战斗为零。已完成战斗继续用 `requireAugmentFacts`。不新增保存字段／版本或改变原认证。
+- `readPreviousAugmentBattle(state,choiceId)`：读取取得前上一战证据；不把 unavailable 当 none。
+- `recordAugmentGrowth(state,choiceId,receiptId,deltas)`：只允许持有来源、普通英雄、非负安全整数；同收据同内容返回原对象，冲突报错。`readAugmentGrowth(state,unitId)` 沿资源账本合星血缘累计，不接管 Tristana 旧 AD 账本。此任务只提供持久成长证据和读取器；最终战斗面板应用属于实际强化任务。
+- `recordAugmentPlayerHealth(state,change)`：领域事务完成后记录真实 HP/最大 HP 前后值，绑定持有来源与唯一收据，当前 HP 必须等于 hpAfter；不执行治疗、不决定上限。重复收据同内容幂等，冲突拒绝。
+- `appendAugmentFact(state,fact)`：内部领域扩展入口，不向网络开放。未来 player-health 等事实必须在可重演的真实领域事务内产生，不能把此函数当认证器。
+- `advanceAugmentPreparationTime(state,elapsedMs): MatchState`：仅 preparation 或返回 preparation 的选择阶段；累计毫秒0～600000、单调，重复同值无动作，倒退/越界/错阶段抛错。单人驱动可直接调用并进入重演证据；B5-07 从取得时的准备期偏移计算刷新，后续 PvE 轮从零计时。房间只对存活且需要准备期时钟的席位，在命令前、冻结前和对齐本轮准备期入口的50ms回调采样，经 `advanceSharedAugmentPreparationTime(pool,state,elapsedMs)` 同时更新卡池、商店与时钟证据；禁止对共享席位直接调用单人刷新路径。各席按房间席序暂存，全部成功才一次发布 pool/poolRevision/seats；任一失败舍弃该批暂存并进入房间故障。暂停时调用方不推进逻辑时钟；战斗/选秀时钟不能冒充它。
+- `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)`：未来奖励路由指定剩余槽，要求全部正常领取已结束且真实持有来源；复用保留/授予/卡池守恒与满席 held 流程，不负责抽签或选择获奖者。正常领取仍一人一次。额外 ID 为 `<carouselId>:<seatId>:extra:<1..8>`，来源、序号写在同一个 augmentHistory 节中，没有第二个版本节。关闭后已归还的剩余卡先重新保留再授予；失败返回原 pool/carousel/state，无 RNG 消耗。
+- `recordAugmentTable`、`recordAugmentPvpRoster`：房间取得/入轮和战斗冻结调用的规则接口，不供客户端提交事实。整桌结算改经 `recordAugmentSettlementTable(state,seats): MatchStep`（`match.ts` / `server-entry`），保留历史去重并返回新增收据对应的已编号事件；房间与原结算事件一起发布，详见联机合同 B5-34 节。
+
+记录 API 的错误统一前缀 `Invalid augment history:`。选秀事务沿用现有 `CarouselFailure`（invalid-match、stale-pool、slot-taken、invalid-slot、pool-exhausted、receipt-mismatch 等），不新增 wire reason。普通成功命令原事件/资源序号不变。
+
+## 界限与保存所有权
+
+v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演步、8席、每快照128单位/1024装备、单死亡批115328行、600000准备毫秒或16MiB证据预算的输入；递归深度小于64、节点不超过100万。先界限检查再重演，不用候选 count 分配战斗或无限循环。该预算只约束新增证据，不更改任何已开放内容的规则。实际启用持续产生日志的强化前，应按整局长度核算其预算，不能静默截断账本。
+
+事实、命令参数、authority 和查询返回均有明确的独立所有权。死亡现场的旁路样本只用 WeakMap 关联真实事件，不向 `CombatState`、事件 JSON、回放帧或 UI 投影塞入新字段。房间只有在整轮结果被验证、排名确定后才发布事实；同 ID 重复结算沿既有逻辑拒绝。普通存档/无相关席位的房间不新增空字段。
+
+死亡装备快照同时保留带槽位的 `equipment`（含临时标记）和没有装备槽的 `combatItemGrants`（不稳定财宝箱生成物，含真实来源、序号和取得 tick），不会漏掉战中获得的装备，也不为它们虚构槽位。
+
+联机 PvE 的低层战斗采样没有席位上下文；Match 接收实时事件和终战旁路样本时，统一把玩家侧 `ownerSeatId` 绑定为 `multiplayer.seatId`，敌方野怪保持 `null`。单人仍使用 `solo`；PvP 双边归属仍由服务器的 battle mapping 绑定，不使用此单席规则。恢复预检对单人/PvE 死亡行逐一核对 team 与 owner，错误为 `Invalid augment history: death owner`；随后照常比较独立服务器 authority 的完整状态。旧错误 PvE 行即使配有同样错误的 authority 也拒绝，不猜测修补。按 combatId/eventSeq 去重，复活后再次死亡保留独立行。
+
+## 本次变更的全部接线点
+
+| 文件/函数 | 改动 |
+| --- | --- |
+| `src/simulation/match-types.ts / MatchBase` | 唯一可选 augmentHistory 字段 |
+| `src/simulation/match.ts / createMatch` | 初始化不序列化的单人命令追踪 |
+| `match.ts / selectChoice` | 在取得后、专属效果前初始化获取历史 |
+| `match.ts / nextRound, advanceMultiplayerRound` | 正常轮和加时入口快照 |
+| `match.ts / deployMatchUnit, buyUnit, openAnvil, sellUnit, setShopLock, rerollShop, buyXp` | 外层成功命令追踪；位置/交易变更同事务记录 |
+| `match.ts / startMatchCombat, stepMatch, lockMatchCombatRoster, autoDeployToCap` | 开战、死亡完整性与自动布阵边界 |
+| `match.ts / openMatchCombatStream, stepMatchCombatStream, revealMatchCombatStreamTerminal, settleMatchCombatStream` | 流式 PvE 执行/终战交接；终战样本不会因 state 原先停在前一 tick 而丢失 |
+| `match.ts / useConsumable, combineItems, equipItem, selectAnomalyTarget, rerollAugment, rerollAnomaly` | 操作历史 |
+| `match.ts / forfeitPendingChoice, forfeitTerminalOrbs, claimOrb, claimOrDiscardLoot, chooseG23Junker, chooseG23BlackMarket, claimG23Reward` | 系统超时、领取和已有薄适配入口；嵌套调用只记外层一次 |
+| `src/simulation/combat-s13.ts, combat-tick.ts / 死亡清理` | 现场装备/英雄身份样本 |
+| `combat-effects.ts / stampCombatStep` | 样本关联到 stamped event，事件本身不新增字段 |
+| `combat.ts / stepCombat` | 传递执行过程死亡样本，含复活后的再死 |
+| `serialization-structure.ts / restoreMatchWithinCall` | 三离线入口同一 preflight、命令重演、恢复后追踪交接 |
+| `battle-record-validation.ts / checkHistoryCarry` | 既有战斗档案的强化历史/命令前缀认证 |
+| `shared-pool.ts / restoreSharedOrbSnapshot` | 独立服务器 authority 参数与校验 |
+| `carousel.ts / planGrantCarouselPick, grantCarouselPick, pickCarouselForSeat, autoPickCarouselForSeat` | 正常/自动领取来源与落位证据；内部可指定具体附加收据 |
+| `carousel.ts / grantAdditionalCarouselPick, restoreCarouselSeat` | 多收据事务及权威恢复 |
+| `carousel-units.ts / validateCarouselMetadata` | 附加收据必须有同节来源证据 |
+| `shared-pool-ledger.ts / assertSharedPoolConservation` | 认可有界附加收据 ID，既有单份库存守恒不变 |
+| `src/server/room/room.ts / apply, freezeAndResolve, replace, dispose` | 准备期逻辑时间；完整全桌冻结；发布时入轮表；条件计时器释放 |
+| `room.ts / planSteps, commitSettlement` | 先取得双方实际结算，再写死亡/实际扣血；整轮排名确定后写表 |
+| `room.ts / commitSeat, augmentHistoryAuthority` | 历史附加后的原子提交识别及独立恢复句柄 |
+| `room.ts / prepareAugmentAcquisition, applyTimeouts, onChoiceDeadline` | 取得事务开始前提供私有上一战、逻辑时间和全桌事实，覆盖手选、机器人和超时 |
+| `src/server/room/augment-history.ts`（新增） | 全桌采样、冻结名单、真实死亡映射、扣血记录及发布适配；不计算奖励 |
+| `src/server-entry/index.ts` | 导出内部历史接口、类型、选秀额外授予入口 |
+| `src/simulation/augment-history*.ts, augment-death-samples.ts`（新增） | 类型、归属登记、记录/读取、只读认证与旁路采样 |
+| `tests/augment-history.test.ts`（新增） | 基线字节、单人三入口、篡改矩阵、通用成长、真实房间、多选秀收据 |
+
+无 `src/rendering/`、`src/presentation/`、素材或客户端协议修改；没有把规则搬进房间。具体执行结果及剩余限制见根目录 `-o`。
+
+## 验证记录
+
+- 相关回归批次：13 文件、252 项通过，覆盖商店历史、Match 保存、双边战斗、结算、选秀、房间流式战斗、Mel 保命和实时金币。最后补充与接线修正后，4 文件、98 项通过（其中新增历史测试69项，生产身份/体积6项，准备期与选秀房间23项；批次有重叠，不累加）。Vitest 全部 `--maxWorkers=4`，只因共享 node_modules 的只读缓存使用 `--configLoader runner`；未删断言、未提高超时。
+- `npm run build -- --configLoader runner` 通过，包含 `tsc --noEmit`；双摘要 `--check` 与 `git diff --check` 通过。content=`fnv1a32-utf16:db662e0b`，loot=`fnv1a32-utf16:18c876b2` 未变。
+- `tests/server/lifecycle.test.ts` 的监听端口用例被沙盒 `listen EPERM 127.0.0.1` 阻断；该文件其余5项已通过。未声称真实网络端到端通过。
+- `npm run build:server` 的打包完成，但既有目录边界检查失败：`combat-replay-view.ts` 导入 `src/presentation/combat-status.ts`。对 HEAD `ee2b019c` 独立解包并构建也命中同一依赖；本任务未修改该依赖或放宽断言，不将其记为新增历史回归。
+
+## Review Y 修复调用点（2026-10-27）
+
+本次基线 `4fbb08f345c01e6301c24daa45467bea6c4765b3`，只修复历史归属、取得时序和验证，不开放 Survivor 等预留强化，不改奖励数值、保存版本或内容摘要。
+
+| 本次实际修改的文件／函数 | 接线变化 |
+| --- | --- |
+| `src/simulation/augment-history.ts / prepareAugmentAcquisition` | 新增必填全桌参数；独立复制、验证席位集合后保存在事务上下文 |
+| `src/simulation/augment-history.ts / recordAugmentAcquisition` | 取得事实后立即追加选择前全桌事实，供 `match.ts / selectChoice → grantAugmentAcquisition` 同事务读取；外层重复记录不会追加第二份 |
+| `src/simulation/augment-history.ts / recordAugmentTransition` | 合并实时／终战旁路死亡样本后绑定真实玩家席位，野怪保持 null |
+| `src/simulation/augment-history-restore.ts / preflightAugmentHistory` | 单人／PvE death owner 的独立语义检查；离线及两个联机恢复入口沿用此预检 |
+| `src/server/room/room.ts / Room.prepareAugmentAcquisition` | 调用 `tableFacts(this.current.seats)`，随上一战和时钟一起传给规则；原 `apply`（手选／handleBot）、`applyTimeouts`、`onChoiceDeadline` 三个入口复用此方法 |
+| `src/server/room/room.ts / Room.replace` | `recordRoomPublication` 调用移除上一战和时间参数，获取事实不再延迟到发布 |
+| `src/server/room/augment-history.ts / recordRoomPublication` | 移除获取时的补写 table／previousBattle；保留成功转换及入轮事实 |
+| `tests/augment-history.test.ts`、`tests/augment-stage-bans-audit.test.ts` | 获取效果内部读取三席已淘汰事实并记录结果（手选／机器人／超时）；普通／流式真实联机 PvE、恢复继续、复活再死与终战旁路；持有者投影隔离；两联机恢复入口对象／JSON 篡改矩阵 |
+
+`src/simulation/match.ts`、`augment-death-samples.ts` 和 server-entry 的原导出本次无需修改：前者已在专属效果前调用 `recordAugmentAcquisition`，采样器仍只观察战斗现场，server-entry 自动导出更新后的函数签名。未修改界面、素材、现有断言或超时限制。最终验证结果见根目录 `-o`。
+
+验证：`npm test -- --configLoader runner --maxWorkers=4` 指定 augment-history、server/projection、server/combat-stream、server/augment-preparation-room、server/anvil-choice-deadline、server/bot-driver、server/round-commit、tp-shared-pool、p7-carousel，共 9 文件 155 项通过、1 项受限（anvil-choice-deadline 的 WebSocket 重连用例：沙盒 `listen EPERM 127.0.0.1`）。其中 augment-history 的 77 项全部通过；末次补充 death owner／authority 联合篡改后，普通和流式两个定向用例再次通过。`npm run typecheck`、`npm run build -- --configLoader runner`、`git diff --check` 通过。
+
+反证：在 `/tmp` 独立解包只读 HEAD `4fbb08f3`，仅复制新增测试，以相同 Vitest 参数筛选获取时序和 PvE 归属；5 个用例全部复现失败（手选／机器人／超时三项无法完成选择，普通／流式两项死亡 owner 不等于 s0）。工作区修复未回滚、Git 未写入。
+
+## Batch 5 H3 接入（2026-10-27）
+
+新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。
+
+## B5-45／46／47 调用约定（2026-10-27）
+
+本批规则与内容标识为 `augment-pool-batch5-h8-v25`，本分支原规则／内容身份为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`；外层 schema/save/replay/command 仍为 12/8/8/7，旧内容摘要不迁移或重录 epoch。
+
+- `forward-thinking` 在取得事务读取 `acquire.goldBefore` 后仅把当前金币移出；第六个已结算 PvP 的冻结 `pvp-roster` 证据到位时，以 choiceId 唯一收据返还本金加70。随后收入和利息正常，重复提交不返两次。
+- `mirrored-monetization` 取得时2金币；从取得轮起三个自然轮，结算时按同轮 `deaths` 的正式敌方英雄死亡次数每次支付2。每个 eventSeq 视为一次死亡，召唤物不计，复活再死计两次；联机 PvP 使用 ownerSeatId，PvE／单人使用敌方 team。战后同轮唯一收据支付；房间在双边事实齐备后调用规则的 `drainBatch5H8Deaths`，将新增收据事件并入同轮账本。
+- `applyDhampyrSettlement(state: MatchState): MatchState` 为服务端内部规则入口：须先完成双方真实伤害结算并通过 `appendAugmentFact` 写入本席 `player-damage`，再调用并在排名前把返回的 Match HP 同步到房间席位；镜像、未知对手 HP、零治疗或已淘汰席返回原状态。存活席以实际扣血20%向下取整，封顶当前最大HP（默认100，已有健康事实时读最新 maxHpAfter）；有效治疗调用 `recordAugmentPlayerHealth`，以 choiceId 与 battleId 的唯一收据防重。`batch2HpAfterSettlement → applyRecordedDhampyrHealing` 依已认证事实重建历史治疗链并保留封顶。12%全能吸血通过既有战斗机制编译。
+
+`src/server/room/augment-history.ts` 只在取得双方的结算事实后调用规则入口并同步席位 HP；不计算治疗或改写伤害。没有新增客户端命令或 wire reason。对象、JSON 和序列化恢复继续由 solo 重演或独立 server authority 验证，候选事实不能自证。
+
+新增只读 API：`readAugmentPlayerHealth(state: MatchState): readonly Extract<AugmentHistoryFact, {kind:'player-health'}>[]`，返回脱离对象的健康收据；没有健康变更时返回空数组，缺历史节则抛 `Invalid augment history: missing player health history`。这是已有 v1 字段的读取器，不增加持久字段或放宽认证，不能代替 `requireAugmentFacts` 对完整死亡／伤害边界的要求。
+
+| 本批实际接线 | 职责／输入输出与失败 |
+| --- | --- |
+| `match.ts / execute_selectChoice → applyBatch5H8Acquisition(state, definitionId): MatchState` | 先冻结 acquire，再仅对前瞻思维清空当前金币；沿原 choose/reroll 的失败 reason，无新增客户端参数 |
+| `round-settlement.ts / applyRoundSettlement → drainBatch5H8Gold(state): MatchState` | 联机第六战产生一次本金+70的 mechanic gold 收据，沿原完整事件发布；领域异常映射既有 invalid-receipt |
+| `augment-history.ts / traceHistoryCommand` | 单人及联机 PvE 的死亡采样完成后发放所需金币并追加有序事件；单人只保持最简单行为，不虚构对手HP |
+| `server-entry/index.ts` | 导出 drainBatch5H8Deaths、applyDhampyrSettlement、readAugmentPlayerHealth 内部接口；没有网络命令 |
+| `src/server/room/augment-history.ts / recordRoomBattleFacts` | 双方实际结果到位后记录死亡／扣血，调用 drainBatch5H8Deaths 和 applyDhampyrSettlement，同步 hpAfter 与新增金币事件；Room.planSteps 的现有调用在排名前完成此事务 |
+| `augment-pool-grants.ts / validateBatch1Gifts` | 调用 validateBatch5H8Gold/Deaths；应发集合与实际收据逐项匹配，错误为 Invalid forward thinking gold / Invalid monetization gold，缺历史沿通用 API 错误 |
+| `shared-pool.ts / restoreSharedOrbSnapshot` | 三项持有者均进入奖励校验；独立服务器 authority 精确比较仍先于规则收据检查 |
+| `augment-pool-batch2-health.ts / batch2HpAfterSettlement` | 使用 applyRecordedDhampyrHealing(state, round, hp): number，供既有恢复与房间 HP 账本复算 |
+
+三项均已加入 definitions、tiers、API 名称、rules manifest、validate-content、stage bans 和独立 m5 oracle；黄金档，提供节点分别为3-2、4-2、3-2。研究原始值测试按本机档案是否存在决定是否运行；候选池／真实命令／房间／认证测试始终运行。旧 epoch 未重录，历史无持有者字节测试仅归一化版本名与 content/loot 身份，其原始 SHA-256 和战斗账本断言保持不变。
+## H12 历史消费者与报价证据扩展（2026-10-27）
+
+B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵容、取得自然轮与 choiceId，批量出售和三轮禁用均不从当前阵容倒推。B5-84 `max-cap` 登记 acquire；双重目的的有序购买认证以该 acquire.resourcePrefix 区分同一准备期取得上限之前、之后的购买，取得前合法七级经验不会倒算成违规。B5-86 `subscription-service` 登记 acquire/round-entry；取得与后续阶段首轮的资格直接查询这些事实，保留独立 shop-history-v1 的商店库存、购买、刷新重演，未再复制一套历史状态。
+
+新增事实 `{kind:'offer-level',choiceId,generation,level,xp}`，仍在 `augment-history-v1` 内，继承统一 sequence/seatId/round/roundId/resourcePrefix。`recordAugmentOfferLevel(before:MatchState,after:MatchState):MatchState` 仅由 4-2 棱彩报价及成功重抽调用：初次 generation=0、后续1～3，读取当次真实等级/经验；其它节点原样返回。报价就需要条件证据，故这个节点即使最大规模被过滤或未选中，也激活同一版本节。`needsAugmentHistory` 同时识别该报价记录；无相关持有者且没到该报价的存档不加字段。并未把候选的可篡改等级字段当作证明。
+
+`recordedOfferFilter(record,drawIndex,state?)` 的恢复调用通过 requireAugmentFacts 读取恰好一个同 generation 的报价等级，重建当时的候选池；现场重抽使用当前等级，选取事务再次拒绝已升至八级的旧报价（invalid-choice），超时选择跳过失效项。单人继续从合法起点重演全部公共命令，联机继续逐字段比较独立服务器 authority；缺节、删改报价事实或缺 generation 均拒绝。原有外层 schema/save/replay/command 和网络封套不变，不迁移缺证旧档、不重录 epoch。
+
+调用点：`match.ts / enterScheduledEvents, execute_rerollAugment` 记录报价等级；`augment-offers.ts / augmentOfferAllowed, augmentOptionViews, validateAugmentOfferHistory` 过滤、投影与验证；`augment-history.ts / needsAugmentHistory, recordAugmentOfferLevel`、types/owners/restore 扩展事实及预检。房间沿现有 `Room.handle/apply/applyTimeouts/onChoiceDeadline → runSharedMatchCommand` 和 `nextSharedRound` 调用，不新增服务器状态或网络命令。对象、JSON、序列化离线恢复，以及对象/JSON/canonicalContent 联机恢复均有篡改测试；联机恢复始终要求权威句柄，`serializeMatch` 本来只支持离线存档。
+
+## B5-H13 装备强化扩展（2026-10-27）
+
+实际开放 B5-20/22/23 后，三者加入持有者表；外层仍为 schema/save/replay/command=12/8/8/7，节内仍为 `augment-history-v1`。规则和内容身份升到 v25 并重算摘要；不重录 epoch。无持有者仍不写本节。
+
+- `settled-combat {settlementId,roundKind}`：B5-20 取得轮起，在真实结算奖励 drain 中记录一次，与 `roundResults` 的同轮结算 ID 和 PvP/PvE 类型严格对应；供给轮不写。奖励通过 `requireAugmentFacts` 读取并核对完整结算行，第四场 PvP 只发一次组件，不另存计数器。
+- `augment-item-transform {choiceId,receiptId,input,outputs}`：出售归还后的库存成装拆解、入轮神器转换或分类重掷，在同一规则事务中用 `appendAugmentFact` 写入。输入是带位置的永久实例，输出为递增新实例；唯一 ID 为 `['batch5-h13',choiceId,round,input.id]`。同收据同输入/输出幂等，冲突拒绝。
+- `inventory-transform-entry {choiceId,itemIds}`：B5-22/23 从既有 `round-entry.roster` 冻结本轮符合资格的库存物品，按实例 ID 排序，转换后写完成标记。零符合项也写标记；取得当轮不重掷，后续普通、选秀、PvE 和加时自然轮同口径。装备在英雄上（包括备战席英雄）不等于库存。
+
+转换在资源来源账本中保留同名有序行，必须与本节事实的 `resourcePrefix`、回合、收据、输入输出完全一致；它只用于装备来源与顺序重建，不是另一份可自签的奖励证明。`preflightH13Fact` 限制持有者、轮次、1/2件输出、最多1024个唯一入轮物品 ID，并绑定真实结算。最终认证仍由原有单人命令重演或独立房间 authority 完成；修改两份账本和最终物品也不能绕过。
+
+本批新增调用点：`match.sellUnit`；`match.nextRound/advanceMultiplayerRound`；`augment-pool-grants.batch1GiftPlan/drainBatch1Gifts`；`resource-provenance.foldResourceProvenance`；`b8-restore.validateHistoricalEquipment/validateB8Resources/replayCurrentSuffix`；`temporary-equipment.validateMatchEquipment`（已拆掉/转换的窃贼手套仍保留历史父物品）；`shop-history.anomalyRecovery`（转交同节证据）；`augment-history-restore.preflightAugmentHistory`。`src/server`、`src/server-entry` 无修改，房间现有 choose/sell/combine/equip/openAnvil/useConsumable、settlement 和 advance 流程即为生产调用路径；服务器不计算新规则。
+
+## B5-56／B5-58 已开放（2026-10-27）
+
+采用用户授权 P-B5-56／P-B5-58。运行规则／内容身份升为 v25；外层 schema/save/replay/command 仍为 12/8/8/7，历史节仍为 augment-history-v1，不重录旧 epoch。新增字段均按持有者写入；不改变没有这两项强化的公开战斗事件形状。
+
+- 金色收获：仅 4-2 提供；选择即有 10 次免费商店刷新。`combat-binding` 冻结每场开战时原始异常绑定；`deaths.killer` 保存真实致死来源。正式绑定英雄本人每累计 3 次敌方击杀给 2 金，余数跨 PvP／PvE，战后 `augment-b5-golden-find` 唯一机制收据发放。代理、异常复制体和助攻不计入。
+- 禁忌魔法：仅 3-2 且正式棋盘有黑色玫瑰成员时提供。完整英雄目录为 Cassiopeia、Elise、LeBlanc、Morgana、Vladimir；沿既有 choice／seat／spec 绑定的礼物 RNG 等权有放回抽三次，联机发三份奖励球，领取沿有限共享卡池账本。旧 batch2 行保留为资料索引，移出 blocked 表，实际定义和规则在 batch5-h9。
+- `deaths.takedowns` 是现场观测的参与者数组 `{unitId,definitionId,team,eligible}`，只对禁忌魔法持有者存储。沿战斗现有正伤害／护盾吸收贡献和致死来源，正式英雄与赛恩按冻结的有效羁绊身份判资格；转职和未达到激活门槛的黑玫成员也计入。代理自身不计；现有攻击代理为主人记录的助攻沿用。每名参与者对每个敌方实例每场最多一次，复活再死不重复；同一敌人的不同参与者分别计数。不是按命中次数或整队击杀次数推断。
+- `summon-growth` 是同一 v1 节中的玩家级永久成长事实 `{choiceId,receiptId,definitionId:'g23-sion',stacks,healthFlat,attackDamageBps}`。每满 3 次参与击杀写一次唯一来源／回合收据，每层 +10 平面生命、+150 AD 基点；余数跨战。无需将战斗召唤体伪造成永久正式英雄，也不依赖赛恩每战变化的实例 ID。
+- `cabalGrowthPlan(state: MatchState)` 根据 `requireAugmentFacts` 导出逐轮增量；`settleCabalGrowth(state)` 幂等写入同节；`readCabalGrowth(state)` 仅汇总严格早于当前轮的成长，返回 `CabalGrowth | undefined`。只有这项强化的战斗输入／双方私有快照附带 `cabalGrowth:{healthFlat,attackDamageBps}`，由规则层从历史导出，进入唯一属性编译器。恢复 Match 时重新核对输入与历史，再执行命令重演／独立服务器 authority 验证；快照结构校验本身不是客户端授权。
+- `goldenFindGoldPlan(state)` 导出金币收据计划；`settleBatch5H9History(state: MatchState): MatchStep` 统一执行战后金币和成长，返回 state/events。没有新增公共玩家命令或 wire reason。内部缺事实／冲突错误仍以 `Invalid augment history:` 开头；失败不补零、不修复坏档。恢复预检检查参与者、成长与绑定结构；对象、JSON、规范序列化输入均需原来的独立服务器权威句柄，不能自行签名。
+
+| 本单修改的实际接线点 | 职责 |
+| --- | --- |
+| `content/augment-pool-batch5-h9.ts`；`augment-pool-batch5-h9.ts`；`augment-pool-batch5-h9-cabal.ts` | 两项独立内容、免费次数、金币计划、三英雄计划、参与者采样、成长及编译效果 |
+| `content/augments.ts`、`augment-policy.ts`、`augment-offer-rules.ts`、`augment-stage-bans.ts`、`rules-manifest.ts`、`augment-pool-batch2.ts`；`validate-content.ts` | 定义／等级／API／节点与 trait 过滤、约定身份、移除旧 blocked 原因、计数 |
+| `free-rerolls.ts / freeRerollCredits`；`augment-pool-grants.ts / batch1GiftPlan` | 真实 rerollShop／rerollSharedShop 消费额度；selectChoice／runSharedMatchCommand 领取既有奖励球 |
+| `augment-history-owners.ts`、`augment-history-types.ts`、`augment-history-restore.ts / preflightAugmentHistory` | 持有者声明、v1 条件事实、结构上限与三入口前置拒绝 |
+| `augment-history.ts / recordAugmentPvpRoster, recordAugmentTransition, traceHistoryCommand` | 开战绑定；普通／流式 PvE 的死亡终战采样、战后事务与可重演命令链 |
+| `augment-death-samples.ts / sampleAugmentDeath, carryAugmentDeathSample, augmentDeathsFromEvents, carryAugmentCombatDeaths, readAugmentCombatDeaths`；`combat-s13.ts / advanceS13Tick` | 完整致死来源／参与者旁路，保持 stamped event／终战交接，不截断死亡事件 |
+| `combat-input.ts / readCombatStrategyInputs, restoreCombatInput`；`b8-restore.ts / validateB8Resources` | 从历史冻结下战成长，保存恢复时核对输入 |
+| `two-sided-types.ts`；`two-sided-snapshot.ts / snapshotForBattleSteps, restorePlayerBattleSnapshotSteps`；`two-sided-battle.ts / compileSideSteps`；`strategy-snapshot.ts / buildStrategySnapshotSteps` | 双边私有快照携带成长；唯一规则编译器给实际赛恩加属性 |
+| `src/server-entry/index.ts`；`src/server/room/augment-history.ts / recordRoomBattleFacts` | 服务器只按公共导出请求带归属的死亡事实，再调用统一规则结算并发布事件；没有服务器奖励公式或新命令 |
+| `m8/version.ts`、`m8/contracts.ts`、`content/identity-constants.ts`；`scripts/tests/production-size.test.ts` | v25 规则／内容身份及自然重算摘要；未重录 epoch |
+| `tests/fixtures/m5/oracle.g2.cjs`、`tests/augment-stage-helpers.ts`、`tests/augment-pool-batch2.test.ts`、`tests/augment-pool-source.test.ts`、`tests/augment-history.test.ts`、`tests/augment-stage-bans-audit.test.ts` | 独立节点／次数／候选表、固定房间路线、旧资料索引的实现迁移断言；原四份无持有者 SHA-256 只规范化显式升级的身份后比较，保留原断言／原散列；阶段审计确认 Cabal 旧缺口已消除 |
+| `tests/augment-pool-batch5-h9-{attribution,golden,cabal}.test.ts`；`tests/server/batch5-h9-{golden,cabal}-room.test.ts` | 真命令、共享池、真实 PvP／PvE、普通及流式路径、下战属性、恢复继续和篡改矩阵 |
+
+本单没有修改 `src/server/room/room.ts` 或协议命令分派：已有冻结、结算和 `applySeatCommand` 的 choose/reroll/claimOrb/buy/deploy/anomalyTarget 路由直接复用。服务器变更文件没有新增计时器或浏览器全局；仓库原有 `real-clock.ts`、`net/test-client.ts` 的系统计时适配不在本单强化接线范围。最终验证计数及摘要见根目录 `-o`。
+
+本单最终验证：所有 Vitest 调用均为指定文件／用例、`--maxWorkers=3`，累计去重 369 项通过（其中金色收获 63 项、禁忌魔法 93 项，覆盖普通及流式真实 Room、对象／JSON／规范序列化恢复和篡改拒绝）。其余通过项为历史 77 项、源资料及双边快照 123 项、内容身份／生产大小 12 项、batch2 分类迁移 1 项；没有跑完整套件或超过 0..100 的种子扫描。`npm run typecheck`、`npm run build -- --configLoader runner`、身份重算 `--write`／校验 `--check` 和 `git diff --check` 通过。最终摘要为 CONTENT `fnv1a32-utf16:5dd52c60`、LOOT `fnv1a32-utf16:85985e18`，生产大小断言已同步。
+
+额外阶段审计的 10 个自动用例受沙盒 `spawnSync node EPERM` 阻断；直接运行同一审计 CLI 后确认本单两个节点无差异，仍报告 Academy、Experiment、Formswapper、BloodBrothers 四项范围外既有差异。没有删除断言、增加超时、修改 epoch 或写入 Git。严格全目录禁词检查仍会命中未修改的 `src/server/room/real-clock.ts:4` 和 `src/server/net/test-client.ts:13` 等既有计时适配；本单服务器新增行不含 `setTimeout`、`Date.now`、`performance.now` 或 `window`。
+## Batch5 R2 扩展（2026-10-27，沿用 augment-history-v1）
+
+`anger-issues` 与 `another-anomaly` 登记为历史持有者；不为未持有者写空节。B5-81 增加 `anomaly-copy-kills`：`{battleId,itemId,unitId,kills:[{eventSeq,victimId}]}`，另带通用 sequence/seat/round/resourcePrefix。使用 `recordAugmentCopyKills(state,fact)` 和 `readAugmentCopyKills(state,itemId,beforeRound?)`；同一战斗/物品同内容幂等、冲突拒绝，复活后再次死亡不按 victimId 去重。采样只读取已认证终战，原异常持有者与召唤物/装备克隆不进入复制品账本。
+
+战斗输入的可选 `augmentCopyKills` 由上述 API 读取此前回合的自身记录，绝不复制原英雄累计值；恢复用已认证资源前缀选择开战物品，运行中读取开战历史，避免后续卸下、重铸抹去冻结输入。PvP 装备 ID 沿既有命名空间映射。全部事实仍走同一界限检查、单人公共命令重演及联机独立 authority，不创建第二个保存节、不重录 epoch。规则、接口与接线点见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。
+
+## B5-67 在线恢复接入（2026-10-27）
+
+炼金术士不读取跨回合事实，不登记为 history owner，不生成空历史节。其单席在线保存仍不能独立证明敌方阵容与毒伤轨迹，故规则内部 `augment-pool-batch5-r4-restore.ts / validateMadChemistOnlineSave(pool,state,authority?)` 从独立服务器 `pool.pending/rewards` 核对本席固定 2-1 奖励身份；即使候选组合删除强化、选择记录、奖励收据和法球，仍复用 `validateAugmentAuthority(state,authority,true)` 强制独立服务器完整检查点，并校验既有奖励计划。候选残留的本卡标记也要求认证；所有已提供句柄一律认证完整状态，不能因本卡或历史节缺失而跳过。选秀入口传入 `carousel.pool`，两个公开恢复入口签名不变。调用者继续使用 `Room.augmentHistoryAuthority(seatId)`；无 `src/server` 改动、无候选自签、无新持久格式。离线战斗的可选 `CombatUnit.madChemist` 则使用现有可信输入全量重演。新增测试覆盖真实八席选取/领取/部署/PvP、真实选秀恢复、对象和JSON往返、恢复后命令一致，以及句柄、组合删除、奖励、阵容、毒伤与回蓝篡改拒绝。
+## Batch 5 R6 接入（2026-10-27）
+
+`pandoras-bench` 登记 round-entry/positions，`recombobulator` 登记 acquire/positions。规则只经 `requireAugmentFacts` / `readAugmentFacts` 读取取得前阵容和自然轮入口，不复制另一份历史节；保持实例ID，已有成长API与资源合星血缘继续工作。`preflightAugmentHistory` 增加两卡变形来源及完整批次检查，涵盖共享法球、选秀和离线三个恢复入口；联机最终状态仍须匹配独立服务器authority。资源有序账本新增 unit-transformed 与 augment-transform-completed，后者覆盖空批次，不新增网络命令或封套版本。
+
+R6 验证：两卡22项专项测试及相关卡池、双边战斗、消耗品、强化历史／报价、身份／体积回归，共12文件182项通过；全部 `--maxWorkers=3`，未跑全套、未放宽断言或超时。类型检查及生产构建通过。content=`fnv1a32-utf16:d473c202`，loot=`fnv1a32-utf16:c50b81d2`；旧epoch未重录。具体调用签名与失败边界见 `MATCH_CONTRACT.md` 的 Batch 5 R6 节，逐卡结果见根目录 `-o`。
+## B5-G2 死亡事实扩展（2026-10-27）
+
+B5-63／B5-70 均登记为 `deaths` 历史持有者，联机恢复要求房间独立 authority；B5-63 使用现有 `deaths` API 推导永久值；`AugmentDeath.form?` 保存真实死亡时已经冻结的双形态，`championCopy?:true` 区分英雄复制体与非英雄召唤物。原 `ordinaryHero` 的过滤语义保持不变，现有消费者不被扩大；英雄复制体可由新消费者显式纳入。“最后机会”这类先复活后清理的流程，在G2持有者场次会补齐复活前首次死亡采样；原有复活事件保留，复活后再次死亡仍按新eventSeq记录。两字段只在适用的真实样本中出现，由原本的单人命令重演或独立服务器 authority 认证，不接受客户端自报死亡。协议与历史节版本仍沿用现有版本；内容变化通过 rules manifest 和内容身份区分，不重录旧 epoch。
+## 2026-10-27 B5-82／B5-85 集成（G5）
+
+`expected-unexpectedness` 使用现有 `acquire` 持有者登记，确保联机存档整体金币与奖励状态也必须匹配独立服务器 authority；骰子结果仍独立重算，不从历史收据读金额。`prismatic-pipeline` 登记为 `orb-opened` 历史持有者。沿用 `augment-history-v1`，增加事实 `{kind:'orb-opened',choiceId,orbId,tier:'prismatic'}`，其连续 sequence、席位、自然轮、roundId、resourcePrefix 由现有 `appendAugmentFact` 填写。仅在通用开球命令把最后一项实际授予后写入，领取前已持有来源才有效；排队、部分领取、弃置、失败和重复均不写。规则通过 `readAugmentFacts(state,'orb-opened')` 读取，不能从当前金币或 receipt.claimedRoundId 推测同轮取得前后顺序。
+
+金币及礼物均由事实中的 orbId、来源 choiceId、取得节点、席位和种子重算；事实不携带奖励金额或抽样结果。在线仍由 `Room.augmentHistoryAuthority` 的独立品牌句柄认证完整候选状态；缺历史／缺 authority／改事实拒绝，不自签名、不迁移补零。无需新增客户端命令、协议或 epoch 录制。

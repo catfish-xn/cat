@@ -1,5 +1,42 @@
+import { PORTABLE_ANOMALY_ITEMS } from './augment-pool-batch5-r2-items';
+import { AUGMENT_BATCH5_R2, ANGER_RAGEBLADE, PORTABLE_ANOMALY_EXCLUDED } from './augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3 } from './augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4 } from './augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R5, BATCH5_R5_STARRY_POLICY } from './augment-pool-batch5-r5';
+import { AUGMENT_BATCH5_R6 } from './augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1, LUCKY_GLOVES_POLICY, LUCKY_GLOVES_CHAMPION_ROLES, LUCKY_GLOVES_RANGED_ROLES, LUCKY_GLOVES_ROLE_ITEMS } from './augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2, GHOST_FRIENDS_ROLES, REBEL_COPY_RULES } from './augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3 } from './augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G4, B5_G4_VOID_POLICY, B5_G4_SUMMON_UNITS } from './augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5, EXPECTED_UNEXPECTEDNESS_REWARDS, PRISMATIC_PIPELINE_REWARDS } from './augment-pool-batch5-g5';
+import { AUGMENT_BATCH5_G6, CARRY_GOLEM, CARRY_GOLEM_UNIT } from './augment-pool-batch5-g6';
+import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
+import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
+import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_R1 } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_H6 } from './augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_B5A } from './augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1B } from './augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A, BATCH5_S3A_POLICY } from './augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3D } from './augment-pool-batch5-s3d';
+import { AUGMENT_BATCH5_H7 } from './augment-pool-batch5-h7';
+import { AUGMENT_BATCH5_H8, DHAMPYR_RULES } from './augment-pool-batch5-h8';
+import { AUGMENT_BATCH5_H10 } from './augment-pool-batch5-h10';
+import { AUGMENT_BATCH5_H11 } from './augment-pool-batch5-h11';
+import { AUGMENT_BATCH5_H12 } from './augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_H9 } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7, LOOT_EXPLOSION_RULES } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP } from './augment-pool-shop';
+import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S6C } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B } from './augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C } from './augment-pool-batch5-s8c';
+import { AUGMENT_BATCH5_S11A } from './augment-pool-batch5-s11a';
+import { AUGMENT_BATCH5_S8A } from './augment-pool-batch5-s8a';
+import { AUGMENT_BATCH5_H13 } from './augment-pool-batch5-h13';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
+import { AUGMENT_BATCH5_H5 } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP } from './augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4REROLL } from './augment-pool-batch4-b4reroll';
@@ -39,14 +76,57 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
-  augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentStageBans:{version:'augment-stage-bans-14.24-tags-user-override-v3',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27;P-LOOT-EXPLOSION-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2;ambusher-user-override-2026-10-27'},
+  augmentPoolBatch5B5a:{version:'augment-pool-batch5-b5a-v1',content:AUGMENT_BATCH5_B5A,convention:'P-B5-50-51-55-2026-10-27'},
+  augmentPoolBatch5S1a:{version:'augment-pool-batch5-s1a-v1',content:AUGMENT_BATCH5_S1A,convention:'P-B5-S1A-2026-10-27'},
+  augmentPoolBatch5S1b:{version:'augment-pool-batch5-s1b-v1',content:AUGMENT_BATCH5_S1B,convention:'P-B5-03-04-2026-10-27'},
+  augmentPoolBatch5S3a:{version:'augment-pool-batch5-s3a-v1',content:AUGMENT_BATCH5_S3A,policy:BATCH5_S3A_POLICY,convention:'P-B5-S3A-2026-10-27'},
+  augmentPoolBatch5S3b:{version:'augment-pool-batch5-s3b-v1',content:AUGMENT_BATCH5_S3B,convention:'P-B5-S3B-2026-10-27'},
+  augmentPoolBatch5S3d:{version:'augment-pool-batch5-s3d-v1',content:AUGMENT_BATCH5_S3D,convention:'P-B5-24-52-2026-10-27'},
+  augmentPoolBatch5R2:{version:'augment-pool-batch5-r2-v25',content:AUGMENT_BATCH5_R2,rageblade:ANGER_RAGEBLADE,portableItems:PORTABLE_ANOMALY_ITEMS,excludedAnomalies:PORTABLE_ANOMALY_EXCLUDED,convention:'P-B5-21-and-81-2026-10-27'},
+  augmentPoolBatch5R3:{version:'augment-pool-batch5-r3-v2',content:AUGMENT_BATCH5_R3,convention:'P-B5-74-78-2026-10-27',availability:'hall-of-mirrors-14.24-stage-bans',
+    copies:'combat-only-counted-members-nearest-empty-row-col-ties',cloning:'second-row-from-back-fourth-column-opening-hp-7000bps-mana-ceil-12000bps',
+    mirrors:'front-row-fourth-column-nearest-left-tie-simultaneous-including-center-original-opening-hp-no-items-anomaly-growth-all-outgoing-damage-times-6000bps-once'},
+  augmentPoolBatch5R4:{version:'augment-pool-batch5-r4-v25-r1',content:AUGMENT_BATCH5_R4,convention:'P-B5-67-2026-10-27',trail:'one-traversed-cell-present-enemies-contact-refresh-single-cleansable-dot-first-pulse-after-10-ticks-total-split-with-remainder',movement:'nearest-id-ties-pass-through-contact-free-landing-base-550-grid-5-ticks',mana:'per-tick-fixed-point-current-AS-cast-lock-no-catchup'},
+  augmentPoolBatch5R6:{version:'augment-pool-batch5-r6-v1',content:AUGMENT_BATCH5_R6,convention:'P-B5-27-28-R6-2026-10-27',selection:'sorted-eligible-definitions-uniform-before-return',copies:[1,3,9],merge:'after-batch'},
+  augmentPoolBatch5G1:{content:AUGMENT_BATCH5_G1,policy:LUCKY_GLOVES_POLICY,roles:LUCKY_GLOVES_CHAMPION_ROLES,rangedRoles:LUCKY_GLOVES_RANGED_ROLES,roleItems:LUCKY_GLOVES_ROLE_ITEMS},
+  augmentPoolBatch5G4:{version:'augment-pool-batch5-g4-v25-spawn-1',content:AUGMENT_BATCH5_G4,policy:B5_G4_VOID_POLICY,summons:B5_G4_SUMMON_UNITS,convention:'P-B5-72-73-2026-10-27'},
+  augmentPoolBatch5G6:{version:'augment-pool-batch5-g6-v25-review-2',content:AUGMENT_BATCH5_G6,golem:CARRY_GOLEM_UNIT,growth:CARRY_GOLEM,convention:'P-B5-83-2026-10-27',angerIssuesConvention:'P-B5-21/B5-83-2026-10-28'},
+  augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
+  augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
+  augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},
+  augmentPoolBatch5R1:{version:'augment-pool-batch5-r1-v25',content:AUGMENT_BATCH5_R1,convention:'P-B5-39-40-2026-10-27'},
+  augmentPoolBatch5G2:{version:'augment-pool-batch5-g2-v1',content:AUGMENT_BATCH5_G2,roles:GHOST_FRIENDS_ROLES,rebelCopies:REBEL_COPY_RULES,convention:'P-B5-63-70-G2-2026-10-27'},
+  augmentPoolBatch5G3:{version:'augment-pool-batch5-g3-v1',content:AUGMENT_BATCH5_G3,convention:'P-B5-68-71-G3-2026-10-27',mutation:'own-back-row-2-column-4-combat-exclusion-no-death-equipment-retained-extra-donation-tier7-doubled',movement:'all-movement-events-hex-distance-additive-99-hexes-per-combat-dashes-uncapped'},
+  augmentPoolBatch5G5:{version:'augment-pool-batch5-g5-v1',content:AUGMENT_BATCH5_G5,dice:EXPECTED_UNEXPECTEDNESS_REWARDS,pipeline:PRISMATIC_PIPELINE_REWARDS,history:'augment-history-v1/acquire+orb-opened/independent-server-authority',convention:'P-B5-82-85-2026-10-27',random:'fnv1a32-source-seat-choice-stage/lcg32-rejection-high-buckets'},
+  augmentPoolBatch5H6:{version:'augment-pool-batch5-h6-v1',content:AUGMENT_BATCH5_H6,convention:'P-B5-37-38-2026-10-27'},
+  augmentPoolBatch5S6c:{version:'augment-pool-batch5-s6c-v25',content:AUGMENT_BATCH5_S6C,convention:'P-B5-48-49-2026-10-27'},
+  augmentPoolBatch5S8a:{version:'augment-pool-batch5-s8a-v1',content:AUGMENT_BATCH5_S8A,convention:'P-B5-59-2026-10-27',victim:'first-formal-shop-hero-death',grant:'next-natural-round'},
+  augmentPoolBatch5S8b:{version:'augment-pool-batch5-s8b-v25',content:AUGMENT_BATCH5_S8B,convention:'P-B5-64-2026-10-27'},
+  augmentPoolBatch5S8c:{version:'augment-pool-batch5-s8c-v1',content:AUGMENT_BATCH5_S8C,convention:'P-B5-65-2026-10-27'},
+  augmentPoolBatch5S11a:{version:'augment-pool-batch5-s11a-v1',content:AUGMENT_BATCH5_S11A,convention:'P-B5-75-77-2026-10-27'},
+  augmentPoolBatch5H7:{version:'augment-pool-batch5-h7-v25',content:AUGMENT_BATCH5_H7,convention:'P-B5-H7-2026-10-27',deathRandom:'fnv1a32-utf16-source-seat-choice-combat-event-xor-seed-lcg32-word-less-than-2^31'},
+  augmentPoolBatch5H8:{version:'augment-pool-batch5-h8-v25',content:AUGMENT_BATCH5_H8,dhampyr:DHAMPYR_RULES,convention:'P-B5-2026-10-27'},
+  augmentPoolBatch5H10: { content: AUGMENT_BATCH5_H10, convention: 'P-B5-60/61-2026-10-27', tracker: 'successful-preparation-command-8-nonunique-traits-6-of-22-emblems-without-replacement-once', sniper: 'first-opening-8-cap-32-cell-or-absence-reset-main-instance-merge', history: 'augment-history-v1' },
+  augmentPoolBatch5H11:{version:'augment-pool-batch5-h11-v25',content:AUGMENT_BATCH5_H11,convention:'P-B5-76-79-2026-10-27',pool:'G24-CHEST-01',rng:'combat-lcg32-rejection-uniform',deaths:'ordered-first-ordinary-hero-deaths-item-then-live-recipient-skip-without-rng',opening:'permanent-slots-before-scrap-nearest-hex-then-id-sample-all-before-grants'},
+  augmentPoolBatch5H12:{version:'augment-pool-batch5-h12-v25',content:AUGMENT_BATCH5_H12,convention:'P-B5-80-84-86-2026-10-27',history:'augment-history-v1'},
+  augmentPoolBatch5H13:{version:'augment-pool-batch5-h13-v1',content:AUGMENT_BATCH5_H13,convention:'P-B5-H13-2026-10-27',transforms:'permanent-ordinary-only;new-serials;history-v1-authenticated',
+    timing:'pre-grant-round-entry-snapshot;after-acquisition-round;zero-input-marker;one-transform-per-instance',
+    sampling:'sorted-existing-category-pools;uniform-with-replacement;unchanged-allowed;fnv1a32-seat-choice-round-item-lcg32-v1',
+    salvage:'sale-returned-permanent-recipe-items-only;four-settled-pvp-including-acquisition-round;one-component'},
+  augmentPoolBatch5H9:{version:'augment-pool-batch5-h9-v25',content:AUGMENT_BATCH5_H9,convention:'P-B5-56-58-2026-10-27',gold:'original-anomaly-owner-kills-cross-battle-every-three-two-gold-post-settlement',history:'augment-history-v1',cabal:'sorted-full-black-rose-catalog-uniform-three-with-replacement-per-participant-victim-once-per-battle-next-battle-sion-150bps-10hp'},
+  augmentPoolBatch5G7:{version:'augment-pool-batch5-g7-v1',content:AUGMENT_BATCH5_G7,rules:LOOT_EXPLOSION_RULES,convention:'P-B5-69-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
+  augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
+    selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',
+    priority:'shared-carousel-arrival-end-logical-zero',events:'additional-pick-then-grant-stamped-match-events'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
   augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},
   augmentPoolBatch4B4reroll:{version:'augment-pool-batch4-b4reroll-v23',content:AUGMENT_BATCH4_B4REROLL,timing:'next-entry-after-income-before-entry-grants',credits:'carry-over',patience:'previous-round-shop-purchases-including-combat',invested:'floor-clamp-gold-50-80-divide-10'},
   augmentPoolBatch3Xp:{version:'augment-pool-batch3-xp-v23-candidate',content:AUGMENT_BATCH3_XP,blocked:AUGMENT_BATCH3_XP_BLOCKED,timing:'pvp-xp-next-round-entry-draw-as-loss-stage-start-after-acquisition',levels:'recorded-at-acquisition'},
   augmentPoolBatch4B4Combat:{version:'augment-pool-batch4-b4combat-v23',content:AUGMENT_BATCH4_B4COMBAT,convention:'P-B4COMBAT-2026-10-25'},
   augmentPoolBatch3:{version:'augment-pool-batch3-v23-candidate',content:AUGMENT_BATCH3,counting:'pvp-battle-receipts-from-acquisition-round-inclusive-draw-not-loss'},
+  augmentPoolBatch5R5:{content:AUGMENT_BATCH5_R5,policy:BATCH5_R5_STARRY_POLICY,convention:'P-B5-08-09-2026-10-28'},
   augmentPoolShop:{version:'augment-pool-shop-v24-candidate',content:AUGMENT_SHOP,credits:'rigged-acquisition-and-ticket-seed-stream'},
   augmentPoolBatch2:{version:'augment-pool-batch2-v23-candidate',content:AUGMENT_BATCH2,blocked:AUGMENT_BATCH2_BLOCKED},
   augmentPoolBatch1:{version:'augment-pool-batch1-v23-candidate',content:AUGMENT_BATCH1,blocked:AUGMENT_BATCH1_BLOCKED,random:'source-seat-choice-spec-lcg32-uniform-sorted-with-replacement',anvilChoices:4,roundGold:'add-to-deferred-base-income-next-entry',unitEscrow:'solo-capacity-online-reward-orb'},

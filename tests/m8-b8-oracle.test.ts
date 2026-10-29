@@ -23,6 +23,7 @@ async function openingWithRealConsumedReward() {
 function prefixLedger(count = timeline.length) {
   const ledger = new Ledger(initial);
   for (const t of timeline.slice(0, count)) ledger.apply(t.before, t.after, t.command, t.events);
+  ledger.audit(count === 0 ? initial : timeline.slice(0, count).at(-1)!.after);
   return ledger;
 }
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
@@ -99,15 +100,21 @@ describe('independent B8 oracle checks authentic command transitions', () => {
         }
       }
       ledger.apply(before,after,command,result.events);
-      if(returned)throw stop;
+      if(returned){ledger.audit(after);throw stop;}
     }});}catch(e){if(e!==stop)throw e;}
     expect([departures,returns]).toEqual([1,1]);
   },120000);
 
   it('counts a real reward candidate even when immediately consumed by its upgrade', () => {
-    const transition = timeline.find(t => t.after.roundDefinitionId==='3-7' && t.events.some(e => e.type === 'unitUpgraded'))!;
+    // v25 buys can upgrade Leona during 3-7 preparation before any loot is earned.
+    // Bind this control to the actual Tristana reward and upgrade in the same transition.
+    const transition = timeline.find(t => t.after.roundDefinitionId==='3-7'
+      && t.events.some(e => e.type === 'unitUpgraded' && e.definitionId === 'tristana')
+      && t.events.some(e => e.type === 'lootGranted' && e.receipt.payload.kind === 'unit'
+        && e.receipt.payload.definitionId === 'tristana'))!;
     expect(transition).toBeDefined();
     const receipt = transition.after.m8.loot.receipts.find(r => r.payload.kind === 'unit' && r.payload.definitionId === 'tristana')!;
+    expect(receipt).toBeDefined();
     const reward=`unit-${transition.before.nextUnitSerial}`;
     const oldCopies=transition.before.preparation.units.filter(u=>u.definitionId==='tristana'&&u.starLevel===1).map(u=>u.id).sort();
     expect(oldCopies).toHaveLength(2);
@@ -139,6 +146,7 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     const repeated = api.selectChoice(result.state, c.choiceId, c.generation, definitionId);
     expect(repeated.ok).toBe(false); expect(repeated.state).toBe(result.state);
     ledger.apply(result.state, repeated.state, undefined, []);
+    ledger.audit(repeated.state);
   });
 
   it('rejects duplicate grant, reveal and resolution events independently of event-sequence checks', () => {
@@ -179,7 +187,13 @@ describe('independent B8 oracle checks authentic command transitions', () => {
   });
 
   it.each([42, 230])('runs the complete real cannon route, seed %i, through the unchanged public-command driver', async seed => {
-    const route = await run(api, { seed, build: 'cannon' });
+    // Seed 42 keeps production inputs untouched: oracle freezing must not make
+    // all main routes benefit from src's frozen-object validation caches.
+    const route = await run(api, { seed, build: 'cannon', freezeObservations: seed !== 42,
+      onStep(_before: MatchState, result: { state: MatchState }) {
+        if (seed === 42 && result.state.augmentHistory)
+          expect(Object.isFrozen(result.state.augmentHistory.facts)).toBe(false);
+      } });
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);

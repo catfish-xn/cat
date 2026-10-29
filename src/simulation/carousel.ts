@@ -1,3 +1,14 @@
+import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
+import { applyAngerIssues } from './augment-pool-batch5-r2';
+import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
+import { augmentNeedsHistory } from './augment-history-owners';
+import { validateAugmentHistory } from './augment-history-restore';
+import { validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
+import { validateTombRaider } from './restore-checks/tomb-raider-check';
+import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
+import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
+import { drainBatch1Gifts } from './augment-pool-grants';
+import { mechanicGrantEvents } from './g2-3-runtime';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
@@ -7,7 +18,7 @@ import { getCatalogRoundById } from './round-selectors';
 import { assertSharedPoolConservation } from './shared-pool-ledger';
 import type { SharedPoolState } from './shared-pool-types';
 import type { MatchState } from './match-types';
-import type { CostTier } from './unit-types';
+import type { CostTier, UnitUpgradedEvent } from './unit-types';
 import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, CarouselReceipt, CarouselState, CarouselFailure, CarouselEvent, CarouselResult } from './carousel-types';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
@@ -16,6 +27,7 @@ import { appendResourceProvenance } from './resource-provenance';
 import { createCarouselMatch, finishCarouselSupply } from './match';
 import type { MatchEvent } from './match-types';
 import { draftPool, returnHolding, reconcileHoldings } from './shared-pool-ledger';
+import { carouselPriorityChoice, tableScrapsPick } from './augment-pool-batch5-h5';
 import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
 export type * from './carousel-types';
 export { CAROUSEL_RULES, CAROUSEL_COST_ODDS };
@@ -33,6 +45,16 @@ export function schedule(roundId: string): {
     if (!validRound(roundId))
         throw new RangeError('invalid-round');
     return { firstBatchMs: CAROUSEL_RULES.firstBatchMs, batchIntervalMs: CAROUSEL_RULES.batchIntervalMs, tailMs: CAROUSEL_RULES.tailMs };
+}
+function carouselRelease(participants: readonly CarouselParticipant[], first: number, interval: number) {
+    const release = h7CarouselRelease(participants, first, interval);
+    const releaseAtMs = { ...release.releaseAtMs };
+    for (const p of participants) if (p.priorityChoiceId) releaseAtMs[p.seatId] = 0;
+    const order = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
+    const releaseOrder = (order.some(p => p.titanicTitanChoiceId)
+        ? [...order].sort((a, b) => releaseAtMs[a.seatId] - releaseAtMs[b.seatId] || order.indexOf(a) - order.indexOf(b))
+        : order).map(p => p.seatId);
+    return { releaseAtMs, releaseOrder };
 }
 export function opensCarousel(state: MatchState): boolean {
     return !!state.carousel && validRound(state.roundDefinitionId) && !state.carousel.receipts.some(r => r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`));
@@ -60,9 +82,12 @@ export function prepareCarouselParticipants(pool: SharedPoolState, states: reado
     const participants: CarouselParticipant[] = [];
     for (const entry of states) {
         const seat = active.find(s => s.seatId === entry.seatId), s = entry.state;
-        if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > 100 || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
+        if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > maximumPlayerHp(s.augments) || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
             return { ok: false, pool, reason: 'invalid-participants' };
-        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp });
+        let priorityChoiceId: string | null, choiceId: string | undefined;
+        try { priorityChoiceId = carouselPriorityChoice(s); choiceId = titanicTitanChoiceId(s); }
+        catch { return { ok: false, pool, reason: 'invalid-participants' }; }
+        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp, ...(priorityChoiceId ? {priorityChoiceId} : {}), ...(choiceId ? {titanicTitanChoiceId:choiceId} : {}) });
     }
     participants.sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
     return { ok: true, pool: { ...pool, carouselParticipants: participants } };
@@ -123,14 +148,14 @@ export function createCarousel(pool: SharedPoolState, roundId: CarouselRoundId, 
     if (roundId === '1-1' ? pool.naturalRound !== 0 : pool.naturalRound !== getCatalogRoundById(roundId).ordinal)
         return fail('invalid-round');
     const participants = pool.carouselParticipants, active = pool.seats.filter(s => !s.released);
-    if (pool.seats.length !== pool.seatCount || !participants.length || participants.length !== active.length || new Set(participants.map(p => p.seatId)).size !== participants.length || participants.some(p => !integer(p.hp, 1) || p.hp > 100 || !active.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)))
+    if (pool.seats.length !== pool.seatCount || !participants.length || participants.length !== active.length || new Set(participants.map(p => p.seatId)).size !== participants.length || participants.some(p => !integer(p.hp, 1) || !h7CarouselParticipantValid(p) || p.priorityChoiceId !== undefined && (typeof p.priorityChoiceId !== 'string' || !p.priorityChoiceId.length) || !active.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)))
         return fail('invalid-participants');
     if (Object.values(pool.available).reduce((a, b) => a + b, 0) < 9)
         return fail('pool-exhausted');
     const id = `${pool.poolId}:carousel:${roundId}`, { available, slots, wordState } = drawSlots(pool.available, roundId, rng.state, id);
-    const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), releaseOrder = ordered.map(p => p.seatId), times = schedule(roundId);
-    const nextPool: SharedPoolState = { ...pool, available, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
-    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, releaseOrder, releaseAtMs: Object.fromEntries(releaseOrder.map((s, i) => [s, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs])), deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
+    const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(roundId), release = carouselRelease(ordered,times.firstBatchMs,times.batchIntervalMs);
+    const nextPool: SharedPoolState = { ...pool, available, carouselParticipants: ordered, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
+    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, ...release, deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
     assertSharedPoolConservation(nextPool);
     return { ok: true, state, events: [{ type: 'carousel-created', carouselId: id, roundId }] };
 }
@@ -139,8 +164,8 @@ export function validateCarousel(state: CarouselState): void {
     assertSharedPoolConservation(state.pool);
     if (state.version !== 'carousel-v1' || !validRound(state.roundId) || state.id !== `${state.pool.poolId}:carousel:${state.roundId}` || !state.pool.carouselRounds.includes(state.roundId) || !integer(state.revision) || !integer(state.elapsedMs) || !['open', 'closed'].includes(state.status) || state.slots.length !== 9)
         throw Error('invalid-carousel');
-    const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId);
-    if (!ordered.length || ordered.length > 8 || !equal(state.releaseOrder, ordered.map(s => s.seatId)) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || p.hp > 100 || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, Object.fromEntries(ordered.map((s, i) => [s.seatId, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs]))) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
+    const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId), release = carouselRelease(ordered,times.firstBatchMs,times.batchIntervalMs);
+    if (!ordered.length || ordered.length > 8 || !equal(state.participants,state.pool.carouselParticipants) || !equal(state.releaseOrder, release.releaseOrder) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || !h7CarouselParticipantValid(p) || p.priorityChoiceId !== undefined && (typeof p.priorityChoiceId !== 'string' || !p.priorityChoiceId.length) || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, release.releaseAtMs) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
         throw Error('invalid-carousel');
     let seed = state.rngBefore.state;
     validateSeed(seed);
@@ -239,7 +264,7 @@ function planAutoPickFromCarousel(state: CarouselState, seatId: string, match: M
 const cost = (id: string) => UNIT_DEFINITIONS[id].cost;
 export function listCarouselSlots(state: CarouselState) { return state.slots.map(s => ({ slot: s.slot, definitionId: s.definitionId, starLevel: 1 as const, items: [s.itemId], pickedBy: s.pickedBy })); }
 export { createCarouselMatch };
-function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: string): {
+function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: string, receiptId?: string, pickSource: 'manual' | 'bot' | 'timeout' | 'disconnected' | 'augment' = 'manual', choiceId: string | null = null): {
     ok: true;
     state: CarouselState;
     match: MatchState;
@@ -260,7 +285,7 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     catch {
         return failure('invalid-match');
     }
-    const receipt = state.receipts.find(r => r.seatId === seatId), seat = state.pool.seats.find(s => s.seatId === seatId);
+    const receipt = state.receipts.find(r => r.seatId === seatId && (receiptId === undefined || r.id === receiptId)), seat = state.pool.seats.find(s => s.seatId === seatId);
     if (!receipt || receipt.status === 'released')
         return failure('receipt-mismatch');
     if (match.sharedPool?.seatId !== seatId || !seat || seat.released)
@@ -285,9 +310,13 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     const nextPool: SharedPoolState = { ...state.pool, revision: state.pool.revision + 1, holdings, carouselReceipts: poolReceipts, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== state.slots[receipt.slot].reservationId), seats: state.pool.seats.map(s => s.seatId === seatId ? { ...s, revision: s.revision + 1 } : s) };
     const events: MatchEvent[] = [{ type: 'carouselGranted', receipt: granted }];
     const stamped: MatchEvent[] = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
-    const nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
+    let nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
         items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
         carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    nextMatch = applyAngerIssues(nextMatch);
+    nextMatch = drainBatch5Inventory(nextMatch);
+    nextMatch = appendAugmentFact(nextMatch, { kind: 'carousel', receipt: granted, source: pickSource, choiceId,
+      ordinal: metadata.receipts.filter(r => r.carouselId === state.id).length, roster: historyRoster(nextMatch), releaseAtMs: state.releaseAtMs[seatId], eligibilityChoiceIds: match.augments.map(a => a.choiceId) });
     const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };
     try {
         validateCarousel(nextState);
@@ -299,14 +328,18 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     return { ok: true, state: nextState, match: nextMatch, events: stamped };
 }
 /** A single public transaction for the server: a failed grant rolls back the slot too. */
-export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number) {
+export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number, source: 'manual' | 'bot' | 'timeout' | 'disconnected' = 'manual') {
     const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
     if (!equal(pool, carousel.pool))
         return bad('stale-pool');
+    try {
+        if ((carousel.participants.find(p => p.seatId === seatId)?.priorityChoiceId ?? null) !== carouselPriorityChoice(match))
+            return bad('invalid-match');
+    } catch { return bad('invalid-match'); }
     const picked = pickFromCarousel(carousel, seatId, slot);
     if (!picked.ok)
         return bad(picked.reason);
-    const granted = grantCarouselPick(picked.state, match, seatId);
+    const granted = grantCarouselPick(picked.state, match, seatId, undefined, source);
     if (!granted.ok)
         return bad(granted.reason);
     return { ok: true as const, pool: granted.state.pool, carousel: granted.state, state: granted.match, events: [...picked.events, ...granted.events] };
@@ -316,7 +349,7 @@ export function autoPickCarouselForSeat(pool: SharedPoolState, carousel: Carouse
     if (!picked.ok)
         return { ok: false as const, pool, carousel, state: match, reason: picked.reason, events: [] as readonly (MatchEvent | CarouselEvent)[] };
     const slot = picked.state.receipts.find(r => r.seatId === seatId)!.slot;
-    return pickCarouselForSeat(pool, carousel, match, seatId, slot);
+    return pickCarouselForSeat(pool, carousel, match, seatId, slot, _reason);
 }
 /** Commit x-4 natural income once, only after the fixed cutoff. 1-1 has no income. */
 export function completeCarouselForSeat(state: CarouselState, match: MatchState, seatId: string) {
@@ -335,12 +368,26 @@ export function completeCarouselForSeat(state: CarouselState, match: MatchState,
         return bad('receipt-mismatch');
     if (state.roundId === '1-1' || match.roundResults.some(r => r.roundId === state.roundId))
         return { ok: true as const, state, match, events: [] as readonly MatchEvent[] };
-    const result = finishCarouselSupply(match);
+    let completedState = state, completedMatch = match;
+    const augmentEvents: MatchEvent[] = [];
+    try {
+        const plan = tableScrapsPick(match, state);
+        if (plan) {
+            const additional = grantAdditionalCarouselPick(state.pool, state, match, seatId, plan.slot, plan.choiceId);
+            if (!additional.ok) return bad(additional.reason);
+            completedState = additional.carousel;
+            completedMatch = additional.state;
+            augmentEvents.push(...additional.events.filter((event): event is MatchEvent => 'domain' in event));
+        }
+    } catch {
+        return bad('invalid-match');
+    }
+    const result = finishCarouselSupply(completedMatch);
     if (!result.ok)
         return bad('invalid-match');
-    const seat = state.pool.seats.find(s => s.seatId === seatId)!;
-    const pool = { ...state.pool, revision: state.pool.revision + 1, seats: state.pool.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s) };
-    return { ok: true as const, state: { ...state, pool, revision: state.revision + 1 }, match: { ...result.state, sharedPool: { ...result.state.sharedPool!, revision: seat.revision + 1 } }, events: result.events };
+    const seat = completedState.pool.seats.find(s => s.seatId === seatId)!;
+    const pool = { ...completedState.pool, revision: completedState.pool.revision + 1, seats: completedState.pool.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s) };
+    return { ok: true as const, state: { ...completedState, pool, revision: completedState.revision + 1 }, match: { ...result.state, sharedPool: { ...result.state.sharedPool!, revision: seat.revision + 1 } }, events: [...augmentEvents, ...result.events] };
 }
 /** Move previously owned queued units when a legal place/merge exists; never draws or buys. */
 export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchState): SharedPoolResult {
@@ -350,8 +397,8 @@ export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchS
         if (!match.carousel || match.phase !== 'preparation' || match.multiplayer?.combatRosterLocked)
             return bad();
         const resolved = resolveCarouselPreparation(match);
-        let next = resolved.state;
-        const draft = draftPool(pool), events = [...resolved.events], poolEvents: SharedPoolEvent[] = [];
+        let next = resolved.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(resolved.state) : resolved.state;
+        const draft = draftPool(pool), events = [...resolved.events, ...mechanicGrantEvents(resolved.state,next)], poolEvents: SharedPoolEvent[] = [];
         reconcileHoldings(draft, match, next, poolEvents);
         if (next === match)
             return { ok: true, pool, state: match, events: [], poolEvents: [] };
@@ -446,9 +493,9 @@ export function releaseCarouselParticipant(state: CarouselState, match: MatchSta
     }
     return { ok: true as const, state: nextState, match: released.state, events: [...released.events, {type:'carousel-seat-released' as const,carouselId:state.id,seatId}], poolEvents: released.poolEvents };
 }
-export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string): ReturnType<typeof planGrantCarouselPick> {
+export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string, receiptId?: string, pickSource: 'manual' | 'bot' | 'timeout' | 'disconnected' | 'augment' = 'manual', choiceId: string | null = null): ReturnType<typeof planGrantCarouselPick> {
     try {
-        return planGrantCarouselPick(state, match, seatId);
+        return planGrantCarouselPick(state, match, seatId, receiptId, pickSource, choiceId);
     }
     catch {
         return { ok: false, state, match, reason: 'invalid-match', events: [] };
@@ -463,9 +510,34 @@ export function autoPickFromCarousel(state: CarouselState, seatId: string, match
     }
 }
 
+/** Follow the original carousel copy through transformations and every kind of merge. */
+function carouselUnitIdentity(match: MatchState, receipt: CarouselReceipt, birthIndex: number) {
+    let unitId = receipt.unitId!, definitionId = receipt.definitionId, starLevel = 1;
+    let present = true;
+    const upgrade = (event: UnitUpgradedEvent) => {
+        if (!present || ![event.survivorId, ...event.consumedIds].includes(unitId)) return;
+        if (event.definitionId !== definitionId || event.fromStar !== starLevel) throw Error('receipt-mismatch');
+        unitId = event.survivorId;
+        starLevel = event.toStar;
+    };
+    for (const fact of match.resourceProvenance.entries.slice(birthIndex + 1)) {
+        if (fact.kind === 'unit-transformed' && present && fact.unitId === unitId) {
+            if (fact.from !== definitionId || fact.starLevel !== starLevel) throw Error('receipt-mismatch');
+            definitionId = fact.to;
+        } else if (fact.kind === 'unit-upgraded' || fact.kind === 'unit-upgraded-after-combat') {
+            upgrade(fact.event);
+        } else if (fact.kind === 'carousel-preparation-settled' || fact.kind === 'carousel-unit-claimed') {
+            for (const event of fact.upgrades) upgrade(event);
+        } else if ((fact.kind === 'unit-sold' || fact.kind === 'unit-removed' || fact.kind === 'anvil-opened') && fact.unitId === unitId) {
+            present = false;
+        }
+    }
+    return present ? { unitId, definitionId, starLevel } : null;
+}
+
 /** Restore a server-owned seat alongside its carousel. Offline restoreMatch continues
  * rejecting server metadata; this boundary checks the pool and every carousel birth. */
-export function restoreCarouselSeat(carousel: CarouselState, input: unknown): MatchState {
+export function restoreCarouselSeat(carousel: CarouselState, input: unknown, authority?: AugmentHistoryAuthority): MatchState {
     validateCarousel(carousel);
     if (typeof input !== 'string') canonicalContent(input);
     const match = JSON.parse(typeof input === 'string' ? input : JSON.stringify(input)) as MatchState;
@@ -474,6 +546,9 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
     if (match.contentDigest !== CONTENT_DIGEST) throw Error('content-digest');
     const metadata = match.carousel;
     if (!metadata || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits) || !Array.isArray(metadata.heldCarouselUnits) || !equal(metadata.pendingUnits,metadata.heldCarouselUnits) || !Array.isArray(metadata.preparationReceipts) || metadata.openingPending!==undefined)  throw Error('invalid-match');
+    // A transformation is evidence only after its independent server checkpoint is authenticated.
+    validateAugmentHistory(match, authority);
+    validateOnlineBatch1GiftAuthority(carousel.pool, match, authority);
     const ids = new Set<string>();
     for (const receipt of metadata.receipts) {
         const pooled = carousel.pool.carouselReceipts.find(r => r.id === receipt.id);
@@ -484,8 +559,13 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
         const unitFacts = match.resourceProvenance.entries.filter(e => e.kind === 'unit-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         const itemFacts = match.resourceProvenance.entries.filter(e => e.kind === 'item-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         if (unitFacts.length !== 1 || unitFacts[0].kind !== 'unit-acquired' || unitFacts[0].unitId !== receipt.unitId || itemFacts.length !== 1 || itemFacts[0].kind !== 'item-acquired' || itemFacts[0].itemId !== receipt.itemInstanceId) throw Error('receipt-mismatch');
-        const unit = match.preparation.units.find(u=>u.id===receipt.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
-        if (unit && unit.definitionId !== receipt.definitionId || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
+        const identity = carouselUnitIdentity(match, receipt, match.resourceProvenance.entries.indexOf(unitFacts[0]));
+        const original = match.preparation.units.find(u=>u.id===receipt.unitId);
+        const unit = match.preparation.units.find(u=>u.id===identity?.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
+        const holding = carousel.pool.holdings.find(h=>h.seatId===receipt.seatId && h.sources.includes(receipt.holdingSource));
+        if (original && original.id !== identity?.unitId || unit && (unit.definitionId !== identity?.definitionId || unit.starLevel !== identity.starLevel)
+            || holding && (!identity || holding.unitId !== identity.unitId || holding.definitionId !== identity.definitionId || holding.sources.length !== 3 ** (identity.starLevel - 1))
+            || !released && unit && !holding || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
     }
     const pendingIds = new Set<string>();
     for (const pending of metadata.pendingUnits) {
@@ -493,5 +573,48 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
         pendingIds.add(pending.unitId);
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
+    const participant = carousel.participants.find(p=>p.seatId===match.multiplayer?.seatId);
+    if (participant && participant.titanicTitanChoiceId !== titanicTitanChoiceId(match)) throw Error('invalid-participants');
+    for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
+    validateTombRaider(match);
+    validateMadChemistOnlineSave(carousel.pool, match, authority);
     return match;
+}
+
+/** Internal award primitive: the future augment chooses the remaining slot using its explicit RNG.
+ * Normal picks remain one per seat. Multiple receipts consume distinct remaining cards, never copies.
+ * No client command calls this entry. The history owns the source/ordinal, so no new receipt fields exist. */
+export function grantAdditionalCarouselPick(pool: SharedPoolState, carousel: CarouselState, match: MatchState,
+  seatId: string, slot: number, choiceId: string): ReturnType<typeof pickCarouselForSeat> {
+  const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
+  try {
+    if (!equal(pool, carousel.pool)) return bad('stale-pool');
+    validateCarousel(carousel); assertSharedPoolConservation(pool, [match]);
+    if (!match.augmentHistory || !match.augments.some(a => a.choiceId === choiceId && augmentNeedsHistory(a.definitionId)) || match.sharedPool?.seatId !== seatId
+      || match.multiplayer?.status !== 'active' || !carousel.participants.every(p => carousel.receipts.some(r => r.seatId === p.seatId && r.status !== 'reserved')))
+      return bad('invalid-match');
+    const ordinal = carousel.receipts.filter(r => r.seatId === seatId).length;
+    if (ordinal < 1 || ordinal > 8) return bad('receipt-mismatch');
+    const s = carousel.slots[slot];
+    if (!Number.isInteger(slot) || !s) return bad('invalid-slot');
+    if (s.pickedBy !== null) return bad('slot-taken');
+    const id = `${carousel.id}:${seatId}:extra:${ordinal}`;
+    const receipt: CarouselReceipt = { id, carouselId: carousel.id, seatId, slot, definitionId: s.definitionId, itemId: s.itemId,
+      holdingSource: id, unitId: null, itemInstanceId: null, status: 'reserved' };
+    const closed = carousel.status === 'closed';
+    if (closed && pool.available[s.definitionId] < 1) return bad('pool-exhausted');
+    const reservation = { carouselId: carousel.id, reservationId: s.reservationId, slot, definitionId: s.definitionId, seatId };
+    const reservedPool = { ...pool, revision: pool.revision+1,
+      available: closed ? { ...pool.available, [s.definitionId]: pool.available[s.definitionId]-1 } : pool.available,
+      carouselReceipts: [...pool.carouselReceipts, receipt], carouselReservations: closed ? [...pool.carouselReservations, reservation]
+        : pool.carouselReservations.map(r => r.reservationId === s.reservationId ? reservation : r) };
+    const reserved: CarouselState = { ...carousel, pool: reservedPool, revision: carousel.revision+1,
+      receipts: [...carousel.receipts, receipt], slots: carousel.slots.map(x => x.slot === slot ? { ...x, pickedBy: seatId } : x) };
+    if (!Number.isSafeInteger(match.nextMatchEventSeq) || match.nextMatchEventSeq >= Number.MAX_SAFE_INTEGER - 1) return bad('invalid-match');
+    const numbered = { ...match, nextMatchEventSeq: match.nextMatchEventSeq + 1 };
+    const granted = grantCarouselPick(reserved, numbered, seatId, id, 'augment', choiceId);
+    if (!granted.ok) return bad(granted.reason);
+    return { ok: true, pool: granted.state.pool, carousel: granted.state, state: granted.match,
+      events: [{type:'carousel-picked', receipt, domain:'match' as const, eventSeq:match.nextMatchEventSeq}, ...granted.events] };
+  } catch { return bad('invalid-match'); }
 }
