@@ -616,6 +616,7 @@
     "tests/fixtures/m5/black-market-oracle.cjs": "b8d7c1834d2b12825bd3a1e82a8e4fd5ee3d0e4d7be2fb291b1dd0080dbc51a8",
     "tests/fixtures/m5/command-oracle.cjs": "c04c62191921a76aa28cd5bc118e8df580578a2358c7c9f784d9c182f6c09579",
     "tests/fixtures/m5/command-oracle.g2.cjs": "9576cfde9db617fe5dfc6f3226bb44a246d31e2357e4eea6055aa38d4e2d1172",
+    "tests/fixtures/m5/h13-inventory-oracle.cjs": "caa196914d630d3b24ba6c2e078ab05fa113f27f71cea50b7050ee95b126ff55",
     "tests/fixtures/m5/h3-growth-oracle-v25-baseline.cjs": "9bbea0b3d1f5fd6d6048d0a6dfffa729b30670292acef802fad29d1a43b74b70",
     "tests/fixtures/m5/h3-growth-oracle.cjs": "334c7d8667137735a8a8f25ade013a2bcd673112b28de5a49a2d32b72c720a01",
     "tests/fixtures/m5/h4-rewards-oracle.cjs": "89335898a298ff32ad4029bfbb66f6198967c37e586de6219a6ae9ce9c3ac97e",
@@ -624,7 +625,7 @@
     "tests/fixtures/m5/lucky-gloves-oracle.cjs": "e64f822ae05b5ca49a2c4da66d5dd0a3fa492cbc94e570b19a15567b8a8fb489",
     "tests/fixtures/m5/observed-equal.cjs": "765d2f0efe4b7e20ea54810d129fe633c85c699b0b812767a386f95a6a1a7d14",
     "tests/fixtures/m5/oracle.cjs": "0d0d87de236768f0fb3bc676ddfa3032c6fe484a0ae613acb74cf3e898e8cf1f",
-    "tests/fixtures/m5/oracle.g2.cjs": "da6a1e11e944382c4e729ad692553be5aba66704c313bb6fe335104e03c1180c",
+    "tests/fixtures/m5/oracle.g2.cjs": "e18093e90501ca3636ee849ae3c6872fc249d6553b4796dce844cdda089a944e",
     "tests/fixtures/m5/oracle.t13.cjs": "0b11a6cc60f3d31e59553d5121acb8a1fdc22ce3c6091ae3065ff0f8c35ad6ca",
     "tests/fixtures/record-v25-online-rules-herald.cjs": "48a7f6796827a53ab6b13a578c26322dfec80a92a78139b3c38162848ec5f5ce",
     "tests/fixtures/v25-online-rules-herald-support/generate.ts": "1cfd2ffddf90bee61aa6868b842b7e2ce146b52a639b330aa4fd8ba306e07fcf"
@@ -684,7 +685,7 @@
       "previousBytes": 48373,
       "currentBytes": 66707,
       "previousSha256": "2647356330030c2c67c46129d9efa70e290b4665d8787fb4aa49ca6cf63f8e22",
-      "currentSha256": "8c2c447b509a3db2ef903736a391c0d1074711b54cfdb7a40d5874e95c8aa47a",
+      "currentSha256": "26754c618b13714d7b00536fe6b97328d629a9e06c5856b6c8412ecd5aed38e2",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v25-online-rules-herald-raw/trajectory.json": {

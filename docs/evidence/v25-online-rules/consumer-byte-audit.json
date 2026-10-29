@@ -564,9 +564,9 @@
     "tests/augment-pool-batch5-h3-oracle.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 21173,
+      "currentBytes": 21356,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "76a13ef4777b25486af7fde6519b6bca961e865da3b8d283cb76a1dca0649d6c",
+      "currentSha256": "748ca9b9eef6044d9661e7db2deee0aff4990708e9cdd2dc4af4095356f4b317",
       "firstDifferentByte": 0
     },
     "tests/augment-pool-batch5-h3.test.ts": {
@@ -1489,6 +1489,14 @@
       "currentSha256": "b6b2508ad17e621aa47b7928db591df3723815df9d183420a7bcea35786c8507",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/m5/h13-inventory-oracle.cjs": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4461,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "caa196914d630d3b24ba6c2e078ab05fa113f27f71cea50b7050ee95b126ff55",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/m5/h3-growth-oracle-v25-baseline.cjs": {
       "previousExists": false,
       "previousBytes": 0,
@@ -1563,9 +1571,9 @@
     },
     "tests/fixtures/m5/oracle.g2.cjs": {
       "previousBytes": 88080,
-      "currentBytes": 105329,
+      "currentBytes": 105672,
       "previousSha256": "3bc32dd1092e8711a2b93a110eb4933a7f5f3df3eddb91fd5aaa540141f49580",
-      "currentSha256": "da6a1e11e944382c4e729ad692553be5aba66704c313bb6fe335104e03c1180c",
+      "currentSha256": "e18093e90501ca3636ee849ae3c6872fc249d6553b4796dce844cdda089a944e",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m5/oracle.g2.d.cts": {
@@ -1694,7 +1702,7 @@
       "previousBytes": 0,
       "currentBytes": 66707,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8c2c447b509a3db2ef903736a391c0d1074711b54cfdb7a40d5874e95c8aa47a",
+      "currentSha256": "26754c618b13714d7b00536fe6b97328d629a9e06c5856b6c8412ecd5aed38e2",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v25-online-rules-herald-raw/quicksilver.json": {
@@ -1876,9 +1884,9 @@
     "tests/h3-growth-oracle-fast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12985,
+      "currentBytes": 13127,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4e3b98ef145f93e7396648fa8ce317dfa76d6b7f9fd1e88147afff2f9d5500d1",
+      "currentSha256": "b3cb9d88053019133851a105e553be9bd91fedb3d4c5fde6bc5f4aefd09bf6c8",
       "firstDifferentByte": 0
     },
     "tests/h3-observed-equal.test.ts": {
@@ -1966,6 +1974,14 @@
       "previousSha256": "aed2a713f61eea5a0d2d165b0572189befd5dcefafa092ca90481c0806825117",
       "currentSha256": "f4ff4a6c082bc788fa80d520fb89b74150d6fd47d281bae3a8dd7f5fa27b31d4",
       "firstDifferentByte": 499
+    },
+    "tests/m5-oracle-h13-inventory.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4851,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "cbc0b18694be70af29fc724be4ba269bf91fd083048e82e62b2b3f1da92ed5bd",
+      "firstDifferentByte": 0
     },
     "tests/m5-oracle-h6.test.ts": {
       "previousExists": false,
