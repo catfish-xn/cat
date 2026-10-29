@@ -121,9 +121,9 @@
     },
     "tests/augment-pool-batch3.test.ts": {
       "previousBytes": 81357,
-      "currentBytes": 81737,
+      "currentBytes": 82016,
       "previousSha256": "ac6988c5800c5e1adc02916e8ee0293ed3f6225b3f5aa112692c6850030f3c18",
-      "currentSha256": "3411d10d79101cb58c426946620c74e12401bac3f03172242bf88284210dcfd9",
+      "currentSha256": "6da248b560a851e5c62598fd2350afd0ec21d567591356188e97a2f457beb58e",
       "firstDifferentByte": 375
     },
     "tests/augment-pool-batch4-b4combat.test.ts": {
@@ -1151,6 +1151,14 @@
       "previousSha256": "72a7984890ffca430ff602da2db5056a60eafe3857d701f1f6de172a2940fd7e",
       "currentSha256": "56091b2eafbe6199c8640f4c24e5fdc4fd8643abc954d0c69bfd578f83db101a",
       "firstDifferentByte": 66
+    },
+    "tests/augment-strip-layout.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 13646,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "70bfa10be6801990ff8663ec75657ac99d6e51f1aa5e360233573c5268a4522e",
+      "firstDifferentByte": 0
     },
     "tests/augment-text-identity.test.ts": {
       "previousBytes": 2405,
