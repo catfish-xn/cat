@@ -1300,9 +1300,9 @@
     "tests/fixtures/augment-replay-command-cache.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6988,
+      "currentBytes": 8140,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f751c5d6f28afe82964b800e9622bda2f8b7b1b9d369b45890ae949cb4a851b0",
+      "currentSha256": "19d8973f0717b3f5f5cfd810d0e6a3fb24ebfd06c071ebdec04252c8bbaa6dd9",
       "firstDifferentByte": 0
     },
     "tests/fixtures/b1-offer-cache-key.ts": {
@@ -2202,10 +2202,10 @@
     },
     "tests/m8-b8-live-transfer.test.ts": {
       "previousBytes": 11655,
-      "currentBytes": 18247,
+      "currentBytes": 22501,
       "previousSha256": "f04af4ec7c47c276b48376a980ed8b804e27d4ee71bf50b5ec5062792661a89c",
-      "currentSha256": "5d386bd0a34a1be0c8c025471de616dc8c106f5cbf1bfb7eb075b184ab17f906",
-      "firstDifferentByte": 401
+      "currentSha256": "a52404c57bbba2f15fc3f85e94c457a45dc9a047969788d3e3f2d297c47b088b",
+      "firstDifferentByte": 90
     },
     "tests/m8-b8-loot-view.test.ts": {
       "previousBytes": 8992,
