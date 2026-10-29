@@ -60,6 +60,8 @@ import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
 import { registerGolemModels } from './summon-models';
+import { createPvpPortal } from './pvp-portal';
+import { createPresentationLighting, readQuality3d } from './presentation-lighting';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -351,6 +353,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   sun.position.set(-200, 600, 300);
   scene.add(sun);
   const camera = new PerspectiveCamera(36, 1, 1, 5000);
+  const quality = readQuality3d(typeof location === 'undefined' ? '' : location.search);
+  const lighting = createPresentationLighting(scene, quality), portal = createPvpPortal(scene);
+  const arrivalsEnabled = () => quality !== 'off' && !reducedMotion() && !visiting() && !stage.active;
 
   // Shared geometry/materials owned by this renderer; model templates are owned by the ModelCache.
   const owned: { dispose(): void }[] = [];
@@ -720,11 +725,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
   const attachBody = (view: PieceView) => {
+    lighting.detachBody(view);
     cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
+    lighting.registerBody(view.body);
     const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
     if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
@@ -737,6 +744,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) loadReport.attached(id, definitionId);
         return;
       }
+      lighting.detachBody(view);
       const stand = view.body;
       const monster = monsterFit(definitionId);
       const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
@@ -770,6 +778,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
       stand?.removeFromParent();
       view.root.add(lease.scene);
+      lighting.registerBody(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
@@ -827,6 +836,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.rise = false; view.mixer.apply(view.state.spawn());
   };
   const removePiece = (view: PieceView) => {
+    lighting.remove(view.root);
     cancelLunge(view); view.disposed = true; held.delete(view); holds.delete(view); view.halo?.dispose(); view.halo = null;
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
@@ -1103,6 +1113,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
     tabletop.frame(frame); traitProps.frame(frame); goldMines?.frame(frame, !!arena?.ready, visiting());
+    portal.frame(frame, pieces, combatBegan, arrivalsEnabled());
   };
   const face = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId);
@@ -1162,6 +1173,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   const onCarousel = (view: Parameters<typeof stage.show>[0]) => {
+    if (view) portal.cancel();
     if (view && !stage.active) {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
@@ -1172,6 +1184,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Scouting replaces my board the same way: let go of a press or drag first.
   const onScout = (view: Parameters<typeof scout.show>[0]) => {
+    if (view) portal.cancel();
     if (view && !visiting()) {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag(); canvas.style.cursor = '';
@@ -1314,6 +1327,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (id && box) return { target: { kind: 'unit', id } as BoardDescription, box };
   };
   const showDescription = (client: { x: number; y: number } | null) => {
+    lighting.hover(client && !stage.active && !visiting() ? pieces.get(pickUnit(client, true) ?? '') ?? null : null);
     const hit = client ? describeAt(client) : undefined, key = JSON.stringify(hit ?? null);
     if (descriptionKey === key) return;
     descriptionKey = key;
@@ -1469,6 +1483,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (w <= 0 || h <= 0) return;
     width = w; height = h;
     renderer.setSize(w, h, false);
+    lighting.resize(w, h);
     const box = frameBox();
     camera.aspect = box ? box.width / box.height : w / h;
     if (box) camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else camera.clearViewOffset();
@@ -1506,6 +1521,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!fighting && now - sweptAt >= SWEEP_MS) { sweptAt = now; retention?.sweep(); effects?.sweep(); models.reader?.trim?.(); }
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
+    portal.advance(seconds, arrivalsEnabled());
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
     camera.updateMatrixWorld();
     frustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
@@ -1522,6 +1538,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // Hop: two bounces a second, each dancer a little out of step with the next.
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
+      portal.apply(id);
+      lighting.update(view);
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;
@@ -1600,13 +1618,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, goldMines, stage, scout, ltk, ui: originalUi };
+  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, goldMines, stage, scout, ltk, portal, lighting, quality, ui: originalUi };
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = debug;
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
       clearDescription();
       closed = true; shopSkin.dispose();
+      portal.dispose(); lighting.dispose();
       if (typeof window !== 'undefined' && (window as unknown as { __render3d?: unknown }).__render3d === debug) delete (window as unknown as { __render3d?: unknown }).__render3d;
       cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
