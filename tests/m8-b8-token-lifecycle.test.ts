@@ -3,6 +3,8 @@ import type { Unit } from '../src/simulation/units';
 import type { CombatState, CombatUnit } from '../src/simulation/combat-types';
 import { createMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { MatchSession } from '../src/rendering/match-session';
+import { sionPreparation } from './fixtures/sion-preparation';
+import type { BoardControls } from '../src/rendering/board-feed';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -38,10 +40,16 @@ const display = vi.hoisted(() => {
     lastUnit: Unit;
     lastCombatUnit: CombatUnit | undefined;
     ring = 'normal';
+    equipped: readonly string[] = [];
+    extras = { temporary: [] as readonly string[] };
+    hp = { visible: false };
+    shield = { visible: false };
+    meter() { return { value: 0, maxValue: 0 }; }
     destroyCount = 0;
     resetCount = 0;
     constructor(_scene: unknown, unit: Unit, x: number, y: number) {
-      this.token = new Token(`unit:${unit.id}`, x, y).setData('unitId', unit.id);
+      this.token = new Token(`unit:${unit.id}`, x, y).setData('unitId', unit.id)
+        .setData('definitionId', unit.definitionId).setData('team', unit.team).setData('starLevel', unit.starLevel);
       this.lastUnit = unit;
       created.push(this);
     }
@@ -66,7 +74,13 @@ type View = InstanceType<typeof display.View>;
 interface SceneBridge {
   session: MatchSession;
   application: unknown;
+  position(location: Unit['location']): { x: number; y: number };
   boardFrame(): BoardFrame;
+  boardControls(): BoardControls;
+  dropAt(token: Token, point: { x: number; y: number } | null): void;
+  sell(id: string): void;
+  overlay: { clear(): void };
+  dropZones: { clear(): void };
   tokens: Map<string, Token>;
   views: Map<string, View>;
   namedObjects: Map<string, Token>;
@@ -318,5 +332,49 @@ describe('BoardScene online interest feed', () => {
     expect(scene.boardFrame().goldMineIncomeKey).toBe('round:1:one');
     scene.session = new MatchSession({ ...initial, gold: 29, round: 2, roundResults: [result] });
     expect(scene.boardFrame()).toMatchObject({ goldMines: 2, goldMineIncomeKey: 'round:1:one' });
+  });
+});
+
+
+describe('Sion preparation in the real BoardScene and its 3D controls', () => {
+  it('keeps its token visible and draggable inside the preparation augment window', () => {
+    const state = sionPreparation();
+    const scene = makeScene({ ...state, phase: 'choice', combat: null, pendingChoice: { kind: 'augment', choiceId: 'prep-window',
+      eventId: 'prep-window', generation: 0, offers: [], returnPhase: 'preparation', step: 'offer', targetId: null, rerollCount: 0 } });
+    const summon = scene.session.itemSummons.find(s => s.kind === 'sion')!;
+    expect(token(scene, summon.unit.id)).toMatchObject({ visible: true, input: { enabled: true, draggable: true } });
+    const before = scene.session.state;
+    scene.dropAt(token(scene, summon.unit.id), scene.position({ kind: 'board', cell: { col: 6, row: 7 } }));
+    expect(scene.session.state).not.toBe(before);
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 6, row: 7 } });
+  });
+
+  it('creates a draggable 2D token and 3D feed piece, submits the shared drop command, and refuses bench/sale', () => {
+    const scene = makeScene(sionPreparation());
+    const summon = scene.session.itemSummons.find(s => s.kind === 'sion')!;
+    const body = token(scene, summon.unit.id);
+    expect(body.input).toEqual({ enabled: true, draggable: true });
+    expect(scene.boardFrame().pieces.filter(p => p.id === summon.unit.id)).toMatchObject([
+      { definitionId: 'g23-sion', visible: true, alive: true, benchSlot: null },
+    ]);
+    const at = (col: number, row: number) => scene.position({ kind: 'board', cell: { col, row } });
+    const move = vi.spyOn(scene.session, 'moveItemSummon');
+    scene.dropAt(body, at(6, 7)); scene.sync();
+    expect(move).toHaveBeenLastCalledWith('g23-sion', { col: 6, row: 7 });
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 6, row: 7 } });
+    const before = scene.session.state;
+    scene.dropAt(body, scene.position({ kind: 'bench', slot: 0 }));
+    scene.sell(summon.unit.id);
+    expect(scene.session.state).toBe(before);
+    expect(scene.setStatus).toHaveBeenLastCalledWith('赛恩由黑色玫瑰召唤 · 不能出售');
+    // Only pointer/GPU surfaces are substituted. The production 3D control callbacks and rule command run unchanged.
+    Object.assign(scene.input, { manager: { pointers: [] }, setDragState() {} });
+    scene.overlay = { clear() {} }; scene.dropZones = { clear() {} };
+    const controls = scene.boardControls();
+    expect(controls.dragStart(summon.unit.id)).toBe(true);
+    controls.dragEnd(at(5, 7), { x: 10, y: 10 });
+    expect(move).toHaveBeenLastCalledWith('g23-sion', { col: 5, row: 7 });
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 5, row: 7 } });
+    expect(scene.boardFrame().pieces.filter(p => p.definitionId === 'g23-sion')).toHaveLength(1);
   });
 });

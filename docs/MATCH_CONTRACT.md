@@ -815,7 +815,7 @@ match.ts 与既有 server-entry 继续导出。有效调用必须传下标；TS 
 
 ### G2-3 / Claude 服务器配套交接（本PR不越界）
 
-`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
+`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产，但二者已作为可移动棋盘投影显示（赛恩为用户2026-10-29规则，见本文“赛恩准备期”）；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
 
 双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算，镜像无进度/收益。当前`src/server/room/room.ts`的`buildReceipt`（约1052行）仍只复制旧字段；Claude需补`...(proposal.g23Facts ? {g23Facts:proposal.g23Facts} : {})`，不自行算规则。该转发未完成前不能宣称G2-3联机机制已上线。见`docs/UI_REQUESTS.md`的G23-SERVER-FACTS。冻结战斗输入的g23/playerHp由规则快照函数提供，服务器不得另造进度。
 
@@ -1255,7 +1255,7 @@ CHOICE_SKIP_OPTION = '@skip'
 
 - `UnitDefinition.formSwap?: true`。`resolveUnitForm(definition, team, location, board?)` 和 `getUnitForm(unit)` 返回 `'melee' | 'ranged' | null`：本方部署区离敌方最近的两排是近战，后两排是远程；备战席和普通英雄为 null。用户已定：开战时按站位定形态，战斗中不切换。
 - `CombatUnit.form?`：Codex 在开战快照里按 `getUnitForm` 填写并据此选那套属性和技能；回放单位视图带 `form`。
-- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；本批Sion/Forge仅在Combat入口由spawnCombatUnit生成，不进入准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
+- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；Sion/Forge在准备期由readItemSummons投影为可移动棋盘单位，在Combat入口由spawnCombatUnit创建隔离战斗实体，不进入永久准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
 
 ### 5 物品
 
@@ -1330,19 +1330,21 @@ the latter is captured from the owning seat by snapshotForBattle.
 adds own-side earned receipts up to that cap. No combat payout is spendable
 until the existing settlement transaction commits it.
 
-### G2-4b WIP — movable portal summon
+### 可移动准备期召唤物（含赛恩，2026-10-29）
 
-`readItemSummons(state:MatchState):ItemSummonOrigin[]` derives owner-visible
-preparation summons from equipped portals. `moveItemSummon(state,itemInstanceId,
-cell:HexCell):MatchCommandResult` persists a portal's desired cell in the seat
-mechanic `g24ItemPositions`; it accepts only an unlocked live preparation,
-owned active summon and unoccupied friendly cell. Failures return unchanged
-state, no event/RNG: wrong-phase, unknown-unit, outside-deployment-zone, occupied.
-Success emits seatMechanicChanged. Ordinary hero movement into a projected cell
-makes the summon relocate on next projection; a full half omits it. No permanent
-unit or population is minted. Frozen solo inputs and two-sided snapshots capture
-positions; restore rejects invalid/future item identities or frozen/current
-position disagreement. UI/server command dispatch adapters are not implemented.
+`readItemSummons(state: MatchState): readonly MovableSummon[]` 为只读棋盘投影；包括传送门虚空生物、杰斯熔炉和黑色玫瑰赛恩。它可用于公开阵容查询；显示及命令阶段由 `isSummonPreparation(state): boolean` 判断：`preparation` 或 `choice.kind='augment' && returnPhase='preparation'`。`MovableSummon.kind` 新增 `'sion'`，字段仍为 `{kind, ownerId, itemInstanceId, unit}`。
+
+赛恩准备期（用户决定，历史证据边界见 [实施报告](SION_PREPARATION_REPORT.md)）：当前有效阵容达到黑玫三档立即显示一只赛恩。准备期与战斗编译共用 `projectStrategyMembership(state: CombatStrategyInputs, definitions?: Readonly<Record<string, TraitDefinition>>, context?: TraitProjectionContext)`：先投影镜厅、R3复制体，再计装备纹章、临时成员来源，并通过同一个 `r3Traits` 统计成员与档位；返回投影后的 `state / projection / traits` 及编译所需的 `hall / r3 / teamups`，不修改原阵容或消耗资源/RNG。非法成员来源或context回合不符沿用 `RangeError`，不是Match命令的新reason。准备期召唤物也使用该投影的占格，复制体及镜厅变化不会再导致“准备期未显示、开战才出现赛恩”。
+
+以下为**项目约定**，不声称已由14.24研究确认：默认己方前排中格 `(3,4)`；不占人口/备战席；不可出售/装备；公开棋盘显示方式与虚空生物、熔炉一致。默认格占用时沿用行列扫描找空格。拖动使用 `moveItemSummon(state, 'g23-sion', cell): MatchCommandResult`，只允许本席部署区的整数空格。`g23-sion` 是席位位置键，存于 `seatMechanics.seat.g24ItemPositions`，**整局保留**；不把它解析为装备实例，也不随命名成员出售/合星、回合切换或羁绊降档而清除。降档隐藏、再达标恢复所存位置；保存格被英雄占用时找最近空格，不覆写原保存格。熔炉保存格、赛恩、默认熔炉、传送门依次放置；整个半场没有空格时沿用不生成重叠投影的约定。
+
+强化选择窗口：本分支保证 `choice.kind='augment' && returnPhase='preparation'` 时赛恩可拖动。普通英雄在强化选择期间上下棋盘的解锁由 D2 分支 `claude/v26-d2-brb` 提供，合并后共用同一备战窗口；本分支不另改普通英雄操作策略。
+
+失败仍为 `wrong-phase / unknown-unit / outside-deployment-zone / occupied`，保持原 state、无事件和 RNG 消耗；淘汰、锁定阵容、非备战选择及 masterwork-upgrade 窗口拒绝。成功仅发 `seatMechanicChanged{key:'g24ItemPositions'}`，不花金币、不占人口/备战席、不进共享池、不参与合星。赛恩不是永久资产，用其投影 id 走普通出售、装备、备战席部署命令返回 `unknown-unit`，不能借此交易或穿戴。
+
+冻结输入及 `PlayerBattleSnapshot.itemSummonPositions` 带上席位位置键；`snapshot.units` 仍禁止塞入赛恩资产。编译把位置冻结为 `StrategyUnitSnapshot.summonCell`，双边战斗按席位坐标再镜像。PvP单侧 `projectG23Summons` **始终传 `compiled.traits`**，与Combat及恢复校验一致：纹章激活的赛恩先于默认熔炉占格，不能等Combat补召唤后再找空格。Combat 沿用一只战斗实体、一次 `unitSpawned` 和初始 `bindingChanged`，不重复召唤；结束后战斗实体留在回放，下一备战期重建满状态投影且保留站位。服务器与2D/3D只传显示及移动意图；不算阈值、属性或战斗结果。
+
+`G23_SUMMON_POLICY.sion.preparationVersion='sion-preparation-v1'` 已纳入完整内容/loot摘要；赛恩战斗数值不变。按本次用户要求，生成身份常量、全局v25纪元及历史fixture由Claude统一重录，此分支不运行 `--write`。
 
 
 ## G2-4B 辅助装锻造器预演合同（2026-10-17）

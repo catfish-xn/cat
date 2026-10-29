@@ -12,7 +12,7 @@ import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
-import { projectG23Summons } from './g2-3-summons';
+import { projectG23Summons, SION_POSITION_KEY } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
 import { canonicalContent, canonicalContentSteps, digestContent } from './content';
 import { createScopedContentFreezer, freezeContent, freezeContentSteps } from './content/freeze';
@@ -60,7 +60,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
     ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g,unitId:map('unit',g.unitId)}))}:{}),
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
     ...(s.sniperOpening ? { sniperOpening: Object.fromEntries(Object.entries(s.sniperOpening).map(([id, bps]) => [map('unit', id), bps])) } : {}),
-    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
+    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[id===SION_POSITION_KEY?id:map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),
@@ -93,7 +93,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   });
   return {
     mapping, inputs,
-    units:projectItemSummons(projectG23Summons(projectR3Preparation(preparation,compiled),compiled.r3Original?.length||compiled.units.some(u=>isR3Copy(u.itemSummon))?compiled.traits:undefined,inputs.itemSummonPositions),compiled).units.map(sideUnit),
+    units:projectItemSummons(projectG23Summons(projectR3Preparation(preparation,compiled),compiled.traits,inputs.itemSummonPositions),compiled).units.map(sideUnit),
     strategy:sideStrategy(compiled),
   };
 }

@@ -11,7 +11,7 @@ import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
-import { isG23NonCombatant, isG23Summon } from './g2-3-summons';
+import { isG23NonCombatant, isG23Summon, SION_POSITION_KEY } from './g2-3-summons';
 import { validateG23ProgressSteps } from './g2-3-match-progress';
 import { canonicalContent, canonicalContentSteps, CONTENT_DIGEST } from './content';
 import { freezeContentSteps } from './content/freeze';
@@ -67,10 +67,10 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     else requireSnapshot(!s.augments.some(a=>a.definitionId==='forbidden-magic'));
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
-    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
+    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id===SION_POSITION_KEY|| (id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id))));
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
-    // Sion, the Forge and other combat-only skill bodies are spawned at combat start from the roster; a snapshot
-    // never carries one (a pre-placed Sion would bypass the Black Rose tier and its one-Sion projection).
+    // Projected preparation summons carry their chosen cells in itemSummonPositions, never as owned roster units.
+    // Requiring an ordinary roster here keeps Black Rose activation and the one-Sion limit compiler-owned.
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId && !isG23Summon(unit) && !isG23NonCombatant(unit)); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
     const units = validateInputAssets({ preparation: { board: DEFAULT_BOARD, benchSize: 9, units: s.units }, items: s.items },
@@ -206,8 +206,8 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   const ids = new Set(units.map(unit => unit.id));
   const cabalGrowth = readCabalGrowth(state);
   const wins = priorPvpWins(state.roundResults, state.round);
-  // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
-  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
+  // Forge follows its Jayce and Voidspawn its portal; Sion's cell belongs to the seat even while Black Rose is inactive.
+  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>id===SION_POSITION_KEY||units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
   const h6Growth=scoreboardCombatGrowth(state,units.map(u=>u.id));
   const sniperOpening = readSniperOpening(state);

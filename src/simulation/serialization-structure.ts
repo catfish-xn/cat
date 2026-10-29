@@ -345,7 +345,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, parsedImmutable, forSerialization);
-    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,undefined,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,expectedStrategy.traits,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];

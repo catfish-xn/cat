@@ -1,6 +1,6 @@
 import { hasB5VoidSwarm } from './augment-pool-batch5-g4-swarm';
 import type {TraitSnapshot} from './strategy-types';
-import {isCombatRosterLocked,canOperateMatch} from './operation-policy';
+import {isCombatRosterLocked} from './operation-policy';
 import type {CombatStrategyInputs} from './combat-input';
 import type {MatchState,MatchCommandResult} from './match-types';
 import type {HexCell} from './board';
@@ -9,13 +9,14 @@ import type {ItemSummonOrigin} from './g2-4b-summons';
 import {DEFAULT_BOARD,isDeploymentCell,sameCell} from './board';
 import {g22Equipment} from './strategy-g2-2';
 import {ROUND_CATALOG} from './content/round-catalog';
-import {projectG23Summons} from './g2-3-summons';
+import {projectG23Summons,SION_POSITION_KEY} from './g2-3-summons';
+import {projectStrategyMembership} from './strategy-membership';
 import {nearestItemCell} from './g2-4b-item-kernel';
 import {G24_VOIDSPAWN_POLICY} from './content/g2-4b-voidspawn';
 import {writeSeatMechanic} from './seat-mechanics/state';
 export const VOIDSPAWN_ITEM='TFT5_Item_ZzRotPortalRadiant';
 /** Saved preparation cells of movable summons: a Voidspawn's by its portal item instance (`item-N`), a Hextech Forge's by
- * its Jayce (`unit-N`, P user 2026-10-24). Cells are in the owner's own deployment rows. */
+ * its Jayce (`unit-N`), and Black Rose Sion by `g23-sion` (P user 2026-10-29). Cells are in the owner's own rows. */
 export type ItemSummonPositions=Readonly<Record<string,HexCell>>;
 export function readItemSummonPositions(state:Pick<MatchState,'seatMechanics'>):ItemSummonPositions|undefined {
  return state.seatMechanics?.seat.g24ItemPositions as ItemSummonPositions|undefined;
@@ -24,7 +25,7 @@ export function validateItemSummonPositions(value:unknown,nextItemSerial?:number
  if(!value||typeof value!=='object'||Array.isArray(value))throw new RangeError('Invalid item summon positions');
  for(const [id,cell] of Object.entries(value)){
   const match=/^(item|unit)-([1-9][0-9]*)$/.exec(id),next=match?.[1]==='unit'?nextUnitSerial:nextItemSerial;
-  if(!match||next!==undefined&&Number(match[2])>=next||!cell||typeof cell!=='object'
+  if((!match&&id!==SION_POSITION_KEY)||match&&next!==undefined&&Number(match[2])>=next||!cell||typeof cell!=='object'
     ||Object.keys(cell).sort().join()!=='col,row'||!Number.isSafeInteger(cell.col)||!Number.isSafeInteger(cell.row)
     ||!isDeploymentCell(DEFAULT_BOARD,'player',cell))throw new RangeError('Invalid item summon cell');
  }
@@ -58,22 +59,34 @@ export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly Tr
  return {preparation:{...preparation,units},origins};
 }
 /** A movable preparation summon as its owner sees it. `forge`: Jayce's Hextech Forge, keyed by its Jayce (`itemInstanceId`
- * is then the Jayce unit id); it is never a combat item summon. */
-export type MovableSummon=Pick<ItemSummonOrigin,'ownerId'|'itemInstanceId'|'unit'>&{readonly kind:ItemSummonOrigin['kind']|'forge'};
+ * is then the Jayce unit id); Sion uses the seat-local `g23-sion` key. Neither is a combat item summon. */
+export type MovableSummon=Pick<ItemSummonOrigin,'ownerId'|'itemInstanceId'|'unit'>&{readonly kind:ItemSummonOrigin['kind']|'forge'|'sion'};
 function movableSummons(state:MatchState){
- const projection=projectVoidspawns({...state,itemSummonPositions:readItemSummonPositions(state)});
- const forges:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-forge'&&u.team==='player'&&u.location.kind==='board').map(unit=>{
+ // Use the compiler's membership and projected occupancy, including emblems, R3 copies and Hall of Mirrors.
+ const membership=projectStrategyMembership(state);
+ const projection=projectVoidspawns({...membership.state,itemSummonPositions:readItemSummonPositions(state)},membership.traits);
+ // Combat-only Jayce copies must not introduce a movable forge key absent from the owned roster/snapshot.
+ const forges:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-forge'&&u.team==='player'&&u.location.kind==='board'
+   &&state.preparation.units.some(owner=>owner.id===u.id.slice(0,-':g23-forge'.length)&&owner.definitionId==='jayce')).map(unit=>{
   const ownerId=unit.id.slice(0,-':g23-forge'.length);
   return {kind:'forge',ownerId,itemInstanceId:ownerId,unit};
  });
- return {projection,summons:[...projection.origins as readonly MovableSummon[],...forges]};
+ const sions:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-sion'&&u.team==='player'&&u.location.kind==='board').map(unit=>({
+  kind:'sion',ownerId:unit.id.slice(0,-':g23-sion'.length),itemInstanceId:SION_POSITION_KEY,unit
+ }));
+ return {projection,summons:[...projection.origins as readonly MovableSummon[],...forges,...sions]};
 }
 /** Owner-visible movable preparation summons. Rendering remains an adapter. */
 export function readItemSummons(state:MatchState):readonly MovableSummon[] {
  return movableSummons(state).summons;
 }
+/** Movable summons remain editable during the preparation augment choice. */
+export function isSummonPreparation(state:Pick<MatchState,'phase'|'pendingChoice'>):boolean {
+ return state.phase==='preparation'||state.phase==='choice'&&state.pendingChoice?.kind==='augment'&&state.pendingChoice.returnPhase==='preparation';
+}
 export function moveItemSummon(state:MatchState,itemInstanceId:string,cell:HexCell):MatchCommandResult {
- if(state.phase!=='preparation'||isCombatRosterLocked(state)||!canOperateMatch(state))return {ok:false,state,reason:'wrong-phase'};
+ if(!isSummonPreparation(state)||isCombatRosterLocked(state)||state.multiplayer?.status==='eliminated'
+   ||state.pendingChoice?.payload?.source==='masterwork-upgrade')return {ok:false,state,reason:'wrong-phase'};
  const {projection,summons}=movableSummons(state);
  const origin=summons.find(o=>o.itemInstanceId===itemInstanceId&&o.unit.team==='player');
  if(!origin)return {ok:false,state,reason:'unknown-unit'};

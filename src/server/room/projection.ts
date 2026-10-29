@@ -13,7 +13,7 @@ import {
 import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
+import { d14PublicUnitMark, listCarouselSlots, readItemSummons, isSummonPreparation, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatChoiceDeadline, SeatPublic, SeatState } from './types';
 
@@ -190,10 +190,10 @@ export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoice
 }
 /**
  * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
- * outside preparation (they exist in a battle only as its own units). Never minted, moved or scaled here.
+ * outside preparation and its augment choice (a battle supplies its own units). Never minted, moved or scaled here.
  */
 export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
-  if (match.phase !== 'preparation') return [];
+  if (!isSummonPreparation(match)) return [];
   return readItemSummons(match).filter(origin => origin.unit.team === 'player').map(origin => ({
     kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId,
     unit: { id: origin.unit.id, definitionId: origin.unit.definitionId, team: origin.unit.team, starLevel: origin.unit.starLevel,

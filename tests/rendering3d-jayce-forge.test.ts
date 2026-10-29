@@ -126,6 +126,26 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
   }
   const cast = (tick: number) => listener.events([{ type: 'cast', tick, eventSeq: tick, sourceId: 'j', targetIds: ['foe'] } as unknown as DisplayCombatEvent]);
 
+  it('loads and ray-picks the preparation Sion model and forwards its drag without adding a combat spawn', async () => {
+    const lease = model('g23-sion', { idle: 's_idle', spawn: 's_spawn' }, [['s_idle', 2], ['s_spawn', 1]]);
+    const load = vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+    controls.dragStart = vi.fn(() => true);
+    await mount();
+    const sion = piece({ id: 'unit-2:g23-sion', definitionId: 'g23-sion' });
+    await publish([sion], false);
+    expect(load).toHaveBeenCalledWith('g23-sion');
+    expect(scene.getObjectByName('model-g23-sion')).toBe(lease.scene);
+    const clips = forgeCalls(lease).map(([output]) => output.playback?.clips[0]);
+    expect(clips).not.toContain('s_spawn');
+    const center = lease.scene.getWorldPosition(new three.Vector3()).add(new three.Vector3(0, 23, 0)).project(camera);
+    const point = { x: (center.x + 1) * 400, y: (1 - center.y) * 300 };
+    canvas.pointer('pointerdown', point);
+    canvas.pointer('pointermove', { x: point.x + 20, y: point.y + 10 });
+    canvas.pointer('pointerup', { x: point.x + 20, y: point.y + 10 });
+    expect(controls.dragStart).toHaveBeenCalledWith(sion.id);
+    expect(controls.dragEnd).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps a missing trainer golem as a team pawn across combat resets, death and revival', async () => {
     await mount();
     const golem = piece({ definitionId: 'trainer-golem' });

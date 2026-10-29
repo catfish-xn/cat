@@ -1058,7 +1058,7 @@ function execute_claimG23Reward(state:MatchState,atomId:string,definitionId:stri
  return granted.ok?accept(granted.state,granted.events):fail(state,granted.reason);
 }
 
-export {readItemSummons,moveItemSummon} from './g2-4b-voidspawn';
+export {readItemSummons,moveItemSummon,isSummonPreparation} from './g2-4b-voidspawn';
 
 export function deployMatchUnit(...args: Parameters<typeof execute_deployMatchUnit>): ReturnType<typeof execute_deployMatchUnit> {
   return traceHistoryCommand('deployMatchUnit', args, () => execute_deployMatchUnit(...args));

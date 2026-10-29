@@ -6,7 +6,7 @@ import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
   combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, rerollAugment, setShopLock,
-  moveItemSummon, readItemSummons,
+  moveItemSummon, readItemSummons, isSummonPreparation,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
@@ -111,7 +111,7 @@ export class MatchSession {
    */
   get itemSummons(): readonly ItemSummonView[] {
     const state = this.matchState;
-    if (this.summonCache?.state !== state) this.summonCache = { state, summons: state.phase !== 'preparation' ? [] : readItemSummons(state)
+    if (this.summonCache?.state !== state) this.summonCache = { state, summons: !isSummonPreparation(state) ? [] : readItemSummons(state)
       .filter(origin => origin.unit.team === 'player')
       .map(origin => ({ kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId, unit: structuredClone(origin.unit) })) };
     return this.summonCache.summons;

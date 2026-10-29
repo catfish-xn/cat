@@ -131,6 +131,7 @@ export interface SeatChoiceDeadlineView { readonly choiceId: string; readonly ge
  * place it this preparation (the saved cell, or the nearest free one); the client draws it there and only sends
  * `moveItemSummon` with `itemInstanceId`. Stage stats are not part of it and are never computed on the client.
  * `kind: 'forge'` (P, 2026-10-24): 杰斯's 海克斯科技锻炉, whose `itemInstanceId` is its Jayce's unit id.
+ * `kind: 'sion'` (P, 2026-10-29): 黑色玫瑰赛恩; `itemInstanceId: 'g23-sion'` is a seat-local position key.
  */
 export interface ItemSummonView {
   readonly kind: MovableSummon['kind'];
