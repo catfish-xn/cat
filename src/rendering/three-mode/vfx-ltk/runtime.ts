@@ -4,6 +4,8 @@ import { createLtkParticles, unitAnchor, unitJoints, ROOT_PARTICLES, CHILD_PARTI
 import type { VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineSpawn } from './timeline';
 import { createVfxPasses } from './rendering/passes';
+import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
+import { flushFrameTargetPool } from './rendering/utils/frame';
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
@@ -105,6 +107,6 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     },
     get active() { return running.size; },
     get queued() { return waiting.length; },
-    dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); library.dispose(); },
+    dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); flushDrawBufferPool(); flushFrameTargetPool(); library.dispose(); },
   };
 }

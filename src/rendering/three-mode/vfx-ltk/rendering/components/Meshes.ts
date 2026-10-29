@@ -43,6 +43,7 @@ import {
   rowsWritten,
   written,
 } from "../utils/buffers";
+import { releaseMeshBuffers } from "../utils/drawBufferPool";
 import { colorLookupInto } from "../utils/colorLookup";
 import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
 import { meshMaterial } from "../utils/materials";
@@ -96,6 +97,8 @@ export interface MeshesProps {
   sources: readonly Source[];
   /** The emitter's own geometry, with the per-instance attributes the frame writes. */
   buffers: MeshBuffers;
+  /** Stable pool key for this authored mesh (prepared draw definition key). */
+  meshKey: string;
   samplers: EmitterSamplers;
   /** Where the emitter falls in the system's draw order, from `drawRanks`. */
   rank: number;
@@ -120,6 +123,7 @@ export function createMeshes({
   emitter,
   sources,
   buffers,
+  meshKey,
   samplers,
   rank,
   hidden,
@@ -146,7 +150,7 @@ export function createMeshes({
 
   const instanced = new InstancedMesh(geometry, material, MESHES_PER_EMITTER);
   const pair = { solid: instanced };
-  cleanup(() => () => { buffers.pose?.texture.dispose(); geometry.dispose(); instanced.dispose(); });
+  cleanup(() => () => { buffers.pose?.texture.dispose(); instanced.dispose(); releaseMeshBuffers(buffers, meshKey); });
   const drawn = !hidden && !emitter.disabled;
 
   eachFrame((state) => {

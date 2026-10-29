@@ -20,7 +20,8 @@ import {
 import { FRAME_SLOTS } from "../../engine/simulation/pool";
 import type { EmitterSamplers } from "../hooks/useVfxTextures";
 import { fragmentTests } from "../utils/blend";
-import { projectionBuffers, QUADS_PER_EMITTER, written } from "../utils/buffers";
+import { type ProjectionBuffers, QUADS_PER_EMITTER, written } from "../utils/buffers";
+import { borrowProjectionBuffers, releaseProjectionBuffers } from "../utils/drawBufferPool";
 import { colorLookupInto } from "../utils/colorLookup";
 import { drawsAsProjection } from "../utils/drawKind";
 import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
@@ -66,7 +67,7 @@ export function createProjections({
   room = QUADS_PER_EMITTER,
 }: ProjectionsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
-  const buffers = memo(() => projectionBuffers(room), [room]);
+  const buffers = memo(() => borrowProjectionBuffers(room), [room]);
   const material = memo(
     () =>
       projectionMaterial(
@@ -79,7 +80,7 @@ export function createProjections({
     [emitter, samplers],
   );
 
-  cleanup(() => () => buffers.geometry.dispose(), [buffers]);
+  cleanup(() => () => releaseProjectionBuffers(buffers, room), [buffers, room]);
 
   const pair = makePair(material);
   const drawn = !hidden && !emitter.disabled && drawsAsProjection(emitter);
@@ -124,7 +125,7 @@ function write(
   emitter: EmitterModel,
   at: number,
   instance: number,
-  buffers: ReturnType<typeof projectionBuffers>,
+  buffers: ProjectionBuffers,
 ): void {
   const pool = source.pool;
   const time = frame.now;

@@ -10,7 +10,7 @@ import { createTrails } from './rendering/components/Trails';
 import { createBeams } from './rendering/components/Beams';
 import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
-import { meshBuffers } from './rendering/utils/buffers';
+import { borrowMeshBuffers } from './rendering/utils/drawBufferPool';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
@@ -105,7 +105,11 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const geometry = prepared.meshes.get(definition.key);
         if (geometry) {
           const pose = prepared.poses?.get(definition.key);
-          draw = createMeshes({ ...props, buffers: { ...meshBuffers(staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) } });
+          draw = createMeshes({
+            ...props,
+            meshKey: definition.key,
+            buffers: { ...borrowMeshBuffers(definition.key, staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) },
+          });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
       else if (drawsAsTrail(emitter)) draw = createTrails(props);
