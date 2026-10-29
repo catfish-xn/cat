@@ -2187,7 +2187,7 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 ## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
 
-用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
+2026-10-20 用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子；当时不公开连胜/连败，**此限制已由下方 §27.1 的 2026-10-29 决定覆盖**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
 
 **投影**：`SeatPublic.publicBoard`（`PublicBoard`）在原 `units` 之外由 `toPublicBoard` 逐字段新增三个字段，均为可选类型、房间总是填写：
 - `bench: PublicBenchUnit[]`：本席 `preparation.units` 中 `team:'player'`、位于备战席的单位，`{definitionId, starLevel, slot, items[]}`，按 slot 升序；`items` 为该单位所持装备定义 id，按装备槽序。
@@ -2195,9 +2195,21 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 - `augments: string[]`：已拥有强化的定义 id，按 `MatchState.augments` 顺序（获得顺序）。
 - `anomaly?: string`（加在 `units[]` 与 `bench[]` 的单位上）：`anomalyBinding.unitId` 指向该单位时为其异常定义 id，否则省略该键。不带 `choiceId`、`boundRound`、单位 id。
 
-不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
+`publicBoard` 不包含连胜/连败（`streak`，§27.1 在席位顶层单独公开）；仍不公开金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
 
-**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
+**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。连胜/连败改读下方 §27.1 的席位顶层字段。
+
+### 27.1 V26 公开连胜/连败（2026-10-29，SR-V26-SIDEBAR）
+
+`SeatPublic` 新增可选 `readonly streak?: { readonly kind: 'win' | 'loss' | null; readonly count: number }`，路径为 `PlayerView.seats[].streak`，终局 `PlayerView.ranking[].streak` 使用同一席位投影。`count` 为非负安全整数，无连胜/连败为 `{kind:null,count:0}`。类型可选以兼容旧视图；当前房间所有席位、所有阶段始终填写，包含机器人、已淘汰席与观战者收到的视图。旧视图缺字段时界面不推算。
+
+`SeatState.streak: MatchState['streak']` 是房间已提交的公开 streak 账本：创建席位时逐字段复制初值，结算时在 `commitSettlement` / `publishOpeningResolution` 从该次规则结果复制 `kind/count`，与 `SeatState.hp` 一起提交。非结算变化仅在新获取 Called Shot 且规则 `batch5Streak` 能解释该次变化时，由 `syncedSeatStreak` 同步账本；选择发布时即与本人私有 streak 和公开 `publicBoard.augments` 一致，不等本轮结算。已拥有的 Called Shot 不构成再次改写依据，无法解释的非结算 streak 变化沿用 `invalid-results` 拒绝发布。live `seat.match` 可能在房间提交前已经自行完成 PvE 结算（空棋盘开战即结束，或 live-bank 指令经 `pveCatchUp` 追帧结束）；这时公开 HP/streak 均保持上次提交值，普通指令、断线重连或新 SeatState 不得提前发布结果。治疗可按既有 HP 同步入口更新 HP，不改变 streak。
+
+`toSeatPublic(seat: SeatState): SeatPublic`（`src/server/room/projection.ts`）只逐字段复制已提交的 `seat.streak.kind/count` 为独立对象，按不可变 SeatState 缓存；不直接读取 live `seat.match.streak`，不传引用，不展开经济对象，不附带金币、收入、历史、收据或随机流。`publicBoard` 白名单不变，继续禁止其内部出现 streak。`toPlayerView(room,seatId,serverNow)` 对所有接收者公开相同结果，结算提交时与公开 `seat.hp` 同一次账本发布；首次下发、增量、本地房间、wire JSON 编码和 resume 快照共用此入口。淘汰保留最后已提交值，观战与重连不重计或清零。
+
+只公开已有经济状态：PvE、平局、补给/选秀及加时对 streak 的影响完全沿用现有经济/结算入口，服务器与客户端不另算。无新命令或失败原因；未知接收席位仍沿用 `toPlayerView` 的 `RangeError`。兼容增量字段不提升 ROOM/NET 协议版本，不改规则、内容版本、digest、存档或回放规则。
+
+验收：`tests/server/projection.test.ts` 保留私有数据隔离断言并精确扩展席位顶层白名单，检查 streak 仅含 kind/count、独立复制、按 SeatState 缓存更新、live Match 不覆盖账本、重复读取与观战/终局；`room-streak-ledger.test.ts` 验自然候选选择 Called Shot 后逐发布、全接收者和本人私有 streak 立即一致，并拒绝无新获取、错误数值及已拥有强化解释的改写；`projection-wire.test.ts` 验 Called Shot 选择后即时推送与重连，以及真实 PvE 后全席 HP/streak 一起提交与重连；`local-room-client.test.ts` 验本地首帧/更新；`t10-combat-ops.test.ts` 验空棋盘 PvE 在 battle 期间保持旧公开 HP/streak，提交进入 settlement 后一起变化，含期间操作与旧缓存视图；`live-bank.test.ts` 验 battle 指令经 `pveCatchUp` 完成 PvE 也不提前公开。`g5-economy-preview.test.ts` 在既有整局路径逐发布核对 `SeatState.hp/streak` 已提交账本，并以已提交回合的规则 `streakAfter` 交叉验证，覆盖连续胜负、打断、PvE、平局、补给和淘汰。投影新增字段使 v25 纪元摘要/联机视图快照漂移属预期，交给 Claude 统一重录；本任务不执行 `--write` 或改基线断言。
 
 ### First-pass replay capture supplement
 

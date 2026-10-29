@@ -7,6 +7,7 @@ import { prepareInput, copyInput } from '../fixtures/prepared-input';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { applyCombatReplayTick, stepCombat, type CombatReplay, type CombatReplayInput, type CombatState, type CombatViewState } from '../../src/server-entry';
 import type { ServerMessage } from '../../src/server/net/messages';
+import type { PlayerView } from '../../src/server/protocol';
 import { toCombatReplayFor, mirrorCombatReplay, toSeatPrivateView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { Room } from '../../src/server/room/room';
@@ -61,6 +62,128 @@ function firstPvpBattle(room: Room, clock: ManualClock): { state: RoomState; bat
 
 let harness: NetHarness | null = null;
 afterEach(async () => { await harness?.close(); harness = null; });
+
+describe('V26 public streak over the wire', () => {
+  describe('Called Shot acquired between settlements', () => {
+    let owner: TestClient, observer: TestClient, room: Room;
+    beforeAll(async () => {
+      harness = await startServer({ seed: 8 }, new TwoSidedBattleResolver());
+      const first = await harness.connect(); observer = await harness.connect(); owner = await harness.connect();
+      for (const [index, client] of [first, observer, owner].entries()) expectOk(await client.join(`玩家 ${index}`));
+      expectOk(await first.start());
+      await owner.waitFor(message => message.type === 'state');
+      room = harness.server.room!;
+    });
+    for (const round of [2, 3, 4]) beforeAll(async () => {
+      runUntil(room, harness!.clock, state => state.round === round && state.phase === 'preparation');
+      await owner.waitForView(view => view.phase.round === round && view.phase.kind === 'preparation');
+    });
+    it('broadcasts the new streak with the owned augment immediately and keeps it on resume', async () => {
+      const before = room.state.seats.find(seat => seat.seatId === owner.seatId)!, choice = before.match.pendingChoice!;
+      expect(choice.offers).toContain('called-shot');
+      expect(before.streak).not.toEqual({ kind: 'win', count: 4 });
+      await owner.waitFor(message => message.type === 'state' && message.seatRevision === before.seatRevision);
+      const settlements = room.state.settlements;
+      expectOk(await owner.command({ type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: 'called-shot' }));
+      const hasAugment = (view: PlayerView) => view.seats.some(seat => seat.seatId === owner.seatId && seat.publicBoard?.augments?.includes('called-shot'));
+      for (const client of [owner, observer]) {
+        const view = await client.waitForView(hasAugment);
+        expect(view.seats.find(seat => seat.seatId === owner.seatId)!.streak).toEqual({ kind: 'win', count: 4 });
+        expect(privateKeysIn(view)).toEqual([]);
+      }
+      const privateState = await owner.waitFor<Extract<ServerMessage, { type: 'state' }>>(message => message.type === 'state' && message.state.augments.some(augment => augment.definitionId === 'called-shot'));
+      expect(privateState.state.streak).toEqual({ kind: 'win', count: 4 });
+      expect(room.state.settlements).toEqual(settlements);
+      expect(room.state.phase).toBe('preparation');
+      const token = owner.token!;
+      await owner.close();
+      const resumed = await harness!.connect();
+      expectOk(await resumed.resume(token));
+      const view = await resumed.waitForView(hasAugment);
+      expect(view.seats.find(seat => seat.seatId === owner.seatId)!.streak).toEqual({ kind: 'win', count: 4 });
+      expect(privateKeysIn(view)).toEqual([]);
+      expect(room.state.fault).toBeNull();
+    });
+  });
+
+  it('keeps an empty-board PvE result private through battle commands and resume until the room commits HP and streak', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [a, b] = await seatTwo(harness), room = harness.server.room!;
+    const mine = () => room.state.seats.find(seat => seat.seatId === a.seatId)!;
+    const publicSeat = (view: PlayerView) => view.seats.find(seat => seat.seatId === a.seatId)!;
+    runUntil(room, harness.clock, state => state.round === 2 && state.phase === 'preparation');
+    for (const unit of mine().match.preparation.units.filter(unit => unit.team === 'player')) expectOk(room.handle(a.seatId!, { type: 'sell', unitId: unit.id }));
+    runUntil(room, harness.clock, state => state.round === 2 && state.phase === 'battle');
+    expect(mine().match).toMatchObject({ phase: 'settlement', playerHp: 97, streak: { kind: 'loss', count: 1 } });
+    for (const client of [a, b]) {
+      const battle = await client.waitForView(view => view.phase.round === 2 && view.phase.kind === 'combat');
+      expect(publicSeat(battle)).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
+    }
+    // The frozen public view already maps to combat; send against the latest locked private snapshot.
+    await a.waitFor(message => message.type === 'state' && message.round === 2 && message.seatRevision === mine().seatRevision);
+    const fromIndex = b.inbox.length;
+    expectOk(await a.command({ type: 'shopLock', locked: true, generation: mine().match.shop.generation }));
+    const operated = await b.waitFor<Extract<ServerMessage, { type: 'view' }>>(message => message.type === 'view', undefined, fromIndex);
+    expect(publicSeat(operated.view)).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
+    const token = a.token!;
+    await a.close();
+    const disconnected = await b.waitForView(view => !publicSeat(view).connected);
+    expect(publicSeat(disconnected)).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
+    const resumed = await harness.connect();
+    expectOk(await resumed.resume(token));
+    const battle = await resumed.waitForView(view => view.phase.round === 2 && view.phase.kind === 'combat');
+    expect(publicSeat(battle)).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
+    runUntil(room, harness.clock, state => state.round === 2 && state.phase === 'settlement');
+    expect(room.state.fault).toBeNull();
+    // awaiting-settlement also maps to a settlement view, so select the room's actual committed publication.
+    const committedRevision = room.state.roomRevision;
+    for (const client of [b, resumed]) {
+      const { view: settled } = await client.waitFor<Extract<ServerMessage, { type: 'view' }>>(message => message.type === 'view' && message.roomRevision === committedRevision);
+      expect(settled.phase).toMatchObject({ round: 2, kind: 'settlement' });
+      expect(publicSeat(settled)).toMatchObject({ hp: 97, streak: { kind: 'loss', count: 1 } });
+    }
+    expect(publicSeat(battle)).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
+    expect(mine().match.roundResults).toHaveLength(2);
+    for (const client of [a, b, resumed]) for (const message of client.inbox) if (message.type === 'view') expect(privateKeysIn(message.view)).toEqual([]);
+  }, 20_000);
+
+  it('publishes the settled streak with HP to every player, and resumes without resetting or recounting', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [a, b] = await seatTwo(harness), room = harness.server.room!;
+    for (const client of [a, b]) for (const seat of client.view!.seats) expect(seat.streak).toEqual({ kind: null, count: 0 });
+    // A real PvE settlement changes the authoritative economy streak; no network-side calculation.
+    runUntil(room, harness.clock, state => state.phase === 'settlement');
+    expect(room.state.fault).toBeNull(); expect(room.state.roundId).toBe('1-2');
+    const stats = (seats: PlayerView['seats']) => seats.map(({ seatId, hp, streak }) => ({ seatId, hp, streak }));
+    const expected = room.state.seats.map(seat => ({ seatId: seat.seatId, hp: seat.hp, streak: seat.streak }));
+    for (const seat of room.state.seats) {
+      expect(seat.hp).toBe(seat.match.playerHp);
+      expect(seat.streak).toEqual(seat.match.streak);
+    }
+    for (const seat of expected) expect(seat.streak.count).toBe(1);
+    for (const client of [a, b]) {
+      const settled = await client.waitForView(view => view.phase.kind === 'settlement');
+      expect(stats(settled.seats)).toEqual(expected);
+      for (const seat of settled.seats) {
+        expect(Object.keys(seat.streak!).sort()).toEqual(['count', 'kind']);
+        for (const key of ['shop', 'gold', 'xp', 'rngState', 'seed', 'pendingChoice', 'roundResults']) expect(seat).not.toHaveProperty(key);
+      }
+    }
+    const token = a.token!, matches = room.state.seats.map(seat => seat.match);
+    await a.close();
+    expect(stats((await b.waitForView(view => view.seats.some(seat => seat.seatId === a.seatId && !seat.connected))).seats)).toEqual(expected);
+    const resumeIndex = b.inbox.length;
+    const resumed = await harness.connect();
+    expectOk(await resumed.resume(token));
+    await resumed.waitFor(message => message.type === 'state');
+    expect(stats((await resumed.waitForView(view => view.phase.kind === 'settlement')).seats)).toEqual(expected);
+    const seen = await b.waitFor<Extract<ServerMessage, { type: 'view' }>>(message => message.type === 'view' && message.view.seats.some(seat => seat.seatId === a.seatId && seat.connected), undefined, resumeIndex);
+    expect(stats(seen.view.seats)).toEqual(expected);
+    expect(room.state.seats.map(seat => seat.match)).toEqual(matches);
+    for (const seat of room.state.seats) expect(seat.match.roundResults).toHaveLength(1);
+    for (const client of [a, b, resumed]) for (const message of client.inbox) if (message.type === 'view') expect(privateKeysIn(message.view)).toEqual([]);
+  });
+});
 
 describe('B7 private seat view on every state path', () => {
   describe('private wire snapshots', () => {

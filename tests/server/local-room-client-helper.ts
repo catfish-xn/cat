@@ -108,6 +108,7 @@ describe('LocalRoomClient', () => {
     expect(view.phase.kind).toBe('preparation'); expect(view.phase.endsAt).toBe(1_000);
     expect(view.seats).toHaveLength(8); expect(view.seats.filter(seat => seat.kind === 'bot')).toHaveLength(7);
     expect(view.seats.find(seat => seat.seatId === view.mySeatId)).toMatchObject({ kind: 'human', name: '测试', hp: 100 });
+    for (const seat of view.seats) expect(seat.streak).toEqual({ kind: null, count: 0 });
     expect(log.state).toHaveLength(1); expect(log.state[0]!.phase).toBe('preparation');
     expect(view.fault).toBeNull();
   });
@@ -159,6 +160,16 @@ describe('LocalRoomClient', () => {
     expect(view.ranking).toBeNull();
     expect(view.fault).toMatchObject({ kind: 'resolver-error' });
     expect(view.fault!.detail).toContain('faultAt=2');
+    // The local transport uses the same public projection: the first real PvE result is already visible to everyone.
+    for (const seat of view.seats) {
+      const authority = client.currentRoom!.state.seats.find(entry => entry.seatId === seat.seatId)!;
+      expect(seat.streak).toEqual(authority.streak);
+      expect(authority.streak).toEqual(authority.match.streak);
+      expect(seat.streak!.count).toBe(1);
+      expect(seat.hp).toBe(authority.hp);
+      expect(authority.hp).toBe(authority.match.playerHp);
+    }
+    client.dispose();
   });
   if (mode === 'fast') it('returns to the lobby after reset and can queue a new match', async () => {
     const { client, log, runUntil, last } = harness({ faultAtRound: 1 });
