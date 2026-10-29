@@ -57,12 +57,26 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 ## 2026-10-27 v25 B5-56／B5-58
 
 规则／内容为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 保持 12/8/8/7，网络规则协议 5。金色收获（4-2）与禁忌魔法（3-2、黑玫棋盘）按 P-B5-56／58 开放。唯一历史证据为按持有者写入的 `augment-history-v1`：开战异常绑定、真实致死来源、实际参与者与玩家级赛恩成长。每三杀发二金和每三次参与击杀 +150 AD 基点／10 生命均由规则层战后唯一收据执行，成长从下一战生效。无新增玩家命令，旧身份拒绝续玩，未重录 epoch。接口、失败语义与全部接线点以 [强化历史合同](AUGMENT_HISTORY_DESIGN.md) 的 B5-56／B5-58 节为准。
+## 2026-10-27 B5-69 战利品爆炸（P-B5-69，数值待最终确认）
 
-## 2026-10-27 v24 纪元身份
+新增黄金强化 `loot-explosion`（`TFT13_Augment_Ambusher`）。取得时发卡蜜尔、爆爆各1，联机英雄使用既有共享奖励法球。规则、权重、档位映射和11%基础值以 [P-B5-69](S13_RULES_GAP.md#p-b5-69p2026-10-27战利品爆炸用户纠正版) 为准，按用户决定在 **2-1／3-2 开放、4-2 禁出**；3-2 保留伏击专家阵容过滤。没有新增网络命令、战斗事件或外层版本；精确内容摘要随本次脚本重算，历史epoch不重录。
 
-当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
+| 内部领域入口（`augment-pool-batch5-g7.ts`） | 输入、输出与拒绝 |
+| --- | --- |
+| `rollLootExplosion(stage:number, critChanceBps:number, draw:()=>number): LootExplosionDrop \| null` | 阶段2–8、0–10000整数暴击率、合法32位字；返回基础档、最终档、价值暴击标记和金币/物品奖励，未掉落返回null；越界抛 `Invalid augment history: loot explosion stage/crit chance/random word`。只用指定子流。 |
+| `lootExplosionRewardPlan(state:MatchState)` | 从持有者与 `requireAugmentFacts(state,'deaths',round)` 推导已结算非供给战斗的奖励（现有PvE野怪不满足英雄资格）；每个死亡事件、每个奖励槽拥有唯一receiptId。缺完整死亡边界、重复death eventSeq、错战斗ID抛 `Invalid augment history: ...`；不从候选收据推导奖励。 |
+| `drainLootExplosionRewards(state:MatchState):MatchState` | 结算期调用既有 `grantMechanicGold/Item`；已发收据保持原对象，禁止补发遗漏的旧轮奖励；在 `applyRoundSettlement` 内失败仍返回原state及 `invalid-receipt`，无事件、资源、RNG消耗。 |
+| `validateLootExplosionRewards(state:MatchState):void` | 按独立死亡历史重新规划，逐项核对数量、唯一身份、来源、轮次、金币/装备和item-acquired来源；伪造、缺失、孤儿或冲突收据抛 `Invalid augment history: loot explosion ...`。联机恢复仍须另外提供独立服务器authority。 |
 
-## 2026-10-25 v23 当前合同索引（基线 2b434e28 → 0797f3fe）（历史记录；身份以 v24 节为准）
+服务器 `recordRoomBattleDeaths(match,results)` 只映射实际执行的双边死亡/击杀席位与原始实例ID，在共享 `settleRound` 事务前写入已验证的历史API；战后 `recordRoomBattleFacts` 不重复写此批死亡。金币/装备仍只在领域模块计算。`sampleAugmentDeath` 的第三个可选参数只承接击杀现场观察，既有事件JSON不增加字段。Match单人路径保持可执行；验收以联机为目标。
+
+审查修复：Match 在发奖前记录与终局 tick 相等的完整 `deaths` 边界；空阵容 tick 0 的 `deaths:[]` 同样必须显式保存，不能把缺行当作零死亡。已有边界和死亡 eventSeq 不重复记录。`restoreSharedOrbSnapshot(pool,input,authority?)` 依据可信 pool 的 pending／rewards 内初始赠礼命名空间判断相关历史认证要求：候选删除拥有者、历史或赠礼收据，仍须独立服务器 authority；缺失抛 `Invalid augment history: missing independent server authority`，状态不符抛 `server facts/state mismatch`。初始 gift 的 source 或 `receiptId` 命名空间命中 `augment-pool-batch1` 时，始终运行拥有者／来源／礼物计划校验，孤儿或伪装来源抛 `Invalid augment batch1 gift authority`。恢复保持只读，不补发资源。回归与通用 Oracle 覆盖见 [G7 审查修复报告](V25_G7_REVIEW_FIXES.md)。
+
+## 2026-10-27 v24 纪元身份（历史记录）
+
+当时 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
+
+## 2026-10-25 v23 当前合同索引（基线 2b434e28 → 0797f3fe）（历史记录；当前身份以 v25 节为准）
 
 本节描述 `codex/v23-contract` 的实际行为，优先于下文保留的 v17–v22“当前／候选／待录制”身份说明；历史章节与既有接口结构保留。文档口径见 [P-CONTRACT-V23](S13_RULES_GAP.md#p-contract-v23p2026-10-25契约覆盖关系)。本次仅更新合同，不修改玩法、保存格式或录制。当时规则／内容身份为 `s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，schema/save/replay/command＝**12/8/8/7**，NET＝**5**，`lcg32-v1`、50 ms/tick；精确内容摘要仍须与本分支生成常量相等，不能凭相同版本名接纳旧摘要。v23 epoch fixtures 正由独立任务重录，本节不宣布录制已验收。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)、[src/simulation/content/identity-constants.ts:3](../src/simulation/content/identity-constants.ts#L3)。战斗事实、控制、位移、召唤及恢复细节见 [COMBAT_CONTRACT 的 v23 节](COMBAT_CONTRACT.md#2026-10-25-v23-当前战斗与恢复合同)。
 
@@ -300,7 +314,7 @@ Match公共命令/失败原因不变。战斗新增可选 `CombatUnit.damageMana
 
 ## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
 
-用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+现按用户 2026-10-28 批准对齐 14.24 存档，**各阶段固定15金币**，全队 **1%攻速**不变（覆盖10-23暂定15/18/22）。逐字段来源和对照见 [14.24 对齐报告](AUGMENT_14_24_ALIGNMENT.md)。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
 
 每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
 
@@ -1608,3 +1622,113 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 | `tests/augment-stage-helpers.ts`；`tests/fixtures/m5/oracle.g2.cjs`、`augment-rewards-oracle.cjs` | 固定有界路线种子；独立候选/互斥/阶段/出售返金/礼物/上限XP校验 |
 | `tests/augment-pool-batch5-h12-*.test.ts`、`tests/server/h12-subscription.test.ts`；相关 shop/history 测试 | 真实命令、房间、池守恒、三入口恢复/篡改；旧固定种子夹具改合法重抽，保留断言与超时 |
 | `content/identity-constants.ts`、`scripts/tests/production-size.test.ts` | 最后用指定脚本同步完整内容摘要，历史epoch不动 |
+### v25：盗墓者 I／II（B5-39／40，P，2026-10-27）
+
+`tomb-raider-1`（黄金，原始 `NumDead=3`）与 `tomb-raider-2`（棱彩，原始 `NumDead=9`）只在4-2报价，沿原始互斥关系双向排除。I处理取得后的接下来3名淘汰者，空候选也占一名；II处理取得后的每名淘汰者，9不作为上限。两者都不追溯取得前淘汰者，也不向同时已被淘汰的持有者发奖励。候选只来自淘汰席正式棋盘／备战席普通英雄持有的普通成装；背包、临时装备、纹章、光明、神器、辅助装、召唤物及选秀暂存英雄不参与。同回合按名次从低到高，各件全部展示，包括同名副本，不抽样、不消耗 RNG。证据等级和用户约定见 `S13_RULES_GAP.md` P-B5-39／40。
+
+- `hasTombRaider(state: MatchState): boolean`：服务器可查询是否需要这组结算编排，不自行判候选或次数。
+- `recordTombRaiderEliminations(state: MatchState, table: readonly HistorySeat[]): MatchStep`：仅服务器权威结算调用，排名确定后、共享池资源回收前传入整桌正式快照；复用 `recordAugmentTable(state,'settlement',table)`，按 `acquire` 后的全桌历史推导机会并打开第一项。无持有者返回原状态和空事件；同轮同表重试不重发，冲突表抛 `Invalid tomb raider settlement conflict`。打开事件在同一事务中取得连续 match eventSeq，房间按原 seatRevision 发布，不接受客户端上传表。
+- `publishTombRaiderChoice(state: MatchState): MatchStep`：服务器在已有 `table/entry` 发布后调用，使入轮淘汰也进入同一队列；补给／共享选秀期间沿用现有选择限制，保留历史机会，在后续可打开选择时处理。
+- `openTombRaiderChoice(state: MatchState): MatchStep`：Match成功命令的通用接受点调用；已有选择优先，完成一项后立即打开下一名。沿用 `PendingChoice.kind='forge'`，`payload.source='augment-pool-batch5-r1'`，`offers` 为全量装备定义ID；该来源允许同名副本重复展示。唯一 choiceId／receiptId 为 `JSON.stringify(['augment-pool-batch5-r1', ownerChoiceId, eliminatedSeatId])`。每项使用既有 `selectChoice`／网络 `choose` 或 `forfeitPendingChoice`／超时命令；授予1件永久库存装备、1条 mechanic item-acquired 来源和1张 choice 收据，默认超时选首项。失效ID／代次、非法候选沿用 `stale-choice`／`invalid-choice`，失败保持原 state／pool 引用，不发事件、不用资源或 RNG。
+- `validateTombRaider(state: MatchState): void`：从历史重建全部合法机会、顺序、候选、收据身份和装备出生来源，错项抛 `Invalid tomb raider authority`。已接入普通恢复、`restoreSharedOrbSnapshot`、`restoreCarouselSeat`；多人对象、JSON与规范文本恢复均仍要求 `captureAugmentHistoryAuthority`／`Room.augmentHistoryAuthority` 的独立品牌句柄，缺节、伪造权威、修改历史／候选／装备／收据全部拒绝。
+
+规则与内容位于 `augment-pool-batch5-r1*.ts` 和同名 content 文件。`src/server/room/augment-history.ts` 只冻结／传递全桌和发布事件，`room.ts` 只增加回收前一次调用；没有新增网络命令、真实时钟或服务器奖励公式。独立 M5 oracle 按原始全桌事实、独立英雄费用表和普通成装转录重建预期，不以生产奖励收据决定资格或奖品。单人取得不产生淘汰奖励且保持可运行；沿用同版12/8/8/7格式，重算内容与loot身份，不重录epoch。
+## Batch 5 R2（P，2026-10-27；沿用 v25）
+
+开放 `anger-issues`（棱彩，3-2/4-2）和 `another-anomaly`（黄金，4-2）；规则、研究状态及完整内部签名见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。沿用现有 `selectChoice`、装备、合成、消耗品和重掷命令/失败枚举，不增加客户端提交事实的命令。普通成装转换追加有选择来源绑定的 `anger-item-converted` 资源事实；便携异常以不可变物品定义携带复制身份，共用唯一 apiName，4-6选择事务内即时授予，失败仍返回原 state、无事件和 RNG 消耗。
+
+强化历史 API 新增 `recordAugmentCopyKills(state,fact)` / `readAugmentCopyKills(state,itemId,beforeRound?)`，同 `augment-history-v1` 保存 `anomaly-copy-kills`，复制品独立于原英雄的历史。联机采样入口 `recordR2PortableBattle(state,combat,team,mapping?)` 只接受服务器已经认证的终战及既有身份映射；房间只编排调用。持有者的对象/JSON恢复仍必须取得独立 authority；伪造选择、来源、复制定义、位置、成长、旧手套收据或历史节均拒绝。无 epoch 重录。
+
+## B5-67 炼金术士（v25，2026-10-27）
+
+`mad-chemist` / `TFT13_Augment_SingedCarry` 为 2-1 白银强化；3-2/4-2 禁止，沿用 AssociatedTraits 与互斥表。`selectChoice`、联机 `runSharedMatchCommand(...,{type:'choose',...})` 共用既有 `batch1GiftPlan → drainBatch1Gifts`，选择事务只授予一次一星辛吉德；在线使用共享卡池奖励法球，`claimOrb` 领取后可正常部署、合星。失败、重试和重复旧 choice 不发第二份奖励，不新增公共命令或 wire reason。
+
+开战编译只给本方最强的一个棋盘辛吉德附加 `madChemist`（星级降序、正式装备数降序、实例 ID 升序），不从当前余额推测历史。其运行状态仅在 `CombatUnit.madChemist?: MadChemistRuntime`：整数回蓝余数、技能到期 tick、唯一格毒云和同源目标毒伤。完整结构见 `augment-pool-batch5-r4.ts`；数值和离散语义见 COMBAT_CONTRACT 与 S13_RULES_GAP P-B5-67。
+
+`restoreSharedOrbSnapshot(pool,input,authority?) → MatchState` 与 `restoreCarouselSeat(carousel,input,authority?) → MatchState` 保留签名。独立服务器共享池（选秀入口使用 `carousel.pool`）中的本席 B5-67 待发奖励或已结算奖励收据要求现有独立 `AugmentHistoryAuthority`；该要求不随候选档删除强化、选择记录、奖励收据或法球而消失，奖励合星、卖出、折金或放弃后仍成立。候选仍带 B5-67 强化/奖励/战斗标记时也要求认证。句柄由 `Room.augmentHistoryAuthority(seatId)` 从服务器私有席位捕获，不能从候选 JSON 自签；只要提供句柄，无论是否持有本卡或历史节，都必须认证完整席位。缺失/伪造句柄报 `Invalid augment history: missing independent server authority`，任何完整席位差异报 `Invalid augment history: server facts/state mismatch`；额外复核既有奖励计划。B5-67 无跨回合历史事实，不新增空 `augmentHistory` 节。离线战斗恢复按已认证输入完整重演并比较毒云/毒伤/回蓝/移动状态；离线入口仍拒绝多人文件。无服务器编排或接口接线变化。
+
+展示数据沿现有 `d11ChoiceDisplay(definitionId)` / `d11PrivateDisplay(state)` 提供公开的中文名称、描述和白银级别，内容取自 R4 定义；既有界面无需新增规则计算，不改表现目录。
+### B5-R5：星夜与星夜+（2026-10-27）
+
+- 内容位于 `content/augment-pool-batch5-r5.ts`，通过 `AUGMENT_SHOP` 的既有 definitions/tier/API-name 聚合注册，避免重复候选。普通版获取6金且仅2-1提供；+版获取8金且仅3-2提供；彼此互斥。阶段标签不变。
+- `starryChanceBps(state: Pick<MatchState,'augments'|'level'>): number`：返回整数基点；未持有返回0；等级1–10分别为1800/1800/1800/2000/2200/2500/3000/5000/8000/10000（用户2026-10-28决定1/2级恢复v24的18%，覆盖2026-10-27的0%约定）。两版及1/2费同率。
+- `starryUpgrade(state: Pick<MatchState,'augments'|'level'|'seed'|'multiplayer'>, generation: number, slot: number, definitionId: string): boolean`：对有效领域输入纯计算，不修改状态或主RNG；3费及以上返回false。调用方仍须检查是否能预留3份共享库存。既有 `shop-augments.ts` 保留兼容导出。
+- `generateSharedShop` / `rerollSharedShop` / 自然换轮沿用共享池事务：命中且至少3份库存则生成二星报价、一次预留3份，否则保留一星；刷新/淘汰退回所有未买份额，锁店自然换轮保留预留。`buySharedUnit` 支付3倍基础费用，将3份来源转为自有持有份额，不二次扣池；既有合星按一星等价份额守恒，9份可合三星。失败沿用 `stale-shop`、`insufficient-gold`、`bench-full`、`purchased-slot`、`empty-slot` 等原枚举，原state/pool引用、事件和RNG不变。
+- `validateBatch5R5ShopAcquisition(state: MatchState): void`：`shop-history.ts` 恢复入口调用；按内容核对唯一获取收据及金币、选择身份、回合，错误抛 `RangeError('Invalid Starry Night acquisition')`。其余抽取/星级/库存/购买由现有 `shop-history-v1` 重演；不新建事实格式，缺历史不推测迁移。有其它历史强化的联机档仍须使用 `Room.augmentHistoryAuthority(seatId)` 与既有恢复API。
+- 服务器调用链复用 `Room.handle` → `applySeatCommand` → 共享池领域入口，无 `src/server` 改动；规则身份纳入 `rules-manifest.ts` 的 `augmentPoolBatch5R5` 和重算digest，外层schema/save/replay/command及历史epoch不变。证据状态与明确约定见 `S13_RULES_GAP.md` 的 P-B5-08/09。
+
+## Batch 5 R6：潘朵拉的备战席与变形重组器（2026-10-27）
+
+只新增 `pandoras-bench`（白银，三个节点，取得2金）和 `recombobulator`（白银，3-2/4-2，取得2拆卸器）。数值、研究状态和用户批准的继承／库存边界见 `S13_RULES_GAP.md` 的 P-B5-27-R6、P-B5-28-R6。规则和内容分别在 `augment-pool-batch5-r6.ts`、`content/augment-pool-batch5-r6.ts`。联机为执行目标；单人选择保留基础金币／工具并正常运行，不模拟无限卡池变形。
+
+| 规则接口／接线 | 输入、输出与失败语义 |
+| --- | --- |
+| `transformPandorasBench(state: MatchState, stock?: Readonly<Record<string,number>>): {state: MatchState; events: readonly MatchEvent[]}` | 在 `nextRound` 与加时 `advanceMultiplayerRound` 的历史入轮快照后、经验／商店／选秀迁入前调用；共享推进传入事务草稿库存。读取 `requireAugmentFacts(state,'round-entry',round)`；无拥有者／取得轮／已完成／非联机返回原对象。 |
+| `transformRecombobulator(state: MatchState, policy?: UnitLootPolicy): {state: MatchState; events: readonly MatchEvent[]}` | `selectChoice` 记录 acquire 后、礼物发放前调用；读取同次取得历史。`rewardPolicy` 经 `bindBatch5R6Stock` 在WeakMap提供草稿库存，无保存字段／客户端参数；共享席缺策略抛错，外层共享事务回退。 |
+| 事务与账本 | 在私有库存副本上选定全部替换，再统一合星；资源事实为 `unit-transformed {choiceId,unitId,from,to,starLevel}`，末尾 `augment-transform-completed {choiceId}`（即使空棋盘或缺货）。实例ID不变，成长和装备按既有合星血缘转移；异常仅在成功变形时清除。`reconcileHoldings` 按同序事实扣返，保留来源份额身份并检查完整星级；失败不发布任何席位／卡池变化。 |
+| `validateBatch5R6Transforms(state): void` / 保存 | `restoreSharedOrbSnapshot` 在既有校验链中检查变形所有者／历史，两个强化注册为 `augment-history-v1` 持有者；整个候选必须匹配独立服务器authority。`restoreCarouselSeat` 沿现有同一history authority认证。缺历史、伪造来源／星级／成长／工具、缺失完成事实均拒绝；无需新封套或重录旧epoch。 |
+| 卡池失败枚举 | 无完整候选是成功事务中的单位不变，不补金、不降星；不增加wire reason。共享事务仍返回既有 `invalid-pool`／`invalid-seat-state` 等失败并保留原pool/state。 |
+
+`src/server/` 无改动：`Room.apply` 的 choose／timeoutChoice、入轮的 `nextSharedRound`、独立 `augmentHistoryAuthority` 继续调用现有公共规则入口；服务器不计算费用、库存或变形。战斗快照仅在持有上述变形强化时允许普通英雄继承原Tristana永久AD；新增成长来源仍只能由既有Tristana战斗事件认证。两个卡片测试的变形、星级库存和合星预期由独立M5 oracle根据变形前阵容、真实库存与种子推导，不读取生产收据作为预期；工具数量另用独立礼物计划核验。
+
+## Batch 5 G1：幸运手套 / 幸运手套+（P，2026-10-27）
+
+现有公共命令 `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)`、`combineItems(state,aId,bId)`、`equipItem(state,itemId,unitId,slot,options?)`、`deployMatchUnit`、`useConsumable` 与自然入轮完成全部执行；网络命令和失败原因不变，失败保持原state、无事件/资源/RNG变化。B5-53仅2-1可选，给2拳套并在取得轮+5入口给1拳套；B5-54禁2-1，立即给3拳套，无延迟；二者互斥。数值/证据/选装约定见 `S13_RULES_GAP.md` P-B5-53/54。
+
+新增规则内部接口（均在 `augment-pool-batch5-g1*.ts`，不新增服务器命令）：
+
+| 签名 | 输入/输出与拒绝 |
+| --- | --- |
+| `luckyGlovesRewardPlan(state: MatchState): AugmentGift[]` | 从已取得来源和自然轮推导唯一延迟礼物；未到期或+版返回空数组，不读取收到的收据推测应得数值。 |
+| `luckyGlovesSelection(state: Pick<MatchState,'augments'\|'preparation'>, parent: ItemInstance): EquipmentRoundRoll['lucky']` | 读取当前合法持有者及形态；无该强化/普通英雄则undefined，不伪造英雄角色。 |
+| `selectLuckyGlovesPair(role: string, radiant: boolean, draw: () => number): readonly [string,string]` | 推荐池8选2，拒绝采样等权、无放回；光明逐件映射。非法角色/池/映射抛RangeError。 |
+| `equipmentRollFor(rolls,roundId,parent,context): EquipmentRoundRoll \| undefined` | 从不可变roll中取对应英雄/形态/父装备的缓存；冻结战斗使用自身冻结阵容与roll前缀。 |
+| `generateLuckyGlovesRolls(state,requests,pool): EquipmentState` | 校验已有账本，按父装备ID排序追加缺少的缓存；复用不耗RNG，无额外墙钟。 |
+| `validateLuckyGlovesEquipment(state,pool): void` | 从原始装备种子独立重放普通/推荐抽样，校验角色、持有来源、两个结果、抽数和游标；篡改抛 `Invalid Lucky Gloves equipment authority`。 |
+
+`EquipmentRoundRoll.poolVersion`增加`lucky-gloves-v1`，仅该分支带`lucky:{choiceId,holderId,definitionId,role,radiant}`选择上下文；不新增顶层保存节。旧普通roll字节不变，普通roll和推荐roll可同轮共存；战斗冻结与战中装备重建按对应上下文选取。`temporaryEquipment`沿原槽位、身份、撤销协议，临时装备不能变永久库存。两项登记为`augment-history-v1`持有者，通过通用API保留取得/位置/阵容事实；联机三种输入形式均调用 `restoreSharedOrbSnapshot(pool,input,independentAuthority?)`，缺节或缺独立authority拒绝，不推测恢复。服务器已有通用编排直接生效，本任务未改`src/server/`。
+## Batch 5 G2 联机接口（P，2026-10-27）
+
+`src/simulation/augment-pool-batch5-g2.ts` 导出 `ghostFriendsGrowth(state: MatchState): GhostFriendsGrowth | undefined`；`GhostFriendsGrowth={healthFlat:number,attackDamageBps:number,abilityPower:number}`，均为非负整数。未持有老友幽魂返回 undefined；持有者缺强化历史按现有 API 抛 `Invalid augment history: missing augment-history-v1`，不得补零。永久值仅从当前席位已完成前序自然轮的真实死亡事实推导，战斗输入冻结为 `ghostFriendsGrowth`，不接受客户端提交成长。形态及英雄复制体证据见 AUGMENT_HISTORY_DESIGN。
+
+报价／选择沿用现有命令，不新增 wire failure：老友幽魂为棱彩且仅 2-1，爆蓝之城为黄金、无额外阶段禁令，3-2／4-2 沿用蓝发羁绊筛选。爆蓝之城通过既有强化奖励法球各授予一个阿卡丽、艾瑞莉娅，重复选择保持失败原子性；战斗复制体不进入资源谱系、正式棋盘或共享卡池。服务器继续只编排 `snapshotForBattle`、双边战斗和原有死亡采样，无新服务器规则或计时器。
+
+两条 G2 均为 deaths 历史持有者，恢复继续使用独立服务器 authority 认证整份 Match，并核对原有资源／奖励；外部双边结果按冻结输入冷重演核对完整数值、复制体、额度和事件。错误沿用 Match 验证错误及 `BattleValidationError('invalid-result'|'battle-input-invalid')`，不新增客户端失败枚举。内容身份重算，现有 schema/save/replay/command 和 epoch 均不重录。
+
+## 2026-10-27 Batch 5 G3：空战与物竞天择
+
+正式内部 ID 为 `aerial-warfare`（B5-68）与 `natural-selection`（B5-71），来源与约定分别见 S13_RULES_GAP 的 P-B5-68-G3／P-B5-71-G3。两者为金色；前者三节点按原规则报价，后者保留 14.24 的 2-1 禁令，后两节点均按对应羁绊过滤。新内容位于 `content/augment-pool-batch5-g3.ts`，其礼物由既有 `batch1GiftPlan → drainBatch1Gifts` 的共享池奖励事务发放和独立计划验证，不新增公共命令、金币来源或第二套服务器结算。
+
+`restoreSharedOrbSnapshot(pool,input,authority?)` 对 G3 持有者调用同一礼物计划验证；即使没有持有者，只要收据来源为 `augment-pool-batch1` 或身份处于该 JSON 数组命名空间，也必须认证。非法礼物索引、孤儿收据或来源不符抛 `RangeError('Invalid augment batch1 gift authority')`；同步篡改关联法球、掉落、领取收据及资源来源不能绕过此认证。对象、JSON 和规范 JSON 文本遵循相同入口，合法档恢复后重复发奖仍保持原收据数。
+
+这两项不需要跨轮事实，不登记 augmentHistory 持有者，也不读候选存档重造历史。既有持有者仍只通过 `augment-history.ts` API 获取历史。物竞天择的献祭单位和装备始终留在正式准备阵容；战斗投影缺席不构成资源售出、阵亡或卡池返还。`readG23MechanismState(state)` 的 owner-only 视图可额外返回 `mutationSacrificeCell:{col:3,row:6}`；`laboratories` 保留普通实验室的含义。不新增布局或视觉实现。外层 schema/save/replay/command 和 NET 版本沿用基线；新内容摘要必须精确匹配，不重录旧 epoch。
+
+## Batch 5 G4：B5-72／73（P，2026-10-27）
+
+内部赠物入口继续为 `batch1GiftPlan(state:MatchState):AugmentGift[]`、`drainBatch1Gifts(state,policy?):MatchState`，新增规则计划 `b5VoidSwarmGiftPlan(state:MatchState):AugmentGift[]`。B5-72取得时赠芮尔、莫甘娜各1名；在线沿已有有限共享卡池奖励法球，满席继续沿已有领取／held策略。B5-73取得时赠传送门，此后从取得当轮起每11个已结算PvP再赠1个；读取 `roundResults` 并由 `requireAugmentFacts` 认证每个 `pvp-roster`，不计PvE／选秀。阈值收据绑定原choiceId及第几次11战，原资源／赠物校验器重算应发结果。
+
+两张卡使用现有 `augment-history-v1`：voidcaller登记acquire，void-swarm登记pvp-roster；事实全部通过已有API记录，联机恢复须由 `Room.augmentHistoryAuthority(seatId)` 提供独立authority。没有新增网络命令、wire失败reason、第二套保存版本或服务器规则；源文件 `augment-pool-batch5-g4*.ts`。缺历史／缺PvP边界／无独立authority沿历史合同拒绝；赠物仍沿原失败枚举和失败原state／无事件／无资源及RNG消耗规则。候选：B5-72三节点、后两次按冻结先知成员过滤；B5-73仅2-1，保留原14.24禁用语义。数值证据和运行约定见S13_RULES_GAP的P-B5-72、P-B5-73。
+
+G4 出生修订 `augment-pool-batch5-g4-v25-spawn-1`：内部 `castB5Voidcaller(ctx,caster,spent,counters,pending):void` 消费实际耗蓝阈值、冻结触发者格子并排队，累计成功数加同队待出生数共同限制上限；`spawnB5Voidlings(ctx,state,pending,counters):void` 在所有既有行动者完成规划后，逐只按触发格和当时占格重选最近空格（距离／row／col），包含更早成功出生的虚灵。无空格则跳过余下出生，阈值已消费但不累计召唤数、不发布出生事件；成功后才累计并初始化，首次行动仍为下一 tick。没有新增命令失败原因，合法的同 tick 跳跃占格不再抛 `Spawn cell unavailable`。
+## G5：B5-82／B5-85 奖励接口（2026-10-27，P）
+
+公共命令、传输与存档外层版本不变；新规则由 `src/simulation/augment-pool-batch5-g5*.ts` 实现，静态内容为 `content/augment-pool-batch5-g5.ts`。三次掷骰接到现有 `selectChoice` 和自然轮入口，管道接到通用 `claimOrb`／结算 FIFO；服务器继续只调用现有共享池事务，无 `src/server/` 调用点变更。
+
+| 导出 | 输入／输出与失败 |
+| --- | --- |
+| `expectedUnexpectednessRolls(state: MatchState)` | 从已拥有来源重算已到期的阶段、round、三骰、档位、奖励和唯一金币键；无来源返回空数组。`expectedDiceBand(dice: readonly number[]): ExpectedDiceBand` 对非三个 1–6 整数抛 `RangeError('Invalid expected dice')`。 |
+| `expectedUnexpectednessRerolls(state: MatchState): number` | 只返回该强化已确定的免费刷新额度，不读取生产奖励收据；现有账本负责消费。 |
+| `pipelineExtraOrbs(state: MatchState): OrbPlan[]` | 联机下一 PvE 到期后重算一球；选择前／尚未到期／单人返回空数组。标准球内容使用现有 `sampleOrbBox(...,'ultraPlus')`。 |
+| `pipelineBonusPlan(state: MatchState)` | 经 `readAugmentFacts` 读取已实际完全开球的证据，重算 `round/orbId/reward/giftOwner/receiptId`；无来源返回空数组，缺历史沿用历史 API 的明确拒绝。 |
+| `batch5G5GiftPlan(state: MatchState): AugmentGift[]` | 合并三次骰子和已开棱彩球的礼物，复用 P-AG1；英雄排入现有共享池奖励球，锻造器仍受备战席容量约束。 |
+| `drainBatch5G5Gold(state: MatchState): MatchState` | 由已确定计划调用 `grantMechanicGold`，同键不重发；内部非法授权抛 RangeError。`validateBatch5G5Rewards(state): void` 检查完整金币计划、唯一性、金额、回合、礼物覆盖和历史，篡改抛 RangeError。 |
+
+`claimOrb` 失败原因继续使用原枚举 `stale-round / unknown-orb / already-claimed / wrong-phase / shared-pool-required / seat-eliminated / invalid-loot`，失败返回原状态和原池，无事件与随机消耗。额外球未杀载体时不可领取；部分领取返回原有成功语义并保留未领条目，全部领取后才产生一次管道历史事实和加奖。金币收据 namespace 为 `augment-pool-batch5-g5`；物品／英雄／工具沿用独立礼物计划的 `augment-pool-batch1` namespace。全部数值、证据级别和主表保留项见 S13_RULES_GAP 的 P-B5-82／P-B5-85。
+### B5-G6：我成C位了（P-B5-83，2026-10-27）
+
+- 正常报价保留14.24阶段禁表：本卡无2-1/3-2/4-2禁令。公共命令仍是 `selectChoice`，无新增客户端命令、失败枚举或服务器专用奖励公式；房间现有共享选择/入轮路径直接调用领域规则，无 `src/server` 修改。
+- `augment-pool-batch5-g6.ts` 内部生命周期：`grantCarryGolem(state: MatchState): {state: MatchState; events: readonly MatchEvent[]}` 在取得事务中固定授予一次免费棋盘魔像及三件装备；重复调用返回原对象和空事件。没有可用出生格、无效装备内容为内部 `RangeError`；合法匹配的部署区有空位。`growCarryGolem(state: MatchState): MatchState` 接正常入轮与联机加时，按取得轮与当前轮推导星级，同阶段重复调用不写状态。
+- `augment-pool-batch5-g6-stats.ts`：`carryGolemGrowth(round: number, acquiredRound: number): number` 返回经过的阶段数；`carryGolemStar(round, acquiredRound): StarLevel` 返回1～4；`carryGolemEffects(round: number, owner: OwnedAugment, unit: Unit): Effect[]` 只对carry-golem产生475×阶段数平面生命和2000×阶段数AD基点；`carryGolemBaseStats(starLevel: StarLevel): ResolvedUnitStats` 读取原型星级面板。非法轮/星级抛 `RangeError`，其它单位返回空效果。2-1取得的2/3/4/5+阶段星级为1/2/3/4，晚取得从1星起、不追认之前阶段；加时仍第6阶段。
+- `validateCarryGolem(state: MatchState): void` 在离线与共享恢复入口执行：核对持有者、唯一单位、推导星级、四张获取收据、固定装备位置与7条连续资源来源事实；魔像坐标必须为默认棋盘己方部署区内无重叠的整数格。从资源流起点独立累计装备获取、合成、消耗品替换产生的分配，核对每次连续序号及最终 `nextItemSerial`，不依赖收据或当前装备ID反推起始值。无持有者的残留单位/收据同样拒绝。对象、JSON、规范文本及传入房间 authority 的恢复均检查；失败为 `RangeError('Invalid carry golem authority')`，沿各恢复入口原有错误封装；不修补缺失凭证。
+- 存活伤害沿用训练师魔像政策：附赠魔像不进入 `countsG23SurvivorDamage` 的伤害人数，10英雄加魔像全存活时 `opposingSurvivors=10`，正常进入 `applyRoundSettlement`，不修改伤害上限。`applyG23Radiant(state, newItemIds?)` 的全量与后续新增装备转换均跳过魔像固定套装；消耗品拒绝原子保留state与空事件，精工候选查询返回空列表。普通英雄的同款装备仍正常转换。
+- 正式 `StarLevel` 类型可表达4，但 `getUnitStats`、`resolveAbility` 和资源结构检查仅允许carry-golem的正式四星，普通英雄仍一至三星；既有战斗临时四星规则不变。无新增历史事实或保存节，内容身份脚本重算，旧epoch不重录。研究状态及取整/装备/人口政策详见 `S13_RULES_GAP.md` P-B5-83。

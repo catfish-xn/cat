@@ -3,12 +3,22 @@ import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, rerollShop, deployMatchUnit, getDeploymentCap, type MatchState } from '../src/simulation/match';
+import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, rerollShop, deployMatchUnit, getDeploymentCap, rerollAugment, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5-h4';
-import { offerFor, offeredAt } from './augment-stage-helpers';
-import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
+import { offeredAt } from './augment-stage-helpers';
+import { accepted, emptyBoard, resolveM5Choices, reachRound } from './match-helpers';
 const id='diversified-portfolio-plus';
+/** v25 batch-5 pool drift: seed 1 with three public slot rerolls (re-searched 0..100). */
+function offerPortfolioPlus(): MatchState {
+ let state=reachRound('3-2',false,1);
+ for (const slot of [0,1,2]) {
+  if (state.pendingChoice!.offers.includes(id)) break;
+  const c=state.pendingChoice!; state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));
+ }
+ expect(state.pendingChoice!.offers).toContain(id);
+ return state;
+}
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-33 source numbers',()=>{
  const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((x:any)=>x.apiName===AUGMENT_BATCH5_H4[id].apiName);
@@ -16,7 +26,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('B5-33 source numbers',()=>{
 });
 it('B5-33 offer, public selection, next natural round and authenticated restore',()=>{
  expect(['2-1','3-2','4-2'].filter(n=>offeredAt(id,n as '2-1'|'3-2'|'4-2'))).toEqual(['3-2']);
- let s=offerFor(id),c=s.pendingChoice!;expect(c.offers).toContain(id);
+ let s=offerPortfolioPlus(),c=s.pendingChoice!;expect(c.offers).toContain(id);
  const gold=s.gold;s=accepted(selectChoice(s,c.choiceId,c.generation,id));expect(s.gold).toBe(gold+4);
  s=resolveM5Choices(s);s=accepted(startMatchCombat(emptyBoard(s)));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
  expect(s.augmentHistory!.facts.filter(f=>f.kind==='round-entry'&&f.round===s.round)).toHaveLength(1);
@@ -30,7 +40,7 @@ it('B5-33 offer, public selection, next natural round and authenticated restore'
 });
 let rewarded:MatchState;
 it('B5-33 pays its first recurring gold from an actual three-trait board',()=>{
- let s=offerFor(id),c=s.pendingChoice!;
+ let s=offerPortfolioPlus(),c=s.pendingChoice!;
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));s=resolveM5Choices(s);
  // The merged first augment changes the gifted heroes. Build the same three-trait
  // witness with paid public shop commands instead of relying on incidental gifts.

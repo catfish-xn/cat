@@ -3,8 +3,8 @@ import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { makeRoom, runUntil } from './server/helpers';
 
-// Fixed public 2-1 offer (seed in 0..100); legs keep each real room battle in its own test.
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:104});
+// Fixed public 2-1 offer for seat s2 (room seed 6; v25 batch-5 pool re-search in 0..100).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:6});
 afterAll(()=>room.dispose());
 it('B5-48 room opens and advances the first PvE round',()=>{
  room.start();runUntil(room,clock,s=>s.roundId==='1-2'&&s.phase==='preparation');expect(room.state.fault).toBeNull();

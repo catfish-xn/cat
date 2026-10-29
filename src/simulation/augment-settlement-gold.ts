@@ -13,7 +13,7 @@ export function needsOpponentHp(augments:MatchState['augments'],round:number):bo
  * Kingslayer: one receipt per player-combat win from the acquisition round on. The opponent's health comes only from the
  * room's settlement receipt (frozen battle snapshot); an offline opponent is not a player and never counts as higher.
  * Risky Moves: one receipt at the settlement of the PlayerCombatNum-th player combat (any result) from the acquisition round. */
-function plan(state:MatchState) {
+export function plan(state:MatchState) {
  const risky=state.augments.flatMap(a=>{
   const row=AUGMENT_BATCH3_XP[a.definitionId]?.pvpCombatGold;if(!row)return [];
   const due=state.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound)[batch3XpValue(a.definitionId,row.combats)-1];
@@ -36,12 +36,4 @@ export function drainSettlementGold(initial:MatchState):MatchState {
  }
  return state;
 }
-export function validateSettlementGold(state:MatchState):void {
- const expected=plan(state),receipts=state.seatMechanics?.receipts??[];
- const ours=(r:{source:string;receiptId:string})=>[KINGSLAYER_SOURCE,RISKY_MOVES_SOURCE].some(s=>r.source===s||r.receiptId.startsWith(`["${s}",`));
- for(const r of receipts.filter(ours)){
-  const p=expected.find(p=>p.receiptId===r.receiptId);
-  if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch3 settlement gold authority');
- }
- for(const p of expected)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch3 settlement gold receipt');
-}
+

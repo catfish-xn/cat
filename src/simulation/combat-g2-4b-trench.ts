@@ -1,3 +1,4 @@
+import { inheritGhostFriendsBirth } from './augment-pool-batch5-g2-combat';
 import { occupiesCell } from './anomalies/availability';
 import type {CombatState,CombatUnit,CombatMechanic} from './combat-types';
 import type {HexCell} from './board';
@@ -47,6 +48,7 @@ export function createTrenchCopy(holder:CombatUnit,item:CombatMechanic,ordinal:n
 
 /** Birth-relative periodic clocks; old counters, debts and temporary states never enter. */
 export function initializeBornUnits(ctx:AbilityContext,born:readonly CombatUnit[]):void {
+ inheritGhostFriendsBirth(ctx,born);
  const fresh=born as S13Unit[];
  for(const unit of fresh){
   const definitions=compileMechanismDefinitions(unit,ctx.combatId??'standalone');

@@ -1,5 +1,5 @@
 import { recordCommand, recordedEmptyRoute } from './fixtures/recorded-empty-route';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
 import { readLootView, buyXp, deployMatchUnit, equipItem, nextRound, rerollAugment, selectChoice, sellUnit,
   startMatchCombat, stepMatch, useConsumable, type MatchState } from '../src/simulation/match';
@@ -12,8 +12,9 @@ import { readRoundEnemyProjection } from '../src/simulation/round-enemies';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
-import { openingEncounterId } from '../src/simulation/opening-encounter';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { createMatch } from '../src/simulation/match';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import { BattleHistory } from '../src/replay/history';
 import type { BattleRecord } from '../src/m6/contracts';
 import { reachRound, resolveM5Choices } from './match-helpers';
@@ -74,6 +75,13 @@ function until(s: MatchState, predicate: (s: MatchState) => boolean): MatchState
 function matrix(name: string, build: () => MatchState | Generator<void, MatchState>, edits: readonly [string, (s: Json) => void][]) {
   describe(name, () => {
     let saved: string, legitimate: MatchState, battles: readonly BattleRecord[] | undefined, work: Generator<void, MatchState> | undefined;
+    // Betrayal's scripted draw remains in place for restore's offer-history checks.
+    // Eligibility and RNG advancement remain real; an offer check is a fixture self-check.
+    let restoreOffers: (() => void) | undefined;
+    if (name.toLowerCase().startsWith('betrayal')) {
+      beforeAll(() => { restoreOffers = installB1Offers(['betrayal']); });
+      afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
+    }
     beforeAll(() => {
       const result = build();
       if ('next' in result) work = result; else legitimate = result;
@@ -234,22 +242,20 @@ matrix('Experiment genuine split', experiment, [
   ['clone HP', s => { copy(s).hp++; }],
 ]);
 
-// Search only authentic initial public augment offers; final selection is a command.
+// Seed 35 naturally offers Blood Brothers at 2-1 on the current pool.
 function acquire(id: string): MatchState {
-  for (let seed = 0; seed < 10000; seed++) {
-    const root = createMatch(seed);
-    if (openingEncounterId(root) === 'trainer-golems') continue;
-    if (!generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], null,
-      { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers.includes(id)) continue;
-    const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
-    const c = s.pendingChoice!;
-    if (c.offers.includes(id)) return resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
-  }
-  throw Error(`No public ${id} offer`);
+  const seed = 35, root = createMatch(seed);
+  expect(openingEncounterId(root)).not.toBe('trainer-golems');
+  // Real seed and real 2-1 draw (no scripted offers here): predicts the offer from the real candidate pool.
+  expect(generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], openingEncounterId(root),
+    { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers).toContain(id);
+  const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
+  const c = s.pendingChoice!;
+  expect(c.offers).toContain(id);
+  return resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
 }
 function* acquireBetrayal(): Generator<void, MatchState> {
-  // Seed 10, re-scanned through real commands on the v24 235-card pool. Betrayal is 3-2-only and
-  // trait-tailored; field both partners BEFORE opening that node's offer.
+  // Betrayal is 3-2-only and trait-tailored; field both partners before the scripted draw.
   let s = clear(reachRound('2-1', true, 10));
   s = add(s, 'maddie', 0, 4); s = add(s, 'ambessa', 3, 7);
   while (s.roundDefinitionId !== '3-2') {

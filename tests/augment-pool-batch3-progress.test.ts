@@ -4,8 +4,10 @@ import { expect, it } from 'vitest';
 import { needsCrownHistory } from '../src/simulation/crown-history';
 import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match-types';
-import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold } from '../src/simulation/augment-pool-batch3-progress';
+import { batch1GiftPlan, drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
+import { batch3RewardPlan, drainBatch3Gold } from '../src/simulation/augment-pool-batch3-progress';
+import { validateBatch3Gold } from '../src/simulation/restore-checks/batch3-progress-check';
 import { g23BattleFacts } from '../src/simulation/g2-3-settlement';
 import { advanceG23Economy, validateG23BattleFacts } from '../src/simulation/g2-3-economy';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
@@ -130,7 +132,7 @@ it('Spoils historical authentication cannot be bypassed by deleting the kill cou
 // Frozen pre-fb3prog settlement bytes under current content; see fixture provenance.
 // Keep this independent baseline rather than synthesizing it with the new settlement code.
 it.each([1,2])('pre-Spoils baseline bytes restore and continue round %i with full history',targetRound=>{
- const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-v24-seed42.json',import.meta.url),'utf8');
+ const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-v25-seed42.json',import.meta.url),'utf8');
  const history=new BattleHistory('spoils-compatibility');
  let s=fieldBench(resolveM5Choices(createMatch(42)));
  s=accepted(recordCommand(history,s,startMatchCombat(s)));

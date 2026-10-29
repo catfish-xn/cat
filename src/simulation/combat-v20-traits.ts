@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { CombatTask, CombatOrigin, CombatUnit } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { ad, amount, ap, byDistance, enemies, variable, type S13Unit, EMPTY_RUNTIME } from './combat-s13-state';
@@ -29,7 +30,7 @@ export function startV20Traits(ctx:AbilityContext):void {
   for(const {u,m,value} of samples){const before=ad(u),granted=Math.floor(value*2500/10000);u.v20Traits={...u.v20Traits,mentorshipAdSample:value,mentorshipGranted:granted};ctx.events.push({type:'statChanged',tick:0,unitId:u.id,source:asSource(m.source),stat:'attackDamage',before,after:ad(u)});}
   for(const u of ctx.units)if(u.definitionId==='powder'){
     const m=teamup(u,'menaces'),silco=m&&ctx.units.find(t=>t.id===m.targetId);
-    if(silco)u.v20Traits={...u.v20Traits,silcoSample:{star:silco.starLevel,abilityPower:ap(silco,0),damage:amount(silco,0,{ap:variable(silco,'MinionDamage')}),
+    if(silco)u.v20Traits={...u.v20Traits,silcoSample:{star:silco.starLevel as 1|2|3,abilityPower:ap(silco,0),damage:amount(silco,0,{ap:variable(silco,'MinionDamage')}),
       attacks:variable(silco,'MinionNumAttacks'),durationTicks:Math.round(variable(silco,'MinionDuration')*20)},detonations:[]};
   }
 }
@@ -80,7 +81,7 @@ export function quickDashV20(ctx:AbilityContext,u:S13Unit):void {
     .filter(c=>hexDistance(c,target.cell)===1&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0))
     .sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
   if(u.targetId!==target.id)ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});u.targetId=target.id;
-  if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
+  if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 /** Menaces monsters use the existing Silco attack-agent convention: no health/body collision or jar hit. */
 export function detonateMenaces(ctx:AbilityContext,powder:S13Unit,seq:number,cell:import('./board').HexCell):void {

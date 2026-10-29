@@ -1,6 +1,17 @@
+import { AUGMENT_BATCH5_R1_API_NAMES } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_API_NAMES } from './augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3_API_NAMES } from './augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4_API_NAMES } from './augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6_API_NAMES } from './augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1_API_NAMES } from './augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2_API_NAMES } from './augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3_API_NAMES } from './augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G4_API_NAMES } from './augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5_API_NAMES } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1_API_NAMES } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_API_NAMES } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_API_NAMES } from './augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_G6_API_NAMES } from './augment-pool-batch5-g6';
 import { AUGMENT_BATCH5_H6_API_NAMES } from './augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_B5A_API_NAMES } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1A_API_NAMES } from './augment-pool-batch5-s1a';
@@ -13,6 +24,7 @@ import { AUGMENT_BATCH5_H10_API_NAMES } from './augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H11_API_NAMES } from './augment-pool-batch5-h11';
 import { AUGMENT_BATCH5_H12_API_NAMES } from './augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_H9_API_NAMES } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7_API_NAMES } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP_API_NAMES } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S3B_API_NAMES } from './augment-pool-batch5-s3b';
 import { AUGMENT_BATCH5_S6C_API_NAMES } from './augment-pool-batch5-s6c';
@@ -41,6 +53,7 @@ import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment
  * so pool expansion only adds a row here.
  */
 export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeContent({
+  ...AUGMENT_BATCH5_R2_API_NAMES,
   ...AUGMENT_BATCH1_API_NAMES,
   ...AUGMENT_BATCH2_API_NAMES,
   ...AUGMENT_BATCH3_API_NAMES,
@@ -50,7 +63,9 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH4_API_NAMES,
   ...AUGMENT_BATCH5_API_NAMES,
   ...AUGMENT_BATCH5_H1_API_NAMES,
+  ...AUGMENT_BATCH5_G1_API_NAMES,
   ...AUGMENT_BATCH5_H3_API_NAMES,
+  ...AUGMENT_BATCH5_R6_API_NAMES,
   ...AUGMENT_BATCH5_H4_API_NAMES,
   ...AUGMENT_BATCH5_H5_API_NAMES,
   ...AUGMENT_BATCH5_H6_API_NAMES,
@@ -72,6 +87,15 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH5_H12_API_NAMES,
   ...AUGMENT_BATCH5_H13_API_NAMES,
   ...AUGMENT_BATCH5_H9_API_NAMES,
+  ...AUGMENT_BATCH5_R1_API_NAMES,
+  ...AUGMENT_BATCH5_R3_API_NAMES,
+  ...AUGMENT_BATCH5_R4_API_NAMES,
+  ...AUGMENT_BATCH5_G2_API_NAMES,
+  ...AUGMENT_BATCH5_G3_API_NAMES,
+  ...AUGMENT_BATCH5_G4_API_NAMES,
+  ...AUGMENT_BATCH5_G5_API_NAMES,
+  ...AUGMENT_BATCH5_G6_API_NAMES,
+  ...AUGMENT_BATCH5_G7_API_NAMES,
   ...AUGMENT_BATCH4_B4XP_API_NAMES,
   ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',

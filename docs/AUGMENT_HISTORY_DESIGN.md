@@ -1,5 +1,7 @@
 # 强化历史证据设计与实现（方案 A）
 
+B5-69接入（P，2026-10-27）：`loot-explosion` 登记为deaths持有者；真实死亡观察增加可选 `lootExplosion{ killerUnitId, originalKillerUnitId, killerSeatId, critChanceBps }`。击杀包产生时采样、真实death落地时归档，沿既有WeakMap传递，战斗事件和回放字节无新增字段。联机在共享结算前以已验证执行结果记录死亡，结算后玩家伤害仍按原时序记录；没有B5-69的席位保持原时序。任何历史读取使用 `requireAugmentFacts`，联机恢复仍绑定独立authority。规则和奖励见 `augment-pool-batch5-g7.ts` 与 `MATCH_CONTRACT.md`；不是从候选收据补造历史。
+
 基线：`codex/v25-augment-history`，`ee2b019cc8d60fb11679d9ce8c54338f5ea4ea57`，来自 `claude/v24-integration`（PR #456）。本任务只提供历史基础设施，不新增任何强化定义、报价、奖励公式或现有内容数值，不提交 Git。
 
 ## 2026-10-27 H10 使用与扩展
@@ -54,7 +56,7 @@ B5-61 羁绊追踪者在同一个 `augment-history-v1` 内新增事实 `{kind:'t
 | `positions` | 成功公共命令或房间原子发布改变正式单位/装备后；覆盖手动部署、购买/合星、售出、装备、选秀后放置 | B5-26/29/30、37 |
 | `combat-roster` | 单人真实开战时，包含 PvE 和 PvP；取得时还携带之前一场的冻结快照 | B5-10 的“上一对战”不局限 PvP |
 | `pvp-roster` | 联机自动布阵后、锁名单及编译战斗前；全桌八席含已淘汰席，另存本战 ID、mirrorOfSeatId；单人为实际自身阵容 | B5-31、37；镜像源不会作为额外真人重复计数 |
-| `table` | 每次取得历史依赖强化的事务内、专属获取效果前，以及后续入轮、整轮淘汰/排名原子提交后；每席 HP、存活、名次、淘汰轮、阵容 | B5-34、37、38；取得时即可读取以前淘汰席，不凭缺行判断存活 |
+| `table` | 每次取得历史依赖强化的事务内、专属获取效果前，以及后续入轮、整轮淘汰/排名原子提交时；淘汰表在排名确定、资源回收前冻结，每席 HP、存活、名次、淘汰轮、阵容 | B5-34、37、38、39、40；取得时可读取以前淘汰席，盗墓者以取得时存活名单为起点，不凭缺行判断存活 |
 | `growth` | 未来强化领域事务调用通用 API；唯一 receiptId、choiceId、每普通英雄的 HP flat/Bps、AD Bps、AP **百分之一点** `abilityPowerCenti` | B5-31、38、57；150 centi=1.5 AP，150 Bps=1.5%，没有浮点保存 |
 | `carousel` | 每笔真实选取并授予完成后；完整收据、同轮 ordinal、manual/bot/timeout/disconnected/augment 来源、可选来源 choiceId、落位快照、放行逻辑毫秒及持有资格 choiceId 列表 | B5-26/29/30、35/36、44；同席同轮可有多笔且独占不同槽 |
 | `preparation-time` | 显式、单调的整数准备期逻辑时间；不读取墙钟，不复用战斗 tick | B5-07 |
@@ -254,3 +256,25 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 本单最终验证：所有 Vitest 调用均为指定文件／用例、`--maxWorkers=3`，累计去重 369 项通过（其中金色收获 63 项、禁忌魔法 93 项，覆盖普通及流式真实 Room、对象／JSON／规范序列化恢复和篡改拒绝）。其余通过项为历史 77 项、源资料及双边快照 123 项、内容身份／生产大小 12 项、batch2 分类迁移 1 项；没有跑完整套件或超过 0..100 的种子扫描。`npm run typecheck`、`npm run build -- --configLoader runner`、身份重算 `--write`／校验 `--check` 和 `git diff --check` 通过。最终摘要为 CONTENT `fnv1a32-utf16:5dd52c60`、LOOT `fnv1a32-utf16:85985e18`，生产大小断言已同步。
 
 额外阶段审计的 10 个自动用例受沙盒 `spawnSync node EPERM` 阻断；直接运行同一审计 CLI 后确认本单两个节点无差异，仍报告 Academy、Experiment、Formswapper、BloodBrothers 四项范围外既有差异。没有删除断言、增加超时、修改 epoch 或写入 Git。严格全目录禁词检查仍会命中未修改的 `src/server/room/real-clock.ts:4` 和 `src/server/net/test-client.ts:13` 等既有计时适配；本单服务器新增行不含 `setTimeout`、`Date.now`、`performance.now` 或 `window`。
+## Batch5 R2 扩展（2026-10-27，沿用 augment-history-v1）
+
+`anger-issues` 与 `another-anomaly` 登记为历史持有者；不为未持有者写空节。B5-81 增加 `anomaly-copy-kills`：`{battleId,itemId,unitId,kills:[{eventSeq,victimId}]}`，另带通用 sequence/seat/round/resourcePrefix。使用 `recordAugmentCopyKills(state,fact)` 和 `readAugmentCopyKills(state,itemId,beforeRound?)`；同一战斗/物品同内容幂等、冲突拒绝，复活后再次死亡不按 victimId 去重。采样只读取已认证终战，原异常持有者与召唤物/装备克隆不进入复制品账本。
+
+战斗输入的可选 `augmentCopyKills` 由上述 API 读取此前回合的自身记录，绝不复制原英雄累计值；恢复用已认证资源前缀选择开战物品，运行中读取开战历史，避免后续卸下、重铸抹去冻结输入。PvP 装备 ID 沿既有命名空间映射。全部事实仍走同一界限检查、单人公共命令重演及联机独立 authority，不创建第二个保存节、不重录 epoch。规则、接口与接线点见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。
+
+## B5-67 在线恢复接入（2026-10-27）
+
+炼金术士不读取跨回合事实，不登记为 history owner，不生成空历史节。其单席在线保存仍不能独立证明敌方阵容与毒伤轨迹，故规则内部 `augment-pool-batch5-r4-restore.ts / validateMadChemistOnlineSave(pool,state,authority?)` 从独立服务器 `pool.pending/rewards` 核对本席固定 2-1 奖励身份；即使候选组合删除强化、选择记录、奖励收据和法球，仍复用 `validateAugmentAuthority(state,authority,true)` 强制独立服务器完整检查点，并校验既有奖励计划。候选残留的本卡标记也要求认证；所有已提供句柄一律认证完整状态，不能因本卡或历史节缺失而跳过。选秀入口传入 `carousel.pool`，两个公开恢复入口签名不变。调用者继续使用 `Room.augmentHistoryAuthority(seatId)`；无 `src/server` 改动、无候选自签、无新持久格式。离线战斗的可选 `CombatUnit.madChemist` 则使用现有可信输入全量重演。新增测试覆盖真实八席选取/领取/部署/PvP、真实选秀恢复、对象和JSON往返、恢复后命令一致，以及句柄、组合删除、奖励、阵容、毒伤与回蓝篡改拒绝。
+## Batch 5 R6 接入（2026-10-27）
+
+`pandoras-bench` 登记 round-entry/positions，`recombobulator` 登记 acquire/positions。规则只经 `requireAugmentFacts` / `readAugmentFacts` 读取取得前阵容和自然轮入口，不复制另一份历史节；保持实例ID，已有成长API与资源合星血缘继续工作。`preflightAugmentHistory` 增加两卡变形来源及完整批次检查，涵盖共享法球、选秀和离线三个恢复入口；联机最终状态仍须匹配独立服务器authority。资源有序账本新增 unit-transformed 与 augment-transform-completed，后者覆盖空批次，不新增网络命令或封套版本。
+
+R6 验证：两卡22项专项测试及相关卡池、双边战斗、消耗品、强化历史／报价、身份／体积回归，共12文件182项通过；全部 `--maxWorkers=3`，未跑全套、未放宽断言或超时。类型检查及生产构建通过。content=`fnv1a32-utf16:d473c202`，loot=`fnv1a32-utf16:c50b81d2`；旧epoch未重录。具体调用签名与失败边界见 `MATCH_CONTRACT.md` 的 Batch 5 R6 节，逐卡结果见根目录 `-o`。
+## B5-G2 死亡事实扩展（2026-10-27）
+
+B5-63／B5-70 均登记为 `deaths` 历史持有者，联机恢复要求房间独立 authority；B5-63 使用现有 `deaths` API 推导永久值；`AugmentDeath.form?` 保存真实死亡时已经冻结的双形态，`championCopy?:true` 区分英雄复制体与非英雄召唤物。原 `ordinaryHero` 的过滤语义保持不变，现有消费者不被扩大；英雄复制体可由新消费者显式纳入。“最后机会”这类先复活后清理的流程，在G2持有者场次会补齐复活前首次死亡采样；原有复活事件保留，复活后再次死亡仍按新eventSeq记录。两字段只在适用的真实样本中出现，由原本的单人命令重演或独立服务器 authority 认证，不接受客户端自报死亡。协议与历史节版本仍沿用现有版本；内容变化通过 rules manifest 和内容身份区分，不重录旧 epoch。
+## 2026-10-27 B5-82／B5-85 集成（G5）
+
+`expected-unexpectedness` 使用现有 `acquire` 持有者登记，确保联机存档整体金币与奖励状态也必须匹配独立服务器 authority；骰子结果仍独立重算，不从历史收据读金额。`prismatic-pipeline` 登记为 `orb-opened` 历史持有者。沿用 `augment-history-v1`，增加事实 `{kind:'orb-opened',choiceId,orbId,tier:'prismatic'}`，其连续 sequence、席位、自然轮、roundId、resourcePrefix 由现有 `appendAugmentFact` 填写。仅在通用开球命令把最后一项实际授予后写入，领取前已持有来源才有效；排队、部分领取、弃置、失败和重复均不写。规则通过 `readAugmentFacts(state,'orb-opened')` 读取，不能从当前金币或 receipt.claimedRoundId 推测同轮取得前后顺序。
+
+金币及礼物均由事实中的 orbId、来源 choiceId、取得节点、席位和种子重算；事实不携带奖励金额或抽样结果。在线仍由 `Room.augmentHistoryAuthority` 的独立品牌句柄认证完整候选状态；缺历史／缺 authority／改事实拒绝，不自签名、不迁移补零。无需新增客户端命令、协议或 epoch 录制。

@@ -1,3 +1,4 @@
+import { recordR2PortableBattle } from './augment-pool-batch5-r2-history';
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainSurvivorGold } from './augment-pool-batch5-h4-survivor';
 import { grantScoreboardEntry } from './augment-pool-batch5-h6-scoreboard';
@@ -8,6 +9,7 @@ import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
 import { maxCapOfferNeedsHistory } from './augment-pool-batch5-h12-progression';
 import { settleBatch5H9History } from './augment-pool-batch5-h9';
 import type { MatchState, MatchEvent } from './match-types';
+import { clonePlainData } from './plain-clone';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
 import { augmentNeedsHistory, AUGMENT_HISTORY_OWNERS } from './augment-history-owners';
@@ -28,18 +30,31 @@ export const historySeatId = (s: MatchState): string => s.multiplayer?.seatId ??
 export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId)) || maxCapOfferNeedsHistory(s);
 export const needsAugmentPreparationClock = (s: MatchState): boolean => s.augments.some(a => AUGMENT_HISTORY_OWNERS[a.definitionId]?.includes('preparation-time'));
 export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): HistoryRoster {
-  return structuredClone({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
+  return clonePlainData({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
 }
 export function appendAugmentFact(s: MatchState, fact: AugmentFactData): MatchState {
   if (!s.augmentHistory) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return s; }
   historyCheck(s.augmentHistory.facts.length < LIMIT.facts && s.round <= LIMIT.rounds, 'recording bounds');
-  const row: AugmentHistoryFact = { ...structuredClone(fact), sequence: s.augmentHistory.facts.length,
+  const row: AugmentHistoryFact = { ...clonePlainData(fact), sequence: s.augmentHistory.facts.length,
     seatId: historySeatId(s), round: s.round, roundId: getMultiplayerRoundByOrdinal(s.round).roundId,
     resourcePrefix: s.resourceProvenance.entries.length };
   return { ...s, augmentHistory: { ...s.augmentHistory, facts: [...s.augmentHistory.facts, row] } };
 }
 export function recordAugmentRoundEntry(s: MatchState): MatchState {
   return appendAugmentFact(s, { kind: 'round-entry', roster: historyRoster(s) });
+}
+
+/** Portable Anomaly owns its own kill journal. Original Headhunter history is never inherited. */
+export function recordAugmentCopyKills(s:MatchState,fact:Extract<AugmentFactData,{kind:'anomaly-copy-kills'}>):MatchState {
+  historyCheck(s.augments.some(a=>a.definitionId==='another-anomaly')&&s.augmentHistory,'anomaly copy owner');
+  const old=readAugmentFacts(s,'anomaly-copy-kills').find(f=>f.battleId===fact.battleId&&f.itemId===fact.itemId);
+  if(old){historyCheck(same({battleId:fact.battleId,itemId:fact.itemId,unitId:fact.unitId,kills:fact.kills},{battleId:old.battleId,itemId:old.itemId,unitId:old.unitId,kills:old.kills}),'anomaly copy conflict');return s;}
+  historyCheck(fact.kills.length<=LIMIT.deaths&&new Set(fact.kills.map(k=>k.eventSeq)).size===fact.kills.length
+    &&fact.kills.every(k=>Number.isSafeInteger(k.eventSeq)&&k.eventSeq>=0&&typeof k.victimId==='string'),'anomaly copy kills');
+  return appendAugmentFact(s,fact);
+}
+export function readAugmentCopyKills(s:MatchState,itemId:string,beforeRound=s.round):number {
+  return readAugmentFacts(s,'anomaly-copy-kills').filter(f=>f.itemId===itemId&&f.round<beforeRound).reduce((n,f)=>n+f.kills.length,0);
 }
 export function recordAugmentTable(s: MatchState, stage: 'acquire' | 'entry' | 'settlement', seats: readonly HistorySeat[]): MatchState {
   let recorded = appendAugmentFact(s, { kind: 'table', stage, seats });
@@ -206,11 +221,17 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
   const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
   const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
-  const recorded = new Set(after.combat?.status === 'finished' ? next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []) : []);
+  const deathRows = next.augmentHistory!.facts.filter(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId);
+  const recorded = new Set(after.combat?.status === 'finished' ? deathRows.flatMap(f => f.kind === 'deaths' ? f.deaths.map(d => d.eventSeq) : []) : []);
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
-  if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
+  const boundaryRecorded = deathRows.some(f => f.kind === 'deaths' && f.completeThroughTick === after.combat?.tick);
+  // Settlement may already hold the finished CombatState (including tick 0).
+  // Its explicit terminal boundary must exist before rewards, even without any deaths.
+  if (after.combat && (deaths.length || !boundaryRecorded && (before.combat?.tick !== after.combat.tick || !before.combat || after.combat.status === 'finished')))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
-      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
+      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null,
+        ...(d.lootExplosion?{lootExplosion:{...d.lootExplosion,killerSeatId:d.team==='enemy'?historySeatId(after):null}}:{}) })) });
+  if(after.roundResults.length>before.roundResults.length&&after.combat?.status==='finished')next=recordR2PortableBattle(next,after.combat,'player');
   // Solo PvP has no opposing player's HP account. Unknown is explicit, never fabricated as zero.
   if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp')
     next = appendAugmentFact(next, { kind: 'player-damage', battleId: after.combat!.combatId!, opponentSeatId: null, mirror: false, hpBefore: null, hpAfterDamage: null, actualDamage: null });
@@ -234,8 +255,9 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     if (!next.multiplayer) next = drainBatch5H8Gold(next);
     if (!next.multiplayer || next.m8.round.kind === 'pve') next = drainBatch5H8Deaths(next);
   }
-  const priorReceipts=new Set((rewarded.state.seatMechanics?.receipts??[]).map(r=>r.receiptId));
-  const newReceipts=(next.seatMechanics?.receipts??[]).filter(r=>!priorReceipts.has(r.receiptId));
+  const prior = rewarded.state.seatMechanics?.receipts, current = next.seatMechanics?.receipts;
+  const priorReceipts = current === prior ? undefined : new Set((prior ?? []).map(r => r.receiptId));
+  const newReceipts = priorReceipts ? (current ?? []).filter(r => !priorReceipts.has(r.receiptId)) : [];
   const payoutEvents:MatchEvent[]=newReceipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:next.nextMatchEventSeq+index}));
   if(payoutEvents.length)next={...next,nextMatchEventSeq:next.nextMatchEventSeq+payoutEvents.length};
   let effectEvents: readonly MatchEvent[] = [];
@@ -304,8 +326,8 @@ export function carryRestoredAugmentTrace(validated: MatchState, restored: Match
 /** Restore-only trust check. The handle must come from an independently owned server checkpoint. */
 export function validateAugmentAuthority(s: MatchState, authority: AugmentHistoryAuthority | undefined, required: boolean): void {
   const expected=authority && authorities.get(authority);
-  if(required)historyCheck(expected,'missing independent server authority');
-  if(expected && (required || expected.augmentHistory))historyCheck(same(s,expected),'server facts/state mismatch');
+  if(required || authority!==undefined)historyCheck(expected,'missing independent server authority');
+  if(expected)historyCheck(same(s,expected),'server facts/state mismatch');
 }
 
 /** Evidence for a future maximum-HP effect, after its real domain transaction changed playerHp.

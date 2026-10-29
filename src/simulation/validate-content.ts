@@ -1,6 +1,19 @@
+import { AUGMENT_BATCH5_R2 } from './content/augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3 } from './content/augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4 } from './content/augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_G1 } from './content/augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3, B5_G3_FIELDS } from './content/augment-pool-batch5-g3';
+import { B5_G4_MECHANIC_FIELDS } from './content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G4 } from './content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5 } from './content/augment-pool-batch5-g5';
+import { AUGMENT_BATCH5_G6 } from './content/augment-pool-batch5-g6';
+import { AUGMENT_BATCH5_G7 } from './content/augment-pool-batch5-g7';
 import { AUGMENT_BATCH5_H1_DEFINITIONS } from './content/augment-pool-batch5-h1';
+import { AUGMENT_BATCH5_R6 } from './content/augment-pool-batch5-r6';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_R1_DEFINITIONS } from './content/augment-pool-batch5-r1';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_B5A } from './content/augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1A } from './content/augment-pool-batch5-s1a';
@@ -78,7 +91,10 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
-  d14Anomaly:['enabled'],d11Fill:['enabled'],
+  rebelResurgence:['count','reducedHealth'],
+  ghostFriends:['healthFlat','attackDamageBps','abilityPower'],
+  ...B5_G4_MECHANIC_FIELDS,
+  carryGolem:['enabled'],d14Anomaly:['enabled'],d11Fill:['enabled'],
   s13P2Augment:['enabled'],s13P2Anomaly:['enabled'],s13P2ItemAugment:['enabled'],
   s13Anomaly:['enabled'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
@@ -113,7 +129,8 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   coronation:['enabled'],g23Tactician:['goldChanceBps','timerTicks'],
-  ...H11_FIELDS, ...B4COMBAT_FIELDS,traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],towerDefense:['apRatio1','apRatio2','apRatio3','upgrade1Stage','upgrade1AsBps','upgrade2Stage','upgrade2Bps'],towerDefenseLive:['apRatio','extraBps'],magicRoll:['health'],forming:['golem','healthBps','attackBps','healthPerStage'],heroCarry:['hero', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd1', 'dashAd2', 'dashAd3', 'dashAp1', 'dashAp2', 'dashAp3', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near1', 'near2', 'near3'],heroCarryLive:['hero', 'star', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd', 'dashAp', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near'],
+  madChemist:['enabled'],
+  ...H11_FIELDS, ...B5_G3_FIELDS, ...B4COMBAT_FIELDS,traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],towerDefense:['apRatio1','apRatio2','apRatio3','upgrade1Stage','upgrade1AsBps','upgrade2Stage','upgrade2Bps'],towerDefenseLive:['apRatio','extraBps'],magicRoll:['health'],forming:['golem','healthBps','attackBps','healthPerStage'],heroCarry:['hero', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd1', 'dashAd2', 'dashAd3', 'dashAp1', 'dashAp2', 'dashAp3', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near1', 'near2', 'near3'],heroCarryLive:['hero', 'star', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd', 'dashAp', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near'],
   s13P3:['enabled','stage'],
   acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
@@ -171,7 +188,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:Object.keys(AUGMENT_BATCH5_H9).length+Object.keys(AUGMENT_BATCH5_H13).length+Object.keys(AUGMENT_BATCH5_H11).length+Object.keys(AUGMENT_BATCH5_H10).length+Object.keys(AUGMENT_BATCH5_H8).length+Object.keys(AUGMENT_BATCH5_H7).length+Object.keys(AUGMENT_BATCH5_S11A).length+Object.keys(AUGMENT_BATCH5_S8C).length+Object.keys(AUGMENT_BATCH5_S8B).length+Object.keys(AUGMENT_BATCH5_S6C).length+Object.keys(AUGMENT_BATCH5_S8A).length+Object.keys(AUGMENT_BATCH5_B5A).length+Object.keys(AUGMENT_BATCH5_S1A).length+Object.keys(AUGMENT_BATCH5_S1B).length+Object.keys(AUGMENT_BATCH5_S3A).length+Object.keys(AUGMENT_BATCH5_S3B).length+Object.keys(AUGMENT_BATCH5_S3D).length+Object.keys(AUGMENT_BATCH5_H6).length+Object.keys(AUGMENT_BATCH5_H4).length+Object.keys(AUGMENT_BATCH5_H3).length+Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS).length+Object.keys(AUGMENT_BATCH5_H5).length+Object.keys(AUGMENT_BATCH5).length+Object.keys(AUGMENT_BATCH4_B4COMBAT).length+30+6+Object.keys(AUGMENT_BATCH4_B4REROLL).length+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys({...AUGMENT_SHOP,...AUGMENT_BATCH5_H12}).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:Object.keys(AUGMENT_BATCH5_G7).length+Object.keys(AUGMENT_BATCH5_G6).length+Object.keys(AUGMENT_BATCH5_G5).length+Object.keys(AUGMENT_BATCH5_G4).length+Object.keys(AUGMENT_BATCH5_G3).length+Object.keys(AUGMENT_BATCH5_G2).length+Object.keys(AUGMENT_BATCH5_G1).length+Object.keys(AUGMENT_BATCH5_R6).length+Object.keys(AUGMENT_BATCH5_R4).length+Object.keys(AUGMENT_BATCH5_R3).length+Object.keys(AUGMENT_BATCH5_R2).length+Object.keys(AUGMENT_BATCH5_R1_DEFINITIONS).length+Object.keys(AUGMENT_BATCH5_H9).length+Object.keys(AUGMENT_BATCH5_H13).length+Object.keys(AUGMENT_BATCH5_H11).length+Object.keys(AUGMENT_BATCH5_H10).length+Object.keys(AUGMENT_BATCH5_H8).length+Object.keys(AUGMENT_BATCH5_H7).length+Object.keys(AUGMENT_BATCH5_S11A).length+Object.keys(AUGMENT_BATCH5_S8C).length+Object.keys(AUGMENT_BATCH5_S8B).length+Object.keys(AUGMENT_BATCH5_S6C).length+Object.keys(AUGMENT_BATCH5_S8A).length+Object.keys(AUGMENT_BATCH5_B5A).length+Object.keys(AUGMENT_BATCH5_S1A).length+Object.keys(AUGMENT_BATCH5_S1B).length+Object.keys(AUGMENT_BATCH5_S3A).length+Object.keys(AUGMENT_BATCH5_S3B).length+Object.keys(AUGMENT_BATCH5_S3D).length+Object.keys(AUGMENT_BATCH5_H6).length+Object.keys(AUGMENT_BATCH5_H4).length+Object.keys(AUGMENT_BATCH5_H3).length+Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS).length+Object.keys(AUGMENT_BATCH5_H5).length+Object.keys(AUGMENT_BATCH5).length+Object.keys(AUGMENT_BATCH4_B4COMBAT).length+30+6+Object.keys(AUGMENT_BATCH4_B4REROLL).length+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys({...AUGMENT_SHOP,...AUGMENT_BATCH5_H12}).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

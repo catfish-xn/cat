@@ -8,19 +8,19 @@ const samples = new WeakMap<object, Omit<AugmentDeath, 'combatId' | 'eventSeq'>>
 const histories = new WeakMap<CombatState, readonly AugmentDeath[]>();
 export function isAugmentOrdinaryHero(unit: CombatUnit): boolean {
   return !!UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon
-    && unit.unitKind !== 'neutral' && !unit.itemSummon && !unit.anomalySummon;
+    && unit.unitKind !== 'neutral' && !unit.itemSummon && !unit.anomalySummon && !unit.rebelCopy;
 }
 // Keep attribution beside the observed event, not in the combat event or save protocol.
 const takedowns = new WeakMap<object, readonly AugmentTakedownActor[]>();
 const killers = new WeakMap<object, CombatOrigin | null>();
 export interface AugmentDeathAttribution { readonly combatId: string; readonly eventSeq: number; readonly killer: CombatOrigin | null; readonly takedowns?: readonly AugmentTakedownActor[] }
 const attributionHistories = new WeakMap<CombatState, readonly AugmentDeathAttribution[]>();
-export function sampleAugmentDeath<E extends CombatEvent>(event: E, unit: CombatUnit, killer?: CombatOrigin | null, actors?: readonly AugmentTakedownActor[]): E {
+export function sampleAugmentDeath<E extends CombatEvent>(event: E, unit: CombatUnit, killer?: CombatOrigin | null, actors?: readonly AugmentTakedownActor[], lootExplosion?: AugmentDeath['lootExplosion']): E {
   if (actors !== undefined) takedowns.set(event, structuredClone(actors));
   if (killer !== undefined) killers.set(event, killer ? structuredClone(killer) : null);
   samples.set(event, { tick: event.tick, unitId: unit.id, definitionId: unit.definitionId, team: unit.team, ownerSeatId: unit.team === 'player' ? 'solo' : null, originalUnitId: unit.id,
     ordinaryHero: isAugmentOrdinaryHero(unit),
-    equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []) });
+    ...(unit.form ? { form: unit.form } : {}), ...((unit.rebelCopy || unit.itemSummon) && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' ? { championCopy: true as const } : {}), equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []), ...(lootExplosion?{lootExplosion:{...lootExplosion}}:{}) });
   return event;
 }
 export function carryAugmentDeathSample<E extends CombatEvent>(before: CombatEvent, after: E): E {
@@ -37,13 +37,13 @@ export function augmentDeathsFromEvents(events: readonly object[], includeKiller
 }
 export function carryAugmentCombatDeaths(before: CombatState, step: CombatStep): CombatStep {
   const added = augmentDeathsFromEvents(step.events), previous = histories.get(before) ?? [];
-  if (added.length || previous.length) histories.set(step.state, [...previous, ...added]);
+  if (added.length || previous.length) histories.set(step.state, added.length ? [...previous, ...added] : previous);
   const attributions = step.events.flatMap(event => {
     if (!killers.has(event) || typeof event.combatId !== 'string' || typeof event.eventSeq !== 'number') return [];
     return [{ combatId: event.combatId, eventSeq: event.eventSeq, killer: structuredClone(killers.get(event)!), ...(takedowns.has(event)?{takedowns:structuredClone(takedowns.get(event)!)}:{}) }];
   });
   const oldAttributions = attributionHistories.get(before) ?? [];
-  if (attributions.length || oldAttributions.length) attributionHistories.set(step.state, [...oldAttributions, ...attributions]);
+  if (attributions.length || oldAttributions.length) attributionHistories.set(step.state, attributions.length ? [...oldAttributions, ...attributions] : oldAttributions);
   return step;
 }
 export function readAugmentCombatDeaths(terminal: CombatState, includeKiller = false, includeTakedowns = false): readonly AugmentDeath[] {

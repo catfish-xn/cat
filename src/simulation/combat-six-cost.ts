@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import type { CombatOrigin, ShieldLayer } from './combat-types';
 import { ad, ap, byDistance, enemies, origin, variable, grantShield, applyStatus, attackSpeedBonus, type S13Unit } from './combat-s13-state';
@@ -60,7 +61,7 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   }
   const coverage=(cell:HexCell)=>ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(cell,t.cell)<=2).length;
   free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
-  const destination=free[0];if(destination&&hexDistance(destination,u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:destination});u.cell=destination;}
+  const destination=free[0];if(destination&&hexDistance(destination,u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:destination}); recordAerialMovement(ctx, u, destination);u.cell=destination;}
   const allies=byDistance(u,ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(u.cell,t.cell)<=2)).slice(0,2);
   for(const t of [u,...allies])grantShield(t,origin(u),variable(u,'Shield'),ctx.tick+P.mel.shieldTicks,ctx.tick,ctx.events);
   if(u.runtime.castCount%3===0){
@@ -129,7 +130,7 @@ export function advanceSixCost(ctx:AbilityContext,nextSeq:()=>number):void {
     const target=targets[0];if(!target)continue;
     const cells=getNeighbors(ctx.board,target.cell).filter(c=>!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
     if(!cells.length)continue;
-    if(hexDistance(u.cell,cells[0])>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
+    if(hexDistance(u.cell,cells[0])>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
     s.pendingDevour=target.id;const p=packet(ctx,u,target,target.hp,'true',nextSeq(),0);p.devour=true;p.source={...p.source,effectIndex:99};p.critEligibility='never';
   }
 }

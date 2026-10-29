@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
 import { mirroredItemCell, nearestItemCell, manaReavedMaximum, validateDeferredItemDamage } from './g2-4b-item-kernel';
@@ -34,7 +35,7 @@ export function returnZephyrUnits(ctx:AbilityContext):void {
     if(unit.itemBanish?.untilTick!==ctx.tick)continue;
     const to=nearestFreeReturnCell(ctx,unit);
     if(!to)throw new RangeError('No Zephyr return cell');
-    if(!sameCell(to,unit.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});unit.cell=to;}
+    if(!sameCell(to,unit.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to}); recordAerialMovement(ctx, unit, to);unit.cell=to;}
     if(unit.mechanismState)unit.mechanismState={...unit.mechanismState,periodicTasks:unit.mechanismState.periodicTasks.map(t=>{
       const skipped=Math.max(0,Math.ceil((ctx.tick-t.nextPulseAtTick)/t.periodTicks));
       return {...t,nextPulseAtTick:t.nextPulseAtTick+skipped*t.periodTicks,pulseOrdinal:t.pulseOrdinal+skipped};
@@ -101,7 +102,7 @@ export function advanceSpectralCutlass(ctx: AbilityContext): void {
     const available = cells.filter(cell=>!ctx.units.some(other=>other.id!==unit.id&&occupiesCell(other,ctx.tick)&&sameCell(other.cell,cell)));
     const to = nearestItemCell(desired,available);
     if (!to || sameCell(to,unit.cell)) continue;
-    ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});
+    ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to}); recordAerialMovement(ctx, unit, to);
     unit.cell=to;unit.moveCooldownTicks=MOVE_INTERVAL_TICKS;
   }
 }

@@ -1,60 +1,70 @@
+
+import { AUGMENT_BATCH5_R4 } from './content/augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6 } from './content/augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1 } from './content/augment-pool-batch5-g1';
+import { luckyGlovesRewardPlan } from './augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
+import { b5VoidSwarmGiftPlan } from './augment-pool-batch5-g4-swarm';
+import { AUGMENT_BATCH5_G4 } from './content/augment-pool-batch5-g4';
+import { preparePipelineOrbs } from './augment-pool-batch5-g5-pipeline';
+import { batch5G5GiftPlan, drainBatch5G5Gold } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
+import { AUGMENT_BATCH5_G7 } from './content/augment-pool-batch5-g7';
+
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
-import { validateSurvivorGold } from './augment-pool-batch5-h4-survivor';
-import { validatePortfolioGold } from './augment-pool-batch5-h4';
-import { validateContestedGold } from './augment-pool-batch5-h6';
+
+
 import { AUGMENT_BATCH5_B5A } from './content/augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S3A } from './content/augment-pool-batch5-s3a';
 import { AUGMENT_BATCH5_S3B } from './content/augment-pool-batch5-s3b';
 import { salvageRewardPlan } from './augment-pool-batch5-s3b-salvage';
-import { academicGiftPlan, academicAnvilOffers, validateAcademicGifts } from './augment-pool-batch5-s3b';
+import { academicGiftPlan, academicAnvilOffers } from './augment-pool-batch5-s3b';
 import { replicationGiftPlan } from './augment-pool-batch5-s3d';
 import { AUGMENT_BATCH5_S3D } from './content/augment-pool-batch5-s3d';
-import { validateBatch5S6cGold } from './augment-pool-batch5-s6c';
+
 import { pilferRewardPlan } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { gloriousEvolutionRewardPlan } from './augment-pool-batch5-s8b';
 import { hardCommitRewardPlan } from './augment-pool-batch5-s8c';
-import { validateBatch5H7Gold } from './augment-pool-batch5-h7';
-import { validateBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
-import { validateBatch5H8Gold } from './augment-pool-batch5-h8';
+
+
 import { trackerGiftPlan } from './augment-pool-batch5-h10-tracker';
 import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_H13 } from './content/augment-pool-batch5-h13';
 import { recordH13Settlements, salvageRewardPlan as h13SalvageRewardPlan } from './augment-pool-batch5-h13-salvage';
 import { cabalGiftPlan } from './augment-pool-batch5-h9-cabal';
-import { validateShopAugments } from './shop-augments';
+
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
-import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
-import { batch4RewardPlan, drainBatch4Gold, validateBatch4Gold } from './augment-pool-batch4-progress';
+import { batch5RewardPlan } from './augment-pool-batch5-progress';
+import { batch4RewardPlan, drainBatch4Gold } from './augment-pool-batch4-progress';
 import { AUGMENT_BATCH4_B4XP } from './content/augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4COMBAT } from './content/augment-pool-batch4-b4combat';
-import { formSwapperGiftPlan, validateFormSwapperSelection } from './augment-pool-formswapper';
-import { batch2RewardPlan, drainBatch2Gold, validateBatch2Gold } from './augment-pool-batch2-progress';
+import { formSwapperGiftPlan } from './augment-pool-formswapper';
+import { batch2RewardPlan, drainBatch2Gold } from './augment-pool-batch2-progress';
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, drainBatch3Dummies, validateBatch3Dummies, drainBatch3Forming } from './augment-pool-batch3-progress';
-import { validateFreeRerolls } from './free-rerolls';
-import { validateAcquisitionLevels } from './augment-xp';
-import { drainSettlementGold, validateSettlementGold } from './augment-settlement-gold';
+import { batch3RewardPlan, drainBatch3Gold, drainBatch3Dummies, drainBatch3Forming } from './augment-pool-batch3-progress';
+
+
+import { drainSettlementGold } from './augment-settlement-gold';
 import { planAugmentGifts, augmentAnvilOffers, AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { isAnvil } from './content/anvils';
-import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(cabalGiftPlan(state),trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),h13SalvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,((AUGMENT_BATCH5_G7 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G4 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G2 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_R6[a.definitionId]??AUGMENT_BATCH5_R4[a.definitionId as keyof typeof AUGMENT_BATCH5_R4]??AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G1 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(cabalGiftPlan(state),trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),h13SalvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state),luckyGlovesRewardPlan(state),b5VoidSwarmGiftPlan(state),batch5G5GiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
  // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
- let state=drainBatch3Forming(recordH13Settlements(initial)),progressed:boolean;
+ let state=drainBatch5G5Gold(preparePipelineOrbs(drainBatch3Forming(recordH13Settlements(initial)))),progressed:boolean;
  do {
   progressed=false;
   for(const gift of batch1GiftPlan(state)){
@@ -74,35 +84,4 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
  return gift?.kind==='unit'&&isAnvil(gift.definitionId)
   ?{definitionId:gift.definitionId,offers:academicAnvilOffers(state,receiptId)??augmentAnvilOffers(state.seed,receiptId,gift.definitionId)}:undefined;
 }
-export function validateBatch1Gifts(state:MatchState):void {
- validateSurvivorGold(state);
- validatePortfolioGold(state);
- validateContestedGold(state);
- validateAcademicGifts(state);
- validateBatch5S6cGold(state);
- validateBatch5H7Gold(state);
- validateBatch5H8Gold(state);
- validateBatch5H8Deaths(state);
- validateBatch5Gold(state);
- validateBatch4Gold(state);
- validateBatch2Gold(state);
- validateFormSwapperSelection(state);
- validateBatch3Gold(state);
- validateAcquisitionLevels(state);
- validateSettlementGold(state);
- validateShopAugments(state);
- validateFreeRerolls(state);
- validateBatch3Dummies(state);
- const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
- const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
- for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){
-  const gift=gifts.find(g=>g.receiptId===r.receiptId);
-  if(!gift||r.source!==AUGMENT_GIFT_SOURCE||r.kind!==gift.kind||!('definitionId' in r)||r.definitionId!==gift.definitionId||r.round<gift.acquiredRound||r.round>state.round||gift.kind!=='unit'&&r.round!==gift.acquiredRound)fail();
-  if(r.kind==='unit'&&gift){
-   if((r.starLevel??1)!==(gift.starLevel??1))fail();
-   if(isAnvil(r.definitionId)){if(r.resolution!=='held'||r.gold!==0)fail();}
-   else if(r.resolution==='gold'?r.gold!==UNIT_DEFINITIONS[r.definitionId].cost:r.gold!==0)fail();
-  }
- }
- for(const gift of gifts)if(gift.kind!=='unit'&&!receipts.some(r=>r.receiptId===gift.receiptId))fail();
-}
+

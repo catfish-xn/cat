@@ -45,8 +45,12 @@ export interface ResolvedTrigger { readonly key: string; readonly source: Effect
 export interface TraitSnapshot { readonly memberUnitIds?: readonly string[]; readonly team: Team; readonly traitId: string; readonly count: number; readonly tier: number; readonly memberDefinitionIds: readonly string[]; readonly targetUnitIds: readonly string[] }
 export interface StrategyUnitSnapshot {
   readonly augmentEquipment?: import('./combat-types').CombatUnit['equipment'];
+  readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
   readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4}; readonly effectiveStarLevel?:1|2|3|4; readonly openingItemBankGold?:number; readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin; /** A placed Hextech Forge: its Jayce's saved preparation cell (projectG23Summons `forgeCells`). */ readonly summonCell?: import('./board').HexCell; readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[]; readonly unitId: string; readonly stats: ResolvedUnitStats; readonly ability: ResolvedAbility; readonly sources: readonly SourcedEffect[]; readonly triggers: readonly ResolvedTrigger[]; readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number; readonly abilityPower?: number; readonly mechanics?: import('./combat-types').CombatMechanics }
-export interface StrategySnapshot { readonly traits: readonly TraitSnapshot[]; readonly units: readonly StrategyUnitSnapshot[] }
+export interface StrategySnapshot {
+  readonly r3Original?: readonly import('./augment-pool-batch5-r3-mirrors').R3OriginalArmy[];
+  readonly traits: readonly TraitSnapshot[]; readonly units: readonly StrategyUnitSnapshot[];
+}
 export interface EffectRuntime { readonly key: string; readonly count: number }
 export interface EffectInvocation { readonly trigger: ResolvedTrigger; readonly targetId: string; readonly action: EffectAction }
 export type StrategyEvent =

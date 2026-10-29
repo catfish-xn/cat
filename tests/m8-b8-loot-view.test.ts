@@ -3,7 +3,7 @@ import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
-import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
+import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation,configuredPrefix,reserveExcept,players,TERMINAL_EMPTY_BOARD_ROUNDS} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -19,10 +19,38 @@ function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);
  for(const d of v.revealedDrops)expect(Object.keys(d).filter(k=>!['orbId','entryOrdinal','dropId','encounterId','sourceUnitId','roundId','payload','status','receiptId','allowedActions','reason'].includes(k))).toEqual([]);
  expect(api.nextRound(s,s.round).ok).toBe(v.canContinue);return v;}
 function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.parse(serializeMatch(s));mutate(raw);expect(api.readLootView(raw)).toEqual(api.readLootView(s));}
-beforeAll(async () => { await terminalPreparation('loris', 1); });
-beforeAll(async () => { await terminalPreparation('rell', 1); });
-// The hero case's seed-2146 terminal prefix is warmed in its own hook too, so that case stays far inside the default timeout.
-beforeAll(async () => { await terminalPreparation(null, 1, 7, 2146); });
+// The cannon driver now sells its early Maddie. Keep the original seed and
+// acquire her as a real sniper-core unit instead. Every item/remover is earned
+// on that route; two ordinary rod recipes and public equipment commands give
+// the same two-carrier terminal control without killing the anvil carrier.
+let terminalHero:MatchState;
+async function prepareTerminalHero(){
+ let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',
+  emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[]}),[]);
+ const holder=players(s).find(u=>u.definitionId==='maddie');if(!holder)throw Error('Missing earned Maddie');
+ for(const unit of players(s).filter(u=>s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))){
+  const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover');if(!remover)throw Error('Missing earned remover');
+  s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:unit.id}));
+ }
+ for(let recipe=0;recipe<2;recipe++){
+  const rods=s.items.filter(i=>i.location.kind==='inventory'&&i.definitionId==='rod');
+  if(rods.length<2)throw Error('Missing earned rods');s=accepted(api.combineItems(s,rods[0].id,rods[1].id));
+ }
+ for(const [slot,definitionId]of ['warmog','deathcap','statikk-shiv'].entries()){
+  const item=s.items.find(i=>i.location.kind==='inventory'&&i.definitionId===definitionId);if(!item)throw Error(`Missing earned ${definitionId}`);
+  s=accepted(api.equipItem(s,item.id,holder.id,slot));
+ }
+ s=accepted(api.deployMatchUnit(s,holder.id,{kind:'board',cell:{col:0,row:7}}));
+ return fillBench(s,['ezreal']);
+}
+// Warm shared prefixes once; report each original 10 s callback separately.
+async function warmTerminal(hero=false){
+ const began=performance.now();
+ try{if(hero)terminalHero=await prepareTerminalHero();else await terminalPreparation(null);}
+ finally{console.info(`B8 terminal warmup ${hero?'hero':'default'}: ${performance.now()-began} ms`);}
+}
+beforeAll(async () => { await warmTerminal(); });
+beforeAll(async () => { await warmTerminal(true); });
 describe('B8 readLootView over real randomized public routes',()=>{
  it('exposes no future orb content and hidden payloads cannot leak before a death',()=>{
   const v=view(prepared);expect(v).toEqual({roundId:'3-7',revealedDrops:[],revealedOrbs:[],pendingClaims:[],canContinue:false,reason:'unsettled-round',pendingChoice:null});
@@ -59,16 +87,19 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- // v23: seed 2253 no longer fields Maddie and every hero-carrier kill there also kills the first-orb anvil carrier;
- // crab-free seed 2146 (3 HP / 97 lost) has Maddie at (2,7) killing the sword and Ezreal carriers only.
+ // v25: the same seed-2146 sniper route retains Maddie; earned equipment at
+ // (0,7) kills r01/r03 and leaves the first-orb anvil unearned.
 // Tool carrier: Leona (was Loris) at (0,7). After the xp/batch-3 merge seed 2253's augments let a lone Loris there
 // clear all six razorbeaks; Leona kills the same r01 rod and r02 reforger carriers and dies.
- it.each([{name:'two source deaths including a hero',keep:'maddie',col:2,row:7,deaths:2,seed:2146},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'leona',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
-  const terminal=battle(await terminalPreparation(keep,col,row,seed)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
+ it.each([{name:'two source deaths including a hero',keep:'maddie',col:0,row:7,deaths:2,seed:2146},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'leona',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
+  const prep=seed===2146?terminalHero:await terminalPreparation(keep,col,row,seed);
+  if(seed===2146){expect(prep.playerHp).toBe(3);expect(bench(prep)).toHaveLength(9);expect(players(prep).find(u=>u.definitionId===keep)!.location).toEqual({kind:'board',cell:{col,row}});}
+  const terminal=battle(prep),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(deaths);
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   const killed=new Set(s.combat!.neutralReceipts!.deaths.map(d=>d.unitId));
   const expected=independentLootPlan(s.seed,24).rounds.at(-1)!.encounterPlan.drops.filter(d=>killed.has(d.sourceUnitId!));
+  if(seed===2146)expect(expected.some(d=>d.payload.kind==='unit')).toBe(true);
   expect(v.revealedDrops.map(d=>d.payload)).toEqual(expected.map(d=>d.payload));
   expect(v.revealedDrops.map(d=>d.status)).toEqual(expected.map(d=>d.payload.kind==='unit'?'retained-terminal':'granted'));
   for(const d of v.revealedDrops)if(d.payload.kind==='unit')expect(d).toMatchObject({status:'retained-terminal',receiptId:null,reason:'terminal-bench-full'});

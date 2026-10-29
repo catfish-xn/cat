@@ -8,16 +8,17 @@ import { accepted, reachRound, freeze } from './match-helpers';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
-import { formSwapperGiftPlan, validateFormSwapperSelection } from '../src/simulation/augment-pool-formswapper';
+import { formSwapperGiftPlan } from '../src/simulation/augment-pool-formswapper';
+import { validateFormSwapperSelection } from '../src/simulation/restore-checks/form-swapper-check';
 import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 
-// First matching cheap 2-1 draw from the former bounded search; assert both the predicate and public offer.
+// v25 batch-5 pool: first public 2-1 route to why-not-both in 0..100 (seed 27).
 let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
  if(acquired)return acquired;
- const seed=20,id='why-not-both',initial=createMatch(seed);
+ const seed=27,id='why-not-both',initial=createMatch(seed);
  expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
  const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
  expect(c.offers).toContain(id);

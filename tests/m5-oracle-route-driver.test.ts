@@ -5,10 +5,10 @@ import { ANVIL_IDS } from './fixtures/m5/oracle.g2.cjs';
 
 // One ordinary oracle-audited route, collected once as the existing replay files do.
 // No funded state, injected reward, skipped command, or enlarged test/hook timeout.
-const sold=new Set<string>(),anvilDeploys:string[]=[];
-// First default-priority sniper route on the 232-card pool that selects Caretaker's Favor,
-// grants all four level anvils and finishes without deploying them: seed 8475.
-const route=await run(api,{seed:8475,build:'sniper',onStep(before,_result,command){
+const sold=new Set<string>(),anvilDeploys:string[]=[];let rerollAugments=0;
+// Seed 9 naturally offers Caretaker's Favor after three public 2-1 rerolls.
+const route=await run(api,{seed:9,build:'sniper',augmentRerollPriorities:{'2-1':['caretakers-favor']},onStep(before,_result,command){
+  if(command?.type==='rerollAugment')rerollAugments++;
   if(command?.type==='sell')sold.add(command.id as string);
   if(command?.type==='deploy'){
     const unit=before.preparation.units.find(u=>u.id===command.id);
@@ -17,6 +17,7 @@ const route=await run(api,{seed:8475,build:'sniper',onStep(before,_result,comman
 }});
 
 it('opens all four genuine Caretaker level anvils through public commands without deploying them as heroes',()=>{
+  expect(rerollAugments).toBe(3);
   expect(route.final.augments[0].definitionId).toBe('caretakers-favor');
   const grants=route.final.seatMechanics!.receipts.filter(r=>r.kind==='unit'&&r.source==='augment-pool-batch1'
     &&JSON.parse(r.receiptId)[2]==='caretakers-favor');

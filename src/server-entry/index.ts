@@ -1,4 +1,5 @@
 export { maximumPlayerHp } from '../simulation/augment-pool-batch5-h7-health';
+export { recordR2PortableBattle } from '../simulation/augment-pool-batch5-r2-history';
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
 export { drainBatch5H7Gold } from '../simulation/augment-pool-batch5-h7';
 export {
@@ -100,3 +101,5 @@ export { drainBatch5H8Deaths } from '../simulation/augment-pool-batch5-h8-deaths
 export { readAugmentPlayerHealth } from '../simulation/augment-history';
 
 export { settleBatch5H9History } from '../simulation/augment-pool-batch5-h9';
+
+export { hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, tombRaiderOpportunities } from '../simulation/augment-pool-batch5-r1';

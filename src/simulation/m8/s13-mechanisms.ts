@@ -1,3 +1,6 @@
+import { madChemistVamp } from '../augment-pool-batch5-r4';
+import { recordAerialMovement } from '../augment-pool-batch5-g3-combat';
+import { b5VoidSwarmVamp } from '../augment-pool-batch5-g4-swarm';
 import { b4Vamp, overhealB4Combat } from '../augment-pool-batch4-b4combat';
 import { occupiesCell } from '../anomalies/availability';
 import { anomalyVamp } from '../anomalies/bonuses';
@@ -151,7 +154,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
         .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(holder.cell, a) - hexDistance(holder.cell, b) || a.row - b.row || a.col - b.col)[0];
       if (!free) break;
-      ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); holder.cell = free; break;
+      ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); recordAerialMovement(ctx, holder, free); holder.cell = free; break;
     }
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
       delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(damageContext?.facts?.damage[0] ? { parentPacketId: damageContext.facts.damage[0].context.packetId, rootActionSeq: damageContext.facts.damage[0].context.rootActionSeq } : {}), ...(periodic ? { periodic } : {}) }); break;
@@ -199,6 +202,10 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       target.statuses = target.statuses.filter(s => !(s.contributionKeys?.some(k => keys.has(k)) || !s.contributionKeys && hostile.has(s.source.ownerId) && (s.kind === 'stun' || s.kind === 'armorReduction' || s.kind === 'resistanceFlat' && s.amount < 0)));
       for (const unit of ctx.units) {
         unit.tasks = unit.tasks.filter(t => !(t.attachedDot && t.targetId === target.id && hostile.has(t.source.ownerId)));
+        // B5-67 uses a refreshable attached DoT rather than CombatTask entries.
+        // Cleanse only this target's hostile attachment; clouds may contact it again next tick.
+        if (unit.madChemist && hostile.has(unit.id)) unit.madChemist = { ...unit.madChemist,
+          poisons: unit.madChemist.poisons.filter(p => p.targetId !== target.id) };
       }
       target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
       ctx.events.push(...endedStatusEvents(ctx.tick, target.id, result.ended, 'cleansed'));
@@ -229,7 +236,7 @@ export function initializeMechanisms(ctx: AbilityContext): void {
     if (unit.pendingEquipmentSources?.length) {
       const added = new Set(unit.pendingEquipmentSources);
       const definitions = unit.mechanismDefinitions!;
-      const own = (s: Source) => s.sourceKind === 'item' && added.has(s.instanceId);
+      const own = (s: Source) => s.sourceKind === 'item' && added.has(s.instanceId)||!!s.parentItemInstanceId&&added.has(s.parentItemInstanceId);
       const survival = definitions.survivalTriggers.filter(d => own(d.source));
       const sample: SurvivalSample = { unitId: unit.id, tick: ctx.tick, hpBeforeDamage: unit.hp, hpAfterDamage: unit.hp,
         maxHpBeforeThresholdEffects: unit.maxHp, survivedDamageBatch: unit.alive, receivedPositiveDamage: false };
@@ -370,7 +377,7 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
     executeMechanismEffect(ctx, holder, { ...definition.source, effectIndex: definition.source.effectIndex + index }, holder, effect, 0, index, sample);
 }
 export function vampRates(unit: S13Unit, hp: number): VampRate[] {
-  return [...b4Vamp(unit,unit.mechanismState?.sampledAtTick??0),...(unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>0&&(unit.sixCost?.frenzyUntil??0)>=(unit.mechanismState?.sampledAtTick??0))?[{source:asSource(origin(unit)),bps:1000+Math.floor((unit.ability.kind==='s13'?unit.ability.variables.Vamp:0)*ap(unit,unit.mechanismState?.sampledAtTick??0)/100),allyBps:0}]:[]),...anomalyVamp(unit), ...(unit.g23Sion?.revived?[{source:asSource(origin(unit,3)),bps:Math.round(variable(unit,'PercentOmnivamp')*10000),allyBps:0}]:[]), ...unit.mechanismDefinitions!.vamp.map(def => {
+  return [...b5VoidSwarmVamp(unit),...madChemistVamp(unit,unit.mechanismState?.sampledAtTick??0),...b4Vamp(unit,unit.mechanismState?.sampledAtTick??0),...(unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>0&&(unit.sixCost?.frenzyUntil??0)>=(unit.mechanismState?.sampledAtTick??0))?[{source:asSource(origin(unit)),bps:1000+Math.floor((unit.ability.kind==='s13'?unit.ability.variables.Vamp:0)*ap(unit,unit.mechanismState?.sampledAtTick??0)/100),allyBps:0}]:[]),...anomalyVamp(unit), ...(unit.g23Sion?.revived?[{source:asSource(origin(unit,3)),bps:Math.round(variable(unit,'PercentOmnivamp')*10000),allyBps:0}]:[]), ...unit.mechanismDefinitions!.vamp.map(def => {
     const sample = { holder: { id: unit.id, hp, maxHp: unit.maxHp } };
     return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0, ...(def.damageTypes ? { damageTypes: def.damageTypes } : {}) };
   })];

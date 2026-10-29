@@ -21,7 +21,8 @@ it.each(['2-1','3-2','4-2'])('only offers Dhampyr at the allowed node %s',node=>
 });
 let state:import('../src/simulation/match').MatchState;
 it('selects through a real 3-2 choice and grants 12% omnivamp to the combat roster',()=>{
- let s=restoreMatch(serializeMatch(reachRound('3-2',false,14)));
+ // Seed 19: first 0..100 route whose public 3-2 choice (≤3 rerolls) offers Dhampyr after batch-5 pool expansion.
+ let s=restoreMatch(serializeMatch(reachRound('3-2',false,19)));
  for(let i=0;i<3&&!s.pendingChoice!.offers.includes('dhampyr');i++){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,i));}
  const c=s.pendingChoice!;expect(c.offers).toContain('dhampyr');s=accepted(selectChoice(s,c.choiceId,c.generation,'dhampyr'));
  state=accepted(startMatchCombat(fieldBench(resolveM5Choices(s))));

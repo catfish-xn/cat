@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntilClaiming } from './helpers';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
@@ -6,7 +7,10 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 
 describe('contested real room',()=>{
  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:3});
- afterAll(()=>room.dispose());
+ let restoreOffers:()=>void;
+ // Pool expansion moved the old seed's card; script only the eligible draw, not roster facts or settlement.
+ beforeAll(()=>{restoreOffers=installB1Offers(['contested']);});
+ afterAll(()=>{room.dispose();restoreOffers();});
  for(const round of ['1-2','1-3','1-4','2-1','2-3','2-5','2-7','3-2']) it(`reaches ${round} through the room`,()=>{
   if(round==='1-2')room.start();
   expect(runUntilClaiming(room,clock,s=>s.roundId===round&&s.phase==='preparation',5000).roundId).toBe(round);
@@ -17,7 +21,7 @@ describe('contested real room',()=>{
    expect(room.handle(id,{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:slot})).toMatchObject({ok:true});
   }
   const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('contested'));
-  expect(seat).toBeDefined();if(!seat)throw new Error('no offer');
+  expect(seat,'contested at 3-2 (scripted eligible draw)').toBeDefined();if(!seat)throw new Error('no offer');
   const c=seat.match.pendingChoice!;
   expect(room.handle(seat.seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'contested'})).toMatchObject({ok:true});
   runUntilClaiming(room,clock,s=>s.roundId==='3-2'&&s.phase==='settlement',5000);

@@ -1,3 +1,4 @@
+import { angerGrantedProgram } from '../augment-pool-batch5-r2-combat';
 /** G2-4b: programs bound from items gained during combat (Unstable Treasure Chest). The grant record is the only
  * dynamic fact; the program itself always comes from the frozen pool, so compile and restore derive it identically. */
 import { p3ItemProgram } from '../s13-p3-programs';
@@ -47,7 +48,7 @@ export function grantedItemPrograms(unit: Pick<CombatUnit, 'id' | 'combatItemGra
   if (hit && hit.unitId === unit.id && hit.mechanics===unit.mechanics && hit.p3Key === p3Key) return hit.bound;
   const bound = grants.map(grant => {
     const payload = payloadOf(grant);
-    return { source: grantedItemSource(unit.id, grant), program: shifted(p3ItemProgram(grant.definitionId,p2GrantedItemProgram(unit,grant.definitionId,payload.program),ids,stage), grant.grantedAtTick) };
+    return { source: grantedItemSource(unit.id, grant), program: shifted(p3ItemProgram(grant.definitionId,angerGrantedProgram(unit,grant.definitionId,p2GrantedItemProgram(unit,grant.definitionId,payload.program)),ids,stage), grant.grantedAtTick) };
   });
   cache.set(grants, { unitId: unit.id, mechanics:unit.mechanics, p3Key, bound });
   return bound;

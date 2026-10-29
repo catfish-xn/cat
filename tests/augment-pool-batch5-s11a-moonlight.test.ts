@@ -8,7 +8,7 @@ import { selectChoice, startMatchCombat, stepMatch, type MatchState } from '../s
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { familyCombatBase } from '../src/simulation/family-reunion';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { offerFor } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor } from './augment-stage-helpers';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
 it.skipIf(!existsSync(RESEARCH_FILE))('Moonlight preserves the 14.24 archive numbers',()=>{
@@ -29,6 +29,8 @@ it('Moonlight samples only fielded eligible one-cost champions, without promotin
  expect(moonlightSelection(units.slice(1),a,1,42,new Map()).size).toBe(0);
 });
 let combat:MatchState, promotedId:string;
+// Reuse the same public route in bounded legs; keep the existing hook timeout unchanged.
+for(const [seed,leg] of fieldedLegCases('moonlight'))beforeAll(()=>{fieldedRoute(seed,leg);});
 beforeAll(()=>{
  let s=offerFor('moonlight'), c=s.pendingChoice!;expect(c.offers).toContain('moonlight');
  s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'moonlight')));s=fieldBench(s);

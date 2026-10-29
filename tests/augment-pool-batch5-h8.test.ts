@@ -33,7 +33,7 @@ it('takes the real bank at the 3-2 public choice, replays the save and rejects t
 let play: import('../src/simulation/match').MatchState, principal=0, startingRound=0;
 const payoutEvents:import('../src/simulation/match-types').MatchEvent[]=[];
 it('starts the six-combat route with a public Forward Thinking offer',()=>{
- let before=restoreMatch(serializeMatch(reachRoundFielded('3-2',27)));
+ let before=restoreMatch(serializeMatch(reachRoundFielded('3-2',15)));
  for(let slot=0;slot<3&&!before.pendingChoice!.offers.includes('forward-thinking');slot++){const c=before.pendingChoice!;before=accepted(rerollAugment(before,c.choiceId,c.generation,slot));}
  const choice=before.pendingChoice!;expect(choice.offers).toContain('forward-thinking');
  play=accepted(selectChoice(before,choice.choiceId,choice.generation,'forward-thinking'));

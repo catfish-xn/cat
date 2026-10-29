@@ -1,0 +1,2696 @@
+{
+  "comparisons": [
+    {
+      "seed": 42,
+      "equivalent": true,
+      "round": 33,
+      "battles": 154,
+      "replays": 127,
+      "events": 176176,
+      "ticks": 38260,
+      "initialUnitTicks": 513192,
+      "matchEvents": 1828,
+      "matchEventsSha256": "7aa86969d518461cb3b66b972493ddf5b88b614030a04fbed72d5756cd518b0b",
+      "terminalBytes": 6773581,
+      "terminalSha256": "e4d714088e99fe1e6ecbc63064ca97b1f2d26c2ccb5cb0cb897bac32edaaabde",
+      "ledgerSha256": "7d4f4f4fc7287248cee42b7b033acccbf38215f4cbdc56631ca5b8daec97db32",
+      "intentionsSha256": "559dc64644899af381c155d261c313654c8be738fdd5c5f2407679acb5d0ff03",
+      "receiptsSha256": "d48f2ffa9a89c4c154f07613639ed4553dca65dc5ac3bea94a6581d9df513022",
+      "replaySha256": "b3c35eebdb99696bd31bbee5cdd9b36a815191fcf8ad003ea55fe5db996667fc",
+      "replaySummaries": [
+        {
+          "battleId": "bot-room:r1:b0",
+          "combatId": "round-1",
+          "ticks": 146,
+          "bytes": 28858,
+          "sha256": "532b55a6316eb7152f80bd21b8d99fc5d50c839839feb43f1541e44bddc0f6f7"
+        },
+        {
+          "battleId": "bot-room:r1:b1",
+          "combatId": "round-1",
+          "ticks": 103,
+          "bytes": 22399,
+          "sha256": "42e681eb77e6fc677a9abb68e49e8f4728070f6ef87c150dcff7306dbc5a6eed"
+        },
+        {
+          "battleId": "bot-room:r1:b2",
+          "combatId": "round-1",
+          "ticks": 118,
+          "bytes": 24844,
+          "sha256": "d6ff09e114c68ee1196bdbf3e7b3b15fae5ab9614054755643cf1ba3d452dba9"
+        },
+        {
+          "battleId": "bot-room:r1:b3",
+          "combatId": "round-1",
+          "ticks": 129,
+          "bytes": 26683,
+          "sha256": "fe2cf8f6ee7906af16d953113c973a45ebbc4eaef13b098872d1d15e48bdb6af"
+        },
+        {
+          "battleId": "bot-room:r1:b4",
+          "combatId": "round-1",
+          "ticks": 118,
+          "bytes": 24843,
+          "sha256": "209f35c25774308c4d1fa15c9024858bf18062dab4de863be3cbf126397ed5f1"
+        },
+        {
+          "battleId": "bot-room:r1:b5",
+          "combatId": "round-1",
+          "ticks": 147,
+          "bytes": 29454,
+          "sha256": "8fa41edacbea921cb92c5036d88d18c347aefcca70a91b98eefbf412b3499816"
+        },
+        {
+          "battleId": "bot-room:r1:b6",
+          "combatId": "round-1",
+          "ticks": 112,
+          "bytes": 21162,
+          "sha256": "01e927c5623b960b094dba161513ab368fb0285976ff56acf6bdc65bea8db4c1"
+        },
+        {
+          "battleId": "bot-room:r1:b7",
+          "combatId": "round-1",
+          "ticks": 103,
+          "bytes": 20853,
+          "sha256": "06fa65b8e746095b9ab6a3b73d96b2b48282d6cd20586c075b61399c6614bb69"
+        },
+        {
+          "battleId": "bot-room:r2:b0",
+          "combatId": "round-2",
+          "ticks": 118,
+          "bytes": 39316,
+          "sha256": "891c9012969ffe644714487feeef4783815c885263dac326d86d97474eb56930"
+        },
+        {
+          "battleId": "bot-room:r2:b1",
+          "combatId": "round-2",
+          "ticks": 120,
+          "bytes": 37901,
+          "sha256": "57df1eb891b730c5d2911cfae48d6d37f1bcc850730533350d9216512acad08a"
+        },
+        {
+          "battleId": "bot-room:r2:b2",
+          "combatId": "round-2",
+          "ticks": 118,
+          "bytes": 36894,
+          "sha256": "ee992f6a342b779f68352cd1fa22d25372e929a580d7f5546755b98a28783f14"
+        },
+        {
+          "battleId": "bot-room:r2:b3",
+          "combatId": "round-2",
+          "ticks": 94,
+          "bytes": 32025,
+          "sha256": "72d1a41302325605a8f0bf2831a11f9529c1f0f8698adde330955d036dc1c3d0"
+        },
+        {
+          "battleId": "bot-room:r2:b4",
+          "combatId": "round-2",
+          "ticks": 118,
+          "bytes": 38561,
+          "sha256": "983d39a9b49a5da6a2299f404ac2cb96be40a26c9675a7aee5bcca454c739e7c"
+        },
+        {
+          "battleId": "bot-room:r2:b5",
+          "combatId": "round-2",
+          "ticks": 107,
+          "bytes": 35261,
+          "sha256": "b02c63874f61a875eb8f7cf41f48ca94453fd37ebf96375edc00c8f5fa143557"
+        },
+        {
+          "battleId": "bot-room:r2:b6",
+          "combatId": "round-2",
+          "ticks": 148,
+          "bytes": 43812,
+          "sha256": "aad7f7713a998f8640210d985a9e0b61a6c0d4096b1d2d5bbf16d9712d00fd43"
+        },
+        {
+          "battleId": "bot-room:r2:b7",
+          "combatId": "round-2",
+          "ticks": 138,
+          "bytes": 43158,
+          "sha256": "7ea999a83ddba24e752bcc0efed85f85e97b11ebb88b9eb075d1a0d3d4001501"
+        },
+        {
+          "battleId": "bot-room:r3:b0",
+          "combatId": "round-3",
+          "ticks": 118,
+          "bytes": 51614,
+          "sha256": "1456d220402f827251cffec8bb08cfa206e469abff1d0eb3fcc568cb4d725085"
+        },
+        {
+          "battleId": "bot-room:r3:b1",
+          "combatId": "round-3",
+          "ticks": 103,
+          "bytes": 51686,
+          "sha256": "883c6b927926e8636f358c51ec293f7154b53347df678976e84b8fb0a376c76a"
+        },
+        {
+          "battleId": "bot-room:r3:b2",
+          "combatId": "round-3",
+          "ticks": 114,
+          "bytes": 52297,
+          "sha256": "ded0a1cdc04d34b4c5092f2d22a4c50fad89f498518111cc1175f7e0b6165980"
+        },
+        {
+          "battleId": "bot-room:r3:b3",
+          "combatId": "round-3",
+          "ticks": 94,
+          "bytes": 44924,
+          "sha256": "8b71cd359537cc6f8ea8e7f35dd1af12a392e11c9edd9208d09efd63490a7703"
+        },
+        {
+          "battleId": "bot-room:r3:b4",
+          "combatId": "round-3",
+          "ticks": 118,
+          "bytes": 51512,
+          "sha256": "403c0bf1f42c902fd1a07e7f345b40df94a2367361f0e2b9810332555baaf23c"
+        },
+        {
+          "battleId": "bot-room:r3:b5",
+          "combatId": "round-3",
+          "ticks": 112,
+          "bytes": 50519,
+          "sha256": "e4f73682f9d33ac059c67dd8aba7d7b4d0df628b380f52453b4834f95d223344"
+        },
+        {
+          "battleId": "bot-room:r3:b6",
+          "combatId": "round-3",
+          "ticks": 94,
+          "bytes": 49280,
+          "sha256": "606c3ac30d715e9baeb0b9089bc944f9b798413ee06ce7757014f74881249d1c"
+        },
+        {
+          "battleId": "bot-room:r3:b7",
+          "combatId": "round-3",
+          "ticks": 118,
+          "bytes": 52805,
+          "sha256": "2059d37665c04113597ba1dd13c2c6992ec6aeaf80cabe83582c90ea1c2961a8"
+        },
+        {
+          "battleId": "bot-room:r4:b3",
+          "combatId": "bot-room:r4:b3",
+          "ticks": 460,
+          "bytes": 235888,
+          "sha256": "bffe2bf1f3b2390ca3d193563852e1a68a319ea0f2dced76e54891b7089ae514"
+        },
+        {
+          "battleId": "bot-room:r4:b2",
+          "combatId": "bot-room:r4:b2",
+          "ticks": 281,
+          "bytes": 162548,
+          "sha256": "375395c211070a3cad89b19e6923b1488edb0f6fa7ba1fbd1fdb29c95231a3d2"
+        },
+        {
+          "battleId": "bot-room:r4:b0",
+          "combatId": "bot-room:r4:b0",
+          "ticks": 467,
+          "bytes": 333305,
+          "sha256": "fc7dcca413a612904fda12dcfed8be4a40f7fe2fed1698382d39236aa5df4307"
+        },
+        {
+          "battleId": "bot-room:r4:b1",
+          "combatId": "bot-room:r4:b1",
+          "ticks": 444,
+          "bytes": 188878,
+          "sha256": "913ced987f35642d457fa770b5db5b4ab4b21f53ed29fdba9c1e3ccf24c9836a"
+        },
+        {
+          "battleId": "bot-room:r5:b0",
+          "combatId": "bot-room:r5:b0",
+          "ticks": 302,
+          "bytes": 186716,
+          "sha256": "9c5283de58aebf472c3f2d686b5b6e9fb5665c416ba95609d13dc3d75f6a32c8"
+        },
+        {
+          "battleId": "bot-room:r5:b2",
+          "combatId": "bot-room:r5:b2",
+          "ticks": 497,
+          "bytes": 302329,
+          "sha256": "ac320592a62eaadeac81b0d73049496c8eeb9d380ed56e7cafb11dbf51c7cb35"
+        },
+        {
+          "battleId": "bot-room:r5:b1",
+          "combatId": "bot-room:r5:b1",
+          "ticks": 528,
+          "bytes": 304281,
+          "sha256": "189611d81aa1a6c5470397bf24d79a21e0216f68be4e2c5c2022870b34eebe94"
+        },
+        {
+          "battleId": "bot-room:r5:b3",
+          "combatId": "bot-room:r5:b3",
+          "ticks": 305,
+          "bytes": 174762,
+          "sha256": "a8a3eabe605746810dda412df83bff6f3431bb5456e4bdb70fe0d271b5691322"
+        },
+        {
+          "battleId": "bot-room:r6:b1",
+          "combatId": "bot-room:r6:b1",
+          "ticks": 176,
+          "bytes": 134134,
+          "sha256": "39dfe1e0fde516232489fee70ea6e10542efa583e08f4aaa00e6a782152fd657"
+        },
+        {
+          "battleId": "bot-room:r6:b2",
+          "combatId": "bot-room:r6:b2",
+          "ticks": 322,
+          "bytes": 191175,
+          "sha256": "06377aed44272e9e62c371e68b3c8b06fb7f4699cfa23b57f54fb8a379ae6e52"
+        },
+        {
+          "battleId": "bot-room:r6:b0",
+          "combatId": "bot-room:r6:b0",
+          "ticks": 645,
+          "bytes": 476742,
+          "sha256": "ef466857519441b249342fc98daaa0d8fc9d9c12749f5dfba28ca509e7dafd69"
+        },
+        {
+          "battleId": "bot-room:r6:b3",
+          "combatId": "bot-room:r6:b3",
+          "ticks": 412,
+          "bytes": 233084,
+          "sha256": "51ad2aec371df5854637dbf34ab2ecf576939c07c8eac9d265d4a6213fd391c2"
+        },
+        {
+          "battleId": "bot-room:r8:b2",
+          "combatId": "bot-room:r8:b2",
+          "ticks": 411,
+          "bytes": 384365,
+          "sha256": "6afca1d2ec387600955d4eb15a5968d346abb287ad3091480a06f759aa4c7a26"
+        },
+        {
+          "battleId": "bot-room:r8:b1",
+          "combatId": "bot-room:r8:b1",
+          "ticks": 322,
+          "bytes": 213685,
+          "sha256": "75fed4dbe2f4486eb64732f918ae6026156e74ce1820208716a096df03198973"
+        },
+        {
+          "battleId": "bot-room:r8:b3",
+          "combatId": "bot-room:r8:b3",
+          "ticks": 380,
+          "bytes": 269543,
+          "sha256": "29e32d2262d30ea26dcd914eece492a1f97f9316970435bf5b16e00177d3aeeb"
+        },
+        {
+          "battleId": "bot-room:r8:b0",
+          "combatId": "bot-room:r8:b0",
+          "ticks": 642,
+          "bytes": 393389,
+          "sha256": "d8bca3764c9bd05541fe79858b51fdfbc04a6013783d643ab221df7670beb712"
+        },
+        {
+          "battleId": "bot-room:r9:b0",
+          "combatId": "bot-room:r9:b0",
+          "ticks": 354,
+          "bytes": 258858,
+          "sha256": "4526ab8a7d0a4465efb026b5bf8a64e0c60dda7283e0b4764074b503d1b6217e"
+        },
+        {
+          "battleId": "bot-room:r9:b2",
+          "combatId": "bot-room:r9:b2",
+          "ticks": 382,
+          "bytes": 342205,
+          "sha256": "20834deb66896ac4d68af5a0bea94dce98fff4f764607a4e8d06aee51fd016cd"
+        },
+        {
+          "battleId": "bot-room:r9:b3",
+          "combatId": "bot-room:r9:b3",
+          "ticks": 596,
+          "bytes": 542343,
+          "sha256": "244815ec4c6d7c9d95b9b919fcbdbd797aa075dae70e9813ba919e7053b0e377"
+        },
+        {
+          "battleId": "bot-room:r9:b1",
+          "combatId": "bot-room:r9:b1",
+          "ticks": 384,
+          "bytes": 242144,
+          "sha256": "f65a490bed3bd4fd68168efb7346e5dab827d08b3a8c145ea31cc1dfebad5b48"
+        },
+        {
+          "battleId": "bot-room:r10:b0",
+          "combatId": "round-10",
+          "ticks": 127,
+          "bytes": 69093,
+          "sha256": "78c45ebf851e71a6b1519d4326751ed507084fcace866ac90b6cb3c7fd5f87d0"
+        },
+        {
+          "battleId": "bot-room:r10:b1",
+          "combatId": "round-10",
+          "ticks": 118,
+          "bytes": 60520,
+          "sha256": "4c2ddb549b512903821cc8096f4d4d15401dd72c81901aaf604572beae0ea24a"
+        },
+        {
+          "battleId": "bot-room:r10:b2",
+          "combatId": "round-10",
+          "ticks": 103,
+          "bytes": 65830,
+          "sha256": "b5e9716e059fd283dd549e019454d3d5eb3899e75213596bdd6fe0cc67e6e6b8"
+        },
+        {
+          "battleId": "bot-room:r10:b3",
+          "combatId": "round-10",
+          "ticks": 134,
+          "bytes": 68440,
+          "sha256": "f9cc404747c0351f75e3e7a2380d93181ae31865a92806dc838116616d4d24f8"
+        },
+        {
+          "battleId": "bot-room:r10:b4",
+          "combatId": "round-10",
+          "ticks": 118,
+          "bytes": 65415,
+          "sha256": "52c26f68d30178adc196d8ef76d5554f25bae469bddda16068904d256b07222a"
+        },
+        {
+          "battleId": "bot-room:r10:b5",
+          "combatId": "round-10",
+          "ticks": 131,
+          "bytes": 77391,
+          "sha256": "a4aeacf04b3083e2789ef3a536f253294847236ef997ae8fbf9ed1edacd75aa1"
+        },
+        {
+          "battleId": "bot-room:r10:b6",
+          "combatId": "round-10",
+          "ticks": 146,
+          "bytes": 79832,
+          "sha256": "ace3ce0d78d33aef1590827fc72055b3d459e4951d6668b91cf04e965eb7bcfd"
+        },
+        {
+          "battleId": "bot-room:r10:b7",
+          "combatId": "round-10",
+          "ticks": 125,
+          "bytes": 70961,
+          "sha256": "ab8755819ecc8e76b196429f30986d7bf931b8e1b80f8baa8662ce8c306c9027"
+        },
+        {
+          "battleId": "bot-room:r11:b1",
+          "combatId": "bot-room:r11:b1",
+          "ticks": 137,
+          "bytes": 132084,
+          "sha256": "0a61bb988d453a17dd8b9deff4e575baae51f63ab12ef158e9b0547fb6fb1ca9"
+        },
+        {
+          "battleId": "bot-room:r11:b2",
+          "combatId": "bot-room:r11:b2",
+          "ticks": 448,
+          "bytes": 313037,
+          "sha256": "7a4390fb5353ab81aa02465a545174e847d54cd34127786c6b58bce22b70e767"
+        },
+        {
+          "battleId": "bot-room:r11:b0",
+          "combatId": "bot-room:r11:b0",
+          "ticks": 292,
+          "bytes": 302843,
+          "sha256": "7ddc4c10a6072280bebc288fbd1ffdec9defa3aa08617c3d2e8b8cd594eb1fd2"
+        },
+        {
+          "battleId": "bot-room:r11:b3",
+          "combatId": "bot-room:r11:b3",
+          "ticks": 611,
+          "bytes": 474950,
+          "sha256": "5cac78da6bcbcecac1bac66945fd8afe25c4d920e7083bfcc69382cac2578491"
+        },
+        {
+          "battleId": "bot-room:r12:b0",
+          "combatId": "bot-room:r12:b0",
+          "ticks": 336,
+          "bytes": 390021,
+          "sha256": "cbad01d247a525c682d43e00b1b6f236c561b595228b1313a73306c34d9d72cc"
+        },
+        {
+          "battleId": "bot-room:r12:b1",
+          "combatId": "bot-room:r12:b1",
+          "ticks": 351,
+          "bytes": 341391,
+          "sha256": "81ef18f7ea049b26c3b3b9bd2b0b77576b9f4522a293d118a5fe581cdac09429"
+        },
+        {
+          "battleId": "bot-room:r12:b2",
+          "combatId": "bot-room:r12:b2",
+          "ticks": 396,
+          "bytes": 298821,
+          "sha256": "042084f609244a82d90a82d1101adaa621d7f4328dd49aa60478d0222772f324"
+        },
+        {
+          "battleId": "bot-room:r12:b3",
+          "combatId": "bot-room:r12:b3",
+          "ticks": 346,
+          "bytes": 774822,
+          "sha256": "2e20a031e16b1caf29c5ca35e4439f4795d89f7f56f994d858eeb09672123b26"
+        },
+        {
+          "battleId": "bot-room:r13:b1",
+          "combatId": "bot-room:r13:b1",
+          "ticks": 420,
+          "bytes": 428183,
+          "sha256": "91037df653e378ec6f4e0ba888bb289e55feef49b397647bae17333f5bf68f1d"
+        },
+        {
+          "battleId": "bot-room:r13:b0",
+          "combatId": "bot-room:r13:b0",
+          "ticks": 322,
+          "bytes": 295253,
+          "sha256": "a00176f3492e6a75b856fa72d0252f7973ffd7e3f24e6be372fb1e68e68eb18f"
+        },
+        {
+          "battleId": "bot-room:r13:b2",
+          "combatId": "bot-room:r13:b2",
+          "ticks": 416,
+          "bytes": 913479,
+          "sha256": "7ed3018af28d34d16d2370235f8104c8ffc0709972b1af069519484558f2c86e"
+        },
+        {
+          "battleId": "bot-room:r13:b3",
+          "combatId": "bot-room:r13:b3",
+          "ticks": 315,
+          "bytes": 279732,
+          "sha256": "4f3cb9e88880dfcce8e6775ad80adc03c39a13aad08120d5c2b4bfac9b0c40ac"
+        },
+        {
+          "battleId": "bot-room:r15:b0",
+          "combatId": "bot-room:r15:b0",
+          "ticks": 453,
+          "bytes": 446447,
+          "sha256": "b9dae5424b318a416c9e071953e7fd2aa0466304c34a10dc8933d08207c9fdd8"
+        },
+        {
+          "battleId": "bot-room:r15:b1",
+          "combatId": "bot-room:r15:b1",
+          "ticks": 293,
+          "bytes": 348097,
+          "sha256": "5c88c8c712bf978f8238435e20e9d2f48fa507a01cab98db0caef9a7ae0ecbc4"
+        },
+        {
+          "battleId": "bot-room:r15:b2",
+          "combatId": "bot-room:r15:b2",
+          "ticks": 409,
+          "bytes": 988766,
+          "sha256": "6e489d37ecc0ccf19f5f317000f12fe80ff4ce07356cf6d376504f5ca53b642c"
+        },
+        {
+          "battleId": "bot-room:r15:b3",
+          "combatId": "bot-room:r15:b3",
+          "ticks": 439,
+          "bytes": 363162,
+          "sha256": "4a33f3b86131cf863917e290007340048422a5cf425db92cbeecca34c7324b0d"
+        },
+        {
+          "battleId": "bot-room:r16:b3",
+          "combatId": "bot-room:r16:b3",
+          "ticks": 300,
+          "bytes": 280497,
+          "sha256": "877162e0f8cb0d406f47ebcc1fb573c1e4fe37b26f4e60924d04373ee6b666fd"
+        },
+        {
+          "battleId": "bot-room:r16:b2",
+          "combatId": "bot-room:r16:b2",
+          "ticks": 438,
+          "bytes": 448785,
+          "sha256": "d6a9177b82d4252af1709c8d0072e6188dc6a5d1c4794c79bec44e9973b91403"
+        },
+        {
+          "battleId": "bot-room:r16:b0",
+          "combatId": "bot-room:r16:b0",
+          "ticks": 550,
+          "bytes": 556810,
+          "sha256": "5b91c9ca75cf6d16119abbe1368f781f1993d4c3298dc36926b5af7683aa674a"
+        },
+        {
+          "battleId": "bot-room:r16:b1",
+          "combatId": "bot-room:r16:b1",
+          "ticks": 326,
+          "bytes": 786932,
+          "sha256": "a9f2202d610b48bc3767db4bb4b057b8695eed6c54209f341c58bdda728f72bb"
+        },
+        {
+          "battleId": "bot-room:r17:b0",
+          "combatId": "round-17",
+          "ticks": 117,
+          "bytes": 82322,
+          "sha256": "5588a2395254d728d47304463d398bf0f56c9715ceddf8128549a63055b704a3"
+        },
+        {
+          "battleId": "bot-room:r17:b1",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 86733,
+          "sha256": "1b0c71f56271d76c7134357eac1fbc2a378b1e0cc0c86878d887601ee63a4c8c"
+        },
+        {
+          "battleId": "bot-room:r17:b2",
+          "combatId": "round-17",
+          "ticks": 127,
+          "bytes": 102714,
+          "sha256": "12a34d25406ce3f3c62fe751d5199c67fc70aeb1de722301b173d2ba080fc614"
+        },
+        {
+          "battleId": "bot-room:r17:b3",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 94205,
+          "sha256": "80b420ffbb7774aaabaa8eb2c74c411679109fcdd2c052a8672cae8da3b9e20c"
+        },
+        {
+          "battleId": "bot-room:r17:b4",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 87974,
+          "sha256": "b34fa87095a3600ff728348b6a6d233f1eb5d08e7d2c1e3d13db566514fe2d30"
+        },
+        {
+          "battleId": "bot-room:r17:b5",
+          "combatId": "round-17",
+          "ticks": 143,
+          "bytes": 289814,
+          "sha256": "c80c38647f827208af639ea4233a72fefdb740b30b1da1c82a73dd2a66e2fa12"
+        },
+        {
+          "battleId": "bot-room:r17:b6",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 93831,
+          "sha256": "3e33641603025e8498c4499fedad77350494d4cb1a61da79bb47ff2ec68d1ab4"
+        },
+        {
+          "battleId": "bot-room:r17:b7",
+          "combatId": "round-17",
+          "ticks": 139,
+          "bytes": 107978,
+          "sha256": "404b518bb05750e04859d279656e0c4574316c7a5846daae0f03007547ca67e8"
+        },
+        {
+          "battleId": "bot-room:r18:b1",
+          "combatId": "bot-room:r18:b1",
+          "ticks": 310,
+          "bytes": 349788,
+          "sha256": "f9f75f56576878be3043eda3ba5d8052c62232c04fa3447027161760e380ac24"
+        },
+        {
+          "battleId": "bot-room:r18:b2",
+          "combatId": "bot-room:r18:b2",
+          "ticks": 479,
+          "bytes": 420061,
+          "sha256": "a48ba70c34a9b6e5dbcecf8c28dd764b41f4d4c20646694890118f85f635ac90"
+        },
+        {
+          "battleId": "bot-room:r18:b3",
+          "combatId": "bot-room:r18:b3",
+          "ticks": 421,
+          "bytes": 867922,
+          "sha256": "413b239cf96674efc820d422b2bcffda86a2ceb99b64ff9ddd9ac06f31c5d5ef"
+        },
+        {
+          "battleId": "bot-room:r18:b0",
+          "combatId": "bot-room:r18:b0",
+          "ticks": 467,
+          "bytes": 505780,
+          "sha256": "3fc8febbd002365659be9f7d3ca4f64ef378a39b89fa54d72d96a2c38f9557cb"
+        },
+        {
+          "battleId": "bot-room:r19:b0",
+          "combatId": "bot-room:r19:b0",
+          "ticks": 397,
+          "bytes": 448370,
+          "sha256": "eda3629f4449a907df104dad5185adb0bc670a59e44cdef4a62c1e3b5f06771f"
+        },
+        {
+          "battleId": "bot-room:r19:b2",
+          "combatId": "bot-room:r19:b2",
+          "ticks": 353,
+          "bytes": 434322,
+          "sha256": "c871218ee6f6038d2219e54a73f1548cc7f3be2805e8322b4a05bc4a98d2153d"
+        },
+        {
+          "battleId": "bot-room:r19:b3",
+          "combatId": "bot-room:r19:b3",
+          "ticks": 281,
+          "bytes": 431870,
+          "sha256": "08b12b431286884b983380e2d80ce1f49a06a3c2efe9e1be962713707318f7ad"
+        },
+        {
+          "battleId": "bot-room:r19:b1",
+          "combatId": "bot-room:r19:b1",
+          "ticks": 379,
+          "bytes": 866287,
+          "sha256": "a736cd032bcde6f33cc5ac0f9c73c86151d9b5e7d3a281270f90295d62bd0aef"
+        },
+        {
+          "battleId": "bot-room:r20:b0",
+          "combatId": "bot-room:r20:b0",
+          "ticks": 258,
+          "bytes": 423267,
+          "sha256": "b77d2e9791cfd54a850544c1c82aa6f00bd1da9890b66d4389ea36581fca9c4b"
+        },
+        {
+          "battleId": "bot-room:r20:b3",
+          "combatId": "bot-room:r20:b3",
+          "ticks": 353,
+          "bytes": 436166,
+          "sha256": "a6b5e107756c66248471e846281db900fb7ff14872de274ac8de77b6ffff96d0"
+        },
+        {
+          "battleId": "bot-room:r20:b1",
+          "combatId": "bot-room:r20:b1",
+          "ticks": 341,
+          "bytes": 384076,
+          "sha256": "9cae73623340b845670ab86142700da29b5d5a80fab14ed316da7bb13a57d82a"
+        },
+        {
+          "battleId": "bot-room:r20:b2",
+          "combatId": "bot-room:r20:b2",
+          "ticks": 348,
+          "bytes": 797611,
+          "sha256": "d0db914b3ca64f6bd1ec9cc732b12fcb984c7360abdab5d3d87ce46ec5270003"
+        },
+        {
+          "battleId": "bot-room:r22:b1",
+          "combatId": "bot-room:r22:b1",
+          "ticks": 351,
+          "bytes": 471950,
+          "sha256": "aa908af465f88e60d63964b95509f985cee437b8fbee1784842e79077560e36e"
+        },
+        {
+          "battleId": "bot-room:r22:b0",
+          "combatId": "bot-room:r22:b0",
+          "ticks": 565,
+          "bytes": 614495,
+          "sha256": "67216525bbee72f48de46b9587178d3e9b5b28e05e07fe29bb237e71aca128db"
+        },
+        {
+          "battleId": "bot-room:r22:b3",
+          "combatId": "bot-room:r22:b3",
+          "ticks": 335,
+          "bytes": 1062367,
+          "sha256": "47d8b01ab3f40c0b74e3a5eff4780b1315a79ee97238ade12a6171075a50defc"
+        },
+        {
+          "battleId": "bot-room:r22:b2",
+          "combatId": "bot-room:r22:b2",
+          "ticks": 376,
+          "bytes": 421245,
+          "sha256": "f5a2022a3209edf2222d2c191bf28992ffd95dfe7a05d87219ff1a3bad16a367"
+        },
+        {
+          "battleId": "bot-room:r23:b1",
+          "combatId": "bot-room:r23:b1",
+          "ticks": 440,
+          "bytes": 676895,
+          "sha256": "85a9fe321fae6bf73310bf4755ee33fa62d28e6c957a743d8ac15345ddaff72e"
+        },
+        {
+          "battleId": "bot-room:r23:b2",
+          "combatId": "bot-room:r23:b2",
+          "ticks": 475,
+          "bytes": 1481199,
+          "sha256": "337c77d7bd5a512e0ef6d8044b2c265a131505c90efc37c834d43895508dae27"
+        },
+        {
+          "battleId": "bot-room:r23:b0",
+          "combatId": "bot-room:r23:b0",
+          "ticks": 265,
+          "bytes": 411966,
+          "sha256": "c43287d0c9d0f275fabf35eb722354d8ffaf85e52c77b4b0d798912e512400a4"
+        },
+        {
+          "battleId": "bot-room:r23:b3",
+          "combatId": "bot-room:r23:b3",
+          "ticks": 361,
+          "bytes": 469781,
+          "sha256": "bcf7d05967e8dd4ad4b9baa0ef8f543505ae6138c08fa7f20879786125b8df9f"
+        },
+        {
+          "battleId": "bot-room:r24:b0",
+          "combatId": "round-24",
+          "ticks": 144,
+          "bytes": 157384,
+          "sha256": "5ec8329f6e645406530641fe9b01b6740b8a03ce15be2a3f9a1058951d93696a"
+        },
+        {
+          "battleId": "bot-room:r24:b1",
+          "combatId": "round-24",
+          "ticks": 147,
+          "bytes": 167014,
+          "sha256": "6868bf887b09d41b3f2dc4ae25954d1db504e0b90e2bde7d10916f033a249412"
+        },
+        {
+          "battleId": "bot-room:r24:b2",
+          "combatId": "round-24",
+          "ticks": 126,
+          "bytes": 153220,
+          "sha256": "0e3c595b6498106b0251243b58df49bea2755713d7ac62d8dfe160ff0c82c570"
+        },
+        {
+          "battleId": "bot-room:r24:b3",
+          "combatId": "round-24",
+          "ticks": 147,
+          "bytes": 144732,
+          "sha256": "08fd519df1ad1194d71c834a6c4f20cd291351e4901f532192e96bccfca65f8b"
+        },
+        {
+          "battleId": "bot-room:r24:b4",
+          "combatId": "round-24",
+          "ticks": 132,
+          "bytes": 164923,
+          "sha256": "aaedeaa6e8d0d01462bb70a13daba68a966ae84e18cbf04532b80d9e137fd958"
+        },
+        {
+          "battleId": "bot-room:r24:b5",
+          "combatId": "round-24",
+          "ticks": 139,
+          "bytes": 388245,
+          "sha256": "7abcdd9e19a6a14348bef97f5ef929791c6302fbeb0fe67874346231e84e99f8"
+        },
+        {
+          "battleId": "bot-room:r24:b7",
+          "combatId": "round-24",
+          "ticks": 147,
+          "bytes": 146615,
+          "sha256": "8011aecf5f3359adae79d3249ec2a6430ee3f694bc57eda8b22bf2053aef4f57"
+        },
+        {
+          "battleId": "bot-room:r25:b3",
+          "combatId": "bot-room:r25:b3",
+          "ticks": 572,
+          "bytes": 1552760,
+          "sha256": "73a1fcc0b785cf5b1f2a19f68e4a607cff1ca47394f299c363f0b270cbc09d77"
+        },
+        {
+          "battleId": "bot-room:r25:b2",
+          "combatId": "bot-room:r25:b2",
+          "ticks": 571,
+          "bytes": 889795,
+          "sha256": "0b55c3ab636dcfdf9fb6d5b031a105744917c87588f821b406c6602a3cfbcb4b"
+        },
+        {
+          "battleId": "bot-room:r25:b1",
+          "combatId": "bot-room:r25:b1",
+          "ticks": 329,
+          "bytes": 608739,
+          "sha256": "7e60048022291cd5094a3e8b283990814bf6a4efc8009289eb58b6aa22c3c7d0"
+        },
+        {
+          "battleId": "bot-room:r25:b0",
+          "combatId": "bot-room:r25:b0",
+          "ticks": 376,
+          "bytes": 1416896,
+          "sha256": "a0e5ee868654e575f2a51ae166f56d5015d6441aa70ab8091a3b00cdcb92f6ae"
+        },
+        {
+          "battleId": "bot-room:r26:b1",
+          "combatId": "bot-room:r26:b1",
+          "ticks": 534,
+          "bytes": 824107,
+          "sha256": "b37f4cc2de8df434537637103e4b2608edd8259b7b6d93c30e74ed5694bdf644"
+        },
+        {
+          "battleId": "bot-room:r26:b0",
+          "combatId": "bot-room:r26:b0",
+          "ticks": 388,
+          "bytes": 1687710,
+          "sha256": "df09c103f2380a7358446db0bc1db2a2ce44fef921c8e2a6f3f56f75b11088c6"
+        },
+        {
+          "battleId": "bot-room:r26:b2",
+          "combatId": "bot-room:r26:b2",
+          "ticks": 528,
+          "bytes": 956933,
+          "sha256": "998eba4a6d025cbe50318a005e5e2ff441e1473e805c4d0eb36a40242e15fdfe"
+        },
+        {
+          "battleId": "bot-room:r27:b1",
+          "combatId": "bot-room:r27:b1",
+          "ticks": 323,
+          "bytes": 969773,
+          "sha256": "eee543d1b9817c07d3736cab358c829a4253c64082b39f4b6e8f5eb03eb1f65c"
+        },
+        {
+          "battleId": "bot-room:r27:b0",
+          "combatId": "bot-room:r27:b0",
+          "ticks": 750,
+          "bytes": 1216995,
+          "sha256": "f87e61d46a6097f10f6a3c1b38969f94a959853e68232f91e0692ac9bdb4104a"
+        },
+        {
+          "battleId": "bot-room:r29:b0",
+          "combatId": "bot-room:r29:b0",
+          "ticks": 716,
+          "bytes": 2211585,
+          "sha256": "36be2693809ca8002f1822d98023c569e66d939c66cebb23a2daf7aece3141af"
+        },
+        {
+          "battleId": "bot-room:r29:b1",
+          "combatId": "bot-room:r29:b1",
+          "ticks": 447,
+          "bytes": 1342970,
+          "sha256": "07c9b7aa1f295773b0f8981afce656845b772ef476ae94fb7454514cc245df31"
+        },
+        {
+          "battleId": "bot-room:r30:b0",
+          "combatId": "bot-room:r30:b0",
+          "ticks": 617,
+          "bytes": 1064413,
+          "sha256": "330183b9d764b21ed941d92572c42976fe1a02db6575e0e07cb07c962a0b7131"
+        },
+        {
+          "battleId": "bot-room:r30:b1",
+          "combatId": "bot-room:r30:b1",
+          "ticks": 540,
+          "bytes": 1665217,
+          "sha256": "fbde2354bf33a047750c5d3a9b449ebc7a58e1136f72f65e80543b028bd80863"
+        },
+        {
+          "battleId": "bot-room:r31:b1",
+          "combatId": "round-31",
+          "ticks": 212,
+          "bytes": 140038,
+          "sha256": "6fc533161b028af7457378af395b8cdfb347ea079b8c27d2b66628bb4cac25ab"
+        },
+        {
+          "battleId": "bot-room:r31:b2",
+          "combatId": "round-31",
+          "ticks": 149,
+          "bytes": 114847,
+          "sha256": "fa0bb7a6d964c67a9e0dbad029d33f1bb36cdf4c90c53eee4df0ed50aa86ec8f"
+        },
+        {
+          "battleId": "bot-room:r31:b4",
+          "combatId": "round-31",
+          "ticks": 140,
+          "bytes": 183679,
+          "sha256": "fc0bfda613b82f53ac7dec10e69c8244489cc1fcd7aafb4474ed12dc2a9c4707"
+        },
+        {
+          "battleId": "bot-room:r32:b0",
+          "combatId": "bot-room:r32:b0",
+          "ticks": 711,
+          "bytes": 2182292,
+          "sha256": "915aa3190d93a8034c3237536c75cecc140fd6ae5da51260b46451b1620efc4c"
+        },
+        {
+          "battleId": "bot-room:r32:b1",
+          "combatId": "bot-room:r32:b1",
+          "ticks": 309,
+          "bytes": 901615,
+          "sha256": "48a1d346599e2787301f0b0f215e2d983224240b12e1f73aa48ec2c256c5178c"
+        },
+        {
+          "battleId": "bot-room:r33:b0",
+          "combatId": "bot-room:r33:b0",
+          "ticks": 454,
+          "bytes": 771152,
+          "sha256": "f94692255255e80e4a57530b8f826bcb6a8ea0dcfd59924fbd99589a7d107283"
+        },
+        {
+          "battleId": "bot-room:r33:b1",
+          "combatId": "bot-room:r33:b1",
+          "ticks": 341,
+          "bytes": 1403945,
+          "sha256": "49712043417c16d213e59a85822afb90b4c28ef4c385594fed8b4829136be542"
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "equivalent": true,
+      "round": 36,
+      "battles": 155,
+      "replays": 125,
+      "events": 125690,
+      "ticks": 32934,
+      "initialUnitTicks": 408234,
+      "matchEvents": 1858,
+      "matchEventsSha256": "d7d41a9edf25136d0cbde284908a93f34b104955c0d604c8fd83f16d3b2042ee",
+      "terminalBytes": 9544950,
+      "terminalSha256": "eabf51a5d029cffee9b071b266b0c1e1fa4e97efeabab8ab85a2f081c701e815",
+      "ledgerSha256": "20c32492e5829782899b41378d8291473d981ae0c73d1fa729a9b31362eaff9a",
+      "intentionsSha256": "7993dbd046d23e40f18f20fc99e4457756de6b47db30120ee56e908c80496aa4",
+      "receiptsSha256": "1aa440e5ae850719551f81875e79aa3c73081d98a95fa97b4a9734697a4b77d3",
+      "replaySha256": "8863b72f1918b1595cd557fe28d0324a8933cc4c23a9a9f8895b081feb269cd7",
+      "replaySummaries": [
+        {
+          "battleId": "bot-room:r1:b0",
+          "combatId": "round-1",
+          "ticks": 204,
+          "bytes": 36870,
+          "sha256": "c306a2cb9800374b3c71d7e32e917862757e8497eb558678b148c94db440c135"
+        },
+        {
+          "battleId": "bot-room:r1:b1",
+          "combatId": "round-1",
+          "ticks": 100,
+          "bytes": 20175,
+          "sha256": "c8596b0ae39e32df467254b0408198ce5641b04db0a1d3859a402fce82c952f1"
+        },
+        {
+          "battleId": "bot-room:r1:b2",
+          "combatId": "round-1",
+          "ticks": 101,
+          "bytes": 21845,
+          "sha256": "82a737a557e4cc9d0c2f58e2c82d1a7bb7715443de021534557df96df094a92e"
+        },
+        {
+          "battleId": "bot-room:r1:b3",
+          "combatId": "round-1",
+          "ticks": 118,
+          "bytes": 24520,
+          "sha256": "b01e66f55ea42f0434412c9a1c578e38a86f9f11cbeb6bb405209ccc542247cc"
+        },
+        {
+          "battleId": "bot-room:r1:b4",
+          "combatId": "round-1",
+          "ticks": 118,
+          "bytes": 24845,
+          "sha256": "942c08d9a83c1bde38849bd2ca2ffc1c24cbc2b47470debe51a147c0f0b3b6ac"
+        },
+        {
+          "battleId": "bot-room:r1:b5",
+          "combatId": "round-1",
+          "ticks": 147,
+          "bytes": 29446,
+          "sha256": "c49f197d422c27d3205908d82e11b4cf79b31edf2132e8c638dbddf423221527"
+        },
+        {
+          "battleId": "bot-room:r1:b6",
+          "combatId": "round-1",
+          "ticks": 112,
+          "bytes": 21063,
+          "sha256": "690e32ffcfcf79081c6ee9cb76625e4a1b49f4c19f8f0cdeec50eb0debedfdb1"
+        },
+        {
+          "battleId": "bot-room:r1:b7",
+          "combatId": "round-1",
+          "ticks": 103,
+          "bytes": 20950,
+          "sha256": "d0a9db897046d340fc8e8b260c9677f1eee3357f69878d71b8d74632ce3f11f4"
+        },
+        {
+          "battleId": "bot-room:r2:b0",
+          "combatId": "round-2",
+          "ticks": 137,
+          "bytes": 41856,
+          "sha256": "dd4787a8b71699ea3f2b3a2b6623e7a82631dc9808862eb3f950694a7f27a891"
+        },
+        {
+          "battleId": "bot-room:r2:b1",
+          "combatId": "round-2",
+          "ticks": 123,
+          "bytes": 41163,
+          "sha256": "c48882b100a596d0fe7b71a7a21334cea533e273599c95b6b8eb8aed7c700b1c"
+        },
+        {
+          "battleId": "bot-room:r2:b2",
+          "combatId": "round-2",
+          "ticks": 102,
+          "bytes": 37160,
+          "sha256": "b5b87b6dd4c21d5c0f19a1a37d9094f7791ff90446d38fa984ef4c91458938da"
+        },
+        {
+          "battleId": "bot-room:r2:b3",
+          "combatId": "round-2",
+          "ticks": 147,
+          "bytes": 46763,
+          "sha256": "5039ce4cfe635bc9669fe0c90c8f2459912090e1fc6a6f5cd30bf4191c37fc35"
+        },
+        {
+          "battleId": "bot-room:r2:b4",
+          "combatId": "round-2",
+          "ticks": 118,
+          "bytes": 38515,
+          "sha256": "614044cd676b5f5dd444252fcaa19aa74bb088109b0780995d76aa41061aa3cb"
+        },
+        {
+          "battleId": "bot-room:r2:b5",
+          "combatId": "round-2",
+          "ticks": 112,
+          "bytes": 35604,
+          "sha256": "04d2e8be18c68fca4d83a3a76905ca3a0aacc1d25b526ece960bf6d015fe9c4f"
+        },
+        {
+          "battleId": "bot-room:r2:b6",
+          "combatId": "round-2",
+          "ticks": 137,
+          "bytes": 40090,
+          "sha256": "12d8436ec0081bc1fe3b8c3dd58458f391626be2754dcd9f6cbebf032e0d844a"
+        },
+        {
+          "battleId": "bot-room:r2:b7",
+          "combatId": "round-2",
+          "ticks": 102,
+          "bytes": 35407,
+          "sha256": "31a5f6b165149fa84c183e69acf25c4a6354c6d2878194713f9a51443f9c91af"
+        },
+        {
+          "battleId": "bot-room:r3:b0",
+          "combatId": "round-3",
+          "ticks": 113,
+          "bytes": 52355,
+          "sha256": "f721e2fee9372d3b23f9f6cdc8f922b9c24ac785eee3bf986c37b9f05f99838a"
+        },
+        {
+          "battleId": "bot-room:r3:b1",
+          "combatId": "round-3",
+          "ticks": 118,
+          "bytes": 54611,
+          "sha256": "d1af1270b62b640650b19578cf15d539fc43999662860d58edddf4062e17fdd3"
+        },
+        {
+          "battleId": "bot-room:r3:b2",
+          "combatId": "round-3",
+          "ticks": 85,
+          "bytes": 47433,
+          "sha256": "7fe4fb86c03b5be7627d67c9f6d811f612f17e8ca045db9ca3f1b5a599081729"
+        },
+        {
+          "battleId": "bot-room:r3:b3",
+          "combatId": "round-3",
+          "ticks": 117,
+          "bytes": 50614,
+          "sha256": "3f530ae12ff2a9bee985e619ddd385cb55fa704f1940c21d212da825260549f5"
+        },
+        {
+          "battleId": "bot-room:r3:b4",
+          "combatId": "round-3",
+          "ticks": 111,
+          "bytes": 50623,
+          "sha256": "ae974d13f3ae3f41734580dcd290899147f726345f56811f950cbf789feb1d32"
+        },
+        {
+          "battleId": "bot-room:r3:b5",
+          "combatId": "round-3",
+          "ticks": 93,
+          "bytes": 47033,
+          "sha256": "6e7a29bd63f5ebd4fb65f595e9f67b3a8aea8af5e39be572116f5a434f094197"
+        },
+        {
+          "battleId": "bot-room:r3:b6",
+          "combatId": "round-3",
+          "ticks": 117,
+          "bytes": 57174,
+          "sha256": "e468c4ae82eb98e8282d0cd853efbe5c5a1eb3277efcf4c8c8fe8590d3090c0f"
+        },
+        {
+          "battleId": "bot-room:r3:b7",
+          "combatId": "round-3",
+          "ticks": 107,
+          "bytes": 50739,
+          "sha256": "b473804bc28d7071ccc4a4b9af35e6abe3cd544c1eeb0b64b407d8e357e730d1"
+        },
+        {
+          "battleId": "bot-room:r4:b3",
+          "combatId": "bot-room:r4:b3",
+          "ticks": 469,
+          "bytes": 197055,
+          "sha256": "e11ff4e210f680e5f7b87580ec63e65b0c7e9870b80eb33b92617fcb6bfa46db"
+        },
+        {
+          "battleId": "bot-room:r4:b1",
+          "combatId": "bot-room:r4:b1",
+          "ticks": 244,
+          "bytes": 147330,
+          "sha256": "a0c17fc0c923bc3effdc1e67daa123c0bcfc1eaa78f45a2cba019e8e2088f3f1"
+        },
+        {
+          "battleId": "bot-room:r4:b2",
+          "combatId": "bot-room:r4:b2",
+          "ticks": 173,
+          "bytes": 159892,
+          "sha256": "a55a5787d71bb18ad4a29ab837256a299112f72c0027822fe9706d0d4eaf9747"
+        },
+        {
+          "battleId": "bot-room:r4:b0",
+          "combatId": "bot-room:r4:b0",
+          "ticks": 343,
+          "bytes": 164465,
+          "sha256": "7878a7d3c35c239f67c4db28d422a4ddeb352352026bd0b1ea2734b4dce0db0d"
+        },
+        {
+          "battleId": "bot-room:r5:b3",
+          "combatId": "bot-room:r5:b3",
+          "ticks": 439,
+          "bytes": 202688,
+          "sha256": "44e854b3a8f444ac76718ebe2bb0ecdd68d19b95f8e4c020a1942e90f290977c"
+        },
+        {
+          "battleId": "bot-room:r5:b2",
+          "combatId": "bot-room:r5:b2",
+          "ticks": 270,
+          "bytes": 183122,
+          "sha256": "b027b95c58c5d06bbb7bf701234ed1618f7e5967297fed11161404e678a8d3aa"
+        },
+        {
+          "battleId": "bot-room:r5:b0",
+          "combatId": "bot-room:r5:b0",
+          "ticks": 437,
+          "bytes": 250656,
+          "sha256": "ffab55b1b4ef8f7bcde1d98c53019a6bcc7063201de039a41959687342e0ac05"
+        },
+        {
+          "battleId": "bot-room:r5:b1",
+          "combatId": "bot-room:r5:b1",
+          "ticks": 415,
+          "bytes": 304588,
+          "sha256": "db1ccf0596020df59fca7d7112a285c401ecec47648de0c46dad9fe33c56d402"
+        },
+        {
+          "battleId": "bot-room:r6:b0",
+          "combatId": "bot-room:r6:b0",
+          "ticks": 325,
+          "bytes": 202706,
+          "sha256": "854e3fa39065b25948f8d1271a725c3b8ed108a72669cc7643f59f47a8e60a3e"
+        },
+        {
+          "battleId": "bot-room:r6:b2",
+          "combatId": "bot-room:r6:b2",
+          "ticks": 553,
+          "bytes": 283585,
+          "sha256": "b6a4e9c0dbab55085e6df713af4a48766144e3271a3be512c5b5601be456328d"
+        },
+        {
+          "battleId": "bot-room:r6:b3",
+          "combatId": "bot-room:r6:b3",
+          "ticks": 576,
+          "bytes": 352069,
+          "sha256": "b94fd5e3698eb6d0408d60ed59378b4cbac83b53b7b654a99c727b7f13c999fe"
+        },
+        {
+          "battleId": "bot-room:r6:b1",
+          "combatId": "bot-room:r6:b1",
+          "ticks": 258,
+          "bytes": 180906,
+          "sha256": "b906e00d280e16eec0875797950e4698daeedef173b887f5d0c66c69664481a2"
+        },
+        {
+          "battleId": "bot-room:r8:b1",
+          "combatId": "bot-room:r8:b1",
+          "ticks": 373,
+          "bytes": 239950,
+          "sha256": "0f6f6b4d9a6a33e2032027109bc646216ce64b95b30910c8ab6a327c2c570946"
+        },
+        {
+          "battleId": "bot-room:r8:b0",
+          "combatId": "bot-room:r8:b0",
+          "ticks": 329,
+          "bytes": 284916,
+          "sha256": "0fe837244af3f253ce9e1cb164a600cf427ef627dd944b9f14a7d2e4f7b725c3"
+        },
+        {
+          "battleId": "bot-room:r8:b3",
+          "combatId": "bot-room:r8:b3",
+          "ticks": 326,
+          "bytes": 246621,
+          "sha256": "a96fc47348fabc75c323a0daf176928d39fc5c3e17d16eb078cddf705db5686e"
+        },
+        {
+          "battleId": "bot-room:r8:b2",
+          "combatId": "bot-room:r8:b2",
+          "ticks": 466,
+          "bytes": 259462,
+          "sha256": "f0d3301f51793f81b46aab94da45dcc5894f38ff1fdbe38b06704b01a8db2a9e"
+        },
+        {
+          "battleId": "bot-room:r9:b3",
+          "combatId": "bot-room:r9:b3",
+          "ticks": 354,
+          "bytes": 329736,
+          "sha256": "1057659b5c282391a3cc9351ba3dc734c031b56e80ee6084a84afda22356c81a"
+        },
+        {
+          "battleId": "bot-room:r9:b0",
+          "combatId": "bot-room:r9:b0",
+          "ticks": 352,
+          "bytes": 242167,
+          "sha256": "c7f03992cbfc6a45f197a561055a17f67dcab3eb1ab58ed7958999d4c68d8ec7"
+        },
+        {
+          "battleId": "bot-room:r9:b1",
+          "combatId": "bot-room:r9:b1",
+          "ticks": 281,
+          "bytes": 227359,
+          "sha256": "3117bdcba142d6f095854be4ca7066fd522714b8bbe218beb8bf35d41ad5f832"
+        },
+        {
+          "battleId": "bot-room:r9:b2",
+          "combatId": "bot-room:r9:b2",
+          "ticks": 466,
+          "bytes": 304408,
+          "sha256": "31b1cbae2ee7dd87ba30f195b8ca01822e1ee2ca0e8edbdb6a39ac32744711cf"
+        },
+        {
+          "battleId": "bot-room:r10:b0",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 69889,
+          "sha256": "fa1b653cfede4d267973a8dfd266ca9c58451d25947c4fe213c4bd28cab22d53"
+        },
+        {
+          "battleId": "bot-room:r10:b1",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 66796,
+          "sha256": "aba18a0554863f0555c5bfb5f36d3ab707c33cec3135f2190a28757cfbcb4bca"
+        },
+        {
+          "battleId": "bot-room:r10:b2",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 70581,
+          "sha256": "f310b743004b6d099cd3e4b5fb01930044e4ab5c3a4df830d6bcf09732200ce0"
+        },
+        {
+          "battleId": "bot-room:r10:b3",
+          "combatId": "round-10",
+          "ticks": 110,
+          "bytes": 62461,
+          "sha256": "4f6a5efa79bc552b59eb7f2a7184fcfaaa4583b5a8d0144868fb5ac362a81d31"
+        },
+        {
+          "battleId": "bot-room:r10:b4",
+          "combatId": "round-10",
+          "ticks": 80,
+          "bytes": 52541,
+          "sha256": "bf2885d9fe1d06bf2c266cce518f3d9af75dbb24ee898fdae4c197b09549af18"
+        },
+        {
+          "battleId": "bot-room:r10:b5",
+          "combatId": "round-10",
+          "ticks": 117,
+          "bytes": 62000,
+          "sha256": "872d782ec9717edda82fde7bc54adf9147313ea60fd5d36f1268ca54ac1b6209"
+        },
+        {
+          "battleId": "bot-room:r10:b6",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 74351,
+          "sha256": "7a6ebe140c58648698bcb16675f3277a1836ffcd7b6336c5cdcfa99d0738ba93"
+        },
+        {
+          "battleId": "bot-room:r10:b7",
+          "combatId": "round-10",
+          "ticks": 127,
+          "bytes": 72970,
+          "sha256": "01925fb037d87dc41180ba9f3419b172e67c8134cf5f72a4fbf3d5d7183fbba9"
+        },
+        {
+          "battleId": "bot-room:r11:b0",
+          "combatId": "bot-room:r11:b0",
+          "ticks": 389,
+          "bytes": 299258,
+          "sha256": "7b1dbd77c9fae277346b59340425da21c34aa23364460c45316e8ceb534b79fb"
+        },
+        {
+          "battleId": "bot-room:r11:b3",
+          "combatId": "bot-room:r11:b3",
+          "ticks": 322,
+          "bytes": 591930,
+          "sha256": "27fd2a5306d559ced94d0105f805b9c3313e4520561f80c019fc7241199d3408"
+        },
+        {
+          "battleId": "bot-room:r11:b1",
+          "combatId": "bot-room:r11:b1",
+          "ticks": 289,
+          "bytes": 237676,
+          "sha256": "771e8e236c3fee7f7bcfdf18423af38604473103d7c285d988434fe3ee84050f"
+        },
+        {
+          "battleId": "bot-room:r11:b2",
+          "combatId": "bot-room:r11:b2",
+          "ticks": 263,
+          "bytes": 280205,
+          "sha256": "2e992e3eda132f418da172df0380ffb1b052d40c2d45a0af4566db1e873144b5"
+        },
+        {
+          "battleId": "bot-room:r12:b0",
+          "combatId": "bot-room:r12:b0",
+          "ticks": 426,
+          "bytes": 387176,
+          "sha256": "f151b4b2f07a4369120e4591e50a38303f9e6a7a289688d46b719bb20450c271"
+        },
+        {
+          "battleId": "bot-room:r12:b3",
+          "combatId": "bot-room:r12:b3",
+          "ticks": 299,
+          "bytes": 358791,
+          "sha256": "430b25b252c88736f517d4b6f2f8a01f7f047f28f47293b52eb361cb5a43986a"
+        },
+        {
+          "battleId": "bot-room:r12:b1",
+          "combatId": "bot-room:r12:b1",
+          "ticks": 433,
+          "bytes": 423256,
+          "sha256": "4b9d556055e91ea01d434cfc630c5339c200c971a240a48c5d1b05c75f0f622f"
+        },
+        {
+          "battleId": "bot-room:r12:b2",
+          "combatId": "bot-room:r12:b2",
+          "ticks": 302,
+          "bytes": 472041,
+          "sha256": "6fc5470d0b13e5e4223bcdf767465413e55faf4f1046f971e4c2927126a28712"
+        },
+        {
+          "battleId": "bot-room:r13:b1",
+          "combatId": "bot-room:r13:b1",
+          "ticks": 326,
+          "bytes": 681090,
+          "sha256": "6f01a7ba7830db66943de66157b490509450d9d707c0631252dceda719b58fb2"
+        },
+        {
+          "battleId": "bot-room:r13:b2",
+          "combatId": "bot-room:r13:b2",
+          "ticks": 321,
+          "bytes": 372524,
+          "sha256": "ed0d389dd90bf90eea964d7865a582b7e3be36a81b15bb4db5b48854171061f4"
+        },
+        {
+          "battleId": "bot-room:r13:b3",
+          "combatId": "bot-room:r13:b3",
+          "ticks": 369,
+          "bytes": 467528,
+          "sha256": "2c4b7869575cf691595cea0a2f3f8ab82067a293b2b9036cbc18c202e44399fc"
+        },
+        {
+          "battleId": "bot-room:r13:b0",
+          "combatId": "bot-room:r13:b0",
+          "ticks": 420,
+          "bytes": 350016,
+          "sha256": "a3c5912617036f8a4f6b87270a6eb33c201f5a3eb2d078da8896f98fb20ae812"
+        },
+        {
+          "battleId": "bot-room:r15:b3",
+          "combatId": "bot-room:r15:b3",
+          "ticks": 504,
+          "bytes": 390618,
+          "sha256": "e35bdbac00e77b167b1dc92321f1bf506053db0bac93e432c7f0bfe417ec3043"
+        },
+        {
+          "battleId": "bot-room:r15:b2",
+          "combatId": "bot-room:r15:b2",
+          "ticks": 271,
+          "bytes": 280313,
+          "sha256": "df8625b752774c142e9477166dd2985516363f27df7f39f19f57fc0d9f382a10"
+        },
+        {
+          "battleId": "bot-room:r15:b1",
+          "combatId": "bot-room:r15:b1",
+          "ticks": 335,
+          "bytes": 373827,
+          "sha256": "1f2b4fa7802a51f0772ccf580997e923aad07939187a76f464c00b2ca77f5e9e"
+        },
+        {
+          "battleId": "bot-room:r15:b0",
+          "combatId": "bot-room:r15:b0",
+          "ticks": 220,
+          "bytes": 429207,
+          "sha256": "35f7bb9e31330eff45e0fbd58bde96aac5e7eb25d4cecfe6ec6212ec63f1554a"
+        },
+        {
+          "battleId": "bot-room:r16:b2",
+          "combatId": "bot-room:r16:b2",
+          "ticks": 673,
+          "bytes": 582318,
+          "sha256": "216ce6a48c51532c4fe6699af7bf866c611b4bbd14e185ea0a4041e551fab419"
+        },
+        {
+          "battleId": "bot-room:r16:b1",
+          "combatId": "bot-room:r16:b1",
+          "ticks": 368,
+          "bytes": 351104,
+          "sha256": "8ea37e03473c83b2154679ecf73f5f3e2bea16393ca2bf2ec6e772ffa74b2d10"
+        },
+        {
+          "battleId": "bot-room:r16:b0",
+          "combatId": "bot-room:r16:b0",
+          "ticks": 224,
+          "bytes": 324167,
+          "sha256": "b85711e0eeb62078c400a36fb1bf2502dbdb0f723c43acfd8688a103decf33de"
+        },
+        {
+          "battleId": "bot-room:r16:b3",
+          "combatId": "bot-room:r16:b3",
+          "ticks": 292,
+          "bytes": 448485,
+          "sha256": "1d32f99ea19e2f68c69fbe9e2a1a97ae5bdc7cf73a7a7d17d12850b3d0b8163d"
+        },
+        {
+          "battleId": "bot-room:r17:b0",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 89228,
+          "sha256": "fb5114846cfc60d0c9889c4d100d04f04ac8178d1ae7d9a180723e9c9f203064"
+        },
+        {
+          "battleId": "bot-room:r17:b1",
+          "combatId": "round-17",
+          "ticks": 156,
+          "bytes": 114855,
+          "sha256": "cb3bfa47d2cd60bd5c532ea6676756f65426734324a41a1418ea3c2d13fea034"
+        },
+        {
+          "battleId": "bot-room:r17:b2",
+          "combatId": "round-17",
+          "ticks": 136,
+          "bytes": 100409,
+          "sha256": "c5f45e36f0fce98ca19236cb6840aad7ac8682dfc141567200ce0c5f4cbf0c6d"
+        },
+        {
+          "battleId": "bot-room:r17:b3",
+          "combatId": "round-17",
+          "ticks": 109,
+          "bytes": 97498,
+          "sha256": "bfe592297de9414b4b74706fc1973469e96b0092415d8ba4eaa5271cc79ce169"
+        },
+        {
+          "battleId": "bot-room:r17:b4",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 89370,
+          "sha256": "ed3d51649ca6f235ec6dcbbee0f6b3fdb89266a821db06be6cbee5511fdf86b3"
+        },
+        {
+          "battleId": "bot-room:r17:b5",
+          "combatId": "round-17",
+          "ticks": 117,
+          "bytes": 143482,
+          "sha256": "8f52894a8b7bce608194dc0d604e7595557d5e5d6a6197f18e982fcb4790c726"
+        },
+        {
+          "battleId": "bot-room:r17:b6",
+          "combatId": "round-17",
+          "ticks": 119,
+          "bytes": 91299,
+          "sha256": "b345d89484cdee33a3b2739c2a1ebcd70545b054a9c6acd3168aef15dce5f101"
+        },
+        {
+          "battleId": "bot-room:r17:b7",
+          "combatId": "round-17",
+          "ticks": 117,
+          "bytes": 115906,
+          "sha256": "8b78d348ba4d603726734611e9bdf9f4f37d235b7b78cd20d56501f9a911b762"
+        },
+        {
+          "battleId": "bot-room:r18:b2",
+          "combatId": "bot-room:r18:b2",
+          "ticks": 293,
+          "bytes": 584058,
+          "sha256": "69ac628a7fc5866b7c93b182642485e08829f21a3a4d7256b40726ade3237e25"
+        },
+        {
+          "battleId": "bot-room:r18:b1",
+          "combatId": "bot-room:r18:b1",
+          "ticks": 252,
+          "bytes": 369424,
+          "sha256": "547db96e8083ed90d498ef4d00198355e2d9c5b658503f3ca2892267bb877b07"
+        },
+        {
+          "battleId": "bot-room:r18:b0",
+          "combatId": "bot-room:r18:b0",
+          "ticks": 571,
+          "bytes": 551524,
+          "sha256": "58af89e537d541e23b8ae0636a7839044fd90626ad6e792a7c066f5fcf7ee66d"
+        },
+        {
+          "battleId": "bot-room:r18:b3",
+          "combatId": "bot-room:r18:b3",
+          "ticks": 227,
+          "bytes": 363442,
+          "sha256": "c710ceedd265bf3a2dc6c071e947417d24819dc930289d6dc72b7e80c323f7b3"
+        },
+        {
+          "battleId": "bot-room:r19:b1",
+          "combatId": "bot-room:r19:b1",
+          "ticks": 212,
+          "bytes": 360839,
+          "sha256": "3bf8efd040702bbe7aac592d153949b1f8aa29e842b7d6a5714844876cd0a32e"
+        },
+        {
+          "battleId": "bot-room:r19:b0",
+          "combatId": "bot-room:r19:b0",
+          "ticks": 352,
+          "bytes": 451267,
+          "sha256": "8df8951f4c5a7c95a63cac42332782e4fcaee6e8d456fba8a6e9f1459abe4787"
+        },
+        {
+          "battleId": "bot-room:r19:b2",
+          "combatId": "bot-room:r19:b2",
+          "ticks": 406,
+          "bytes": 542538,
+          "sha256": "1eaf2c9a3ad4c2ebc3e7df955f0b976f9e1c2844eb7abc9bbe1ae03db051bfd1"
+        },
+        {
+          "battleId": "bot-room:r19:b3",
+          "combatId": "bot-room:r19:b3",
+          "ticks": 554,
+          "bytes": 1093521,
+          "sha256": "3a5c9bbc8019be52aac450bacb508d98e3a5c546c5d1f24cc9b0c82d817677f1"
+        },
+        {
+          "battleId": "bot-room:r20:b0",
+          "combatId": "bot-room:r20:b0",
+          "ticks": 340,
+          "bytes": 505890,
+          "sha256": "24cab91fb94a3161bb5a1df59ac53be0705f5c457ead15165a665a036a9ad47d"
+        },
+        {
+          "battleId": "bot-room:r20:b1",
+          "combatId": "bot-room:r20:b1",
+          "ticks": 315,
+          "bytes": 508822,
+          "sha256": "f51038eb09a387408e697f0d05f4bfd393370988d25ad19942db85de2a99f67a"
+        },
+        {
+          "battleId": "bot-room:r20:b3",
+          "combatId": "bot-room:r20:b3",
+          "ticks": 462,
+          "bytes": 514141,
+          "sha256": "95365d6b0814427b19323c11e16d5f77f37acdbffa39df28b49c00bf454cf899"
+        },
+        {
+          "battleId": "bot-room:r20:b2",
+          "combatId": "bot-room:r20:b2",
+          "ticks": 303,
+          "bytes": 708529,
+          "sha256": "e74c21775fc76cd5672048c76484065919c90fd6a32014622d76759d65a62c97"
+        },
+        {
+          "battleId": "bot-room:r22:b2",
+          "combatId": "bot-room:r22:b2",
+          "ticks": 534,
+          "bytes": 634346,
+          "sha256": "0662d18903e0cf5658ee84dc45106c3aea1c7308ed88ade5298a0b3fe55f68c8"
+        },
+        {
+          "battleId": "bot-room:r22:b0",
+          "combatId": "bot-room:r22:b0",
+          "ticks": 328,
+          "bytes": 648057,
+          "sha256": "6b0a1a6c8ad59dfe80bef3c96118f89ab632b8b1952b60ef5b073cc0e9a65d40"
+        },
+        {
+          "battleId": "bot-room:r22:b3",
+          "combatId": "bot-room:r22:b3",
+          "ticks": 294,
+          "bytes": 704322,
+          "sha256": "597499e44b97ed2dc8361722b55b971de49d473e52f25badd3595806422883d0"
+        },
+        {
+          "battleId": "bot-room:r22:b1",
+          "combatId": "bot-room:r22:b1",
+          "ticks": 164,
+          "bytes": 297749,
+          "sha256": "6d7fd74bd912d83388182bc05f7bc5a3e6c1ed8ae69013f01f0b7b07952f0552"
+        },
+        {
+          "battleId": "bot-room:r23:b3",
+          "combatId": "bot-room:r23:b3",
+          "ticks": 184,
+          "bytes": 691332,
+          "sha256": "2d66d2ce642968d96104023c88ebd532211c608e61ae734f4873421404d3a5d1"
+        },
+        {
+          "battleId": "bot-room:r23:b2",
+          "combatId": "bot-room:r23:b2",
+          "ticks": 500,
+          "bytes": 646746,
+          "sha256": "816e95b0e4be348de8eb3c75ba894b61a3caaf287f3a0e8028011289f866362c"
+        },
+        {
+          "battleId": "bot-room:r23:b1",
+          "combatId": "bot-room:r23:b1",
+          "ticks": 282,
+          "bytes": 777703,
+          "sha256": "7aeb270db687ab85e1a4fd9da9aa3e79133744555d89d45c50c1a8d6acbab9b7"
+        },
+        {
+          "battleId": "bot-room:r23:b0",
+          "combatId": "bot-room:r23:b0",
+          "ticks": 326,
+          "bytes": 419098,
+          "sha256": "42724cee9e41b76af874b09af5fb0f55333ca6167c010a9b83c580848102fdbd"
+        },
+        {
+          "battleId": "bot-room:r24:b2",
+          "combatId": "round-24",
+          "ticks": 168,
+          "bytes": 168435,
+          "sha256": "6877569dbae52e1c3f80a0fb04780c9363c491930da361fefb862738d492a425"
+        },
+        {
+          "battleId": "bot-room:r24:b3",
+          "combatId": "round-24",
+          "ticks": 126,
+          "bytes": 153604,
+          "sha256": "0f0ccfc0f692371b8729677e206f23741074020f2b2f98b5bc6432d7f2f52d28"
+        },
+        {
+          "battleId": "bot-room:r24:b5",
+          "combatId": "round-24",
+          "ticks": 64,
+          "bytes": 164244,
+          "sha256": "6e3f570ca9b5e5aee83b581df678375598359bb0d13a105b99dcb35c16bef39a"
+        },
+        {
+          "battleId": "bot-room:r24:b6",
+          "combatId": "round-24",
+          "ticks": 117,
+          "bytes": 134326,
+          "sha256": "bb83c676f51f4d788826d248a8d2bffd197683e918dd0944b14df170a7192cd8"
+        },
+        {
+          "battleId": "bot-room:r24:b7",
+          "combatId": "round-24",
+          "ticks": 110,
+          "bytes": 148557,
+          "sha256": "51e69aaf2bf5deb27dcfa4bc9d718d5de3e2631db73f768d4544e2732b32df6c"
+        },
+        {
+          "battleId": "bot-room:r25:b0",
+          "combatId": "bot-room:r25:b0",
+          "ticks": 451,
+          "bytes": 831146,
+          "sha256": "5dd3da17adaf7e709ba85cbdc0cb695505a4764d19ba73084384c128c7315757"
+        },
+        {
+          "battleId": "bot-room:r25:b1",
+          "combatId": "bot-room:r25:b1",
+          "ticks": 444,
+          "bytes": 875746,
+          "sha256": "d73aae498a684ed0f2f0a39e53007bb067d6dcc18748207281816a0001ac45ee"
+        },
+        {
+          "battleId": "bot-room:r25:b2",
+          "combatId": "bot-room:r25:b2",
+          "ticks": 203,
+          "bytes": 579566,
+          "sha256": "f5cb1279b8a0022d94ab4d3f46aa27f3762e0163c73e6f6e2dab40ca01a4f832"
+        },
+        {
+          "battleId": "bot-room:r26:b1",
+          "combatId": "bot-room:r26:b1",
+          "ticks": 251,
+          "bytes": 927759,
+          "sha256": "8ce89f043cf1e652b4044c09b64421fe63e2960b2c6fa8bf8e9f13d577d6a5c9"
+        },
+        {
+          "battleId": "bot-room:r26:b2",
+          "combatId": "bot-room:r26:b2",
+          "ticks": 663,
+          "bytes": 1106943,
+          "sha256": "90b427cc5b3194b669f3fed6e7926dc0b20b02c23c940d155fd27697f26a3eaf"
+        },
+        {
+          "battleId": "bot-room:r26:b0",
+          "combatId": "bot-room:r26:b0",
+          "ticks": 280,
+          "bytes": 615411,
+          "sha256": "fd9cea61584d98e8cc7cd3677761f17ccbf5d187cf19d559b3481494565d44cb"
+        },
+        {
+          "battleId": "bot-room:r27:b1",
+          "combatId": "bot-room:r27:b1",
+          "ticks": 382,
+          "bytes": 769011,
+          "sha256": "21d260ca909bbe51db54483c24d19e144323193d08b9fc6e290b68f6e5fc5954"
+        },
+        {
+          "battleId": "bot-room:r27:b0",
+          "combatId": "bot-room:r27:b0",
+          "ticks": 201,
+          "bytes": 711203,
+          "sha256": "e67bd1cd44fe63b78733e68e28465eed37f31a0fced5bbada41940bc30ac639e"
+        },
+        {
+          "battleId": "bot-room:r29:b1",
+          "combatId": "bot-room:r29:b1",
+          "ticks": 466,
+          "bytes": 844320,
+          "sha256": "24795b8b268192fd41aafffdb76ef59733889323337dca0a4967e995c4a2c9e6"
+        },
+        {
+          "battleId": "bot-room:r29:b0",
+          "combatId": "bot-room:r29:b0",
+          "ticks": 236,
+          "bytes": 766272,
+          "sha256": "9a800f02e461226e1fdcfcced968c2ac53f59f9d4207c80a2b760b04354dd165"
+        },
+        {
+          "battleId": "bot-room:r30:b0",
+          "combatId": "bot-room:r30:b0",
+          "ticks": 219,
+          "bytes": 831301,
+          "sha256": "bb13543a0349baa496d6c7aea6bb7b6c418d2aa00a7e8ec9fc25225f3c4a855c"
+        },
+        {
+          "battleId": "bot-room:r30:b1",
+          "combatId": "bot-room:r30:b1",
+          "ticks": 204,
+          "bytes": 692476,
+          "sha256": "fee3128923688e7c79731adb36c5d5933d7833809566528998761ff9a77d731b"
+        },
+        {
+          "battleId": "bot-room:r31:b3",
+          "combatId": "round-31",
+          "ticks": 141,
+          "bytes": 122360,
+          "sha256": "8e03582cd1f65871f47ad2f57fc217aa678ca8bf6a93799affc64f7ec7b6770d"
+        },
+        {
+          "battleId": "bot-room:r31:b5",
+          "combatId": "round-31",
+          "ticks": 76,
+          "bytes": 113786,
+          "sha256": "6579275d4f73a865a84ebda83958c92bb4be9143a87e8b80eee4c5d1012bb7b7"
+        },
+        {
+          "battleId": "bot-room:r31:b6",
+          "combatId": "round-31",
+          "ticks": 120,
+          "bytes": 100782,
+          "sha256": "c49c4b17070ec5124ff81f1b216db6e844789d21d51cfad7d4765048836c94cb"
+        },
+        {
+          "battleId": "bot-room:r32:b0",
+          "combatId": "bot-room:r32:b0",
+          "ticks": 277,
+          "bytes": 663939,
+          "sha256": "feb902494330d54c8c000ea29a660d0a714eec34ac8b627124c4e05f369674ec"
+        },
+        {
+          "battleId": "bot-room:r32:b1",
+          "combatId": "bot-room:r32:b1",
+          "ticks": 205,
+          "bytes": 679503,
+          "sha256": "1a73b47c0061978d4a29826faac6f930bf038dbd5cf52c3d682e54d85c10f942"
+        },
+        {
+          "battleId": "bot-room:r33:b0",
+          "combatId": "bot-room:r33:b0",
+          "ticks": 606,
+          "bytes": 1278998,
+          "sha256": "7659cae6d6efb61b1a3a315e3859380254c789d51991b11204eaf42c532cd706"
+        },
+        {
+          "battleId": "bot-room:r34:b0",
+          "combatId": "bot-room:r34:b0",
+          "ticks": 410,
+          "bytes": 1074874,
+          "sha256": "f258a539b494eaa354b12bd35774365ccd673a2965c9147fb23e37ec00765738"
+        },
+        {
+          "battleId": "bot-room:r36:b0",
+          "combatId": "bot-room:r36:b0",
+          "ticks": 306,
+          "bytes": 1054046,
+          "sha256": "2307a6275284b9448d72fa4eb53aad3dbb42d6a33099948ee56d13f6b2523a9a"
+        }
+      ]
+    },
+    {
+      "seed": 19,
+      "equivalent": true,
+      "round": 34,
+      "battles": 152,
+      "replays": 124,
+      "events": 99203,
+      "ticks": 38770,
+      "initialUnitTicks": 475015,
+      "matchEvents": 1876,
+      "matchEventsSha256": "19c5bd1945e64bfb9402fcd7d9629565cc570540801cc220dcfde66595f197ed",
+      "terminalBytes": 6928321,
+      "terminalSha256": "34b8a50e9cf0bf86aaaac52035581adc1786f957c1468adca90fdb67d0fe57b5",
+      "ledgerSha256": "bd0a9668274595a932aead9fd51bdf7a763173bf3793f850e43e89798ba4f4f2",
+      "intentionsSha256": "f8f1f1ea502ae142a46a1d66f849671bf205f75d822d7b85421b9180734a61e3",
+      "receiptsSha256": "81f5125476255f9ea97e1773d2c7934394f17c2e989a644e72a9aa847807a5dd",
+      "replaySha256": "8416abeb49dd9cfe4abbbe43d6770317bb35b83edf92eb2549fba939e8d6993f",
+      "replaySummaries": [
+        {
+          "battleId": "bot-room:r1:b0",
+          "combatId": "round-1",
+          "ticks": 175,
+          "bytes": 31800,
+          "sha256": "626f3a58574318fa1b19ff14017dd00808a44448020deb457d12b21ce6fee38b"
+        },
+        {
+          "battleId": "bot-room:r1:b1",
+          "combatId": "round-1",
+          "ticks": 103,
+          "bytes": 22720,
+          "sha256": "fc69daaf9682e2ca8df58ac407712175e8b2619abecba8caaea8f313df40ba3f"
+        },
+        {
+          "battleId": "bot-room:r1:b2",
+          "combatId": "round-1",
+          "ticks": 102,
+          "bytes": 23354,
+          "sha256": "98ed22a4d990e476d535fe14414e0b729c58a8d5e94c62dac77bde9a627bed4b"
+        },
+        {
+          "battleId": "bot-room:r1:b3",
+          "combatId": "round-1",
+          "ticks": 129,
+          "bytes": 26683,
+          "sha256": "a9a963f99aec08384198471daa1d3b8ffc6689af3e47d8848f074d6dcbeb8290"
+        },
+        {
+          "battleId": "bot-room:r1:b4",
+          "combatId": "round-1",
+          "ticks": 118,
+          "bytes": 24849,
+          "sha256": "47199d63a41d6673a451e94aa307cc5c30c4ddeef746fe316a2091300ed06418"
+        },
+        {
+          "battleId": "bot-room:r1:b5",
+          "combatId": "round-1",
+          "ticks": 147,
+          "bytes": 29453,
+          "sha256": "952394b384c45c196a071fc43f9f4ea24757088074b45836f9b74e0d9810cdf1"
+        },
+        {
+          "battleId": "bot-room:r1:b6",
+          "combatId": "round-1",
+          "ticks": 112,
+          "bytes": 21162,
+          "sha256": "2305c9c62bde09cd58ac2b752cb6f2c7939401ac628fbbf1e77a10ffb8a37133"
+        },
+        {
+          "battleId": "bot-room:r1:b7",
+          "combatId": "round-1",
+          "ticks": 103,
+          "bytes": 20852,
+          "sha256": "b1cd76be5852d7b3bcdd840bc75e6133aed939d37b4361ee939470f8632fdb7c"
+        },
+        {
+          "battleId": "bot-room:r2:b0",
+          "combatId": "round-2",
+          "ticks": 117,
+          "bytes": 35583,
+          "sha256": "d10214de5d15f79b7893d0297562ac4fce2dc9a6ab687dcc8dd9fefb0e0964e0"
+        },
+        {
+          "battleId": "bot-room:r2:b1",
+          "combatId": "round-2",
+          "ticks": 88,
+          "bytes": 31309,
+          "sha256": "35d3c647e91dddeb93a498c35b2483816862f3d580522ab1e26dccd4d82687ed"
+        },
+        {
+          "battleId": "bot-room:r2:b2",
+          "combatId": "round-2",
+          "ticks": 171,
+          "bytes": 47549,
+          "sha256": "4b1297e388646409c780ec4ade258b61fe476572ee2bececada318990e5684d4"
+        },
+        {
+          "battleId": "bot-room:r2:b3",
+          "combatId": "round-2",
+          "ticks": 137,
+          "bytes": 39975,
+          "sha256": "c58c2feab71b07fefae60fe3d4cc5b83c478561d48d62062a14ba2b7d9e9e284"
+        },
+        {
+          "battleId": "bot-room:r2:b4",
+          "combatId": "round-2",
+          "ticks": 123,
+          "bytes": 40195,
+          "sha256": "70dbd46c1897c4848c5e53ed2bf7153dcc6eff727e596ef8ef46022768dc0680"
+        },
+        {
+          "battleId": "bot-room:r2:b5",
+          "combatId": "round-2",
+          "ticks": 103,
+          "bytes": 35064,
+          "sha256": "9010d608ca904ae113d6f2a19dc7b31e6aedf328a1f1d88d60fee07d04c9c077"
+        },
+        {
+          "battleId": "bot-room:r2:b6",
+          "combatId": "round-2",
+          "ticks": 88,
+          "bytes": 31593,
+          "sha256": "71295b5781a607ad880372ebeadfc78d2cf0cb00092ce989c5a3c8ff5e9b5b10"
+        },
+        {
+          "battleId": "bot-room:r2:b7",
+          "combatId": "round-2",
+          "ticks": 88,
+          "bytes": 31013,
+          "sha256": "675f1e22354f94192943f7f4392f35dc0b9ab6263f1dcfb33c9183bde721708b"
+        },
+        {
+          "battleId": "bot-room:r3:b0",
+          "combatId": "round-3",
+          "ticks": 103,
+          "bytes": 49240,
+          "sha256": "a216d778eef0f9eace189aa51da34150e574e0c403c4c4a12710017154932763"
+        },
+        {
+          "battleId": "bot-room:r3:b1",
+          "combatId": "round-3",
+          "ticks": 97,
+          "bytes": 47345,
+          "sha256": "3645a8ad4a98ba96cd000dc71f8f0551f1742ad95f28e577937703b9373398e3"
+        },
+        {
+          "battleId": "bot-room:r3:b2",
+          "combatId": "round-3",
+          "ticks": 137,
+          "bytes": 59446,
+          "sha256": "07c0f906682a16dc480f9e21e34ae5e50819500ca89c2264fbcc32d612b968f7"
+        },
+        {
+          "battleId": "bot-room:r3:b3",
+          "combatId": "round-3",
+          "ticks": 125,
+          "bytes": 61833,
+          "sha256": "a4615622cee2de750d8a9b977298ee8ca986874bb8e30fdea716c21d23ee4821"
+        },
+        {
+          "battleId": "bot-room:r3:b4",
+          "combatId": "round-3",
+          "ticks": 118,
+          "bytes": 51367,
+          "sha256": "c3926797509f89d7acb733aa64656d0ef1ba44c6a673c9f27c65f537eac44d0e"
+        },
+        {
+          "battleId": "bot-room:r3:b5",
+          "combatId": "round-3",
+          "ticks": 104,
+          "bytes": 52503,
+          "sha256": "8bcea9969a223eb0a2f66c7f7388547dddfa51438233e1bc8d5be63994afff8e"
+        },
+        {
+          "battleId": "bot-room:r3:b6",
+          "combatId": "round-3",
+          "ticks": 80,
+          "bytes": 40190,
+          "sha256": "a96f7b32900a7c3ecf4ed69b7fb7c2af2b4eca0467af51725340655a57bd70bc"
+        },
+        {
+          "battleId": "bot-room:r3:b7",
+          "combatId": "round-3",
+          "ticks": 105,
+          "bytes": 55886,
+          "sha256": "2aabd1271b5629d3bcb6b500bc1b36394dd580b22f15ef1c31e093016bf72f93"
+        },
+        {
+          "battleId": "bot-room:r4:b0",
+          "combatId": "bot-room:r4:b0",
+          "ticks": 298,
+          "bytes": 161823,
+          "sha256": "bbbd67c49990bc92918e97ad0e6bae85df36c28d249ef86f04e902776270a159"
+        },
+        {
+          "battleId": "bot-room:r4:b3",
+          "combatId": "bot-room:r4:b3",
+          "ticks": 361,
+          "bytes": 210696,
+          "sha256": "02c84954a80a16764ba9643ada7b04290d5bcc89fd3453d2e32ed7da653321b5"
+        },
+        {
+          "battleId": "bot-room:r4:b1",
+          "combatId": "bot-room:r4:b1",
+          "ticks": 595,
+          "bytes": 277053,
+          "sha256": "33b86f6e135023fa6edd47a4bd6319d005d1991910c47d3b62a3a25020c4ff1d"
+        },
+        {
+          "battleId": "bot-room:r4:b2",
+          "combatId": "bot-room:r4:b2",
+          "ticks": 378,
+          "bytes": 206007,
+          "sha256": "e7d028615bb7f374c80d68664c0391d280f12606eccf9b3489b5178902a6d946"
+        },
+        {
+          "battleId": "bot-room:r5:b3",
+          "combatId": "bot-room:r5:b3",
+          "ticks": 531,
+          "bytes": 341654,
+          "sha256": "f02b341fd9b9bf12a0d682ffbbb65a6d645d6f7c25fcbe92f9a5548f2ee5ba5b"
+        },
+        {
+          "battleId": "bot-room:r5:b1",
+          "combatId": "bot-room:r5:b1",
+          "ticks": 478,
+          "bytes": 267534,
+          "sha256": "89cee5eabdebbd4d1a917bda812d942a0e41239b3a8018113ead1970755daec8"
+        },
+        {
+          "battleId": "bot-room:r5:b0",
+          "combatId": "bot-room:r5:b0",
+          "ticks": 393,
+          "bytes": 193423,
+          "sha256": "217d7d9ae576c1932f052a9115925a0ba6b1f56c7fdd7cb71e1cc1c4c006ebca"
+        },
+        {
+          "battleId": "bot-room:r5:b2",
+          "combatId": "bot-room:r5:b2",
+          "ticks": 514,
+          "bytes": 257428,
+          "sha256": "d24eaaefcf02af4c3326ffeb5bf333cc33bd15fa1b639a6730891b65fdb49483"
+        },
+        {
+          "battleId": "bot-room:r6:b0",
+          "combatId": "bot-room:r6:b0",
+          "ticks": 506,
+          "bytes": 308720,
+          "sha256": "4063a75bfea173cf83c55abaa8f3b36e6010dd2ff559fd17cb40ab8bd2b3efa8"
+        },
+        {
+          "battleId": "bot-room:r6:b2",
+          "combatId": "bot-room:r6:b2",
+          "ticks": 331,
+          "bytes": 270662,
+          "sha256": "bcbf904b30cb7af2b1c0201ac5c8a4da186cb68bcf0f8049bcb00a8d1ec1a977"
+        },
+        {
+          "battleId": "bot-room:r6:b1",
+          "combatId": "bot-room:r6:b1",
+          "ticks": 385,
+          "bytes": 242215,
+          "sha256": "a09b521ed74aa8669f40ff8b6b51a93cda0800cbffa3d62c53903bae7a9ba30c"
+        },
+        {
+          "battleId": "bot-room:r6:b3",
+          "combatId": "bot-room:r6:b3",
+          "ticks": 249,
+          "bytes": 170582,
+          "sha256": "2d4c585e859e7c6f1dcee8d76ef6fd4239b5f46eac6439c1184bbb10e9c63103"
+        },
+        {
+          "battleId": "bot-room:r8:b2",
+          "combatId": "bot-room:r8:b2",
+          "ticks": 376,
+          "bytes": 273829,
+          "sha256": "7afcdcff61f820a54d972a13840c0145b98890f3a0f2ab53e7d748311af7473e"
+        },
+        {
+          "battleId": "bot-room:r8:b1",
+          "combatId": "bot-room:r8:b1",
+          "ticks": 409,
+          "bytes": 268607,
+          "sha256": "9333d22d156c017b2fcc190575fd6fc9595e55c9b84f54a8a28e84214e7af86e"
+        },
+        {
+          "battleId": "bot-room:r8:b3",
+          "combatId": "bot-room:r8:b3",
+          "ticks": 427,
+          "bytes": 298959,
+          "sha256": "bda60ae3df02d3f2eeb4a4f62766eeb7a5509e497a33f8f8d509dc54f41d9ad0"
+        },
+        {
+          "battleId": "bot-room:r8:b0",
+          "combatId": "bot-room:r8:b0",
+          "ticks": 500,
+          "bytes": 352409,
+          "sha256": "8fb673b8e612064a1144b5fe0d8fc69345c7a43a44cf7fbacfd7c7c532a44ac6"
+        },
+        {
+          "battleId": "bot-room:r9:b3",
+          "combatId": "bot-room:r9:b3",
+          "ticks": 223,
+          "bytes": 193016,
+          "sha256": "278ce49865880afd45fbf644f936717974cd2626ea11325172872ff98e4780f6"
+        },
+        {
+          "battleId": "bot-room:r9:b2",
+          "combatId": "bot-room:r9:b2",
+          "ticks": 363,
+          "bytes": 278239,
+          "sha256": "c33cb642b8ba7c841b26f9120f65db33d678e47149b4bb23029ba30b3ebcb658"
+        },
+        {
+          "battleId": "bot-room:r9:b0",
+          "combatId": "bot-room:r9:b0",
+          "ticks": 649,
+          "bytes": 456331,
+          "sha256": "c71bb9107fb06cfe3f98f57047c113e2ccb85f07c55a862908d4251d41e4758f"
+        },
+        {
+          "battleId": "bot-room:r9:b1",
+          "combatId": "bot-room:r9:b1",
+          "ticks": 381,
+          "bytes": 289528,
+          "sha256": "af9dbeb1025bf384d024c4515731a283708b332d1b782c42098414b7c3b7337a"
+        },
+        {
+          "battleId": "bot-room:r10:b0",
+          "combatId": "round-10",
+          "ticks": 104,
+          "bytes": 59755,
+          "sha256": "76c17655860249424596944ce0fae0c458aba9d3c2eee3dfb73e340cce33cf9c"
+        },
+        {
+          "battleId": "bot-room:r10:b1",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 71029,
+          "sha256": "4d02079e2afbf164e2abdd9ecd2857a4c853ce1deb24340b114911b34033c7c7"
+        },
+        {
+          "battleId": "bot-room:r10:b2",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 70343,
+          "sha256": "eb60e9ab7f07037bc4016dc98918c660ee862e1c766c8b57cf7943df551d9b02"
+        },
+        {
+          "battleId": "bot-room:r10:b3",
+          "combatId": "round-10",
+          "ticks": 126,
+          "bytes": 72287,
+          "sha256": "5275f2a73c99ea39774df8208ec4565013e991f4f39e85db4ac10be86f4e8521"
+        },
+        {
+          "battleId": "bot-room:r10:b4",
+          "combatId": "round-10",
+          "ticks": 118,
+          "bytes": 61283,
+          "sha256": "ed48c2cdd76e3b01b53660471c5dae0a4ae974795ffd839e2bd4a9844b4a475e"
+        },
+        {
+          "battleId": "bot-room:r10:b5",
+          "combatId": "round-10",
+          "ticks": 127,
+          "bytes": 72953,
+          "sha256": "2fe6b2ba33fc3feb6a0dc7b079a87cc84a9682e3af0216866d48c69524e10dba"
+        },
+        {
+          "battleId": "bot-room:r10:b6",
+          "combatId": "round-10",
+          "ticks": 88,
+          "bytes": 61568,
+          "sha256": "9b7e24588ac8dda941e42164e90da0f1feca6542678fa290d1fb2b7064f06e64"
+        },
+        {
+          "battleId": "bot-room:r10:b7",
+          "combatId": "round-10",
+          "ticks": 137,
+          "bytes": 69589,
+          "sha256": "010ebeaccb5601fae48945b770329f921846bd354d209b2388d6bd67c62ada19"
+        },
+        {
+          "battleId": "bot-room:r11:b1",
+          "combatId": "bot-room:r11:b1",
+          "ticks": 719,
+          "bytes": 538605,
+          "sha256": "3e603108c4be0fe38d3e90baca7480e85a703aeddf5a65a61939078e7bb42461"
+        },
+        {
+          "battleId": "bot-room:r11:b2",
+          "combatId": "bot-room:r11:b2",
+          "ticks": 584,
+          "bytes": 457811,
+          "sha256": "7e26497c64f2a6cf5002eb33fcee634c163bfac83274ec22a989dee66b4fd90a"
+        },
+        {
+          "battleId": "bot-room:r11:b0",
+          "combatId": "bot-room:r11:b0",
+          "ticks": 370,
+          "bytes": 296816,
+          "sha256": "76dc24c5b754be9ab39b2ec6e0a8a98fcaa518ec73d8cd7dcf615b3af3bb5369"
+        },
+        {
+          "battleId": "bot-room:r11:b3",
+          "combatId": "bot-room:r11:b3",
+          "ticks": 408,
+          "bytes": 353472,
+          "sha256": "425da7b9648c4b31a6fc5b405a2ccdace738da5bf7b0427c559ba69732d80580"
+        },
+        {
+          "battleId": "bot-room:r12:b3",
+          "combatId": "bot-room:r12:b3",
+          "ticks": 471,
+          "bytes": 432689,
+          "sha256": "34414a7bc682f855ef86e306e2151bea5a07c9cb6dbb28199780e3f566a44473"
+        },
+        {
+          "battleId": "bot-room:r12:b1",
+          "combatId": "bot-room:r12:b1",
+          "ticks": 414,
+          "bytes": 350098,
+          "sha256": "3522ab31a754796cf404ffe43c912af3be2f1c4f4b4f7f945311708e9dfeb790"
+        },
+        {
+          "battleId": "bot-room:r12:b0",
+          "combatId": "bot-room:r12:b0",
+          "ticks": 671,
+          "bytes": 529004,
+          "sha256": "9a8e5ebb6f6e384b70974250cb05d1c679c65189ec92f08bdd7643bf28a00ac5"
+        },
+        {
+          "battleId": "bot-room:r12:b2",
+          "combatId": "bot-room:r12:b2",
+          "ticks": 720,
+          "bytes": 585237,
+          "sha256": "9380d4296d6122785d3165403fcb6f2b5481da0fb4a23121f1317000eb7ec3cc"
+        },
+        {
+          "battleId": "bot-room:r13:b3",
+          "combatId": "bot-room:r13:b3",
+          "ticks": 310,
+          "bytes": 298551,
+          "sha256": "372824ac6dd19d80bc0cfc68ac1b7a22196a80a030bda62c2a1cc8c89f311cc6"
+        },
+        {
+          "battleId": "bot-room:r13:b0",
+          "combatId": "bot-room:r13:b0",
+          "ticks": 640,
+          "bytes": 566479,
+          "sha256": "b281823087e47791a1f82cc400164f6e3ed78fbbdeff31005d7864d0dbec4b41"
+        },
+        {
+          "battleId": "bot-room:r13:b1",
+          "combatId": "bot-room:r13:b1",
+          "ticks": 428,
+          "bytes": 412264,
+          "sha256": "ee3cd03c587ea3d742ea9c9788d6d1c3704a388a177fee0288301afca1804a3e"
+        },
+        {
+          "battleId": "bot-room:r13:b2",
+          "combatId": "bot-room:r13:b2",
+          "ticks": 631,
+          "bytes": 448846,
+          "sha256": "dcc75c078403d6903169843745a3666a5e65918f40c0bd74a16042ff343ce7b5"
+        },
+        {
+          "battleId": "bot-room:r15:b2",
+          "combatId": "bot-room:r15:b2",
+          "ticks": 521,
+          "bytes": 480358,
+          "sha256": "c5f83a2973257f5980b71c7e8722bc19cfec7bdd388239b7dd9c18b10148e088"
+        },
+        {
+          "battleId": "bot-room:r15:b3",
+          "combatId": "bot-room:r15:b3",
+          "ticks": 286,
+          "bytes": 299909,
+          "sha256": "617fdbaf7f44bfdd80103011e85d37e22eff37301b303a1a45c15995612c0912"
+        },
+        {
+          "battleId": "bot-room:r15:b1",
+          "combatId": "bot-room:r15:b1",
+          "ticks": 671,
+          "bytes": 542804,
+          "sha256": "badb3895f37d7791a809a6faa3c79dc5eb4491b950189aefff90dafeb1b58bf6"
+        },
+        {
+          "battleId": "bot-room:r15:b0",
+          "combatId": "bot-room:r15:b0",
+          "ticks": 403,
+          "bytes": 338529,
+          "sha256": "068df3555d3d529bba679cfe954c78afddfb7b3b9aa2139b011f194101a29576"
+        },
+        {
+          "battleId": "bot-room:r16:b3",
+          "combatId": "bot-room:r16:b3",
+          "ticks": 417,
+          "bytes": 443991,
+          "sha256": "31c44d8742d42b29002e76fecdc98d78c2f152461d68c25f9923e02de066a896"
+        },
+        {
+          "battleId": "bot-room:r16:b2",
+          "combatId": "bot-room:r16:b2",
+          "ticks": 322,
+          "bytes": 327694,
+          "sha256": "58a3727eaed75f7a05ef16735582cee4c654d232fbff1eb059547525b6136947"
+        },
+        {
+          "battleId": "bot-room:r16:b0",
+          "combatId": "bot-room:r16:b0",
+          "ticks": 341,
+          "bytes": 289424,
+          "sha256": "b2e697335b4faab98ee18ee3d56b90d2c3d584bc6296f726b6336ffa8e244cf1"
+        },
+        {
+          "battleId": "bot-room:r16:b1",
+          "combatId": "bot-room:r16:b1",
+          "ticks": 387,
+          "bytes": 388690,
+          "sha256": "61ce6e4f196dba3e5d945ef2c1fb33aa608a34c0d2e0ae10a35937d1719d5d3a"
+        },
+        {
+          "battleId": "bot-room:r17:b0",
+          "combatId": "round-17",
+          "ticks": 118,
+          "bytes": 89644,
+          "sha256": "4d8aca64089cd08ac90d5c0f0b0076cee465ce1440b75621d6bda0d917b9ecea"
+        },
+        {
+          "battleId": "bot-room:r17:b1",
+          "combatId": "round-17",
+          "ticks": 99,
+          "bytes": 84309,
+          "sha256": "5bd930a0e03150f37bf07b9955599c8f335cc32a700186000aa5d89825b2b850"
+        },
+        {
+          "battleId": "bot-room:r17:b2",
+          "combatId": "round-17",
+          "ticks": 143,
+          "bytes": 113720,
+          "sha256": "cec3f342c9367d2e288e318cf482e2d6b7b81327a63c3b04243d60ed887a9e0a"
+        },
+        {
+          "battleId": "bot-room:r17:b3",
+          "combatId": "round-17",
+          "ticks": 117,
+          "bytes": 85733,
+          "sha256": "8de085ebab55584c947d79c9d826f9cd08686fea4c1615a82b7a91814fb8c8ec"
+        },
+        {
+          "battleId": "bot-room:r17:b4",
+          "combatId": "round-17",
+          "ticks": 145,
+          "bytes": 103620,
+          "sha256": "9c623a85a4b1f700d034790493e7ee574fe1effb6e94703ad0ca2e991df456da"
+        },
+        {
+          "battleId": "bot-room:r17:b5",
+          "combatId": "round-17",
+          "ticks": 117,
+          "bytes": 95372,
+          "sha256": "551833c850ba53e1f53d642c949e7bb6293e4901e23cdc79c1f8a0ec30d83585"
+        },
+        {
+          "battleId": "bot-room:r17:b6",
+          "combatId": "round-17",
+          "ticks": 131,
+          "bytes": 103696,
+          "sha256": "fc085531fe6554c75bd18a930cb9d7440a8d427fbe6c063003eb0975545a1fb2"
+        },
+        {
+          "battleId": "bot-room:r17:b7",
+          "combatId": "round-17",
+          "ticks": 128,
+          "bytes": 96602,
+          "sha256": "67b4d3284ac7ed1f29936fe73797baf90aec4e9a582d6d33e052d7efca3900c0"
+        },
+        {
+          "battleId": "bot-room:r18:b0",
+          "combatId": "bot-room:r18:b0",
+          "ticks": 411,
+          "bytes": 476645,
+          "sha256": "6a3387b1f130745889a08c9e7cea0b68e0a720c035fa134a821c23952cca7619"
+        },
+        {
+          "battleId": "bot-room:r18:b3",
+          "combatId": "bot-room:r18:b3",
+          "ticks": 345,
+          "bytes": 417233,
+          "sha256": "1c300997bb32440af5121b8ad3de76a490ddd56fbfef5a5674550d936730b996"
+        },
+        {
+          "battleId": "bot-room:r18:b2",
+          "combatId": "bot-room:r18:b2",
+          "ticks": 445,
+          "bytes": 536845,
+          "sha256": "774e07ce2216f9517982e697b3b835880b86daa5ffa7e8521bc2075678a09a8f"
+        },
+        {
+          "battleId": "bot-room:r18:b1",
+          "combatId": "bot-room:r18:b1",
+          "ticks": 377,
+          "bytes": 385324,
+          "sha256": "a6679922696a1acd45a7e8901bcae8c25e9c645ee9e812680f7553d44b846580"
+        },
+        {
+          "battleId": "bot-room:r19:b1",
+          "combatId": "bot-room:r19:b1",
+          "ticks": 497,
+          "bytes": 542519,
+          "sha256": "e214411e01393d1bb1bedee9f042a1d113022d84c7b7582ce9aa6eb1e2c835c3"
+        },
+        {
+          "battleId": "bot-room:r19:b2",
+          "combatId": "bot-room:r19:b2",
+          "ticks": 315,
+          "bytes": 376665,
+          "sha256": "7c98e971ac2fc1064b54c0d830b809a3ad1c15b8db5635d1d29472033ac82446"
+        },
+        {
+          "battleId": "bot-room:r19:b3",
+          "combatId": "bot-room:r19:b3",
+          "ticks": 313,
+          "bytes": 370741,
+          "sha256": "1f4a37de68a3f61738515920216851eaf0433aa7dd9fdadbc29eb7b8c9439859"
+        },
+        {
+          "battleId": "bot-room:r19:b0",
+          "combatId": "bot-room:r19:b0",
+          "ticks": 642,
+          "bytes": 753251,
+          "sha256": "9b4263b4d49ce352d346f2c022ea66db0a80ec1a09ed9107e84d8ce339cd7d50"
+        },
+        {
+          "battleId": "bot-room:r20:b0",
+          "combatId": "bot-room:r20:b0",
+          "ticks": 379,
+          "bytes": 430033,
+          "sha256": "400195f66981487ec9072e3dd4ec402705b4b6fc82ac458158523abdc296d0bb"
+        },
+        {
+          "battleId": "bot-room:r20:b1",
+          "combatId": "bot-room:r20:b1",
+          "ticks": 387,
+          "bytes": 423261,
+          "sha256": "754522b61390c4b9f80c5764930ffb674fb54024e796b2bbdf7717cbbfb64048"
+        },
+        {
+          "battleId": "bot-room:r20:b2",
+          "combatId": "bot-room:r20:b2",
+          "ticks": 453,
+          "bytes": 500061,
+          "sha256": "26c70e644d58d22c79b9e5ac7c1f80eeafbe08a9e965f53259d18a227503d3d7"
+        },
+        {
+          "battleId": "bot-room:r20:b3",
+          "combatId": "bot-room:r20:b3",
+          "ticks": 386,
+          "bytes": 490825,
+          "sha256": "9ffa0bba924acedecda2390f122ad6ff62123d1bc18441281f5de6055b41f10c"
+        },
+        {
+          "battleId": "bot-room:r22:b2",
+          "combatId": "bot-room:r22:b2",
+          "ticks": 411,
+          "bytes": 587680,
+          "sha256": "203421bcdf2aea6a545e0d11dc8bbafc672d45adc7da7af027404275cd80f66d"
+        },
+        {
+          "battleId": "bot-room:r22:b3",
+          "combatId": "bot-room:r22:b3",
+          "ticks": 377,
+          "bytes": 568679,
+          "sha256": "d6206daa8343b0b49689be210d30616d1b9bccd37cfd8e4015a25f09343a9e91"
+        },
+        {
+          "battleId": "bot-room:r22:b1",
+          "combatId": "bot-room:r22:b1",
+          "ticks": 329,
+          "bytes": 432453,
+          "sha256": "87f7df611073ade84983cdd2c1b525f778198e23c038ac21159edf844988de10"
+        },
+        {
+          "battleId": "bot-room:r22:b0",
+          "combatId": "bot-room:r22:b0",
+          "ticks": 327,
+          "bytes": 383237,
+          "sha256": "398ce206172865584dbb9945a19213b0213616c936edee093d8d9425d28bfdba"
+        },
+        {
+          "battleId": "bot-room:r23:b2",
+          "combatId": "bot-room:r23:b2",
+          "ticks": 291,
+          "bytes": 406621,
+          "sha256": "9fcedaec59d172ec6c855b2e3e88dd5ce8522f93b320037ebe1199b940f606d7"
+        },
+        {
+          "battleId": "bot-room:r23:b1",
+          "combatId": "bot-room:r23:b1",
+          "ticks": 317,
+          "bytes": 560285,
+          "sha256": "449922e2264a5a38eb9dd9006d8d8082b7c24e1c32d3f168d40defc0952c0ff7"
+        },
+        {
+          "battleId": "bot-room:r23:b0",
+          "combatId": "bot-room:r23:b0",
+          "ticks": 433,
+          "bytes": 515223,
+          "sha256": "e4c24cc3abc36a808a7856181d1045bf6e5ce50fe153bcbab19a1b47c618e241"
+        },
+        {
+          "battleId": "bot-room:r23:b3",
+          "combatId": "bot-room:r23:b3",
+          "ticks": 750,
+          "bytes": 883379,
+          "sha256": "15d727d38fd617c553508906c244d8e55d71aa47c8511bceaeb7f3481c37b8f1"
+        },
+        {
+          "battleId": "bot-room:r24:b1",
+          "combatId": "round-24",
+          "ticks": 132,
+          "bytes": 144594,
+          "sha256": "ece6e8ea4e751cfe2628a26b3c4ee1c5c226366db57108e7cdc61ce8f383e9a8"
+        },
+        {
+          "battleId": "bot-room:r24:b2",
+          "combatId": "round-24",
+          "ticks": 143,
+          "bytes": 146906,
+          "sha256": "76105e07ca806e31bce7847b8a1630d0b78d18bf79ff3a9a30211b0116d9a5e5"
+        },
+        {
+          "battleId": "bot-room:r24:b3",
+          "combatId": "round-24",
+          "ticks": 170,
+          "bytes": 163539,
+          "sha256": "e99fe6ee29d5bc9e5f92abb603ab1c010d466ba6dff2faf2295bc2f88bfd6e0f"
+        },
+        {
+          "battleId": "bot-room:r24:b4",
+          "combatId": "round-24",
+          "ticks": 140,
+          "bytes": 137664,
+          "sha256": "57d1c1f74b768986b8742023a76f3ad000089266cf0a079a3143df121b85e6d6"
+        },
+        {
+          "battleId": "bot-room:r24:b5",
+          "combatId": "round-24",
+          "ticks": 135,
+          "bytes": 142824,
+          "sha256": "4dbac0897a11b3e27ae53ecd497751a1769a787a9bb60d5fa8bb6fdeb8054a5e"
+        },
+        {
+          "battleId": "bot-room:r24:b6",
+          "combatId": "round-24",
+          "ticks": 124,
+          "bytes": 136239,
+          "sha256": "b5ea407db492afd6755c51acb61fd74bd9ac1bad0d25c8c8ad6490fb080be691"
+        },
+        {
+          "battleId": "bot-room:r24:b7",
+          "combatId": "round-24",
+          "ticks": 130,
+          "bytes": 141029,
+          "sha256": "41b54c8d5b19ff8e4ceac63c03f4638a87b24b82bfdc0442992e43284337fd4a"
+        },
+        {
+          "battleId": "bot-room:r25:b0",
+          "combatId": "bot-room:r25:b0",
+          "ticks": 252,
+          "bytes": 409641,
+          "sha256": "71f7e3a8da4894f54e3343fe62a585aac5b2fe2241b3b9470efd50e8f9ba4064"
+        },
+        {
+          "battleId": "bot-room:r25:b1",
+          "combatId": "bot-room:r25:b1",
+          "ticks": 316,
+          "bytes": 435518,
+          "sha256": "87a2a0da502c809d140499fe70e7d0126a6a44b09623215bf0c3d99f637a11b6"
+        },
+        {
+          "battleId": "bot-room:r25:b3",
+          "combatId": "bot-room:r25:b3",
+          "ticks": 448,
+          "bytes": 682768,
+          "sha256": "8ae7147bb0989e22524fc902cb804a236bea7b5d35f7b66210771b453e7cd709"
+        },
+        {
+          "battleId": "bot-room:r25:b2",
+          "combatId": "bot-room:r25:b2",
+          "ticks": 603,
+          "bytes": 866944,
+          "sha256": "9d1164e146e0237af9d92818c5fd89f361cdcb017ec16787cbf0b5b3a143d458"
+        },
+        {
+          "battleId": "bot-room:r26:b0",
+          "combatId": "bot-room:r26:b0",
+          "ticks": 635,
+          "bytes": 854270,
+          "sha256": "f5b87e5bf89abca9f84bf0be4b3ea7cc97f260ed39b76f3be59d4279a0bd912b"
+        },
+        {
+          "battleId": "bot-room:r26:b2",
+          "combatId": "bot-room:r26:b2",
+          "ticks": 300,
+          "bytes": 464735,
+          "sha256": "31eebbaa799c4721db0aaa99b294bd03f1a153032130dd17b1b677fbce99d7d0"
+        },
+        {
+          "battleId": "bot-room:r26:b1",
+          "combatId": "bot-room:r26:b1",
+          "ticks": 381,
+          "bytes": 554033,
+          "sha256": "aa18979b213f7a55e5658aa8f4a8ef102c53168f50c11a352f9025bca6dff9d0"
+        },
+        {
+          "battleId": "bot-room:r27:b1",
+          "combatId": "bot-room:r27:b1",
+          "ticks": 378,
+          "bytes": 603458,
+          "sha256": "18d33ea0a20af8f22ce7f1aa8d14c7d6f76ec260a13d288bfbea38e0d4564553"
+        },
+        {
+          "battleId": "bot-room:r27:b0",
+          "combatId": "bot-room:r27:b0",
+          "ticks": 430,
+          "bytes": 631045,
+          "sha256": "cb927cc6524cfa90df49b0ec00578381f66e37c392c10bc894167d2c92351f10"
+        },
+        {
+          "battleId": "bot-room:r29:b1",
+          "combatId": "bot-room:r29:b1",
+          "ticks": 410,
+          "bytes": 629665,
+          "sha256": "8bfb4be4ae7830adf79e870784d49cde65b57b93bdc9186ef4271c6d47cf03c0"
+        },
+        {
+          "battleId": "bot-room:r29:b0",
+          "combatId": "bot-room:r29:b0",
+          "ticks": 458,
+          "bytes": 768523,
+          "sha256": "83a3dc24d552a1e6a311f402964744c784fa729180717419b2bcf73bcdc20f69"
+        },
+        {
+          "battleId": "bot-room:r30:b0",
+          "combatId": "bot-room:r30:b0",
+          "ticks": 454,
+          "bytes": 775881,
+          "sha256": "34777c452c1af95fb88579ec6fda315c16763be5e6260aac79c0e23dcd70ab15"
+        },
+        {
+          "battleId": "bot-room:r31:b3",
+          "combatId": "round-31",
+          "ticks": 127,
+          "bytes": 109797,
+          "sha256": "e8e1835ca6cc4c0d25f66cafab84da34f6a87d9f10ab779d680f738e899e47fa"
+        },
+        {
+          "battleId": "bot-room:r31:b7",
+          "combatId": "round-31",
+          "ticks": 152,
+          "bytes": 124497,
+          "sha256": "56d16ff63d738ca5e02685078b9aec9ca840674e902035b71e79bb88545ed8d2"
+        },
+        {
+          "battleId": "bot-room:r32:b0",
+          "combatId": "bot-room:r32:b0",
+          "ticks": 487,
+          "bytes": 864134,
+          "sha256": "539a007885609327002495842db7ab23df34907c9d19363c768c6388e1e2a0e5"
+        },
+        {
+          "battleId": "bot-room:r33:b0",
+          "combatId": "bot-room:r33:b0",
+          "ticks": 467,
+          "bytes": 855554,
+          "sha256": "1b390330838b808a5e17f791138598effcf53998450b53d27a51d14fd2e8edb2"
+        },
+        {
+          "battleId": "bot-room:r34:b0",
+          "combatId": "bot-room:r34:b0",
+          "ticks": 507,
+          "bytes": 904849,
+          "sha256": "51834ec80c8de5ae6c32fb430790d05d4e1f034d605934b7aeda87e60ba6336d"
+        }
+      ]
+    }
+  ]
+}

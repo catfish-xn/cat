@@ -1,13 +1,19 @@
-import { beforeAll, expect, it } from 'vitest';
+import { beforeAll, afterAll, expect, it } from 'vitest';
 import { createMatch, buyUnit, combineItems, equipItem, startMatchCombat, stepMatch, nextRound, rerollAugment, selectChoice, type MatchState } from '../src/simulation/match';
 import { accepted, fieldBench, finish, resolveM5Choices } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 
-// Bounded 0..7 search found this public route; every item comes from actual PvE
-// rewards. Three pairs become ordinary completed items via combineItems.
+// Seed 5: installB1Offers scripts 2-1 heroic-grab-bag and 3-2 sponging; part of the donor gear comes from that grab-bag chain, not pure PvE orbs alone.
 let route = createMatch(5), acquired: MatchState, opening: MatchState, permanent: MatchState['items'];
+let restoreSpongingOffers: () => void;
 const priorities = ['item-grab-bag-i','big-grab-bag','heroic-grab-bag','iron-assets'];
+beforeAll(() => {
+  // Wrapper scripts only the three-card draws (2-1 heroic-grab-bag chain + 3-2 sponging); real candidate pools unchanged.
+  restoreSpongingOffers = installB1Offers([...priorities, 'sponging']);
+});
+afterAll(() => { restoreSpongingOffers(); });
 function choices(s: MatchState) { return resolveM5Choices(s, priorities, ['spoils-of-war-i','spoils-of-war-ii','blood-brothers','caretakers-chosen']); }
 for (let round = 1; round < 12; round++) beforeAll(() => {
   route = choices(route);

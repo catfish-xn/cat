@@ -36,7 +36,7 @@ describe('batch B public lifecycle',()=>{
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { openingBattleRewards, openingRewards,  openBatchBForge, validateBatchBRewards,  openingBox, claimOpeningReward, openingRewardOffers, openingRewardOrbs as batchBOrbs } from '../src/simulation/opening-batch-b-rewards';
-import { validateAnvils } from '../src/simulation/anvils';
+import { validateAnvils } from '../src/simulation/restore-checks/anvils-check';
 import { g23BattleFacts, commitG23Settlement } from '../src/simulation/g2-3-settlement';
 import { recordNeutralReceipts } from '../src/simulation/neutral-receipts';
 import { resolveStat } from '../src/simulation/m8/stats';

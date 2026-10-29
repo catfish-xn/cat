@@ -283,7 +283,9 @@ describe('B7 overtime (§11.5)', () => {
   }, 60_000);
 
   it('ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP)', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(),{seed:0});
+    // Seed 0 now chooses I'm the Carry Now at 4-2: its unsellable carry-golem breaks the empty-board precondition.
+    // Seed 3 keeps all eight PvP boards empty through public sell commands; the zero-unit assertion below stays exact.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
     room.start();
     const hpByRound: { kind: string | null; hp: number }[] = [];
     let lastCleared = -1;

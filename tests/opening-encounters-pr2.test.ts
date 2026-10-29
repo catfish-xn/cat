@@ -3,7 +3,8 @@ import { createMatch, createCarouselMatch, selectChoice, rerollAugment, startMat
   type MatchState } from '../src/simulation/match';
 import { OPENING_ENCOUNTERS, createOpeningEncounter, applyOpeningEffects, planOpeningRound,
   pendingOpeningForges, openOpeningForge, readOpeningForgeProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
-import { augmentCandidates, deriveAugmentTier, recordedOfferFilter, resolveAugmentTier, validateAugmentOfferHistory } from '../src/simulation/augment-offers';
+import { augmentCandidates, deriveAugmentTier, recordedOfferFilter, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { validateAugmentOfferHistory } from '../src/simulation/restore-checks/augment-offer-history-check';
 import { FINAL_ROUND } from '../src/simulation/round-schedule';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { G24_FORGE_POOLS } from '../src/simulation/content/g2-4-forges';

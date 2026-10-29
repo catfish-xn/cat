@@ -15,6 +15,12 @@ export interface HistorySeat extends HistoryRoster {
 }
 export interface AugmentTakedownActor { readonly unitId: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly eligible: boolean }
 export interface AugmentDeath {
+  /** A summoned champion identity (distinct from ordinaryHero, which existing consumers retain). */
+  readonly championCopy?: true;
+  /** Frozen form at this actual death; absent for champions without a form. */
+  readonly form?: import('./seat-mechanics/types').UnitForm;
+  /** B5-69: actual last-hit observation; absent for ineligible kills. Never a reward receipt. */
+  readonly lootExplosion?: {readonly killerUnitId:string;readonly originalKillerUnitId:string;readonly killerSeatId:string|null;readonly critChanceBps:number};
   readonly combatId: string; readonly eventSeq: number; readonly tick: number; readonly unitId: string;
   readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly ownerSeatId: string | null; readonly originalUnitId: string; readonly ordinaryHero: boolean;
   readonly equipment: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];
@@ -38,6 +44,8 @@ export type AugmentFactData =
   | AugmentItemTransform
   | { readonly kind: 'inventory-transform-entry'; readonly choiceId: string; readonly itemIds: readonly string[] }
   | { readonly kind: 'settled-combat'; readonly settlementId: string; readonly roundKind: 'pve'|'pvp' }
+  | { readonly kind:'anomaly-copy-kills'; readonly battleId:string; readonly itemId:string; readonly unitId:string; readonly kills:readonly {readonly eventSeq:number;readonly victimId:string}[] }
+  | { readonly kind: 'orb-opened'; readonly choiceId: string; readonly orbId: string; readonly tier: 'prismatic' }
   | { readonly kind: 'acquire'; readonly choiceId: string; readonly definitionId: string; readonly goldBefore: number; readonly hpBefore: number; readonly roster: HistoryRoster; readonly previousBattle: PreviousAugmentBattle; readonly preparationElapsedMs: number }
   | { readonly kind: 'trait-activation'; readonly choiceId: string; readonly roster: HistoryRoster }
   | { readonly kind: 'round-entry'; readonly roster: HistoryRoster }

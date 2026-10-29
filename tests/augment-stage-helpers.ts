@@ -7,6 +7,7 @@ import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices }
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { needsCrownHistory } from '../src/simulation/crown-history';
+import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 
 /** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
 export const H12_MAX_CAP_SEED = 16;
@@ -35,13 +36,18 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * Re-searched (first seed from 0 whose route reaches the node and offers the card) after the v23 integration
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
+ * v25 drift-13: fielded route seed 576 retained; batch3 scripts the 4-2 draw and expects XP outcome under that route.
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
- * v25 integration B refreshes the exercised B5A/Raining Gold+/Final Polish routes for 250 cards;
- * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
+ * v25 integration B refreshes the exercised B5A routes for 250 cards; other entries retain their earlier fixture scope.
  * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
  * ascending seeds 0..299, then public slot rerolls 0/1/2, without editing state.
+ * v25 drift-3 (batch-5 pool expansion): coronation, belt-overflow, calculated-enhancement,
+ * sword-overflow, trifecta-ii, wand-overflow, geniuses, pair-of-fours re-searched on the same 0..299 rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
+/** P2 Trifecta→Nami review: 0..100 内首份礼物只有 loris 和 kogmaw，没有 Nami；256 的首礼是 Nami，但 3-2 候选里没有 trifecta-ii；257 是第一个两条都满足的种子。 */
+export const TRIFECTA_NAMI_REVIEW_SEED = 257 as const;
+
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
   'all-that-shimmers-plus':{node:'3-2',seed:3},
   'roll-the-dice':{node:'3-2',seed:7,rerolls:[0]},
@@ -50,9 +56,10 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'tiniest-titan-plus':{node:'3-2',seed:5},
   // v25 integrated catalog: verified public routes; rerolls are existing per-slot commands.
   'glorious-evolution':{node:'4-2',seed:86,fielded:true},
-  'moonlight':{node:'4-2',seed:1,fielded:true},
+  // T5: re-searched public fielded routes in 0..100; seed 63 offers Moonlight after rerolling slot 0.
+  'moonlight':{node:'4-2',seed:63,fielded:true,rerolls:[0]},
   'greater-moonlight':{node:'4-2',seed:16,fielded:true,rerolls:[0,1]},
-  'forward-thinking':{node:'3-2',seed:27,fielded:true},
+  'forward-thinking':{node:'3-2',seed:15,fielded:true,rerollSlots:[0,1,2]},
   'mirrored-monetization':{node:'4-2',seed:37,fielded:true,rerolls:[0]},
   'dhampyr':{node:'3-2',seed:14},
   'trait-tracker':{node:'3-2',seed:20,rerolls:[0,1]},
@@ -62,23 +69,20 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
-  'belt-overflow':{node:'3-2',seed:0},
-  'betrayal':{node:'3-2',seed:27,fielded:true,rerolls:[0,1]},
+  'belt-overflow':{node:'3-2',seed:29},
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
-  'black-rose-crest':{node:'3-2',seed:147,fielded:true},
-  'black-rose-crown':{node:'3-2',seed:28,fielded:true},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
-  'blinding-speed':{node:'3-2',seed:0,rerolls:[0,1]},
+  'blinding-speed':{node:'3-2',seed:47},
   'bronze-for-life-i':{node:'3-2',seed:30},
   'bronze-for-life-ii':{node:'3-2',seed:16},
   'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},
   'bulky-buddies-iii':{node:'3-2',seed:21},
-  'calculated-enhancement':{node:'3-2',seed:0},
+  'calculated-enhancement':{node:'3-2',seed:5},
   "call-to-chaos":{node:'4-2',seed:576,fielded:true},
   'climb-the-ladder-i':{node:'3-2',seed:76},
   'climb-the-ladder-ii':{node:'3-2',seed:15,rerolls:[0,1]},
-  'coronation':{node:'3-2',seed:0},
+  'coronation':{node:'3-2',seed:5,rerolls:2},
   'corrosion':{node:'3-2',seed:25},
   'dark-alley-dealings':{node:'3-2',seed:13,rerolls:[0]},
   'defense-call':{node:'3-2',seed:3,rerolls:[0,1]},
@@ -86,9 +90,8 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'duo-queue':{node:'4-2',seed:24,fielded:true,rerolls:[0,1,2]},
   'epoch-plus':{node:'3-2',seed:11},
   'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
-  'final-polish':{node:'4-2',seed:54,fielded:true,rerolls:[0,1]},
   'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
-  'geniuses':{node:'4-2',seed:12,fielded:true,rerolls:[0,1,2]},
+  'geniuses':{node:'4-2',seed:16,fielded:true,rerolls:3},
   'golemify':{node:'3-2',seed:18,rerolls:[0]},
   'item-collector-i':{node:'3-2',seed:40},
   'item-collector-ii':{node:'3-2',seed:4},
@@ -103,27 +106,25 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
   'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
   'one-two-five':{node:'4-2',seed:59,fielded:true},
-  'pair-of-fours':{node:'4-2',seed:10,fielded:true},
+  'pair-of-fours':{node:'4-2',seed:63,fielded:true},
   'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
   'piercing-lotus-i':{node:'3-2',seed:15},
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
   'placebo-plus':{node:'3-2',seed:56,rerolls:[0,1,2]},
   'radiant-refactor':{node:'3-2',seed:21,rerolls:[0,1,2]},
-  'raining-gold-plus':{node:'3-2',seed:51},
   'reunion':{node:'4-2',seed:21,fielded:true,rerolls:[0,1,2]},
-  'rocket-collection-plus':{node:'3-2',seed:300,fielded:true},
   'rolling-for-days-i':{node:'3-2',seed:17,rerolls:[0,1]},
   'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
   'sisters':{node:'4-2',seed:3,fielded:true},
   'support-mining-plus':{node:'3-2',seed:1},
-  'sword-overflow':{node:'3-2',seed:16},
+  'sword-overflow':{node:'3-2',seed:16,rerolls:3},
   'teaming-up-i':{node:'3-2',seed:6,rerolls:[0,1,2]},
   'teaming-up-ii':{node:'4-2',seed:60,fielded:true,rerolls:[0,1,2]},
   'the-golden-egg':{node:'4-2',seed:27,fielded:true,rerolls:[0]},
   'trifecta-i':{node:'3-2',seed:39},
-  'trifecta-ii':{node:'3-2',seed:7,rerolls:[0,1]},
+  'trifecta-ii':{node:'3-2',seed:57,rerolls:3},
   'unlikely-duo':{node:'4-2',seed:1,fielded:true,rerolls:[0]},
-  'wand-overflow':{node:'3-2',seed:7},
+  'wand-overflow':{node:'3-2',seed:0},
   'wealthy-rehab-i':{node:'3-2',seed:6},
   'wealthy-rehab-ii':{node:'3-2',seed:18,rerolls:[0,1,2]},
 };
@@ -139,10 +140,14 @@ export function fieldedLegCases(id: string): (readonly [number, string])[] {
   if (!at?.fielded) throw new Error(`${id} has no fielded stage route`);
   return FIELDED_LEGS.slice(0, FIELDED_LEGS.indexOf(at.node) + 1).map(leg => [at.seed, leg] as const);
 }
-const fieldedRoutes = new Map<number, { entries: Map<string, MatchState>; last: MatchState }>();
+const fieldedRoutes = new Map<string, { entries: Map<string, MatchState>; last: MatchState }>();
+/** Test-only: rebuild fielded routes after scripted-offer installs change generateChoices. */
+export function resetFieldedRouteCache(): void { fieldedRoutes.clear(); }
 export function fieldedRoute(seed: number, roundId: string): MatchState {
-  let route = fieldedRoutes.get(seed);
-  if (!route) fieldedRoutes.set(seed, route = { entries: new Map(), last: createMatch(seed) });
+  // The draw policy is an input even when the explicit seed/node are unchanged.
+  const key = JSON.stringify([seed, b1OfferCacheKey()]);
+  let route = fieldedRoutes.get(key);
+  if (!route) fieldedRoutes.set(key, route = { entries: new Map(), last: createMatch(seed) });
   route.entries.set(route.last.roundDefinitionId, route.last);
   let state = route.entries.get(roundId) ?? route.last;
   while (state.roundDefinitionId !== roundId) {

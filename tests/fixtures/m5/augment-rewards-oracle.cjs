@@ -9,10 +9,12 @@ const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
 const s3b=require('./augment-batch5-s3b-oracle.cjs');
 const {validateH6Transition}=require('./augment-h6-oracle.cjs');
+const {portableGrant,validateAngerChoice,validateAngerTransitions}=require('./augment-r2-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
 const h4=require('./h4-rewards-oracle.cjs');
+const {expectedRolls,pipelineBonuses,validatePipelineClaim}=require('./augment-batch5-g5-oracle.cjs');
 const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C',id,n],R=(cost,n=1,star=1,distinct=false)=>['R',cost,n,star,distinct],Q=(pool,n=1,identical=false)=>['Q',pool,n,identical];
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
@@ -27,12 +29,21 @@ const initial={
  'pandoras-items-iii':[Q('radiant')],
  'artifactory':[U('TFT_ArmoryKeyOrnn'),C('magnetic-remover',2)],
  'salvage-bin-plus':[Q('completed')],
+ 'mad-chemist':[U('singed')],
+ 'recombobulator':[C('magnetic-remover',2)],
+ 'rebel-resurgence':[U('akali'),U('irelia')],
+ 'voidcaller':[U('rell'),U('morgana')],'void-swarm':[I('TFT5_Item_ZzRotPortalRadiant')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
+ 'lucky-gloves':[I('gloves',2)],
+ 'lucky-gloves-plus':[I('gloves',3)],
+ 'aerial-warfare':[U('scar'),U('zeri')],
+ 'natural-selection':[['F',['zyra','urgot','nunu','drmundo','twitch','warwick'],3]],
  'cooking-pot':[I('frying-pan')],
  'quality-over-quantity':[C('magnetic-remover',2)], 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  'hard-commit':[Q('emblem')],
  'glorious-evolution':[I('adaptive-helm')],
+ 'loot-explosion':[U('camille'),U('powder')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -110,6 +121,10 @@ function b5Entry(s,round){
 function rewardPlan(s,env){
  const gifts=[],batch2=[],batch3=[],forms=[],levelsOut=[],gold=[],battles=s.seatMechanics?.hidden?.progress?.economyReceipts.filter(r=>r.kind==='battle').map(r=>r.facts)??[];
  const addGold=(source,a,parts,amount,round)=>{if(amount)gold.push({receiptId:JSON.stringify([source,a.choiceId,...parts]),source,kind:'gold',amount,round});};
+ for(const r of [...expectedRolls(s),...pipelineBonuses(s)]){
+  levelsOut.push(...expand(s,r.owner,r.gifts,env));
+  if(r.gold)gold.push({receiptId:r.receiptId,source:'augment-pool-batch5-g5',kind:'gold',amount:r.gold,round:r.round});
+ }
  const nonSupply=r=>{while(env.ROUNDS[r-1]?.kind==='supply')r++;return r;};
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
@@ -154,6 +169,12 @@ function rewardPlan(s,env){
    }
   }
   if(a.definitionId==='salvage-bin-plus'){const due=s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp')[3];if(due)gifts.push(...expand(s,owner(a,['h13-four-pvp'],due.round),[Q('component')],env));}
+  if(a.definitionId==='lucky-gloves'&&s.round>=a.acquiredRound+5)levelsOut.push(...expand(s,owner(a,['lucky-gloves-delayed'],a.acquiredRound+5),[I('gloves')],env));
+  if(a.definitionId==='void-swarm'){
+   const completed=s.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound);
+   completed.forEach((r,i)=>{assert.equal(s.augmentHistory.facts.filter(f=>f.kind==='pvp-roster'&&f.round===r.round).length,1,'independent Void Swarm combat boundary');
+    if((i+1)%11===0)levelsOut.push(...expand(s,{...a,choiceId:JSON.stringify([a.choiceId,'b5-void-swarm',(i+1)/11]),acquiredRound:r.round},[I('TFT5_Item_ZzRotPortalRadiant')],env));});
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -229,9 +250,77 @@ function rewardPlan(s,env){
    if(levels.gold&&s.level>=levels.gold[0])addGold('augment-pool-batch4',a,['level',levels.gold[0]],levels.gold[1],levelRound(levels.gold[0]));
   }
  }
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut],gold:[...gold,...h4.goldPlan(s)]};
+ const explosion=lootExplosionPlan(s);
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
 }
-module.exports={rewardPlan,expand,salt,pick,word,outcome,initial};
+// P-B5-69 (2026-10-27): independent integer weights and reward mapping, not production receipts.
+function lootExplosionPlan(s) {
+ const gifts=[],gold=[],a=s.augments.find(a=>a.definitionId==='loot-explosion');if(!a)return {gifts,gold};
+ for(const r of s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind!=='supply')) {
+  const rows=s.augmentHistory?.facts.filter(f=>f.kind==='deaths'&&f.round===r.round)??[];
+  assert(rows.some(f=>f.completeThroughTick===r.combatTicks),'independent loot explosion complete deaths');
+  const stage=Number(r.roundId.split('-')[0]),weights=stage===2?[80,20]:stage===3?[30,60,5,5]:stage===4?[30,35,25,5,5]:[15,30,35,13,5,2];
+  const seen=new Set();
+  for(const d of rows.flatMap(f=>f.deaths).sort((a,b)=>a.eventSeq-b.eventSeq)) {
+   assert(!seen.has(d.eventSeq),'independent loot explosion unique death');seen.add(d.eventSeq);
+   const k=d.lootExplosion,seat=s.multiplayer?.seatId??'solo';
+   if(!k||!d.ordinaryHero||k.killerSeatId!==seat||d.ownerSeatId===seat)continue;
+   assert(Number.isInteger(k.critChanceBps)&&k.critChanceBps>=0&&k.critChanceBps<=10000);
+   const ns=['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.eventSeq];
+   let rng=salt(s.seed,ns);const draw=()=>rng=word(rng);
+   if(BigInt(draw())*10000n>=BigInt(Math.min(10000,1100+k.critChanceBps))*MOD)continue;
+   let ticket=pick(draw(),weights.reduce((a,b)=>a+b,0)),tier=1;
+   for(const w of weights){if(ticket<w)break;ticket-=w;tier++;}
+   if(BigInt(draw())*10000n<BigInt(k.critChanceBps)*MOD)tier=Math.min(6,tier+1);
+   const receiptId=i=>JSON.stringify([...ns,i]);
+   if(tier<=3)gold.push({receiptId:receiptId(0),source:ns[0],kind:'gold',amount:tier,round:r.round});
+   else {
+    const pool=data.pools[tier===6?'completed':'component'];
+    for(let i=0;i<(tier===5?2:1);i++)gifts.push({receiptId:receiptId(i),source:ns[0],kind:'item',definitionId:pool[pick(draw(),pool.length)],starLevel:1,acquiredRound:r.round});
+   }
+  }
+ }
+ return {gifts,gold};
+}
+function validateLootExplosionReceipts(s) {
+ const plan=lootExplosionPlan(s),expected=[...plan.gold,...plan.gifts].map(r=>({receiptId:r.receiptId,source:r.source,round:r.round??r.acquiredRound,kind:r.kind,...(r.kind==='gold'?{amount:r.amount}:{definitionId:r.definitionId})}));
+ const actual=(s.seatMechanics?.receipts??[]).filter(r=>r.source==='augment-pool-batch5-g7'||r.receiptId.startsWith('["augment-pool-batch5-g7",')).map(r=>({receiptId:r.receiptId,source:r.source,round:r.round,kind:r.kind,...(r.kind==='gold'?{amount:r.amount}:{definitionId:r.definitionId})}));
+ const sort=rs=>rs.sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
+ assert.deepEqual(sort(actual),sort(expected),'independent Loot Explosion receipts');
+}
+module.exports={rewardPlan,expand,salt,pick,word,outcome,initial,lootExplosionPlan,validateLootExplosionReceipts};
+// P-B5-74, independent board arithmetic and literal ratios. Opening owner stats are
+// observed combat facts; no production copy declarations or reward receipts are read.
+function r3Opening(input,opening){
+ const a=input.augments.find(a=>a.definitionId==='cloning-facility');if(!a)return [];
+ const zone=input.preparation.board.deploymentZones.player,origin={col:3,row:zone.lastRow-1};
+ const board=input.preparation.units.filter(u=>u.location.kind==='board');
+ const owner=board.find(u=>u.team==='player'&&u.location.cell.col===3&&u.location.cell.row===origin.row);
+ if(!owner)return [];
+ const occupied=new Set(board.map(u=>JSON.stringify(u.location.cell))),free=[];
+ const distance=c=>{const q=c.col-Math.floor(c.row/2)-origin.col+Math.floor(origin.row/2),r=c.row-origin.row;return (Math.abs(q)+Math.abs(r)+Math.abs(q+r))/2;};
+ for(let row=zone.firstRow;row<=zone.lastRow;row++)for(let col=0;col<input.preparation.board.columns;col++){
+  const cell={col,row};if(!occupied.has(JSON.stringify(cell)))free.push(cell);
+ }
+ free.sort((a,b)=>distance(a)-distance(b)||a.row-b.row||a.col-b.col);if(!free.length)return [];
+ const stats=opening.find(u=>u.id===owner.id);assert(stats,'independent original opening unit');
+ return [{id:JSON.stringify(['b5-r3','cloning-facility',a.choiceId,owner.id]),ownerId:owner.id,definitionId:owner.definitionId,
+  starLevel:owner.starLevel,cell:free[0],maxHp:Number(BigInt(stats.maxHp)*7n/10n),maxMana:Number((BigInt(stats.maxMana)*6n+4n)/5n)}];
+}
+module.exports.r3Opening=r3Opening;
+// P-B5-78: choose by physical column distance (left wins ties), preserve each
+// original position's observed opening HP; center definition/star are sampled once.
+function hallOpening(input,original){
+ if(!input.augments.some(a=>a.definitionId==='hall-of-mirrors'))return [];
+ const row=input.preparation.board.deploymentZones.player.firstRow;
+ const front=input.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.location.cell.row===row)
+  .sort((a,b)=>Math.abs(a.location.cell.col-3)-Math.abs(b.location.cell.col-3)||a.location.cell.col-b.location.cell.col);
+ if(!front.length)return [];
+ const center=front[0];return front.map(u=>({id:u.id,definitionId:center.definitionId,starLevel:center.starLevel,
+  cell:u.location.cell,maxHp:original.find(x=>x.id===u.id).maxHp}));
+}
+module.exports.hallOpening=hallOpening;
+module.exports.hallDamage=n=>Number(BigInt(n)*6000n/10000n);
 const data=require('../../augment-reward-pools-oracle-data.cjs');
 function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...(s.seatMechanics?.seat.academy?.sponsored??[])].sort()},
  spoils(s,a,tier){const tables=data.spoils[tier],rng=salt(s.seed,['augment-pool-batch3','spoils',s.multiplayer?.seatId??'solo',a.choiceId,a.definitionId]);return tables[pick(word(rng),tables.length)];},
@@ -240,8 +329,8 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
+const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-batch5-r1','augment-pool-batch5-r2','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+ 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch5-g5','augment-pool-batch5-g6','augment-pool-batch5-g7',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -256,7 +345,7 @@ function validateBattleCounters(before,after,f,base){
  const dummies=team.filter(u=>['training-dummy','forming-dummy','tower-dummy'].includes(u.definitionId));
  const deaths=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq);
  if(dummies.length)assert.deepEqual(f.batch3Dummy,{deaths:dummies.filter(u=>!u.alive).map(u=>u.id).sort(),first:deaths.find(d=>team.some(u=>u.id===d.unitId))?.unitId??null,gold:dummies.reduce((n,u)=>n+(u.batch2?.dummyGold??0),0)},'independent dummy counters');
- const survivors=team.filter(u=>u.alive&&!u.itemSummon&&!u.anomalySummon&&!['trainer-golem','g23-sion','g23-forge','g23-barrel','v20-silco-minion'].includes(u.definitionId));
+ const survivors=team.filter(u=>u.alive&&!u.itemSummon&&!u.anomalySummon&&!['b5-voidling','trainer-golem','g23-sion','g23-forge','g23-barrel','v20-silco-minion'].includes(u.definitionId));
  const damage=f.roundKind==='pvp'&&combat.result==='playerWin'?[2,5,8,10,12][base.ROUNDS[before.round-1].stage-2]+survivors.length:0;
  assert.equal(f.batch3DamageDealt??0,damage,'independent damage counter');
  const opening=new Set(before.combatInputBasis?.inputs.preparation.units.filter(u=>u.location.kind==='board').map(u=>u.id)??before.preparation.units.filter(u=>u.location.kind==='board').map(u=>u.id));
@@ -285,11 +374,16 @@ function validateBattleCounters(before,after,f,base){
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
 function validateRewardsCore(before,after,command,events,base){
+ validateTombRaiderTransition(before,after,command,events,base);
+ validatePipelineClaim(before,after,command,events);
  assert.equal(after.seed,before.seed,'immutable reward seed');
  assert.equal(after.augmentTierSeed,before.augmentTierSeed,'immutable opening seed');
  assert.equal(after.multiplayer?.seatId,before.multiplayer?.seatId,'immutable reward seat');
+ validateAngerChoice(before,after,command);
  const prior=before.seatMechanics?.receipts??[],appended=(after.seatMechanics?.receipts??[]).slice(prior.length);
  for(const r of appended)assert(admitted.has(r.source),'unknown mechanic reward source '+r.source);
+ const portable=portableGrant(before,command),portableActual=appended.filter(r=>r.source==='augment-pool-batch5-r2');
+ assert.deepEqual(portableActual,portable?[portable]:[],'independent immediate Portable Anomaly grant');
  if(command?.type==='select'){
   const c=before.pendingChoice;assert.equal(before.phase,'choice');assert(c,'selection needs a pending choice');
   assert.equal(command.choiceId,c.choiceId,'selection identity');assert.equal(command.generation,c.generation,'selection generation');assert.equal(c.step,'offer');
@@ -298,11 +392,31 @@ function validateRewardsCore(before,after,command,events,base){
  }
  const select=command?.type==='select'&&before.pendingChoice?.kind==='augment';
  if(select){const c=before.pendingChoice;assert.equal(before.phase,'choice');assert.equal(command.choiceId,c.choiceId);assert.equal(command.generation,c.generation);assert(c.offers.includes(command.definitionId),'acquired augment was actually offered');assert(events.some(e=>e.type==='choiceSelected'&&e.choiceId===c.choiceId&&e.definitionId===command.definitionId),'augment reward needs selection event');}
+ // B5-08/09: derive acquisition effect from the requested, actually offered card,
+ // then compare both cash and the unique schedule receipt. Never use receipt.gold as the answer.
+ if(select&&['starry-night','starry-night-plus'].includes(command.definitionId)){
+  const amount=command.definitionId==='starry-night'?6:8,c=before.pendingChoice;
+  assert.equal(after.gold,before.gold+amount,'independent Starry Night acquisition gold');
+  assert.deepEqual(after.scheduleReceipts,[...before.scheduleReceipts,{eventId:c.eventId,round:before.round,kind:'augment',itemIds:[],gold:amount,unitId:null,definitionId:command.definitionId}],'independent Starry Night acquisition receipt');
+ }
  const augments=select?[...before.augments,{choiceId:before.pendingChoice.choiceId,definitionId:command.definitionId,acquiredRound:before.round}]:before.augments;
  assert.deepEqual(after.augments,augments,'independent owned augment transition');
  h4.validateTransition(before,after,command,events,base);
  validateH6Transition(before,after,command,base);
- const terminal=after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
+ // Online PvP keeps the seat in preparation while its frozen roster fights. The
+ // resolver commits the round directly; it does not emit a local combatFinished.
+ const lockedPvp=before.phase==='preparation'&&before.multiplayer?.combatRosterLocked===true;
+ const pvpSettlement=lockedPvp&&after.multiplayer?.combatRosterLocked!==true;
+ if(pvpSettlement){
+  assert.equal(after.round,before.round,'locked PvP settlement round');
+  assert(['settlement','choice','gameOver'].includes(after.phase),'locked PvP settlement phase');
+  assert.equal(base.ROUNDS[before.round-1]?.kind,'pvp','locked roster settlement must be PvP');
+  assert.deepEqual(after.roundResults.slice(0,before.roundResults.length),before.roundResults,'settlement history append-only');
+  assert.equal(after.roundResults.length,before.roundResults.length+1,'one locked PvP settlement');
+  assert.equal(after.roundResults.at(-1).round,before.round,'locked PvP settlement identity');
+  assert.equal(events.filter(e=>e.type==='roundSettled'&&e.round===before.round).length,1,'locked PvP needs one settlement event');
+ }
+ const terminal=pvpSettlement||after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
  if(command==null&&!terminal)assert.equal(appended.length,0,'no mechanic reward without command/combat settlement');
  const entry=command?.type==='continue';
  assert.equal(after.round,before.round+(entry?1:0),'independent round entry');
@@ -316,6 +430,11 @@ function validateRewardsCore(before,after,command,events,base){
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
  const progression=base.xp(before.level,before.xp,xpGain);
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
+ if(pvpSettlement){
+  const r=after.roundResults.at(-1);
+  assert.deepEqual([r.levelBefore,r.xpBefore,r.xpRequested,r.xpAwarded,r.levelAfter,r.xpAfter],
+   [before.level,before.xp,xpGain,progression.xpApplied,progression.level,progression.xp],'independent locked PvP settlement XP');
+ }
  const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};
  const tracked=['shopping-spree','upward-mobility','risky-moves',...Object.keys(b4)];
  const levels=select&&tracked.includes(command.definitionId)?{...priorLevels,[before.pendingChoice.choiceId]:progression.level}:priorLevels;
@@ -341,7 +460,10 @@ function validateRewardsCore(before,after,command,events,base){
  if(oldFacts!==newFacts)assert.deepEqual(newFacts.slice(0,oldFacts.length),oldFacts,'reward battle counters append-only');
  const battleSuffix=newFacts.slice(oldFacts.length).filter(r=>r.kind==='battle');
  assert.equal(battleSuffix.length,terminal?1:0,'reward counters need an actual completed combat');
- if(terminal){assert(events.some(e=>e.type==='combatFinished'),'reward counter needs terminal combat event');assert.equal(battleSuffix[0].facts.round,before.round);validateBattleCounters(before,after,battleSuffix[0].facts,base);}
+ if(terminal){
+  if(!pvpSettlement)assert(events.some(e=>e.type==='combatFinished'),'reward counter needs terminal combat event');
+  assert.equal(battleSuffix[0].facts.round,before.round);validateBattleCounters(before,after,battleSuffix[0].facts,base);
+ }
  // Reward receipts never select the owner, threshold, random outcome, gift identity or amount.
  // Prior receipts are only the exactly-once set and pre-existing dummy identities.
  const choiceReceipts=appended.filter(r=>r.kind==='choice');
@@ -430,19 +552,21 @@ function validateRewardsCore(before,after,command,events,base){
    if(deaths.length&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-batch5-h8-monetization',kind:'gold',amount:deaths.length*2,round:r.round});
   }
  }
- const actualGold=appended.filter(r=>['augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
+ // Loot Explosion shares one source across gold and equipment; gold-only sources
+ // still enter their validator even if a counterexample forges their kind.
+ const actualGold=appended.filter(r=>r.source==='augment-pool-batch5-g7'?r.kind==='gold':['augment-pool-batch5-g5','augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
  for(const r of actualGold)assert.equal(r.roundId,base.ROUNDS[r.round-1]?.roundId);
- const locked=Boolean(before.multiplayer&&(before.multiplayer.combatRosterLocked||before.phase==='combat'&&!terminal));
+ const locked=Boolean(before.multiplayer&&!terminal&&(before.multiplayer.combatRosterLocked||before.phase==='combat'));
  if(locked||before.phase==='combat'&&!terminal){
   assert.equal(appended.filter(r=>['augment-pool-batch1','augment-pool-batch3-dummy'].includes(r.source)).length,0,'locked roster defers unit and item rewards');
   return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...shopGifts]),price};
  }
 
  const pending=plan.gifts.filter(p=>!claimed.has(p.receiptId));
- const actual=appended.filter(r=>r.source==='augment-pool-batch1'),expected=new Map(pending.map(g=>[g.receiptId,g]));
+ const actual=appended.filter(r=>r.source==='augment-pool-batch1'||r.source==='augment-pool-batch5-g7'&&r.kind!=='gold'),expected=new Map(pending.map(g=>[g.receiptId,g]));
  for(const r of actual){const g=expected.get(r.receiptId);assert(g,'independent due augment gift identity '+r.receiptId);expected.delete(r.receiptId);
   assert.equal(r.kind,g.kind);assert.equal(r.definitionId,g.definitionId,'independent gift draw');assert.equal(r.starLevel??1,g.starLevel,'independent gift stars');
   assert(r.round>=g.acquiredRound&&r.round<=ctx.round,'independent gift timing');assert.equal(r.round,ctx.round,'independent gift grant round');assert.equal(r.roundId,base.ROUNDS[r.round-1]?.roundId);
@@ -505,21 +629,82 @@ function validateRewardsCore(before,after,command,events,base){
 }
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
+ require('./augment-pool-batch5-g6-oracle.cjs').validateTransition(before,after,command,events);
  const result=validateRewardsCore(before,after,command,events,base);
  s3b.validatePandora(before,after,command);
  for(const [id,gift] of s3b.validateSalvage(before,after,command,events))result.gifts.set(id,gift);
+ validateAngerTransitions(before,after,command,result,base.lootReceipts);
+ require('./lucky-gloves-oracle.cjs').validateTransition(before,after,command);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
  const add=(definitionId,id)=>{const expected=`consumable-${serial++}`;assert.equal(id,expected,'independent consumable grant ID');inventory.push({consumableId:expected,definitionId});};
- for(const r of base.lootReceipts??[]){
-  const ids=r.grantedConsumableIds??[];assert.equal(ids.length,r.payload.kind==='consumable'?1:0,'independent loot consumable count');
-  if(r.payload.kind==='consumable')add(r.payload.definitionId,ids[0]);
+ const loot=base.lootReceipts??[],mechanics=(after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0).filter(r=>r.kind==='consumable');
+ const settlement=before.phase==='combat'&&after.phase!=='combat'&&before.round===after.round
+  &&!before.roundResults.some(r=>r.round===before.round)&&after.roundResults.some(r=>r.round===before.round)
+  &&events.some(e=>e.type==='roundSettled'&&e.round===before.round);
+ // 14.23 fixed PvE remover: exactly one for a survivor, independently of box contents.
+ if(settlement&&base.ROUNDS[before.round-1]?.kind==='pve'){
+  assert(['playerWin','enemyWin','draw'].includes(after.combat?.result),'fixed PvE remover needs finished combat');
+  const survived=before.playerHp>(after.combat.result==='playerWin'?0:3); // Independent PvE loss/draw damage is 3 HP.
+  assert.equal(after.playerHp>0,survived,'independent PvE surviving status');
+  const remover=mechanics.filter(r=>r.source==='pve-remover'||r.receiptId.startsWith('pve-remover:'));
+  assert.equal(remover.length,survived?1:0,'independent fixed PvE remover count');
+  for(const r of remover){
+   assert.equal(r.source,'pve-remover');assert.equal(r.receiptId,`pve-remover:${before.roundDefinitionId}`);
+   assert.equal(r.round,before.round);assert.equal(r.roundId,before.roundDefinitionId);assert.equal(r.definitionId,'magnetic-remover','independent fixed PvE remover definition');
+   assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'fixed PvE remover needs its grant event');
+  }
  }
- for(const r of (after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0))if(r.kind==='consumable'){
+ const addLoot=r=>{
+  if(r.resolution==='forfeited'&&queue.includes(orbOf(r))){
+   assert(after.playerHp===0||after.phase==='gameOver','queued forfeit requires a terminal seat');
+   assert(after.m8.loot.direct.some(d=>d.dropId===r.dropId&&d.status==='forfeited'),'queued forfeit needs forfeited loot state');
+   assert(events.some(e=>e.type==='lootForfeited'&&e.dropId===r.dropId),'queued forfeit needs its event');
+  }
+  const ids=r.grantedConsumableIds??[],granted=r.payload.kind==='consumable'&&r.resolution!=='forfeited';
+  assert.equal(ids.length,granted?1:0,'independent loot consumable count');
+  if(granted)add(r.payload.definitionId,ids[0]);
+ };
+ const addMechanic=r=>{
   const g=result.gifts.get(r.receiptId);
   if(r.source==='augment-pool-batch1')assert(g&&g.kind==='consumable','independent consumable reward plan');
   add(g?.definitionId??r.definitionId,r.consumableId);
+ };
+ // Auto-loot occurs before PvE hooks; a pre-existing combat queue drains after
+ // roundSettled, in FIFO order, with mechanic grants between individual orbs.
+ const queue=(settlement||before.multiplayer?.combatRosterLocked===true&&after.multiplayer?.combatRosterLocked!==true)
+  ?before.m8?.loot.queuedOrbClaims??[]:[];
+ const orbOf=r=>{try{return JSON.parse(r.dropId)[0];}catch{return null;}};
+ const queuedLoot=loot.filter(r=>r.resolution!=='forfeited'&&queue.includes(orbOf(r)));
+ if(queuedLoot.length){
+  assert.equal(new Set(queue).size,queue.length,'independent consumable queue uniqueness');
+  const boundary=events.findIndex(e=>e.type==='roundSettled'&&e.round===before.round);
+  assert(boundary>=0,'queued consumables need settlement');
+  const pre=events.slice(0,boundary),post=events.slice(boundary+1);
+  const isGrant=(e,r)=>e.type==='mechanicGranted'&&e.receipt.receiptId===r.receiptId;
+  const late=mechanics.filter(r=>!pre.some(e=>isGrant(e,r))&&post.some(e=>isGrant(e,r)));
+  for(const r of mechanics.filter(r=>r.source==='pve-remover'))assert(pre.some(e=>isGrant(e,r))&&!late.includes(r),'fixed PvE remover precedes queued loot');
+  for(const r of loot.filter(r=>r.resolution==='forfeited'||!queue.includes(orbOf(r))))addLoot(r);
+  for(const r of mechanics.filter(r=>!late.includes(r)))addMechanic(r);
+  let lastQueue=-1,lastEntry=-1;const seenLoot=new Set(),seenMechanics=new Set();
+  for(const e of post){
+   if(e.type==='lootGranted'){
+    const r=queuedLoot.find(r=>r.dropId===e.receipt.dropId);if(!r)continue;
+    assert.deepEqual(e.receipt,r,'queued loot grant event matches receipt');assert(!seenLoot.has(r.dropId),'queued loot grant event unique');seenLoot.add(r.dropId);
+    const [id,entry]=JSON.parse(r.dropId),index=queue.indexOf(id);
+    assert(Number.isInteger(entry)&&index>=lastQueue&&(index!==lastQueue||entry>lastEntry),'queued loot follows FIFO and entry order');
+    lastEntry=entry;lastQueue=index;addLoot(r);
+   }else if(e.type==='mechanicGranted'){
+    const r=late.find(r=>r.receiptId===e.receipt.receiptId);if(!r||seenMechanics.has(r.receiptId))continue;
+    assert.deepEqual(e.receipt,r,'queued mechanic grant event matches receipt');seenMechanics.add(r.receiptId);addMechanic(r);
+   }
+  }
+  assert.equal(seenLoot.size,queuedLoot.length,'all queued loot needs grant events');
+  assert.equal(seenMechanics.size,late.length,'all queued mechanics need grant events');
+ }else{
+  for(const r of loot)addLoot(r);
+  for(const r of mechanics)addMechanic(r);
  }
  let used=null;
  if(command?.type==='useConsumable'){
@@ -536,3 +721,162 @@ function validateRewards(before,after,command,events,base){
  return result;
 }
 module.exports.validateRewards=validateRewards;
+
+// P-B5-39/40, 2026-10-27. Read raw history observations and an independent completed-item transcription.
+// Production reward receipts never choose the opportunities, cap, candidates or awarded definition.
+function tombRaiderPlan(state,base){
+ if(!state.multiplayer)return [];
+ const result=[],completed=new Set(data.pools.completed),facts=state.augmentHistory?.facts??[];
+ for(const owner of state.augments.filter(a=>['tomb-raider-1','tomb-raider-2'].includes(a.definitionId))){
+  const acquired=facts.find(f=>f.kind==='acquire'&&f.choiceId===owner.choiceId);
+  assert(acquired,'independent tomb acquisition');
+  const tables=facts.filter(f=>f.kind==='table'&&f.sequence>acquired.sequence);
+  const initial=tables.find(f=>f.stage==='acquire');assert(initial,'independent tomb acquisition table');
+  const live=new Set(initial.seats.filter(s=>s.alive&&s.seatId!==initial.seatId).map(s=>s.seatId));
+  let eliminated=0;
+  for(const table of tables.filter(t=>t.sequence>initial.sequence&&t.stage!=='acquire')){
+   const self=table.seats.find(s=>s.seatId===table.seatId);assert(self,'independent tomb self');
+   const dead=table.seats.filter(s=>live.has(s.seatId)&&!s.alive).sort((a,b)=>b.rank-a.rank);
+   for(const seat of dead){
+    live.delete(seat.seatId);if(!self.alive)continue;
+    eliminated++;if(owner.definitionId==='tomb-raider-1'&&eliminated>3)continue;
+    const heroIds=new Set(seat.units.filter(u=>u.team==='player'&&base.COST[u.definitionId]
+      &&['board','bench'].includes(u.location.kind)).map(u=>u.id));
+    const offers=seat.items.filter(i=>i.location.kind==='unit'&&heroIds.has(i.location.unitId)&&completed.has(i.definitionId)).map(i=>i.definitionId);
+    result.push({choiceId:JSON.stringify(['augment-pool-batch5-r1',owner.choiceId,seat.seatId]),seatId:seat.seatId,round:table.round,offers});
+   }
+  }
+ }
+ return result;
+}
+function validateTombRaiderTransition(before,after,command,events,base){
+ const source='augment-pool-batch5-r1',plan=tombRaiderPlan(before,base),prior=before.seatMechanics?.receipts??[];
+ const due=plan.find(p=>p.offers.length&&!prior.some(r=>r.receiptId===p.choiceId));
+ const c=before.pendingChoice,choosing=c?.payload?.source===source&&['select','timeoutChoice'].includes(command?.type);
+ const granted=(after.seatMechanics?.receipts??[]).slice(prior.length).filter(r=>r.source===source||r.receiptId.startsWith('["'+source+'",'));
+ assert.equal(granted.length,choosing?1:0,'independent tomb due choice count');
+ if(choosing){
+  assert(due,'independent tomb opportunity');
+  assert.equal(command.choiceId,due.choiceId);assert.equal(command.generation,0);
+  const expectedChoice={kind:'forge',step:'offer',choiceId:due.choiceId,eventId:due.choiceId,generation:0,offers:due.offers,
+   targetId:null,rerollCount:0,returnPhase:c.returnPhase,payload:{kind:'forge',source,timeoutOption:due.offers[0]}};
+  assert.deepEqual(c,expectedChoice,'independent tomb full candidate list and order');
+  const timedOut=command.type==='timeoutChoice',optionId=timedOut?due.offers[0]:command.definitionId;
+  assert(due.offers.includes(optionId),'independent tomb chosen equipment');
+  const itemId='item-'+before.nextItemSerial;
+  assert.deepEqual(granted[0],{kind:'choice',receiptId:due.choiceId,round:before.round,roundId:before.roundDefinitionId,
+   source,choiceKind:'forge',optionId,skipped:false,price:0,itemId,timedOut},'independent tomb item receipt');
+  assert.deepEqual(after.items.filter(i=>i.id===itemId),[{id:itemId,definitionId:optionId,location:{kind:'inventory'}}],'independent tomb exactly one item');
+  assert.equal(after.nextItemSerial,before.nextItemSerial+1,'independent tomb single item serial');
+  assert.equal(after.gold,before.gold,'independent tomb free choice');
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,granted[0])),'independent tomb grant event');
+ }
+ const next=after.pendingChoice;
+ if(next?.payload?.source===source){
+  const receipts=after.seatMechanics?.receipts??[],pending=tombRaiderPlan(after,base).find(p=>p.offers.length&&!receipts.some(r=>r.receiptId===p.choiceId));
+  assert(pending,'independent tomb pending opportunity');assert.equal(next.choiceId,pending.choiceId);
+  assert.deepEqual(next.offers,pending.offers,'independent tomb next complete candidate list');
+ }
+ for(const key of ['choiceRngState','rewardRngState','battleSeedRngState','rngState'])
+  if(choosing)assert.equal(after[key],before[key],'independent tomb RNG conservation '+key);
+}
+module.exports.tombRaiderPlan=tombRaiderPlan;
+module.exports.validateTombRaiderTransition=validateTombRaiderTransition;
+// B5-27/28: independent pre-transaction prediction, never read production transform receipts.
+// cost map comes from oracle.g2's hand-transcribed catalog, not the live content registry.
+function batch5Transforms(before, augmentId, stock, costs) {
+ const a=before.augments.find(x=>x.definitionId===augmentId), available={...stock};
+ const order=u=>u.location.kind==='board'?[0,u.location.cell.row,u.location.cell.col,u.id]:[1,u.location.slot,0,u.id];
+ const compare=(a,b)=>{const x=order(a),y=order(b);for(let i=0;i<4;i++){if(x[i]<y[i])return -1;if(x[i]>y[i])return 1;}return 0;};
+ const targets=before.preparation.units.filter(u=>u.team==='player'&&costs[u.definitionId]&&(augmentId==='pandoras-bench'?u.location.kind==='bench'&&u.location.slot>=before.preparation.benchSize-3:u.location.kind==='board'&&costs[u.definitionId]<=5)).sort(compare);
+ let rng=salt(before.seed,['augment-pool-batch5-r6',before.multiplayer.seatId,a.choiceId,before.round]);
+ let units=structuredClone(before.preparation.units);const exchanges=[];
+ for(const u of targets){
+  const copies=[1,3,9][u.starLevel-1],ids=Object.keys(costs).filter(id=>costs[id]===(augmentId==='pandoras-bench'?costs[u.definitionId]:Math.min(5,costs[u.definitionId]+1))&&available[id]>=copies).sort();
+  if(!ids.length)continue;
+  rng=word(rng);const to=ids[pick(rng,ids.length)];available[u.definitionId]+=copies;available[to]-=copies;
+  units.find(x=>x.id===u.id).definitionId=to;exchanges.push({unitId:u.id,from:u.definitionId,to,starLevel:u.starLevel});
+ }
+ const upgrades=[];
+ for(const id of [...new Set(units.filter(u=>u.team==='player').map(u=>u.definitionId))].sort())for(const star of [1,2]){
+  for(;;){const group=units.filter(u=>u.team==='player'&&u.definitionId===id&&u.starLevel===star).sort(compare);if(group.length<3)break;
+   const [keep,...others]=group.slice(0,3),consumed=others.map(u=>u.id);keep.starLevel++;units=units.filter(u=>!consumed.includes(u.id));
+   upgrades.push({survivorId:keep.id,consumedIds:consumed.sort(),definitionId:id,fromStar:star,toStar:star+1});
+  }
+ }
+ return {units,available,exchanges,upgrades};
+}
+module.exports.batch5Transforms=batch5Transforms;
+// B5-63: independent literal role buckets and event identity, never reward receipts.
+const ghostTanks=new Set('amumu blitzcrank drmundo elise garen illaoi irelia leona loris nunu rell renni scar sett singed steb swain trundle vander vladimir'.split(' '));
+const ghostAD=new Set('ambessa caitlyn camille corki darius draven ezreal gangplank jayce jinx maddie nocturne sevika smeech tristana twitch urgot vi violet zeri warwick'.split(' '));
+const ghostAP=new Set('akali cassiopeia ekko heimerdinger kogmaw leblanc lux malzahar mordekaiser morgana nami powder renata rumble silco twistedfate vex ziggs zoe zyra mel viktor'.split(' '));
+function ghostFriendsDeathReward(d){
+ const out={healthFlat:0,attackDamageBps:0,abilityPower:0};if(!d.ordinaryHero&&!d.championCopy)return out;
+ if(d.form==='ranged'&&['elise','swain'].includes(d.definitionId))out.abilityPower=1;
+ else if(ghostTanks.has(d.definitionId))out.healthFlat=5;
+ else if(ghostAD.has(d.definitionId))out.attackDamageBps=80;
+ else if(ghostAP.has(d.definitionId))out.abilityPower=1;
+ else out.healthFlat=5;
+ return out;
+}
+function ghostFriendsGrowth(s){
+ const a=s.augments.find(a=>a.definitionId==='ghost-of-friends-past');if(!a)return undefined;
+ assert(s.augmentHistory,'independent ghost death history');
+ const out={healthFlat:0,attackDamageBps:0,abilityPower:0},seen=new Set();
+ for(const f of s.augmentHistory.facts)if(f.kind==='deaths'&&f.round>=a.acquiredRound&&f.round<s.round)for(const d of f.deaths){
+  const id=JSON.stringify([d.combatId,d.eventSeq]);if(seen.has(id))continue;seen.add(id);
+  if(d.ownerSeatId!==(s.multiplayer?.seatId??'solo'))continue;
+  const delta=ghostFriendsDeathReward(d);for(const k of Object.keys(out))out[k]+=delta[k];
+ }
+ return out;
+}
+module.exports.ghostFriendsGrowth=ghostFriendsGrowth;
+module.exports.ghostFriendsDeathReward=ghostFriendsDeathReward;
+
+// B5-70: fresh lower-star source attributes, then the flat HP deduction and explicit floor.
+// No production clone bodies, augment receipts or resolver outputs enter this calculation.
+function rebelCopyStats(base,star){
+ const lower=Math.max(1,star-1),health=[0,100,180,324][lower],attack=[0,100,150,225][lower];
+ return {starLevel:lower,maxHp:Math.max(100,Math.floor(base.health*health/100)-400),attackDamage:Math.floor(base.attack*attack/100)};
+}
+function rebelCopyDeaths(events,originals){
+ const seen={player:0,enemy:0},out=[];
+ for(const e of events){
+  if(e.type!=='death')continue;
+  const u=originals.find(u=>u.id===e.unitId);if(!u||!u.traits.includes('rebel')||u.summon||u.copy)continue;
+  if(seen[u.team]<5)out.push({ownerId:u.id,team:u.team,ordinal:seen[u.team]++});
+ }
+ return out;
+}
+module.exports.rebelCopyStats=rebelCopyStats;
+module.exports.rebelCopyDeaths=rebelCopyDeaths;
+
+function validateGhostCombatInputs(s){
+ const expected=ghostFriendsGrowth(s);
+ if(s.combatInputBasis)assert.deepEqual(s.combatInputBasis.inputs.ghostFriendsGrowth,expected,'independent Ghost Friends frozen growth');
+}
+module.exports.validateGhostCombatInputs=validateGhostCombatInputs;
+// P-B5-68-G3: independent offset-to-cube distance and literal additive coefficients.
+// Takes movement facts and independently scheduled dash count, never production stacks/stat receipts.
+module.exports.aerialWarfareExpected = function(moves,dashes) {
+ const distance=(a,b)=>{const q=a.col-Math.floor(a.row/2)-b.col+Math.floor(b.row/2),r=a.row-b.row;return Math.max(Math.abs(q),Math.abs(r),Math.abs(q+r));};
+ const hexes=Math.min(99,moves.reduce((sum,m)=>sum+distance(m.from,m.to),0));
+ return {hexes,adBps:hexes*300+dashes*900,ap:hexes*3+dashes*9};
+};
+
+// P-B5-71-G3: derive Laboratory effects from the frozen donor identities, not receipts or compiled effects.
+module.exports.mutationLaboratoryExpected = function(tier,donor,normalDonors) {
+ const factor=tier>=7?2:1,all=[...new Set(normalDonors),...(donor?[donor]:[])];
+ const count=id=>all.filter(d=>d===id).length;
+ const values={mundo:count('drmundo')*60*factor,nunu:count('nunu')*300*factor,zyra:count('zyra')*5000*factor,urgot:count('urgot')*2000*factor,twitch:count('twitch')*2000*factor};
+ if(count('warwick'))values.warwick=count('warwick')*20*factor;
+ return {healthFlat:(tier>=5?300:100)+count('drmundo')*120*factor,values};
+};
+module.exports.mutationLabsExpected = function(seed,tier) {
+ if(tier<3)return [];
+ const pool=[];for(let row=4;row<=7;row++)for(let col=0;col<7;col++)if(row!==6||col!==3)pool.push({col,row});
+ let rng=Number(BigInt(seed)^0x6c616273n),result=[];
+ for(let n=0;n<(tier>=5?3:2);n++){rng=word(rng);result.push(...pool.splice(pick(rng,pool.length),1));}
+ return result;
+};

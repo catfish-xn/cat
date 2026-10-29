@@ -21,7 +21,7 @@ import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, applyLevelUpHealth, ba
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
-import { validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { XP_TO_NEXT_LEVEL } from '../src/simulation/match-rules';
 import { grantXp } from '../src/simulation/progression';
@@ -178,7 +178,8 @@ const kingGold=(s:MatchState)=>s.seatMechanics?.receipts.filter(r=>r.source===KI
 it('Kingslayer: a player win pays 1 gold, 4 when the opponent had more health; the receipt must carry exactly that health', ()=>{
  const base=mpOpening(),s={...base,playerHp:80,augments:[...base.augments,{definitionId:'kingslayer',choiceId:'k',acquiredRound:base.round}]};
  expect(AUGMENT_DEFINITIONS.kingslayer.effects).toContainEqual({kind:'mechanic',mechanic:'acquisitionGold',values:{amount:1}});
- for(const [hp,gold] of [[90,4],[80,1],[50,1]] as const){
+ // H7 Titanic Titan permits a frozen opponent HP up to 120, even when this seat lacks it.
+ for(const [hp,gold] of [[120,4],[101,4],[90,4],[80,1],[50,1]] as const){
   const r=applyRoundSettlement(s,settlement(s,{opponentHp:hp}));if(!r.ok)throw new Error(r.reason);
   expect(kingGold(r.state)).toEqual([gold]);validateBatch1Gifts(r.state);
   const forged=structuredClone(r.state) as any;forged.seatMechanics.receipts.find((x:any)=>x.source===KINGSLAYER_SOURCE).amount=gold===4?1:4;
@@ -186,7 +187,7 @@ it('Kingslayer: a player win pays 1 gold, 4 when the opponent had more health; t
  }
  const lost=applyRoundSettlement(s,settlement(s,{result:'loss',damage:2,opponentHp:90}));if(!lost.ok)throw new Error(lost.reason);
  expect(kingGold(lost.state)).toEqual([]);
- for(const bad of [settlement(s),settlement(s,{opponentHp:101}),settlement(s,{opponentHp:-1})])expect(applyRoundSettlement(s,bad)).toMatchObject({ok:false,reason:'invalid-receipt'});
+ for(const bad of [settlement(s),settlement(s,{opponentHp:121}),settlement(s,{opponentHp:-1})])expect(applyRoundSettlement(s,bad)).toEqual({ok:false,state:s,reason:'invalid-receipt'});
  expect(applyRoundSettlement(base,settlement(base,{opponentHp:90}))).toMatchObject({ok:false,reason:'invalid-receipt'});
  // A forged settled history without its receipt is refused as well.
  const r=applyRoundSettlement(s,settlement(s,{opponentHp:90}));if(!r.ok)throw new Error(r.reason);

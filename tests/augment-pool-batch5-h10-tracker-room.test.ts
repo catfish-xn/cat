@@ -5,6 +5,7 @@ import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { ManualClock } from '../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { SEATS, TIMINGS, runUntil, answerOpenChoices } from './server/helpers';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { trackerGiftPlan, trackerActiveTraits } from '../src/simulation/augment-pool-batch5-h10-tracker';
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../src/simulation/shared-pool';
 import { toPlayerView, toSeatPrivateView } from '../src/server/room/projection';
@@ -17,7 +18,10 @@ const room=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS
 let seatId='s1';
 const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;
 const command=(c:WireCommand)=>{const r=room.handle(seatId,c);expect(r,r.ok?'':JSON.stringify(r)).toMatchObject({ok:true});if(!r.ok)throw new Error(r.reason);return r;};
+let restoreTrackerOffers: () => void;
 beforeAll(()=>room.start());
+beforeAll(()=>{ restoreTrackerOffers = installB1Offers(['trait-tracker']); });
+afterAll(()=>{ restoreTrackerOffers(); room.dispose(); });
 for(let round=2;round<=12;round++)beforeAll(()=>{
  runUntil(room,clock,s=>s.round===round&&(s.phase==='preparation'||s.roundKind==='supply'));
  if(round!==12)answerOpenChoices(room);
@@ -33,7 +37,7 @@ beforeAll(()=>{
   }
   if(seat().match.pendingChoice!.offers.includes('trait-tracker'))break;
  }
- const c=seat().match.pendingChoice!;expect(c.offers).toContain('trait-tracker');
+ const c=seat().match.pendingChoice!;expect(c.offers).toContain('trait-tracker'); // fixture self-check under installB1Offers
  command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'trait-tracker'});answerOpenChoices(room);
 });
 function prepare(){
@@ -79,7 +83,6 @@ beforeAll(()=>{
  const receipt=command({type:'reroll'});
  expect(receipt.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(6);
 });
-afterAll(()=>room.dispose());
 it('real room commands grant six distinct emblems exactly once and keep the shared pool conserved',()=>{
  const s=seat().match,gifts=trackerGiftPlan(s);expect(gifts).toHaveLength(6);expect(new Set(gifts.map(g=>g.definitionId)).size).toBe(6);
  expect(s.augmentHistory!.facts.filter(f=>f.kind==='trait-activation')).toHaveLength(1);

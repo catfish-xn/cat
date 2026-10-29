@@ -1,13 +1,15 @@
-import { validateBatch1Gifts } from './augment-pool-grants';
+import { validatePortableAnomaly } from './restore-checks/portable-anomaly-check';
+import { validateBatch1Gifts } from './restore-checks/batch1-gifts-check';
 import { familyDisplay } from './family-heist';
-import { validateEpicForges } from './epic-forges';
+import { validateAnvils as validateEpicForges } from './restore-checks/anvils-check';
 import { validateAugmentAcquisition } from './augment-acquisition';
 import { validateD11Acquisition } from './d11-fill';
 import type {MatchState} from './match-types';
 import {validateP2Gifts} from './s13-augments-p2-grants';
 import {canonicalContent,equalValidatedContent} from './content';
 import {openG23Choice} from './g2-3-runtime';
-import {readG23Progress,validateG23MechanicLinks,validateG23RewardSources} from './g2-3-state';
+import { readG23Progress } from './g2-3-state';
+import { validateG23MechanicLinks, validateG23RewardSources } from './restore-checks/g23-state-check';
 import {g23SoloFacts} from './g2-3-settlement';
 import {validateG23Progress} from './g2-3-match-progress';
 import {isMechanicChoice} from './seat-mechanics/choices';
@@ -15,6 +17,7 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 /** Shared restore checks for G23 escrow, pending offers, receipts and settlement history.
  * Runs no grant hooks and consumes no live RNG; callers still validate the surrounding seat/save. */
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
+ validatePortableAnomaly(state);
  validateEpicForges(state);
  validateP2Gifts(state);
  validateBatch1Gifts(state);

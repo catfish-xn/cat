@@ -11,8 +11,9 @@ import type { ItemInstance } from '../src/simulation/strategy-types';
 import { readAugmentCombatEquipment } from '../src/simulation/augment-pool-batch5-h11-history';
 import { G24_CHEST_PAYLOADS } from '../src/simulation/content/g2-4-chest-pool';
 import type { CombatStrategyInputs } from '../src/simulation/combat-input';
+import { resolveAbility } from '../src/simulation/combat-abilities';
 
-function fixture(donorItems = ['rageblade', 'warmog', 'blue-buff'], reverse = false, edit: (input: CombatStrategyInputs) => CombatStrategyInputs = s => s) {
+function fixture(donorItems = ['rageblade', 'warmog', 'blue-buff'], reverse = false, edit: (input: CombatStrategyInputs) => CombatStrategyInputs = s => s, legacyRecipient = false) {
   const base = createMatch(42), unit = base.preparation.units[0];
   const units = Array.from({ length: 8 }, (_, i) => ({ ...unit, id: `p${i}`, definitionId: 'maddie', team: 'player' as const,
     location: { kind: 'board' as const, cell: i === 6 ? { col: 0, row: 7 } : i === 7 ? { col: 1, row: 6 } : { col: i, row: 5 } } }));
@@ -21,7 +22,10 @@ function fixture(donorItems = ['rageblade', 'warmog', 'blue-buff'], reverse = fa
   const input = { ...base, preparation, items: reverse ? [...items].reverse() : items,
     augments: [{ definitionId: 'sponging', choiceId: 'fixture', acquiredRound: 1 }] };
   const edited = edit(input), strategy = buildStrategySnapshot(edited);
-  return createCombatWithEvents(edited.preparation, strategy, 'h11-sponging-fixture', 42);
+  // Supported legacy abilities participate in the frozen roster but have no S13 runtime.
+  const mixed = legacyRecipient ? { ...strategy, units: strategy.units.map(u => u.unitId === 'p0'
+    ? { ...u, ability: resolveAbility('ranger-shot', 1) } : u) } : strategy;
+  return createCombatWithEvents(edited.preparation, mixed, 'h11-sponging-fixture', 42);
 }
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-79 preserves the archived numbers and prismatic tier', () => {
   const row = JSON.parse(readFileSync(RESEARCH_FILE, 'utf8')).find((r: any) => r.apiName === 'TFT_Augment_Sponging');
@@ -52,6 +56,15 @@ it('B5-79 copies at tick zero to exactly the first five IDs, activates item prog
   }
   expect(stepCombat(c).state.units.flatMap(u => u.combatItemGrants ?? [])).toHaveLength(5);
   expect(fixture(undefined, true)).toEqual(result);
+});
+it.each([false, true])('B5-79 handles a legacy ability before the first S13 holder/recipient (reversed=%s)', reverse => {
+  const result = fixture(undefined, reverse, s => s, true), c = result.state;
+  expect(c.units.find(u => u.id === 'p0')!.ability).toEqual(resolveAbility('ranger-shot', 1));
+  expect(c.units.find(u => u.id === 'p0')!.combatItemGrants).toBeUndefined();
+  expect(result.events.filter(e => e.type === 'combatItemGranted').map(e => e.unitId)).toEqual(['p1','p2','p3','p4','p5']);
+  expect(c.units.flatMap(u => u.combatItemGrants ?? [])).toHaveLength(5);
+  expect(c.rngDraws).toBe(5);
+  expect(stepCombat(c).state.units.flatMap(u => u.combatItemGrants ?? [])).toHaveLength(5);
 });
 it.each(['sword','TFT5_Item_WarmogsArmorRadiant','TFT_Item_UnstableTreasureChest'])('B5-79 excludes a full donor containing %s and consumes no copy RNG', item => {
   const c = fixture(['rageblade','warmog',item]).state;

@@ -12,8 +12,9 @@ import { batch2HpAfterSettlement } from '../src/simulation/augment-pool-batch2-h
 import { recordRoomBattleFacts } from '../src/server/room/augment-history';
 import type { SettledSeat, TwoSidedBattleResult } from '../src/server/room/types';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
+// Seed 15 offers Dhampyr to an injured winner at 3-2; seed 10 only offered it to a full-HP winner.
 const clock=new ManualClock();
-const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:10,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:15,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 beforeAll(()=>{room.start();});
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');});
 afterAll(()=>room.dispose());
@@ -33,7 +34,7 @@ it('heals from actual opponent damage after settlement and synchronizes the room
  runUntil(room,clock,s=>s.round===12&&s.phase==='settlement');
  const seats=ids.map(id=>room.state.seats.find(s=>s.seatId===id)!);
  const healed=seats.find(s=>s.match.augmentHistory?.facts.some(f=>f.kind==='player-health'&&f.round===12));
- expect(healed).toBeDefined();if(!healed)throw new Error('no holder healed');
+ expect(healed,`dhampyr needs an injured winner dealing at least 5 actual damage: ${JSON.stringify(seats.map(s=>({id:s.seatId,hp:s.hp,damage:requireAugmentFacts(s.match,'player-damage',12).at(-1)?.actualDamage})))}`).toBeDefined();if(!healed)throw new Error('no holder healed');
  const match=healed.match;healedMatch=match;const damage=requireAugmentFacts(match,'player-damage',12).at(-1)!;
  const hp=requireAugmentFacts(match,'player-health',12).at(-1)!;
  expect(damage.actualDamage).toBeGreaterThan(0);expect(damage.mirror).toBe(false);

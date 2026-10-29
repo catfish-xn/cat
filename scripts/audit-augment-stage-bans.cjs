@@ -8,7 +8,9 @@ const STAGES = ['2-1', '3-2', '4-2'];
 // P 2026-10-25: preserve the documented inference, not a decoded Riot identifier.
 const TAGS = ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'];
 // P-FINE-VINTAGE-STAGE (user decision 2026-10-27): retain source checks, override production expectation only.
-const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' } };
+// P-LOOT-EXPLOSION-STAGE (user decision 2026-10-27): Loot Explosion is offered at 2-1 and 3-2 only; the source carries no stage tags.
+const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' },
+  TFT13_Augment_Ambusher: { source: [], expected: ['4-2'], decision: 'P-LOOT-EXPLOSION-STAGE' } };
 const DEFAULT_DATA = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const DEFAULT_CROSS = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const KNOWN = {
@@ -110,9 +112,12 @@ function audit(options = {}) {
     if (!pool.has(apiName)) pool.set(apiName, []);
     pool.get(apiName).push({ file: path.relative(root, file), line, enabled });
   }
-  // Inspect lexical property names, including disabled inventory rows. Comments
-  // and unrelated apiName mentions cannot create fake coverage.
-  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f)).sort()) {
+  // Inspect augment inventory modules, including disabled rows. Companion
+  // *-items.ts modules define equipment (ItemDefinition), not augments; classify
+  // by module role, never by an individual apiName. Do not exclude mixed modules
+  // merely because they import ItemDefinition alongside augment definitions.
+  // Comments and unrelated apiName mentions cannot create fake coverage.
+  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f) && !/-items\.ts$/.test(f)).sort()) {
     const file = path.join(content, fileName), ts = tokens(fs.readFileSync(file, 'utf8'));
     let count = 0;
     for (let i = 0; i < ts.length; i++) {

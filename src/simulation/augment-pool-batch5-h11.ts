@@ -44,13 +44,14 @@ export function openingH11(ctx: AbilityContext, before: CombatState): void {
   const plans: { source: import('./m8/contracts').Source; target: import('./combat-s13-state').S13Unit; definitionId: string }[] = [];
   for (const team of ['player', 'enemy'] as const) {
     const allies = roster.filter(u => u.team === team).sort((a, b) => compareText(a.id, b.id));
-    const holder = allies.map(u => ctx.units.find(x => x.id === u.id)!).find(u => u.mechanics?.some(m => m.mechanic === 'sponging'));
+    // The frozen roster also includes legacy abilities; ctx.units contains only S13 runtimes.
+    const holder = allies.map(u => ctx.units.find(x => x.id === u.id)).find(u => u?.mechanics?.some(m => m.mechanic === 'sponging'));
     const mechanic = holder?.mechanics?.find(m => m.mechanic === 'sponging');
     if (!mechanic) continue;
     const donors = allies.filter(u => u.equipment.length === 3 && u.equipment.every(i => Object.hasOwn(G24_CHEST_PAYLOADS, i.definitionId)));
     const recipients = allies.filter(u => {
-      const target = ctx.units.find(x => x.id === u.id)!;
-      return u.equipment.length <= mechanic.values.maxItems && target.alive && target.hp > 0
+      const target = ctx.units.find(x => x.id === u.id);
+      return u.equipment.length <= mechanic.values.maxItems && target?.alive && target.hp > 0
         && (target.equipment?.length ?? 0) + (target.combatItemGrants?.length ?? 0) < 3;
     }).slice(0, mechanic.values.maxUnits);
     for (const recipient of recipients) {

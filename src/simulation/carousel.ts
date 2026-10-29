@@ -1,6 +1,10 @@
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
+import { applyAngerIssues } from './augment-pool-batch5-r2';
+import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
+import { validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
+import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';
@@ -14,7 +18,7 @@ import { getCatalogRoundById } from './round-selectors';
 import { assertSharedPoolConservation } from './shared-pool-ledger';
 import type { SharedPoolState } from './shared-pool-types';
 import type { MatchState } from './match-types';
-import type { CostTier } from './unit-types';
+import type { CostTier, UnitUpgradedEvent } from './unit-types';
 import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, CarouselReceipt, CarouselState, CarouselFailure, CarouselEvent, CarouselResult } from './carousel-types';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
@@ -309,6 +313,7 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     let nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
         items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
         carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    nextMatch = applyAngerIssues(nextMatch);
     nextMatch = drainBatch5Inventory(nextMatch);
     nextMatch = appendAugmentFact(nextMatch, { kind: 'carousel', receipt: granted, source: pickSource, choiceId,
       ordinal: metadata.receipts.filter(r => r.carouselId === state.id).length, roster: historyRoster(nextMatch), releaseAtMs: state.releaseAtMs[seatId], eligibilityChoiceIds: match.augments.map(a => a.choiceId) });
@@ -505,6 +510,31 @@ export function autoPickFromCarousel(state: CarouselState, seatId: string, match
     }
 }
 
+/** Follow the original carousel copy through transformations and every kind of merge. */
+function carouselUnitIdentity(match: MatchState, receipt: CarouselReceipt, birthIndex: number) {
+    let unitId = receipt.unitId!, definitionId = receipt.definitionId, starLevel = 1;
+    let present = true;
+    const upgrade = (event: UnitUpgradedEvent) => {
+        if (!present || ![event.survivorId, ...event.consumedIds].includes(unitId)) return;
+        if (event.definitionId !== definitionId || event.fromStar !== starLevel) throw Error('receipt-mismatch');
+        unitId = event.survivorId;
+        starLevel = event.toStar;
+    };
+    for (const fact of match.resourceProvenance.entries.slice(birthIndex + 1)) {
+        if (fact.kind === 'unit-transformed' && present && fact.unitId === unitId) {
+            if (fact.from !== definitionId || fact.starLevel !== starLevel) throw Error('receipt-mismatch');
+            definitionId = fact.to;
+        } else if (fact.kind === 'unit-upgraded' || fact.kind === 'unit-upgraded-after-combat') {
+            upgrade(fact.event);
+        } else if (fact.kind === 'carousel-preparation-settled' || fact.kind === 'carousel-unit-claimed') {
+            for (const event of fact.upgrades) upgrade(event);
+        } else if ((fact.kind === 'unit-sold' || fact.kind === 'unit-removed' || fact.kind === 'anvil-opened') && fact.unitId === unitId) {
+            present = false;
+        }
+    }
+    return present ? { unitId, definitionId, starLevel } : null;
+}
+
 /** Restore a server-owned seat alongside its carousel. Offline restoreMatch continues
  * rejecting server metadata; this boundary checks the pool and every carousel birth. */
 export function restoreCarouselSeat(carousel: CarouselState, input: unknown, authority?: AugmentHistoryAuthority): MatchState {
@@ -516,6 +546,9 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     if (match.contentDigest !== CONTENT_DIGEST) throw Error('content-digest');
     const metadata = match.carousel;
     if (!metadata || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits) || !Array.isArray(metadata.heldCarouselUnits) || !equal(metadata.pendingUnits,metadata.heldCarouselUnits) || !Array.isArray(metadata.preparationReceipts) || metadata.openingPending!==undefined)  throw Error('invalid-match');
+    // A transformation is evidence only after its independent server checkpoint is authenticated.
+    validateAugmentHistory(match, authority);
+    validateOnlineBatch1GiftAuthority(carousel.pool, match, authority);
     const ids = new Set<string>();
     for (const receipt of metadata.receipts) {
         const pooled = carousel.pool.carouselReceipts.find(r => r.id === receipt.id);
@@ -526,8 +559,13 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
         const unitFacts = match.resourceProvenance.entries.filter(e => e.kind === 'unit-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         const itemFacts = match.resourceProvenance.entries.filter(e => e.kind === 'item-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         if (unitFacts.length !== 1 || unitFacts[0].kind !== 'unit-acquired' || unitFacts[0].unitId !== receipt.unitId || itemFacts.length !== 1 || itemFacts[0].kind !== 'item-acquired' || itemFacts[0].itemId !== receipt.itemInstanceId) throw Error('receipt-mismatch');
-        const unit = match.preparation.units.find(u=>u.id===receipt.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
-        if (unit && unit.definitionId !== receipt.definitionId || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
+        const identity = carouselUnitIdentity(match, receipt, match.resourceProvenance.entries.indexOf(unitFacts[0]));
+        const original = match.preparation.units.find(u=>u.id===receipt.unitId);
+        const unit = match.preparation.units.find(u=>u.id===identity?.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
+        const holding = carousel.pool.holdings.find(h=>h.seatId===receipt.seatId && h.sources.includes(receipt.holdingSource));
+        if (original && original.id !== identity?.unitId || unit && (unit.definitionId !== identity?.definitionId || unit.starLevel !== identity.starLevel)
+            || holding && (!identity || holding.unitId !== identity.unitId || holding.definitionId !== identity.definitionId || holding.sources.length !== 3 ** (identity.starLevel - 1))
+            || !released && unit && !holding || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
     }
     const pendingIds = new Set<string>();
     for (const pending of metadata.pendingUnits) {
@@ -535,10 +573,11 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
         pendingIds.add(pending.unitId);
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
-    validateAugmentHistory(match, authority);
     const participant = carousel.participants.find(p=>p.seatId===match.multiplayer?.seatId);
     if (participant && participant.titanicTitanChoiceId !== titanicTitanChoiceId(match)) throw Error('invalid-participants');
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
+    validateTombRaider(match);
+    validateMadChemistOnlineSave(carousel.pool, match, authority);
     return match;
 }
 

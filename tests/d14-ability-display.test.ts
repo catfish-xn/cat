@@ -14,6 +14,10 @@ it('uses the certified fourth rank and 14.24b override, with ordinary third rank
   expect(ultimateHeroAbilityDisplayValues('maddie', { attackDamage: 200, abilityPower: 150 }).TotalDamage).toBe(332);
   expect(ultimateHeroAbilityDisplayValues('irelia')).toMatchObject({ ModifiedShield: 675, ModifiedBaseStrikeDamage: 200, 'PercentShieldDamage*100': 30 });
   expect(abilityDisplayValues('lux', 3).ModifiedDamage).toBe(900);
+  expect(ultimateHeroAbilityDisplayValues('zyra')).toMatchObject({ ModifiedTargetDamage: 780, ModifiedAOEDamage: 290,
+    ExperimentDuration: 2, 'TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus': 50 });
+  expect(ultimateHeroAbilityDisplayValues('zyra', { abilityPower: 150 })).toMatchObject({ ModifiedTargetDamage: 1170, ModifiedAOEDamage: 435 });
+  expect(abilityDisplayValues('zyra', 3)).toMatchObject({ ModifiedTargetDamage: 585, ModifiedAOEDamage: 215 });
   expect(() => ultimateHeroAbilityDisplayValues('leona')).toThrow(RangeError);
   expect(() => ultimateHeroAbilityDisplayValues('missing')).toThrow(RangeError);
 });

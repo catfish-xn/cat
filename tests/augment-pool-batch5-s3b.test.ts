@@ -86,7 +86,9 @@ it('academic research removes a combat craft from the battle equipment transcrip
 
 import { nextRound } from '../src/simulation/match';
 import { emptyBoard, resolveM5Choices } from './match-helpers';
-import { pandoraItem, pandoraConversions, pandoraRoundEntry, isS3bConversion } from '../src/simulation/augment-pool-batch5-s3b-conversions';
+import { pandoraItem, pandoraConversions, pandoraRoundEntry, isS3bConversion, validS3bConversion } from '../src/simulation/augment-pool-batch5-s3b-conversions';
+import { s3bInventoryReplay, s3bHistoricalEquipmentParent } from '../src/simulation/augment-pool-batch5-s3b-restore';
+import type { ResourceProvenanceEntry } from '../src/simulation/resource-provenance';
 it.skipIf(!existsSync(RESEARCH_FILE))('Pandora II preserves the two components and null completed-item source field',()=>{
  const row=AUGMENT_BATCH5_S3B['pandoras-items-ii'];
  const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName===row.apiName);expect(row.source.values).toEqual(source.effects);
@@ -189,6 +191,25 @@ it('academic research escrows its anvil at full bench and grants once when a rea
 
 import { createRequire } from 'node:module';
 const independent=createRequire(import.meta.url)('./fixtures/m5/augment-batch5-s3b-oracle.cjs');
+it.each([[39,'overtime-1'],[46,'overtime-8']] as const)('S3B authenticates Pandora entry and historical gloves at %s / %s', (round,roundId)=>{
+ // Isolated replay boundary vector, not a synthetic whole-match save. The independent oracle supplies the conversion.
+ const base=chooseAcademic(),item={id:'item-1',definitionId:'thiefs-gloves',location:{kind:'inventory' as const}};
+ const previous:MatchState={...base,round:round-1,items:[item],augments:[{definitionId:'pandoras-items-ii',choiceId:'overtime-pandora',acquiredRound:4}],
+  resourceProvenance:{...base.resourceProvenance,entries:[]}};
+ const fact:ResourceProvenanceEntry={...independent.pandoraChanges(previous,round)[0],sequence:0,roundId};
+ const items=[{...item,definitionId:fact.kind==='g23-item-converted'?fact.to:item.definitionId}];
+ const next:MatchState={...previous,round,items,resourceProvenance:{...previous.resourceProvenance,entries:[fact]}};
+ if(fact.kind!=='g23-item-converted')throw Error('conversion');
+ expect(validS3bConversion(next,fact,roundId)).toBe(true);
+ expect(validS3bConversion(next,{...fact,to:'spatula'},roundId)).toBe(false);
+ const replay=s3bInventoryReplay(next,previous);
+ expect(()=>{replay.beforeFact(fact,previous.items,2);replay.finish(items);}).not.toThrow();
+ expect(s3bHistoricalEquipmentParent(next,item.id,round===39?'6-7':'overtime-7')).toEqual(item);
+ expect(s3bHistoricalEquipmentParent(next,item.id,roundId)).toBeUndefined();
+ const bad={...fact,to:'spatula'},tampered={...next,resourceProvenance:{...next.resourceProvenance,entries:[bad]}};
+ expect(()=>s3bInventoryReplay(tampered,previous).beforeFact(bad,previous.items,2)).toThrow('conversion coverage/order');
+ expect(()=>s3bInventoryReplay(next,previous).finish(previous.items)).toThrow('missing inventory conversions');
+});
 it('independent ordinary recipes cover the exact conversion category and component pairs',()=>{
  expect(Object.keys(independent.RECIPES).sort()).toEqual([...G24_FORGE_POOLS.TFT_ArmoryKeyCompleted].sort());
  for(const [id,recipe] of Object.entries(independent.RECIPES))expect(ITEM_DEFINITIONS[id].recipe).toEqual(recipe);

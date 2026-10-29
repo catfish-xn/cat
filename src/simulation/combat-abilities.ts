@@ -1,3 +1,4 @@
+import { CARRY_GOLEM, CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 import { TRAINER_DAMAGE } from './content/opening-batch-b';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { hexDistance } from './board';
@@ -44,6 +45,8 @@ validateAbilityDefinitions();
 
 /** Copy only resolved numbers into battle state, never content-table objects or callbacks. */
 export function resolveAbility(abilityId: string, starLevel: StarLevel): ResolvedAbility {
+  if (abilityId === 'carry-golem-ability' && [1, 2, 3, 4].includes(starLevel)) return { id: abilityId, amount: 0, kind: 's13', championId: CARRY_GOLEM_ID, variables: { Damage: CARRY_GOLEM.damage[starLevel - 1] * 10000 } };
+  if (starLevel === 4) throw new RangeError('Invalid star level');
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
   if (abilityId==='trainer-golem-ability') return {id:abilityId,amount:0,kind:'s13',championId:'trainer-golem',variables:{Damage:TRAINER_DAMAGE[starLevel-1]*10000}};
   if (Object.hasOwn(S13_ABILITY_DATA, abilityId)) {

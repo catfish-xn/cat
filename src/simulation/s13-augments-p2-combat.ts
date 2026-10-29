@@ -1,3 +1,4 @@
+import { b5VoidSwarmTarget } from './augment-pool-batch5-g4-swarm';
 import { batch2Target } from './augment-pool-batch2-combat';
 import { isSelectable } from './anomalies/availability';
 /** Frozen opening facts. Random choices share Combat's lcg32 stream after existing opening consumers.
@@ -38,7 +39,7 @@ function addHealth(ctx: AbilityContext,u:S13Unit,amount:number,source:CombatOrig
   const updated={...basis,flat:basis.flat+amount};
   u.maxHpBasis=updated;u.maxHp=scaleItemSummonHp(u,Math.floor((updated.base+updated.flat)*(10000+updated.bps+updated.bonusBps)/10000));
   u.hp=Math.min(u.maxHp,beforeHp+u.maxHp-beforeMax);
-  ctx.events.push({type:'maxHpChanged',tick:0,unitId:u.id,source:{...source,parentItemInstanceId:source.parentItemInstanceId??null},beforeMax,afterMax:u.maxHp,beforeHp,afterHp:u.hp,countsAsHeal:false});
+  ctx.events.push({type:'maxHpChanged',tick:ctx.tick,unitId:u.id,source:{...source,parentItemInstanceId:source.parentItemInstanceId??null},beforeMax,afterMax:u.maxHp,beforeHp,afterHp:u.hp,countsAsHeal:false});
 }
 export function startP2Combat(ctx: AbilityContext):void {
   const groups=new Map<string,{source:CombatOrigin;units:S13Unit[]}>();
@@ -56,9 +57,13 @@ export function startP2Combat(ctx: AbilityContext):void {
       addHealth(ctx,unit,id==='trifecta-ii'?v.Health:0,{...source,ownerId:unit.id});
     }
   }
+  shareP2Energy(ctx);
+}
+/** Shared opening broadcast; an equipment installation may select just its new item sources. */
+export function shareP2Energy(ctx:AbilityContext,onlyItems?:ReadonlySet<string>):void {
   // Freeze all five stat values and all neighbour identities before the first broadcast.
-  const snapshots=ctx.units.filter(u=>u.alive&&u.hp>0&&p2HasAnomaly(u,'share-your-energy')).map(u=>{
-    const stats=readCombatStats(u,{units:ctx.units,tick:0}),v=p2Values('share-your-energy');
+  const snapshots=ctx.units.filter(u=>u.alive&&u.hp>0&&p2HasAnomaly(u,'share-your-energy')&&(!onlyItems||u.mechanics!.some(m=>m.mechanic==='s13P2Anomaly'&&m.source.definitionId==='share-your-energy'&&!!m.source.parentItemInstanceId&&onlyItems.has(m.source.parentItemInstanceId)))).map(u=>{
+    const stats=readCombatStats(u,{units:ctx.units,tick:ctx.tick}),v=p2Values('share-your-energy');
     const fraction=(n:number)=>Math.floor(n*Math.round(v.PercentStatsToShare*10000)/10000);
     return {source:u.mechanics!.find(m=>m.mechanic==='s13P2Anomaly'&&m.source.definitionId==='share-your-energy')!.source,
       stats:{attackDamage:fraction(stats.attackDamage),abilityPower:fraction(stats.abilityPower),health:fraction(u.maxHp),armor:fraction(stats.armor),magicResist:fraction(stats.magicResist)},
@@ -75,6 +80,7 @@ export function p2Stoneskin(u: CombatUnit,tick:number):number {
   const v=p2Values('stoneskin');return p2HasAnomaly(u,'stoneskin')?Math.max(0,v.BonusArmorMR-Math.floor(tick/20)*v.ArmorMRLossPerSecond):0;
 }
 export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
+  const taunted=b5VoidSwarmTarget(u,units,tick);if(taunted)return taunted;
   const forced=batch2Target(u,units);if(forced)return forced;
   const cull=p2HasAnomaly(u,'cull-the-weak');
   const candidates:S13Unit[]=[];

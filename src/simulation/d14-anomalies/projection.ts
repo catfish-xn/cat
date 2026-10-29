@@ -3,7 +3,7 @@ import { getUnitStats } from '../unit-stats';
 import { resolveAbility } from '../combat-abilities';
 import { makeSourcedEffects, resolveEffects } from '../effects';
 import type { SourcedEffect } from '../strategy-types';
-import type { S13ResolvedAbility } from '../ability-types';
+import { resolveFourthStarAbility } from '../fourth-star-ability';
 import type { D14State } from './types';
 import { D14_FOURTH_ABILITY } from './fourth-ability';
 import { D14_POLICY } from '../content/d14-anomalies';
@@ -46,10 +46,7 @@ export function d14UnitBase(unit: Pick<import('../unit-types').Unit,'definitionI
       || !Object.hasOwn(D14_FOURTH_ABILITY, unit.definitionId)) throw new RangeError('Invalid Ultimate Hero certificate');
     base = { ...base, health: Math.floor(definition.baseStats.health * D14_ULTIMATE_BASE_BPS / 10000),
       attack: Math.floor(definition.baseStats.attack * D14_ULTIMATE_BASE_BPS / 10000) };
-    const variables = Object.fromEntries(Object.entries(D14_FOURTH_ABILITY[unit.definitionId]).map(([key, value]) => [key, Math.round(value * 10000)]));
-    // Riot 14.24b explicitly lists the fourth rank: 50/50/55/60%, raw 4-star is 70%.
-    if (unit.definitionId === 'singed') variables.DR = 6000;
-    ability = { id: base.abilityId, amount: 0, kind: 's13', championId: unit.definitionId, variables } satisfies S13ResolvedAbility;
+    ability = resolveFourthStarAbility(unit.definitionId, base.abilityId);
   }
   return {base,ability};
 }

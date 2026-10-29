@@ -21,6 +21,18 @@ import { AUGMENT_BATCH5_S8A } from '../src/simulation/content/augment-pool-batch
 import { AUGMENT_BATCH5_S8C } from '../src/simulation/content/augment-pool-batch5-s8c';
 import { AUGMENT_BATCH5_S11A } from '../src/simulation/content/augment-pool-batch5-s11a';
 import { AUGMENT_BATCH5_S8B } from '../src/simulation/content/augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_R1_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G4_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g5';
+import { AUGMENT_BATCH5_G6_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g6';
+import { AUGMENT_BATCH5_G7_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-g7';
 import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
 import { AUGMENT_SHOP } from '../src/simulation/content/augment-pool-shop';
 import { AUGMENT_BATCH4_B4COMBAT } from '../src/simulation/content/augment-pool-batch4-b4combat';
@@ -78,9 +90,9 @@ const expected: Record<string, Effect[]> = {
   'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
   'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
   ...Object.fromEntries(['crown-guarded','not-today','all-for-one-ii','belt-overflow','calculated-enhancement','crownguard-spirit','flurry-of-blows','guardbreaker-spirit','pair-of-fours','immovable-object','shojin-spirit','sword-overflow','trifecta-ii','wand-overflow'].map(id=>[id,[mech('s13P2Augment',{enabled:1})]])),
-  // v22 approved placebo stage gold: 8/11/15 (Placebo+ 15/18/22) by acquisition stage.
+  // Ordinary Placebo keeps user-approved 8/11/15; Placebo+ uses archive Gold=15 (14.24).
   'placebo': [speed(100), mech('acquisitionGold', { amount: 8, stage3Amount: 11, stage4Amount: 15 })],
-  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15, stage3Amount: 18, stage4Amount: 22 })],
+  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
   'manaflow-ii': [mech('extraAttackMana', { amount: 4, backRowOnly: 1 })],
   'glass-cannon-i': [mech('glassCannon', { startingHealthBps: 8000, damageAmpBps: 1200, backRowOnly: 1 })],
@@ -102,7 +114,7 @@ const expected: Record<string, Effect[]> = {
   'backup': [mech('backup', { minimum: 4, attackSpeedBps: 1000 })],
   'lineup': [mech('lineup', { resistCentiPerUnit: 250 })],
   'find-your-center': [mech('findCenter', { healthBps: 1500, damageAmpBps: 1500 })],
-  'built-different': [mech('builtDifferent', { health2: 300, health3: 400, health4: 500, health5: 600, speed2: 4500, speed3: 5500, speed4: 6500, speed5: 7500 })],
+  'built-different': [mech('builtDifferent', { health2: 240, health3: 330, health4: 420, health5: 530, speed2: 4500, speed3: 5000, speed4: 5500, speed5: 6000 })],
   'blistering-strikes': [mech('blisteringStrikes', { durationTicks: 100, burnBpsPerSecond: 100, woundBps: 3300 })],
   'clockwork-accelerator': [mech('clockworkAccelerator', { attackSpeedBps: 1000, periodTicks: 60 })],
   'lone-hero': [mech('loneHero', { attackSpeedBps: 14000, durabilityBps: 3500 })],
@@ -111,7 +123,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the existing, P1/P2/P3, D11, v19/v20, batch-4, v24 shop and v25 batch-5 source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5),...Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H3_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H4_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H5_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H6_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H7_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H8_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H9_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H10_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H11_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H12_DEFINITIONS).filter(id => id !== 'subscription-service'),...Object.keys(AUGMENT_BATCH5_H13_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_B5A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3D_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S8B),...Object.keys(AUGMENT_BATCH5_S6C),...Object.keys(AUGMENT_BATCH5_S8A),...Object.keys(AUGMENT_BATCH5_S8C),...Object.keys(AUGMENT_BATCH5_S11A),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
+  it('contains exactly the existing, P1/P2/P3, D11, v19/v20, batch-4, v24 shop and v25 batch-5 source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH5_R1_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_R2_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_R3_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_R4_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_R6_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G1_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G2_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G3_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G4_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G5_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G6_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_G7_DEFINITIONS),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5),...Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H3_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H4_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H5_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H6_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H7_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H8_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H9_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H10_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H11_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H12_DEFINITIONS).filter(id => id !== 'subscription-service'),...Object.keys(AUGMENT_BATCH5_H13_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_B5A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3D_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S8B),...Object.keys(AUGMENT_BATCH5_S6C),...Object.keys(AUGMENT_BATCH5_S8A),...Object.keys(AUGMENT_BATCH5_S8C),...Object.keys(AUGMENT_BATCH5_S11A),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 
@@ -178,13 +190,13 @@ describe('G2 static augment selectors and hand-calculated totals', () => {
   it.each(['lux', 'akali', 'blitzcrank', 'test-six-cost'])('little buddies never buffs cost 1/2/3/6 target %s', name => {
     expect(compiled('little-buddies', fixture([unit(name), unit('lux', 'low', 5, 6)]))).toEqual([]);
   });
-  it.each([[1, 300, 4500], [4, 300, 4500], [11, 400, 5500], [18, 500, 6500], [25, 600, 7500], [32, 600, 7500]] as const)('built different round %i uses the B-patch stage ladder', (round, hp, as) => {
+  it.each([[1, 240, 4500], [4, 240, 4500], [11, 330, 5000], [18, 420, 5500], [25, 530, 6000], [32, 530, 6000]] as const)('built different round %i uses the exact 14.24 HP1..4 / AS1..4 stage ladder', (round, hp, as) => {
     expect(compiled('built-different', { ...fixture(), round })).toEqual([flat('maxHp', hp), speed(as)]);
   });
   it('built different rejects any active member trait but ignores unrelated and inactive traits', () => {
     const state = { ...fixture(), round: 4 };
     expect(compiled('built-different', state, unit(), [trait('sorcerer', 2, ['lux'])])).toEqual([]);
-    expect(compiled('built-different', state, unit(), [trait('sorcerer', 0, ['lux']), trait('sentinel', 2, ['irelia'])])).toEqual([flat('maxHp', 300), speed(4500)]);
+    expect(compiled('built-different', state, unit(), [trait('sorcerer', 0, ['lux']), trait('sentinel', 2, ['irelia'])])).toEqual([flat('maxHp', 240), speed(4500)]);
   });
   it('find center uses the documented player deployment center (3,5)', () => {
     expect(compiled('find-your-center', fixture([unit('lux', 'lux', 3, 5)]))).toEqual([{ kind: 'statPercentBps', stat: 'maxHp', bps: 1500 }, mech('damageAmp', { bps: 1500 })]);

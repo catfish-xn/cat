@@ -1,20 +1,19 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
-// Seed 2004 is the first from 2000 satisfying each independent drop shape and
-// public route: no opening, two-star holder, defeat with only r00 (Loris) or r01
-// (Zyra) killed; Loris earns one item and one unit, Zyra one item.
-export const PARTIAL_REVEAL_SEEDS = {loris:2004,zyra:2004} as const;
+// v25: bounded public-route search requires no opening, a two-star holder and a
+// defeat killing only r00 (Loris) or r01 (Zyra), with the original reward shapes.
+export const PARTIAL_REVEAL_SEEDS = {loris:29,zyra:29} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command, preserving the exact tick/eventSeq assertions below.
-// v24: first no-opening seed from 2000 whose independent 4-7 plan has nine
+// v25: first no-opening seed from 2000 whose independent 4-7 plan has nine
 // entries (r03 one hero, r04 three entries including a hero, r05 unloaded), whose
 // public route fields all eight two-star holders/four recipes, and whose lawful
 // Lux/Nami swap kills r03/r04 together after three earlier deaths, then r05 last.
-export const SIMULTANEOUS_REVEAL_SEED=3711;
+export const SIMULTANEOUS_REVEAL_SEED=2634;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[

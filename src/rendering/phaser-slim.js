@@ -16,7 +16,6 @@ import SceneEvents from 'phaser/src/scene/events/index.js';
 import CoreEvents from 'phaser/src/core/events/index.js';
 import Scale from 'phaser/src/scale/index.js';
 import Vector2 from 'phaser/src/math/Vector2.js';
-import Color from 'phaser/src/display/color/index.js';
 import Components from 'phaser/src/gameobjects/components/index.js';
 import GameObject from 'phaser/src/gameobjects/GameObject.js';
 import Graphics from 'phaser/src/gameobjects/graphics/Graphics.js';
@@ -45,7 +44,9 @@ import 'phaser/src/tweens/TweenManager.js';
 
 const Phaser = Extend(false, {
   Game, Scene, Scenes: { Events: SceneEvents }, Core: { Events: CoreEvents }, Scale,
-  Math: { Vector2 }, Display: { Color },
+  // No runtime consumer uses the public Color utility namespace. Engine classes
+  // still import their required color helpers directly (Canvas/Text keep them).
+  Math: { Vector2 },
   GameObjects: { Components, GameObject, Graphics, Image, Text, Container, Arc },
 }, CONST);
 export default Phaser;

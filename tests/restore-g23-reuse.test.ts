@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { createMatch, startMatchCombat } from '../src/simulation/match';
-import { readG23Progress, validateG23RewardSources } from '../src/simulation/g2-3-state';
+import { readG23Progress } from '../src/simulation/g2-3-state';
+import { validateG23RewardSources } from '../src/simulation/restore-checks/g23-state-check';
 import { replayG23Economy, validateG23Progress } from '../src/simulation/g2-3-match-progress';
 import { restoreMatch } from '../src/simulation/serialization';
 import { withG23RestoreReuse, registerG23RestoreOwner, reusedG23Sources, reusedG23Validation, readRestoreG23Replay } from '../src/simulation/g23-restore-reuse';

@@ -1,3 +1,4 @@
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { advanceItemMatchRoute, itemMatch } from './fixtures/m8-b4-match';
@@ -10,11 +11,13 @@ describe('B8 public equipment fixture provenance', () => {
     [['bloodthirster', 'bloodthirster'], 15]] as const) {
     for (let round = 1; round <= last; round++) beforeAll(() => {
       // Another file in the run may already have published the finished acquisition.
-      const acquired = advanceItemMatchRoute(id, round);
+      // Scripted three-card fixture; the public commands and independent loot vectors stay real.
+      const acquired = withB1Offers(typeof id === 'string' ? ['crimson-pact'] : ['pumping-up-iii', 'bronze-for-life-ii'],
+        () => advanceItemMatchRoute(id, round));
       if (round === last) expect(acquired).toBe(true);
     });
   }
-  it('wins the real opening, receives its oracle-defined heroes and combines the two real opening components', () => {
+  it('wins the real opening, receives its oracle-defined heroes and combines the two real opening components', () => withB1Offers(['crimson-pact'], () => {
     const state = itemMatch('bloodthirster');
     const expected=new Map(independentLootPlan(state.seed,state.round).rounds.flatMap(r=>r.encounterPlan.drops.map(d=>[d.dropId,d.payload] as const)));
     for(const receipt of state.m8.loot.receipts)expect(receipt.payload).toEqual(expected.get(receipt.dropId));
@@ -27,8 +30,8 @@ describe('B8 public equipment fixture provenance', () => {
     ]);
     expect(state.resourceProvenance.entries.filter(entry=>entry.kind==='unit-acquired'&&['unit-1','unit-2','unit-3'].includes(entry.unitId)).map(entry=>entry.kind==='unit-acquired'?[entry.roundId,entry.unitId,entry.source.kind]:[])).toEqual([["1-2","unit-1","opening"],["1-2","unit-2","loot"],["1-3","unit-3","loot"]]);
     expect(state.m8.loot.receipts.filter(r=>r.payload.kind==='item').map(r=>[r.payload,r.grantedItemIds])).toEqual([[{"kind":"item","definitionId":"sword","quantity":1},["item-1"]],[{"kind":"item","definitionId":"cloak","quantity":1},["item-2"]],[{"kind":"item","definitionId":"sword","quantity":1},["item-3"]]]);
-    // v24 preserves the seed's independent item/holder vector. The selected
-    // trait card cannot affect Irelia; its actual Renni gift remains benched.
+    // Scripted-card equality is a fixture self-check. The independent item/holder
+    // vector stays real; Crimson Pact cannot affect Irelia and Renni stays benched.
     expect(state.augments.map(augment => augment.definitionId)).toEqual(['crimson-pact']);
     expect(state.preparation.units.find(unit=>unit.team==='player'&&unit.definitionId==='renni')?.location.kind).toBe('bench');
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"]]);
@@ -38,18 +41,18 @@ describe('B8 public equipment fixture provenance', () => {
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-  });
+  }));
 
-  it('equips the actual dropped Lux while preserving the original Irelia on the bench', () => {
+  it('equips the actual dropped Lux while preserving the original Irelia on the bench', () => withB1Offers(['crimson-pact'], () => {
     const state = itemMatch('hand-of-justice', 'unit-3');
     expect(state.roundDefinitionId).toBe('3-5');
     expect(state.preparation.units.find(unit => unit.id === 'unit-1')).toMatchObject({ definitionId: 'irelia', location: { kind: 'bench' } });
     expect(state.preparation.units.find(unit => unit.id === 'unit-3')).toMatchObject({ definitionId: 'lux', location: { kind: 'board', cell: { col: 5, row: 4 } } });
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => unit.id)).toEqual(['unit-3']);
     expect(restoreMatch(state)).toEqual(state);
-  });
+  }));
 
-  it('obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5', () => {
+  it('obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5', () => withB1Offers(['pumping-up-iii', 'bronze-for-life-ii'], () => {
     const state = itemMatch(['bloodthirster', 'bloodthirster']);
     expect(state.roundDefinitionId).toBe('3-5');
     // Keep the original opening drops and supply choices; Pumping Up III and
@@ -64,9 +67,9 @@ describe('B8 public equipment fixture provenance', () => {
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
-  });
+  }));
 
-  it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => {
+  it('returns detached snapshots and does not reuse caller-mutated resources or provenance', () => withB1Offers(['crimson-pact'], () => {
     const first = itemMatch('bloodthirster'), original = serializeMatch(first);
     Object.assign(first.preparation.units.find(unit => unit.id === 'unit-1')!, { definitionId: 'garen' });
     Object.assign(first.items[0], { definitionId: 'warmog' });
@@ -75,5 +78,5 @@ describe('B8 public equipment fixture provenance', () => {
     expect(second.resourceProvenance).not.toBe(first.resourceProvenance);
     expect(serializeMatch(second)).toBe(original);
     expect(restoreMatch(second)).toEqual(second);
-  });
+  }));
 });

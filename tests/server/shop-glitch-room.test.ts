@@ -1,4 +1,4 @@
-import { roomOfferFor } from './augment-offer-helpers';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { PER_ROUND_PREPARATION } from '../../src/server/room/room';
@@ -8,7 +8,7 @@ import * as shared from '../../src/simulation/shared-pool';
 import { serializeMatch, restoreMatch } from '../../src/simulation/serialization';
 import { shopGlitchShared } from '../fixtures/m5/oracle.g2.cjs';
 import { conserved } from '../tp-helpers';
-import { makeRoom, runUntil } from './helpers';
+import { answerOpenChoices, makeRoom, runUntil } from './helpers';
 
 /** A busy event loop can deliver due callbacks together at the current injected clock time. */
 class DelayedClock extends ManualClock {
@@ -20,14 +20,32 @@ class DelayedClock extends ManualClock {
   }
 }
 const clock = new DelayedClock();
-// Independent offer oracle search: seed 537 offers Shop Glitch to s1 and s3 at 2-1.
-const { room } = makeRoom(new TwoSidedBattleResolver(), { seed: 537, clock, preparationMs: 31_000 });
+// Script only the three-card offers; real eligibility, RNG advancement and choose commands remain in use.
+const restoreOffers = installB1Offers(['shop-glitch']);
+const { room } = makeRoom(new TwoSidedBattleResolver(), { seed: 42, clock, preparationMs: 31_000 });
 const owners = ['s1', 's3'];
 const seat = (id = owners[0]!) => room.state.seats.find(s => s.seatId === id)!;
 const mine = () => seat().match;
 let startedAt = 0;
 const elapsed = () => clock.now() - startedAt;
-afterAll(() => room.dispose());
+afterAll(() => { room.dispose(); restoreOffers(); });
+
+function chooseOtherSeats(targetRoom = room): void {
+  // Scripted Shop Glitch can be the first offer for other seats too. Their timeouts can
+  // add clock owners, changing the finite pool and staging s0/s1/s2 before s3.
+  // Explicitly choose a non-clock augment through public commands; keep the two-owner route.
+  for (const { seatId } of targetRoom.state.seats) {
+    if (owners.includes(seatId)) continue;
+    const s = targetRoom.state.seats.find(s => s.seatId === seatId)!, c = s.match.pendingChoice!;
+    const definitionId = c.offers.find(id => id !== 'shop-glitch')!;
+    expect(definitionId).toBeDefined();
+    const command = { type: 'choose' as const, choiceId: c.choiceId, generation: c.generation, definitionId };
+    const result = s.controller === 'bot' ? targetRoom.handleBot(seatId, s.controlEpoch, command) : targetRoom.handle(seatId, command);
+    expect(result).toMatchObject({ ok: true });
+    answerOpenChoices(targetRoom, [seatId]);
+  }
+  expect(targetRoom.state.seats.filter(s => s.match.augments.some(a => a.definitionId === 'shop-glitch')).map(s => s.seatId)).toEqual(owners);
+}
 
 function reach(roundId: string, targetRoom = room, targetClock = clock): void {
   for (let i = 0; i < 200; i++) {
@@ -70,10 +88,12 @@ it('starts a real room', () => { room.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches initial ${id}`, () => { reach(id); });
 it('selects the two offered augments through room.handle', () => {
   for (const id of owners) {
-    roomOfferFor(room,id,'shop-glitch');const c = seat(id).match.pendingChoice!;
+    const c = seat(id).match.pendingChoice!;
+    // Scripted-offer fixture self-check, not evidence about the real RNG offer distribution.
     expect(c.offers).toContain('shop-glitch');
     expect(room.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }
+  chooseOtherSeats();
   const before = mine(); clock.lateAdvance(30_000);
   expect(mine().shop).toEqual(before.shop); expect(mine().rngState).toBe(before.rngState);
 });
@@ -187,16 +207,20 @@ it('caps at twelve boundaries and stops after leaving preparation', () => {
 
 it('discards every staged seat and pool if a later seat clock transaction refuses', () => {
   reach('3-1');
+  // Only s1 can stage before the injected s3 refusal; the other six explicitly declined Shop Glitch.
+  expect(room.state.seats.filter(s => s.match.augments.some(a => a.definitionId === 'shop-glitch')).map(s => s.seatId)).toEqual(owners);
   const before = room.state, actual = shared.advanceSharedAugmentPreparationTime;
   const staged: shared.SharedPoolResult[] = [];
+  const stagedSeats: string[] = [];
   const spy = vi.spyOn(shared, 'advanceSharedAugmentPreparationTime').mockImplementation((pool, match, ms) => {
     if (match.sharedPool!.seatId === 's3') return { ok: false, pool, state: match, reason: 'stale-seat' };
-    const result = actual(pool, match, ms); staged.push(result); return result;
+    const result = actual(pool, match, ms); staged.push(result); stagedSeats.push(match.sharedPool!.seatId); return result;
   });
   const publications: typeof room.state[] = [];
   const stop = room.subscribe(s => publications.push(s));
   try { clock.advance(50); } finally { spy.mockRestore(); stop(); }
   expect(staged).toHaveLength(1); expect(staged[0]!.ok).toBe(true);
+  expect(stagedSeats).toEqual(['s1']);
   expect(staged[0]!.pool).not.toBe(before.pool);
   expect(room.state.phase).toBe('ended');
   expect(room.state.fault).toEqual({ kind: 'seat-stuck', seatId: 's3', reason: 'augment-clock:stale-seat' });
@@ -212,17 +236,19 @@ it('discards every staged seat and pool if a later seat clock transaction refuse
 for (const deliveryLag of [0, 5000]) describe(`default preparation, deadline delivery lag ${deliveryLag}ms`, () => {
 const deadlineClock = new DelayedClock();
 const deadlineRoom = makeRoom(new TwoSidedBattleResolver(), {
-  seed: 537, clock: deadlineClock, preparationMs: PER_ROUND_PREPARATION,
+  seed: 42, clock: deadlineClock, preparationMs: PER_ROUND_PREPARATION,
 }).room;
 afterAll(() => deadlineRoom.dispose());
 it('starts a room with the existing per-round preparation durations', () => { deadlineRoom.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches default-duration ${id}`, () => { reach(id, deadlineRoom, deadlineClock); });
 it('acquires Shop Glitch in the default-duration room', () => {
   for (const id of owners) {
-    roomOfferFor(deadlineRoom,id,'shop-glitch');const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
+    const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
+    // Scripted-offer fixture self-check, not evidence about the real RNG offer distribution.
     expect(c.offers).toContain('shop-glitch');
     expect(deadlineRoom.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }
+  chooseOtherSeats(deadlineRoom);
 });
 for (const id of ['2-2', '2-3', '2-4', '2-5', '2-6', '2-7']) it(`reaches default-duration ${id}`, () => { reach(id, deadlineRoom, deadlineClock); });
 it('includes the 20000ms refresh atomically before the preparation deadline freezes every seat', () => {

@@ -3,6 +3,7 @@
  * are outputs. Never derive the expected amount or recipients from those outputs.
  */
 const assert=require('node:assert/strict');
+const {observedPrefixEqual}=require('./observed-equal.cjs');
 const ID='scoreboard-scrapper';
 const owner=s=>s.augments.find(a=>a.definitionId===ID);
 const ordinary=(u,base)=>u.team==='player'&&Object.hasOwn(base.COST,u.definitionId);
@@ -66,7 +67,7 @@ function validateScoreboardCombat(s,input,base,provenancePrefixLength=s.resource
 }
 function validateH6Transition(before,after,command,base){
  const prior=before.augmentHistory?.facts??[],next=after.augmentHistory?.facts??[];
- assert.deepEqual(next.slice(0,prior.length),prior,'augment history facts append-only');
+ observedPrefixEqual(next,prior,'augment history facts append-only');
  const a=owner(after);
  if(a){
   const appended=next.slice(prior.length);

@@ -1,6 +1,7 @@
+import { validateBatch5R6Transforms } from './restore-checks/batch5-r6-check';
 import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
-import type { AugmentDeath, AugmentTakedownActor, HistorySeat } from './augment-history-types';
+import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
 import { canonicalContent } from './content';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
@@ -8,15 +9,156 @@ import { historyCheck, needsAugmentHistory, historySeatId, validateAugmentAuthor
   advanceAugmentPreparationTime, carryRestoredAugmentTrace, type AugmentHistoryAuthority } from './augment-history';
 import * as commands from './match';
 import { validateMatchStructure } from './serialization-structure';
+import { freezeContent } from './content/freeze';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 
+interface ReplayEvidence {
+  readonly origin: string;
+  readonly commands: readonly { readonly name: string; readonly args: string; readonly count: number }[];
+  readonly state: MatchState;
+  // Retained graph, commands and the trace roster, in UTF-16 bytes. Short node
+  // texts are not included; those are charged once per origin.
+  readonly bytes: number;
+  // ASCII characters of every short node text. One byte each.
+  readonly frozenBytes: number;
+}
+// Restore-only evidence, never candidate admission or live command results.
+// Exact origin/argument encodings bind each prefix; a compressed step run may
+// grow, but a changed argument, branch or shortened run cannot reuse that suffix.
+const replays: ReplayEvidence[] = [];
+const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
+function containsNegativeZero(values: readonly unknown[]): boolean {
+  const stack = [...values];
+  while (stack.length) {
+    const value = stack.pop();
+    if (Object.is(value, -0)) return true;
+    if (value && typeof value === 'object') for (const child of Object.values(value)) stack.push(child);
+  }
+  return false;
+}
+function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
+  let best: ReplayEvidence | undefined, bestSteps = -1;
+  for (const entry of replays) {
+    if (entry.origin !== origin || entry.commands.length > commands.length) continue;
+    let steps = 0;
+    const matches = entry.commands.every((c, i) => {
+      const next = commands[i];
+      steps += c.count;
+      return c.name === next.name && c.args === next.args && (i === entry.commands.length - 1 && c.name === 'stepMatch'
+        ? c.count <= next.count : c.count === next.count);
+    });
+    if (!matches) continue;
+    const priorFacts = entry.state.augmentHistory?.facts ?? [];
+    // A candidate may only extend the independently generated fact prefix. At
+    // an identical command boundary all facts must match, including absence.
+    // A miss always reconstructs from an earlier prefix or the validated origin.
+    const exact = entry.commands.length === commands.length && entry.commands.at(-1)?.count === commands.at(-1)?.count;
+    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) continue;
+    if (steps > bestSteps) { best = entry; bestSteps = steps; }
+  }
+  return best;
+}
+// Code units of every object/array value whose canonical text is under 2048.
+// rememberFrozen retains exactly those strings after the graph is frozen.
+function frozenTextUnits(text: string): number {
+  let total = 0; const stack: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { i++; while (i < text.length) { if (text[i] === '\\') { i += 2; continue; } if (text[i] === '"') break; i++; } continue; }
+    if (c === '{' || c === '[') { stack.push(i); continue; }
+    if (c === '}' || c === ']') { const start = stack.pop(); if (start !== undefined) { const len = i - start + 1; if (len < 2048) total += len; } }
+  }
+  return total;
+}
+function quotedChars(text: string): number {
+  let n = 2;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // JSON.stringify short-escapes the five controls and quote/backslash; other controls use \u00XX.
+    n += c === 34 || c === 92 || c === 8 || c === 9 || c === 10 || c === 12 || c === 13 ? 2 : c < 32 ? 6 : 1;
+  }
+  return n;
+}
+// Canonical length without building the string. Key order does not change it.
+function jsonChars(value: unknown): number {
+  const seen = new WeakSet<object>();
+  const walk = (v: unknown): number => {
+    if (v === null) return 4;
+    if (typeof v === 'string') return quotedChars(v);
+    if (typeof v === 'boolean') return v ? 4 : 5;
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v).length : 0;
+    if (typeof v !== 'object') return 0;
+    if (seen.has(v)) return 0;
+    seen.add(v);
+    if (Array.isArray(v)) {
+      let n = 2;
+      for (let i = 0; i < v.length; i++) n += (i ? 1 : 0) + walk(v[i]);
+      return n;
+    }
+    const keys = Object.keys(v); let n = 2;
+    for (let i = 0; i < keys.length; i++) n += (i ? 1 : 0) + quotedChars(keys[i]) + 1 + walk((v as Record<string, unknown>)[keys[i]]);
+    return n;
+  };
+  return walk(value);
+}
+// The trace shares proof.origin and proof.commands with the state. It also
+// keeps one previous-battle roster clone that no state field points at.
+function traceRosterChars(state: MatchState): number {
+  let max = jsonChars({ units: state.preparation.units.filter(unit => unit.team === 'player'), items: state.items });
+  for (const fact of state.augmentHistory?.facts ?? []) if ('roster' in fact && fact.roster) {
+    const chars = jsonChars(fact.roster);
+    if (chars > max) max = chars;
+  }
+  return max;
+}
+// Short node texts of one origin are charged once, at the largest total. Each
+// later prefix only adds the increment, and those increments sum to that maximum.
+// The strings are ASCII, so a character is one byte, not a UTF-16 code unit.
+function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'bytes' | 'frozenBytes'>[]): number {
+  let graph = 0;
+  const frozen = new Map<string, number>();
+  for (const entry of entries) {
+    graph += entry.bytes;
+    const prior = frozen.get(entry.origin) ?? 0;
+    if (entry.frozenBytes > prior) frozen.set(entry.origin, entry.frozenBytes);
+  }
+  for (const value of frozen.values()) graph += value;
+  return graph;
+}
+function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
+  // stateText proxies the retained graph. The trace roster sits outside it.
+  // Both are UTF-16. Short node texts are charged separately, once per origin.
+  const frozenBytes = frozenTextUnits(stateText);
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
+  if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
+  const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
+  if (previous >= 0) replays.splice(previous, 1);
+  const candidate = { origin, bytes, frozenBytes };
+  while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
+  // No private expected state or trace payload can be mutated through a later
+  // restored command's proof. Pure commands can resume these frozen prefixes.
+  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
+}
+
 export function preflightAugmentHistory(s: MatchState): void {
+  validateBatch5R6Transforms(s);
   const h = s.augmentHistory;
   if (h === undefined) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return; }
   historyCheck(h && typeof h === 'object' && !Array.isArray(h), 'section shape');
   historyCheck(needsAugmentHistory(s), 'history without owner');
   historyCheck(same(Object.keys(h).sort(), ['facts','proof','seatId','version']) && h.version === AUGMENT_HISTORY_VERSION && h.seatId === historySeatId(s), 'version/seat/fields');
+  if (typeof s.round === 'number' && !Number.isFinite(s.round)) throw new TypeError('Content must be finite plain JSON data');
   historyCheck(Array.isArray(h.facts) && h.facts.length <= LIMIT.facts && s.round <= LIMIT.rounds, 'fact bounds');
+  // Bound arbitrary nested payloads before canonicalization/replay, including an adversarial object entry.
+  let bytes = 0, nodes = 0; const stack: [unknown,number][] = [[h,0]];
+  while (stack.length) {
+    const [v,d] = stack.pop()!;
+    historyCheck(++nodes <= 1000000 && d < 64, 'payload bounds');
+    if (typeof v === 'number' && !Number.isFinite(v)) throw new TypeError('Content must be finite plain JSON data');
+    if (typeof v === 'string') bytes += v.length * 2;
+    else if (v && typeof v === 'object') for (const [k,x] of Object.entries(v)) { bytes += k.length * 2 + 8; stack.push([x,d+1]); }
+    historyCheck(bytes <= LIMIT.bytes, 'payload bytes');
+  }
   let round = 0, prefix = 0;
   const attributedBattles = new Set<string>();
   for (const [i,f] of h.facts.entries()) {
@@ -40,6 +182,7 @@ export function preflightAugmentHistory(s: MatchState): void {
         && typeof f.receiptId==='string'&&f.receiptId.length<=256
         && [f.stacks,f.healthFlat,f.attackDamageBps].every(n=>Number.isSafeInteger(n)&&n>0&&n<=1000000000), 'summon growth');
     }
+    if(f.kind==='anomaly-copy-kills')historyCheck(typeof f.battleId==='string'&&typeof f.itemId==='string'&&typeof f.unitId==='string'&&Array.isArray(f.kills)&&f.kills.length<=LIMIT.deaths&&f.kills.every((k:{eventSeq:number;victimId:string})=>Number.isSafeInteger(k.eventSeq)&&k.eventSeq>=0&&typeof k.victimId==='string'),'anomaly copy bounds');
     if (f.kind === 'deaths') {
       historyCheck(Array.isArray(f.deaths) && f.deaths.length <= LIMIT.deaths, 'death bounds');
       if(s.augments.some(a=>a.definitionId==='forbidden-magic'&&a.acquiredRound<=f.round))
@@ -57,15 +200,6 @@ export function preflightAugmentHistory(s: MatchState): void {
   }
   historyCheck(h.facts[0]?.kind === 'acquire' || h.facts[0]?.kind === 'offer-level', 'acquisition boundary');
   historyCheck(h.proof && (h.proof.kind === 'solo' || h.proof.kind === 'server'), 'proof kind');
-  // Bound arbitrary nested payloads before canonicalization/replay, including an adversarial object entry.
-  let bytes = 0, nodes = 0; const stack: [unknown,number][] = [[h,0]];
-  while (stack.length) {
-    const [v,d] = stack.pop()!;
-    historyCheck(++nodes <= 1000000 && d < 64, 'payload bounds');
-    if (typeof v === 'string') bytes += v.length * 2;
-    else if (v && typeof v === 'object') for (const [k,x] of Object.entries(v)) { bytes += k.length * 2 + 8; stack.push([x,d+1]); }
-    historyCheck(bytes <= LIMIT.bytes, 'payload bytes');
-  }
 }
 export function validateAugmentHistory(s: MatchState, authority?: AugmentHistoryAuthority): void {
   preflightAugmentHistory(s); const h = s.augmentHistory;
@@ -84,15 +218,32 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
     historyCheck(c && same(Object.keys(c).sort(), ['args','count','name']) && SOLO_COMMANDS.has(c.name) && Array.isArray(c.args) && c.args.length <= 5 && Number.isSafeInteger(c.count) && c.count > 0 && (c.count === 1 || c.name === 'stepMatch'), 'command shape');
     steps += c.count; historyCheck(steps <= LIMIT.steps, 'step bounds');
   }
-  let replay = initializeAugmentTrace(validateMatchStructure(proof.origin));
-  for (const c of proof.commands) for (let i = 0; i < c.count; i++) {
-    const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
-    const result = fn(replay, ...c.args.map((a: unknown) => a === null ? undefined : a)) as { ok?: boolean; state?: MatchState };
-    historyCheck(result && result.ok !== false, `replay command ${c.name}`);
-    const next = result.state ?? result as unknown as MatchState;
-    historyCheck(next !== replay, 'replay no-op'); replay = next;
+  const origin = canonicalContent(proof.origin);
+  const encoded = proof.commands.map(c => ({name:c.name,args:canonicalContent(c.args),count:c.count}));
+  // Canonical JSON collapses -0 to 0, so such proofs must use cold replay.
+  const cacheable = !containsNegativeZero([proof.origin, ...proof.commands.map(c => c.args)]);
+  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts) : undefined;
+  // A hit skips validateMatchStructure(proof.origin) and resumes commands from
+  // frozen evidence. This is correct only while all SOLO_COMMANDS are pure
+  // functions that never mutate their inputs in place.
+  let replay = prefix?.state ?? initializeAugmentTrace(validateMatchStructure(proof.origin));
+  for (const [index,c] of proof.commands.entries()) {
+    const skipped = prefix?.commands[index]?.count ?? 0;
+    if (skipped === c.count) continue;
+    // A command may retain a location/target object. Private evidence must not
+    // retain or freeze any object owned by the candidate save.
+    const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
+    for (let i = skipped; i < c.count; i++) {
+      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
+      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState };
+      historyCheck(result && result.ok !== false, `replay command ${c.name}`);
+      const next = result.state ?? result as unknown as MatchState;
+      historyCheck(next !== replay, 'replay no-op'); replay = next;
+    }
   }
-  historyCheck(same(replay, s), 'replayed facts/state mismatch');
+  const replayText = canonicalContent(replay);
+  historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
+  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { trajectoryHash } from './m6-integration-oracle.cjs';
 import * as api from '../src/simulation/match';
 import { run, type Route } from '../scripts/generate-m5-route.cjs';
+import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
 import { MatchSession } from '../src/rendering/match-session';
@@ -24,7 +25,7 @@ describe('M6 independent route/history/playback/session integration', () => {
   for (const build of builds) it(`${build}: every completed battle has exact original state/events and isolated playback`, async () => {
     const runId = `independent-${build}`, history = new BattleHistory(runId);
     const trajectories = new Map<string, Map<number, string>>();
-    const route = await run(api, { build, seed: 42, retainStates: true, onStep: (before, result, command) => { if (!('events' in result)) throw new Error('route rejected command'); history.observe({ before, after: result.state, events: combatEvents(result.events), reason: command ? 'command' : 'tick' }); const combat = result.state.combat; if (combat) { let ticks = trajectories.get(combat.combatId!); if (!ticks) { ticks = new Map(); trajectories.set(combat.combatId!, ticks); } ticks.set(combat.tick, trajectoryHash(combat)); } } }) as RetainedRoute;
+    const route = await run(api, { build, seed: 42, ...routeOptions(build,42), retainStates: true, onStep: (before, result, command) => { if (!('events' in result)) throw new Error('route rejected command'); history.observe({ before, after: result.state, events: combatEvents(result.events), reason: command ? 'command' : 'tick' }); const combat = result.state.combat; if (combat) { let ticks = trajectories.get(combat.combatId!); if (!ticks) { ticks = new Map(); trajectories.set(combat.combatId!, ticks); } ticks.set(combat.tick, trajectoryHash(combat)); } } }) as RetainedRoute;
     assertGolden(route);
     expect(history.completedRecords).toHaveLength(ROUND_CATALOG.filter(r=>r.kind!=='supply').length);
     expect(history.capturePrefix()).toBeNull();

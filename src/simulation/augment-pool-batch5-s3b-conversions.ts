@@ -4,7 +4,7 @@ import type { ItemInstance } from './strategy-types';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import { nextRandom } from './rng';
 import { appendResourceProvenance, type ResourceFact } from './resource-provenance';
-import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 
 export type S3bConversion = Extract<ResourceFact,{kind:'g23-item-converted'}>;
 export const isS3bConversion = (fact:ResourceFact):boolean => fact.kind==='g23-item-converted'&&fact.receiptId.startsWith('["augment-pool-batch5-s3b",');
@@ -35,7 +35,7 @@ export function pandoraRoundEntry(state:MatchState,round:number,roundId:string):
 export function validS3bConversion(state:Pick<MatchState,'seed'|'augments'|'resourceProvenance'>,fact:S3bConversion,roundId:string):boolean {
   if(!isS3bConversion(fact))return false;
   if(validSalvageConversion(state,fact,roundId))return true;
-  const round=getCatalogRoundById(roundId).ordinal;
+  const round=getMultiplayerRoundById(roundId).ordinal;
   const owner=state.augments.find(a=>a.definitionId==='pandoras-items-ii'&&a.acquiredRound<round);
   return !!owner&&fact.receiptId===JSON.stringify(['augment-pool-batch5-s3b',owner.choiceId,'pandora',round,fact.itemId])
     &&pandoraItem(state.seed,fact.receiptId,fact.from)===fact.to;

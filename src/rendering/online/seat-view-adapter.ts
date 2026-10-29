@@ -25,6 +25,7 @@ import type { ItemSummonView, RoundEconomyPreview, SeatStateView } from '../../s
 export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null;
   /** Server-computed shop rerolls; absent until a room's private state arrives. */
   readonly freeRerollsAvailable?: number;
+  readonly mutationSacrificeCell?: import('../../simulation/board').HexCell;
   /** G2-4b (§26): my movable preparation summons as the server placed them; RemoteSession.itemSummons reads them. */
   readonly itemSummons?: readonly ItemSummonView[];
   /** v19: the rules' 家人团聚 view of my seat and the six-cost chance per shop slot (basis points). */

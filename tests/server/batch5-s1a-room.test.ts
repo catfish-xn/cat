@@ -8,7 +8,7 @@ const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:22});
 let sid:string;
 beforeAll(()=>{
  room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
- roomOfferFor(room,'s0','beggars-can-be-choosers');const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('beggars-can-be-choosers'));
+ roomOfferFor(room,'s3','beggars-can-be-choosers');const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('beggars-can-be-choosers'));
  expect(seat).toBeDefined();sid=seat!.seatId;const c=seat!.match.pendingChoice!;
  expect(room.handle(sid,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'beggars-can-be-choosers'})).toMatchObject({ok:true});
 });

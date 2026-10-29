@@ -53,7 +53,7 @@ export function batch2RewardPlan(state:MatchState):AugmentGift[] {
   }return gifts;
  });
 }
-function goldPlan(state:MatchState){
+export function goldPlan(state:MatchState){
  const market=state.augments.find(a=>a.definitionId==='crimson-pact');
  const marketPlan=(state.seatMechanics?.receipts??[]).flatMap(r=>market&&r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.skipped&&r.round>=market.acquiredRound?[{receiptId:JSON.stringify(['augment-pool-batch2',market.choiceId,'market',r.receiptId]),source:'augment-pool-batch2',amount:batch2Values(market.definitionId).Gold,round:r.round}]:[]);
  const a=state.augments.find(a=>a.definitionId==='enforce');if(!a)return marketPlan;
@@ -69,11 +69,4 @@ export function drainBatch2Gold(initial:MatchState):MatchState {
   const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
  }return state;
 }
-export function validateBatch2Gold(state:MatchState):void {
- const plan=goldPlan(state),receipts=state.seatMechanics?.receipts??[];
- for(const r of receipts.filter(r=>r.source==='augment-pool-batch2'||r.receiptId.startsWith('["augment-pool-batch2",'))){
-  const p=plan.find(p=>p.receiptId===r.receiptId);
-  if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch2 gold authority');
- }
- for(const p of plan)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch2 gold receipt');
-}
+

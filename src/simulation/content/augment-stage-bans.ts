@@ -10,6 +10,19 @@ import { freezeContent } from './freeze';
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
+  TFT_Augment_TombRaider1:['2-1','3-2'],
+  TFT_Augment_TombRaider2:['2-1','3-2'],
+  TFT13_Augment_AnotherAnomaly:['2-1','3-2'],
+  TFT_Augment_OopsAllRageblades:['2-1'],
+  // 14.24 tags; the user confirmed all three bans for P-B5-78 on 2026-10-27.
+  TFT_Augment_HallOfMirrors: ['2-1','3-2','4-2'],
+  'TFT6_Augment_Recombobulator':['2-1'],
+  "TFT7_Augment_LuckyGloves":["3-2","4-2"],
+  "TFT7_Augment_LuckyGlovesPlus":["2-1"],
+  "TFT_Augment_GhostOfUnitsPast":["3-2", "4-2"],
+  TFT_Augment_Voidborne:['3-2','4-2'],
+  "TFT_Augment_PrismaticPipeline":["4-2"],
+  "TFT_Augment_ExpectedUnexpectedness":["3-2","4-2"],
   "TFT_Augment_NoScoutNoPivot":["3-2", "4-2"],
   "TFT_Augment_CookingPot":["3-2", "4-2"],
   "TFT_Augment_Survivor":["3-2","4-2"],
@@ -87,12 +100,15 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT11_Augment_RainingGold":['3-2','4-2'],
   "TFT11_Augment_RainingGoldPlus":['2-1','4-2'],
   "TFT11_Augment_WanderingTrainerGold":['3-2','4-2'],
+  // User rule (2026-10-27) overrides the unrestricted 14.24 source tags.
+  "TFT13_Augment_Ambusher":['4-2'],
   "TFT13_Augment_Artillerist":['3-2','4-2'],
   "TFT13_Augment_ArtilleristPlus":['2-1','4-2'],
   "TFT13_Augment_CabalCrest":['2-1'],
   "TFT13_Augment_CabalCrown":['2-1'],
   "TFT13_Augment_ChainsawCarry":['2-1','4-2'],
   "TFT13_Augment_Chembaron":['4-2'],
+  "TFT13_Augment_Experiment":['2-1'],
   "TFT13_Augment_Enforcer":['4-2'],
   "TFT13_Augment_Family":['4-2'],
   "TFT13_Augment_FishCarry":['3-2','4-2'],
@@ -100,6 +116,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT13_Augment_PitFighter":['3-2','4-2'],
   "TFT13_Augment_PrimeCarry":['3-2','4-2'],
   "TFT13_Augment_Scrap":['3-2','4-2'],
+  "TFT13_Augment_SingedCarry":["3-2","4-2"],
   "TFT13_Augment_TrundleCarry":['3-2','4-2'],
   "TFT13_Augment_VladCarry":['3-2','4-2'],
   "TFT13_Augment_Watcher":['2-1','3-2','4-2'],

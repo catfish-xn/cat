@@ -18,6 +18,7 @@ async function main() {
   assert(Number.isSafeInteger(count) && count > 0, '--samples must be a positive integer');
   fs.mkdirSync(output, { recursive: true });
   const { build } = require(path.join(root, 'node_modules/esbuild'));
+  const { routeOptions } = require(path.join(root, 'scripts/v25-online-rules-route.cjs'));
   const modulePath = path.join(output, 'seek-modules.mjs');
   await build({ stdin: { contents: `export * from ${JSON.stringify(path.join(root, 'src/simulation/match.ts'))}; export * from ${JSON.stringify(path.join(root, 'src/replay/index.ts'))};`, resolveDir: root },
     bundle: true, platform: 'node', format: 'esm', outfile: modulePath, sourcemap: true });
@@ -30,7 +31,7 @@ async function main() {
     for (const build of ['cannon', 'sniper', 'mage', 'sniper-caitlyn', 'full-load']) {
       const history = new api.BattleHistory(`performance-${build}`);
       const runner = require(path.join(root, 'scripts', build === 'full-load' ? 'verify-m6-full-load-helper.cjs' : 'generate-m5-route.cjs'));
-      const route = await runner.run(api, { build, seed: 42, ...(build === 'full-load' ? { augmentPriorities: ['going-long'] } : {}),
+      const route = await runner.run(api, { build, seed: 42, ...(build === 'full-load' ? { augmentPriorities: ['going-long'] } : {}), ...routeOptions(build, 42),
         onStep(before, result, command) { history.observe({ before, after: result.state, events: result.events.filter(e => e.domain === 'combat'), reason: command ? 'command' : 'tick' }); } });
       assert.equal(route.final.phase, 'gameOver');
       assert.equal(history.completedRecords.length, 33, 'B9 catalog capacity');

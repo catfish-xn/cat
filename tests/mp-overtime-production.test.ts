@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { createMatch, enableMultiplayerSettlement, advanceMultiplayerRound, startMatchCombat, stepMatch,
   claimOrDiscardLoot, forfeitPendingChoice, selectChoice, buyXp, buyUnit, rerollShop, deployMatchUnit,
   snapshotForBattle, compileBattle, resolveTwoSidedBattle, proposeSettlement, applyRoundSettlement,
-  ROUND_SETTLEMENT_VERSION, type MatchState } from '../src/server-entry';
+  ROUND_SETTLEMENT_VERSION, recordAugmentPvpRoster, historyRoster, type MatchState } from '../src/server-entry';
 import { accepted, catalogPreparation, finalSettlement } from './t5r-helpers';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 
@@ -71,8 +71,14 @@ it('public production commands reach ordinal 39, resolve its earned armory, and 
             u => u.location.kind === 'bench' && u.location.slot === n))!;
           opponent = accepted(deployMatchUnit(opponent, unit.id, { kind: 'bench', slot }));
         }
+        // Batch5 history augments (seed 43 selects Contested) require the real frozen table,
+        // just as Room records it before resolving PvP. Keep this two-seat harness on that boundary.
+        const battleId = `natural:${state.round}`;
+        const seats = [state, opponent].map((match, index) => ({ ...historyRoster(match), seatId: index === 0 ? 'A' : 'B',
+          index, hp: match.playerHp, alive: true, rank: index + 1, eliminatedRound: null }));
+        state = recordAugmentPvpRoster(state, battleId, seats, null);
         const battle = resolveTwoSidedBattle(compileBattle(snapshotForBattle(state, 'A'), snapshotForBattle(opponent, 'B'),
-          42, { battleId: `natural:${state.round}` }), 1201);
+          42, { battleId }), 1201);
         const proposal = proposeSettlement(battle).a;
         const { events: _events, ...fields } = proposal;
         const receipt = { ...fields, version: ROUND_SETTLEMENT_VERSION,

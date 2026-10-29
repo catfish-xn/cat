@@ -2,8 +2,8 @@ import type { MatchState } from './match-types';
 import { requireAugmentFacts, historySeatId } from './augment-history';
 import { grantMechanicGold } from './seat-mechanics/grants';
 import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
-const SOURCE='augment-batch5-h8-monetization';
-function plan(state:MatchState) {
+export const SOURCE='augment-batch5-h8-monetization';
+export function plan(state:MatchState) {
  return state.augments.filter(a=>a.definitionId==='mirrored-monetization').flatMap(a=>
   state.roundResults.filter(r=>r.round>=a.acquiredRound&&r.round<a.acquiredRound+AUGMENT_BATCH5_H8['mirrored-monetization'].source.values.rounds&&r.roundKind!=='supply').flatMap(r=>{
    const rows=requireAugmentFacts(state,'deaths',r.round),own=historySeatId(state);
@@ -19,7 +19,4 @@ export function drainBatch5H8Deaths(initial:MatchState):MatchState {
  }
  return state;
 }
-export function validateBatch5H8Deaths(state:MatchState):void {
- const expected=plan(state),actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===SOURCE||r.receiptId.startsWith(`["${SOURCE}",`));
- if(actual.length!==expected.length||expected.some(p=>!actual.some(r=>r.receiptId===p.receiptId&&r.source===p.source&&r.kind==='gold'&&r.round===p.round&&r.amount===p.amount)))throw new RangeError('Invalid monetization gold');
-}
+

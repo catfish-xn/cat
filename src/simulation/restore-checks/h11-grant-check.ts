@@ -1,7 +1,8 @@
-import type { CombatItemGrant, CombatUnit } from './combat-types';
-import { isAugmentOrdinaryHero } from './augment-pool-batch5-h11-history';
-import { canonicalSource } from './m8/identity';
-import { asSource } from './m8/s13-definitions';
+// 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
+import { isAugmentOrdinaryHero } from '../augment-pool-batch5-h11-history';
+import type { CombatItemGrant, CombatUnit } from '../combat-types';
+import { canonicalSource } from '../m8/identity';
+import { asSource } from '../m8/s13-definitions';
 
 /** Local guards only; exact victim, RNG, recipient, item and tick are authenticated
  * by the normal full combat replay and augment-history-v1 command/authority proof. */

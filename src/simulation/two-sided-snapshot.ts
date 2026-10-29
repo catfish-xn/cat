@@ -1,3 +1,7 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { UNIT_DEFINITIONS } from './units';
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
@@ -108,6 +112,11 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       requireSnapshot(c.phase!=='returned'||round.ordinal>=b!.boundRound+3);
       requireSnapshot(Object.keys(c).length===3);
     }
+    if (s.ghostFriendsGrowth !== undefined) {
+      requireSnapshot(augmentIds.has('ghost-of-friends-past')); record(s.ghostFriendsGrowth);
+      requireSnapshot(Object.keys(s.ghostFriendsGrowth).sort().join(',') === 'abilityPower,attackDamageBps,healthFlat');
+      for (const v of Object.values(s.ghostFriendsGrowth)) integer(v);
+    } else requireSnapshot(!augmentIds.has('ghost-of-friends-past'));
     if(s.h6Growth!==undefined){
       requireSnapshot(augmentIds.has('scoreboard-scrapper') && Array.isArray(s.h6Growth) && s.h6Growth.length===s.units.length);
       const ids=new Set<string>();
@@ -119,9 +128,11 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
-      requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+      requireSnapshot(units.has(growth.unitId) && !UNIT_DEFINITIONS[units.get(growth.unitId)!.definitionId]?.summon
+        && (units.get(growth.unitId)!.definitionId === 'tristana' || augmentIds.has('pandoras-bench') || augmentIds.has('recombobulator')) && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
     }
+    if(s.augmentCopyKills){list(s.augmentCopyKills);const seen=new Set<string>();for(const g of s.augmentCopyKills){record(g);id(g.itemId);integer(g.count,1);requireSnapshot(s.items.some(i=>i.id===g.itemId)&&!seen.has(g.itemId)&&Object.keys(g).sort().join(',')==='count,itemId');seen.add(g.itemId);}requireSnapshot(s.augmentCopyKills.length>0);}
     if (s.augmentHistoryGrowth) {
       const seen = new Set<string>(); list(s.augmentHistoryGrowth);
       for (const g of s.augmentHistoryGrowth) { record(g); id(g.unitId); requireSnapshot(units.has(g.unitId) && !seen.has(g.unitId)); seen.add(g.unitId);
@@ -144,6 +155,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:{...s.ghostFriendsGrowth}}:{}),
       ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g}))}:{}),
       ...(s.sniperOpening ? { sniperOpening: structuredClone(s.sniperOpening) } : {}),
       ...(s.cabalGrowth?{cabalGrowth:structuredClone(s.cabalGrowth)}:{}),
@@ -162,6 +174,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       anomalyBinding: s.anomalyBinding === null ? null : { definitionId:s.anomalyBinding.definitionId,
         unitId:s.anomalyBinding.unitId, choiceId:s.anomalyBinding.choiceId, boundRound:s.anomalyBinding.boundRound },
       persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
+      ...(s.augmentCopyKills?{augmentCopyKills:s.augmentCopyKills.map(g=>({...g}))}:{}),
       ...(s.augmentHistoryGrowth ? {augmentHistoryGrowth:s.augmentHistoryGrowth.map(g=>({...g}))} : {}),
       augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp,
         ...(s.augmentProgress.magicRoll === undefined ? {} : { magicRoll: [s.augmentProgress.magicRoll[0], s.augmentProgress.magicRoll[1], s.augmentProgress.magicRoll[2]] as const }),
@@ -199,17 +212,19 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   const h6Growth=scoreboardCombatGrowth(state,units.map(u=>u.id));
   const sniperOpening = readSniperOpening(state);
   return yield* restorePlayerBattleSnapshotSteps({
+    ...(ghostFriendsGrowth(state)?{ghostFriendsGrowth:ghostFriendsGrowth(state)}:{}),
     ...(h6Growth?{h6Growth}:{}),
     ...(sniperOpening ? { sniperOpening } : {}),
     ...(cabalGrowth?{cabalGrowth}:{}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
-    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
+    ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>portableAnomalyId(i.definitionId)==='avarice-incarnate')||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),
     version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),...(wins===0?{}:{priorPvpWins:wins}),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)), augmentProgress: state.augmentProgress,
+    ...((kills=>kills.length?{augmentCopyKills:kills}:{})(r2CopyKills(state).filter(g=>state.items.some(i=>i.id===g.itemId&&i.location.kind==='unit'&&ids.has(i.location.unitId))))),
     ...((growth=>growth.length?{augmentHistoryGrowth:growth}:{})(combatHistoryGrowth(state,[...ids]))),
   });
 }

@@ -1,6 +1,17 @@
+import { AUGMENT_BATCH5_R1_DEFINITIONS } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_DEFINITIONS } from './augment-pool-batch5-r2';
+import { AUGMENT_BATCH5_R3_DEFINITIONS } from './augment-pool-batch5-r3';
+import { AUGMENT_BATCH5_R4_DEFINITIONS } from './augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6_DEFINITIONS } from './augment-pool-batch5-r6';
+import { AUGMENT_BATCH5_G1_DEFINITIONS } from './augment-pool-batch5-g1';
+import { AUGMENT_BATCH5_G2_DEFINITIONS } from './augment-pool-batch5-g2';
+import { AUGMENT_BATCH5_G3_DEFINITIONS } from './augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G4_DEFINITIONS } from './augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5_DEFINITIONS } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1_DEFINITIONS } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_DEFINITIONS } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_DEFINITIONS } from './augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_G6_DEFINITIONS } from './augment-pool-batch5-g6';
 import { AUGMENT_BATCH5_H6_DEFINITIONS } from './augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_B5A_DEFINITIONS } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1A_DEFINITIONS } from './augment-pool-batch5-s1a';
@@ -13,6 +24,7 @@ import { AUGMENT_BATCH5_H10_DEFINITIONS } from './augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H11_DEFINITIONS } from './augment-pool-batch5-h11';
 import { AUGMENT_BATCH5_H12_DEFINITIONS } from './augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_H9_DEFINITIONS } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7_DEFINITIONS } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP_DEFINITIONS } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S3B_DEFINITIONS } from './augment-pool-batch5-s3b';
 import { AUGMENT_BATCH5_S6C_DEFINITIONS } from './augment-pool-batch5-s6c';
@@ -39,6 +51,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...AUGMENT_BATCH5_R2_DEFINITIONS,
   ...AUGMENT_BATCH1_DEFINITIONS,
   ...AUGMENT_BATCH2_DEFINITIONS,
   ...AUGMENT_BATCH3_DEFINITIONS,
@@ -48,7 +61,9 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH4_DEFINITIONS,
   ...AUGMENT_BATCH5_DEFINITIONS,
   ...AUGMENT_BATCH5_H1_DEFINITIONS,
+  ...AUGMENT_BATCH5_G1_DEFINITIONS,
   ...AUGMENT_BATCH5_H3_DEFINITIONS,
+  ...AUGMENT_BATCH5_R6_DEFINITIONS,
   ...AUGMENT_BATCH5_H4_DEFINITIONS,
   ...AUGMENT_BATCH5_H5_DEFINITIONS,
   ...AUGMENT_BATCH5_H6_DEFINITIONS,
@@ -70,6 +85,15 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH5_H12_DEFINITIONS,
   ...AUGMENT_BATCH5_H13_DEFINITIONS,
   ...AUGMENT_BATCH5_H9_DEFINITIONS,
+  ...AUGMENT_BATCH5_R1_DEFINITIONS,
+  ...AUGMENT_BATCH5_R3_DEFINITIONS,
+  ...AUGMENT_BATCH5_R4_DEFINITIONS,
+  ...AUGMENT_BATCH5_G2_DEFINITIONS,
+  ...AUGMENT_BATCH5_G3_DEFINITIONS,
+  ...AUGMENT_BATCH5_G4_DEFINITIONS,
+  ...AUGMENT_BATCH5_G5_DEFINITIONS,
+  ...AUGMENT_BATCH5_G6_DEFINITIONS,
+  ...AUGMENT_BATCH5_G7_DEFINITIONS,
   ...AUGMENT_BATCH4_B4XP_DEFINITIONS,
   ...AUGMENT_BATCH4_B4REROLL_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,
@@ -276,10 +300,11 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
       }
     ]
   },
+  // 14.24 archive TFT_Augment_PlaceboPlus.effects Gold=15, AttackSpeed=0.01.
   "placebo-plus": {
     "id": "placebo-plus",
     "name": "Placebo+",
-    "description": "获得时按阶段一次性获得金币：2阶段15、3阶段18、4阶段及以后22；全队获得1%攻速。",
+    "description": "获得15金币。你的弈子们获得1%攻击速度。",
     "effects": [
       {
         "kind": "attackSpeedBps",
@@ -289,9 +314,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
         "kind": "mechanic",
         "mechanic": "acquisitionGold",
         "values": {
-          "amount": 15,
-          "stage3Amount": 18,
-          "stage4Amount": 22
+          "amount": 15
         }
       }
     ]
@@ -449,23 +472,24 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
       }
     ]
   },
+  // 14.24 archive TFT6_Augment_Traitless2.effects HP1..4 / AS1..4; see docs/AUGMENT_14_24_ALIGNMENT.md.
   "built-different": {
     "id": "built-different",
     "name": "Built Different",
-    "description": "无任何激活羁绊的单位；B补丁stage2/3/4/5+为300/400/500/600HP和45/55/65/75%AS。",
+    "description": "你的弈子们只要不具有任何已激活的羁绊，就会获得240-530生命值和45-60%攻击速度（基于当前阶段）。",
     "effects": [
       {
         "kind": "mechanic",
         "mechanic": "builtDifferent",
         "values": {
-          "health2": 300,
-          "health3": 400,
-          "health4": 500,
-          "health5": 600,
+          "health2": 240,
+          "health3": 330,
+          "health4": 420,
+          "health5": 530,
           "speed2": 4500,
-          "speed3": 5500,
-          "speed4": 6500,
-          "speed5": 7500
+          "speed3": 5000,
+          "speed4": 5500,
+          "speed5": 6000
         }
       }
     ]

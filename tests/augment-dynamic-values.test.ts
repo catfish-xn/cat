@@ -21,7 +21,7 @@ it.each([['pumping-up-i',750],['pumping-up-ii',1100],['pumping-up-iii',1800]] as
  const fielded={...state,preparation:{...state.preparation,units:[board('lux',0)]}};
  expect(buildStrategySnapshot(fielded).units.find(u=>u.unitId==='hero-0')!.stats.attackSpeedBonusBps).toBe(expected);
 });
-it.each([['starry-night',6,25],['starry-night-plus',8,50]] as const)('%s follows current level and reaches the private display projection', (id,level,chance) => {
+it.each([['starry-night',1,18],['starry-night',2,18],['starry-night-plus',1,18],['starry-night-plus',2,18],['starry-night',6,25],['starry-night-plus',8,50]] as const)('%s follows current level and reaches the private display projection', (id,level,chance) => {
  const base=createMatch(42), state={...base,level,augments:[own(id)]};
  const view=toSeatPrivateView(state);
  expect(view.augmentDynamicValues[id].values).toEqual([chance]);

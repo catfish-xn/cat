@@ -17,6 +17,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { G23_ANOMALY_SOURCE } from '../simulation/content/g2-3-anomaly-source';
+import { S13_P3_SOURCE } from '../simulation/content/s13-p3-source';
 import { D11_FILL_SOURCE } from '../simulation/content/d11-fill-source';
 import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
@@ -140,7 +141,10 @@ export function anomalyDisplayName(id: string): string {
  */
 export function anomalyPlayerDescription(id: string): string {
   const sources: Readonly<Record<string, { readonly zhDescription: string; readonly values: Readonly<Record<string, number>> }>> = G23_ANOMALY_SOURCE;
-  const source = Object.hasOwn(sources, id) ? sources[id] : undefined;
+  const p3Sources: Readonly<Record<string, { readonly description: string; readonly values: Readonly<Record<string, number>> }>> = S13_P3_SOURCE;
+  const source = Object.hasOwn(sources, id) ? sources[id]
+    : Object.hasOwn(ANOMALY_DEFINITIONS, id) && Object.hasOwn(p3Sources, id)
+      ? { zhDescription: p3Sources[id].description, values: p3Sources[id].values } : undefined;
   if (!source) return Object.hasOwn(ANOMALY_DEFINITIONS, id) ? ANOMALY_DEFINITIONS[id].description : '';
   const values: Record<string, number> = {};
   for (const [key, value] of Object.entries(source.values)) { values[key] = value; values[`${key}*100`] = value * 100; }

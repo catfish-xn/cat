@@ -4,6 +4,8 @@ import type { FrozenDirectDrop, FrozenLootRound, LootChoiceDescriptor } from '..
 import type { RngStream, LootReceipt } from '../../../src/simulation/m8/contracts';
 
 export const COST: Record<string, number>;
+export function luckyGlovesPair(seed:number,start:number,role:string,radiant?:boolean): {children:string[];state:number;draws:number};
+export function validateLuckyGlovesEquipment(state:MatchState): void;
 export const SELL: Record<number, number[]>;
 export const COMPONENTS: readonly string[];
 export type OracleCommand = Readonly<{ type: string; [key: string]: unknown }>;
@@ -11,7 +13,7 @@ export type OracleAugmentTier = 'silver' | 'gold' | 'prismatic';
 export function openingEncounter(seed: number): string;
 export function augmentTier(seed: number, node: string): OracleAugmentTier;
 export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): string[];
-export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[]): { offers: string[]; rng: number };
+export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): { offers: string[]; rng: number };
 export function validateAugmentReroll(before: MatchState, result: unknown, command: OracleCommand): void;
 export type EconomyInput = Pick<MatchState, 'round' | 'gold' | 'level' | 'xp' | 'playerHp' | 'streak'> & Partial<Pick<MatchState, 'seed' | 'm8'>>;
 export type EconomyCombat = Pick<CombatState, 'result' | 'tick' | 'nextEventSeq'> & {
@@ -30,7 +32,7 @@ export function lootPlan(seed: number, ordinal: number): { readonly rng: RngStre
 export function validateLoot(state: MatchState): Map<string, FrozenDirectDrop | LootChoiceDescriptor>;
 export function validateLootTransition(before: MatchState, after: MatchState, command: OracleCommand | undefined, events: readonly MatchEvent[]): readonly LootReceipt[];
 export class Ledger {
-  constructor(initial: MatchState);
+  constructor(initial: MatchState, options?: { freezeObservations?: boolean });
   gold: number;
   cards: number;
   combinations: number;
@@ -39,12 +41,15 @@ export class Ledger {
   receipts: Set<string>;
   apply(before: MatchState, after: MatchState, command?: OracleCommand | null, events?: readonly MatchEvent[]): void;
   check(state: MatchState): void;
+  audit(state: MatchState): void;
 }
 
 /** Detached observations, initialized before H3 growth; no production growth is an expectation. */
 export interface H3Ledger { readonly kind: 'h3-oracle-v1' }
-export function createH3Ledger(initial: MatchState): H3Ledger;
+export function createH3Ledger(initial: MatchState, options?: { freezeInputs?: boolean }): H3Ledger;
 export function checkH3Growth(memory: H3Ledger, before: MatchState, after: MatchState, command?: OracleCommand | null): H3Ledger;
+/** Full read-only comparison against the detached observed checkpoint. */
+export function auditH3(memory: H3Ledger, state: MatchState): void;
 export function h3GrowthForUnit(memory: H3Ledger, unitId: string): import('../../../src/simulation/augment-history-types').AugmentGrowth;
 
 export function blackMarket(tier: number, rng: number): { offers: string[]; rng: number; draws: number };
@@ -84,3 +89,20 @@ export function shopGlitchShared(pool: import('../../../src/simulation/shared-po
   shop: MatchState['shop']; rngState: number; available: Record<string, number>;
   shops: import('../../../src/simulation/shared-pool-types').SharedPoolState['shops'];
 };
+export function tombRaiderPlan(state: MatchState): readonly { readonly choiceId: string; readonly seatId: string; readonly round: number; readonly offers: readonly string[] }[];
+export function validateTombRaiderTransition(before: MatchState, after: MatchState, command: unknown, events: readonly unknown[]): void;
+
+export function madChemistExpected(star: number, abilityPower: number, attackSpeedBps: number, ticks?: number): { total: number; pulses: number[]; mana: number };
+
+export function starryChanceBps(level: number): number;
+export function starrySharedShop(state: MatchState, stock: Readonly<Record<string, number>>): {
+  rngState: number; shop: MatchState['shop']; available: Record<string, number>;
+};
+
+export function batch5TransformPlan(before: MatchState, augmentId: string, stock: Readonly<Record<string,number>>): ReturnType<typeof import('./augment-rewards-oracle.cjs').batch5Transforms>;
+
+export { ghostFriendsGrowth } from './augment-rewards-oracle.cjs';
+export { rebelCopyStats, rebelCopyDeaths } from './augment-rewards-oracle.cjs';
+
+export function voidcallerModel(costs: readonly number[]): {remainder:number;summoned:number};
+export function voidSwarmPortals(completed: readonly {round:number;roundKind:string}[], acquiredRound:number): number;

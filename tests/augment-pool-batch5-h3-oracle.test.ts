@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createRequire } from 'node:module';
 import { createMatch, type MatchState } from '../src/simulation/match';
 import { readAugmentGrowth } from '../src/simulation/augment-history';
 import { applyRoundSettlement } from '../src/simulation/round-settlement';
@@ -10,13 +11,14 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { makeRoom, runUntil } from './server/helpers';
-import { COST, Ledger, createH3Ledger, checkH3Growth, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
+import { COST, Ledger, createH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
 
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
 const copy = <T>(x:T):Mutable<T> => structuredClone(x) as Mutable<T>;
 type Transition = {before:MatchState;after:MatchState;memory:H3Ledger};
 type Route = {trace:Transition[];final:MatchState;memory:H3Ledger};
 const routes:Record<string,Route>={};
+const originalH3=createRequire(import.meta.url)('./fixtures/m5/h3-growth-oracle-v25-baseline.cjs');
 
 // All observations precede the checked transition. Expected growth never comes
 // from a production planner, history reader, deserializer, or authority token.
@@ -43,6 +45,8 @@ for(const id of ['no-scout-no-pivot','cooking-pot'] as const) {
       room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
       const c=mine().pendingChoice!;expect(c.offers).toContain(id);
       let memory=createH3Ledger(mine());
+      expect(memory).toMatchObject({freezeInputs:true});
+      expect(Object.isFrozen(mine().preparation.units[0])).toBe(true);
       const command={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:id},before=mine();
       expect(room.handle(seatId,command)).toMatchObject({ok:true});memory=checkH3Growth(memory,before,mine(),command);
       const act=(command:Parameters<typeof room.handle>[1])=>{
@@ -62,15 +66,15 @@ for(const id of ['no-scout-no-pivot','cooking-pot'] as const) {
         const after=mine();memory=checkH3Growth(memory,before,after);trace.push({before,after,memory:prior});
       }
       expect(room.state.fault).toBeNull();
-      const final=mine();
+      const final=mine();auditH3(memory,final);
       // Holding either augment through a room disconnect/reconnect must preserve
       // receipts and independently computed growth, including the battle snapshot.
       const snapshot=snapshotForBattle(final,seatId);
       expect(room.setConnected(seatId,false)).toBe(true);expect(room.setConnected(seatId,true)).toBe(true);
-      memory=checkH3Growth(memory,final,mine());expect(mine()).toEqual(final);
+      memory=checkH3Growth(memory,final,mine());auditH3(memory,mine());expect(mine()).toEqual(final);
       expect(snapshotForBattle(mine(),seatId)).toEqual(snapshot);
       expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),room.augmentHistoryAuthority(seatId))).toEqual(final);
-      routes[id]={trace,final,memory};
+      auditH3(memory,mine());routes[id]={trace,final,memory};
     } finally {room.dispose();}
   });
 }
@@ -87,6 +91,35 @@ it('Ledger.apply rejects an unsolicited +999999 HP receipt with no command or ev
 });
 
 describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth',id=>{
+  it('matches the original verdict and complete detached ledger at every real room observation',()=>{
+    const {trace}=routes[id];expect(trace.length).toBeGreaterThan(0);
+    const heroes=(trace[0].memory as unknown as {heroes:string[]}).heroes;
+    let original=originalH3.createH3Ledger(trace[0].before,heroes),
+      optimized=createH3Ledger(trace[0].before,{freezeInputs:false});
+    for(const t of trace) {
+      original=originalH3.checkH3Growth(original,t.before,t.after);
+      optimized=checkH3Growth(optimized,t.before,t.after);
+      const {references,freezeInputs,...detached}=optimized as unknown as {references:unknown;freezeInputs:boolean;[k:string]:unknown};
+      expect(freezeInputs).toBe(false);
+      expect(references).toBeDefined();expect(detached).toEqual(original);
+    }
+    auditH3(optimized,trace.at(-1)!.after);
+  });
+  it('catches a retained in-place edit at the reconnect checkpoint before it is restored',()=>{
+    // Replay into a separate mutable ledger so the room route keeps its freeze checks.
+    const {trace}=routes[id];
+    let memory=createH3Ledger(trace[0].before,{freezeInputs:false});
+    for(const t of trace)memory=checkH3Growth(memory,t.before,t.after);
+    const final=copy(routes[id].final);
+    memory=checkH3Growth(memory,routes[id].final,final);
+    const record=final.augmentHistory!.facts[0],originalPrefix=record.resourcePrefix;
+    record.resourcePrefix=originalPrefix+1;
+    // No round, phase or roster-lock transition: only the forced checkpoint can catch this.
+    memory=checkH3Growth(memory,final,final);
+    expect(()=>auditH3(memory,final)).toThrow(/H3 independent observed checkpoint/);
+    record.resourcePrefix=originalPrefix;
+    expect(()=>auditH3(memory,final)).not.toThrow();
+  });
   it('accepts the observed room boundaries and matches independently calculated totals',()=>{
     const {final,memory}=routes[id],step=growthStep(id);expect(step).toBeDefined();
     const values=final.preparation.units.filter(u=>u.team==='player').map(u=>h3GrowthForUnit(memory,u.id));

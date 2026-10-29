@@ -1,3 +1,4 @@
+import { castMadChemist, isMadChemist } from './augment-pool-batch5-r4';
 import { batch2Rocket } from './augment-pool-batch2-combat';
 import { executeV20Teamup } from './combat-v20-traits';
 import { sixCostCast, sixCostAttack } from './combat-six-cost';
@@ -48,7 +49,8 @@ function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, val
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
 }
 export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): string[] {
-  if(unit.definitionId==='trainer-golem'||unit.definitionId==='augment-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
+  if (isMadChemist(unit)) return castMadChemist(ctx, unit);
+  if(unit.definitionId==='carry-golem'||unit.definitionId==='trainer-golem'||unit.definitionId==='augment-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
   const six=sixCostCast(ctx,unit,target,seq);if(six)return six;
   const { tick, units, events } = ctx, source = origin(unit), v = (key: string, fallback = 0) => variable(unit, key, fallback);
   const mag = (key: string) => amount(unit, tick, { ap: v(key) });

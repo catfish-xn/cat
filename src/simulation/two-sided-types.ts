@@ -9,6 +9,7 @@ export const PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1';
 export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 /** Server-private frozen assets. No economy, shop, random stream or resolved combat numbers. */
 export interface PlayerBattleSnapshot {
+  readonly ghostFriendsGrowth?: import('./augment-pool-batch5-g2').GhostFriendsGrowth;
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly sniperOpening?: Readonly<Record<string, number>>;
   readonly cabalGrowth?: import('./augment-pool-batch5-h9-cabal').CabalGrowth;
@@ -31,6 +32,7 @@ export interface PlayerBattleSnapshot {
   readonly augments: readonly OwnedAugment[];
   readonly anomalyBinding: AnomalyBinding | null;
   readonly persistentGrowth: readonly PersistentGrowth[];
+  readonly augmentCopyKills?:readonly import('./augment-pool-batch5-r2-history').AugmentCopyKills[];
   readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly augmentProgress: MatchBase['augmentProgress'];
 }

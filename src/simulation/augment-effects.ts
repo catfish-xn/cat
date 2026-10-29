@@ -1,3 +1,9 @@
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { compileMadChemist } from './augment-pool-batch5-r4';
+import { compileMutationEffect } from './augment-pool-batch5-g3-mutation';
+import { compileBatch5G3Effect } from './augment-pool-batch5-g3';
+import { b5VoidlingHealth } from './augment-pool-batch5-g4';
+import { carryGolemEffects } from './augment-pool-batch5-g6-stats';
 import { getUnitForm } from './seat-mechanics/forms';
 import { EMBLEM_ITEMS } from './content/emblems';
 import { HERO_UNITS, magicRollKind } from './content/augment-pool-batch3';
@@ -49,6 +55,11 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 'madChemist': return compileMadChemist(state,unit,board,effect);
+    case 'mutationSurvives': return compileMutationEffect(effect, state, unit, traits);
+    case 'aerialWarfare': return compileBatch5G3Effect(effect, unit, traits);
+    case 'voidcaller': return traits.some(t=>t.traitId==='visionary'&&isTraitSnapshotMember(t,unit))?[{...effect,values:{...v,health:b5VoidlingHealth(state.round)}}]:[];
+    case 'carryGolem': return carryGolemEffects(state.round, augment, unit);
     case 'coronation': {
       const count=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length+state.temporaryEquipment.filter(i=>i.holderId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length;
       const v=AUGMENT_BATCH1.coronation.source.values;
@@ -128,7 +139,8 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'mentorship': return allies.some(other=>other.id!==unit.id&&UNIT_DEFINITIONS[other.definitionId].cost>UNIT_DEFINITIONS[unit.definitionId].cost&&other.location.kind==='board'&&unit.location.kind==='board'&&hexDistance(other.location.cell,unit.location.cell)===1)?[flat('maxHp',v.health),speed(v.attackSpeedBps)]:[];
     case 'itemCollector': {
       const ids=new Set(allies.map(u=>u.id));
-      const count=new Set([...state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)).map(i=>i.definitionId),...state.temporaryEquipment.filter(i=>ids.has(i.holderId)).map(i=>i.definitionId)]).size;
+      const converted=(id:string)=>state.augments.some(a=>a.definitionId==='anger-issues')&&isAngerIssuesConvertibleItem(id)?'rageblade':id;
+      const count=new Set([...state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)).map(i=>i.definitionId),...state.temporaryEquipment.filter(i=>ids.has(i.holderId)).map(i=>i.definitionId)].map(converted)).size;
       return [flat('maxHp',v.baseHealth+count*v.healthPerItem),{kind:'statPercentBps',stat:'attackDamage',bps:count*v.adBpsPerItem},mechanic('fractionalFlat',{armorCenti:0,magicResistCenti:0,abilityPowerCenti:count*v.apCentiPerItem})];
     }
     case 'backup': return allies.filter(u=>row(u)>=zone.lastRow-1).length>=v.minimum?[speed(v.attackSpeedBps)]:[];
