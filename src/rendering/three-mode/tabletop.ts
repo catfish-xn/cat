@@ -99,7 +99,7 @@ export interface Tabletop {
    * Visiting another board (TFT: my legend goes there): mine leaves this one, its walk dropped and no orb claimed meanwhile;
    * back home it stands at its own spot again.
    */
-  away(on: boolean): void;
+  away(on: boolean, carousel?: boolean): void;
   /** Acceptance read (?debug3d). */
   debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean; dropping: boolean; opened: boolean }[]; hits: string[]; opening: number; bolt: boolean };
   dispose(): void;
@@ -185,7 +185,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
   /** Set while I visit another board (`away`). */
-  let away = false;
+  let away = false, carousel = false;
   const legend = (side: 'me' | 'opponent'): LegendView => {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
@@ -196,7 +196,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-legend-${side}`;
     view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
-    root.add(standIn(side)); root.visible = !(away && side === 'me');
+    root.add(standIn(side)); root.visible = !carousel && !(away && side === 'me');
     placeLegend(view); scene.add(root);
     if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
     if (side === 'opponent' && before) opponentWalk = before.walk;
@@ -571,13 +571,16 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
         save.expiresAt = now() + 1400; // A dropped frame must not stretch the save past its wall-clock bound.
       }
     },
-    away(on) {
-      if (on === away) return;
+    away(on, inCarousel = false) {
+      const changed = on !== away, wasCarousel = carousel;
+      carousel = inCarousel;
+      for (const [side, view] of legends) view.root.visible = !carousel && !(on && side === 'me');
+      if (!changed) return;
       away = on; orbTarget = null;
       const view = legends.get('me');
       if (!view) return;
-      view.path = null; view.root.visible = !on;
-      if (!on) { view.walked = false; placeLegend(view); }
+      view.path = null;
+      if (!on) { if (!wasCarousel) view.walked = false; placeLegend(view); }
     },
     walk(walk) {
       if (walk.scene !== 'board' || walk.who !== 'opponent') return;

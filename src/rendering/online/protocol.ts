@@ -72,7 +72,7 @@ export interface GameClient {
    * not change until the receipt and the state push that follows it (or a `refused` callback).
    */
   send(command: WireCommand): ClientSendResult;
-  /** My legend's walk to the room (no receipt); false when it was not sent. In-browser rooms have none. */
+  /** My legend's walk to the room (no receipt); false when it was not sent or the local room refused it. */
   walk?(request: LegendWalkRequest): boolean;
   /** Watch another seat's battles (null: stop); kept across a reconnect. In-browser rooms have none. */
   watch?(seatId: string | null): void;

@@ -174,7 +174,7 @@ export class CarouselPanel {
     for (const chip of Array.from(this.ring.querySelectorAll('.carousel-slot.pending'))) chip.classList.remove('pending');
     this.tick();
   }
-  /** A slot click, from its chip or the 3D carousel: taken only while my batch is out, the slot stands and no pick is out. */
+  /** A 2D card click requesting server-planned travel: taken only while my batch is out, the slot stands and no pick is out. */
   pickSlot(slot: number): boolean {
     const current = this.view, chip = this.chip(slot);
     if (!current?.eligible || !chip || chip.disabled || this.pending !== null) return false;

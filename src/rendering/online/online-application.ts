@@ -26,7 +26,7 @@ import { ScoutMinimap } from './scout-minimap';
 import { OpponentBoardPanel, publicTraitRows } from './opponent-board';
 import { traitColumnShowRows } from '../trait-column';
 import { PlayersSidebar } from './players-sidebar';
-import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
+import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { EliminationCard, RankingOverlay } from './ranking';
 import { rankBattle } from '../../presentation/battle-ranking';
 import type { CombatReplay } from '../../simulation/combat-replay-view';
@@ -128,7 +128,7 @@ export class OnlineApplication implements SceneApplication {
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.minimap = new ScoutMinimap(app, seatId => this.toggleBoard(seatId));
-    this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
+    this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
     this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });
@@ -362,7 +362,7 @@ export class OnlineApplication implements SceneApplication {
   }
   /**
    * ?render=3d: the carousel side is drawn by the 3D layer from the same view (board-feed BoardCarousel); its clicks come
-   * back through the panel's own pickSlot. The 2D panel then keeps head, countdown and release order only.
+   * to the room as ground walks. The 2D panel then keeps head, countdown and release order only.
    */
   private publishCarousel3d() {
     this.carouselFeedGeneration = boardFeedGeneration();
@@ -378,20 +378,17 @@ export class OnlineApplication implements SceneApplication {
           cost: getHeroIdentity(slot.definitionId).cost,
           items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), pickedBy: slot.pickedBy,
           takable: view.eligible && slot.pickedBy === null && pending === null, pending: pending === slot.slot })) };
-    });
+    }, view !== null);
     this.carousel.drawnIn3d = drawn && shown;
     if (!shown) this.carouselNextRelease = Infinity;
   }
   private carouselReleaseDue(): boolean { return (this.carousel.elapsedNow() ?? -Infinity) >= this.carouselNextRelease; }
-  private pickCarousel(slot: number, view: CarouselView) {
-    const result = this.session.carouselPick(view.id, view.revision, slot);
-    this.publishCarousel3d(); // pending
-    if (result.ok) return;
-    const notice = this.session.takeNotice();
-    if (notice?.kind === 'pending') return; // the receipt and the next view answer it
-    this.carousel.clearPending(); this.publishCarousel3d();
-    this.hooks.status(notice?.kind === 'offline' ? notice.text : NON_RULE_REFUSALS[result.reason as ReceiptFailure] ?? `选秀未成功：${result.reason}`);
+  private pickCarousel(slot: number) {
+    const sent = this.client.walk?.({ scene: 'carousel', slot }) ?? false;
+    if (!sent) { this.carousel.clearPending(); this.hooks.status('选秀行走未发送，请重试'); }
+    this.publishCarousel3d();
   }
+
   /**
    * G5: the stats of my battle add up live while it plays back, then hold its final totals until my next battle starts.
    * The economy hint shows whenever the server sends a preview (preparation and my battle).

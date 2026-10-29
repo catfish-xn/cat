@@ -6,7 +6,7 @@ import {
   type BoardCarousel, type BoardCarouselSlot, type BoardLegendWalk,
 } from '../src/rendering/board-feed';
 import {
-  CAROUSEL_LEGEND_RADIUS, CAROUSEL_ORBIT_MS, CAROUSEL_UNIT_RADIUS, LEGEND_CELLS_PER_SECOND, carouselHome, carouselUnitPoint,
+  CAROUSEL_UNIT_PICK_RADIUS, CAROUSEL_LEGEND_RADIUS, CAROUSEL_ORBIT_MS, CAROUSEL_UNIT_RADIUS, LEGEND_CELLS_PER_SECOND, carouselHome, carouselUnitPoint,
 } from '../src/server/legend-motion';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
@@ -71,6 +71,20 @@ describe('3D carousel stage', () => {
     expect(debug.units.map(unit => unit.slot)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     expect(debug.units.every(unit => unit.body === 'standin' && unit.items === 1 && unit.ring === 'none')).toBe(true);
     expect(debug.effects.some(entry => entry.includes('timer'))).toBe(false);
+  });
+
+  it('draws each selectable circle at the server pickup radius and never chases a pending unit', () => {
+    const { stage, tick } = setup();
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, i) => slot(i, { takable: true, pending: i === 0 })) }));
+    const holder = stage.scene.getObjectByName('render3d-carousel-units')!.children[0]!;
+    const ring = holder.children[1] as Mesh;
+    ring.geometry.computeBoundingSphere();
+    expect(ring.geometry.boundingSphere!.radius * ring.scale.x / CAROUSEL_CELL).toBeCloseTo(CAROUSEL_UNIT_PICK_RADIUS, 6);
+    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, position = mine.position.clone();
+    tick(4000); stage.update(4);
+    expect(mine.position.equals(position)).toBe(true);
+    expect(stage.debug().legends[2]).not.toMatch(/:chase$/);
+    stage.dispose();
   });
 
   it('puts legends on the outer cradles and units on the inner ring, at the doc proportions', () => {
@@ -369,7 +383,7 @@ describe('3D carousel stage', () => {
     stage.dispose();
   });
 
-  it('walks my legend on a ground click only once released and with no pick out; my pick sends it running, a refusal stops it', () => {
+  it('walks my released legend to the clicked ground point, including while a card is pending and after a pick', () => {
     const { stage } = setup();
     const area = { left: 0, top: 0, width: 1600, height: 900 }, middle = { x: 800, y: 450 };
     stage.show(carousel());
@@ -381,10 +395,10 @@ describe('3D carousel stage', () => {
     const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, start = Math.hypot(mine.position.x, mine.position.z);
     for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
     expect(Math.hypot(mine.position.x, mine.position.z)).toBeLessThan(start - CAROUSEL_CELL);
-    // My click on slot 3 is out: running for it, and no more ground walking.
+    // Pending cards never replace a ground destination or lock movement.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pending: index === 3 })) }));
-    expect(stage.debug().legends[2]).toMatch(/:chase$/);
-    expect(stage.walkTo(middle, area)).toBeNull();
+    expect(stage.debug().legends[2]).not.toMatch(/:chase$/);
+    expect(stage.walkTo(middle, area)).not.toBeNull();
     // Refused (someone else got it first): it stops where it is.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : null })) }));
     expect(stage.debug().legends[2]).not.toMatch(/:chase$/);
@@ -395,7 +409,8 @@ describe('3D carousel stage', () => {
     for (let frame = 0; frame < 360; frame++) stage.update(1 / 60);
     expect(stage.debug().fetched).toMatchObject({ s2: 5, s6: 3 });
     expect(stage.walkTo(middle, area)).not.toBeNull();
-    expect(stage.runTo(1)).toBe(false);
+    expect('runTo' in stage).toBe(false);
+    expect(stage.debug().fetched).toMatchObject({ s2: 5 });
   });
 
   it('puts units already taken on the first view by their legends at home, with nothing to watch', async () => {
@@ -481,13 +496,13 @@ describe('3D carousel legends walk where the room has them', () => {
     expect(stage.debug().fetched).toMatchObject({ s5: 0 });
   });
 
-  it('runs my legend to a unit I may take at once, and not before release', () => {
+  it('walks to the clicked point after release and only follows the server line when it arrives', () => {
     const { stage } = setup();
     stage.show(carousel());
-    expect(stage.runTo(4)).toBe(false);
+    expect(stage.walkTo({ x: 800, y: 450 }, { left: 0, top: 0, width: 1600, height: 900 })).toBeNull();
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { takable: true })) }));
-    expect(stage.runTo(4)).toBe(true);
-    expect(stage.debug().legends[2]).toMatch(/:chase$/);
+    expect(stage.walkTo({ x: 800, y: 450 }, { left: 0, top: 0, width: 1600, height: 900 })).not.toBeNull();
+    expect(stage.debug().legends[2]).toMatch(/:walk$/);
     // The room's walk for me takes over from where it is drawn.
     stage.walk({ seatId: 's2', scene: 'carousel', from: { x: 0, y: 0 }, to: { x: 0.5, y: 2 }, startedAt: 0, arriveAt: 800, slot: 4, who: 'me' });
     expect(stage.debug().legends[2]).toMatch(/:walk$/);
@@ -511,6 +526,15 @@ describe('board-feed legend channel', () => {
 });
 
 describe('board-feed carousel channel', () => {
+  it('publishes carousel presence even when the board side has no carousel scene', () => {
+    const phases: (boolean | undefined)[] = [], scenes: (BoardCarousel | null)[] = [];
+    const off = subscribeBoardFeed({ frame() {}, events() {}, carousel: (view, active) => { scenes.push(view); phases.push(active); } });
+    expect(publishCarousel(() => null, true)).toBe(true);
+    expect(publishCarousel(() => null, false)).toBe(true);
+    expect(scenes).toEqual([null, null]); expect(phases).toEqual([true, false]);
+    off();
+  });
+
   it('builds a carousel only for a layer that draws one, and hands the panel click and hover through', () => {
     const before = boardFeedGeneration();
     expect(publishCarousel(() => { throw new Error('not built'); })).toBe(false);
@@ -544,7 +568,8 @@ describe('carousel pick limits ownership without locking movement', () => {
     tick(1000); stage.update(1);
     expect(Math.hypot(mine.position.x, mine.position.z)).toBeCloseTo(0);
     expect(stage.debug().fetched).toEqual({ s2: 0 });
-    expect(stage.runTo(1)).toBe(false);
+    expect('runTo' in stage).toBe(false);
+    expect(stage.debug().fetched).toEqual({ s2: 0 });
     stage.walk({ ...walk, from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, startedAt: 2000, arriveAt: 3000 });
     tick(1000); stage.update(1);
     expect(mine.position.x / CAROUSEL_CELL).toBeCloseTo(1);
@@ -552,7 +577,9 @@ describe('carousel pick limits ownership without locking movement', () => {
     expect(unit.position.x).toBeLessThan(mine.position.x);
     expect(stage.walkTo({ x: 800, y: 450 }, area)).not.toBeNull();
     stage.show(carousel({ seats: seats(false), slots: [slot(1)] }));
-    expect(stage.runTo(1)).toBe(false); // receipt remains remembered even if its slot is pruned
+    expect('runTo' in stage).toBe(false); // the removed chase API cannot request a second pick
+    tick(1000); stage.update(1);
+    expect(stage.debug().fetched).toEqual({}); // an unconfirmed slot is never picked locally
     expect(stage.walkTo({ x: 800, y: 450 }, area)).not.toBeNull();
     stage.dispose();
   });

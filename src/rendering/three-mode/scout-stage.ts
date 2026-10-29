@@ -105,6 +105,7 @@ export interface ScoutStage {
   /** The seat to draw on this board layout, or null to stop (everything is released). */
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
   /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
+  away(on: boolean): void;
   walkVisitor(point: { x: number; y: number }): boolean;
   inspectRoot(id: string): Group | undefined;
   descriptionAt(client: { x: number; y: number }, camera: Camera, area: ScreenArea): { target: BoardDescription; box: BoardScreenBox } | undefined;
@@ -141,6 +142,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let current: ScoutView | null = null, layoutKey = '';
   const pieces: Piece[] = [], orbs: Mesh[] = [];
   let legend: Piece | null = null, visitor: Piece | null = null;
+  let away = false;
   let roam: { minX: number; maxX: number; minZ: number; maxZ: number; speed: number } | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
@@ -230,6 +232,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
         return fit(stand, legendHeight);
       }, loadModel ? id => loadLegendLease(loadModel, id) : null);
+      piece.root.visible = !away;
       piece.root.position.copy(at);
       piece.root.rotation.y = Math.atan2(center.x - at.x, center.z - at.z);
       return piece;
@@ -253,6 +256,10 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   return {
     group,
     get active() { return current !== null; },
+    away(on) {
+      away = on;
+      for (const piece of [legend, visitor]) if (piece) { piece.root.visible = !on; if (on) piece.path = null; }
+    },
     show(scout, frame) {
       if (!scout || !frame) { if (current) { clear(); current = null; layoutKey = ''; group.visible = false; } return; }
       const view = readScout(scout);
@@ -302,7 +309,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       orbs.forEach((orb, index) => { orb.position.y = ORB_FLOAT + Math.sin(clock * 2 + index) * 2; });
     },
     walkVisitor(point) {
-      if (!current || !visitor || !roam) return false;
+      if (away || !current || !visitor || !roam) return false;
       const to = new Vector3(Math.min(roam.maxX, Math.max(roam.minX, point.x)), 0, Math.min(roam.maxZ, Math.max(roam.minZ, point.y)));
       const from = visitor.root.position.clone().setY(0);
       if (from.distanceToSquared(to) > 1) visitor.root.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);

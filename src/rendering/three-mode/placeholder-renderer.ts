@@ -1150,7 +1150,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return root ? projectedBox(root, camera, viewport()) : undefined;
   };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
-  const onCarousel = (view: Parameters<typeof stage.show>[0]) => {
+  let carouselOngoing = false;
+  const onCarousel = (view: Parameters<typeof stage.show>[0], active = view !== null) => {
+    carouselOngoing = active;
+    tabletop.away(scout.active || active, active);
+    scout.away(active);
     if (view && !stage.active) {
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
@@ -1177,7 +1181,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     showingOwnBoard = !view;
     if (lastFrame) buildBoard(lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
-    tabletop.away(scout.active);
+    tabletop.away(scout.active || carouselOngoing, carouselOngoing);
     goldMines?.away(!!view);
   };
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
@@ -1318,16 +1322,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     if (stage.active) {
       if (event.button !== 0 && event.button !== 2) return;
-      // Either button, as TFT's right click: on a unit I may take my legend runs to it and the room picks it when it gets
-      // there (a client that cannot walk falls back to the panel's own slot click); anywhere else it walks there.
+      // Both buttons walk to the clicked ground point, even over a unit. The room alone picks on contact.
       const client = { x: event.clientX, y: event.clientY };
-      const hit = stage.slotAt(client, viewport());
-      if (hit?.takable) {
-        event.preventDefault();
-        if (!legend()?.walk({ scene: 'carousel', slot: hit.slot })) feed?.carouselControls?.()?.pick(hit.slot);
-        else stage.runTo(hit.slot);
-        return;
-      }
       const to = stage.walkTo(client, viewport());
       if (to) { event.preventDefault(); legend()?.walk({ scene: 'carousel', to }); }
       return;
@@ -1335,7 +1331,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // While scouting the board is the other seat's: only a right click, which walks my visiting legend there.
     // Watching its battle takes no input at all.
     if (visiting()) {
-      if (scout.active && event.button === 2) { const point = boardPoint(event); if (point && scout.walkVisitor(point)) event.preventDefault(); }
+      if (scout.active && !carouselOngoing && event.button === 2) { const point = boardPoint(event); if (point && scout.walkVisitor(point)) event.preventDefault(); }
       return;
     }
     // Right click: my legend walks there (onto my orb when it is under the pointer, which it then claims).
