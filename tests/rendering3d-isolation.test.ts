@@ -52,8 +52,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
 
     // Keep the path as evidence: a regression reports each leaking module and
     // the exact chunk import chain, rather than relying on filenames or sizes.
-    function reachable(includeDynamic: boolean): Map<string, string[]> {
-      const paths = new Map<string, string[]>([[entry.fileName, [entry.fileName]]]);
+    function reachable(includeDynamic: boolean, from = entry.fileName): Map<string, string[]> {
+      const paths = new Map<string, string[]>([[from, [from]]]);
       for (const [name, path] of paths) {
         const chunk = byName.get(name);
         if (!chunk) throw new Error(`Missing emitted chunk: ${path.join(' → ')}`);
@@ -99,6 +99,12 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect(dynamicValuesChunks, 'the shared dynamic projection must remain emitted on demand').toHaveLength(1);
     expect(dynamicValuesChunks[0]!.fileName).toMatch(/^assets\/solo\//);
     expect(allPaths.has(dynamicValuesChunks[0]!.fileName)).toBe(true);
+
+    const augmentTextChunks = chunks.filter(chunk => chunk.moduleIds.some(id =>
+      normalize(id).endsWith('/src/presentation/augment-text-data.ts')));
+    expect(augmentTextChunks, 'online augment text must remain independently loadable').toHaveLength(1);
+    expect([...reachable(true, augmentTextChunks[0]!.fileName).keys()].filter(name => name.startsWith('assets/solo/')),
+      'loading augment text must not transitively request solo code, including dynamic values').toEqual([]);
 
     const soloChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/solo/'));
     expect(soloChunks.length, 'solo functionality must actually be emitted').toBeGreaterThan(0);

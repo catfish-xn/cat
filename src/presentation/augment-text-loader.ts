@@ -29,9 +29,13 @@ export function createAugmentTextLoader<TextData>(importData: () => Promise<Text
   return { peekAugmentText, loadAugmentText, readAugmentText, augmentTextPlaceholder, onAugmentTextChanged };
 }
 export const { peekAugmentText, loadAugmentText, readAugmentText, augmentTextPlaceholder, onAugmentTextChanged } =
-  // Keep text-only UI chunks independent of the domain. The companion projection
-  // is loaded by the same request and shares the server's synchronous implementation.
+  // Online values come from the server; never request the solo projection there.
+  // Solo text and its synchronous projection become visible atomically.
   createAugmentTextLoader(async () => {
-    const [text, dynamic] = await Promise.all([import('./augment-text-data'), import('../simulation/augment-dynamic-values')]);
-    return { ...text, augmentDynamicValues: dynamic.augmentDynamicValues };
+    const online = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'online';
+    const [text, dynamic] = await Promise.all([
+      import('./augment-text-data'),
+      online ? undefined : import('../simulation/augment-dynamic-values'),
+    ]);
+    return { ...text, augmentDynamicValues: dynamic?.augmentDynamicValues };
   });

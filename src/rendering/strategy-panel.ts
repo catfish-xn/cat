@@ -556,7 +556,7 @@ export class StrategyPanel {
   private dynamicValues(state: MatchState): AugmentDynamicValues {
     if (isOnline()) return (state as MatchState & { augmentDynamicValues?: AugmentDynamicValues }).augmentDynamicValues ?? {};
     if (!state.augments.length && state.pendingChoice?.kind !== 'augment') return {};
-    return readAugmentText()?.augmentDynamicValues(state) ?? {};
+    return readAugmentText()?.augmentDynamicValues?.(state) ?? {};
   }
   render(): void {
     const spectating = isOnlineSpectating();
