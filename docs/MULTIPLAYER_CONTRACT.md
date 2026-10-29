@@ -2164,12 +2164,12 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 **指令**：新增线指令 `{type:'moveItemSummon', itemInstanceId:string, cell:{col:int,row:int}}`（`MoveItemSummonCommand`，属于 `WireCommand`，不进 `ClientCommand`，机器人不会发）。每层 onlyKeys；`itemInstanceId` 非空，`cell` 两个整数，其它形状一律 `invalid-message`。
 - 房间阶段门：只在 `preparation` 和 `choice` 两个房间阶段放行（与 deploy 同窗口但不进战斗/结算的 OPS）；其余阶段 `wrong-phase`。
-- 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
+- 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备或强化待选布阵窗口、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
 - 客户端：`RemoteSession.moveItemSummon` 发送后等回执和下一次 state 推送，本地不先移动；战斗回放期间不发。
 
 **私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席阶段不是 `preparation` 时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
 
-**界面**：准备阶段且棋盘上没有战斗时，`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
+**界面**：准备阶段或海克斯待选布阵窗口且棋盘上没有战斗时，全部召唤物（含锻炉、赛恩及 `itemSummons`）按规则公共移动命令可拖动；`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
 
 **公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
 

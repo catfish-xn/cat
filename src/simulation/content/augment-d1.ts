@@ -2,7 +2,7 @@ import { freezeContent } from './freeze';
 import type { ChoiceDefinition } from '../strategy-types';
 import type { AugmentGiftSpec } from '../augment-gift-plan';
 
-/** D1 effect only. D5 owns catalogue/offer/stage registration and digest changes. */
+/** D1 effect declaration; D5 registers catalogue, tier and stage tags. */
 export const WHAT_YOU_REALLY_ARE = freezeContent({
   id:'what-you-really-are', apiName:'TFT13_Augment_Grant6Cost_Warwick', tier:'prismatic',
   name:'真心本色', description:'获得一个【饮血剑】。在你对其他玩家造成35伤害后，获得一个【沃里克】和一个【斯特拉克的挑战护手】。\n(当前：〔对局动态值〕)\n',

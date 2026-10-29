@@ -73,7 +73,7 @@ function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolStat
     if (state.phase === 'settlement' || state.phase === 'gameOver') return { outcome: { seatId, state, result: lastResult(state), damage: lastDamage(state), combat: null }, pool };
     throw new BattleResolveError(seatId, `wrong-phase:${state.phase}`);
   }
-  const started = runSharedMatchCommand(pool, state, { type: 'startCombat' });
+  const started = runSharedMatchCommand(pool, state, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'startPlaceholderCombat' : 'startCombat' });
   if (!started.ok) throw new BattleResolveError(seatId, started.reason);
   const initial = combatOf(seatId, started.state);
   const events: LedgerCombatEvent[] = ledger(started.events);
@@ -82,7 +82,7 @@ function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolStat
   let current = started.state, latest = started.pool;
   while (current.phase === 'combat') {
     yield;
-    const step = runSharedMatchCommand(latest, current, { type: 'step' });
+    const step = runSharedMatchCommand(latest, current, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'stepPlaceholderCombat' : 'step' });
     if (!step.ok) throw new BattleResolveError(seatId, step.reason);
     const stepEvents = ledger(step.events);
     recorder?.record(combatOf(seatId, current), { state: combatOf(seatId, step.state), events: stepEvents });

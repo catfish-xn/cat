@@ -1,15 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-// D3 remains absent from the real catalog. A test-only one-for-one definition swap
-// exercises the existing public commands/restore without changing production offers.
-vi.mock('../src/simulation/content/augments', async original => {
-  const actual = await original<typeof import('../src/simulation/content/augments')>();
-  const { placebo: _replaced, ...definitions } = actual.AUGMENT_DEFINITIONS;
-  return {...actual,AUGMENT_DEFINITIONS:{...definitions,'over-encumbered':{id:'over-encumbered',name:'运力不足',description:'D3 test fixture',effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}}]}}};
-});
-vi.mock('../src/simulation/content/augment-policy', async original => {
-  const actual = await original<typeof import('../src/simulation/content/augment-policy')>();
-  return {...actual,AUGMENT_TIERS:{...actual.AUGMENT_TIERS,'over-encumbered':'silver'}};
-});
+// D5 uses production registration for the public command/restore fixtures.
 import { createMatch, buyUnit, sellUnit, openAnvil, deployMatchUnit, selectAnomalyTarget, forfeitPendingChoice, equipItem, autoDeployToCap, startMatchCombat, getDeploymentCap, buyXp, rerollShop, setShopLock, type MatchState } from '../src/simulation/match';
 import { getPlayerDeploymentCount } from '../src/simulation/game';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -79,10 +69,10 @@ function anvilFixture(benchAnvil=false):MatchState {
 }
 
 describe('D3 capacity and non-combat reserves',()=>{
-  it('does not register the real definition or tier',async()=>{
+  it('registers the real definition and silver tier',async()=>{
     const defs=await vi.importActual<typeof import('../src/simulation/content/augments')>('../src/simulation/content/augments');
     const tiers=await vi.importActual<typeof import('../src/simulation/content/augment-policy')>('../src/simulation/content/augment-policy');
-    expect(defs.AUGMENT_DEFINITIONS['over-encumbered']).toBeUndefined();expect(tiers.AUGMENT_TIERS['over-encumbered']).toBeUndefined();
+    expect(defs.AUGMENT_DEFINITIONS['over-encumbered']).toEqual(OVER_ENCUMBERED_DEFINITION);expect(tiers.AUGMENT_TIERS['over-encumbered']).toBe('silver');
     expect(OVER_ENCUMBERED_DEFINITION.id).toBe('over-encumbered');
   });
   it.each(['2-1','2-7','4-1'])('has no restriction at %s',id=>{

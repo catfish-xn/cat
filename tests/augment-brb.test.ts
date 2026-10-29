@@ -6,10 +6,10 @@ import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { createMatch, buyUnit, buyXp, rerollShop, sellUnit, setShopLock } from '../src/simulation/match';
 
-it('D2 leaves BRB absent from every production candidate pool', () => {
-  expect(AUGMENT_DEFINITIONS.brb).toBeUndefined();
+it('D5 offers BRB exactly at gold 2-1', () => {
+  expect(AUGMENT_DEFINITIONS.brb).toEqual(BRB_DEFINITION);
   for (const node of ['2-1', '3-2', '4-2']) for (const tier of ['silver', 'gold', 'prismatic'] as const)
-    expect(augmentCandidates(tier, [], [], null, { node, fieldedTraits: [], blocked: [] })).not.toContain('brb');
+    expect(augmentCandidates(tier, [], [], null, { node, fieldedTraits: [], blocked: [] }).includes('brb')).toBe(node === '2-1' && tier === 'gold');
 });
 it('includes acquisition and every natural round, independently of combat kind', () => {
   const augments = [{ definitionId: 'brb', choiceId: 'test', acquiredRound: 4 }];

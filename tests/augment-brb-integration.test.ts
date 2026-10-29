@@ -1,17 +1,5 @@
-import { afterAll, expect, it, vi } from 'vitest';
-// D2 is deliberately unregistered in production. Only this isolated module graph
-// adds its declaration/tier, so selection and restore use genuine public commands.
-vi.mock('../src/simulation/content/augments', async importOriginal => {
-  const original = await importOriginal<typeof import('../src/simulation/content/augments')>();
-  const { BRB_DEFINITION } = await import('../src/simulation/content/augment-brb');
-  const { 'manaflow-ii': replaced, ...definitions } = original.AUGMENT_DEFINITIONS;
-  return { ...original, AUGMENT_DEFINITIONS: { ...definitions, brb: BRB_DEFINITION } };
-});
-vi.mock('../src/simulation/content/augment-policy', async importOriginal => {
-  const original = await importOriginal<typeof import('../src/simulation/content/augment-policy')>();
-  const { 'manaflow-ii': replaced, ...tiers } = original.AUGMENT_TIERS;
-  return { ...original, AUGMENT_TIERS: { ...tiers, brb: 'gold' } };
-});
+import { afterAll, expect, it } from 'vitest';
+// D5 uses production registration for the public command/restore fixtures.
 import { sellPendingCarouselUnit } from '../src/simulation/carousel';
 import { validateB8Resources } from '../src/simulation/b8-restore';
 import { brbGiftPlan, brbShopDisabled } from '../src/simulation/augment-brb';
@@ -26,13 +14,25 @@ import { runUntil } from './server/helpers';
 
 let chosen: MatchState;
 const gifts = (s: MatchState) => s.seatMechanics?.receipts.filter(r => r.receiptId.includes('"brb"')) ?? [];
-it('selects BRB through the public command with no immediate gift and authenticates its acquisition', () => {
-  const before = reachRound('2-1', false, firstNodeSeed('brb', 1000));
+it('selects BRB, unlocks an already locked shop without rerolling, and authenticates restoration', () => {
+  const seed = firstNodeSeed('brb', 1000);
+  let before = reachRound('1-3', false, seed);
+  before = accepted(setShopLock(before, true, before.shop.generation));
+  while (before.round < 4) {
+    const settled = resolveM5Choices(finish(accepted(startMatchCombat(before))));
+    before = accepted(nextRound(settled, settled.round));
+    if (before.round < 4) before = resolveM5Choices(before);
+  }
+  expect(before.shop.locked).toBe(true);
   const c = before.pendingChoice!;
   chosen = accepted(selectChoice(before, c.choiceId, c.generation, 'brb'));
+  expect(chosen.shop).toEqual({ ...before.shop, locked: false });
+  expect(chosen.rngState).toBe(before.rngState);
+  expect(chosen.shopHistory?.initial.shop.locked).toBe(true);
   expect(brbShopDisabled(chosen)).toBe(true); expect(gifts(chosen)).toHaveLength(0);
   expect(chosen.augmentHistory!.facts).toContainEqual(expect.objectContaining({ kind: 'acquire', definitionId: 'brb', round: 4 }));
   expect(restoreMatch(serializeMatch(chosen))).toEqual(chosen);
+  expect(() => restoreMatch({ ...chosen, shop: { ...chosen.shop, locked: true } })).toThrow();
 });
 it('keeps formation editable, auto-fields the offline bench, advances three rounds, then grants two usable anvils once', () => {
   let state = chosen;
@@ -90,8 +90,6 @@ it('retains a full-bench entitlement, retries after space opens, and never rewar
 let ctx: ReturnType<typeof roomOffer>;
 afterAll(() => {
   ctx?.room.dispose();
-  vi.doUnmock('../src/simulation/content/augments');
-  vi.doUnmock('../src/simulation/content/augment-policy');
 });
 it('finds a real room offer in the bounded public seed search', () => { ctx = roomOffer('brb'); });
 for (const roundId of ['1-3', '1-4', '2-1']) it(`reaches ${roundId} on normal deadlines`, () => {

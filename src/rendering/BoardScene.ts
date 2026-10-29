@@ -1,3 +1,4 @@
+import type { MultiplayerCommandResult } from '../simulation/round-settlement';
 import { usableBenchSlots, isOverflowUnit } from '../simulation/bench-capacity';
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
@@ -792,7 +793,7 @@ export class BoardScene extends Phaser.Scene {
   private endText(): string {
     return this.online ? '对局结束 · 查看排名' : `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`;
   }
-  private failureMessage(reason: MatchFailure): string { return this.knownFailure(reason) ?? `操作被拒绝（${reason}）`; }
+  private failureMessage(reason: string): string { return this.knownFailure(reason) ?? `操作被拒绝（${reason}）`; }
   private knownFailure(reason: string): string | undefined {
     const messages: Partial<Record<MatchFailure, string>> = {
       'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
@@ -841,7 +842,7 @@ export class BoardScene extends Phaser.Scene {
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
     this.command({ ok: true, state: this.session.state, events }, success, false, benchMove, false);
   }
-  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false, animateUpgrades = true) {
+  private command(result: MatchCommandResult | MultiplayerCommandResult, success: string, equipment = false, sentBenchMove = false, animateUpgrades = true) {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;

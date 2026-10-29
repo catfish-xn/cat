@@ -24,8 +24,8 @@ export function validateD14(state:MatchState,context:ResourceProvenanceContext):
   const prefix=foldResourceProvenance(state.resourceProvenance,{...context,prefixLength:d.selectionPrefixLength});
   const original=prefix.units.find(u=>u.id===d.originalUnit.id);check(original&&original.definitionId===d.originalUnit.definitionId&&original.starLevel===d.originalUnit.starLevel);
   const id=traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength));
-  const saleIndex=state.resourceProvenance.entries.findIndex(e=>e.kind==='unit-sold'&&traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,e.sequence))===e.unitId);
-  const retiredId=saleIndex<0?null:traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,saleIndex));
+  const retirementIndex=state.resourceProvenance.entries.findIndex(e=>(e.kind==='unit-sold'||e.kind==='unit-removed')&&traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,e.sequence))===e.unitId);
+  const retiredId=retirementIndex<0?null:traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,retirementIndex));
   check(d.unitId===(id??retiredId));
   const returned=facts.filter(e=>e.kind==='d14-returned');
   check(facts.filter(e=>e.kind==='d14-selected').length===1&&returned.length<=1);

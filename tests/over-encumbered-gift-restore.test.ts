@@ -1,23 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-// D3 is not registered until D5. Keep the real gift rules/commands/restore, but
-// swap one dormant definition and script the draw within the eligible catalog.
+// D5 uses production registration for the public command/restore fixtures.
 const fixture = vi.hoisted(() => ({ firstTier: 'silver' as 'silver' | 'gold' }));
-vi.mock('../src/simulation/content/augments', async original => {
-  const actual = await original<typeof import('../src/simulation/content/augments')>();
-  const { placebo: _replaced, ...definitions } = actual.AUGMENT_DEFINITIONS;
-  return { ...actual, AUGMENT_DEFINITIONS: { ...definitions, 'over-encumbered': {
-    id: 'over-encumbered', name: '运力不足', description: 'D3 restore fixture',
-    effects: [{ kind: 'mechanic', mechanic: 'acquisitionBundle', values: { enabled: 1 } }],
-  } } };
+// Counterfactual D3 capacity witnesses: Fine Vintage and Over-Encumbered are both 2-1-only
+// in production. Admit the historical 3-2 owner only inside this file, preserving every
+// deferred-gift/restore/tamper assertion. d5-registration separately rejects that offer.
+vi.mock('../src/simulation/content/augment-stage-bans', async original => {
+  const actual = await original<typeof import('../src/simulation/content/augment-stage-bans')>();
+  return { ...actual, AUGMENT_STAGE_BANS: { ...actual.AUGMENT_STAGE_BANS, TFT11_Augment_OverEncumbered: [] } };
 });
 vi.mock('../src/simulation/content/augment-policy', async original => {
   const actual = await original<typeof import('../src/simulation/content/augment-policy')>();
-  return { ...actual, AUGMENT_TIERS: { ...actual.AUGMENT_TIERS, 'over-encumbered': 'silver' },
-    AUGMENT_OFFER_POLICY: { ...actual.AUGMENT_OFFER_POLICY, get tierCombinations() {
-      return actual.AUGMENT_OFFER_POLICY.tierCombinations.map(r => ({ ...r, tiers: [fixture.firstTier, 'silver', 'silver'] }));
-    } } };
+  return { ...actual, AUGMENT_OFFER_POLICY: { ...actual.AUGMENT_OFFER_POLICY, get tierCombinations() {
+    return actual.AUGMENT_OFFER_POLICY.tierCombinations.map(r => ({ ...r, tiers: [fixture.firstTier, 'silver', 'silver'] }));
+  } } };
 });
+
 
 import { buyUnit, combineItems, deployMatchUnit, nextRound, openAnvil, selectChoice, sellUnit,
   startMatchCombat, type MatchState } from '../src/simulation/match';

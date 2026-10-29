@@ -1,19 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-// D5 owns registration. Exercise the natural draw and all public commands with
-// the same one-for-one dormant definition swap as the other D3 witnesses.
-vi.mock('../src/simulation/content/augments', async original => {
-  const actual = await original<typeof import('../src/simulation/content/augments')>();
-  const { placebo: _replaced, ...definitions } = actual.AUGMENT_DEFINITIONS;
-  return { ...actual, AUGMENT_DEFINITIONS: { ...definitions, 'over-encumbered': {
-    id: 'over-encumbered', name: '运力不足', description: 'D3 settlement restore fixture',
-    effects: [{ kind: 'mechanic', mechanic: 'acquisitionBundle', values: { enabled: 1 } }],
-  } } };
-});
-vi.mock('../src/simulation/content/augment-policy', async original => {
-  const actual = await original<typeof import('../src/simulation/content/augment-policy')>();
-  return { ...actual, AUGMENT_TIERS: { ...actual.AUGMENT_TIERS, 'over-encumbered': 'silver' } };
-});
+// Exercise production registration, natural draws and public commands.
 
 import { buyUnit, createMatch, nextRound, openAnvil, resolveAugmentTier, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';

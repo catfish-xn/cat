@@ -471,10 +471,13 @@ export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPo
   return accept(gifted,mechanicGrantEvents(state,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  return combatStartFailure(state, false);
+}
+function combatStartFailure(state: MatchState, placeholderPvp: boolean): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return 'wrong-phase';
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return 'wrong-phase';
   if (needsAnomalyRecruitment(state)) return 'missing-player';
   if (getPlayerDeploymentCount(state.preparation) > getDeploymentCap(state)) return 'population-cap';
   const reason = validateCombatStart(combatBenchProjection(state.preparation));
@@ -573,8 +576,8 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const entered=enterScheduledEvents(settled,'after');
   return {state:entered.state,events:[...events,...entered.events]};
 }
-function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
-  const reason = matchStartFailure(state); if (reason) return fail(state, reason);
+function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchCommandResult {
+  const reason = combatStartFailure(state, placeholderPvp); if (reason) return fail(state, reason);
   // The offline Start button is its preparation deadline. BRB uses the same
   // deterministic fill as the room; player shop restrictions never gate it.
   const deployment = !state.multiplayer && brbShopDisabled(state) ? autoDeployFormation(state) : null;
@@ -646,10 +649,10 @@ function execute_settleMatchCombatStream(state: MatchState, terminal: CombatStat
   const settled = withCombat(base, terminal, unitLootPolicy);
   return accept(settled.state, settled.events);
 }
-function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
+function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchStep {
   if (state.phase !== 'combat' || state.pendingCombatTerminal) return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return {state,events:[]};
   const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
   const live=sampled===state.combat?sampled:{...sampled,bankSamples:[...(state.combat.bankSamples??[]),
     {tick:state.combat.tick,team:'player' as const,liveGold:state.gold}]};
@@ -1040,6 +1043,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  if(choice.kind==='augment'&&definitionId==='brb'&&selected.shop.locked)selected={...selected,shop:{...selected.shop,locked:false}};
   if(choice.kind==='augment'&&definitionId==='max-cap'&&selected.level===7)selected={...selected,xp:0};
   const beforeHistoryAcquisition = selected;
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
@@ -1119,12 +1123,25 @@ export function buyXp(...args: Parameters<typeof execute_buyXp>): ReturnType<typ
   return traceHistoryCommand('buyXp', args, () => execute_buyXp(...args));
 }
 
-export function startMatchCombat(...args: Parameters<typeof execute_startMatchCombat>): ReturnType<typeof execute_startMatchCombat> {
+export function startMatchCombat(...args: [MatchState, UnitLootPolicy?]): MatchCommandResult {
   return traceHistoryCommand('startMatchCombat', args, () => execute_startMatchCombat(...args));
 }
 
-export function stepMatch(...args: Parameters<typeof execute_stepMatch>): ReturnType<typeof execute_stepMatch> {
+/** Trusted local placeholder resolver only; never dispatched from a player's wire command.
+ * Keeps multiplayer ownership/pool/history, but runs the existing single-seat combat engine without D0 damage. */
+export function startPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('startMatchCombat', [state, unitLootPolicy], () => execute_startMatchCombat(state, unitLootPolicy, true));
+}
+
+export function stepMatch(...args: [MatchState, UnitLootPolicy?]): MatchStep {
   return traceHistoryCommand('stepMatch', args, () => execute_stepMatch(...args));
+}
+
+/** Companion to startPlaceholderMatchCombat; ordinary stepMatch keeps its PvP no-op guard. */
+export function stepPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp' || state.phase !== 'combat') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('stepMatch', [state, unitLootPolicy], () => ({ok:true as const,...execute_stepMatch(state, unitLootPolicy, true)}));
 }
 
 export function nextRound(...args: Parameters<typeof execute_nextRound>): ReturnType<typeof execute_nextRound> {

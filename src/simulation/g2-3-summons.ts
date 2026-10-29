@@ -23,6 +23,7 @@ export function projectG23Summons(preparation:GameState,traits?:readonly TraitSn
   const army=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&!isG23Summon(u)).sort(compareUnitIds);
   const rose=traits?traits.find(t=>t.team===team&&t.traitId==='black-rose'):deriveEffectiveTrait(projectEffectiveMembership(preparation),team,'black-rose');
   const roses=army.filter(u=>rose?.memberUnitIds?rose.memberUnitIds.includes(u.id):rose?.memberDefinitionIds.includes(u.definitionId));
+  if((rose?.tier??0)>=3&&!roses.length)throw new RangeError('Black Rose summon requires a fielded member');
   const forges=army.filter(u=>u.definitionId==='jayce').map(u=>({id:g23ForgeId(u.id),definitionId:'g23-forge',placed:forgeCells&&Object.hasOwn(forgeCells,u.id)?forgeCells[u.id]:undefined,row:u.location.kind==='board'?Math.min(7,(team==='player'?u.location.cell.row:7-u.location.cell.row)+1):7,col:u.location.kind==='board'?u.location.cell.col:3}));
   const requests=[...forges.filter(f=>f.placed).map(f=>({...f,row:f.placed!.row,col:f.placed!.col})),...((rose?.tier??0)>=3?[{id:roses[0].id+':g23-sion',definitionId:'g23-sion',row:4,col:3,placed:undefined}]:[]),...forges.filter(f=>!f.placed)];
   for(const request of requests){
