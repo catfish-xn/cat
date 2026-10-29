@@ -619,6 +619,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')] }) : null;
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
+  // The same summon/anvil placeholder returns each round. Its icon material is
+  // renderer-owned like its texture, so retain one per URL, not one per pawn.
+  const pawnIcons = new Map<string, SpriteMaterial>();
   let closed = false;
   // A lost context that comes back cannot re-upload models whose CPU copies were emptied (model-memory.ts): the shell
   // mounts a fresh renderer instead, which reads them again from the local store.
@@ -662,7 +665,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const icon = definitionId.startsWith('g23-') || anvil ? championIconFor(definitionId) : null;
     if (icon) {
       pawn.name = `render3d-fallback-${definitionId}`;
-      const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
+      let material = pawnIcons.get(icon);
+      if (!material) { material = own(new SpriteMaterial({ color: '#ffffff' })); pawnIcons.set(icon, material); }
+      const badge = new Sprite(material);
       // Anvil icon stands in while its optional model is unavailable or still loading.
       badge.position.y = anvil ? 30 : 42; badge.scale.set(anvil ? 50 : 38, anvil ? 50 : 38, 1); badge.visible = false; pawn.add(badge);
       void overheadContext.itemTexture(icon).then(texture => {
