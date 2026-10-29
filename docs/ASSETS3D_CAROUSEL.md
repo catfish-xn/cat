@@ -49,7 +49,7 @@ Map BIN 中筛出 23 个 carousel/shared draft 系统，所有纹理和网格输
 | `shareddraft-firstdraftwall-death-galaxy` | 边界消退 |
 | `shareddraft-teleport`、`shareddraft-unitselected` | 传送、选择反馈 |
 | `shareddraft-playerindicator`、`shareddraft-releasetimerring-6s` | 玩家标记、计时环近似 |
-| `shareddraft-unittier1` 至 `shareddraft-unittier6` | 新增品质圈近似；保留有界生命周期，非完整原版待机 |
+| `shareddraft-unittier1` 至 `shareddraft-unittier6` | 品质圈近似（有界生命周期，非完整原版待机）；**仍写入 manifest/precache 供复看，v26 去脚环后运行时不再请求**（见 `docs/NORING_V26_REPORT.md`） |
 
 原先八个未输出系统逐项结论：
 
@@ -83,7 +83,7 @@ SCB 的 BGRA 顶点数据转换成 GLB `COLOR_0`，反射绕序和 UV 接缝同�
 
 `review-report.json` 记录资源请求、WebGL 检查、逐时刻包围盒和建议站位。94 个预缓存文件逐一校验大小与 SHA-256，浏览器错误和运行时跳过均为空。新增程序生成的小平面 GPU 探针，检查红色顶点的半透明混合确实与背景合成，避免只靠着色器字符串测试宣称支持透明度。相机按全部采样范围适配，不能把截图中的自适应取景误当成素材缩放。
 
-新增六个品质圈在抽查时刻直径约 1.18 格，贴地显示，未见白色矩形、黑色底片、意外竖片或铺屏。它们没有完整恢复调色板、二级遮罩等语义，颜色和品质区分只能作为近似展示。单网格复看会按其实际包围盒取景；很小的源网格也能放大检查，素材缩放没有改变。无纹理网格单图中的白色面是明确标注的几何检查，不是完整效果的贴图缺失。
+`shareddraft-unittier1` 至 `shareddraft-unittier6` 在复看单图里仍可见（抽查时刻直径约 1.18 格、贴地），未见白色矩形、黑色底片、意外竖片或铺屏；语义仅为近似，不能当作正式 UI 接线依据。正式 3D 选秀自 v26 起用头顶费用方标表示品质，悬停/待确认仅轻微抬起，**不播放**上述六个粒子系统。单网格复看会按其实际包围盒取景；很小的源网格也能放大检查，素材缩放没有改变。无纹理网格单图中的白色面是明确标注的几何检查，不是完整效果的贴图缺失。
 
 复看还发现两项可见限制：基础约束圈早段保留亮环，后段出现明显灰色带状网格；计时环当前主要剩紫色亮点和尾迹，没有完整环形倒计时。这些文件可加载不等于可直接作为最终界面效果；建议约束圈只选已复看的早段，计时环先不启用。不要把灰带描述成原版护罩还原。
 
@@ -102,4 +102,13 @@ SCB 的 BGRA 顶点数据转换成 GLB `COLOR_0`，反射绕序和 UV 接缝同�
 - 为待选英雄/站位标记建立独立轨道组；同一角度同时决定其圆周位置和展示朝向。建议面向圆周切线；若已有权威位置/旋转投影则直接使用，否则以稳定条目顺序和阶段起点作展示插值，不以帧数累计槽位。仅旋转该展示组，保持外圈托架和地台不动；这是表现约定，不是恢复出的原版动画。速度由表现层调节，不能影响可选状态、领取顺序或选秀结束。
 - 未提供权威轨道数据时，保持稳定排序的静态环形站位也可用；表现位置不成为领域坐标。拾取映射回公开条目 ID，成功回执/状态确认后才移除对应英雄、物品和站位反馈；失败保留，重连重建当前状态而不重播旧选择。
 - 基础约束圈若启用，仅取已复看早段并挂在小小英雄锚点；选择反馈挂在被领取英雄锚点，首轮边界挂在转盘中心；不同皮肤变体显式择一。计时环暂不作为正式环形 UI 启用。光束/水晶保持缺席，不按名称猜替代。计时、释放和领取以权威数据为准，粒子只作有界展示；宿主在阶段结束、条目消失或切场时 dispose。
-- 本轮新增接线清单（由 Claude 实施）：使用更新后的 manifest/precache；按公开品质映射 `carousel-shareddraft-unittier1` 至 `carousel-shareddraft-unittier6`，挂在对应待选英雄的展示锚点，保留共同缩放。它们是有界反馈，不承诺无限待机；条目移除或阶段结束时释放，不靠效果结束驱动领域流程。网格加载需保留 GLB 几何的 `color` 属性，交给 `ParticleEffectV2` 着色，不克隆成丢色的简化几何。本次未改 `src/rendering/` 接线。
+- **待选英雄表现（v26，已实现，`src/rendering/three-mode/carousel-stage.ts`）**：费用/品质用头顶方标（`Sprite`，公开费用色；无可选/待确认时半透明）；悬停可选时整体上抬约 5、待服务器确认时约 10（与棋盘选中/拖动同一量级）；确认取走后隐藏方标。**不要**再挂脚下品质圈、交互脚环，也**不要**请求或循环播放 `carousel-shareddraft-unittier1` 至 `carousel-shareddraft-unittier6`（`tests/rendering3d-carousel.test.ts` 断言运行时 effect 列表不含 `unittier`）。选择爆发仍用 `carousel-shareddraft-unitselected` 等有界反馈；计时/释放/领取以权威数据为准。
+- **粒子网格**：其他仍启用的 carousel 粒子若引用转换网格，加载需保留 GLB 的 `color` 属性并交给 `ParticleEffectV2`，不克隆成丢色几何（与构建/复看约定一致）。
+- **precache 中仍带 `unittier` 路径名的条目（素材包未删，运行时未引用；仅列路径，不改清单）**：
+  - `effects/carousel/carousel-shareddraft-unittier1.json`
+  - `effects/carousel/carousel-shareddraft-unittier2.json`
+  - `effects/carousel/carousel-shareddraft-unittier3.json`
+  - `effects/carousel/carousel-shareddraft-unittier4.json`
+  - `effects/carousel/carousel-shareddraft-unittier5.json`
+  - `effects/carousel/carousel-shareddraft-unittier6.json`  
+  上述 JSON 引用的贴图/网格在 precache 里为哈希文件名（路径不含 `unittier`）；若需完整闭包，在本机对 `assets3d-local/carousel/precache.json` 解析这六份文档的 `texture`/`mesh` 字段即可。manifest 中对应键仍为 `carousel-shareddraft-unittier1` … `carousel-shareddraft-unittier6`。
