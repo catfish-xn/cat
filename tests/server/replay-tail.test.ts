@@ -36,4 +36,15 @@ describe('replayTail unchanged-prefix revisions', () => {
     expect({ ...before, ticks: [...before.ticks.slice(0, tail.fromTick), ...tail.ticks], terminal: tail.terminal }).toEqual(after);
     expect(replayTail(after, after)).toBeNull();
   });
+
+  it('keeps the same suffix for shared frames and for JSON-equal copies', () => {
+    const before = predictedReplay();
+    const extra = { tick: 5, events: [] };
+    const extended = { ...before, ticks: [...before.ticks, extra] };
+    expect(replayTail(before, extended)).toEqual({ fromTick: 5, ticks: [extra], terminal: extended.terminal });
+    const copied = { ...before, ticks: before.ticks.map(frame => ({ tick: frame.tick, events: [...frame.events] })), terminal: { ...before.terminal } };
+    expect(replayTail(before, copied)).toBeNull();
+    const changed = { ...copied, ticks: copied.ticks.map((frame, index) => index === 2 ? { ...frame, tick: frame.tick + 100 } : frame) };
+    expect(replayTail(copied, changed)).toEqual({ fromTick: 2, ticks: changed.ticks.slice(2), terminal: changed.terminal });
+  });
 });

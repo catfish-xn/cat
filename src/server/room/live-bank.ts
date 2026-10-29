@@ -188,8 +188,15 @@ export function withOutcome(result: PlaceholderBattleResult, outcome: BattleSeat
 export function replayTail(previous: CombatReplay, next: CombatReplay): { readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] } | null {
   let index = 0;
   const shorter = Math.min(previous.ticks.length, next.ticks.length);
-  while (index < shorter && JSON.stringify(previous.ticks[index]) === JSON.stringify(next.ticks[index])) index++;
-  if (index === previous.ticks.length && index === next.ticks.length && JSON.stringify(previous.terminal) === JSON.stringify(next.terminal)) return null;
+  // Identical frame objects already match. JSON is only for equal copies, so a
+  // shared prefix is not serialized again on every live revision.
+  while (index < shorter) {
+    const left = previous.ticks[index], right = next.ticks[index];
+    if (left !== right && JSON.stringify(left) !== JSON.stringify(right)) break;
+    index++;
+  }
+  const terminalSame = previous.terminal === next.terminal || JSON.stringify(previous.terminal) === JSON.stringify(next.terminal);
+  if (index === previous.ticks.length && index === next.ticks.length && terminalSame) return null;
   // An unchanged live prefix can still discard the predicted future (or revise only the terminal).
   // Carry its last authoritative tick so own and watched tails stay nonempty and splice to exactly `next`.
   if (index === next.ticks.length && index > 0) index--;
