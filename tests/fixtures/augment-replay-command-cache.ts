@@ -13,8 +13,12 @@ type Cached = { readonly result: Result; readonly releaseFacts: () => void };
  * admission: validateAugmentHistory still checks every proof, fact and final
  * state. Battle-record replay and live fixture commands always execute normally.
  */
-export function installAugmentReplayCommandCache() {
+export function installAugmentReplayCommandCache(
+  additionalCommands: readonly ('rerollAugment' | 'selectAnomalyTarget' | 'rerollAnomaly' | 'setShopLock')[] = [],
+) {
   let frame: { reuse: boolean } | undefined;
+  const checkpoint = Symbol('authentic replay checkpoint');
+  let warmBudget: number | undefined;
   let recording = true;
   const results = new Map<string, Cached>();
   let facts: readonly AugmentHistoryFact[] = [];
@@ -54,7 +58,7 @@ export function installAugmentReplayCommandCache() {
   // A proof containing an unwrapped command stays entirely on the cold path:
   // hashing its JSON result would omit that command's hidden side-table data.
   const names = ['startMatchCombat', 'stepMatch', 'deployMatchUnit', 'nextRound', 'selectChoice',
-    'buyUnit', 'rerollShop', 'sellUnit', 'combineItems', 'equipItem', 'buyXp'] as const;
+    'buyUnit', 'rerollShop', 'sellUnit', 'combineItems', 'equipItem', 'buyXp', ...additionalCommands] as const;
   const cacheableCommands = new Set<string>(names);
   const validate = history.validateAugmentHistory;
   const validationSpy = vi.spyOn(history, 'validateAugmentHistory').mockImplementation((...args) => {
@@ -77,6 +81,10 @@ export function installAugmentReplayCommandCache() {
         return run(state, ...args);
       }
       const execute = () => {
+        // A setup hook may yield between real reconstruction commands. Only
+        // completed command outputs enter the cache; admission still has to
+        // finish the unmodified validator in a later slice.
+        if (warmBudget !== undefined && warmBudget-- === 0) throw checkpoint;
         counts.executions++;
         const result = run(state, ...args);
         lastReplayState = result.state;
@@ -123,6 +131,19 @@ export function installAugmentReplayCommandCache() {
   return {
     counts,
     get lastReplayState() { return lastReplayState; },
+    warm(state: MatchState, commandBudget: number): boolean {
+      if (!recording || !Number.isSafeInteger(commandBudget) || commandBudget <= 0) throw Error('Invalid replay warm budget');
+      warmBudget = commandBudget;
+      try {
+        // Candidate graphs never become cache entries. The normal validator
+        // creates the origin, clones arguments and runs every uncached command.
+        history.validateAugmentHistory(structuredClone(state));
+        return true;
+      } catch (error) {
+        if (error !== checkpoint) throw error;
+        return false;
+      } finally { warmBudget = undefined; }
+    },
     seal() { recording = false; },
     resetBattleCounts() { counts.battleStarts = 0; counts.battleTicks = 0; },
     restore() {
