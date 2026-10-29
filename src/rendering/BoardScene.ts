@@ -1425,6 +1425,7 @@ export class BoardScene extends Phaser.Scene {
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const forms = new Map(this.session.combatView?.units.map(unit => [unit.id, unit.form]));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
     const result = this.session.state.roundResults?.at(-1);
     // A result freezes income before it is paid; entering a later round is the authoritative payment boundary.
@@ -1435,6 +1436,7 @@ export class BoardScene extends Phaser.Scene {
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
+        ...(forms.get(id) ? { form: forms.get(id) } : {}),
         ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,

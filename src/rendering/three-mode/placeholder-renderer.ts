@@ -53,6 +53,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactF
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
+import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -608,13 +609,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   const pieces = new Map<string, PieceView>();
   const ltkCastCounts = new Map<string, number>();
+  let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
-  }, { groundPass: true }), scene, id => pieces.get(id), { budget: effects?.budget, renderer,
+  }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')] }) : null;
+  if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
@@ -708,16 +711,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (dx * dx + dz * dz < 1) return;
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
+  const bodyLoads = new WeakMap<PieceView, number>();
   const attachBody = (view: PieceView) => {
+    const request = (bodyLoads.get(view) ?? 0) + 1; bodyLoads.set(view, request);
     cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
+    const originalId = view.definitionId;
+    const preferred = batch3ModelId(originalId, view.form);
+    const definitionId = unitModelId(models.cache?.manifest.models[preferred] ? preferred : originalId, isAnvilPiece(originalId));
     if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
-      if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
+      if (view.disposed || bodyLoads.get(view) !== request || view.definitionId !== originalId || (batch3ModelId(view.definitionId, view.form) !== preferred)) { lease.release(); return; }
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
@@ -841,7 +848,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = () => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; ltk?.clear(); ltkCastCounts.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(); ltkCastCounts.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const fx of referenceEffects) fx.dispose();
@@ -889,7 +896,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
-    if (!reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action)) return;
+    if (!reducedMotion()) {
+      const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
+      if (handled === true || (handled === undefined && ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action))) return;
+    }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
     if (sample && action === 'attack') {
@@ -979,7 +989,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    feel.update(seconds); ltk?.update(seconds, camera);
+    feel.update(seconds); batch3?.update(seconds); ltk?.update(seconds, camera);
     for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -1055,9 +1065,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view) { view = createPiece(piece); pieces.set(piece.id, view); if (frame.fighting && (combatBegan || rising.has(piece.id))) view.rise = true; }
       view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
       // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
-      if (!frame.fighting || combatStarted || created) {
+      if (piece.form || !frame.fighting || combatStarted || created) {
+        const previousForm = view.form;
         const middle = frame.origin.y + (frame.rows - 1) * frame.hexRadius * 1.5 / 2;
-        view.form = Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
+        view.form = piece.form ? (piece.form === 'melee' ? 'front' : 'back') : Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
+        if (view.definitionId === 'elise' && previousForm !== view.form) attachBody(view);
       }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
@@ -1086,6 +1098,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); ltk?.stopUnit(id); removePiece(view); pieces.delete(id); }
+    batch3?.frame(frame);
     if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
       [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
     if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
@@ -1106,6 +1119,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
     for (const event of events) {
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
+      batch3?.event(event, currentEffect);
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       if (recipient?.alive && recipient.root.visible) {
@@ -1141,7 +1155,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
-    for (const view of pieces.values()) if (view.dance !== 'clip') view.mixer?.apply(view.state.output);
+    for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(batch3?.animation(id, view.state.output) ?? view.state.output);
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
@@ -1533,7 +1547,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (hold !== undefined) { if (hold - seconds > 0) holds.set(view, hold - seconds); else holds.delete(view); }
         if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
-        if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
+        if (view.dance !== 'clip') view.mixer.apply(batch3?.animation(id, output) ?? output); // a dance clip runs outside the action state
       }
       if (view.stars) {
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);

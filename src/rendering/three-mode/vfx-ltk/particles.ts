@@ -78,7 +78,9 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / options.projectileSeconds } } }
       : { kind: 'bone', anchor: options.anchor, target: options.target },
   };
-  driver.swap(prepared.model); driver.steer(rig);
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };

@@ -2,7 +2,7 @@
 export interface TimelineCue {
   readonly system: string;
   readonly action?: 'cast' | 'attack';
-  readonly event: 'cast-start' | 'projectile' | 'hit';
+  readonly event: 'cast-start' | 'projectile' | 'hit' | 'link';
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
