@@ -26,6 +26,7 @@ const STAR_SIZE = 12, STAR_GAP = 12;
 
 /** One unit as scouting may show it. */
 export interface ScoutUnit {
+  readonly nonCombat?: true;
   readonly definitionId: string; readonly starLevel: number; readonly effectiveStarLevel?: 4;
   readonly items: readonly string[]; readonly anomaly?: string; readonly summon?: true;
 }
@@ -49,6 +50,7 @@ function unitOf(raw: unknown): ScoutUnit | null {
   const source = raw as Record<string, unknown>, starLevel = int(source.starLevel);
   if (typeof source.definitionId !== 'string' || starLevel === null) return null;
   return { definitionId: source.definitionId, starLevel, items: strings(source.items),
+    ...(source.nonCombat === true ? {nonCombat:true as const}:{}),
     ...(source.effectiveStarLevel === 4 ? { effectiveStarLevel: 4 as const } : {}),
     ...(typeof source.anomaly === 'string' ? { anomaly: source.anomaly } : {}), ...(source.summon === true ? { summon: true as const } : {}) };
 }
@@ -191,7 +193,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const gem = new Mesh(anomalyGeometry, anomalyMaterial); gem.name = 'render3d-scout-anomaly';
       gem.position.set(STAR_SIZE * 2.2, ctx.championHeight + STAR_GAP, 0); piece.root.add(gem);
     }
-    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined);
+    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined, false, unit.nonCombat);
     piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     piece.overhead.object.visible = piece.overhead.drawn;
     return piece;

@@ -54,3 +54,12 @@ describe('3D overhead meters and items', () => {
     expect(overhead.object.children).toHaveLength(0);
   });
 });
+
+it('marks a parked reserve without combat meters and clears the mark on return',()=>{
+  const overhead=createUnitOverhead({colors:()=>DEFAULT_METER_COLORS,itemTexture:async()=>null});
+  overhead.set('player',undefined,undefined,false,true);
+  const label=overhead.object.getObjectByName('render3d-over-encumbered') as Sprite;
+  expect(label.visible).toBe(true);expect(overhead.drawn).toBe(true);
+  overhead.set('player',undefined,undefined,false,false);
+  expect(label.visible).toBe(false);expect(overhead.drawn).toBe(false);overhead.dispose();
+});

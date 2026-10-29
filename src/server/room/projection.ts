@@ -1,3 +1,4 @@
+import { isOverflowUnit } from '../../simulation/bench-capacity';
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized. Other seats'
@@ -55,7 +56,7 @@ export function toPublicBoard(match: MatchState): PublicBoard {
     ...(d14PublicUnitMark(match, unitId) ?? {}) });
   for (const unit of match.preparation.units) {
     if (unit.team !== 'player') continue;
-    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });
+    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...(isOverflowUnit(match.preparation,unit.id)?{nonCombat:true as const}:{}), ...anomalyOf(unit.id) });
     else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id), ...anomalyOf(unit.id) });
   }
   // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.

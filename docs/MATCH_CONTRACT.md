@@ -1,3 +1,9 @@
+## 2026-10-29 D3 运力不足（待 D5 注册）
+
+下一整个阶段用 `preparation.usableBenchSlots=1` 覆盖物理九格；暂留棋子通过 `overflowUnitIds` 标记，购买拒绝、出售回席、完成阶段三散件和全部调用签名见 [D3 合同](D3_OVER_ENCUMBERED.md)。当前未加入候选/等级/定义总表；历史纪元和内容摘要常量不改写。
+
+受限回合的 `CombatInputBasis.resourcePreparation?:GameState` 保存实际开战持有状态（容量覆盖、暂留 ID 和棋盘位置）；`inputs.preparation` 仍是九格战斗投影。恢复同时认证两份数据、投影相等与公开命令历史；B8 从实际持有状态重放掉落，在结算边界重放容量解除，再认证容量出售／掉落重试及完整最终阵容。阶段 x-7 解除容量不自动重试已延期的直接掉落；原 `pending-capacity` 与出售重试语义不变。开战时无容量覆盖则不增加字段，格式号与历史纪元不变。
+
 ## 2026-10-27 v25-h8：三项历史依赖强化
 
 本分支新增 B5-45/46/47，原分支 rules/content 为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`，schema/save/replay/command 保持 **12/8/8/7**，NET=5。三项均已开放；旧身份不迁移，epoch 不重录。P 约定与全部内部接口见 [历史设计的 B5-45／46／47 调用约定](AUGMENT_HISTORY_DESIGN.md#b5-454647-调用约定2026-10-27)。

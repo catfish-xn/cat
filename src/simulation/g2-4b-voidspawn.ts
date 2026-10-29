@@ -13,6 +13,7 @@ import {projectG23Summons} from './g2-3-summons';
 import {nearestItemCell} from './g2-4b-item-kernel';
 import {G24_VOIDSPAWN_POLICY} from './content/g2-4b-voidspawn';
 import {writeSeatMechanic} from './seat-mechanics/state';
+import {combatBenchProjection} from './bench-capacity';
 export const VOIDSPAWN_ITEM='TFT5_Item_ZzRotPortalRadiant';
 /** Saved preparation cells of movable summons: a Voidspawn's by its portal item instance (`item-N`), a Hextech Forge's by
  * its Jayce (`unit-N`, P user 2026-10-24). Cells are in the owner's own deployment rows. */
@@ -61,7 +62,7 @@ export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly Tr
  * is then the Jayce unit id); it is never a combat item summon. */
 export type MovableSummon=Pick<ItemSummonOrigin,'ownerId'|'itemInstanceId'|'unit'>&{readonly kind:ItemSummonOrigin['kind']|'forge'};
 function movableSummons(state:MatchState){
- const projection=projectVoidspawns({...state,itemSummonPositions:readItemSummonPositions(state)});
+ const projection=projectVoidspawns({...state,preparation:combatBenchProjection(state.preparation),itemSummonPositions:readItemSummonPositions(state)});
  const forges:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-forge'&&u.team==='player'&&u.location.kind==='board').map(unit=>{
   const ownerId=unit.id.slice(0,-':g23-forge'.length);
   return {kind:'forge',ownerId,itemInstanceId:ownerId,unit};

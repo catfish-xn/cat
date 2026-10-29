@@ -1,3 +1,4 @@
+import { usableBenchSlots, isOverflowUnit } from '../simulation/bench-capacity';
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
 import { ECONOMY_RULES } from '../simulation/match-rules';
@@ -169,6 +170,7 @@ export class BoardScene extends Phaser.Scene {
   private startHint!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
+  private blockedBench!: Phaser.GameObjects.Graphics;
   /** While a unit is dragged: every board cell and bench slot the rules accept for it, tinted under the pointer outline. */
   private dropZones!: Phaser.GameObjects.Graphics;
   /** G2-3 prep: special-cell layer (trial cells) drawn above the board fill, below units; empty until the rules supply cells. */
@@ -257,6 +259,7 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillStyle(toNumber(THEME.color.bench)).lineStyle(1, toNumber(THEME.color.boardLine)).fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10);
     }
     this.overlay = this.add.graphics().setDepth(5);
+    this.blockedBench = this.add.graphics().setDepth(3);
     this.dropZones = this.add.graphics().setDepth(4);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.loadoutTip = this.add.text(0, 0, '', { fontSize: '12px', color: '#9ff0e4', backgroundColor: '#0b151fe6', padding: { x: 5, y: 3 }, resolution: 2 })
@@ -622,7 +625,7 @@ export class BoardScene extends Phaser.Scene {
     }
     if (!target) { this.setStatus(this.failureMessage('invalid-location')); return { allowed: false }; }
     // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
-    const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
+    const reason = this.session.phase === 'preparation' || this.state.usableBenchSlots !== undefined ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
     this.setStatus(reason ? (reason === 'population-cap' ? this.populationCapText() : this.failureMessage(reason)) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
     this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
     if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
@@ -726,7 +729,7 @@ export class BoardScene extends Phaser.Scene {
       .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
     return taken ? `该位置已有单位 · ${summonName(summon)}只能移到空格` : undefined;
   }
-  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
+  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && (unit.location.kind === 'bench' || isOverflowUnit(this.state,unit.id)))); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
     return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
@@ -930,7 +933,7 @@ export class BoardScene extends Phaser.Scene {
     // by its combat unit only, never as a second token at its preparation cell (C10).
     // Another seat's battle on the board (online, visiting its board): none of my units, its ids are not mine.
     const watching = this.session instanceof RemoteSession && this.session.watchedSeat !== null;
-    const units = watching ? [] : this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    const units = watching ? [] : this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id) || isOverflowUnit(this.state,unit.id));
     for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
     this.departed.clear();
@@ -958,6 +961,7 @@ export class BoardScene extends Phaser.Scene {
       const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
       const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
+      this.views.get(unit.id)!.setOverflow(isOverflowUnit(this.state,unit.id));
       this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
     }
   }
@@ -1020,11 +1024,11 @@ export class BoardScene extends Phaser.Scene {
     const laidOut = !this.session.combatView;
     for (const unit of this.state.units) {
       const token = this.tokens.get(unit.id);
-      if (!token || unit.team !== 'player' || (!laidOut && unit.location.kind !== 'bench')) continue;
+      if (!token || unit.team !== 'player' || (!laidOut && unit.location.kind !== 'bench' && !isOverflowUnit(this.state,unit.id))) continue;
       if (this.draggingId !== unit.id) { const p = this.position(unit.location); token.setPosition(p.x, p.y); }
       token.setVisible(true).setAlpha(1).setScale(1).setDepth(0);
       if (laidOut) { this.views.get(unit.id)?.resetMeters(); this.renderedCells.delete(unit.id); }
-      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench'); }
+      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench' || isOverflowUnit(this.state,unit.id)); }
     }
   }
   private syncConquerorFlag() {
@@ -1032,6 +1036,12 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private syncHud() {
+    this.blockedBench.clear();
+    for (let slot=usableBenchSlots(this.state);slot<this.state.benchSize;slot++) {
+      const p=this.benchCenter(slot);
+      this.blockedBench.fillStyle(0x171b23,0.9).fillRoundedRect(p.x-26,p.y-30,52,60,10)
+        .lineStyle(2,0x87565a).lineBetween(p.x-15,p.y-16,p.x+15,p.y+16).lineBetween(p.x+15,p.y-16,p.x-15,p.y+16);
+    }
     this.syncConquerorFlag();
     const match = this.session.state, ready = match.phase === 'preparation', operable = ready || this.benchOps();
     const round = readRoundInfo(match);
@@ -1335,7 +1345,7 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of this.state.units) {
       const token = this.tokens.get(unit.id);
       if (!token) continue; // a board unit the battle shows under its battle id
-      const bench = unit.location.kind === 'bench', operable = bench && unit.team === 'player' && this.benchOps();
+      const bench = unit.location.kind === 'bench' || isOverflowUnit(this.state,unit.id), operable = bench && unit.team === 'player' && this.benchOps();
       if (token.input) { this.input.setDraggable(token, operable); token.input.enabled = true; }
       if (bench) token.setAlpha(operable ? 1 : 0.35);
     }
@@ -1433,11 +1443,13 @@ export class BoardScene extends Phaser.Scene {
     return { ...(online ? { goldMines: Math.min(ECONOMY_RULES.interestCap, Math.floor(this.session.state.gold / ECONOMY_RULES.interestDivisor)),
       goldMineIncomeKey: paid ? `round:${paid.round}:${paid.roundId}` : null } : {}), rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
+      usableBenchSlots: usableBenchSlots(this.state),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
         ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,
+        ...(isOverflowUnit(this.state,id)?{nonCombat:true as const}:{}),
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id),
         ...(this.controls.has(id) && this.session.combatView ? { control: this.controls.get(id)! } : {}) })),

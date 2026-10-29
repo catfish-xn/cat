@@ -1,3 +1,4 @@
+import { validateOverEncumbered } from './over-encumbered';
 import { validateBatch5R6Transforms } from './restore-checks/batch5-r6-check';
 import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
@@ -141,6 +142,7 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
+  validateOverEncumbered(s);
   validateBatch5R6Transforms(s);
   const h = s.augmentHistory;
   if (h === undefined) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return; }
