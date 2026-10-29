@@ -10,6 +10,7 @@ const {expectedRolls,pipelineOrbs}=require('./augment-batch5-g5-oracle.cjs');
 const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const h3=require('./h3-growth-oracle.cjs');
+const {validateTransforms}=require('./h13-inventory-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
@@ -580,9 +581,10 @@ function validateChemTransition(before,after){
 class Ledger {
  constructor(initial,{freezeObservations=true}={}){this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial,{freezeInputs:freezeObservations});
   // v22 openings can start with extra cards; conservation starts from the actual opening roster (Trainer Golem excluded).
-  this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+  this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.transformInputs=0;this.transformOutputs=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   const h3=checkH3Growth(this.h3,before,after,command);
+  const transforms=validateTransforms(before,after,command);
   validateChemTransition(before,after);
   validatePandoraEntry(before,after,assert);
   const inventoryConversions=buffetPlan(after);
@@ -710,7 +712,7 @@ class Ledger {
   assert.deepEqual(schedule,dueSchedule,'independent due schedule receipts (count, node, identity, reward)');
   if(scheduled&&command.definitionId==='forward-thinking')this.gold=0;
   for(const receipt of dueSchedule){assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
-  let itemSerial=before.nextItemSerial;
+  let itemSerial=before.nextItemSerial+transforms.outputs;
   for(const receipt of lootReceipts)for(const id of receipt.grantedItemIds)assert.equal(id,`item-${itemSerial++}`,'loot item serial');
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');
   const mechanic=appended(before.seatMechanics?.receipts??[],after.seatMechanics?.receipts??[],'receiptId','mechanic receipts');
@@ -740,13 +742,14 @@ class Ledger {
    }
   }
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
+  this.transformInputs+=transforms.inputs;this.transformOutputs+=transforms.outputs;
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);this.h3=h3;
  }
  audit(state){auditH3(this.h3,state);}
  check(state,lootChecked=false){validateGhostCombatInputs(state);if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger R'+state.round+' sim='+state.gold+' ledger='+this.gold+' '+state.roundDefinitionId+' '+state.phase+' '+JSON.stringify(state.m8?.round?.kind));const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
   const academic=require('./augment-batch5-s3b-oracle.cjs').academicConsumed(state);
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
-  assert.equal(items.length,grants-this.combinations-buffetPlan(state).consumed.size-academic,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
+  assert.equal(items.length,grants+this.transformOutputs-this.transformInputs-this.combinations-buffetPlan(state).consumed.size-academic,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations+this.transformOutputs,'item serial accounting');}
 }
 module.exports={benchXp,entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
 Object.assign(module.exports,{createH3Ledger,checkH3Growth,auditH3,h3GrowthForUnit});
