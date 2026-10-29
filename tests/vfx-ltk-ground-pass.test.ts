@@ -1,4 +1,4 @@
-import { Camera, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, Texture } from 'three';
+import { AmbientLight, Bone, Camera, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
@@ -33,5 +33,22 @@ describe('opt-in board ground pass', () => {
     expect(ground.material.polygonOffset).toBe(false);
     expect(camera.layers.mask).toBe(5); expect(gl.autoClear).toBe(true);
     for (const mesh of [floorMesh,ground,unit]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+  });
+  it('skips skinned bone trees and still tags a nested light for the floor pass', () => {
+    const scene = new Scene(), camera = new Camera(); camera.layers.enable(2);
+    const floor = new Group(), bone = new Bone(), skin = new SkinnedMesh(new PlaneGeometry(), new MeshBasicMaterial());
+    let boneVisits = 0;
+    Object.defineProperty(bone, 'layers', { get() { boneVisits++; return { isEnabled: () => false, mask: 1, set() {}, enable() {} }; } });
+    skin.add(bone); const unit = new Group(); unit.add(skin);
+    const light = new AmbientLight(); const rig = new Group(); rig.add(light);
+    const ground = new Mesh(new PlaneGeometry(), new MeshBasicMaterial()); ground.layers.set(GROUND_LAYER);
+    scene.add(floor, unit, rig, ground);
+    const seen: number[] = [];
+    const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, render() {
+      if (camera.layers.isEnabled(FLOOR_LAYER)) seen.push(light.layers.mask);
+    } };
+    createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
+    expect(boneVisits).toBe(0); expect(seen).toEqual([1 | (1 << FLOOR_LAYER)]); expect(light.layers.mask).toBe(1);
+    skin.geometry.dispose(); (skin.material as MeshBasicMaterial).dispose(); ground.geometry.dispose(); ground.material.dispose();
   });
 });

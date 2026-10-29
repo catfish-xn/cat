@@ -16,7 +16,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
   spinOf,
@@ -145,6 +147,7 @@ export function createQuads({
     [room],
   );
   const depth = memo(() => new Float32Array(room), [room]);
+  const frames: FrameSlot[] = [];
 
   eachFrame((state) => {
     if (!drawn) {
@@ -154,7 +157,10 @@ export function createQuads({
     }
 
     const stamp = renderStamp(state.gl);
-    const frames = sources.map((source) => frameOf(source, emitter));
+    for (let from = 0; from < sources.length; from += 1) {
+      const slot = frames[from] ?? (frames[from] = frameOf(sources[from], emitter) as FrameSlot);
+      frameInto(sources[from], emitter, slot);
+    }
     const scroll = material.uniforms.paletteScroll.value as number[];
     sourcesScrollInto(emitter, sources, scroll);
 

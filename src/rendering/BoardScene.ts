@@ -1310,6 +1310,7 @@ export class BoardScene extends Phaser.Scene {
   }
   private clearCombatEffects() {
     this.tweens.killAll();
+    this.fx.releaseAll();
     for (const effect of this.effects) effect.destroy();
     this.effects.clear(); this.renderedCells.clear(); this.clearDrag();
   }

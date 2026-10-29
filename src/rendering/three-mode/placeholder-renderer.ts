@@ -863,7 +863,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
-  const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
+  const effectScaleScratch = new Vector3(), attackFrom = new Vector3(), attackTo = new Vector3(), attackDelta = new Vector3();
+  const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(effectScaleScratch).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
     tuning?: { scale: number; particles: number }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
@@ -904,9 +905,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
       if (!target?.alive) return;
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
-      const from = source.root.position.clone().setY(IMPACT_HEIGHT * 1.1), to = target.root.position.clone().setY(IMPACT_HEIGHT);
-      if (ranged) from.addScaledVector(to.clone().sub(from).setY(0).normalize(), 14);
-      feel.attack(from, to, ranged, ranged ? 0.1 : 0.18);
+      attackFrom.copy(source.root.position).setY(IMPACT_HEIGHT * 1.1); attackTo.copy(target.root.position).setY(IMPACT_HEIGHT);
+      if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
+      feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;

@@ -13,7 +13,9 @@ import {
   type DrawFrame,
   drawnPlace,
   drawnPlaceInto,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -84,6 +86,7 @@ export function createProjections({
   const pair = makePair(material);
   const drawn = !hidden && !emitter.disabled && drawsAsProjection(emitter);
 
+  let frameSlot: FrameSlot | undefined;
   eachFrame((state) => {
     if (!drawn) {
       buffers.geometry.instanceCount = 0;
@@ -96,7 +99,8 @@ export function createProjections({
     const stamp = renderStamp(state.gl);
     let held = 0;
     for (const source of sources) {
-      const frame = frameOf(source, emitter);
+      frameSlot ??= frameOf(source, emitter) as FrameSlot;
+      const frame = frameInto(source, emitter, frameSlot);
       const buckets = bucketsOf(source.pool, stamp);
       const [first, last] = bucketRange(buckets, emitter.index);
       for (let listed = first; listed < last && held < room; listed += 1) {

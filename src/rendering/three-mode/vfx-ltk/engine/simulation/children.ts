@@ -29,7 +29,7 @@ import {
   type World,
   worldOf,
 } from "./integrate";
-import { type DrawFrame, frameOf, type Source } from "./particleRead";
+import { type DrawFrame, frameInto, type FrameSlot, type Source } from "./particleRead";
 import {
   copyRows,
   FLEX_CHANNELS,
@@ -243,6 +243,8 @@ interface Birth {
  */
 export function createChildren(lineage: Lineage, prefix: string, depth: number): Children {
   const mine: Child[] = [];
+  const frameSlots: FrameSlot[] = [];
+  const spawnSets: (ChildSetModel | null)[] = [];
   const bySerial = new Map<number, number>();
   const carried = new Set<number>();
   const seen = new Map<number, Seen>();
@@ -357,8 +359,14 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
     step(parent, system, dt, now) {
       const pool = parent.pool;
       const emitters = system.emitters;
-      const sets = emitters.map((emitter) => spawning(emitter, depth));
-      if (mine.length === 0 && seen.size === 0 && sets.every((set) => set === null)) {
+      spawnSets.length = emitters.length;
+      let spawningAny = false;
+      for (let index = 0; index < emitters.length; index += 1) {
+        const set = spawning(emitters[index], depth);
+        spawnSets[index] = set;
+        if (set !== null) spawningAny = true;
+      }
+      if (mine.length === 0 && seen.size === 0 && !spawningAny) {
         cursor = pool.born;
         return;
       }
@@ -379,11 +387,12 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
 
       /* Each emitter's frame is the same for every particle of the step, so it is read
          once per emitter rather than per particle. */
-      const frames: (DrawFrame | undefined)[] = [];
       const frameAt = (index: number): DrawFrame => {
-        const held = frames[index] ?? frameOf(parent, emitters[index]);
-        frames[index] = held;
-        return held;
+        const slot = frameSlots[index] ?? (frameSlots[index] = {
+          emitter: emitters[index], now: parent.time, phase: 0, origin: parent.origin,
+          orientation: parent.orientation, world: parent.world,
+        });
+        return frameInto(parent, emitters[index], slot);
       };
 
       for (const child of mine) {
@@ -408,7 +417,7 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
       for (const [serial, last] of seen) {
         if (bySerial.has(serial)) continue;
         seen.delete(serial);
-        const set = sets[last.emitter] ?? null;
+        const set = spawnSets[last.emitter] ?? null;
         if (!set?.onDeath) continue;
         const birth: Birth = {
           set,
@@ -422,7 +431,7 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
 
       for (let at = 0; at < pool.count; at += 1) {
         const index = pool.emitter[at];
-        const set = sets[index] ?? null;
+        const set = spawnSets[index] ?? null;
         if (set === null) continue;
         const serial = pool.serial[at];
 

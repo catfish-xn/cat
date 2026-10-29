@@ -27,7 +27,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -149,6 +151,7 @@ export function createMeshes({
   cleanup(() => () => { buffers.pose?.texture.dispose(); geometry.dispose(); instanced.dispose(); });
   const drawn = !hidden && !emitter.disabled;
 
+  let frameSlot: FrameSlot | undefined;
   eachFrame((state) => {
     const held = instanced;
     /* Claimed every frame rather than once, because a change of `args` hands the ref a
@@ -171,7 +174,8 @@ export function createMeshes({
     let instance = 0;
     for (const source of sources) {
       const pool = source.pool;
-      const frame = frameOf(source, emitter);
+      frameSlot ??= frameOf(source, emitter) as FrameSlot;
+      const frame = frameInto(source, emitter, frameSlot);
       const time = frame.now;
       const stretch = beam === null ? 0 : stretchInto(source, beam, depth);
       if (beam !== null && stretch === 0) continue;

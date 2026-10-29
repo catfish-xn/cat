@@ -20,7 +20,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -154,9 +156,11 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
 }
 
 /** One source's particles of `emitter` as a strand, into `STRAND`, in the order they were born. */
+let trailFrame: FrameSlot | undefined;
 function strandInto(source: Source, emitter: EmitterModel, stamp: number): void {
   const pool = source.pool;
-  const frame = frameOf(source, emitter);
+  trailFrame ??= frameOf(source, emitter) as FrameSlot;
+  const frame = frameInto(source, emitter, trailFrame);
   const time = frame.now;
   let held = 0;
   const buckets = bucketsOf(pool, stamp);

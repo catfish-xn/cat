@@ -1,5 +1,5 @@
-import type { Camera, Object3D, Scene, WebGLRenderer } from 'three';
-import { applyStencil, stencilStates } from './rendering/utils/stencil';
+import type { Camera, Material, Object3D, Scene, WebGLRenderer } from 'three';
+import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { createLtkParticles, unitAnchor, unitJoints, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import type { VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineSpawn } from './timeline';
@@ -7,12 +7,28 @@ import { createVfxPasses } from './rendering/passes';
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
+/**
+ * At this many live systems the extra depth and distortion passes are skipped.
+ * Colour particles still draw in the single board pass.
+ */
+export const LTK_PASS_DEGRADE_AT = 4;
+export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
+export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[]): { early: boolean; late: boolean; soft: boolean } {
+  if (systems.length >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
+  const needs = { early: false, late: false, soft: false };
+  for (const fx of systems) {
+    needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
+  }
+  return needs;
+}
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary }
 interface Running { source: string; target?: string; until: number; fx: LtkParticles }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
+  const claimBuf: (StencilClaim & { material: Material })[] = [];
+  const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   const release = (run: Running) => { run.fx.dispose(); if (options.budget) options.budget.live -= slots; };
@@ -89,9 +105,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           running.add({ source: spawn.sourceId, target: spawn.targetId, until: when + spawn.duration, fx }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
-      const claims = [...running].flatMap(run => run.fx.stencils);
-      const states = stencilStates(claims);
-      claims.forEach((claim, index) => applyStencil(claim.material, states[index]));
+      claimBuf.length = 0;
+      for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);
+      if (claimBuf.length) {
+        const states = stencilStates(claimBuf);
+        for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
+      }
     },
     clear,
     render(camera: Camera) {
@@ -99,9 +118,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // The optional engine must leave the ordinary board draw untouched while idle
       // (including missing-data fallback); no frame/depth target is needed then.
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
-      const needs = { early: false, late: false, soft: false };
-      for (const { fx } of running) { needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft; }
-      passes.render(scene as Scene, camera, needs);
+      liveFx.length = 0;
+      for (const { fx } of running) liveFx.push(fx);
+      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx));
     },
     get active() { return running.size; },
     get queued() { return waiting.length; },

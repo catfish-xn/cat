@@ -73,16 +73,28 @@ export interface Source {
   readonly world: World;
 }
 
-/** What `source` stands at this moment, for a draw of `emitter`. */
+/** A DrawFrame whose fields a hot path overwrites instead of allocating. */
+export interface FrameSlot {
+  emitter: EmitterModel;
+  now: number;
+  phase: number;
+  origin: Point;
+  orientation: Float32Array;
+  world: World;
+}
+export function frameInto(source: Source, emitter: EmitterModel, out: FrameSlot): DrawFrame {
+  out.emitter = emitter;
+  out.now = source.time;
+  out.phase = emitterPhase(emitter, source.elapsed);
+  out.origin = source.origin;
+  out.orientation = source.orientation;
+  out.world = source.world;
+  return out;
+}
 export function frameOf(source: Source, emitter: EmitterModel): DrawFrame {
-  return {
-    emitter,
-    now: source.time,
-    phase: emitterPhase(emitter, source.elapsed),
-    origin: source.origin,
-    orientation: source.orientation,
-    world: source.world,
-  };
+  return frameInto(source, emitter, {
+    emitter, now: 0, phase: 0, origin: source.origin, orientation: source.orientation, world: source.world,
+  });
 }
 
 /** Where one particle draws, of which a draw path keeps one. */

@@ -41,7 +41,7 @@ seed 42 每轮平均 CPU 毫秒如下；轮次中的选秀也纳入平均。**�
 | 6-4 | 108.7 | 64.6 | 19.3 | 43.0 |
 | 6-5 | 1942.7 | 143.5 | 11.7 | 109.6 |
 
-CPU profile 的包含子调用占比：`advanceS13Tick` 41.94%，回放 recorder 的 `record` 22.82%，`copyCombatUnitForTick` 7.44%，`assertSharedPoolConservation` 3.01%，`recordRoomPublication` 0.59%，`toPlayerView` 1.42%，`toSeatPrivateView` 3.99%；GC 自身 5.90%。这些类别存在嵌套，不能求和。`freezeOwned` 14.12% 的包含成本分散在多条路径，不能只凭它的名字推断是某一张历史表。
+CPU profile 的包含子调用占比：`advanceS13Tick` 41.94%，回放 recorder 的 `record` 22.82%，`copyCombatUnitForTick` 7.44%，`assertSharedPoolConservation` 3.01%，`recordRoomPublication` 0.59%，`toPlayerView` 1.42%，`toSeatPrivateView` 3.99%；GC 自身 5.90%。这些类别存在嵌套，不能求和。`freezeOwned` 若把递归栈上每一帧的包含时间相加会得到 14.12%，同一采样被重复计入；只计最外层调用后约为 3.84%，且分散在多条路径，不能只凭它的名字推断是某一张历史表。
 
 最终再跑 seed 42（`artifacts/lag/final/report.json`、`final.cpuprofile`），36 轮完整结束，所有检查点与最终 Room JSON 的 SHA-256 均与 baseline 一致：最终 `4a9001352b5657f881812d3f24b7c499c22bea9d0b8e8f0995d967df89e510fd`，检查点 `c0f9417a6d60ed6e29d605465bba4d943c133c63c97b46007571a8e162ae1e22`。这不是服务器优化前后性能收益：领域/服务器没有改动，重复测量用于确定性检查。新增的回调来源观察表明，4-7 最慢 232.7 ms 在 battle 流式推进边界，5-1 最慢 201.0 ms 在 preparation 的 bot 指令，6-1 最慢 140.5 ms 也在 bot 指令；问题不限于战斗循环。bot 指令可能包含规划、交易、发布等，不能把整个 callback 的时间全部归给发布或守恒。
 
@@ -53,7 +53,7 @@ seed 42 GC 后采样堆从 2-1 约 32.5 MiB 增至 6-5 约 86 MiB；同一期间
 
 测试服只读检查：`/healthz` 的 sha 确认是 `5c376b5e`，状态 ok，对局于 6-3 正常结束、fault=null。服务自 20:55:50 CST 启动，NRestarts=0；服务 cgroup 当前约 160 MiB、峰值约 183 MiB，进程 RSS 约 207 MiB（两个统计口径不可混用）。两次相隔约 7 分钟的闲置进程 RSS 为 212072/212144 KiB，healthz 的 rssBytes 均约 216756224；这只说明闲置窗口平稳，不是对局内存曲线。
 
-`journalctl` 只有启停，因为 stdout/stderr 配置为 append 文件。实际读取 `/srv/cat-playtest-v20/logs/game.log` 与 `game-error.log`，后者 0 字节。按本次服务启动后筛选，实际有 32 条 `task.slow`、33 条 `round.perf`，有一次 **1-1** 的 loop.lag=122 ms / p99=10 ms / queueDepth=0；没有超时、房间故障或背压断开记录。后期逐阶段最大战斗/投影/任务耗时：
+`journalctl` 只有启停，因为 stdout/stderr 配置为 append 文件。实际读取 `/srv/cat-playtest-v20/logs/game.log` 与 `game-error.log`，后者 0 字节。按本次服务启动后筛选，实际有 32 条 `task.slow`、33 条 `round.perf`，有一次 **1-2** 的 loop.lag=122 ms / p99=10 ms / queueDepth=0；没有超时、房间故障或背压断开记录。后期逐阶段最大战斗/投影/任务耗时：
 
 | 阶段 | 最大战斗工作 ms | 最大投影 ms | 最大任务 ms |
 | --- | ---: | ---: | ---: |
