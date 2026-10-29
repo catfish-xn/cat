@@ -4,6 +4,12 @@
  * Nothing here decides rules; it only shows what the server sent.
  */
 import { freeRerollsUsed } from '../../simulation/free-rerolls';
+import type ConfiscationDisplay from '../../presentation/confiscation-display';
+import { enforcerConfiscates } from '../../simulation/strategy-snapshot';
+import { UNIT_DEFINITIONS } from '../../simulation/units';
+import { ITEM_DEFINITIONS } from '../../simulation/content/g2-3-item-registry';
+import { deriveTraits } from '../../simulation/trait-snapshot';
+import { combatEquipmentDisplay } from '../../presentation/battle-equipment';
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
@@ -105,6 +111,7 @@ export class OnlineApplication implements SceneApplication {
   private pendingRank: number | null | undefined = undefined;
   private hitLanding = false;
   private view: PlayerView | null = null;
+  confiscation?: ConfiscationDisplay;
   /** board-feed subscription the 3D carousel was last sent to, and the next seat release that changes what it draws. */
   private carouselFeedGeneration = -1;
   private carouselNextRelease = Infinity;
@@ -120,6 +127,10 @@ export class OnlineApplication implements SceneApplication {
   replaySelectedUnit: string | null = null;
   /** @param mounts Online-only board-frame mounts (countdown above the board, shop dock below); the sidebar then keeps only the phase badge. */
   constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
+    // Until the optional chunk loads, keep the normal equipment path without a stamp.
+    void import('../../presentation/confiscation-display').then(module => this.confiscation = new module.default(
+      enforcerConfiscates, UNIT_DEFINITIONS, ITEM_DEFINITIONS, deriveTraits, combatEquipmentDisplay,
+    )).catch(() => {});
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
     this.lobby = new Lobby(app, { join: name => client.joinQueue(name, readLegendChoice()), leave: () => client.leaveQueue(), start: () => client.startMatch() });
@@ -147,11 +158,12 @@ export class OnlineApplication implements SceneApplication {
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
       state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
-      replay: (replay, unitIds) => { this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
+      replay: (replay, unitIds) => { this.confiscation?.capture(replay.initial); this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
       replayRevised: replay => { if (!this.session.reviseReplay(replay)) this.hooks.refresh(); },
       // The battle of the seat I visit (start, then each revision); a late one for a board I left is dropped.
       watched: (seatId, replay) => {
         if (seatId !== this.opponentBoard.openSeatId || !this.opponentBoard.drawnIn3d) return;
+        this.confiscation?.capture(replay.initial, seatId);
         if (!this.session.watchReplay(seatId, replay)) { this.syncScout(); this.hooks.refresh(); }
       },
       refused: refusal => this.onRefused(refusal),
@@ -269,6 +281,7 @@ export class OnlineApplication implements SceneApplication {
   }
   private lastTick: number | null = null;
   private onView(view: PlayerView) {
+    this.confiscation?.observe(view);
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
     noteServerNow(view.phase.serverNow); // the anvil armory counts the server's own deadline down

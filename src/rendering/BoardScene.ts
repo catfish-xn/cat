@@ -952,13 +952,13 @@ export class BoardScene extends Phaser.Scene {
     const items = this.session.state.items, frozen = this.frozenItems();
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const owner = this.equipmentOwner(unit.id);
+      const owner = this.equipmentOwner(unit.id), combatUnit = view?.units.find(entry => entry.id === unit.id);
       // Keep opening equipment until the public combat frame supplies a complete replacement.
       const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
       const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
-      const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
-      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
+      const gear = combatEquipmentDisplay(combatUnit?.equipment, opening, extras);
+      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || combatUnit?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), combatUnit?.itemStacks);
     }
   }
   /**
@@ -1339,12 +1339,10 @@ export class BoardScene extends Phaser.Scene {
       if (token.input) { this.input.setDraggable(token, operable); token.input.enabled = true; }
       if (bench) token.setAlpha(operable ? 1 : 0.35);
     }
-    // Replay reducers and offline ticks both expose the authoritative full loadout here.
-    for (const unit of view.units) {
+    // Before the optional UI loads (and offline), retain the authoritative equipment path.
+    if (!(this.application instanceof OnlineApplication && this.application.confiscation?.sync(view, this.views))) for (const unit of view.units) {
       const drawn = this.views.get(unit.id);
-      if (!drawn) continue;
-      // No loadout in this frame (offline/legacy): keep the drawn unit, so a settlement upgrade is not overwritten by the battle's copy.
-      if (unit.equipment === undefined) continue;
+      if (!drawn || unit.equipment === undefined) continue;
       const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
       drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
         gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
@@ -1474,14 +1472,14 @@ export class BoardScene extends Phaser.Scene {
     return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
-  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted'> {
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated'> {
     const view = this.views.get(id);
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
     const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
     const ids = [...view.equipped, ...view.extras.temporary];
     const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
-    return { ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    return { ...(view.confiscationTag?.visible ? { itemsConfiscated: true } : {}), ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
         ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };

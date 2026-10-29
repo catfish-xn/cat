@@ -35,7 +35,7 @@ export interface MeterData { value: number; maxValue: number; ratio: number; wid
 export class UnitView {
   readonly token: Phaser.GameObjects.Container;
   /** Everything drawn; offset by the motion below so the token (input, hit tests, positions) never moves for it. */
-  private readonly body: Phaser.GameObjects.Container;
+  readonly body: Phaser.GameObjects.Container;
   /** White overlay for the hit flash. */
   private readonly flash: Phaser.GameObjects.Arc;
   private readonly stackLabels: Phaser.GameObjects.Text[] = [];
@@ -70,6 +70,7 @@ export class UnitView {
   private readonly costBadge: Phaser.GameObjects.Arc;
   private readonly costText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.Graphics;
+  declare confiscationTag?: Phaser.GameObjects.Text;
   /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
   private readonly pendingTag: Phaser.GameObjects.Text;
   private portrait: Phaser.GameObjects.Image | null = null;
@@ -128,6 +129,7 @@ export class UnitView {
    * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
   update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel, itemStacks?: CombatViewUnit['itemStacks']): void {
+    this.confiscationTag?.setVisible(false);
     const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}|${JSON.stringify(itemStacks)}`;
     if (key === this.renderKey) return;
     this.renderKey = key; this.lastDrawn = { unit, star };

@@ -5,6 +5,7 @@ import type { Plugin } from 'vite';
 
 type Replacement = { start: number; end: number; text: string };
 const normalize = (path: string) => path.replaceAll('\\', '/');
+const ENTRY_STRING_SEPARATOR = '|';
 
 /** Share values, never rename properties: obj.longName becomes obj[key], where
  * key is still exactly "longName". JSON, enumeration, reflection and wire IDs are
@@ -16,8 +17,9 @@ export function compactEntryStrings(code: string): string {
   let prefix = '__sharedText';
   while (code.includes(prefix)) prefix += '_';
   const add = (value: string, start: number, end: number, kind: 'value' | 'key' | 'optional') => {
-    // __proto__ in object literal syntax is special; NUL is the dictionary separator.
-    if (value.length < 4 || value === '__proto__' || value.includes('\0')) return;
+    // __proto__ in object literal syntax is special. Keep delimiter-containing
+    // values inline so joining/splitting the dictionary cannot change any text.
+    if (value.length < 4 || value === '__proto__' || value.includes('\0') || value.includes(ENTRY_STRING_SEPARATOR)) return;
     const entries = groups.get(value) ?? [];
     entries.push({ start, end, kind }); groups.set(value, entries);
   };
@@ -65,7 +67,7 @@ export function compactEntryStrings(code: string): string {
     prologueEnd = statement.end;
   }
   const body = parts.join('');
-  return `${body.slice(0, prologueEnd)}\nconst [${names.join(',')}]=${JSON.stringify(values.join('\0'))}.split("\\0");\n${body.slice(prologueEnd)}`;
+  return `${body.slice(0, prologueEnd)}\nconst [${names.join(',')}]=${JSON.stringify(values.join(ENTRY_STRING_SEPARATOR))}.split(${JSON.stringify(ENTRY_STRING_SEPARATOR)});\n${body.slice(prologueEnd)}`;
 }
 
 // Pin upstream code we specialize. An engine update must be re-audited instead

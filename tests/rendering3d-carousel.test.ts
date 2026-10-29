@@ -61,7 +61,7 @@ describe('3D carousel stage', () => {
     expect(stage.debug().fetched).toEqual({}); expect(stage.debug().legends.every(entry => !entry.includes(':walk') && !entry.includes(':chase'))).toBe(true);
     stage.show(null); expect(stage.descriptionAt(itemPoint, area)).toBeUndefined(); stage.dispose();
   });
-  it('draws stand-ins without an asset root: platform, eight seat legends, the units with their items and no timer ring', () => {
+  it('draws stand-ins without an asset root, including procedural release timer rings', () => {
     const { stage } = setup();
     stage.show(carousel());
     const debug = stage.debug();
@@ -71,6 +71,9 @@ describe('3D carousel stage', () => {
     expect(debug.units.map(unit => unit.slot)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     expect(debug.units.every(unit => unit.body === 'standin' && unit.items === 1 && unit.ring === 'none')).toBe(true);
     expect(debug.effects.some(entry => entry.includes('timer'))).toBe(false);
+    const timers = stage.scene.children.filter(child => child.name === 'render3d-carousel-timer');
+    expect(timers).toHaveLength(8);
+    expect(timers.every(timer => timer.visible && timer.userData.fraction === 1)).toBe(true);
   });
 
   it('puts legends on the outer cradles and units on the inner ring, at the doc proportions', () => {
