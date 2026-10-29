@@ -14,6 +14,7 @@ import {projectStrategyMembership} from './strategy-membership';
 import {nearestItemCell} from './g2-4b-item-kernel';
 import {G24_VOIDSPAWN_POLICY} from './content/g2-4b-voidspawn';
 import {writeSeatMechanic} from './seat-mechanics/state';
+import {combatBenchProjection} from './bench-capacity';
 export const VOIDSPAWN_ITEM='TFT5_Item_ZzRotPortalRadiant';
 /** Saved preparation cells of movable summons: a Voidspawn's by its portal item instance (`item-N`), a Hextech Forge's by
  * its Jayce (`unit-N`), and Black Rose Sion by `g23-sion` (P user 2026-10-29). Cells are in the owner's own rows. */
@@ -62,8 +63,8 @@ export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly Tr
  * is then the Jayce unit id); Sion uses the seat-local `g23-sion` key. Neither is a combat item summon. */
 export type MovableSummon=Pick<ItemSummonOrigin,'ownerId'|'itemInstanceId'|'unit'>&{readonly kind:ItemSummonOrigin['kind']|'forge'|'sion'};
 function movableSummons(state:MatchState){
- // Use the compiler's membership and projected occupancy, including emblems, R3 copies and Hall of Mirrors.
- const membership=projectStrategyMembership(state);
+ // Combat projection parks over-encumbered reserves before membership, so they do not grant traits or summons.
+ const membership=projectStrategyMembership({...state,preparation:combatBenchProjection(state.preparation)});
  const projection=projectVoidspawns({...membership.state,itemSummonPositions:readItemSummonPositions(state)},membership.traits);
  // Combat-only Jayce copies must not introduce a movable forge key absent from the owned roster/snapshot.
  const forges:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-forge'&&u.team==='player'&&u.location.kind==='board'

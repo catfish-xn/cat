@@ -12,6 +12,8 @@ export function whatYouReallyAreProgress(state: MatchState): { count: number; co
     if (r.round < owner.acquiredRound || r.roundKind !== 'pvp') continue;
     const receipt = state.multiplayer.receipts.find(p => p.settlementId === r.settlementId);
     const damage = r.damageDealt;
+    // ?pvp=placeholder: solo settlement identity with no D0 receipt — skip without earning damage.
+    if (r.settlementId === `round-${r.round}-settled` && !receipt && !Object.hasOwn(r, 'damageDealt')) continue;
     if (damage === undefined || !Number.isSafeInteger(damage) || damage < 0 || damage > MAX_SUPPORTED_PLAYER_HP
       || !receipt || receipt.damageDealt !== damage) throw new RangeError('Invalid D1 damageDealt authority');
     count += damage;

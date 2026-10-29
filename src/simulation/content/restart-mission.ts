@@ -2,7 +2,7 @@ import type { AugmentGiftSpec } from '../augment-gift-plan';
 import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 
-/** D4 implementation only. D5 owns offer/tier/API-name registration and epoch recording. */
+/** D4 effect declaration; D5 registers offer/tier/API-name. */
 export const RESTART_MISSION = freezeContent({
   apiName: 'TFT_Augment_RestartMission',
   source: { patch: '14.24', archive: 'augments-research-2026-10-23/data/augments-14.24.json',

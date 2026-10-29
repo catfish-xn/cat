@@ -13,7 +13,7 @@ vi.mock('phaser', () => ({ default: { Scene: class {}, Scenes: { Events: { SHUTD
 vi.mock('../../src/presentation/unit-view', () => ({ UnitView: class {
   token: Token;
   constructor(_scene: unknown, unit: Unit) { this.token = new Token(unit.id); }
-  update() {} setAnomalies() {} resetMeters() {}
+  update() {} setAnomalies() {} setOverflow() {} resetMeters() {}
 } }));
 import { BoardScene } from '../../src/rendering/BoardScene';
 

@@ -1,3 +1,4 @@
+import { completeOverEncumbered } from './over-encumbered';
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainContestedGold } from './augment-pool-batch5-h6';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
@@ -207,6 +208,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     settled={...settled,playerHp:batch5S6cSettlementHealth(settled,r.round,settled.playerHp)};
     const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
     hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
+    const over=completeOverEncumbered(settled); settled=over.state; hookEvents.push(...over.events.filter(e=>e.type!=='mechanicGranted'));
     const merged = resolveDeferredUpgrades(settled);
     const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution'||a.definitionId==='what-you-really-are') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
     const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));

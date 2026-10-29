@@ -34,13 +34,13 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 
 /** The public board as a preparation state for the rules' trait selector (definition ids and board cells only). */
 function publicPreparation(board: PublicBoard, layout: Board): GameState {
-  return { board: layout, benchSize: 0, units: board.units.filter(unit => !unit.summon).map((unit, index) => ({
+  return { board: layout, benchSize: 0, units: board.units.filter(unit => !unit.summon && !unit.nonCombat).map((unit, index) => ({
     id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
   })) };
 }
 /** The public board units' held items, so emblems count toward the scouted traits as they do on my own column. */
 function publicItems(board: PublicBoard): ItemInstance[] {
-  return board.units.filter(unit => !unit.summon).flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
+  return board.units.filter(unit => !unit.summon && !unit.nonCombat).flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
     id: `public-${index}-${slot}`, definitionId, location: { kind: 'unit' as const, unitId: `public-${index}`, slot },
   })));
 }
@@ -204,6 +204,7 @@ export class OpponentBoardPanel {
     const summon = 'summon' in unit && unit.summon === true;
     if (summon) chip.dataset.summon = 'true';
     else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(star); }
+    if ('nonCombat' in unit && unit.nonCombat) chip.append(element('span','暂留不参战'));
     chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(star)}${star === 4 ? '（终极英雄）' : ''}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(star), `opponent-stars star-${star}`), portrait);

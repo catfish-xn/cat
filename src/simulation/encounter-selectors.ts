@@ -12,6 +12,7 @@ import { freezeContent } from './content/freeze';
 import { createCombatWithEvents } from './combat';
 import { canonicalContent } from './content';
 import { selectPlayerBaseDamage } from './match-rules';
+import { combatBenchProjection } from './bench-capacity';
 
 // Opening effects now include v19 actual-HP sharing. Reuse an independently
 // constructed opening while its complete preparation and resolved inputs match.
@@ -49,7 +50,7 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
     const key=canonicalContent([state.preparation,snapshot]);
     opening=openings.get(state.preparation);
     if(opening?.key!==key){
-      opening={key,units:createCombatWithEvents(state.preparation,snapshot,'encounter-preview',0).state.units};
+      opening={key,units:createCombatWithEvents(combatBenchProjection(state.preparation),snapshot,'encounter-preview',0).state.units};
       openings.set(state.preparation,opening);
     }
   }

@@ -72,6 +72,8 @@ export interface SeatPublic {
 }
 export interface PublicOrbSummary { readonly count: number; readonly tiers: readonly OrbTier[] }
 export interface PublicBoardUnit {
+  /** Parked reserve; visible on the board but excluded from combat and traits. */
+  readonly nonCombat?: true;
   readonly definitionId: string;
   readonly starLevel: number;
   /** Cell on the owner's own board, in the owner's orientation (their deployment rows at the bottom). */

@@ -25,8 +25,9 @@ export function projectG23Summons(preparation:GameState,traits?:readonly TraitSn
   const army=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&!isG23Summon(u)).sort(compareUnitIds);
   const rose=traits?traits.find(t=>t.team===team&&t.traitId==='black-rose'):deriveEffectiveTrait(projectEffectiveMembership(preparation),team,'black-rose');
   const roses=army.filter(u=>rose?.memberUnitIds?rose.memberUnitIds.includes(u.id):rose?.memberDefinitionIds.includes(u.definitionId));
+  if((rose?.tier??0)>=3&&!roses.length)throw new RangeError('Black Rose summon requires a fielded member');
   const forges=army.filter(u=>u.definitionId==='jayce').map(u=>({id:g23ForgeId(u.id),definitionId:'g23-forge',placed:summonCells&&Object.hasOwn(summonCells,u.id)?summonCells[u.id]:undefined,row:u.location.kind==='board'?Math.min(7,(team==='player'?u.location.cell.row:7-u.location.cell.row)+1):7,col:u.location.kind==='board'?u.location.cell.col:3}));
-  const sionId=roses[0]?.id+':g23-sion';
+  const sionId=(roses[0]?.id??'')+':g23-sion';
   // Combat may carry two seats: its compiled cells are keyed by the full, namespaced summon id.
   const sionCell=summonCells?.[sionId]??(team==='player'?summonCells?.[SION_POSITION_KEY]:undefined);
   const requests=[...forges.filter(f=>f.placed).map(f=>({...f,row:f.placed!.row,col:f.placed!.col})),...((rose?.tier??0)>=3?[{id:sionId,definitionId:'g23-sion',row:sionCell?.row??4,col:sionCell?.col??3,placed:sionCell}]:[]),...forges.filter(f=>!f.placed)];

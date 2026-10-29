@@ -588,7 +588,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     arena?.place(frame);
     const overlay = !!arena?.ready;
     const marker = showingOwnBoard ? frame.mutationSacrificeCell : null;
-    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}|${marker?.col ?? ''},${marker?.row ?? ''}`;
+    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}:${frame.usableBenchSlots ?? frame.bench.length}|${overlay}|${marker?.col ?? ''},${marker?.row ?? ''}`;
     if (key === boardKey) return;
     boardKey = key;
     benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
@@ -613,6 +613,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const mesh = new Mesh(slot, slotMaterial);
       mesh.position.set(point.x, -2, point.y);
       boardGroup.add(mesh);
+    }
+    // Disabled slots are marked even when an arena model supplies its own bench strip.
+    const blocked = ownBoard(new MeshStandardMaterial({color:'#87565a',roughness:0.9}));
+    const slash = ownBoard(new BoxGeometry(35,2,3));
+    for(let i=frame.usableBenchSlots ?? frame.bench.length;i<frame.bench.length;i++) {
+      const p=benchSlots?.[i] ?? new Vector3(frame.bench[i].x,0,frame.bench[i].y);
+      for(const turn of [-Math.PI/4,Math.PI/4]) {
+        const cross=new Mesh(slash,blocked);cross.name=`render3d-blocked-bench-${i}`;
+        cross.position.set(p.x,p.y+3,p.z);cross.rotation.y=turn;boardGroup.add(cross);
+      }
     }
     // Over the arena's own bench cells: a faint square per cell (as the hexes above are marked), sized to the cell spacing.
     if (benchSlots && benchSlots.length > 1) {
@@ -1158,7 +1168,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.model = model; view.team = piece.team; attachBody(view);
       }
       syncStars(view, piece);
-      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated, piece.anomalies);
+      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated, piece.anomalies, piece.nonCombat);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {

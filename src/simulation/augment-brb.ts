@@ -3,7 +3,7 @@ import { requireAugmentFacts } from './augment-history';
 import { planAugmentGifts, type AugmentGift } from './augment-gift-plan';
 import { freezeContent } from './content/freeze';
 
-/** D2 effect only. D5 registers the definition, gold tier and 2-1 stage ban.
+/** D2 effect; D5 registers the definition, gold tier and 2-1-only offers.
  * Source: 14.24 TFT_Augment_BRB; timing/allowed operations: approved D rules 3–5. */
 export const BRB_RULES = freezeContent({ rounds: 3, anvils: 2, definitionId: 'TFT_ArmoryKeyCompleted' });
 

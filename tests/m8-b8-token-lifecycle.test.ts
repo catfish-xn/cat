@@ -58,6 +58,7 @@ const display = vi.hoisted(() => {
     }
     update(unit: Unit, _equipped: readonly string[]) { this.lastUnit = unit; }
     setAnomalies(anomalies: readonly UnitAnomaly[]) { this.anomalies = anomalies; }
+    setOverflow() {}
     setRing(ring: string) { this.ring = ring; }
     drawCombat(unit: CombatUnit, _combat: CombatState) { this.lastCombatUnit = unit; }
     resetMeters() { this.resetCount++; }

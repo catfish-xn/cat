@@ -1,5 +1,7 @@
 import { drawAnomalyOffer, isEligibleAnomalyTarget, recordAnomalyOffer } from './anomaly-choice';
 import { reconcileMatchAnomaly } from './anomaly-ownership';
+import { overEncumberedActive, completeOverEncumbered, reconcileOverEncumbered } from './over-encumbered';
+import { combatBenchProjection, isOverflowUnit } from './bench-capacity';
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
@@ -141,6 +143,7 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  const over=completeOverEncumbered(state); state=over.state; events=[...events,...over.events];
   state=applyAngerIssues(state);
   const inventory=drainBatch5Inventory(state);events=[...events,...mechanicGrantEvents(state,inventory)];state=inventory;
   const d14Events:MatchEvent[]=[];state=reconcileMatchAnomaly(state,d14Events);state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
@@ -386,6 +389,7 @@ function autoDeployFormation(state: MatchState): MatchCommandResult {
 function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
+  if (overEncumberedActive(state)) return fail(state, 'bench-full');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -408,7 +412,10 @@ function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneratio
 }
 function execute_openAnvil(state:MatchState,unitId:string):MatchCommandResult {
   const result=planOpenAnvil(state,unitId);
-  return result.ok?acceptEquipment(result.state,result.events):result;
+  if(!result.ok)return result;
+  const freedBench=state.preparation.units.some(u=>u.id===unitId&&u.location.kind==='bench');
+  const over=reconcileOverEncumbered(result.state,freedBench);
+  return acceptEquipment(over.state,[...result.events,...over.events]);
 }
 function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (state.pendingChoice?.kind === 'anomaly') return fail(state, 'wrong-phase');
@@ -421,8 +428,9 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
   if (!isSellableUnit(unit.definitionId) || noScoutLockedUnits(state).has(unitId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
-  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
+  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench' && !isOverflowUnit(state.preparation,unitId)) return fail(state, 'wrong-phase');
   let { state: sold, events } = sellPreparedUnit(state, unit, capacity);
+  const over=reconcileOverEncumbered(sold,unit.location.kind==='bench'); sold=over.state; events.push(...over.events);
   const returnedState=sold; sold=salvageSale(state,sold,unitId);
   sold=salvageSoldItems(state,sold,unitId);
   events.unshift(...mechanicGrantEvents(returnedState,sold));
@@ -486,13 +494,16 @@ export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPo
   return accept(gifted,mechanicGrantEvents(state,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  return combatStartFailure(state, false);
+}
+function combatStartFailure(state: MatchState, placeholderPvp: boolean): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return 'wrong-phase';
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return 'wrong-phase';
   if (needsAnomalyRecruitment(state)) return 'missing-player';
   if (getPlayerDeploymentCount(state.preparation) > getDeploymentCap(state)) return 'population-cap';
-  const reason = validateCombatStart(state.preparation);
+  const reason = validateCombatStart(combatBenchProjection(state.preparation));
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
   return reason === 'missing-player' ? undefined : reason;
 }
@@ -540,6 +551,8 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   let committed=combat?grantPveRemover(commitG23Settlement(observed,facts!,unitLootPolicy,hookEvents)):observed;
   committed=drainLootExplosionRewards(committed);
   const contested=drainContestedGold(committed);hookEvents.push(...mechanicGrantEvents(committed,contested));committed=contested;
+  // Unlock stage-end capacity before deferred merges and queued-orb retries.
+  const over=reconcileOverEncumbered(committed); committed=over.state; hookEvents.push(...over.events);
   if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
     const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;
   }
@@ -586,8 +599,8 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const entered=enterScheduledEvents(settled,'after');
   return {state:entered.state,events:[...events,...entered.events]};
 }
-function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
-  const reason = matchStartFailure(state); if (reason) return fail(state, reason);
+function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchCommandResult {
+  const reason = combatStartFailure(state, placeholderPvp); if (reason) return fail(state, reason);
   // The offline Start button is its preparation deadline. BRB uses the same
   // deterministic fill as the room; player shop restrictions never gate it.
   const deployment = !state.multiplayer && brbShopDisabled(state) ? autoDeployFormation(state) : null;
@@ -659,10 +672,10 @@ function execute_settleMatchCombatStream(state: MatchState, terminal: CombatStat
   const settled = withCombat(base, terminal, unitLootPolicy);
   return accept(settled.state, settled.events);
 }
-function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
+function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchStep {
   if (state.phase !== 'combat' || state.pendingCombatTerminal) return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return {state,events:[]};
   const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
   const live=sampled===state.combat?sampled:{...sampled,bankSamples:[...(state.combat.bankSamples??[]),
     {tick:state.combat.tick,team:'player' as const,liveGold:state.gold}]};
@@ -690,6 +703,8 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  const overPlan=reconcileOverEncumbered({...state,round});
+  const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
   state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round})));
@@ -710,7 +725,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   let prepared = growCarryGolem(growTrainerGolem(enterOpeningCrabs(carousel.state)));
   const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
   prepared = portfolioEvents.state;
-  const openingEvents: MatchEvent[] = [...transformed.events, ...portfolioEvents.events];
+  const openingEvents: MatchEvent[] = [...overEntry.events, ...transformed.events, ...portfolioEvents.events];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
@@ -748,6 +763,8 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const overPlan=reconcileOverEncumbered({...state,round:definition.ordinal});
+    const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
     state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
     state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal})));
     const transformPlan = transformPandorasBench(state, transformStock);
@@ -766,7 +783,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const entry=growCarryGolem(drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))));
     const gifted=entry.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
-    return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
+    return accepted.ok?{...accepted,events:[...overEntry.events,...transformed.events,...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
@@ -1053,6 +1070,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalySelection: choice.kind === 'anomaly' ? { definitionId, championDefinitionId: state.preparation.units.find(u => u.id === choice.targetId)!.definitionId, choiceId, boundRound: state.round } : state.anomalySelection,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  if(choice.kind==='augment'&&definitionId==='brb'&&selected.shop.locked)selected={...selected,shop:{...selected.shop,locked:false}};
   if(choice.kind==='augment'&&definitionId==='max-cap'&&selected.level===7)selected={...selected,xp:0};
   const beforeHistoryAcquisition = selected;
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
@@ -1132,12 +1150,25 @@ export function buyXp(...args: Parameters<typeof execute_buyXp>): ReturnType<typ
   return traceHistoryCommand('buyXp', args, () => execute_buyXp(...args));
 }
 
-export function startMatchCombat(...args: Parameters<typeof execute_startMatchCombat>): ReturnType<typeof execute_startMatchCombat> {
+export function startMatchCombat(...args: [MatchState, UnitLootPolicy?]): MatchCommandResult {
   return traceHistoryCommand('startMatchCombat', args, () => execute_startMatchCombat(...args));
 }
 
-export function stepMatch(...args: Parameters<typeof execute_stepMatch>): ReturnType<typeof execute_stepMatch> {
+/** Trusted local placeholder resolver only; never dispatched from a player's wire command.
+ * Keeps multiplayer ownership/pool/history, but runs the existing single-seat combat engine without D0 damage. */
+export function startPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('startMatchCombat', [state, unitLootPolicy], () => execute_startMatchCombat(state, unitLootPolicy, true));
+}
+
+export function stepMatch(...args: [MatchState, UnitLootPolicy?]): MatchStep {
   return traceHistoryCommand('stepMatch', args, () => execute_stepMatch(...args));
+}
+
+/** Companion to startPlaceholderMatchCombat; ordinary stepMatch keeps its PvP no-op guard. */
+export function stepPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp' || state.phase !== 'combat') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('stepMatch', [state, unitLootPolicy], () => ({ok:true as const,...execute_stepMatch(state, unitLootPolicy, true)}));
 }
 
 export function nextRound(...args: Parameters<typeof execute_nextRound>): ReturnType<typeof execute_nextRound> {

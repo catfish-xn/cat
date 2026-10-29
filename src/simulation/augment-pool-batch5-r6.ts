@@ -1,4 +1,5 @@
 import { reconcileMatchAnomaly } from './anomaly-ownership';
+import { usableBenchSlots } from './bench-capacity';
 import type { UnitLootPolicy } from './loot-runtime';
 import { requireAugmentFacts } from './augment-history';
 import { SHOP_CATALOG } from './match-rules';
@@ -67,7 +68,7 @@ export function transformPandorasBench(state: MatchState, stock?: Readonly<Recor
   const owner = state.augments.find(a => a.definitionId === 'pandoras-bench');
   if (!owner || owner.acquiredRound >= state.round || !state.multiplayer || !stock || completed(state, owner.choiceId)) return { state, events: [] };
   const entry = requireAugmentFacts(state, 'round-entry', state.round)[0];
-  const targets = entry.roster.units.filter(u => ordinary(u) && u.location.kind === 'bench' && u.location.slot >= state.preparation.benchSize - 3)
+  const targets = entry.roster.units.filter(u => ordinary(u) && u.location.kind === 'bench' && u.location.slot >= state.preparation.benchSize - 3 && u.location.slot < usableBenchSlots(state.preparation))
     .sort((a, b) => (a.location.kind === 'bench' ? a.location.slot : 0) - (b.location.kind === 'bench' ? b.location.slot : 0));
   return transformBatch(state, owner.choiceId, targets, stock);
 }

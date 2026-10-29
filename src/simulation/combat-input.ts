@@ -1,3 +1,5 @@
+import { combatBenchProjection } from './bench-capacity';
+import { overEncumberedActive, validateOverEncumbered } from './over-encumbered';
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2FrozenCopyKills, type AugmentCopyKills } from './augment-pool-batch5-r2-history';
 import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
@@ -39,6 +41,8 @@ export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'it
   & { readonly ghostFriendsGrowth?: import('./augment-pool-batch5-g2').GhostFriendsGrowth; readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
   & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
+  /** Actual holdings at Start, only when capacity differs from the combat projection. */
+  readonly resourcePreparation?: import('./game').GameState;
   readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
   readonly combatId: string; readonly roundId: string; readonly contentDigest: string;
@@ -81,7 +85,8 @@ export interface CombatInputAuthority {
   readonly roundResults: readonly RoundResult[];
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
-  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
+  const { round, preparation: ownedPreparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
+  const preparation = combatBenchProjection(ownedPreparation);
   const cabalGrowth='resourceProvenance' in state?readCabalGrowth(state):state.cabalGrowth;
   const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>portableAnomalyId(i.definitionId)==='avarice-incarnate')||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
   const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
@@ -104,6 +109,7 @@ export function freezeCombatInput(state: MatchBase, battleSeed: number, provenan
     roundId: state.roundDefinitionId, contentDigest: state.contentDigest, battleSeed, playerLevel: state.level,
     nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial,
     equipmentRollPrefixLength: state.equipmentState.rolls.length, provenancePrefixLength,
+    ...(state.preparation.usableBenchSlots === undefined ? {} : { resourcePreparation: state.preparation }),
     inputs: readCombatStrategyInputs(state) }));
 }
 function requireBasis(condition: unknown): asserts condition { if (!condition) throw new RangeError('Invalid combat input basis'); }
@@ -119,6 +125,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   if (!parsedJsonInput) canonicalContent(value);
   record(value);
   const basis = value as unknown as CombatInputBasis, input = basis.inputs; record(input);
+  requireBasis(input.preparation && input.preparation.usableBenchSlots === undefined && input.preparation.overflowUnitIds === undefined);
   const round = ROUND_CATALOG.find(entry => entry.ordinal === authority.round);
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
@@ -159,7 +166,9 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round,authority.shared?.openingId ?? createOpeningEncounter(authority.seed).selection.encounterId).units, inputValidation);
+  const assetBoundary = {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)};
+  const enemies = readRoundEnemyProjection(authority.round,authority.shared?.openingId ?? createOpeningEncounter(authority.seed).selection.encounterId).units;
+  const units = validateInputAssets(input, assetBoundary, enemies, inputValidation);
   requireBasis(equal(input.d14Combat??null,authority.d14Combat??null));
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.filter(u=>!authority.heldUnitIds?.includes(u.id)).map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
@@ -169,6 +178,14 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   const expectedAugments = receipts.filter(receipt => receipt.kind === 'augment').map(receipt => ({definitionId:receipt.definitionId,choiceId:receipt.eventId,acquiredRound:receipt.round}));
   requireBasis(equal(input.augments, expectedAugments) && new Set(input.augments.map(augment => augment.definitionId)).size === input.augments.length);
   for (const augment of input.augments) requireBasis(Object.hasOwn(AUGMENT_DEFINITIONS, augment.definitionId));
+  const resourceState = { round: input.round, roundResults: input.roundResults ?? [], augments: input.augments,
+    preparation: basis.resourcePreparation ?? input.preparation };
+  requireBasis(overEncumberedActive(resourceState) === (basis.resourcePreparation !== undefined));
+  if (basis.resourcePreparation !== undefined) {
+    validateInputAssets({ preparation: basis.resourcePreparation, items: input.items }, assetBoundary, enemies, inputValidation);
+    validateOverEncumbered(resourceState);
+    requireBasis(equal(combatBenchProjection(basis.resourcePreparation), input.preparation));
+  }
   if (input.anomalyBinding !== null) {
     record(input.anomalyBinding); const binding = input.anomalyBinding;
     requireBasis(Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId) && units.get(binding.unitId)?.team === 'player'

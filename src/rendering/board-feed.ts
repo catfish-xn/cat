@@ -13,6 +13,8 @@ import type { PvpDamage } from '../presentation/pvp-damage';
 export interface BoardPiece {
   /** Obtained effects only (native binding or public portable item); never pending offers. */
   readonly anomalies?: readonly import('../presentation/anomaly-display').UnitAnomaly[];
+  /** Parked by over-encumbered capacity; drawn, but not a combatant. */
+  readonly nonCombat?: true;
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
   /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
   readonly effectiveStarLevel?: 4;
@@ -41,6 +43,7 @@ export interface BoardPiece {
 }
 export interface BoardMeters { readonly hp: number; readonly maxHp: number; readonly mana: number; readonly maxMana: number; readonly shield: number }
 export interface BoardFrame {
+  readonly usableBenchSlots?: number;
   readonly rows: number; readonly columns: number; readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number };
   readonly bench: readonly { readonly x: number; readonly y: number }[];
   readonly pieces: readonly BoardPiece[];

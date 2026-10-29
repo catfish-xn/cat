@@ -101,6 +101,7 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId', 'starLevel']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
+      ...(state.preparation.usableBenchSlots === undefined ? {} : {usableBenchSlots:state.preparation.usableBenchSlots,overflowUnitIds:[...state.preparation.overflowUnitIds ?? []]}),
       units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(isD14PromotedUnit(state,u.id)?{effectiveStarLevel:4 as const,sellGold:getUnitSellPrice({definitionId:u.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{})})) },
     items: items.map(itemView),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId

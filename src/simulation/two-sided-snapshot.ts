@@ -1,3 +1,4 @@
+import { isOverflowUnit } from './bench-capacity';
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2CopyKills } from './augment-pool-batch5-r2-history';
 import { UNIT_DEFINITIONS } from './units';
@@ -202,7 +203,7 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
     .some(key => state[key] !== M8_VERSION[key])) throw new BattleValidationError('snapshot-version');
   if ((state.multiplayer ? getMultiplayerRoundByOrdinal(state.round) : getCatalogRoundByOrdinal(state.round)).roundId !== state.roundDefinitionId) throw new BattleValidationError('round-mismatch');
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
-  const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
+  const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && !isOverflowUnit(state.preparation,unit.id)).sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
   const cabalGrowth = readCabalGrowth(state);
   const wins = priorPvpWins(state.roundResults, state.round);

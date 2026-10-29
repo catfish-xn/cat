@@ -1,4 +1,5 @@
 import { validateAnomalyHistoryProof } from './anomaly-history-restore';
+import { validateOverEncumbered } from './over-encumbered';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
@@ -185,6 +186,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+  validateOverEncumbered(state);
   // Validate asset containers before mechanic validators traverse their unit arrays.
   mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   record(state.m8); record(state.m8.round); record(state.m8.preparation);

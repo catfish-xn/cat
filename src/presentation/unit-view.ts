@@ -1,3 +1,4 @@
+// D3 labels read the authority's overflow overlay; no combat or capacity decisions here.
 /**
  * M7 board/bench piece view. Pure presentation: reads Unit/CombatUnit snapshots and
  * draws them; never writes domain state. The container keeps the original 58×58 hit
@@ -73,6 +74,7 @@ export class UnitView {
   private readonly items: Phaser.GameObjects.Graphics;
   declare confiscationTag?: Phaser.GameObjects.Text;
   /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
+  private readonly overflowTag: Phaser.GameObjects.Text;
   private readonly pendingTag: Phaser.GameObjects.Text;
   private readonly anomalyMark: Phaser.GameObjects.Text;
   anomalies: readonly UnitAnomaly[] = [];
@@ -89,6 +91,8 @@ export class UnitView {
   extras: GearExtras = NO_GEAR_EXTRAS;
   ring: RingState = 'normal';
 
+  setOverflow(on: boolean): void { this.overflowTag.setVisible(on); }
+
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
     this.identity = getHeroIdentity(unit.definitionId);
     const add = scene.add;
@@ -102,12 +106,13 @@ export class UnitView {
     this.flash = add.circle(0, 0, PIECE_RADIUS, 0xffffff).setAlpha(0);
     this.pendingTag = add.text(21, -19, '', { fontSize: '10px', fontStyle: 'bold', color: '#0b151f', backgroundColor: '#68ddd0', padding: { x: 2, y: 1 }, resolution: 2 }).setOrigin(0.5).setVisible(false);
     this.anomalyMark = add.text(20, 14, '异', { fontSize: '11px', fontStyle: 'bold', color: '#f0dcff', backgroundColor: '#492f60', padding: { x: 3, y: 1 }, resolution: 2 }).setOrigin(0.5).setName('anomaly-mark').setVisible(false);
+    this.overflowTag = add.text(0, -42, '暂留不参战', {fontSize:'11px',color:'#f2d5a0',backgroundColor:'#352b24',padding:{x:3,y:2},resolution:2}).setOrigin(0.5).setVisible(false).setName('over-encumbered');
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
     this.statusIcons = add.graphics().setVisible(false);
     this.shieldLabel = add.text(0, 48, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag, this.anomalyMark];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag, this.anomalyMark, this.overflowTag];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));

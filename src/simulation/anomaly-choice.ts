@@ -5,6 +5,7 @@ import { isAnvil } from './content/anvils';
 import { anomalyCandidates, ANOMALY_OFFER_POLICY } from './content/anomalies';
 import { eligibleD14Target } from './d14-runtime';
 import { r2AnomalyAllowed } from './augment-pool-batch5-r2-anomaly';
+import { isOverflowUnit } from './bench-capacity';
 import { nextRandom } from './rng';
 import { appendAnomalyOffer } from './anomaly-history';
 
@@ -14,7 +15,7 @@ export type AnomalyTargetPurpose = 'manual' | 'timeout';
  * The 14.24 timeout fix excludes every catalog summon, including a manually locked one. */
 export function isEligibleAnomalyTarget(state: MatchState, unit: Unit | undefined,
   offers: readonly string[] = [], purpose: AnomalyTargetPurpose = 'manual'): boolean {
-  if (!unit || unit.team !== 'player' || !UNIT_DEFINITIONS[unit.definitionId]
+  if (!unit || unit.team !== 'player' || isOverflowUnit(state.preparation, unit.id) || !UNIT_DEFINITIONS[unit.definitionId]
     || isAnvil(unit.definitionId) || state.anomalyBinding !== null || state.anomalySelection !== null
     || state.carousel?.receipts.some(r => r.unitId === unit.id && !state.carousel!.preparationReceipts.includes(r.id))) return false;
   if (purpose === 'timeout' && UNIT_DEFINITIONS[unit.definitionId].summon) return false;

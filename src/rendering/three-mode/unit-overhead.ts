@@ -24,7 +24,7 @@ export interface UnitOverhead {
   /** Scene child: the host moves it to the piece's head each frame. Its origin is the bar's bottom edge. */
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
-  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean, anomalies?: BoardPiece['anomalies']): void;
+  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean, anomalies?: BoardPiece['anomalies'], nonCombat?: boolean): void;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
@@ -74,7 +74,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     icons.clear(); badges.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
     badgeDrawers.length = 0;
   };
-  let barKey = '', itemKey = '', disposed = false, flashing = false;
+  let tagKey = '通缉', barKey = '', itemKey = '', disposed = false, flashing = false;
   let shownItems: NonNullable<BoardPiece['items']> = [], itemFont = ctx.font?.() ?? 'sans-serif';
   let shown: { team: BoardPiece['team']; meters: BoardMeters } | null = null;
 
@@ -158,7 +158,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
     get drawn() { return bar.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
-    set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies) {
+    set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies, nonCombat = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
@@ -170,7 +170,14 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       badges.position.y = icons.position.y;
       anomaly.visible = Boolean(anomalies?.length);
       anomaly.position.set(BAR_WIDTH / 2 + 5, icons.position.y + ITEM_SIZE / 2, 0);
-      wanted.visible = enforcerWanted && Boolean(meters);
+      const tag = nonCombat ? '暂留不参战' : '通缉';
+      if(tag !== tagKey && label?.fillText) {
+        tagKey=tag;label.clearRect(0,0,128,40);label.fillStyle='#291b0a';label.fillRect(0,0,128,40);
+        label.fillStyle='#ffd84d';label.font=nonCombat?'bold 22px sans-serif':'bold 30px sans-serif';label.textAlign='center';label.fillText(tag,64,29);wantedTexture!.needsUpdate=true;
+      }
+      wanted.name=nonCombat?'render3d-over-encumbered':'render3d-enforcer-wanted';
+      wanted.scale.set(nonCombat?72:42,14,1);
+      wanted.visible = nonCombat || enforcerWanted && Boolean(meters);
       confiscation.sprite.visible = itemsConfiscated && Boolean(meters);
       confiscation.sprite.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
       wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);

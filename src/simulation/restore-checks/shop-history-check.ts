@@ -122,7 +122,7 @@ export function validateShopHistory(state:MatchState):void {
    let xp=grantMatchXp(cursor,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a)+(a.definitionId==='at-what-cost'?atWhatCostGrant(cursor.level,cursor.xp):0));
    if(a.definitionId==='max-cap'&&xp.level===7)xp={...xp,xp:0};
    check(xp.level===e.point.level&&xp.xp===e.point.xp,'acquisition XP');
-   cursor={...cursor,...xp,augments:[...cursor.augments,a]};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
+   cursor={...cursor,...xp,augments:[...cursor.augments,a],...(a.definitionId==='brb'?{shop:{...cursor.shop,locked:false}}:{})};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
   }else if(e.kind==='round'){
    keys(e,['kind','point']);check(!needNatural&&e.point.round===cursor.round+1,'round entry');
    const previous=state.roundResults.find(r=>r.round===cursor.round);check(previous,'round settlement');

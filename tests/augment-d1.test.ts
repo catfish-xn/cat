@@ -20,16 +20,16 @@ let base: MatchState;
 beforeAll(() => { base = opening(); });
 const acquire = (s = base) => drainBatch1Gifts({ ...s, augments: [owner] });
 
-describe('D1 What You Really Are (effect only; D5 owns offers)', () => {
-  it('grants one Bloodthirster at acquisition and stays outside every offer node', () => {
+describe('D1 What You Really Are with D5 production offers', () => {
+  it('grants one Bloodthirster at acquisition and appears only at 4-2', () => {
     const s = acquire();
     expect(itemCount(s, 'bloodthirster') - itemCount(base, 'bloodthirster')).toBe(1);
     expect(receipts(s)).toHaveLength(1);
     expect(drainBatch1Gifts(freeze(s))).toEqual(s);
     expect(whatYouReallyAreProgress(s)).toEqual({ count: 0 });
-    expect(AUGMENT_DEFINITIONS[ID]).toBeUndefined();
+    expect(AUGMENT_DEFINITIONS[ID]?.name).toBe('真心本色');
     for (const node of ['2-1', '3-2', '4-2'])
-      expect(augmentCandidates('prismatic', [], [], null, { node, fieldedTraits: [], blocked: [] })).not.toContain(ID);
+      expect(augmentCandidates('prismatic', [], [], null, { node, fieldedTraits: [], blocked: [] }).includes(ID)).toBe(node === '4-2');
   });
 
   it('counts the acquisition-round PvP, triggers at exactly 35, and rewards once after JSON copying/retry', () => {
@@ -91,7 +91,10 @@ describe('D1 What You Really Are (effect only; D5 owns offers)', () => {
     expect(rejected).toEqual({ ok: false, state: s, reason: 'invalid-receipt' });
     expect(rejected.state).toBe(s);
     const settled = settle(s, { damageDealt: 12 });
-    for (const bad of [
+    const missingResult = structuredClone(settled), missingReceipt = structuredClone(settled);
+    delete (missingResult.roundResults.at(-1)! as { damageDealt?: number }).damageDealt;
+    delete (missingReceipt.multiplayer!.receipts.at(-1)! as { damageDealt?: number }).damageDealt;
+    for (const bad of [missingResult, missingReceipt,
       { ...settled, multiplayer: { ...settled.multiplayer!, receipts: [] } },
       { ...settled, multiplayer: { ...settled.multiplayer!, receipts: settled.multiplayer!.receipts.map(r => ({ ...r, damageDealt: 35 })) } },
       { ...settled, roundResults: settled.roundResults.map(r => r.roundKind === 'pvp' ? { ...r, damageDealt: -1 } : r) },

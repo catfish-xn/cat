@@ -1,15 +1,9 @@
+import { validateCarouselMetadata } from '../src/simulation/carousel-units';
+import { MatchSession } from '../src/rendering/match-session';
 import { existsSync, readFileSync } from 'node:fs';
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
-// D4 intentionally has no production offer registration. Supply only the definition in this command fixture.
-const registration = vi.hoisted(()=>({ absent: false }));
-vi.mock('../src/simulation/content/augments', async original=>{
-  const actual=await original<typeof import('../src/simulation/content/augments')>();
-  const { RESTART_MISSION_DEFINITION }=await import('../src/simulation/content/restart-mission');
-  registration.absent=!Object.hasOwn(actual.AUGMENT_DEFINITIONS,'restart-mission');
-  // Keep enumeration (and content-count assertions) identical; only this fixture's direct lookup sees the dormant definition.
-  return {...actual,AUGMENT_DEFINITIONS:new Proxy({...actual.AUGMENT_DEFINITIONS},{get(target,key){return key==='restart-mission'?RESTART_MISSION_DEFINITION:Reflect.get(target,key);}})};
-});
+// D5 uses production registration for the public command/restore fixtures.
 import { createMatch, selectChoice, claimOrb, equipItem, type MatchState } from '../src/simulation/match';
 import { applyRestartMission, restartMissionGiftPlan } from '../src/simulation/restart-mission';
 import { RESTART_MISSION } from '../src/simulation/content/restart-mission';
@@ -77,13 +71,13 @@ function expectedDraws(seed:number,seat='solo') {
   });
 }
 
-it('retains the 14.24 six-unit split, without registering an offer or tier',()=>{
+it('retains the 14.24 six-unit split and registers its silver tier',()=>{
   const research='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
   if(existsSync(research)) {
     const source=JSON.parse(readFileSync(research,'utf8')).find((r:{apiName:string})=>r.apiName===RESTART_MISSION.apiName);
     expect(RESTART_MISSION.source.values).toEqual(source.effects);
   }
-  expect(registration.absent).toBe(true);expect(AUGMENT_TIERS[id]).toBeUndefined();
+  expect(AUGMENT_TIERS[id]).toBe('silver');
   expect(RESTART_MISSION.gifts.map(g=>[g.cost,g.count,g.starLevel])).toEqual([[1,1,2],[2,3,2],[3,2,2]]);
 });
 
@@ -101,18 +95,20 @@ it('draws uniformly with replacement from the whole cost catalog, with stable id
 it('clears board, bench and summons without sale gold; keeps anvils, pending carousel and their items',()=>{
   const base=offered(),hero=base.preparation.units[0];
   const unit=(unitId:string,definitionId:string,slot:number):Unit=>({id:unitId,definitionId,starLevel:1,team:'player',location:{kind:'bench',slot}});
-  const anvil=unit('unit-4','TFT_ArmoryKeyCompleted',2),pending=unit('unit-5','amumu',3);
-  const s={...base,preparation:{...base.preparation,units:[{...hero,location:{kind:'board',cell:{row:4,col:0}}},unit('unit-2','amumu',0),unit('unit-3','training-dummy',1),anvil,pending]},
-    carousel:{receipts:[],pendingUnits:[{unitId:pending.id,definitionId:pending.definitionId,receiptId:'pending-fixture'}],heldCarouselUnits:[],preparationReceipts:[]},
+  const anvil=unit('unit-4','TFT_ArmoryKeyCompleted',2);
+  const pending={unitId:'unit-5',definitionId:'amumu',receiptId:'fixture:carousel:1-1:s0'};
+  const s={...base,preparation:{...base.preparation,units:[{...hero,location:{kind:'board',cell:{row:4,col:0}}},unit('unit-2','amumu',0),unit('unit-3','training-dummy',1),anvil]},
+    carousel:{receipts:[{id:pending.receiptId,carouselId:'fixture:carousel:1-1',seatId:'s0',slot:0,definitionId:pending.definitionId,itemId:'rod',holdingSource:'carousel-fixture',unitId:pending.unitId,itemInstanceId:'item-3',status:'granted'}],pendingUnits:[pending],heldCarouselUnits:[pending],preparationReceipts:[]},
     items:[{id:'item-1',definitionId:'sword',location:{kind:'unit',unitId:hero.id,slot:0}},
       {id:'item-2',definitionId:'bow',location:{kind:'unit',unitId:'unit-2',slot:0}},
-      {id:'item-3',definitionId:'rod',location:{kind:'unit',unitId:pending.id,slot:0}}],
+      {id:'item-3',definitionId:'rod',location:{kind:'inventory'}}],
     anomalyBinding:{definitionId:'bulwark',unitId:hero.id,choiceId:'anomaly',boundRound:4},
     persistentGrowth:[{unitId:hero.id,attackDamageBps:500}],
   } as MatchState;
+  expect(()=>validateCarouselMetadata(s)).not.toThrow();
   const withOwner=recordAugmentAcquisition(s,{...s,augments:[{definitionId:id,choiceId,acquiredRound:4}]}),r=applyRestartMission(withOwner);
-  expect(r.state.gold).toBe(s.gold);expect(r.state.preparation.units).toEqual([anvil,pending]);
-  expect(r.state.carousel).toBe(s.carousel);expect(r.state.items.slice(0,2).every(i=>i.location.kind==='inventory')).toBe(true);
+  expect(r.state.gold).toBe(s.gold);expect(r.state.preparation.units).toEqual([anvil]);
+  expect(r.state.carousel).toBe(s.carousel);expect(()=>validateCarouselMetadata(r.state)).not.toThrow();expect(r.state.items.slice(0,2).every(i=>i.location.kind==='inventory')).toBe(true);
   expect(r.state.items[2]).toEqual(s.items[2]);expect(r.state.anomalyBinding).toBeNull();expect(r.state.persistentGrowth).toEqual([]);
   expect(r.events.filter(e=>e.type==='itemsReturned')).toHaveLength(2);
   expect(r.state.resourceProvenance.entries.filter(e=>e.kind==='unit-sold')).toEqual([]);
@@ -210,6 +206,18 @@ it('removes the trainer golem, returns its emblems, and never recreates it on op
   expect(enterTrainerGolems(after).state).toBe(after);
   const withoutProof={...after,resourceProvenance:{...after.resourceProvenance,entries:after.resourceProvenance.entries.filter(e=>e.kind!=='restart-mission-completed')}};
   expect(()=>validateTrainerGolems(withoutProof)).toThrow();
+});
+
+it('claims a solo augment orb through MatchSession with pause and observer behavior',()=>{
+  const session=new MatchSession(selected());
+  try {
+    const orb=session.state.m8.loot.rewardOrbs![0];let changes=0;
+    session.subscribe(()=>changes++);
+    session.pause('test');expect(session.claimOrb(orb.orbId).ok).toBe(false);expect(changes).toBe(0);
+    session.resume('test');expect(session.claimOrb(orb.orbId).ok).toBe(true);
+    expect(session.state.preparation.units.some(u=>u.starLevel===2)).toBe(true);expect(changes).toBe(1);
+    const before=session.state;expect(session.claimOrb(orb.orbId).ok).toBe(false);expect(session.state).toBe(before);
+  } finally {session.dispose();}
 });
 
 it('uses the existing cost-only gold conversion for a pool with fewer than three copies',()=>{
