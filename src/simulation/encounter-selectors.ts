@@ -11,6 +11,7 @@ import { NEUTRAL_DEFINITIONS, type NeutralMechanism } from './content/neutrals';
 import { freezeContent } from './content/freeze';
 import { createCombatWithEvents } from './combat';
 import { canonicalContent } from './content';
+import { selectPlayerBaseDamage } from './match-rules';
 
 // Opening effects now include v19 actual-HP sharing. Reuse an independently
 // constructed opening while its complete preparation and resolved inputs match.
@@ -71,7 +72,8 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
           abilityPower:initial.abilityPower,mana,maxMana:stats.maxMana},
         abilityDescription:neutral?.monsterFamily==='scuttle'?'不普攻；每4秒尝试挪到相邻空格。':neutral?.monsterFamily==='giant-crab'?'不普攻；2秒首跳，之后每2秒一跳；第n跳对全体敌人造成100×n魔法伤害。':d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};
     }),
-    rulesNote:state.m8.round.kind==='pve'?isCrabEncounter(openingEncounterId(state))?'蟹奇遇：采用10-23批准参数；基础野怪奖励保留，额外奖励由结算收据发放。':'固定普通PvE；2026-10-29批准的14.24基础数值，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。'
+    rulesNote:state.m8.round.kind==='pve'?(isCrabEncounter(openingEncounterId(state))?'蟹奇遇：采用10-23批准参数；基础野怪奖励保留，额外奖励由结算收据发放。':'固定普通PvE；2026-10-29批准的14.24基础数值，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。')
+      +`失败或平局：基础${selectPlayerBaseDamage(state.m8.round.stage,'pve',state.roundDefinitionId)}+每只存活野怪1，最少扣1生命；召唤物及非战斗单位不计。`
       :'固定PvP模板；公开星级、装备与羁绊参与开战属性计算，不从中立遭遇池抽取。',
   });
 }

@@ -6,7 +6,7 @@
 
 总政策与历史差异见 [M8B_POLICY.md](M8B_POLICY.md)；八次 PvE 的怪物、站位和行为见 [M8B_ENCOUNTERS.md](M8B_ENCOUNTERS.md)；掉落数量与资格以 [M8B_LOOT.md](M8B_LOOT.md) 为准；选择、收据和终局时序的唯一增补文本见 [M8B_CONTRACT_ADDENDUM.md](M8B_CONTRACT_ADDENDUM.md)。本文只规定起手与逐轮经济，不复制另一份掉落状态机。
 
-当前开局政策版本为 `m8b-opening-project-v2`，属于组合 `m8b-pve-project-v1`。2026-10-13 用户签字 T11：仅将 1-4 自然 XP 从 0 改为 2，阈值不改；同步运行参数、内容与掉落回放 digest，旧 digest 存档拒绝。首版 2/2/0 决定保留于 POLICY §9 历史记录，由本修订覆盖。此项是已批准项目规则，不补称已取得 14.24b 逐轮 XP 脚本。
+当前开局政策版本为 `m8b-opening-project-v3`（2026-10-29：仅替换 PvE 扣血政策；原 v2 为历史），属于组合 `m8b-pve-project-v1`。2026-10-13 用户签字 T11：仅将 1-4 自然 XP 从 0 改为 2，阈值不改；同步运行参数、内容与掉落回放 digest，旧 digest 存档拒绝。首版 2/2/0 决定保留于 POLICY §9 历史记录，由本修订覆盖。此项是已批准项目规则，不补称已取得 14.24b 逐轮 XP 脚本。
 
 ## 1. 对齐的旧起手及比较时点
 
@@ -48,8 +48,10 @@
 | 利息 | 0；不按阶段 1 手持金币结息 | 沿用原利息规则 |
 | 胜利金币 | 0 | 仅 PvP 胜利沿用原 1G |
 | 连胜/连败 | 阶段 1 不更新计数、不发该项金币 | 沿用原 PvP 更新与发放，PvE/补给不推进计数 |
-| PvE 失败或平局扣血 | **沿用当前固定 3HP**，不加存活怪数量 | 原 PvE 同样保留固定 3HP |
+| PvE 失败或平局扣血 | `max(1, 0 + 存活野怪数)` | `max(1, 阶段基础伤害 + 存活野怪数)` |
 | PvE 胜利扣血 | 0 | 沿用当前规则 |
+
+**2026-10-29 10:55 用户决定取代旧规则：** 原“PvE 输固定 3HP、不加存活怪数量”不再生效，历史批准记录保留。所有 PvE（含阶段 1）失败或平局，扣血为 `max(1, 阶段基础伤害 + 存活野怪数)`；阶段 1–7 基础为 `0/2/5/8/10/12/17`，每个存活敌方单位 +1，不看星级；与 PvP survivors 同口径，排除召唤物和非战斗单位。2-7 石甲虫剩 1/2/3 只时扣 3/4/5；阶段 1 剩 0/1/2/3/4 只时扣 1/1/2/3/4。胜利仍扣 0。接口、旧断言替换与统一重录边界见 [PvE 扣血交付](PVE_LOSS_DAMAGE_20261029.md)。
 
 2/3/5G 是基础收入，不是未击杀掉落，也不是恢复旧版失败补给。未击杀的随机英雄奖励或组件按掉落政策作废；不能因为目标是对齐旧起手，就在 2-1 额外补足。玩家因失败失去 HP 时，也不能重置回 100HP。
 
@@ -98,7 +100,7 @@
 | --- | --- |
 | [src/simulation/match.ts](../src/simulation/match.ts)，基线行69–84 | 旧2-1起手资源、三英雄、刀妹坐标与备战席大小 |
 | [src/simulation/match.ts](../src/simulation/match.ts)，基线行209–214、222–233 | 开战消费battle-seed、换轮商店和锁店处理 |
-| [src/simulation/match-rules.ts](../src/simulation/match-rules.ts)，行2–19 | 等级、XP阈值、商店概率、基础经济和PvE失败3HP |
+| [src/simulation/match-rules.ts](../src/simulation/match-rules.ts)，行2–19 | 等级、XP阈值、商店概率、基础经济和旧PvE失败3HP（已被2026-10-29用户决定取代） |
 | [src/simulation/economy.ts](../src/simulation/economy.ts)，行51–76 | 原收入、连胜/败、利息及扣血语义 |
 | [src/simulation/progression.ts](../src/simulation/progression.ts) | 累计XP与等级上限的唯一实现 |
 | [src/simulation/round-schedule.ts](../src/simulation/round-schedule.ts)，行5–14 | 原两次起手组件、强化/异常与补给位置 |

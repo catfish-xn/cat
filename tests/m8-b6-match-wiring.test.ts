@@ -38,12 +38,12 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });
-  it('concedes the three opening battles once: 2/3/4 base + 0/1/1 streak, 2/2/2XP and fixed 3HP',()=>{
+  it('concedes the three opening battles once: 2/3/4 base + 0/1/1 streak, 2/2/2XP and 2/3/4HP from surviving monsters',()=>{
     let state=createMatch(42);
     for(const expected of [
-      {id:'1-2',gold:2,level:2,hp:97,base:2,bonus:0,count:1,xp:2},
-      {id:'1-3',gold:6,level:3,hp:94,base:3,bonus:1,count:2,xp:2},
-      {id:'1-4',gold:11,level:3,hp:91,base:4,bonus:1,count:3,xp:2},
+      {id:'1-2',gold:2,level:2,hp:98,damage:2,base:2,bonus:0,count:1,xp:2},
+      {id:'1-3',gold:6,level:3,hp:95,damage:3,base:3,bonus:1,count:2,xp:2},
+      {id:'1-4',gold:11,level:3,hp:91,damage:4,base:4,bonus:1,count:3,xp:2},
     ]) {
       expect(readRoundInfo(state).roundId).toBe(expected.id);
       roundTrip(state);
@@ -55,7 +55,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
         direct:frozen.loot.direct.map(drop=>({...drop,status:'forfeited'})),
         choiceEligibility:frozen.loot.choiceEligibility.map(choice=>({...choice,status:'forfeited'})),
       }});
-      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:expected.bonus},xpRequested:expected.xp,playerDamage:3});
+      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:expected.bonus},xpRequested:expected.xp,baseDamage:0,survivingEnemyCount:expected.damage,playerDamage:expected.damage});
       roundTrip(state);
       expect(stepMatch(state)).toEqual({state,events:[]}); expect(stepMatch(state).state).toBe(state);
       const old=state;

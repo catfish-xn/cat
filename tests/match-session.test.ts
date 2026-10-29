@@ -166,7 +166,7 @@ describe('match session commands and fixed clock', () => {
     expect(session.startFailure).toBeUndefined(); expect(session.start().ok).toBe(true);
     expect(session.phase).toBe('settlement'); expect(session.combat?.tick).toBe(0);
     // Round income is paid at the next round entry (deferred-income.ts).
-    expect(session.state).toMatchObject({ gold: 2 - deferredRoundIncome(session.state.roundResults.at(-1)!), playerHp: 97, level:2, xp: 0 });
+    expect(session.state).toMatchObject({ gold: 2 - deferredRoundIncome(session.state.roundResults.at(-1)!), playerHp: 98, level:2, xp: 0 });
     const settled = session.state;
     rejected(session, session.start(), 'wrong-phase', settled);
     expect(session.advance(60_000)).toEqual([]); expect(session.state).toBe(settled);

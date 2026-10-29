@@ -255,8 +255,8 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Public seed 0 reaches overtime-3 with the combined v25 pool.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 0 });
+    // Public seed 4 reaches overtime under the 2026-10-29 PvE damage rule.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 4 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();

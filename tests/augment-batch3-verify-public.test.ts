@@ -4,7 +4,7 @@ import { createMatch, selectChoice, rerollShop, nextRound, startMatchCombat, ste
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { reachRound, accepted, resolveM5Choices, emptyBoard } from './match-helpers';
+import { reachRound, fieldBench, accepted, resolveM5Choices, emptyBoard } from './match-helpers';
 import { M5_UNIT_IDS, UNIT_DEFINITIONS } from '../src/simulation/units';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
@@ -19,8 +19,8 @@ const firstNode=(id:string)=>(['2-1','3-2','4-2'] as const).find(n=>!((AUGMENT_O
 // Hero cards at 3-2/4-2 are trait-tailored (record 89: Savage Revenge needs a fielded Bruiser).
 const TAILORED:Readonly<Record<string,string>>={'savage-revenge':'bruiser'};
 /** Public route to a later node with real HP: win stage 1 with the opener, then bench everything and concede, except
- * that a tailored card's trait is bought from the shop and kept fielded so the offer snapshot sees it. */
-function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
+ * that a tailored card keeps its trait fielded, and the egg route fights the wolves to preserve HP. */
+function reachNode(node:'3-2'|'4-2',seed:number,trait?:string,fightWolves=false):MatchState {
  let state=createMatch(seed);
  while(state.roundDefinitionId!==node){
   state=resolveM5Choices(state);
@@ -42,6 +42,16 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
     const fielded=state.preparation.units.find(u=>u.team==='player'&&fits(u.definitionId));
     if(fielded&&fielded.location.kind==='bench'){const r=deployMatchUnit(state,fielded.id,{kind:'board',cell:{col:3,row:4}});if(r.ok)state=r.state;}
    }
+   // The egg prefix needs HP saved at 3-7: buy from the real shop while the bench has space, then fight;
+   // the next preparation benches the army again, preserving the original empty 4-2 offer snapshot.
+   if(fightWolves&&state.roundDefinitionId==='3-7'){
+    for(let slot=0;slot<state.shop.slots.length;slot++){
+     if(state.shop.slots[slot].status!=='available')continue;
+     if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=state.preparation.benchSize)break;
+     state=accepted(buyUnit(state,slot,state.shop.generation));
+    }
+    state=fieldBench(state);
+   }
    state=accepted(startMatchCombat(state));
   }
   while(state.phase==='combat')state=stepMatch(state).state;
@@ -60,7 +70,9 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  * Re-pinned after v25 batch-5 pool expansion (285 admitted cards), same first-seed rule and route validators,
  * with two documented exceptions: savage-revenge skips 43 (its route fills the bench, so the two Renni gifts are
  * held in escrow by design, augment-pool-grants.ts drainBatch1Gifts) and dark-alley-dealings skips 91 (its route
- * picks slammin at 2-1, whose saves need battle replays to restore, crown-history.ts). */
+ * picks slammin at 2-1, whose saves need battle replays to restore, crown-history.ts).
+ * 2026-10-29 PvE damage: Golden Egg keeps seed 28, fields its 3-7 army and fights the wolves instead of
+ * conceding that PvE; pick() still re-proves reachability and the natural empty-board 4-2 offer. */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
  'all-out':12,
  'an-exalted-adventure':38,
@@ -119,7 +131,7 @@ function pick(id:string) {
   const root=createMatch(seed);
   expect(generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers).toContain(id);
   before=reachRound('2-1',false,seed);
- }else before=reachNode(node,seed,TAILORED[id]);
+ }else before=reachNode(node,seed,TAILORED[id],id==='the-golden-egg');
  expect(before.roundDefinitionId).toBe(node);
  const c=before.pendingChoice!;
  expect(c.kind).toBe('augment');expect(c.offers).toContain(id);

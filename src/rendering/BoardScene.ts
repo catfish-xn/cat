@@ -1100,7 +1100,7 @@ export class BoardScene extends Phaser.Scene {
     if ((match.phase === 'settlement' || match.phase === 'gameOver') && result) {
       const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' };
       this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? '胜利' : '失败') : labels[result.result]);
-      const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
+      const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : `${labels[result.result]} · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}${result.roundKind === 'pve' ? '（最少 1）' : ''} = ${result.playerDamage}`;
       this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} 金币 / 经验 +${result.xpAwarded}\n等级 ${result.levelBefore} → ${result.levelAfter}\n生命 ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
     } else { this.resultLabel.setText(''); this.incomeLabel.setText(''); }
     if (!this.session.combatView) this.timer.setText('');

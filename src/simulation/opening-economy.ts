@@ -1,4 +1,4 @@
-import { planCombatStreak, planRoundEconomy, type EconomyStreak, type RoundEconomyInput, type RoundEconomyPlan } from './economy';
+import { planCombatStreak, planPlayerDamage, planRoundEconomy, type EconomyStreak, type RoundEconomyInput, type RoundEconomyPlan } from './economy';
 import { MATCH_RULES, OPENING_ECONOMY_RULES } from './match-rules';
 import { grantXp } from './progression';
 import { getCatalogRoundById } from './round-selectors';
@@ -12,6 +12,7 @@ export interface OpeningEconomyInput {
   readonly level: number;
   readonly xp: number;
   readonly streak: EconomyStreak;
+  readonly enemySurvivors: number;
 }
 
 export type OpeningEconomyPlan = {
@@ -23,6 +24,7 @@ export type OpeningEconomyPlan = {
   readonly naturalXp: number;
   /** Requested HP deduction; the caller applies its existing HP clamp. */
   readonly playerDamage: number;
+  readonly baseDamage: number;
   readonly streakAfter: EconomyStreak;
   readonly progression: ReturnType<typeof grantXp>;
 } | {
@@ -53,10 +55,11 @@ export function planOpeningEconomy(input: OpeningEconomyInput): OpeningEconomyPl
   const income = base + streakGold;
   const goldAfter = input.gold + income;
   if (!Number.isSafeInteger(goldAfter)) throw new RangeError('Invalid settled opening gold');
+  const damage = planPlayerDamage({...input,stage:round.stage,roundKind:round.kind});
   return {
     kind:'opening', roundId:round.roundId, income,
     incomeBreakdown:{base,win:OPENING_ECONOMY_RULES.victoryGold,interest:OPENING_ECONOMY_RULES.interest,streak:streakGold}, goldAfter, naturalXp,
-    playerDamage:input.result === 'playerWin' ? 0 : OPENING_ECONOMY_RULES.pveFailureDamage,
+    ...damage,
     streakAfter, progression:grantXp(input.level,input.xp,naturalXp),
   };
 }
@@ -70,6 +73,6 @@ export function planCatalogRoundEconomy(input: Omit<RoundEconomyInput, 'stage' |
     || !Number.isSafeInteger(input.enemySurvivors) || input.enemySurvivors < 0) throw new RangeError('Invalid opening resources');
   const hpAfter = Math.max(0,input.hp-opening.playerDamage);
   return {goldAfter:opening.goldAfter,hpAfter,income:opening.income,incomeBreakdown:opening.incomeBreakdown,
-    interestBasis:input.gold,streakAfter:opening.streakAfter,baseDamage:OPENING_ECONOMY_RULES.pveFailureDamage,
+    interestBasis:input.gold,streakAfter:opening.streakAfter,baseDamage:opening.baseDamage,
     playerDamage:opening.playerDamage,hpLost:input.hp-hpAfter,progression:opening.progression};
 }
