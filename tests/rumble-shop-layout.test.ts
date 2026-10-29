@@ -19,6 +19,13 @@ beforeAll(async () => {
   origin = `http://127.0.0.1:${address.port}`;
   browser = await testBrowser();
   await mkdir(shots, { recursive: true });
+  // Pay Vite's first transform of the shell modules and the first page here (60 s budget), not in
+  // the first 5 s case: at the start of a busy CI shard that one-off cost alone ran past 5 s.
+  const warm = await browser.newPage();
+  try {
+    await warm.goto(`${origin}/src/style.css`);
+    await warm.evaluate(`Promise.all(['/src/rendering/app-shell.ts', '/src/rendering/strategy-panel.ts', '/src/presentation/anvil-display.ts', '/src/simulation/match.ts'].map(path => import(path)))`);
+  } finally { await warm.close(); }
 }, 60000);
 
 for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
