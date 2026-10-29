@@ -47,7 +47,7 @@ export function removeCombatUnit(state: CombatState, unitId: string, reason: str
   if (!state.units.some(unit => unit.id === unitId)) throw new RangeError(`Unknown combat unit ${unitId}`);
   const units = state.units.filter(unit => unit.id !== unitId).map(unit => {
     if (unit.targetId !== unitId) return unit;
-    const copy = { ...unit, targetId: null }; delete copy.targetEngaged; return copy;
+    const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
   });
   return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
 }

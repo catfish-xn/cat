@@ -7,7 +7,7 @@
 攻击格是目标的棋盘邻居（`getNeighbors`，奇数行偏移，顺序 E、SE、SW、W、NW、NE）。只作用于射程 1、尚未接战、且本 tick 可以移动的普通单位。远程首次接近仍走原来的“任意进射程格子”BFS；已接战的一步追击、疯化学家、河蟹不变。遗留 M3/M4 的 `nextStep` 不动。
 
 1. 要去的攻击格被占时，在目标周围的空攻击格里选可达路径最短的。长度相同，用本场已有的 `ctx.draw`（`lcg32-v1`，与普攻暴击同一条流）拒绝采样一次。下标是邻居序，不是单位 ID。`limit = floor(2^32 / size) * size`，词 `>= limit` 则拒绝并计入 `rngDraws`。不新增 RNG，不用 `Math.random`。
-2. 选定后记在 `CombatUnit.meleeApproach = { targetId, cell }`，一直保持。失效只有三种：有单位停在该格上、目标换了、该格不再是当前目标的攻击格。别人只是路过，或正处在移动冷却里，不使锁定失效，也不把人往后拉。
+2. 选定后记在 `CombatUnit.meleeApproach = { targetId, cell }`，一直保持。失效条件：有单位停在该格上、目标换了、该格不再是当前目标的攻击格，或仅以停住的身体为墙时仍不可达（2026-10-30 返修）。别人只是路过，或正处在移动冷却里，不使锁定失效，也不把人往后拉。
 3. 目标周围每个攻击格上都有人时，原地等待，不退回上一步。
 4. 同一 tick 抢同一个攻击格：先按 ID 升序种下已有锁定（先写者保留，后来者不能抢走）；还没有锁定的单位再按同一 ID 序挑选。输的单位改去下一条路径的攻击格。单位数组在 tick 开始已按 `compareIds` 排序，输入反序结果相同。
 
@@ -70,7 +70,7 @@ seed 42 相对录制基线仍是 274 对 164。P1 已经是 274，本分支没�
 - 等长路径：种子 0 落到 `(3,4)`，种子 1 落到 `(4,4)`，各抽 1 词。反序的落点和 `rngState` 相同。下一 tick 保持该格且不再抽词。
 - 别人只是停在冷却上：锁定不丢，自己不后退，不抽词。
 
-## 测试
+## 初次交付测试（返修前）
 
 `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit` 通过。`git diff --check` 通过。`node scripts/update-content-identities.cjs --check` 通过：content `fnv1a32-utf16:bbfbe0dd`，loot `fnv1a32-utf16:10ece6a9`。P1 的 content 是 `2a01c771`，loot 未变。
 
@@ -91,12 +91,30 @@ seed 42 相对录制基线仍是 274 对 164。P1 已经是 274，本分支没�
 | `ur-i3-combat-statuses.test.ts` | 1 | 终态 SHA。录制 `432c237bd3225a4b75ac5436bb370194689cab64f4be002007bbd703b65afdd9`。P1 现前缀仍是 `d4ad3cac…`（那场没被平局抽词带动）。本分支现前缀 `fe62d6308eb3e57308b4e28e1458d182c992a…`。同文件的 loot 断言没执行到。 |
 | **合计** | **273** | |
 
-## 未改、因而失败的断言
+## 初次交付保留的失败断言（返修前）
 
 - `task-mechanism-restore.test.ts` 赛恩击杀：`contribution: true`、种子 5、tick 294 的断言仍要求 `unit-9:g23-sion` 在这一 tick 普攻击杀 `enemy-r4-1`。走位变了之后这一 tick 没有击杀事件。`contribution: false`、种子 1、tick 323 仍按原断言。没有把 294 改成别的 tick。
 - 同文件 “rejects altered or invented target reave facts”：仍期望莫甘娜诅咒出现在 tick 70。现在存档上的 tick 是 60。注释里的 v22 说明（从 89 提到 70）没有改，也没有把 70 改成 60。
 
-## 未完成
+## 初次交付缺口与后续状态
 
-- `meleeApproach` 会随单位进 JSON 存档，tick 复制也会带上。正式重演认证清单（`targetId` / `targetEngaged` 那一组）还没有这个字段，伪造锁定不会被 “target binding facts” 拒绝。从 tick 0 重演能自己算出来。动态战斗检查点走整状态相等时，伪造会和重演对不上。
+- `meleeApproach` 存档认证缺口已在 2026-10-30 返修中关闭：结构严格校验，并加入正式重演的 target binding facts；细节及验收见下节。
 - 纪元统一重录、旧存档迁移、浏览器实机未做。
+
+
+## 2026-10-30 返修
+
+- `restore-combat-replay.ts` / `combat-runtime-facts.ts` 认证完整 `meleeApproach`；`serialization-structure.ts` 校验精确键、敌方引用与棋盘整数坐标。不要求它的目标等于单位当前目标。
+- `combat-movement.ts` 在持有锁定时增加仅以 `standsStill` 身体为墙的可达性检查，永久围死则重选，临时占道仍保持锁定等待；平局抽词复用 `combat-targeting.ts` 的 `uniformIndex`，仍与暴击共用 `ctx.draw`。
+- 赛恩待复活、机制清目标、名单移除、v20 特殊换敌均同步删除锁定。没有新增规则数值或修改版本／内容摘要，没有重录纪元或 golden。
+- 机制恢复向量采用用户给定 A：有贡献的 seed 5、站位 `(6,7)/(0,4)/(3,4)`、tick 410、`enemy-r4-2`；莫甘娜诅咒 tick 60、reave 到 tick 260。原击杀身份、唯一击杀、贡献、+15、5000 Bps 和 10 任务断言逻辑保持不变；清理修复未导致进一步向量漂移。
+- `targeting-pathing-restore.test.ts` 覆盖合法对象／JSON 恢复到终局逐 tick 相等、四类篡改的三个入口拒绝，以及精确键、敌方引用、坐标结构检查。当前 `battle()` seed 42 在 tick 1 所有单位已有锁定，因此“凭空新增”用同种子合法 tick 0；其余篡改均用 tick 1 尚未接战的锁定单位。
+- `targeting-p1.test.ts` 新增永久包围后的唯一最短／等长路径重选、输入反序一致与精确 RNG 次数，以及冷却旅人临时围住时保持锁定的对照。
+
+返修最终验收：
+
+```sh
+npx vitest run --configLoader=runner --maxWorkers=2 tests/targeting-p0.test.ts tests/targeting-p0-restore.test.ts tests/targeting-p1.test.ts tests/task-mechanism-restore.test.ts tests/targeting-pathing-restore.test.ts
+```
+
+5 个文件、74 项全部通过（36.87 s）；新增 17 项（恢复 14 项、寻路 3 项）。原样默认 config loader 因共享 `node_modules/.vite-temp` 只读而 EROFS，使用 runner 加载同一配置后通过，未修改配置、超时或阈值。`npm run typecheck` 与 `git diff --check` 通过。未跑全套、浏览器或 build，未使用 `--write`，未提交。实际工作区分支 `targeting-pathing`，基线 HEAD `34cfbfbba4a6eeb3ae8e899a17aa425027ab093f`，未更改 Git 分支。

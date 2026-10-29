@@ -85,7 +85,7 @@ export function deathG23Sion(ctx:AbilityContext):void{
  for(const u of ctx.units.filter(u=>u.alive&&u.hp===0&&u.definitionId==='g23-sion'&&!u.g23Sion&&sionTier(u)>=7)){
   u.g23Sion={reviveAtTick:ctx.tick+G23_SUMMON_POLICY.sion.reviveDelayTicks,revived:false};
   u.hp=Math.max(1,Math.floor(u.maxHp*Math.round(variable(u,'PercentReviveHealth')*10000)/10000));
-  u.targetId=null;delete u.targetEngaged;u.cooldownTicks=0;u.moveCooldownTicks=0;
+  u.targetId=null;delete u.targetEngaged;delete u.meleeApproach;u.cooldownTicks=0;u.moveCooldownTicks=0;
   u.tasks=u.tasks.filter(t=>!t.cancellable);
  }
 }

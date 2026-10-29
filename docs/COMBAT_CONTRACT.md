@@ -10,9 +10,13 @@
 
 ## v26 近战抢格（2026-10-29 用户批准）
 
-射程 1 且尚未接战的单位不再用“任意进射程格子”的 BFS。攻击格是目标的棋盘邻居。已选定的攻击格一直保持，直到有单位停在上面（已进入自己目标的射程、不能移动、或无路可走），或目标换了、该格不再是攻击格。只是路过或移动冷却中的单位不使锁定失效，也不因此改道后退。所有攻击格都有人时原地等待。
+射程 1 且尚未接战的单位不再用“任意进射程格子”的 BFS。攻击格是目标的棋盘邻居。已选定的攻击格一直保持，直到有单位停在上面（已进入自己目标的射程、不能移动、或无路可走），或目标换了、该格不再是攻击格。另以 `standsStill` 的占格身体（排除锁定格本身）作为墙检查可达性：锁定格被永久围住时失效，重新选择可达攻击格；只是路过或移动冷却中的单位不使锁定失效，也不因此改道后退。所有攻击格都有人时原地等待。
 
 新选时只在空的、可达的攻击格里取路径最短的；长度相同用本场 `ctx.draw` 拒绝采样一次，下标是邻居序 E、SE、SW、W、NW、NE。已锁定且仍然有效时不抽词。同一 tick 先保留已有锁定；都没有锁定时按单位 ID 升序先选先得，输的单位改去下一条路径的攻击格。远程、已接战的一步追击、疯化学家和河蟹仍走原路径。`S13_COMBAT_RULES.meleePathing` 为 `v26-melee-shortest-attack-hex-hold-lcg32-tie-id-contest-wait-if-surrounded`。不重录 fixture。证据见 [CURSOR_targeting-pathing](CURSOR_targeting-pathing.md)。
+
+`CombatUnit.meleeApproach?: { targetId: string; cell: HexCell }` 与 `targetId` / `targetEngaged` 一起从可信开战输入逐 tick 重演认证；删除、增加或换格均报 `Invalid Match save: target binding facts`。结构要求锁定对象恰有 `targetId` / `cell`，目标为战斗名单中的敌方，格子恰有整数 `col` / `row` 且在棋盘内；不要求锁定目标等于当前 `unit.targetId`。结构错误沿用 `Invalid Match save: melee approach ...`（非对象和非整数沿用 `object` / `integer`）。赛恩待复活、机制清目标、名单移除、特殊换敌时同步清除锁定。
+
+内部共享 `uniformIndex(draw: () => number, size: number): number` 由 `combat-targeting.ts` 导出，供目标和攻击格平局复用；只接受 2–2^32 的整数候选数，否则抛 `RangeError('Invalid targeting tie')`。两者继续与暴击共用 `ctx.draw`。
 
 ## v26 索敌 P0（2026-10-29 用户批准）
 

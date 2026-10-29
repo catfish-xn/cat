@@ -24,7 +24,7 @@ export function ordinaryNearestTies(unit: S13Unit, units: readonly S13Unit[], ti
 
 /** Uniform index on the combat lcg32 stream. Rejected words count as draws.
  * Size 2 never rejects because it divides 2^32. */
-function uniformIndex(draw: () => number, size: number): number {
+export function uniformIndex(draw: () => number, size: number): number {
   if (!Number.isInteger(size) || size < 2 || size > 0x100000000) throw new RangeError('Invalid targeting tie');
   const limit = Math.floor(0x100000000 / size) * size;
   for (;;) {

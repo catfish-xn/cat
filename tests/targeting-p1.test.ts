@@ -256,6 +256,59 @@ describe('melee attack hexes', () => {
     expect(held.state.rngDraws).toBe(1);
   });
 
+  it.each([
+    { col: 0, tieDraws: 0, goal: { col: 3, row: 4 }, nextCell: { col: 1, row: 1 } },
+    { col: 1, tieDraws: 1, goal: { col: 4, row: 3 }, nextCell: { col: 3, row: 0 } },
+  ])('replaces a permanently enclosed claim (start col=$col, new tie draws=$tieDraws)', ({ col, tieDraws, goal, nextCell }) => {
+    const run = (reverse = false) => {
+      const p = actor('p', { cell: { col, row: 0 }, moveCooldownTicks: 0, attackDamage: 0 });
+      const target = enemy('e', 3, 3, { definitionId: 'training-dummy', voidSwarmTaunt: 'p', moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });
+      const first = step(reverse ? [target, p] : [p, target]);
+      expect(get(first.state).meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 2 } });
+      expect(first.state.rngDraws).toBe(1); // Initial approach has two equally short attack hexes.
+      const blockers = getNeighbors(DEFAULT_BOARD, { col: 3, row: 2 })
+        .filter(cell => cell.col !== target.cell.col || cell.row !== target.cell.row)
+        .map((cell, index) => actor(`wall${index}`, { definitionId: 'training-dummy', cell, attackDamage: 0 }));
+      expect(blockers).toHaveLength(5);
+      expect(blockers.some(body => hexDistance(body.cell, get(first.state).cell) === 0)).toBe(false);
+      Object.assign(get(first.state), { moveCooldownTicks: 1 });
+      const units = [...first.state.units, ...blockers];
+      const next = stepCombat(freeze({ ...first.state, units: reverse ? units.reverse() : units }));
+      expect(get(next.state).meleeApproach).toEqual({ targetId: 'e', cell: goal });
+      expect(next.events.filter(event => event.type === 'movement' && event.unitId === 'p')).toEqual([
+        { type: 'movement', tick: 2, unitId: 'p', from: get(first.state).cell, to: nextCell },
+      ]);
+      expect(get(next.state).cell).not.toEqual(get(first.state).cell);
+      expect(next.state.rngDraws).toBe(first.state.rngDraws! + tieDraws);
+      return next;
+    };
+    expect(run(true)).toEqual(run());
+  });
+
+  it('keeps an enclosed claim when the corridor is only blocked by travelers on cooldown', () => {
+    const run = (reverse = false) => {
+      const p = actor('p', { cell: { col: 0, row: 0 }, moveCooldownTicks: 0, attackDamage: 0 });
+      const target = enemy('e', 3, 3, { definitionId: 'training-dummy', voidSwarmTaunt: 'p' });
+      const first = step(reverse ? [target, p] : [p, target]);
+      expect(get(first.state).meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 2 } });
+      const far = enemy('far', 6, 7, { definitionId: 'training-dummy', voidSwarmTaunt: 'p' });
+      const travelers = getNeighbors(DEFAULT_BOARD, { col: 3, row: 2 })
+        .filter(cell => cell.col !== target.cell.col || cell.row !== target.cell.row)
+        .map((cell, index) => actor(`walker${index}`, { cell, targetId: 'far', voidSwarmTaunt: 'far', moveCooldownTicks: 100, attackDamage: 0 }));
+      expect(travelers).toHaveLength(5);
+      expect(travelers.every(body => hexDistance(body.cell, far.cell) > body.attackRange)).toBe(true);
+      Object.assign(get(first.state), { moveCooldownTicks: 1 });
+      const units = [...first.state.units, far, ...travelers];
+      const next = stepCombat(freeze({ ...first.state, units: reverse ? units.reverse() : units }));
+      expect(get(next.state).meleeApproach).toEqual(get(first.state).meleeApproach);
+      expect(get(next.state).cell).toEqual(get(first.state).cell);
+      expect(next.events.filter(event => event.type === 'movement' && event.unitId === 'p')).toEqual([]);
+      expect(next.state.rngDraws).toBe(first.state.rngDraws);
+      return next;
+    };
+    expect(run(true)).toEqual(run());
+  });
+
   it('keeps a claimed hex while another unit is only paused on it', () => {
     const target = enemy('e', 3, 3, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0, targetId: 'p' });
     const far = enemy('far', 6, 7, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });

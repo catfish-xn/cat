@@ -425,6 +425,16 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && (unit.maxMana > 0 || unit.mana === 0), 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       if (unit.targetEngaged !== undefined) requireValue(unit.targetEngaged === true && unit.alive && unit.targetId !== null, 'engaged target');
+      if (unit.meleeApproach !== undefined) {
+        const approach = unit.meleeApproach;
+        record(approach);
+        requireValue(Object.keys(approach).length === 2 && Object.hasOwn(approach, 'targetId') && Object.hasOwn(approach, 'cell'), 'melee approach keys');
+        requireValue(combatIds.has(approach.targetId) && combat.units.find(other => other.id === approach.targetId)?.team !== unit.team, 'melee approach target reference');
+        record(approach.cell);
+        requireValue(Object.keys(approach.cell).length === 2 && Object.hasOwn(approach.cell, 'col') && Object.hasOwn(approach.cell, 'row'), 'melee approach cell keys');
+        integer(approach.cell.col); integer(approach.cell.row);
+        requireValue(contains(combatPreparation.board, approach.cell), 'melee approach cell');
+      }
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }

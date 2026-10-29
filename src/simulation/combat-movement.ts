@@ -4,6 +4,7 @@ import { g23Bound } from './combat-g2-3-summons';
 import { active, range, type S13Unit } from './combat-s13-state';
 import { g23Anomaly } from './g2-3-combat';
 import { hasEffectiveStatus } from './m8/status';
+import { uniformIndex } from './combat-targeting';
 
 /** Sample existing control at the current tick, before movement/action planning. */
 export function isControlled(unit: S13Unit, tick: number): boolean {
@@ -26,16 +27,6 @@ export interface MeleeApproachClaim { readonly targetId: string; readonly cell: 
 export interface MeleeApproachPlan { readonly step?: HexCell; readonly claim?: MeleeApproachClaim }
 
 const cellKey = (cell: HexCell): string => `${cell.col}:${cell.row}`;
-
-/** Uniform index on the combat lcg32 stream. Same rejection rule as target ties. */
-function uniformIndex(draw: () => number, size: number): number {
-  if (!Number.isInteger(size) || size < 2 || size > 0x100000000) throw new RangeError('Invalid melee approach tie');
-  const limit = Math.floor(0x100000000 / size) * size;
-  for (;;) {
-    const word = draw() >>> 0;
-    if (word < limit) return word % size;
-  }
-}
 
 function route(board: Board, from: HexCell, goal: HexCell, blocked: ReadonlySet<string>): { readonly length: number; readonly first: HexCell } | undefined {
   const seen = new Set([cellKey(from)]);
@@ -68,8 +59,9 @@ function standsStill(board: Board, body: S13Unit, units: readonly S13Unit[], tic
 /**
  * Range-1 approach. Attack hexes are the target's on-board neighbors.
  * A committed hex is kept unless a unit has settled on it, the target changed,
- * or an earlier unit won that hex. A body that is only passing through does not
- * drop the claim and does not make this unit step backward.
+ * an earlier unit won that hex, or stationary bodies make it unreachable.
+ * A body that is only passing through does not drop the claim and does not make
+ * this unit step backward.
  * Fresh choices use the shortest unoccupied path. Equal lengths draw `draw` once
  * (neighbor order is only the index). Same-tick losers, in caller order, take the
  * next hex. When every attack hex is occupied the unit waits.
@@ -84,7 +76,15 @@ export function planMeleeApproach(board: Board, unit: S13Unit, target: S13Unit, 
   const held = unit.meleeApproach?.targetId === target.id
     ? hexes.find(cell => same(cell, unit.meleeApproach!.cell)) : undefined;
   const heldBody = held ? occupant(held) : undefined;
-  const heldValid = !!held && !blockedGoals.has(cellKey(held)) && !(heldBody && standsStill(board, heldBody, units, tick, occupied));
+  let heldValid = !!held && !blockedGoals.has(cellKey(held)) && !(heldBody && standsStill(board, heldBody, units, tick, occupied));
+  if (heldValid) {
+    // Travelers can temporarily block the route without invalidating the claim.
+    // Only bodies that have stopped can make the held attack hex unreachable.
+    const walls = new Set(units.filter(body => body.id !== unit.id && occupiesCell(body, tick)
+      && occupied.has(cellKey(body.cell)) && !same(body.cell, held!)
+      && standsStill(board, body, units, tick, occupied)).map(body => cellKey(body.cell)));
+    if (!route(board, unit.cell, held!, walls)) heldValid = false;
+  }
   const ranked = hexes
     .filter(cell => !occupant(cell) && !blockedGoals.has(cellKey(cell)))
     .flatMap(cell => {
