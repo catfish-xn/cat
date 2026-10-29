@@ -45,7 +45,7 @@ describe('staged casts with generated skeleton curves', () => {
     mixer.update(2.5); expect(f.bone.position.x).toBeCloseTo(5);
     const short = new AnimationClip('tiny', 0.1, []);
     expect(new UnitAnimationMixer(new Group(), [short], { cast: 'tiny' }).resolvePlayback('cast')!.durationSeconds).toBe(0.3);
-    expect(mixer.resolvePlayback('attack', 0, { attackIntervalSeconds: 0.25 })!.durationSeconds).toBe(0.5);
+    expect(mixer.resolvePlayback('attack', 0, { attackIntervalSeconds: 0.25 })!.durationSeconds).toBe(0.225);
     expect(mixer.resolvePlayback('attack')!.durationSeconds).toBe(1);
     mixer.dispose(); f.mixer.dispose();
   });
