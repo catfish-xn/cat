@@ -1,7 +1,11 @@
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
+export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
+export type TimelineVariant = 'empowered' | 'self';
 export interface TimelineCue {
   readonly system: string;
-  readonly action?: 'cast' | 'attack';
+  readonly action?: TimelineAction;
+  /** Observed presentation form; untagged cues belong only to the default form. */
+  readonly variant?: TimelineVariant;
   readonly event: 'cast-start' | 'projectile' | 'hit';
   readonly delay: number;
   readonly duration: number;

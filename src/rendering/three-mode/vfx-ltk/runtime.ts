@@ -2,14 +2,14 @@ import type { Camera, Object3D, Scene, WebGLRenderer } from 'three';
 import { applyStencil, stencilStates } from './rendering/utils/stencil';
 import { createLtkParticles, unitAnchor, unitJoints, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import type { VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineSpawn } from './timeline';
+import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary }
-interface Running { source: string; target?: string; until: number; fx: LtkParticles }
+interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
@@ -32,12 +32,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warm,
     /** True means every active cue is covered and queued. Partial/unsupported actions
      * return false without enqueueing anything, so the host runs its entire fallback. */
-    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: 'cast' | 'attack' = 'cast'): boolean {
+    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: TimelineAction = 'cast', variant?: TimelineVariant): boolean {
       if (closed) return false;
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
       const available = catalog.index?.skills[champion];
-      const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
+      const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action && cue.variant === variant), id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues || !source?.alive || source.disposed) return false;
       const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
@@ -50,6 +50,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       })) return false;
       for (const spawn of spawns) waiting.push({ at: clock + spawn.delay, spawn, library: catalog });
       return true;
+    },
+    /** End/recast releases a buff's slots before its replacement or explosion starts. */
+    stopAction(sourceId: string, action: TimelineAction) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && run.action === action) { release(run); running.delete(run); }
     },
     stopUnit(id: string) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === id || waiting[at].spawn.targetId === id) waiting.splice(at, 1);
@@ -86,7 +91,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.ltkSystem = spawn.system;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += slots;
-          running.add({ source: spawn.sourceId, target: spawn.targetId, until: when + spawn.duration, fx }); starts++;
+          running.add({ source: spawn.sourceId, target: spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       const claims = [...running].flatMap(run => run.fx.stencils);
