@@ -323,13 +323,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>(), ordinaryMoved = new Set<string>();
   ctx.movementReservations = reserved;
-  // Keep the old controlled-tick rescans and release boundary. P0 does not add
-  // a controlled pause/latch or change cancellation/action eligibility.
-  const reselect = new Set(state.units.filter(u => isControlled(u as S13Unit, state.tick)).map(u => u.id));
-  for (const unit of units) if (isControlled(unit, tick)) reselect.add(unit.id);
+  // Stun and knock-up freeze ordinary target choice. Permanent frenzy still
+  // selects. The first tick after release is an ordinary decision again.
+  const hardControlled = (unit: S13Unit) => isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy;
   const targets = new Map<string, CombatTargetDecision>();
   for (const unit of units) if (!isAttackProxy(unit) && !isMadChemist(unit))
-    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, reselect.has(unit.id)));
+    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, false, undefined, hardControlled(unit), ctx.draw));
   const chemistPaths = new Map<string, readonly HexCell[]>();
   const intents = units.map(unit => {
     if (isMadChemist(unit) && unit.alive && unit.hp > 0) leaveMadChemistCloud(unit, [unit.cell], tick);
@@ -382,7 +381,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const mover = units.find(u => u.id === id); if (mover) actionOccupied.delete(key(mover.cell));
       }
       const decision = unit.hp > 0 && !isMadChemist(unit)
-        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, reselect.has(unit.id), prior) : undefined;
+        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, false, prior, hardControlled(unit), ctx.draw) : undefined;
       const target = unit.hp>0?(isMadChemist(unit)?byDistance(unit,enemies(unit,units))[0]:decision?.target):undefined;
       if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
       const previousTarget = unit.targetId;

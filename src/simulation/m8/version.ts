@@ -4,10 +4,11 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v26-neutrals-1424, plus targeting-p0 (28fd974a) and anomaly-ui (6093cd26).
+/** v26-neutrals-1424, plus targeting-p0 (28fd974a), targeting-p1, and anomaly-ui (6093cd26).
  * Neutrals: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
- * Targeting: ordinary target retention and one-step chase; the optional engaged-target
- * fact is authenticated by combat replay. No new commands/events.
+ * Targeting: in-range retention and one-step chase; equal distance draws the combat
+ * lcg32 stream; stun/knock-up holds the ordinary target until the release tick.
+ * The optional engaged-target fact is authenticated by combat replay. No new commands/events.
  * Anomaly: planning, shared eligibility, initial-twelve quote protection and R5 sale-persistent entitlement.
  * Schema/save/replay/command remain 12/8/8/7. Older identities are rejected.
  * targeting-p0 and anomaly-ui labeled this s13-g2-3-v26-online-rules; epoch re-record stays with the execution side. */

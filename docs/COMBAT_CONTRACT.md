@@ -1,14 +1,22 @@
 ## 2026-10-27 v25 H7 历史强化
 
+## v26 索敌 P1（2026-10-29 用户批准）
+
+普通最近目标在距离严格更近时仍唯一确定。最近距离上有多名可选敌人时，候选只按代码点 ID 升序排列当抽词下标，不再把最低 ID 当作胜者。当前目标已经在这组里则沿用且不抽词；否则用本场 `ctx.draw`（`lcg32-v1`，与普攻暴击同一条流）拒绝采样，均匀取下标，被拒的词计入 `rngDraws`。不传 draw 的直接调用仍返回最低 ID。遗留 M3/M4 引擎不走这条路径。同一种子、同一抽词序结果相同；单位先按 ID 排序再抽，输入数组反序不改变抽到谁。移动阶段先抽，行动复核只在落点改变了等距集合且先前选择已不在其中时再抽。
+
+眩晕和击飞（击飞是 stun 上的 `knockup`）期间不重选普通目标：目标死亡、出射程或出现更近敌人都不换，`targetEngaged` 原样保留。永久狂暴不视作硬控。嘲讽、背叛、剔除弱者脉冲仍按原优先级生效。解控后的第一个 tick 不再强制改锁最近敌人，而是走 P0：旧目标仍存活、可选且在射程内就继续打，否则一步追击或最近目标（含上面的等距抽词）。引导和根深蒂固不冻结索敌。不新增 RNG 流、命令、事件或存档字段。
+
+`decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?,hardControlled=false,draw?)`；`ordinaryNearestTies(unit,units,tick)` 返回等距候选。`S13_COMBAT_RULES.ordinaryTargeting` 为 `v26-p1-retain-in-range-one-step-equal-distance-lcg32-hard-cc-hold`，内容摘要因此变化；不重录 fixture。证据见 [CURSOR_targeting-p1](CURSOR_targeting-p1.md)。
+
 ## v26 索敌 P0（2026-10-29 用户批准）
 
-普通 S13 单位保持仍存活、可选且在有效射程内的当前目标；已交战目标出射程时，先检查按现有移动资格与占格能否走一格恢复射程，能则等移动冷却后追这一步，不能才走原最近距离／字符串 ID 回退。首次尚未接战的多步 BFS、邻居顺序、首步抢格和失败等待不变。移动前选择与行动阶段复核共享本 tick 决策；行动阶段仍验证目标资格、射程和 override。复核的一步可行性保留静止占格和本 tick 已接受目标的当前格，不计普通移动胜者的落点：失去预留只等待，不改锁；目标自己走出一步恢复范围则重选。
+普通 S13 单位保持仍存活、可选且在有效射程内的当前目标；已交战目标出射程时，先检查按现有移动资格与占格能否走一格恢复射程，能则等移动冷却后追这一步，不能才走最近距离。等距决胜已由上一节 P1 取代，不再用字符串 ID。首次尚未接战的多步 BFS、邻居顺序、首步抢格和失败等待不变。移动前选择与行动阶段复核共享本 tick 决策；行动阶段仍验证目标资格、射程和 override。复核的一步可行性保留静止占格和本 tick 已接受目标的当前格，不计普通移动胜者的落点：失去预留只等待，不改锁；目标自己走出一步恢复范围则重选。
 
-优先级仍为虚空嘲讽 → 背叛 → 剔除弱者 → 普通规则；鱼骨头每次普攻的独立随机目标、技能专用选敌／已绑定任务、疯化学家与河蟹专用移动保持原规则。受控期间原有重扫、阻断和任务取消不变，刚解控制时使用原最近目标决策；本次没有新增受控暂停状态或控制结束锁存器。死亡、缺席／隐身／不可选使目标失效。固定对象不能把空邻格当成可追击落点；移动冷却与本 tick 预留竞争只影响何时成功移动，不改变一步追击的几何可行性。
+优先级仍为虚空嘲讽 → 背叛 → 剔除弱者 → 普通规则；鱼骨头每次普攻的独立随机目标、技能专用选敌／已绑定任务、疯化学家与河蟹专用移动保持原规则。硬控期间的普通重扫和“刚解控强制最近目标”已由上一节 P1 取代；任务取消和行动阻断不变。死亡、缺席／隐身／不可选使目标失效。固定对象不能把空邻格当成可追击落点；移动冷却与本 tick 预留竞争只影响何时成功移动，不改变一步追击的几何可行性。
 
 `CombatUnit.targetEngaged?:true` 表示当前目标曾进入有效射程，跨等待 tick 保留；普通换目标／失去目标、死亡、赛恩待复活、机制清目标、名单移除清除该标记；特殊选敌直接改写目标时不得继承旧标记。恢复从可信战斗输入逐 tick 独立重演，认证 targetId 与标记的值和存在性；篡改报 `Invalid Match save: target binding facts`，结构不合法报 `engaged target`。没有新增公共命令、失败枚举、事件类别、网络计时 API 或 RNG 流。
 
-内部签名：`decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?):{target:S13Unit|undefined,engaged:boolean}`；`chaseStep(board,unit,target,occupied):HexCell|undefined`；`p2Target(unit,units,tick,ordinary?:(nearest)=>S13Unit|undefined):S13Unit|undefined`。没有目标／一步不可行均返回 undefined，不消耗 RNG；保持原先命令失败语义。历史非 S13 的 M3/M4 独立引擎保留。
+内部签名：`decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?,hardControlled=false,draw?):{target:S13Unit|undefined,engaged:boolean}`；`ordinaryNearestTies(unit,units,tick):S13Unit[]`；`chaseStep(board,unit,target,occupied):HexCell|undefined`；`p2Target(unit,units,tick,ordinary?:(nearest)=>S13Unit|undefined):S13Unit|undefined`。没有目标／一步不可行均返回 undefined。等距抽词只发生在普通最近回退真正被使用、并列至少两人、且当前目标不在该集合时；保持、硬控冻结和唯一最近目标不抽词。保持原先命令失败语义。历史非 S13 的 M3/M4 独立引擎保留，其等距仍按 ID。
 
 规则／内容身份升为 `s13-g2-3-v26-online-rules` / `s13-14.24b-g2-3-v26-online-rules`，schema/save/replay/command 仍为 12/8/8/7，旧身份拒绝。`S13_COMBAT_RULES.ordinaryTargeting` 纳入内容摘要；只同步生产摘要，不改录制。证据、全部调用点、原断言替代向量与待重录检查见 [TARGETING_P0_V26](TARGETING_P0_V26.md)。
 

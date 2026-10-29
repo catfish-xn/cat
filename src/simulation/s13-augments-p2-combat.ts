@@ -84,8 +84,8 @@ export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number,ordinary
   const forced=batch2Target(u,units);if(forced)return forced;
   const cull=p2HasAnomaly(u,'cull-the-weak');
   const candidates:S13Unit[]=[];
-  // Only the nearest candidate is consumed; preserve distance/id tie-breaking
-  // without sorting a copy of the roster for every unit on every tick.
+  // Nearest set is ID-sorted only so direct calls stay on the lowest ID.
+  // Combat replaces a real tie through decideCombatTarget's lcg32 draw.
   let normal:S13Unit|undefined, distance=Infinity;
   for (const candidate of units) {
     if(candidate.team===u.team||!isSelectable(candidate,tick))continue;

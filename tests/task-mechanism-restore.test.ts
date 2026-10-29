@@ -24,8 +24,9 @@ for (const options of [
 beforeAll(() => { acquireEquipment(['rod']); });
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
-// v26 public position vectors: real Sion attack kills at323, zero personal
-// kill reward and exactly0/15 assist stats; no battle facts or stats are patched.
+// v26 public position vectors: real Sion attack kills, zero personal kill
+// reward and exactly 0/15 assist stats; no battle facts or stats are patched.
+// P1 equal-distance draws move the contribution case from tick 323 to 294.
 function bracerCounts(state: MatchState, ownerId: string) {
   const owner = state.combat!.units.find(u => u.id === ownerId)!;
   return Object.fromEntries(['kill', 'assist'].map(id => {
@@ -70,10 +71,10 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 
 it.each([
   // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
-  // P0 retention changes the old kills at255/225. Seeds1/5 and these public
-  // positions retain the exact no/yes contribution, live curse and +0/+15 checks.
+  // P0 retention moved the old kills at 255/225. P1's tie draw moves the
+  // contribution case to tick 294. Seeds, positions, curse and +0/+15 checks stay.
   { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 5, cells: [{ col: 0, row: 7 }, { col: 3, row: 4 }, { col: 6, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 5, cells: [{ col: 0, row: 7 }, { col: 3, row: 4 }, { col: 6, row: 4 }], tick: 294, targetId: 'enemy-r4-1' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.
