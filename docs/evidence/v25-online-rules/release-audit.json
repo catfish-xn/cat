@@ -3,7 +3,7 @@
     "scripts/audit-v25-online-rules-adaptations.cjs": "bef5782218ba00594b19ed5775f5fd9d0f5e25c7d8a63f93c0c5084a93eef1f9",
     "scripts/compare-v25-online-rules-digests.cjs": "a0ac4977bdd45e9561d98b98f35bdee7585fcdc361188d82bab8f80912923ad0",
     "scripts/content-digest.ts": "f6f6eee9191bd4e5b83328fe4d042f58447d521ff14c63e5ed704faf870ce8a0",
-    "scripts/generate-m5-route.cjs": "869864bf239d00b842f4ee25b2ac84647e59d517c3e7549a68183e0a716fa6f4",
+    "scripts/generate-m5-route.cjs": "9f8f7354474df086e04f0275c69e2864ff88b88016f0ca58e6a4e3025ecb3d43",
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
     "scripts/record-v25-online-rules-battle-start.cjs": "845c65863daac53d184b8c89f4da1c78d7eba1d1cb9658bbd219aa1abdc86e9b",
@@ -615,16 +615,17 @@
     "tests/fixtures/m5/black-market-oracle.cjs": "b8d7c1834d2b12825bd3a1e82a8e4fd5ee3d0e4d7be2fb291b1dd0080dbc51a8",
     "tests/fixtures/m5/command-oracle.cjs": "c04c62191921a76aa28cd5bc118e8df580578a2358c7c9f784d9c182f6c09579",
     "tests/fixtures/m5/command-oracle.g2.cjs": "9576cfde9db617fe5dfc6f3226bb44a246d31e2357e4eea6055aa38d4e2d1172",
-    "tests/fixtures/m5/h3-growth-oracle.cjs": "0e82e8aa299e5dbb8a678950014a38c17b0a9031d71578d424c0d985db7759eb",
+    "tests/fixtures/m5/h3-growth-oracle-v25-baseline.cjs": "9bbea0b3d1f5fd6d6048d0a6dfffa729b30670292acef802fad29d1a43b74b70",
+    "tests/fixtures/m5/h3-growth-oracle.cjs": "334c7d8667137735a8a8f25ade013a2bcd673112b28de5a49a2d32b72c720a01",
     "tests/fixtures/m5/h4-rewards-oracle.cjs": "89335898a298ff32ad4029bfbb66f6198967c37e586de6219a6ae9ce9c3ac97e",
     "tests/fixtures/m5/h4-traits-oracle-data.cjs": "b3ee8643008943135fcfc5b7125d8e5587898fa361874e1126751236461fb297",
     "tests/fixtures/m5/hard-commit-roster.cjs": "e80f1d5b4dc5e276c8494c18ffd90c9ebb4ef885563bf4b56ed1d81e6afddb55",
     "tests/fixtures/m5/lucky-gloves-oracle.cjs": "e64f822ae05b5ca49a2c4da66d5dd0a3fa492cbc94e570b19a15567b8a8fb489",
     "tests/fixtures/m5/observed-equal.cjs": "765d2f0efe4b7e20ea54810d129fe633c85c699b0b812767a386f95a6a1a7d14",
     "tests/fixtures/m5/oracle.cjs": "0d0d87de236768f0fb3bc676ddfa3032c6fe484a0ae613acb74cf3e898e8cf1f",
-    "tests/fixtures/m5/oracle.g2.cjs": "146687f60882cb449ed42f6ea1c87c8ef520292baa62f1ee75c589b262383115",
+    "tests/fixtures/m5/oracle.g2.cjs": "da6a1e11e944382c4e729ad692553be5aba66704c313bb6fe335104e03c1180c",
     "tests/fixtures/m5/oracle.t13.cjs": "0b11a6cc60f3d31e59553d5121acb8a1fdc22ce3c6091ae3065ff0f8c35ad6ca",
-    "tests/fixtures/record-v25-online-rules-herald.cjs": "4cd9e4f992cae710561b4fb59b2a6becbd1dd5d34d73d4b1a41322de57ed7820",
+    "tests/fixtures/record-v25-online-rules-herald.cjs": "48a7f6796827a53ab6b13a578c26322dfec80a92a78139b3c38162848ec5f5ce",
     "tests/fixtures/v25-online-rules-herald-support/generate.ts": "1cfd2ffddf90bee61aa6868b842b7e2ce146b52a639b330aa4fd8ba306e07fcf"
   },
   "baseCommit": "100589ca41d78a4671c8675ec30057a9ea5ea684",
@@ -657,8 +658,8 @@
     "reason": "v25 integrates the fifth augment batch and performance changes on v24; schema/save/replay/command 12/8/8/7, NET6. Old identities are rejected without migration."
   },
   "previousGoldenSha256": "06e7d6f5003f7ccb17cf0c01cd6afcbfe92b06968afe308b87fc68eb3d73c044",
-  "driverSha256": "869864bf239d00b842f4ee25b2ac84647e59d517c3e7549a68183e0a716fa6f4",
-  "oracleSha256": "146687f60882cb449ed42f6ea1c87c8ef520292baa62f1ee75c589b262383115",
+  "driverSha256": "9f8f7354474df086e04f0275c69e2864ff88b88016f0ca58e6a4e3025ecb3d43",
+  "oracleSha256": "da6a1e11e944382c4e729ad692553be5aba66704c313bb6fe335104e03c1180c",
   "builds": {
     "cannon": {
       "summary": {
