@@ -59,12 +59,12 @@ export function grantMechanicItem(state: MatchState, request: MechanicGrantReque
 
 /** Online heroes enqueue an exactly-once reward orb without inventory or pool allocation.
  * Shop gifts also use this envelope for solo capacity retries. Other offline grants retain their original retry/policy behavior; summons remain direct births. */
-export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
+export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean; readonly deferToOrb?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
   const bad = badRequest(state, request); if (bad) return bad;
   // Pooled shop heroes, or summons (UnitDefinition.summon), which never touch the shared pool.
   const summon = !!UNIT_DEFINITIONS[request.definitionId]?.summon;
   if (!summon && !SHOP_CATALOG.includes(request.definitionId)) return refuse(state, 'invalid-mechanic-state');
-  if ((state.multiplayer || request.source==='augment-pool-shop') && !summon && !request.immediate) {
+  if ((state.multiplayer || request.source==='augment-pool-shop' || request.deferToOrb) && !summon && !request.immediate) {
     if (![1,2,3].includes(request.starLevel??1)) return refuse(state,'invalid-mechanic-state');
     const queued=enqueueRewardOrb(state,request.receiptId,request.definitionId,request.starLevel??1);
     return commit(queued.state,{...identity(state,request),kind:'unit',definitionId:request.definitionId,

@@ -32,6 +32,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | { readonly kind: 'restart-mission-completed'; readonly choiceId: string }
   | import('./augment-history-types').AugmentItemTransform
   | { readonly kind: 'unit-transformed'; readonly choiceId: string; readonly unitId: string; readonly from: string; readonly to: string; readonly starLevel: StarLevel }
   | { readonly kind: 'augment-transform-completed'; readonly choiceId: string }
@@ -50,7 +51,7 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
   /** Batch 3: a training dummy retired by its augment (Support Mining); the grant ledger authenticates receiptId. */
-  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:1|2|3 }
+  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:StarLevel }
   /** Batch 3: one free shop reroll spent at this shop generation; the free-reroll ledger must count exactly these. */
   | { readonly kind: 'free-reroll'; readonly generation:number }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }

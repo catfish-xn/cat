@@ -18,7 +18,8 @@ import { recordAugmentOfferLevel } from './augment-history';
 import { enterH13ItemRound } from './augment-pool-batch5-h13-entry';
 import { salvageSoldItems } from './augment-pool-batch5-h13-salvage';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
-import { soloShopOrb } from './shop-orbs';
+import { soloRewardOrb } from './shop-orbs';
+import { applyRestartMission } from './restart-mission';
 import { applyHeadStart, headStartShopDisabled, sellPreparedUnit } from './augment-pool-batch5-h12';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
 import { batch5Streak, drainBatch5Gold } from './augment-pool-batch5-progress';
@@ -937,7 +938,7 @@ function execute_claimOrb(state: MatchState, orbId: string, expectedRound: numbe
     const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
     if(!result.ok)return result;
     // Queue acceptance must not run resource/equipment/choice hooks during combat.
-    if(isCombatRosterLocked(state)||result.state===state&&soloShopOrb(state,orbId)&&!result.events.length)return result;
+    if(isCombatRosterLocked(state)||result.state===state&&soloRewardOrb(state,orbId)&&!result.events.length)return result;
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);
@@ -1033,6 +1034,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...mechanicGrantEvents(beforeHistoryAcquisition,selected)];
   if(choice.kind==='augment'){
+    if (definitionId === 'restart-mission') { const restarted = applyRestartMission(selected); selected = restarted.state; events.push(...restarted.events); }
     if(definitionId==='head-start'){const sold=applyHeadStart(selected);selected=sold.state;events.push(...sold.events);}
     if (definitionId === 'recombobulator') { const transformed = transformRecombobulator(selected, unitLootPolicy); selected = transformed.state; events.push(...transformed.events); }
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
