@@ -7,6 +7,7 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
+import {M8_VERSION} from '../src/simulation/m8/version';
 import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat,nextRound,claimOrDiscardLoot,advanceMultiplayerRound,selectAnomalyTarget,rerollAnomaly,forfeitPendingChoice} from '../src/simulation/match';
 import {enableMultiplayerSettlement} from '../src/simulation/round-settlement';
 import {FINAL_ROUND} from '../src/simulation/round-schedule';
@@ -301,9 +302,9 @@ describe('v17 epic rewards and unified consumables',()=>{
  it('uses exact approved zh_cn names and rejects prior-epoch state identities without migration',()=>{
   expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器',TFT_Consumable_MasterworkUpgrade:'杰作升级',TFT13_Crime_Consumable_LesserShimmerDuplicator:'次级微光复制器'});
   expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
-  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v25-online-rules');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
+  const state=createMatch(42);expect(state.rulesVersion).toBe(M8_VERSION.rulesVersion);expect(state.contentVersion).toBe(M8_VERSION.contentVersion);expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const){
-    const previous=state[field].replace('v25-online-rules','v19');
+    const previous=field==='rulesVersion'?'s13-g2-3-v25-online-rules':'s13-14.24b-g2-3-v25-online-rules';
     expect(previous).not.toBe(state[field]);
     expect(()=>restoreMatch({...state,[field]:previous})).toThrow();
   }
