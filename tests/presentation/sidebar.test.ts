@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlayersSidebar } from '../../src/rendering/online/players-sidebar';
 import type { PlayerView, SeatPublic } from '../../src/rendering/online/protocol';
-import { rankSidebarSeats } from '../../src/presentation/sidebar-ranking';
-import { sidebarWinStreak, type SidebarStreak } from '../../src/presentation/sidebar-streak';
+import { rankSidebarSeats, SidebarRanking, syncSidebarListChildren } from '../../src/presentation/sidebar-ranking';
+import { SIDEBAR_FIRE_WINS_LEVEL1, SIDEBAR_FIRE_WINS_LEVEL2, sidebarWinStreak, type SidebarStreak } from '../../src/presentation/sidebar-streak';
 import { resetPreferenceCache, setReducedMotion } from '../../src/presentation/preferences';
 import * as textCards from '../../src/presentation/text-card';
 
@@ -37,12 +37,16 @@ describe('sidebar rank, independently of names and viewer identity', () => {
 });
 
 describe('optional public streak adapter', () => {
-  it.each([0, 1, 2, 3, -4, 4.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('does not light a win count of %s', count => {
+  it.each([0, 1, 2, -4, 4.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('does not light a win count of %s', count => {
     expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count } })).toBeNull();
   });
-  it('accepts 4+ wins, but never missing fields, loss streaks, no streak or eliminated seats', () => {
-    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 4 } })).toBe(4);
-    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 12 } })).toBe(12);
+  it('maps WinStreakLoop tiers to level 1/2 thresholds (推断), not economy streak gold', () => {
+    expect(SIDEBAR_FIRE_WINS_LEVEL1).toBe(3);
+    expect(SIDEBAR_FIRE_WINS_LEVEL2).toBe(5);
+    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 3 } })).toEqual({ count: 3, level: 1 });
+    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 4 } })).toEqual({ count: 4, level: 1 });
+    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 5 } })).toEqual({ count: 5, level: 2 });
+    expect(sidebarWinStreak({ alive: true, streak: { kind: 'win', count: 12 } })).toEqual({ count: 12, level: 2 });
     expect(sidebarWinStreak({ alive: true })).toBeNull();
     expect(sidebarWinStreak({ alive: true, streak: { kind: 'loss', count: 12 } })).toBeNull();
     expect(sidebarWinStreak({ alive: true, streak: { kind: null, count: 12 } })).toBeNull();
@@ -67,8 +71,15 @@ class Node {
   };
   append(...nodes: Node[]) { for (const node of nodes) { node.remove(); this.children.push(node); node.parent = this; } }
   replaceChildren(...nodes: Node[]) { for (const child of this.children) child.parent = null; this.children = []; this.append(...nodes); }
-  insertBefore(node: Node, before: Node) { node.parent = this; this.children.splice(this.children.indexOf(before), 0, node); }
+  insertBefore(node: Node, before: Node | null) {
+    if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node);
+    const index = before ? this.children.indexOf(before) : this.children.length;
+    this.children.splice(index, 0, node); node.parent = this;
+  }
   get lastChild() { return this.children.at(-1); }
+  get lastElementChild() { return this.lastChild; }
+  contains(node: Node): boolean { return node === this || this.children.some(child => child.contains(node)); }
+  focus() { documentActive = this; }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(node => node !== this); this.parent = null; }
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   removeAttribute(name: string) { this.attributes.delete(name); }
@@ -90,13 +101,52 @@ class Node {
 }
 const descendants = (node: Node): Node[] => [node, ...node.children.flatMap(descendants)];
 const find = (node: Node, debug: string): Node | undefined => descendants(node).find(child => child.dataset.debug === debug);
+let documentActive: Node | null = null;
 let sidebar: PlayersSidebar | undefined;
 beforeEach(() => {
+  documentActive = null;
   resetPreferenceCache(); setReducedMotion(false);
   vi.spyOn(textCards, 'attachTextCards').mockReturnValue(() => {});
-  vi.stubGlobal('document', { createElement: () => new Node() });
+  vi.stubGlobal('document', {
+    createElement: () => new Node(),
+    get activeElement() { return documentActive; },
+  });
 });
 afterEach(() => { sidebar?.dispose(); sidebar = undefined; resetPreferenceCache(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+describe('sidebar list reorder keeps focus', () => {
+  it('syncSidebarListChildren moves only out-of-place nodes', () => {
+    const list = new Node();
+    const a = new Node(); a.dataset.debug = 'a';
+    const b = new Node(); b.dataset.debug = 'b';
+    const c = new Node(); c.dataset.debug = 'c';
+    list.append(a, b, c);
+    syncSidebarListChildren(list as unknown as HTMLElement, [c, a, b] as unknown as HTMLElement[]);
+    expect(list.children.map(node => node.dataset.debug)).toEqual(['c', 'a', 'b']);
+    expect(c.parent).toBe(list);
+  });
+  it('SidebarRanking retains keyboard focus across rank swaps', () => {
+    const list = new Node();
+    const ranking = new SidebarRanking();
+    const seats = [seat('s0', 70), seat('s1', 100), seat('s2', 50)];
+    const rows = new Map<string, Node>();
+    const makeRow = (s: Seat) => {
+      let row = rows.get(s.seatId);
+      if (!row) {
+        row = new Node(); row.dataset.debug = `online:seat:${s.seatId}`; row.tabIndex = 0;
+        rows.set(s.seatId, row);
+      }
+      return row;
+    };
+    const rowFn = makeRow as unknown as (seat: Seat) => HTMLElement;
+    ranking.render(list as unknown as HTMLElement, seats, rowFn);
+    const focused = list.children[1] as Node;
+    focused.focus();
+    ranking.render(list as unknown as HTMLElement, [seats[0], { ...seats[1], hp: 40 }, seats[2]], rowFn);
+    expect(document.activeElement).toBe(focused);
+    expect(list.children.map(row => row.dataset.debug)).toEqual(['online:seat:s0', 'online:seat:s2', 'online:seat:s1']);
+  });
+});
 
 describe.each(['2d', '3d'] as const)('%s shared sidebar', renderMode => {
   function mount(seats: readonly Seat[]) {
@@ -123,6 +173,9 @@ describe.each(['2d', '3d'] as const)('%s shared sidebar', renderMode => {
     me.fire('click'); expect(select.mock.calls).toEqual([['s0']]);
     const preventDefault = vi.fn(); me.fire('keydown', { key: 'Enter', preventDefault });
     expect(preventDefault).toHaveBeenCalledOnce(); expect(select.mock.calls).toEqual([['s0'], ['s0']]);
+    me.focus();
+    sidebar!.render(view(changed));
+    expect(document.activeElement).toBe(me);
     sidebar!.setViewing('s0'); expect(me.attributes.get('aria-pressed')).toBe('true');
     // A second HP change during the move starts at the visible (partway) location.
     me.offset = 30;
@@ -135,19 +188,21 @@ describe.each(['2d', '3d'] as const)('%s shared sidebar', renderMode => {
     expect(me.animations[1].animation.cancel).toHaveBeenCalledOnce();
   });
   it('lights another player from an injected public streak, retains the effect across pushes, and clears it on loss/missing data/elimination', () => {
-    const me = seat('s0', 90), other = seat('s1', 70, { streak: { kind: 'win', count: 4 } });
+    const me = seat('s0', 90), other = seat('s1', 70, { streak: { kind: 'win', count: 3 } });
     const { host, list, order } = mount([me, other]);
     const flame = find(host, 'online:streak:s1')!;
     expect(flame).toBeDefined(); expect(flame.attributes.get('aria-hidden')).toBe('true');
+    expect(flame.classList.contains('level-2')).toBe(false);
     const portrait = flame.parent!;
     expect(portrait.className).toBe('seat-portrait');
     expect(portrait.children[0].className).toBe('seat-avatar');
-    expect(find(host, 'online:seat:s1')!.dataset.textCard).toContain('4 连胜');
+    expect(find(host, 'online:seat:s1')!.dataset.textCard).toContain('3 连胜');
     expect(find(host, 'online:streak:s0')).toBeUndefined();
     sidebar!.render(view([me, { ...other, hp: 95, streak: { kind: 'win', count: 5 } }]));
     expect(find(host, 'online:streak:s1')).toBe(flame);
+    expect(flame.classList.contains('level-2')).toBe(true);
     expect(order()).toEqual(['online:seat:s1', 'online:seat:s0']);
-    for (const streak of [{ kind: 'loss', count: 6 }, { kind: 'win', count: 3 }, undefined] as const) {
+    for (const streak of [{ kind: 'loss', count: 6 }, { kind: 'win', count: 2 }, undefined] as const) {
       sidebar!.render(view([me, { ...other, streak }]));
       expect(find(host, 'online:streak:s1')).toBeUndefined();
       expect(find(host, 'online:seat:s1')!.dataset.textCard).not.toContain('连胜');
@@ -179,5 +234,6 @@ it('has no CSS self-pinning in either mode and places the flame outside the clip
   }
   expect(css).toContain('#online-sidebar .seat-portrait { grid-area: avatar; }');
   expect(css).toMatch(/\.seat-streak-fire\s*\{[^}]*pointer-events:\s*none/);
-  expect(css).toContain('@media (prefers-reduced-motion: reduce) { .seat-streak-fire::before, .seat-streak-fire::after { animation: none; } }');
+  expect(css).toContain('.seat-streak-fire.level-2');
+  expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[^{]*\{[^}]*\.seat-streak-fire::before[^}]*\.seat-streak-fire\.level-2::before[^}]*animation:\s*none/);
 });
