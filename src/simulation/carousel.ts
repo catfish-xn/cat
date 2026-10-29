@@ -1,4 +1,5 @@
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
+import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
@@ -415,6 +416,7 @@ export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchS
     }
 }
 export function sellPendingCarouselUnit(pool: SharedPoolState, match: MatchState, unitId: string): SharedPoolResult {
+    if (brbShopDisabled(match)) return { ok: false, pool, state: match, reason: 'wrong-phase' };
     try {
         assertSharedPoolConservation(pool, [match]);
         const pending = match.carousel?.pendingUnits.find(u => u.unitId === unitId);

@@ -81,6 +81,8 @@ export interface ProvenanceCombatSettlement {
 export interface ResourceProvenanceContext {
   /** P-B5-59: authenticated Pilfer copies arrive at the next natural round, including supply. */
   readonly pilferRewards?: readonly import('./augment-gift-plan').AugmentGift[];
+  /** D2: authenticated BRB completed-item anvils may mature on a supply entry. */
+  readonly brbRewards?: readonly import('./augment-gift-plan').AugmentGift[];
   readonly batch5Inventory?:InventoryPlan;
   readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
   readonly augmentHistory?: import('./augment-history-types').AugmentHistory;

@@ -1,6 +1,7 @@
 import { attachTextCards, textCard, hoverAction } from '../presentation/text-card';
 import { onTooltipTextChanged } from '../presentation/tooltip-text-loader';
 import { readAugmentText, onAugmentTextChanged } from '../presentation/augment-text-loader';
+import { brbShopDisabled } from '../simulation/augment-brb';
 import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
@@ -228,6 +229,7 @@ export class StrategyPanel {
   private anomalyGold?: ((gold: number) => void) | null;
   /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
   private choiceReopen: HTMLButtonElement | null = null;
+  private collapsedChoiceId: string | null = null;
   /** v16 进入未知: a chip on the board while the hero is away (the panel line can be folded or scrolled out of view). */
   private awayChip: HTMLElement | null = null;
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
@@ -635,12 +637,15 @@ export class StrategyPanel {
         button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
       }
       if (spectating || (name === 'buy-xp' && xp === null)) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); if (!spectating) button.title = '已满级'; }
+      if (brbShopDisabled(state) && (name === 'reroll' || name === 'buy-xp' || name === 'sell')) {
+        button.disabled = true; button.title = '假装摸鱼期间商店不可用'; button.setAttribute('aria-disabled', 'true');
+      }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
     const controls = element('div', '', 'mobile-controls'); controls.classList.toggle('locked', !operable);
     for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
-    const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !operable);
+    const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !operable || brbShopDisabled(state));
     lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
     if (dock) dock.append(controls); else actions.append(controls);
     this.root.append(actions);
@@ -1004,6 +1009,7 @@ export class StrategyPanel {
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
     if (!choice || isShopChoice(choice)) {
+      this.collapsedChoiceId = null;
       this.choiceToken = ''; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
@@ -1039,8 +1045,9 @@ export class StrategyPanel {
       heading.append(chip);
     }
     card.append(heading);
-    // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    const blocking = choice.kind === 'augment'
+      ? '可收起选择界面调整站位、上下棋子，再恢复界面继续选择。'
+      : isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
@@ -1106,7 +1113,7 @@ export class StrategyPanel {
         slot.append(button, reroll); offers.append(slot);
       }
       card.append(offers);
-      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
+      if (generic || isOnline() || choice.kind === 'augment') card.append(this.choiceExtras(choice, title, generic, extras));
       if (choice.kind === 'anomaly') {
         const target = state.preparation.units.find(unit => unit.id === choice.targetId), name = target ? displayUnitName(target.definitionId) : '';
         const reroll = this.button('anomaly-reroll', '', () => this.actions.rerollAnomaly(choice.choiceId, choice.generation));
@@ -1118,6 +1125,8 @@ export class StrategyPanel {
       }
     }
     this.modal.append(card);
+    if (this.collapsedChoiceId === choice.choiceId) { this.collapseChoice(title); return; }
+    this.collapsedChoiceId = null;
     // Session replacement changes the mode at the end of this same task.
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
@@ -1135,9 +1144,11 @@ export class StrategyPanel {
   }
   /** Hides the popup without answering it; the pending choice and its deadline are unchanged. */
   private collapseChoice(title: string): void {
+    this.collapsedChoiceId = this.actions.state().pendingChoice?.choiceId ?? null;
     this.dropChoiceReopen();
     this.modal.hidden = true;
     const reopen = this.button('choice-reopen', `展开 ${title}`, () => {
+      this.collapsedChoiceId = null;
       this.dropChoiceReopen(); this.modal.hidden = false; this.focusChoice();
     });
     // On the board under the countdown bar, never over the shop dock or the side panels; without a board frame, top of the page.
@@ -1413,6 +1424,7 @@ export class StrategyPanel {
     for (const text of this.eventTexts.slice().reverse()) this.eventList.append(element('p', text));
   }
   private renderShop(state: MatchState, ready: boolean): void {
+    ready = ready && !brbShopDisabled(state);
     if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; }
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
     this.shopDock?.toggleAttribute('data-anvil-choice', Boolean(choice && isAnvilArmory(choice)));

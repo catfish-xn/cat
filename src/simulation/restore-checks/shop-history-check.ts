@@ -1,3 +1,4 @@
+import { brbGiftPlan } from '../augment-brb';
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { readAugmentIncome } from '../augment-income';
 import { outcomeAcquisitionXp } from '../augment-pool-batch3-progress';
@@ -216,7 +217,7 @@ function evidenceGold(state:MatchState,p:ShopHistoryPoint):number {
 function anomalyRecovery(state:MatchState,cursor:MatchState,p:ShopHistoryPoint):boolean {
  if(state.sharedPool||cursor.round>FINAL_ROUND||!getRoundSchedule(cursor.round).some(e=>e.kind==='anomaly')
   ||cursor.shop.slots.some(s=>s.status==='available'&&shopOfferCost(s)<=cursor.gold))return false;
- const folded=foldResourceProvenance(state.resourceProvenance,{pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory,s3bState:state,batch5Inventory:batch5InventoryPlan(state),
+ const folded=foldResourceProvenance(state.resourceProvenance,{brbRewards:brbGiftPlan(state),pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory,s3bState:state,batch5Inventory:batch5InventoryPlan(state),
   g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),scheduleReceipts:state.scheduleReceipts,
   lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
   throughRoundOrdinal:state.round,prefixLength:p.resourcePrefix,

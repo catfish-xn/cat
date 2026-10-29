@@ -13,7 +13,8 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { displayUnitName } from './display-names';
-import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
+import { brbShopDisabled } from '../simulation/augment-brb';
+import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, isAugmentPreparationChoice, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
@@ -622,7 +623,7 @@ export class BoardScene extends Phaser.Scene {
     }
     if (!target) { this.setStatus(this.failureMessage('invalid-location')); return { allowed: false }; }
     // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
-    const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
+    const reason = this.boardEditable() ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
     this.setStatus(reason ? (reason === 'population-cap' ? this.populationCapText() : this.failureMessage(reason)) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
     this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
     if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
@@ -638,7 +639,7 @@ export class BoardScene extends Phaser.Scene {
     if (summon) {
       if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), `${summonName(summon)}已移动 · 之后每回合保持此位置`);
       else this.setStatus(summonBoardOnly(summon));
-    } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+    } else if (target && !this.boardEditable() && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
     else if (target) {
       const unit = this.displayedUnit(token.getData('unitId'));
       const benchMove = this.benchOps() && unit?.location.kind === 'bench' && target.kind === 'bench';
@@ -710,7 +711,8 @@ export class BoardScene extends Phaser.Scene {
     return this.online && session instanceof RemoteSession && !session.spectating && session.offline === null
       && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
   }
-  private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
+  private boardEditable(): boolean { return this.session.phase === 'preparation' || isAugmentPreparationChoice(this.session.state); }
+  private dragPhase(): boolean { return this.boardEditable() || this.benchOps(); }
   /**
    * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物, 杰斯's 海克斯科技锻炉) as the rules place them, shown on the board only while I
    * prepare and no battle is on it. They are not assets: no bench, sale, equipment or population.
@@ -726,7 +728,7 @@ export class BoardScene extends Phaser.Scene {
       .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
     return taken ? `该位置已有单位 · ${summonName(summon)}只能移到空格` : undefined;
   }
-  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
+  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.boardEditable() || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
     return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
@@ -841,7 +843,7 @@ export class BoardScene extends Phaser.Scene {
     }
     // Trading on the bench does not interrupt the battle's movement/effect tweens.
     if (this.session.combatView && this.benchOps()) this.clearDrag(); else this.clearCombatEffects();
-    if (this.session.phase !== 'preparation' && !this.benchOps()) this.selectedId = null;
+    if (!this.boardEditable() && !this.benchOps()) this.selectedId = null;
     if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
@@ -995,7 +997,7 @@ export class BoardScene extends Phaser.Scene {
     this.drawSpecialCells();
     this.strategyPanel?.render();
     this.syncOrbs();
-    if (this.session.phase !== 'preparation') {
+    if (!this.boardEditable()) {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
       if (this.benchOps()) this.syncOperable();
       this.syncCombat(); return;
@@ -1009,7 +1011,7 @@ export class BoardScene extends Phaser.Scene {
   }
   /** A pending bench move has not changed the HUD. Its confirmation does the one full sync when state arrives. */
   private syncAfterDrag() {
-    if (!this.benchOps()) { this.sync(); return; }
+    if (this.boardEditable() || !this.benchOps()) { this.sync(); return; }
     this.syncOperable(); this.syncSelection(); this.syncCombat();
   }
   /**
@@ -1033,7 +1035,7 @@ export class BoardScene extends Phaser.Scene {
 
   private syncHud() {
     this.syncConquerorFlag();
-    const match = this.session.state, ready = match.phase === 'preparation', operable = ready || this.benchOps();
+    const match = this.session.state, ready = match.phase === 'preparation', operable = (ready || this.benchOps()) && !brbShopDisabled(match);
     const round = readRoundInfo(match);
     this.roundLabel.setText(round.displayName); this.goldLabel.setText(`金币 ${match.gold}`);
     this.hpLabel.setText(`生命 ${match.playerHp}`);
@@ -1084,7 +1086,7 @@ export class BoardScene extends Phaser.Scene {
     const selected = this.state.units.find(unit => unit.id === this.selectedId);
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
-    const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
+    const displayed = this.boardEditable() || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     const anvil = displayed ? anvilInfo(displayed.definitionId) : null;
     if (displayed && anvil) this.selectionLabel.setText(`${anvil.name}\n${anvil.description}\n拖到商店或按 E：${anvil.sellText}`);
     else if (displayed) {
