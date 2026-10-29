@@ -1,3 +1,4 @@
+import { reconcileMatchAnomaly } from './anomaly-ownership';
 import type { UnitLootPolicy } from './loot-runtime';
 import { requireAugmentFacts } from './augment-history';
 import { SHOP_CATALOG } from './match-rules';
@@ -30,6 +31,7 @@ function transformSeed(s: MatchState, choiceId: string): number {
 function transformBatch(initial: MatchState, choiceId: string, targets: readonly Unit[], stock: Readonly<Record<string, number>>, upgradeCost = false): { state: MatchState; events: readonly MatchEvent[] } {
   let state = initial, rng = transformSeed(state, choiceId);
   const available = { ...stock }, roundId = getMultiplayerRoundByOrdinal(state.round).roundId;
+  const anomalyEvents: MatchEvent[] = [];
   for (const original of targets) {
     const unit = state.preparation.units.find(u => u.id === original.id);
     if (!unit || unit.definitionId !== original.definitionId || unit.starLevel !== original.starLevel) throw new RangeError('Invalid transform roster');
@@ -42,13 +44,14 @@ function transformBatch(initial: MatchState, choiceId: string, targets: readonly
     available[unit.definitionId] += copies; available[to] -= copies;
     state = { ...state,
       preparation: { ...state.preparation, units: state.preparation.units.map(u => u.id === unit.id ? { ...u, definitionId: to } : u) },
-      anomalyBinding: state.anomalyBinding?.unitId === unit.id ? null : state.anomalyBinding,
+      anomalyBinding: state.anomalySelection ? state.anomalyBinding : state.anomalyBinding?.unitId === unit.id ? null : state.anomalyBinding,
       resourceProvenance: appendResourceProvenance(state.resourceProvenance, roundId,
         { kind: 'unit-transformed', choiceId, unitId: unit.id, from: unit.definitionId, to, starLevel: unit.starLevel }),
     };
+    state = reconcileMatchAnomaly(state, anomalyEvents);
   }
   const merged = planDeferredUpgrades(state.preparation), resources = transferUpgradeResources(state.items, state.anomalyBinding, merged.events);
-  const events = [...merged.events, ...resources.events];
+  const events: MatchEvent[] = [...anomalyEvents, ...merged.events, ...resources.events];
   state = { ...state, preparation: merged.preparation, items: resources.items, anomalyBinding: resources.anomalyBinding,
     persistentGrowth: mergeGrowthLedger(state.persistentGrowth, merged.events),
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, roundId, [
@@ -56,7 +59,7 @@ function transformBatch(initial: MatchState, choiceId: string, targets: readonly
       { kind: 'augment-transform-completed', choiceId },
     ]),
   };
-  return { state, events };
+  return { state: reconcileMatchAnomaly(state, events), events };
 }
 
 /** Next natural round (including supply and overtime), before XP, shop or carousel placements. Solo stays safe. */

@@ -1,3 +1,4 @@
+import { validatePortableAnomaly } from './restore-checks/portable-anomaly-check';
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
@@ -93,6 +94,9 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);
+  if(state.anomalySelection || state.anomalyBinding || state.scheduleReceipts.some(r=>r.kind==='anomaly') || state.resourceProvenance.entries.some(e=>e.kind==='anomaly-selected')) {
+    validateHistoricalEquipment(null,state);validatePortableAnomaly(state);
+  }
   if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.

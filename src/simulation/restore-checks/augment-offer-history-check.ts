@@ -59,7 +59,7 @@ export function validateAugmentOfferHistory(state: MatchState): void {
   check(index === state.augmentOffers.length && owned.length === state.augments.length);
   check(JSON.stringify(state.removedAugmentIds) === JSON.stringify(removed));
   // No other consumer of this stream exists until the later anomaly target/offer.
-  // Selling the bound target removes anomalyBinding but retains its schedule receipt and consumed words.
+  // R5 sale may detach the current instance; the selection, schedule receipt and consumed words remain.
   const anomalyDrawn = state.scheduleReceipts.some(receipt => receipt.kind === 'anomaly')
     || state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.generation > 0;
   if (!anomalyDrawn) check(state.choiceRngState === rng);

@@ -1,3 +1,5 @@
+import { validateHistoricalEquipment } from './b8-restore';
+import { validatePortableAnomaly } from './restore-checks/portable-anomaly-check';
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
@@ -578,6 +580,9 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     validateTombRaider(match);
     validateMadChemistOnlineSave(carousel.pool, match, authority);
+    if(match.anomalySelection||match.anomalyBinding||match.scheduleReceipts.some(r=>r.kind==='anomaly')||match.resourceProvenance.entries.some(e=>e.kind==='anomaly-selected')) {
+      validateHistoricalEquipment(null,match);validatePortableAnomaly(match);
+    }
     return match;
 }
 

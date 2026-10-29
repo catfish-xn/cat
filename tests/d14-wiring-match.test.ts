@@ -13,6 +13,7 @@ import { compileBattle, resolveTwoSidedBattle, proposeSettlement } from '../src/
 import { enableMultiplayerSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VERSION } from '../src/simulation/round-settlement';
 import { d14UnitBase } from '../src/simulation/d14-anomalies/projection';
 import { getUnitStats } from '../src/simulation/unit-stats';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
 
 const combatAugments = ['pumping-up-iii','bulky-buddies-iii','pumping-up-ii','bulky-buddies-ii','manaflow-ii','pumping-up-i','bulky-buddies-i','manaflow-i'];
 let prefix:MatchState|undefined;
@@ -160,7 +161,27 @@ it.each(cases)('$id applies certified combat values and retires the same physica
   }
   restored(s);const combat=accepted(api.startMatchCombat(s));restored(combat);
   if(id==='ultimate-hero')expect(toCombatViewState(combat.combat!).units.find(u=>u.id===target.id)).toMatchObject({starLevel:3,effectiveStarLevel:4});
-  const sold=accepted(api.sellUnit(s,target.id));expect(sold.gold-s.gold).toBe(api.getUnitSellPrice(target));expect(sold.anomalyBinding).toBeNull();expect(sold.d14!.phase).toBe('retired');restored(sold);
+  const sold=accepted(api.sellUnit(s,target.id));expect(sold.gold-s.gold).toBe(api.getUnitSellPrice(target));expect(sold.anomalyBinding).toBeNull();expect(sold.anomalySelection).toEqual(s.anomalySelection);expect(sold.d14!.phase).toBe('retired');restored(sold);
+  let reacquired=accepted(grantMechanicUnit(sold,{receiptId:`r5:${id}:one`,source:'r5-test',definitionId:target.definitionId}));
+  if(id==='ultimate-hero'){
+    expect(reacquired.anomalyBinding).toBeNull();restored(reacquired);
+    reacquired=accepted(grantMechanicUnit(reacquired,{receiptId:`r5:${id}:three`,source:'r5-test',definitionId:target.definitionId,starLevel:3}));
+  }
+  expect(reacquired.anomalyBinding).toMatchObject({definitionId:id,choiceId:s.anomalyBinding!.choiceId});
+  expect(reacquired.d14).toMatchObject({atOrdinal:s.d14!.atOrdinal,phase:id==='ultimate-hero'?'promoted':'returned',held:null});
+  expect(reacquired.d14!.unitId).toBe(reacquired.anomalyBinding!.unitId);
+  expect(reacquired.resourceProvenance.entries.filter(e=>e.kind==='d14-selected'||e.kind==='d14-returned')).toEqual(s.resourceProvenance.entries.filter(e=>e.kind==='d14-selected'||e.kind==='d14-returned'));
+  restored(reacquired);
+});
+
+it('R5 restores an early sold Ultimate Hero without restarting or completing its original wait',()=>{
+  const acquired=choose('ultimate-hero'), unit=acquired.d14!.originalUnit;
+  const sold=accepted(api.sellUnit(acquired,unit.id));
+  expect(sold.d14!.phase).toBe('retired');
+  const restoredUnit=accepted(grantMechanicUnit(sold,{receiptId:'r5:ultimate:early',source:'r5-test',definitionId:unit.definitionId,starLevel:3}));
+  expect(restoredUnit.d14).toMatchObject({phase:'waiting',atOrdinal:acquired.d14!.atOrdinal});
+  expect(restoredUnit.anomalyBinding!.boundRound).toBe(acquired.anomalyBinding!.boundRound);
+  restored(restoredUnit);
 });
 
 it.each(['ultimate-hero','into-the-unknown'])('%s rejects edited certificates, clock, resources and frozen combat inputs',id=>{
