@@ -175,33 +175,102 @@ function openingFrames(seed: number) {
 }
 
 describe('Vander seed 104729', () => {
-  it('still backtracks on tick 11 because the target never ties or takes hard control', () => {
+  it('keeps the attack hex and does not fold back through (2,1)', () => {
     const frames = openingFrames(104729);
-    const moves = frames.flatMap(frame => frame.events).filter(event => event.type === 'movement' && event.unitId === 'e3');
+    const moves = frames.flatMap(frame => frame.events).filter((event): event is Extract<CombatEvent, { type: 'movement' }> =>
+      event.type === 'movement' && event.unitId === 'e3');
+    // Replaces the P1 lock of (3,1)->(2,1). That step was the uncommitted BFS leaving a blocked pair of attack hexes.
     expect(moves).toEqual([
       { type: 'movement', tick: 1, unitId: 'e3', from: { col: 2, row: 0 }, to: { col: 2, row: 1 } },
-      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 1 } },
-      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 1 }, to: { col: 2, row: 1 } },
+      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 2 } },
+      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 2 }, to: { col: 3, row: 3 } },
     ]);
-    for (const frame of frames) {
+    expect(moves.some(move => move.from.col === 3 && move.from.row === 1 && move.to.col === 2 && move.to.row === 1)).toBe(false);
+    const trace = frames.map(frame => {
       const tick = frame.state.tick;
       const decided = get(frame.before, 'e3') as S13Unit;
       const vander = get(frame.state, 'e3') as S13Unit;
       expect(vander.definitionId).toBe('vander');
       expect(vander.targetId).toBe('p6');
+      expect(vander.meleeApproach).toEqual({ targetId: 'p6', cell: { col: 3, row: 3 } });
       expect(isControlled(decided, tick)).toBe(false);
-      const ties = ordinaryNearestTies(decided, frame.before.units as S13Unit[], tick);
-      expect(ties.map(unit => unit.id)).toEqual(['p6']);
-    }
-    const tick11 = frames[10];
-    const vander = get(tick11.before, 'e3') as S13Unit;
-    const target = get(tick11.before, 'p6');
-    const occupant = (col: number, row: number) => tick11.before.units.find(u => u.alive && u.cell.col === col && u.cell.row === row)?.id ?? null;
-    expect(target.cell).toEqual({ col: 3, row: 3 });
-    expect(hexDistance(vander.cell, target.cell)).toBe(2);
-    expect(vander.attackRange).toBe(1);
-    const inRange = getNeighbors(DEFAULT_BOARD, vander.cell).filter(cell => hexDistance(cell, target.cell) <= 1);
-    expect(inRange).toEqual([{ col: 4, row: 2 }, { col: 3, row: 2 }]);
-    expect(inRange.map(cell => occupant(cell.col, cell.row))).toEqual(['e7', 'e5']);
+      return { tick, ties: ordinaryNearestTies(decided, frame.before.units as S13Unit[], tick).map(unit => unit.id) };
+    });
+    // Ticks 7–11 are tied with p3 because the other bodies moved; p6 stays because he is already in the tie.
+    expect(trace).toEqual([
+      { tick: 1, ties: ['p6'] }, { tick: 2, ties: ['p6'] }, { tick: 3, ties: ['p6'] },
+      { tick: 4, ties: ['p6'] }, { tick: 5, ties: ['p6'] }, { tick: 6, ties: ['p6'] },
+      { tick: 7, ties: ['p3', 'p6'] }, { tick: 8, ties: ['p3', 'p6'] }, { tick: 9, ties: ['p3', 'p6'] },
+      { tick: 10, ties: ['p3', 'p6'] }, { tick: 11, ties: ['p3', 'p6'] },
+    ]);
+  });
+});
+
+describe('melee attack hexes', () => {
+  it('waits on the current cell when every attack hex is occupied', () => {
+    const target = enemy('e', 3, 3, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0, targetId: 'a0' });
+    const blockers = getNeighbors(DEFAULT_BOARD, target.cell).map((cell, index) =>
+      actor(`a${index}`, { cell, moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 }));
+    const p = actor('p', { cell: { col: 3, row: 1 }, moveCooldownTicks: 0, cooldownTicks: 1000, attackDamage: 0 });
+    expect(hexDistance(p.cell, target.cell)).toBe(2);
+    const result = step([p, target, ...blockers]);
+    expect(get(result.state, 'p').cell).toEqual({ col: 3, row: 1 });
+    expect(result.events.filter(event => event.type === 'movement' && event.unitId === 'p')).toEqual([]);
+    expect(result.state.rngDraws).toBe(0);
+    expect(step([p, target, ...blockers].reverse()).state.units.find(unit => unit.id === 'p')?.cell).toEqual({ col: 3, row: 1 });
+  });
+
+  it('gives a contested attack hex to the lower id and sends the loser to the next hex', () => {
+    const target = enemy('e', 3, 3, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });
+    const wall = actor('wall', { cell: { col: 4, row: 4 }, moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });
+    const a = actor('a', { cell: { col: 3, row: 5 }, moveCooldownTicks: 0, cooldownTicks: 1000, attackDamage: 0 });
+    const b = actor('b', { cell: { col: 2, row: 5 }, moveCooldownTicks: 0, cooldownTicks: 1000, attackDamage: 0 });
+    expect(hexDistance(a.cell, { col: 3, row: 4 })).toBe(1);
+    expect(hexDistance(b.cell, { col: 3, row: 4 })).toBe(1);
+    const result = step([b, wall, target, a]);
+    expect(result.events.filter(event => event.type === 'movement')).toEqual([
+      { type: 'movement', tick: 1, unitId: 'a', from: { col: 3, row: 5 }, to: { col: 3, row: 4 } },
+      { type: 'movement', tick: 1, unitId: 'b', from: { col: 2, row: 5 }, to: { col: 2, row: 4 } },
+    ]);
+    expect(get(result.state, 'a').meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 4 } });
+    expect(get(result.state, 'b').meleeApproach).toEqual({ targetId: 'e', cell: { col: 2, row: 3 } });
+    expect(result.state.rngDraws).toBe(0);
+    expect(step([a, b, wall, target].reverse()).state.units.map(unit => ({ id: unit.id, cell: unit.cell, claim: unit.meleeApproach }))).toEqual(
+      result.state.units.map(unit => ({ id: unit.id, cell: unit.cell, claim: unit.meleeApproach })));
+  });
+
+  it('breaks equal attack-hex paths with the combat stream and then keeps that hex', () => {
+    const p = actor('p', { cell: { col: 3, row: 5 }, moveCooldownTicks: 0, cooldownTicks: 1000, attackDamage: 0 });
+    const target = enemy('e', 3, 3, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });
+    const run = (rngState: number, reverse = false) => step(reverse ? [target, p] : [p, target], rngState);
+    expect(get(run(1).state).cell).toEqual({ col: 4, row: 4 });
+    expect(get(run(0).state).cell).toEqual({ col: 3, row: 4 });
+    expect(run(0).state.rngDraws).toBe(1);
+    expect(run(1).state.rngDraws).toBe(1);
+    expect(get(run(0, true).state).cell).toEqual(get(run(0).state).cell);
+    expect(run(0, true).state.rngState).toBe(run(0).state.rngState);
+    const arrived = run(0);
+    const held = stepCombat(arrived.state);
+    expect(get(held.state).cell).toEqual({ col: 3, row: 4 });
+    expect(get(held.state).meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 4 } });
+    expect(held.state.rngDraws).toBe(1);
+  });
+
+  it('keeps a claimed hex while another unit is only paused on it', () => {
+    const target = enemy('e', 3, 3, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0, targetId: 'p' });
+    const far = enemy('far', 6, 7, { moveCooldownTicks: 100, cooldownTicks: 100, attackDamage: 0 });
+    const passer = actor('walk', { cell: { col: 6, row: 6 }, moveCooldownTicks: 100, cooldownTicks: 1000, attackDamage: 0, voidSwarmTaunt: 'far' });
+    const p = actor('p', { cell: { col: 2, row: 6 }, moveCooldownTicks: 0, cooldownTicks: 1000, attackDamage: 0 });
+    const first = step([p, target, far, passer]);
+    expect(get(first.state).meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 4 } });
+    expect(first.state.rngDraws).toBe(0);
+    const walker = get(first.state, 'walk') as { cell: { col: number; row: number } };
+    walker.cell = { col: 3, row: 4 };
+    (get(first.state) as { moveCooldownTicks: number }).moveCooldownTicks = 1;
+    const next = stepCombat(first.state);
+    expect(get(next.state).meleeApproach).toEqual({ targetId: 'e', cell: { col: 3, row: 4 } });
+    expect(get(next.state).cell).toEqual(get(first.state, 'p').cell);
+    expect(next.events.filter(event => event.type === 'movement' && event.unitId === 'p')).toEqual([]);
+    expect(next.state.rngDraws).toBe(0);
   });
 });

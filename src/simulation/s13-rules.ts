@@ -13,6 +13,7 @@ export const S13_COMBAT_RULES = Object.freeze({
   overtimeTiming: 'first-stack-at-600-every-20-control-half-up-min-one',
   moveIntervalTicks: 5,
   ordinaryTargeting: 'v26-p1-retain-in-range-one-step-equal-distance-lcg32-hard-cc-hold',
+  meleePathing: 'v26-melee-shortest-attack-hex-hold-lcg32-tie-id-contest-wait-if-surrounded',
   abilityPowerBase: 100,
   attackCritBps: 2500,
   critMultiplierBps: 14000,

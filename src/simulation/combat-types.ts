@@ -39,6 +39,8 @@ export interface CombatItemGrant { readonly chest: import('./m8/contracts').Sour
 export interface CombatUnit {
   /** S13: current target has reached attack range; persists through a pending one-step chase. */
   readonly targetEngaged?: true;
+  /** Melee attack hex this unit is committed to. Kept until that hex is settled or the target changes. */
+  readonly meleeApproach?: { readonly targetId: string; readonly cell: HexCell };
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
   readonly madChemist?: import('./augment-pool-batch5-r4').MadChemistRuntime;
   readonly batch5RebelPulseAtTick?: number;

@@ -252,13 +252,14 @@ describe('research report reproductions', () => {
     expect(reportBattle(42, true)).toEqual(frames);
   });
 
-  it('seed 104729: records Vander’s initial-approach backtrack as a remaining P1 occupancy case', () => {
+  it('seed 104729: Vander keeps the attack hex instead of folding back on tick 11', () => {
     const frames = reportBattle(104729);
     const moves = frames.slice(0, 11).flatMap(f => f.events).filter(e => e.type === 'movement' && e.unitId === 'e3');
+    // The P0/P1 lock recorded (3,1)->(2,1). That was the uncommitted detour; the approved rule holds (3,3).
     expect(moves).toEqual([
       { type: 'movement', tick: 1, unitId: 'e3', from: { col: 2, row: 0 }, to: { col: 2, row: 1 } },
-      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 1 } },
-      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 1 }, to: { col: 2, row: 1 } },
+      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 2 } },
+      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 2 }, to: { col: 3, row: 3 } },
     ]);
     expect([0, 5, 10].map(i => get(frames[i].state, 'e3').targetId)).toEqual(['p6', 'p6', 'p6']);
     expect(reportBattle(104729, true)).toEqual(frames);

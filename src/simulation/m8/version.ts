@@ -8,6 +8,8 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
  * Neutrals: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
  * Targeting: in-range retention and one-step chase; equal distance draws the combat
  * lcg32 stream; stun/knock-up holds the ordinary target until the release tick.
+ * Melee pathing: shortest empty attack hex, held until settled or the target changes;
+ * equal length draws the same stream; same-tick contests follow id order.
  * The optional engaged-target fact is authenticated by combat replay. No new commands/events.
  * Anomaly: planning, shared eligibility, initial-twelve quote protection and R5 sale-persistent entitlement.
  * Schema/save/replay/command remain 12/8/8/7. Older identities are rejected.
