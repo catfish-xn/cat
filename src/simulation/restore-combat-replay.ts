@@ -15,7 +15,7 @@ export interface CombatReplayFacts {
   readonly nextEventSeq: CombatState['nextEventSeq'];
   readonly damageContributors: CombatState['damageContributors'];
   readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
-  readonly units: readonly (Pick<CombatUnit, 'mana' | 'manaLockedUntilTick' | 'damageManaRemainderCenti' | 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'g23Sion' | 'maxHp' | 'maxHpBasis'> & {
+  readonly units: readonly (Pick<CombatUnit, 'targetId' | 'targetEngaged' | 'mana' | 'manaLockedUntilTick' | 'damageManaRemainderCenti' | 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'g23Sion' | 'maxHp' | 'maxHpBasis'> & {
     readonly periodicTasks: NonNullable<CombatUnit['mechanismState']>['periodicTasks'];
     readonly abilityContributions: readonly import('./m8/contracts').StatusContribution[];
     readonly abilityStatuses: CombatUnit['statuses'];
@@ -52,7 +52,7 @@ function facts(state: CombatState): CombatReplayFacts {
   return structuredClone({ openingDeaths:state.openingDeaths, openingState: state.openingState, tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
     nextActionSeq: state.nextActionSeq, nextEventSeq: state.nextEventSeq,
     damageContributors: state.damageContributors, nextTriggerEventSeq: state.nextTriggerEventSeq, units: state.units.map(unit => ({
-    id: unit.id, definitionId: unit.definitionId, mana: unit.mana,
+    id: unit.id, definitionId: unit.definitionId, mana: unit.mana, targetId: unit.targetId, targetEngaged: unit.targetEngaged,
     manaLockedUntilTick: unit.manaLockedUntilTick, damageManaRemainderCenti: unit.damageManaRemainderCenti,
     curseCaster: unit.ability.kind === 's13' && unit.ability.championId === 'morgana',
     buddyTriggered: unit.runtime?.buddyTriggered, castCount: unit.runtime?.castCount,

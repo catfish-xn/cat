@@ -46,6 +46,8 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
     throw new Error('Invalid Match save: combat cursor binding facts');
   for (const unit of combat.units) {
     const settledUnit = expected.units.find(u => u.id === unit.id)!;
+    if (unit.targetId !== settledUnit.targetId || unit.targetEngaged !== settledUnit.targetEngaged)
+      throw new Error('Invalid Match save: target binding facts');
     if (unit.mana !== settledUnit.mana || unit.manaLockedUntilTick !== settledUnit.manaLockedUntilTick
       || unit.damageManaRemainderCenti !== settledUnit.damageManaRemainderCenti)
       throw new Error('Invalid Match save: mana binding facts');

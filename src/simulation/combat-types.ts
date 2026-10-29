@@ -37,6 +37,8 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  /** S13: current target has reached attack range; persists through a pending one-step chase. */
+  readonly targetEngaged?: true;
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
   readonly madChemist?: import('./augment-pool-batch5-r4').MadChemistRuntime;
   readonly batch5RebelPulseAtTick?: number;

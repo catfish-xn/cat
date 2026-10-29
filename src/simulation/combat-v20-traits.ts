@@ -80,7 +80,7 @@ export function quickDashV20(ctx:AbilityContext,u:S13Unit):void {
   const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat()
     .filter(c=>hexDistance(c,target.cell)===1&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0))
     .sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
-  if(u.targetId!==target.id)ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});u.targetId=target.id;
+  if(u.targetId!==target.id){ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});delete u.targetEngaged;}u.targetId=target.id;
   if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 /** Menaces monsters use the existing Silco attack-agent convention: no health/body collision or jar hit. */

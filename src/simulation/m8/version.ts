@@ -4,9 +4,12 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v26-neutrals-1424: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
- * Mechanisms, loss damage, schema/save/replay/command remain unchanged (12/8/8/7).
- * Changed content identity rejects older saves/replays; fixtures are re-recorded separately. */
+/** v26-neutrals-1424 plus targeting-p0 (28fd974a).
+ * Neutrals: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
+ * Targeting: ordinary target retention and one-step chase; the optional engaged-target
+ * fact is authenticated by combat replay. No new commands/events.
+ * Schema/save/replay/command remain 12/8/8/7. Older identities are rejected.
+ * targeting-p0 labeled this s13-g2-3-v26-online-rules; epoch re-record stays with the execution side. */
 export const M8_VERSION = {
   schemaVersion: 12, rulesVersion: 's13-g2-3-v26-neutrals-1424', contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424',
   saveFormatVersion: 8, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
