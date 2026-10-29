@@ -12,7 +12,7 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
-import { publicAuthoredPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicAuthoredPreparation, publicHeraldTarget as publicDragonTarget, publicHeraldEquipment as publicDragonEquipment } from './fixtures/m8-neutral-public-route';
 import { NEUTRAL_ENCOUNTERS } from '../src/simulation/content/neutral-encounters';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -21,6 +21,11 @@ vi.setConfig({ testTimeout: 20_000 });
 // Every prefix comes from a complete public command-only acquisition route. v22: seed 42's scuttle-crab
 // opening replaces the authored encounters, so these prefixes come from the crab-free route.
 const prepared=publicAuthoredPreparation;
+// Command-only acquisition is shared fixture setup, just like the route prefixes above.
+// Each timed case still parses/restores its own graph and checks every combat checkpoint.
+const equipmentPrefixes=new Map([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud'],['quicksilver'],['edge-of-night']]
+  .map(ids=>[JSON.stringify(ids),publicDragonEquipment(ids)] as const));
+const dragonEquipment=(ids:readonly string[])=>restoreMatch(serializeMatch(equipmentPrefixes.get(JSON.stringify(ids))!));
 // COMPILED_NEUTRAL_ENCOUNTERS now also lists the opening crab variants; this suite covers the eight authored ones.
 const AUTHORED=COMPILED_NEUTRAL_ENCOUNTERS.filter(e=>NEUTRAL_ENCOUNTERS.some(n=>n.encounterId===e.encounterId));
 function battleFixture(roundId:string):api.MatchState {
@@ -56,7 +61,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     expect(['settlement','gameOver']).toContain(s.phase);
     expect(s.combat!.units.filter(u=>u.team==='enemy').every(u=>u.mana===0 && u.maxMana===0)).toBe(true);
   });
-  it.each(['3-7','6-7'])('%s separates captured initial events from tick-zero opening moves committed by the first step',roundId=>{
+  it.each(['3-7'])('%s separates captured initial events from tick-zero opening moves committed by the first step',roundId=>{
     const preparedState=prepared(roundId),start=api.startMatchCombat(preparedState);
     if(!start.ok) throw new Error('fixture cannot start');
     const initial=start.state.combat!,initialEvents=start.events.filter(e=>e.domain==='combat');
@@ -64,7 +69,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     expect(initial.openingState).toBeUndefined();
     expect(initialEvents.some(e=>e.type==='movement')).toBe(false);
     const first=api.stepMatch(start.state),moves=first.events.filter(e=>e.type==='movement' && e.tick===0);
-    expect(first.state.combat!.tick).toBe(1);expect(moves.length).toBe(roundId==='3-7'?5:1);
+    expect(first.state.combat!.tick).toBe(1);expect(moves.length).toBe(5);
     for(const e of moves) expect(e.eventSeq).toBeGreaterThanOrEqual(initial.nextEventSeq!);
     expect(first.state.combat!.openingState!.committed).toBe(true);
     expect(api.stepMatch(first.state).events.filter(e=>e.type==='movement' && e.tick===0)).toEqual([]);
@@ -76,7 +81,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       ['pve-minion-melee-b','pve-minion-melee-b','pve-minion-ranged-b'],
       ['pve-minion-melee-c','pve-minion-melee-c','pve-minion-ranged-c','pve-minion-ranged-c'],
     ]);
-    expect(ROUND_CATALOG.filter(r=>r.kind==='pve').flatMap(r=>createRoundEnemies(r.ordinal))).toHaveLength(25);
+    expect(ROUND_CATALOG.filter(r=>r.kind==='pve').flatMap(r=>createRoundEnemies(r.ordinal))).toHaveLength(24);
   });
   it('returns public immutable previews without draws, hidden loot or manufacturing a special encounter pool',()=>{
     for(const id of ['1-2','2-1','2-4','4-7','6-7']) {
@@ -90,7 +95,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       for(const u of view!.units) expect(u.stats.maxHp).toBeGreaterThan(0);
     }
     // v22 cleaned the encounter text; a crab-free 1-2 is the fixed ordinary PvE note, never a special pool.
-    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toBe('固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。');
+    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toBe('固定普通PvE；2026-10-29批准的14.24基础数值，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。');
     expect(readEncounterPreview(prepared('2-1'))!.encounterId).toBe('pvp:2-1');
   });
   it('keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates',()=>{
@@ -118,21 +123,19 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{x.combat.openingDefinitions=[{kind:'backline-jump',source:{}}];});
     corrupt(s,x=>{x.combat.companionState={};});
   });
-  it.each(['3-7','6-7'])('rejects replayed, removed, cancelled and geometry-mutated opening consumption for %s',id=>{
+  it.each(['3-7'])('rejects replayed, removed, cancelled and geometry-mutated opening consumption for %s',id=>{
     const s=api.stepMatch(battleFixture(id)).state;roundTrip(s);
     corrupt(s,x=>{delete x.combat.openingState;});
     corrupt(s,x=>{x.combat.openingState.committed=false;});
     corrupt(s,x=>{x.combat.openingState.initialUnits[0].cell.col=6;});
     corrupt(s,x=>{x.combat.openingState.plans[0].to.col=6;});
-    if(id==='6-7') for(const status of ['pending','cancelled']) corrupt(s,x=>{x.combat.openingState.plans[0].task.status=status;});
+
   });
 
-  it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
+  it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores real dragon attacks after earlier tick-one aura maintenance: %j',(...ids)=>{
     const items=ids as string[];
-    // The live branch explicitly returns its legitimately acquired Ionic Spark to the single Herald target.
-    // Sunfire starts at tick 40, so cannot establish tick-one maintenance; keep the earlier-action scenario.
-    // Only the five approved nonempty saves use generated raw input. Independent parsing and the full production restore stay inside this case.
-    let s=items.length ? restoreMatch(publicHeraldRawInput(items)) : publicHeraldEquipment(items);
+    // Acquire equipment through public commands in the current epoch; no old Herald save is restored.
+    let s=dragonEquipment(items);
     if (!items.length) {
       const aura = s.items.find(item => item.definitionId === 'ionic-spark');
       expect(aura).toBeDefined();
@@ -147,21 +150,31 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     }
     s=accepted(api.startMatchCombat(s));roundTrip(s);
     const maintained = api.stepMatch(s); s=maintained.state; roundTrip(s);
-    // Independent scenario obligation: an actual aura status must precede the charge receipt.
     const auraContributions = s.combat!.units.flatMap(u => u.mechanismState?.statuses.flatMap(g => g.contributions) ?? [])
       .filter(c => ['ionic-spark','evenshroud'].includes(c.source.definitionId));
     expect(auraContributions.length).toBeGreaterThanOrEqual(items.length || 1);
-    const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
-    expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length || 1,1]);
+    const events = [...maintained.events];
+    while (s.phase === 'combat' && !events.some(e => e.type === 'attack' && e.attackerId.startsWith('["pve"'))) {
+      const step = api.stepMatch(s); s = step.state; events.push(...step.events); roundTrip(s);
+    }
+    const auraIndex = events.findIndex(e => e.type === 'statusChanged' && e.group.contributions.some(c=>['ionic-spark','evenshroud'].includes(c.source.definitionId)));
+    const dragonIndex = events.findIndex(e => e.type === 'attack' && e.attackerId.startsWith('["pve"'));
+    expect(auraIndex).toBeGreaterThanOrEqual(0); expect(dragonIndex).toBeGreaterThan(auraIndex);
+    expect(s.combat!.units.find(u=>u.team==='enemy')).toMatchObject({definitionId:'pve-elder-dragon',attackCone:{secondaryDamageBps:3500}});
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');target.maxMana=0;target.mana=0;});
-    corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');const status=target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>c.source.definitionId==='void-charge-project-v1');status.source.effectIndex=2;});
+    corrupt(s,x=>{x.combat.units.find((u:any)=>u.team==='enemy').attackCone.secondaryDamageBps=3501;});
+    corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.mechanismState?.statuses.some((g:any)=>g.contributions.some((c:any)=>['ionic-spark','evenshroud'].includes(c.source.definitionId))));
+      target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>['ionic-spark','evenshroud'].includes(c.source.definitionId)).source.effectIndex=99;});
   });
-  it.each(['quicksilver','edge-of-night'])('round-trips legal Herald item immunity/cleanup boundaries with %s',definitionId=>{
-    let s=restoreMatch(publicHeraldRawInput([definitionId]));
-    s=accepted(api.startMatchCombat(s));roundTrip(s);
-    for(let tick=0;tick<15;tick++) {s=api.stepMatch(s).state;roundTrip(s);}
-    if(definitionId==='quicksilver') expect(s.combat!.neutralReceipts!.controls).toEqual([]);
-    else expect(s.combat!.neutralReceipts!.controls).toHaveLength(1);
+  it.each(['quicksilver','edge-of-night'])('round-trips actual dragon damage and item protection with %s',definitionId=>{
+    let s=dragonEquipment([definitionId]);
+    const start=api.startMatchCombat(s);s=accepted(start);roundTrip(s);
+    const events:api.MatchEvent[]=start.ok?[...start.events]:[];
+    for(let tick=0;tick<30 && s.phase==='combat';tick++) {const step=api.stepMatch(s);s=step.state;events.push(...step.events);roundTrip(s);}
+    expect(events.some(e=>e.type==='packetDamage' && e.outcome.context.source.ownerId.startsWith('["pve"'))).toBe(true);
+    const protection=events.filter(e=>e.type==='statusChanged' && e.group.contributions.some(c=>c.source.definitionId===definitionId));
+    expect(protection.some(e=>e.type==='statusChanged' && e.group.kind===(definitionId==='quicksilver'?'control-immunity':'damage-prevention'))).toBe(true);
+    expect(s.combat!.neutralReceipts!.controls).toEqual([]);
   });
   it('pins the current catalog assumptions used by pure opening restore, without executing combatStart',()=>{
     const first=Object.values(ITEM_DEFINITIONS).flatMap(d=>d.combatProgram?.periodic ?? []).filter(p=>(p.startsAtTick ?? p.periodTicks)===1);
@@ -184,17 +197,21 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].tick++;});
     corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].eventSeq++;});
   });
-  it('rejects deletion of active Herald control, its receipt, or both, and forged cleanup',()=>{
-    let s=publicHeraldTarget();
+  it('6-7 restores real dragon attack boundaries and rejects legacy opening/control injection',()=>{
+    let s=publicDragonTarget();
     s=api.stepMatch(accepted(api.startMatchCombat(s))).state;roundTrip(s);
-    expect(s.combat!.neutralReceipts!.controls).toHaveLength(1);
-    const erase=(x:any)=>{const u=x.combat.units.find((u:any)=>u.id==='unit-1');u.mechanismState.statuses=[];u.statuses=[];};
-    corrupt(s,erase);corrupt(s,x=>{x.combat.neutralReceipts.controls=[];});
-    corrupt(s,x=>{erase(x);x.combat.neutralReceipts.controls=[];});
-    corrupt(s,x=>{erase(x);const r=x.combat.neutralReceipts.controls[0];r.removedAtTick=1;r.removedEventSeq=x.combat.nextEventSeq-1;r.removedReason='expired';});
-    corrupt(s,x=>{x.combat.neutralReceipts.controls.push(x.combat.neutralReceipts.controls[0]);});
-    for(let i=0;i<11;i++) s=api.stepMatch(s).state;
-    roundTrip(s);expect(s.combat!.neutralReceipts!.controls[0]).toMatchObject({removedAtTick:12,removedReason:'expired'});
+    expect(s.combat!.units.filter(u=>u.team==='enemy').map(u=>u.definitionId)).toEqual(['pve-elder-dragon']);
+    expect(s.combat!.openingDefinitions).toEqual([]);
+    // A forged opening or control receipt must fail even though the dragon has no opening task.
+    corrupt(s,x=>{x.combat.openingDefinitions=[{kind:'path-charge',source:{}}];});
+    corrupt(s,x=>{x.combat.openingState={committed:true,plans:[],initialUnits:[]};});
+    corrupt(s,x=>{x.combat.neutralReceipts.controls.push({key:'legacy-charge',targetId:'unit-1',appliedEventSeq:0,removedAtTick:null,removedEventSeq:null,removedReason:null});});
+    let attacks=0;
+    while(s.phase==='combat' && attacks<2){
+      const step=api.stepMatch(s);s=step.state;
+      if(step.events.some(e=>e.type==='attack'&&e.attackerId.startsWith('["pve"'))){attacks++;roundTrip(s);}
+    }
+    expect(attacks).toBe(2);roundTrip(s);
   });
   it.each([0,1,42,0xffffffff])('stage-one combat clears with random one-star opening heroes, seed %i through actual orb grants',seed=>{
     let s=api.createMatch(seed);

@@ -5,16 +5,16 @@ const accepted = (result: api.MatchCommandResult): api.MatchState => {
   return result.state;
 };
 
-/** A lawful position swap retains actual same-tick source deaths under G2-3. */
+/** 14.24 stats: publicly swap Leona/Loris so r03 and r04 still die in one real batch. */
 export function simultaneousB8Preparation(initial: api.MatchState): api.MatchState {
-  const lux = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'lux')!;
-  const nami = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'nami')!;
+  const leona = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'leona')!;
+  const loris = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'loris')!;
   const slot = Array.from({length: initial.preparation.benchSize}, (_, i) => i).find(i =>
     !initial.preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === i));
   if (slot === undefined) throw new Error('Public B8 prefix needs one free bench slot');
-  let state = accepted(api.deployMatchUnit(initial, lux.id, {kind:'bench', slot}));
-  state = accepted(api.deployMatchUnit(state, nami.id, lux.location));
-  return accepted(api.deployMatchUnit(state, lux.id, nami.location));
+  let state = accepted(api.deployMatchUnit(initial, leona.id, {kind:'bench', slot}));
+  state = accepted(api.deployMatchUnit(state, loris.id, leona.location));
+  return accepted(api.deployMatchUnit(state, leona.id, loris.location));
 }
 
 /** Keep actual equipment/receipts, bench every other hero through public commands. */

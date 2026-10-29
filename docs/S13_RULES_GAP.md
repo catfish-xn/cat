@@ -692,7 +692,7 @@ D3-A 排除全部消耗品，LOOT §2 掉率 0；当前装备系统只支持合�
 
 S6 的 `TFT_Krug.ability.desc` 为：“Passive: Heal to full Health whenever an allied Krug dies.” 这是 **石甲虫专属 H 语义**。能力变量为空，不能编造一个来源百分比字段；“回满”可表示治疗需求为自身当时缺失生命的100%，但重伤交互和同 tick 时序并不在原档中。
 
-原候选静态 HP=1200、AD=110、AS≈0.8、护甲50、魔抗25；这些也不能直接当作当前项目遭遇值。现行 `content/neutrals.ts` 的石甲虫为 **400HP、30AD、AS8000Bps、双抗20**，`stone-salvage-project-v1` 为 `missingHpBps=10000,maxReactions=2`。ENCOUNTERS §5 已规定同 encounter/同队/同族的正式死亡触发，下一 tick 正常治疗阶段执行，受重伤，不能复活同批已死者。
+原候选静态 HP=1200、AD=110、AS≈0.8、护甲50、魔抗25；这些也不能直接当作当前项目遭遇值。旧项目削弱表（已被2026-10-29用户决定取代）的石甲虫为 **400HP、30AD、AS8000Bps、双抗20**；现行恢复为 **1200HP、110AD、AS8000Bps、护甲50／魔抗25**（见 [恢复记录](NEUTRALS_14_24_RESTORATION.md)），`stone-salvage-project-v1` 为 `missingHpBps=10000,maxReactions=2`。ENCOUNTERS §5 已规定同 encounter/同队/同族的正式死亡触发，下一 tick 正常治疗阶段执行，受重伤，不能复活同批已死者。
 
 其他来源：狼是开场跳后排，鸟是同族死亡加攻速，龙/先锋是各自攻击或开场能力；**“野怪每死一只，其余所有野怪回满血”未找到来源。** 不把石甲虫机制推广到小兵、狼、鸟。
 

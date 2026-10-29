@@ -362,7 +362,8 @@ const ROUND_IDS=['1-2','1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7',
  '5-1','5-2','5-3','5-4','5-5','5-6','5-7','6-1','6-2','6-3','6-4','6-5','6-6','6-7'];
 const ROUNDS=ROUND_IDS.map((roundId,index)=>{const [stage,sub]=roundId.split('-').map(Number);return {roundId,ordinal:index+1,stage,sub,kind:stage===1?'pve':sub===4?'supply':sub===7?'pve':'pvp'};});
 // v22 opening crabs replace a round's neutrals; original slot k (sorted ids) drops from crab c{min(k,n-1)}.
-const ORIGINAL_PVE_SLOTS={'1-2':['m01','m02'],'1-3':['m01','m02','r01'],'1-4':['m01','m02','r01','r02'],'2-7':['k01','k02','k03'],'3-7':['w00','w01','w02','w03','w04'],'4-7':['r00','r01','r02','r03','r04','r05'],'5-7':['d01'],'6-7':['h01']};
+// 2026-10-29 approved literal transcription: 4-7 = one large + four small birds; 6-7 = one elder dragon (d01). No content imports.
+const ORIGINAL_PVE_SLOTS={'1-2':['m01','m02'],'1-3':['m01','m02','r01'],'1-4':['m01','m02','r01','r02'],'2-7':['k01','k02','k03'],'3-7':['w00','w01','w02','w03','w04'],'4-7':['r00','r01','r02','r03','r04'],'5-7':['d01'],'6-7':['d01']};
 function lootCarrier(combat,sourceId){
  const [kind,roundId,,slotId]=JSON.parse(sourceId),units=combat?.units??[];
  if(kind!=='pve'||units.some(u=>u.id===sourceId))return sourceId;

@@ -35,7 +35,7 @@ export const SAMPLE_SOURCES: Readonly<Record<string, string>> = {
   [source('2-7', 'krugs-v1', 'k01')]: 'pve-krug', [source('2-7', 'krugs-v1', 'k02')]: 'pve-krug',
   [source('3-7', 'wolves-v1', 'w00')]: 'pve-wolf-large', [source('3-7', 'wolves-v1', 'w01')]: 'pve-wolf-small',
   [source('4-7', 'razorbeaks-v1', 'r00')]: 'pve-razorbeak-large', [source('4-7', 'razorbeaks-v1', 'r01')]: 'pve-razorbeak-small',
-  [source('6-7', 'rift-herald-v1', 'h01')]: 'pve-rift-herald',
+  [source('6-7', 'elder-dragon-v1', 'd01')]: 'pve-elder-dragon',
 };
 
 export interface LootSample {

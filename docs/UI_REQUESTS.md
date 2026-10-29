@@ -1299,3 +1299,11 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 - 单人现有 `src/rendering/match-session.ts:104` 的 `claimOrb` 固定 blocked，且既有法球展示以线上模式为主。若 D5 同时向单人开放本卡，请让单人 Session 和法球展示沿既有规则 `claimOrb(state,orbId,state.round)` 接线；不得在 UI 直接发单位或合星。D4 保持界面目录未改。
 - 验收：选取后先显示六个灰色法球、棋盘／备战席清空（锻造器保留）；领取才出现二星并合星；满席保留法球，重复领取无额外奖励。线上 2D／3D 已有 choose／claimOrb 回调路径。
 - 规则接口、全部调用点与恢复边界见 [D4 合同](D4_RESTART_MISSION.md)。候选池当前仍未注册，D5 再处理开放与统一证据重录。
+
+## NEUTRALS-1424（2026-10-29，Codex → Claude）
+
+规则按用户已批准表恢复，差异、所有调用点、旧断言替换及重录清单见 [NEUTRALS_14_24_RESTORATION.md](NEUTRALS_14_24_RESTORATION.md)。无新字段或命令；`definitionId / monsterFamily / encounterId / unitId / stats` 的结构不变。4-7为1大鸟+4小鸟；6-7为 `elder-dragon-v1 / d01 / pve-elder-dragon`，实例ID仍含roundId。既有2D名字／头像与3D模型映射自动复用远古龙。
+
+- 静态样例 `src/presentation/loot-preview/fixtures.ts:SAMPLE_SOURCES` 已按本次用户明确指示替换为上述龙身份；`stage-track.ts` 已改按roundId查询，5-7/6-7可共用encounterId。该模块非实际游戏状态，游戏入口不导入它。
+- 3D使用已有 `pve-elder-dragon` manifest key，不增加素材。模型文件已在本机忽略目录只读核对；当前工作树没有完整本地素材包。验收：配置已有素材根时5-7/6-7均显示龙，失败仍走已有占位回退；不根据中文名或回合另造规则。
+- Claude统一重录新纪元的生成digest、golden及存档／路线fixture（三份独立可执行oracle由Codex手写更新）；本轮未运行 `--write`。特别是旧6-7先锋的冲锋、眩晕、控制收据Match场景不能通过仅重录JSON来保留，本轮已改为狼跳、远古龙与鸟buff的真实Match等价覆盖；先锋通用纯战斗回归已保留且独立于旧路线执行。PvE失败扣血仍保持原公式。
