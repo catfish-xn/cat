@@ -5,7 +5,7 @@ import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
 import { RULES_GAP_MANIFEST, ARCHIVED_AUGMENT_DEFINITIONS } from '../scripts/augment-content-archive';
 import { offeredAt, STAGE_SEEDS, fieldedRoute } from './augment-stage-helpers';
 import { readFileSync } from 'node:fs';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
@@ -46,8 +46,9 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { ad, spellCrit, amount as amountAt } from '../src/simulation/combat-s13-state';
 const amountOf=(u:any,key:string)=>amountAt(u,0,{ap:u.ability.variables[key]/10000});
 import { withB1Offers } from './fixtures/b1-scripted-offers';
+import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 import { accept, room } from './tp-helpers';
-import { reachRound, resolveM5Choices, emptyBoard, fieldBench, accepted } from './match-helpers';
+import { reachRound, resolveM5Choices, emptyBoard, fieldBench, accepted, freeze } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { snapshotForBattle, restorePlayerBattleSnapshot } from '../src/simulation/two-sided-snapshot';
 
@@ -316,7 +317,12 @@ it('Wealthy Rehab: team omnivamp is declared, healing is counted into the battle
  const plan=(()=>{const x=drainBatch3Gold({...s,round:3});return x.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3');})();
  expect(plan.map(r=>[r.kind,(r as any).amount,r.round])).toEqual([['gold',8,3]]);
 });
-it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection'])('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
+describe('augment runtime saves',()=>{
+const ids=['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection'];
+// Search the real public offers once per card, outside the restore/tamper case.
+// Each bounded hook has the original default timeout, including filtered runs.
+for(const id of ids)beforeAll(()=>{publicOpen(id);});
+it.each(ids)('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
  let s=publicOpen(id);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
  // v23 fmix32 openings can bench component anvils (never fielded): deploy the first two champions.
@@ -333,7 +339,11 @@ it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protect
  }
  expect(checked).toBeGreaterThan(0);if(id==='blazing-soul-i')expect(tampered).toBeGreaterThan(0);
 });
-it('Noble Sacrifice grants from a real ally death restore exactly, and an edited grant amount is rejected', ()=>{
+});
+describe('Noble Sacrifice ally-death save',()=>{
+ let grantState:MatchState|undefined;
+ afterAll(()=>{grantState=undefined;});
+ beforeAll(()=>{
  let found=false;
  for(let seed=0;seed<3000&&!found;seed++){
   const opened=openAt('noble-sacrifice',seed);if(!opened)continue;let s:MatchState=opened;const c=s.pendingChoice!;
@@ -348,12 +358,21 @@ it('Noble Sacrifice grants from a real ally death restore exactly, and an edited
   while(s.phase==='combat'&&!found){
    s=stepMatch(s).state;const grants=s.combat?contributions(s.combat as any,'noble-sacrifice'):[];
    if(!grants.length)continue;found=true;
+   // Cache only the actual battle result, never a restored/validated substitute.
+   grantState=freeze(structuredClone(s));
+  }
+ }
+ });
+ it('Noble Sacrifice grants from a real ally death restore exactly, and an edited grant amount is rejected', ()=>{
+  const found=grantState!==undefined;
+  if(grantState){
+   const s=structuredClone(grantState);
    expect(restoreMatch(serializeMatch(s))).toEqual(s);
    const edit=structuredClone(s) as any;const k=edit.combat.units.flatMap((u:any)=>u.mechanismState?.statuses.flatMap((g:any)=>g.contributions)??[]).find((k:any)=>k.source.definitionId==='noble-sacrifice');
    k.application.modifier.value.amount+=1;expect(()=>restoreMatch(serializeMatch(edit))).toThrow();
   }
- }
- expect(found).toBe(true);
+  expect(found).toBe(true);
+ });
 });
 
 it('Bad Luck Protection: the team never deals a critical hit and gains 1% AD per 1% crit chance; RNG consumption is unchanged', ()=>{
@@ -452,6 +471,8 @@ it('Gold for Dummies: each live dummy records a pulse every 10 seconds of combat
  expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').reduce((n,r)=>n+((r as any).amount??0),0)).toBe(5);
  expect(()=>advanceG23Economy(readG23Progress(s)!,{...fact(4,['pvp','win']),batch3Dummy:{deaths:[],first:null,gold:-1}})).toThrow();
 });
+describe('training dummy save',()=>{
+beforeAll(()=>{publicOpen('gold-for-dummies');});
 it('a real match with a training dummy restores mid-combat exactly and rejects an edited dummy', ()=>{
  let s=publicOpen('gold-for-dummies');const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,'gold-for-dummies') as any).state as MatchState;
@@ -462,6 +483,7 @@ it('a real match with a training dummy restores mid-combat exactly and rejects a
  while(s.phase==='combat'){s=stepMatch(s).state;if(s.combat&&s.combat.tick%100===1){expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;
   const edit=structuredClone(s) as any,d=edit.combat.units.find((u:any)=>u.definitionId==='training-dummy');d.hp=Math.max(1,d.hp-1);if(d.alive)expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}
  expect(checked).toBeGreaterThan(0);
+});
 });
 it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure','tower-defense'])('%s: a public selection saves and restores through a real round', id=>{
  let s=publicOpen(id);const c=s.pendingChoice!;
@@ -589,9 +611,17 @@ it('All Out: no resists on cast; the empowered attack splashes 25% to enemies ne
  const {events}=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.delivery==='attack-extra'&&e.outcome.context.source.ownerId==='h0',1200);
  expect(events.some(e=>e.type==='packetDamage'&&e.outcome.context.delivery==='attack-extra'&&e.outcome.context.source.ownerId==='h0')).toBe(true);
 });
-it.each(['blood-pact','field-medic','shocking-troll'])('%s: a real mid-combat save restores exactly and an edited hero runtime is rejected', id=>{
- let seed=0,s:MatchState|undefined;
- for(;seed<4000&&!s;seed++)s=openAt(id,seed);
+describe('hero runtime saves',()=>{
+ const ids=['blood-pact','field-medic','shocking-troll'];
+ const opens=new Map<string,MatchState>();
+ afterAll(()=>{opens.clear();});
+ for(const id of ids)beforeAll(()=>{
+  let seed=0,s:MatchState|undefined;
+  for(;seed<4000&&!s;seed++)s=openAt(id,seed);
+  if(s)opens.set(id,freeze(structuredClone(s)));
+ });
+it.each(ids)('%s: a real mid-combat save restores exactly and an edited hero runtime is rejected', id=>{
+ let s=opens.has(id)?structuredClone(opens.get(id)!):undefined;
  expect(s).toBeDefined();const c=s!.pendingChoice!;
  s=accept(selectChoice(s!,c.choiceId,c.generation,id) as any).state as MatchState;
  const hero=s.preparation.units.find(u=>u.definitionId===AUGMENT_BATCH3[id].hero)!;
@@ -600,6 +630,7 @@ it.each(['blood-pact','field-medic','shocking-troll'])('%s: a real mid-combat sa
  while(s!.phase==='combat'){s=stepMatch(s!).state;if(s.combat&&s.combat.tick%60===5){expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;
   const edit=structuredClone(s) as any,u=edit.combat.units.find((x:any)=>x.id===hero.id);if(u&&u.alive){u.runtime.permanentAdBps+=1;expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}}
  expect(checked).toBeGreaterThan(0);
+});
 });
 it('Savage Revenge: 10 less mana; the cast pounces on the farthest enemy within 2 hexes with 110% damage', ()=>{
  const {state,plain}=heroCombat('savage-revenge','renni',{enemies:3,cluster:true});
@@ -661,9 +692,20 @@ function openAt(id:string,seed:number):MatchState|undefined {
  * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (v25 drift-13: seed 89 is the first openAt/reach42 hit in 0..100 that restores after pick).
  * The pinned seed must still open the offer; re-run the search if the pool, openings or route change. */
 const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':89};
+// The draw policy is part of the input. Frozen, genuinely executed checkpoints
+// stay private; callers receive their own plain snapshot and still run all
+// acquisition/combat/restore checks independently.
+const publicOpens=new Map<string,MatchState>();
+afterAll(()=>{publicOpens.clear();});
 function publicOpen(id:string):MatchState {
- const seed=PINNED_OPEN_SEEDS[id];if(seed===undefined)return publicPick(id,6000,0,false);
- const s=openAt(id,seed);expect(s?.pendingChoice?.offers,`${id} at seed ${seed}`).toContain(id);return s!;
+ const key=JSON.stringify([id,b1OfferCacheKey()]),seed=PINNED_OPEN_SEEDS[id];
+ let s=publicOpens.get(key);
+ if(!s){
+  s=seed===undefined?publicPick(id,6000,0,false):openAt(id,seed);
+  if(s)publicOpens.set(key,freeze(structuredClone(s)));
+ }
+ if(seed!==undefined)expect(s?.pendingChoice?.offers,`${id} at seed ${seed}`).toContain(id);
+ return structuredClone(s!);
 }
 /** A public offer of `id` at its first allowed augment node (14.24 stage tags); later nodes also use the free card rerolls. */
 function publicPick(id:string,maxSeed=6000,from=0,buy=true):MatchState {
