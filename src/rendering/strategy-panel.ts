@@ -37,7 +37,7 @@ import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentIconUrl, augmentPlayerDescription } from '../presentation/augment-display';
 import type { AugmentDynamicValues } from '../simulation/augment-dynamic-values';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
@@ -209,7 +209,7 @@ export class StrategyPanel {
   private plannerButton?: HTMLButtonElement;
   /** G2: always-visible trait column above the panel (its own mount, so render() replacing the panel keeps it). */
   private readonly traitColumn: TraitColumn;
-  /** TFT HUD: the owned augments as a row of icons over the trait column (hover for the text). */
+  /** S13: the owned augments float beside the board, independently of the trait column. */
   private readonly augmentStrip = element('div', '', 'augment-strip');
   private augmentKey: string | null = null;
   private selectedItems: string[] = [];
@@ -271,7 +271,8 @@ export class StrategyPanel {
       if (state.augments.length || state.pendingChoice?.kind === 'augment') this.render();
     }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
-    this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
+    this.augmentStrip.dataset.debug = 'augment-strip';
+    (document.getElementById('board-root') ?? this.traitColumn.root.parentElement)?.append(this.augmentStrip);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     if (isOnline()) {
@@ -395,10 +396,10 @@ export class StrategyPanel {
       if (this.dismissalTimer !== null) this.shieldChoiceDismissal();
     });
     // Phaser also consumes native mouse/touch events bubbling to window.
-    // Isolate both the dialog and its dismissal shield at those entry points,
+    // Isolate the dialog, dismissal shield and floating augment icons at those entry points,
     // while leaving DOM click activation and keyboard commands intact.
     for (const type of ['click', 'mousedown', 'mouseup', 'mousemove', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
-      this.modal.addEventListener(type, event => event.stopPropagation());
+      for (const scope of [this.modal, this.augmentStrip]) scope.addEventListener(type, event => event.stopPropagation());
   }
 
   get blocksSell(): boolean {
@@ -571,7 +572,7 @@ export class StrategyPanel {
     // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
     const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
     const values = this.dynamicValues(state);
-    const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
+    const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentIconUrl(augment.definitionId), augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
     if (augmentKey !== this.augmentKey) {
       this.augmentKey = augmentKey;
       this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId, values)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
