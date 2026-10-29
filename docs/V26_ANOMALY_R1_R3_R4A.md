@@ -37,7 +37,7 @@
 
 报价证明只记录选择窗口，不开启普通对局的永久强化/战斗历史。solo 从独立复制的 origin 重演公开命令和准备时间推进；确认后封存报价、资格、唯一收据及资源前缀。`validateB8Resources` 先独立折叠出生/出售/移除/变形/合星/选择事实，认证当前资格和持有者；报价证明再比对已重演的 **anomalySelection**，不再用“原实例出售后血缘归零”推导资格销毁。`anomalyRestored` 是真实获取/协调事件，候选事件不能自行授权新绑定。恢复缓存只保留独立重演成功的私有规范文本，最多4个且合计不超过4 MiB（UTF-16）；负零证据不复用缓存。
 
-联机/本地房间从4-6起（含空席或候选删历史），`restoreSharedOrbSnapshot(pool,input,authority)` 须提供独立 `room.augmentHistoryAuthority(seatId)` 或 `captureAugmentHistoryAuthority(authoritativeState)`；候选 JSON 不能自签。缺失沿 `Invalid augment history: missing independent server authority`，内容不一致沿 `server facts/state mismatch`。对象/JSON/文本同样拒绝伪造已售旧实例、乱改资格/原英雄/选择身份、乱挪到另一副本或删除选择事实。
+联机/本地房间从4-6起（含空席或候选删历史），`restoreSharedOrbSnapshot(pool,input,authority)` 与 `restoreCarouselSeat(carousel,input,authority)` 须提供独立 `room.augmentHistoryAuthority(seatId)` 或 `captureAugmentHistoryAuthority(authoritativeState)`；候选 JSON 不能自签。选秀入口另外在无强化历史的多人席上，只要存在异变资格、绑定、选择收据、`anomaly-selected` 事实或报价历史，就同样要求该句柄，避免把 `round` 改到 4-6 之前绕过检查。历史装备折叠从候选收据重建 definitionId，不能单独证明异变定义。缺失沿 `Invalid augment history: missing independent server authority`，内容不一致沿 `server facts/state mismatch`。对象/JSON/文本同样拒绝伪造已售旧实例、乱改资格/原英雄/选择身份、同步改写 selection/binding/选择收据（及最后一条报价）的异变定义、乱挪到另一副本或删除选择事实。
 
 ## 全部生产调用点
 
@@ -59,6 +59,7 @@
 | `m5-audit-boundaries` | 保留禁售/封存/全部篡改断言；增加出售后真实获取同英雄、合法保存恢复，休眠和恢复后都拒绝把已售旧实例写回 binding。 |
 | `server/v17-avarice-battle-end-frozen` | 不能计为身份漂移。改用同一真实房间的 s3 对 s4（tick222），保留 offset=0/1/40，推进前后均精确要求4-6/battle，采样点早于本轮 deadline；保留冻结对象、liveFrames、花钱和实扣血断言。s2 的新终点546不再适合 offset40。相关路线证据须按新真实战斗同步。 |
 | `server/carousel-room:489` | 不能计为身份漂移。真实路线锁 s0 死于5-5、最近选秀5-4、fightsSinceCarousel=1；继续要求致死 hpLost=hpBefore、最新 pick 仍持有、granted 收据完整、淘汰返还及卡池守恒。相关整局死亡/选秀证据须同步。 |
+| `restoreCarouselSeat` 异变定义 | 不能计为身份漂移。seed=24 的 5-4 上，s2/s3/s7 无强化历史时，同步改写 selection、binding、选择收据定义（以及连最后一条报价一起改）且不传 authority，对象和 JSON 都必须拒绝。带房间 authority 的原快照仍须逐字恢复；错配 authority 报 `server facts/state mismatch`。 |
 | `augment-pool-batch5-g4-swarm:47` | 完整序列化 SHA 受 v26 身份和 R5 null 字段影响，保留原精确哈希，待统一 v26 重录。 |
 | `m8-b7-match-wiring` | 5项 Herald 真实路线的旧输入档 `unsupported-version`；保留失败，不把它们改为“旧档能拒绝”或放行旧档，另录 v26 输入再走原机制断言。 |
 | `m8-b8-live-transfer` | 先命中旧 v25 transfer-anchor 的内容摘要收集门禁；通过新纪元锚点后，还须更新唯一 anomaly-selected 增加的账本长度（88→89），不能漏报。其两项防伪原因已按更早权威检查精确调整。 |
@@ -87,7 +88,7 @@
 | 文件 | 断言失败 | 分类与核实依据 |
 | --- | ---: | --- |
 | `scripts/tests/production-size.test.ts` | 1 | **纯身份/纪元漂移**；压缩领域包的实时内容根038b00ca/战利品根9af7b4d0与旧硬编码f671ab88/36ebfac2不符；保留历史锚点，当前常量--check通过。 |
-| `tests/augment-history.test.ts` | 2 | **纯身份/纪元漂移**；旧 v24 哈希的归一化只识别 v25；v26 版本和新增 null 资格字段仍进入完整字节。独立 v26-anomaly-identity-audit 的四存档与完整战斗/事件反向替换均逐字/逐哈希恢复原证据。 |
+| `tests/augment-history.test.ts` | 2 | **纯身份/纪元漂移**；旧 v24 哈希的归一化只识别 v25；v26 版本和新增 null 资格字段仍进入完整字节。独立 v26-anomaly-identity-audit 的四存档与完整战斗/事件反向替换均逐字/逐哈希恢复原证据。本轮复跑仍是这两项，未改期望哈希：四无历史归一化 SHA 为 8a8c5f23…、93f40351…、085db605…、e7bab395…；战斗账本/终局归一化 SHA 为 ab08e5d6…（基线仍为 99174cbf…）。 |
 | `tests/augment-pool-batch3-progress.test.ts` | 2 | **纯身份/纪元漂移**；pre-spoils-v25 原文保留；独立反向替换仅版本/摘要及删除新 null 字段即恢复原全文，无数值或资源差异。 |
 | `tests/augment-pool-batch5-g4-swarm.test.ts` | 1 | **纯身份/纪元漂移**；旧完整序列化 SHA 保留；独立反向替换恢复 8dedd866… 原完整 SHA，未改玩法字节。 |
 | `tests/d11-wiring-bank.test.ts` | 1 | **纯身份/纪元漂移**；实时 CONTENT_DIGEST=038b00ca 与旧 f671ab88 锚点不符；原 bank/ledger 检查保留。 |
@@ -108,6 +109,12 @@
 | `tests/v19-part2.test.ts` | 1 | **纯身份/纪元漂移**；仍要求 rulesVersion=v25，当前统一为v26；schema/save/replay仍12/8/8。 |
 
 
-Git索引仍保留6个UU条目，这是本轮不写`.git`、不执行add的预期状态；对应工作区文件已经没有冲突标记。旧v26摘要或v25及更早身份均不可继续复用；前端锁盘/隐藏调阵没有在本轮做浏览器验收。
+Git索引仍保留6个UU条目，这是上一轮不写`.git`、不执行add的记录；对应工作区文件已经没有冲突标记。旧v26摘要或v25及更早身份均不可继续复用；前端锁盘/隐藏调阵没有在上一轮做浏览器验收。
 
-最终构建（含类型检查）、双摘要`--check`和`git diff --check`全部通过；2D顶层JS gzip-9=**632,031字节**，低于637,144上限。无新增lazy chunk；服务器、界面和素材无本轮修改。
+上一轮最终构建（含类型检查）、双摘要`--check`和`git diff --check`全部通过；2D顶层JS gzip-9=**632,031字节**，低于637,144上限。无新增lazy chunk；服务器、界面和素材无上一轮修改。
+
+## 选秀快照篡改返修（本轮）
+
+`restoreCarouselSeat` 在无强化历史时不再接受自洽改写的异变定义。seed=24、阶段 5-4 的 s2/s3/s7 覆盖对象与 JSON：原快照带房间 authority 仍相等；不带 authority、以及同步改写 selection/binding/选择收据（另含最后一条报价）都不带 authority 或带原 authority，分别拒绝为缺独立权威和状态不一致。共享池入口对同一输入保持相同结果。
+
+本轮相关集合 26 个文件（选秀恢复调用方、异变选择/R5/准备期、m5 审计边界、carousel-room、上述新篡改测试）：25 个文件通过，504 项通过，2 项跳过。唯一失败文件是 `tests/augment-history.test.ts` 的 2 项，仍是上表那条纯身份/纪元漂移，未 --write、未改断言。上表其余文件本轮未重跑，维持原分类，留给执行端统一重录。未改规则版本、内容摘要或已发布证据。`tsc --noEmit` 通过。2D 顶层 JS gzip-9 仍为 **632,031** 字节（`rendering3d-isolation`），低于 637,144；无新 chunk。服务器、界面和素材无本轮修改。
