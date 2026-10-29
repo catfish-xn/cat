@@ -19,6 +19,19 @@ beforeAll(async () => {
   origin = `http://127.0.0.1:${address.port}`;
   browser = await testBrowser();
   await mkdir(shots, { recursive: true });
+  // Vite's shared cold module graph belongs to setup, not the first layout case's
+  // 5 s budget. Cases still create fresh contexts and run every render/assertion.
+  const warmup = await browser.newPage();
+  try {
+    await warmup.route('**/shell-warmup', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><link rel="stylesheet" href="/src/style.css"><link rel="stylesheet" href="/src/rendering/reference-ui-2d.css">' }));
+    await warmup.goto(`${origin}/shell-warmup`);
+    await warmup.evaluate(`Promise.all([
+      import('/src/rendering/app-shell.ts'),
+      import('/src/rendering/strategy-panel.ts'),
+      import('/src/presentation/anvil-display.ts'),
+      import('/src/simulation/match.ts'),
+    ]).then(() => undefined)`);
+  } finally { await warmup.close(); }
 }, 60000);
 
 for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
