@@ -112,7 +112,11 @@ function animationEvent(event: LedgerCombatEvent) {
       delivery: event.outcome.context.delivery,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
-      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId,
+        sourceKind: share.source.sourceKind, definitionId: share.source.definitionId,
+        // The heal ledger has no damage delivery. This only fills PacketOrigin so a share
+        // can be told from an ability heal; it is not a damage context and does not settle.
+        delivery: healShareDelivery(share.source.sourceKind), actual: share.actual })) };
     case 'manaChanged': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'before', 'after']) };
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
@@ -143,8 +147,16 @@ type PacketOrigin = {
 /** Older replays omit these. New projections always send them; callers must not treat a missing tag as ability damage. */
 type RelaxPacketOrigin<T> = T extends { readonly type: 'packetDamage' }
   ? Omit<T, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] }
-  : T;
+  : T extends { readonly type: 'heal'; readonly shares: readonly (infer Share)[] }
+    ? Omit<T, 'shares'> & { readonly shares: readonly (Omit<Share, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] })[] }
+    : T;
 export type CombatAnimationEvent = RelaxPacketOrigin<NonNullable<ReturnType<typeof animationEvent>>>;
+function healShareDelivery(kind: PacketOrigin['sourceKind']): PacketOrigin['delivery'] {
+  if (kind === 'ability') return 'ability-direct';
+  if (kind === 'item') return 'equipment-proc';
+  if (kind === 'attack') return 'basic-attack';
+  return 'attack-extra';
+}
 export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
   | import('./seat-mechanics/replay-units').ReplayMembershipEvent;
