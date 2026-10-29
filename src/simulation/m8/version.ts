@@ -4,11 +4,11 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v25-online-rules: batch-5 history-backed augments, including Golden Find, Forbidden Magic and H13 item transforms.
- * Conditional shop-history-v1 and augment-history-v1 authenticate affected saves; no new replay facts or commands.
- * Schema/save/replay/command remain 12/8/8/7; older identities are rejected. */
+/** v26-neutrals-1424: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
+ * Mechanisms, loss damage, schema/save/replay/command remain unchanged (12/8/8/7).
+ * Changed content identity rejects older saves/replays; fixtures are re-recorded separately. */
 export const M8_VERSION = {
-  schemaVersion: 12, rulesVersion: 's13-g2-3-v25-online-rules', contentVersion: 's13-14.24b-g2-3-v25-online-rules',
+  schemaVersion: 12, rulesVersion: 's13-g2-3-v26-neutrals-1424', contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424',
   saveFormatVersion: 8, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** D2-A: the shipped M7 identifiers, used only to recognize files for read-only preservation. */

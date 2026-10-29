@@ -18,7 +18,7 @@ describe('online stage tracker', () => {
   });
   it('names the stage 1 minions and the stage 6 boss', () => {
     expect(stageTrackRounds(1).map(round => round.title)).toEqual(['1-2 野怪：小兵 ×2', '1-3 野怪：小兵 ×3', '1-4 野怪：小兵 ×4']);
-    expect(stageTrackRounds(ordinal('6-7')).at(-1)).toMatchObject({ roundId: '6-7', state: 'current', title: '6-7 野怪：峡谷先锋 ×1' });
+    expect(stageTrackRounds(ordinal('6-7')).at(-1)).toMatchObject({ roundId: '6-7', state: 'current', title: '6-7 野怪：远古巨龙 ×1' });
   });
   it('follows overtime with the current and the next PvP round', () => {
     const rounds = stageTrackRounds(ROUND_CATALOG.at(-1)!.ordinal + 2);
