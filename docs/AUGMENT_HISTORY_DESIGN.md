@@ -1,5 +1,13 @@
 # 强化历史证据设计与实现（方案 A）
 
+## v26 历史累计性能（2026-10-29）
+
+`appendAugmentFact` 的签名、事实顺序、边界行、失败原因和全部版本保持不变。WeakMap 旁表通过私有追加日志保存固定长度的索引前缀；私有日志沿同一条命令链追加摊销 O(1)，旧状态分叉时复制其前缀。公开 `facts` 及 solo proof 的 `commands` 始终为普通数组数据属性，没有访问器；冻结输入产生的后继恢复对象展开原有的可写、可配置、可枚举属性语义。发布每份历史时立即物化数组，JSON、structuredClone 和存档结构保持原样，纯数据快照可以继续共享不可变子图。Match 输入仍按既有不可变状态合同使用，旧快照不会随下一状态增长，冻结旧状态也不阻止后续追加。
+
+死亡完整性边界按 battleId/tick 索引，死亡 eventSeq 按 battleId 索引，查询只承认当前状态前缀以内的行。准备期时钟按自然轮保存不可变索引，保留最后 acquire／preparation-time 的原有优先顺序，以及显式 preparation-time 对准备计时命令的优先顺序。连续 stepMatch 只更新独立命令尾部的 count，切换命令才追加原尾部。所有旁路结构仅由执行状态生成，不写入存档，也不替代恢复重演或独立服务器 authority；冷输入从完整数组重建索引。
+
+通常连续命令链上的私有追加及死亡边界／时钟索引维护合计 O(F+T)，但公开原生数组在每次发布时仍需 O(F) 复制，命令数组需要 O(C) 复制。因此完整生产路径仍有 O(T·F+T·C) 的最坏成本，不能再沿用 getter 初稿对整条记录路径的线性宣称。若同时要求原生数组、立即可读的完整历史和旧状态固定内容，就无法在不改变表示或接口的前提下消除这部分复制。性能与逐字节验证见 [v26 性能报告](HISTORY_PERF_V26.md)。
+
 B5-69接入（P，2026-10-27）：`loot-explosion` 登记为deaths持有者；真实死亡观察增加可选 `lootExplosion{ killerUnitId, originalKillerUnitId, killerSeatId, critChanceBps }`。击杀包产生时采样、真实death落地时归档，沿既有WeakMap传递，战斗事件和回放字节无新增字段。联机在共享结算前以已验证执行结果记录死亡，结算后玩家伤害仍按原时序记录；没有B5-69的席位保持原时序。任何历史读取使用 `requireAugmentFacts`，联机恢复仍绑定独立authority。规则和奖励见 `augment-pool-batch5-g7.ts` 与 `MATCH_CONTRACT.md`；不是从候选收据补造历史。
 
 基线：`codex/v25-augment-history`，`ee2b019cc8d60fb11679d9ce8c54338f5ea4ea57`，来自 `claude/v24-integration`（PR #456）。本任务只提供历史基础设施，不新增任何强化定义、报价、奖励公式或现有内容数值，不提交 Git。
