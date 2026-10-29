@@ -241,18 +241,28 @@ describe('online authority',()=>{
   });
 });
 
-for(const mode of ['manual','bot','timeout'] as const)it(`makes three prior eliminations readable inside the ${mode} acquisition effect`,()=>{
-  fixture.allOwners=true;
+for(const mode of ['manual','bot','timeout'] as const)describe(`prior eliminations (${mode})`,()=>{
+  function createRoom(){
   const inner=new TwoSidedBattleResolver();
   // Same lethal-result fixture as round-commit tests: mark the rules seat eliminated so pool shares release.
-  const {room,clock}=makeRoom({resolveBattle(input,pool){
+  return makeRoom({resolveBattle(input,pool){
     const seat=input.seats[0];
     if(input.round===1&&['s1','s2','s3'].includes(seat.seatId))return {kind:'placeholder',battleId:input.battleId,round:input.round,roomRevision:input.roomRevision,outcomes:[{
       seatId:seat.seatId,state:{...seat.state,playerHp:0,multiplayer:{...seat.state.multiplayer!,status:'eliminated'}},result:null,damage:100,combat:null}]};
     return inner.resolveBattle(input,pool);
   }});
+  }
+  let room:ReturnType<typeof createRoom>['room'],clock:ReturnType<typeof createRoom>['clock'];
+  // Each mode owns a real room. Only the common route precedes the test;
+  // acquisition, stale-command identity and independent restore stay below.
+  let hook:ReturnType<typeof installHook>;
+  beforeAll(()=>{fixture.allOwners=true;({room,clock}=createRoom());hook=installHook();room.start();});
+  for(const round of [2,3,4])beforeAll(()=>{
+    runUntil(room,clock,s=>s.round===round&&s.phase==='preparation');
+  });
+  afterAll(()=>{hook?.mockRestore();room?.dispose();fixture.allOwners=false;});
   const grant=acquisition.grantAugmentAcquisition,seen:string[]=[];
-  const hook=vi.spyOn(acquisition,'grantAugmentAcquisition').mockImplementation((state,augment)=>{
+  function installHook(){return vi.spyOn(acquisition,'grantAugmentAcquisition').mockImplementation((state,augment)=>{
     const tables=requireAugmentFacts(state,'table',state.round);
     expect(tables).toHaveLength(1);expect(tables[0].stage).toBe('acquire');
     expect(tables[0].seats).toHaveLength(8);
@@ -264,9 +274,8 @@ for(const mode of ['manual','bot','timeout'] as const)it(`makes three prior elim
     // Infrastructure probe: a history consumer executes and records its result within acquisition.
     return {...granted,state:recordAugmentGrowth(granted.state,augment.choiceId,`elimination-probe:${augment.choiceId}`,[{
       unitId:state.preparation.units.find(u=>u.team==='player')!.id,healthFlat:eliminated.length,healthBps:0,attackDamageBps:0,abilityPowerCenti:0}])};
-  });
-  try {
-    room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');
+  });}
+  it(`makes three prior eliminations readable inside the ${mode} acquisition effect`,()=>{
     const id=mode==='bot'?'s4':'s0',seat=room.state.seats.find(s=>s.seatId===id)!,c=seat.match.pendingChoice!;
     expect(seat.match.augmentHistory).toBeUndefined();
     const before=room.state;
@@ -281,7 +290,7 @@ for(const mode of ['manual','bot','timeout'] as const)it(`makes three prior elim
     expect(requireAugmentFacts(picked,'table',4).filter(f=>f.stage==='acquire')).toHaveLength(1);
     expect(requireAugmentFacts(picked,'growth',4)[0].deltas[0].healthFlat).toBe(3);
     expect(restoreSharedOrbSnapshot(room.state.pool,picked,room.augmentHistoryAuthority(id))).toEqual(picked);
-  } finally {hook.mockRestore();room.dispose();fixture.allOwners=false;}
+  });
 });
 
 for(const streaming of [false,true])describe(`online PvE deaths (${streaming?'stream':'ordinary'})`,()=>{
@@ -358,8 +367,9 @@ for(const streaming of [false,true])describe(`online PvE deaths (${streaming?'st
       expect(()=>restoreSharedOrbSnapshot(finished.pool,input(disguised),finalAuthority)).toThrow('server facts/state mismatch');
     }
   });
-  it('publishes real room PvE death rows for the actual seat with an independent restore authority',()=>{
-    runUntil(room,clock,s=>s.round===10&&s.phase==='settlement');
+  describe('room settlement',()=>{
+    beforeAll(()=>{runUntil(room,clock,s=>s.round===10&&s.phase==='settlement');});
+    it('publishes real room PvE death rows for the actual seat with an independent restore authority',()=>{
     expect(room.state.fault).toBeNull();
     const match=room.state.seats.find(s=>s.seatId==='s0')!.match;
     const rows=requireAugmentFacts(match,'deaths',10),deaths=rows.flatMap(f=>f.deaths);
@@ -368,6 +378,7 @@ for(const streaming of [false,true])describe(`online PvE deaths (${streaming?'st
     expect(deaths.every(d=>d.ownerSeatId===(d.team==='player'?'s0':null))).toBe(true);
     expect(rows.at(-1)!.completeThroughTick).toBe(match.combat!.tick);
     expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(match),room.augmentHistoryAuthority('s0'))).toEqual(match);
+    });
   });
 });
 
