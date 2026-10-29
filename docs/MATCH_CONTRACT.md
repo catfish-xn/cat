@@ -12,6 +12,14 @@
 
 ## 2026-10-27 v25-h8：三项历史依赖强化
 
+## 2026-10-29 PvE 失败扣血（用户 10:55 批准，待统一纪元）
+
+本节取代历史“PvE 失败或平局固定 3HP”。现在为 `max(1, 阶段基础伤害 + 存活野怪数)`，阶段1–7基础为0/2/5/8/10/12/17；每只存活敌方单位+1，不看星级，沿用 `countsG23SurvivorDamage` 排除召唤物/非战斗单位。胜利和补给仍不掉血，PvP与加时保持原公式。单机、联机PvE、LocalRoomClient及淘汰预测均由共享领域入口结算。经济预览仍只给金币方案，不从敌方信息预测掉血。
+
+内部 `OpeningEconomyInput` 新增必填 `enemySurvivors:number`；`planOpeningEconomy(input)` 的 opening 分支新增 `baseDamage:number`。`planPlayerDamage(input:Pick<RoundEconomyInput,'stage'|'roundKind'|'roundId'|'result'|'enemySurvivors'>):{readonly baseDamage:number;readonly playerDamage:number}` 统一开局/普通伤害。非法阶段、野怪加时身份、非安全非负整数存活数、总伤害溢出抛 `RangeError`。公开 Match/服务器命令及失败原因不变；失败仍保持原 state、无事件/资源/RNG变化。`RoundResult.baseDamage` 现在表示真实阶段基础，`playerDamage` 为最少1规则后的请求伤害，`hpLost` 为HP钳制后的实扣。恢复按同一公式重算，拒绝旧固定3收据。
+
+政策版本为 `s13-player-damage-pve-v3` / `m8b-opening-project-v3`。外层身份、生成摘要及历史fixture留给Claude统一升级/重录，本工作区不可直接发布；未运行任何 `--write`。旧断言替换及验证清单见 [PvE 扣血交付](PVE_LOSS_DAMAGE_20261029.md)。
+
 本分支新增 B5-45/46/47，原分支 rules/content 为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`，schema/save/replay/command 保持 **12/8/8/7**，NET=5。三项均已开放；旧身份不迁移，epoch 不重录。P 约定与全部内部接口见 [历史设计的 B5-45／46／47 调用约定](AUGMENT_HISTORY_DESIGN.md#b5-454647-调用约定2026-10-27)。
 
 | 强化／节点 | 权威事务与事实 |

@@ -110,11 +110,13 @@ function boundary(roundId: string, burning: boolean, partial = false) {
 }
 
 describe('B10 eight encounters: explicitly isolated engine result boundaries', () => {
-  it.each(rounds)('%s: lethal HP boundary uses exactly the approved 3-HP PvE loss for defeat and draw', roundId => {
+  it.each(rounds)('%s: lethal HP boundary uses stage base plus survivors, minimum one, for defeat and draw', roundId => {
+    const baseDamage = ({'1-2':0,'1-3':0,'1-4':0,'2-7':2,'3-7':5,'4-7':8,'5-7':10,'6-7':12} as Record<string,number>)[roundId];
+    const damage = Math.max(1, baseDamage);
     const input = { roundId, gold: 0, streak: { kind: null, count: 0 }, level: 1, xp: 0, hp: 3, enemySurvivors: 0 } as const;
     for (const result of ['enemyWin', 'draw'] as const) {
       const settled = planCatalogRoundEconomy({ ...input, result });
-      expect([settled.playerDamage, settled.hpLost, settled.hpAfter]).toEqual([3, 3, 0]);
+      expect([settled.baseDamage, settled.playerDamage, settled.hpLost, settled.hpAfter]).toEqual([baseDamage, damage, Math.min(3, damage), Math.max(0, 3-damage)]);
     }
     const won = planCatalogRoundEconomy({ ...input, result: 'playerWin' });
     expect([won.playerDamage, won.hpLost, won.hpAfter]).toEqual([0, 0, 3]);

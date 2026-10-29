@@ -26,22 +26,22 @@ export const SHOP_CATALOG_BY_COST: Readonly<Record<CostTier, readonly string[]>>
   6: Object.freeze(["mel", "viktor", "warwick"])
 });
 export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_CATALOG_BY_COST).flat());
-/** Standard stage damage in the frozen 14.24b reference; M5 supports stages 2–6. */
-export const STAGE_PLAYER_DAMAGE: Readonly<Record<number, number>> = Object.freeze({ 2:2, 3:5, 4:8, 5:10, 6:12 });
-export const ECONOMY_RULES = Object.freeze({ interestDivisor: 10, interestCap: 5, victoryGold: 1, pveFailureDamage: 3,
+/** Standard stage damage in the frozen 14.24b reference, including opening and overtime. */
+export const STAGE_PLAYER_DAMAGE: Readonly<Record<number, number>> = Object.freeze({ 1:0, 2:2, 3:5, 4:8, 5:10, 6:12, 7:17 });
+export const ECONOMY_RULES = Object.freeze({ interestDivisor: 10, interestCap: 5, victoryGold: 1,
   streakThresholds: Object.freeze([Object.freeze({ count: 2, gold: 1 }), Object.freeze({ count: 5, gold: 2 }), Object.freeze({ count: 6, gold: 3 })]) });
 
 /** Frozen numeric policy: the planner and digest consume these exact parameters. */
 export const OPENING_ECONOMY_RULES = freezeContent({
-  version:'m8b-opening-project-v2',
+  version:'m8b-opening-project-v3',
   // Entitlements frozen here pay at the next preparation entry: 1-3 / 1-4 / 2-1.
   rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:4,naturalXp:2}},
-  interest:0, victoryGold:0, updateStreak:true, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
+  interest:0, victoryGold:0, updateStreak:true, pveDamage:'stage-base-plus-survivors-min-1',
 } as const);
 
 /** Project overtime maps to standard stage 7 damage, without changing its schedule/economy. */
-export const PLAYER_DAMAGE_RULES = Object.freeze({ version: 's13-player-damage-overtime-v2',
-  ordinary: STAGE_PLAYER_DAMAGE, overtimePvpBase: 17, survivingEnemyDamage: 1 });
+export const PLAYER_DAMAGE_RULES = Object.freeze({ version: 's13-player-damage-pve-v3',
+  ordinary: STAGE_PLAYER_DAMAGE, overtimePvpBase: STAGE_PLAYER_DAMAGE[7], survivingEnemyDamage: 1, pveMinimumDamage: 1 });
 export function selectPlayerBaseDamage(stage: number, roundKind: 'pvp' | 'pve' | 'supply', roundId?: string): number {
   if (!Number.isInteger(stage) || STAGE_PLAYER_DAMAGE[stage] === undefined) throw new RangeError('Invalid stage');
   if (roundId?.startsWith('overtime-')) {
@@ -49,5 +49,5 @@ export function selectPlayerBaseDamage(stage: number, roundKind: 'pvp' | 'pve' |
       throw new RangeError('Invalid overtime damage context');
     return PLAYER_DAMAGE_RULES.overtimePvpBase;
   }
-  return roundKind === 'pvp' ? STAGE_PLAYER_DAMAGE[stage] : roundKind === 'pve' ? ECONOMY_RULES.pveFailureDamage : 0;
+  return roundKind === 'supply' ? 0 : STAGE_PLAYER_DAMAGE[stage];
 }

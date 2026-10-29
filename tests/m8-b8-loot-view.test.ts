@@ -25,7 +25,11 @@ function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.par
 // the same two-carrier terminal control without killing the anvil carrier.
 let terminalHero:MatchState;
 async function prepareTerminalHero(){
+ // The new loss formula makes the terminal route win 3-7; its earned glove can
+ // otherwise consume the first belt as Guardbreaker before the second arrives.
+ // Reserve real belts and rods for the original Warmog/two-Deathcap boundary.
  let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',
+  reservedComponents:['belt','rod'],equipmentTargets:{warmog:{definitionId:'garen'}},
   emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[]}),[]);
  const holder=players(s).find(u=>u.definitionId==='maddie');if(!holder)throw Error('Missing earned Maddie');
  for(const unit of players(s).filter(u=>s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))){

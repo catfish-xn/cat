@@ -394,8 +394,9 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;
  const interest=stage===1?0:Math.min(cap,Math.floor(interestBasis/10));
  const streak=roundKind==='supply'?0:streakAfter.count>=6?3:streakAfter.count>=5?2:streakAfter.count>=2?1:0; /* v22: PvE counts; 2-4/5/6+ */
- const baseDamage=roundKind==='pvp'?[2,5,8,10,12][stage-2]:roundKind==='pve'?3:0;
- const playerDamage=result==='playerWin'||roundKind==='supply'?0:roundKind==='pve'?3:baseDamage+survivingEnemyCount;
+ // User 2026-10-29: PvE shares the stage table and counts each survivor once, minimum 1.
+ const baseDamage=roundKind==='supply'?0:[0,2,5,8,10,12,17][stage-1];
+ const playerDamage=result==='playerWin'||roundKind==='supply'?0:Math.max(roundKind==='pve'?1:0,baseDamage+survivingEnemyCount);
  const progression=xp(before.level,before.xp,naturalXp,xpCap(before)),income=base+win+interest+streak,hpLost=Math.min(before.playerHp,playerDamage);
  return {round,roundId,result,combatTicks:combat?.tick??0,combatEventCount:combat?.nextEventSeq??0,settlementId:`round-${round}-settled`,roundKind,
   incomeBreakdown:{base,win,interest,streak},interestBasis,streakBefore:before.streak,streakAfter,xpRequested:naturalXp,

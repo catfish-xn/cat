@@ -54,14 +54,14 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
  it('does not tick preparation, rejects missing teams, and permits an empty-board concession',()=>{
   const empty=freeze(emptyBoard());expect(stepMatch(empty)).toEqual({state:empty,events:[]});expect(stepMatch(empty).state).toBe(empty);
   const conceded=accepted(startMatchCombat(empty));
-  expect(conceded).toMatchObject({phase:'settlement',playerHp:97,gold:2-deferredRoundIncome(conceded.roundResults.at(-1)!)});expect(accepted(nextRound(conceded,conceded.round)).gold).toBe(2);
+  expect(conceded).toMatchObject({phase:'settlement',playerHp:98,gold:2-deferredRoundIncome(conceded.roundResults.at(-1)!)});expect(accepted(nextRound(conceded,conceded.round)).gold).toBe(2);
   for(const[teams,reason]of[[['player'],'missing-enemy'],[[],'missing-both']]as const){const input=deployed(),fixture={...input,preparation:{...input.preparation,units:input.preparation.units.filter(u=>(teams as readonly string[]).includes(u.team))}};expect(startMatchCombat(fixture)).toEqual({ok:false,state:fixture,reason});}
  });
  it('clamps lethal loss while awarding income and XP just once',()=>{
   const before={...emptyBoard(),playerHp:1,level:3,xp:5},terminal=accepted(startMatchCombat(freeze(before)));
   // A lethal loss ends the match: the deferred base income has no next round entry to be paid at.
   expect(terminal).toMatchObject({phase:'gameOver',outcome:'defeat',playerHp:0,gold:2-deferredRoundIncome(terminal.roundResults[0]!),level:4,xp:1});expect(terminal.roundResults).toEqual([settlement(before,terminal.combat)]);
-  expect(terminal.roundResults[0]).toMatchObject({playerDamage:3,hpLost:1});
+  expect(terminal.roundResults[0]).toMatchObject({baseDamage:0,survivingEnemyCount:2,playerDamage:2,hpLost:1});
   for(const command of[buyXp,rerollShop,startMatchCombat,(s:MatchState)=>buyUnit(s,0,s.shop.generation),(s:MatchState)=>sellUnit(s,'unit-1'),(s:MatchState)=>nextRound(s,s.round),(s:MatchState)=>deployMatchUnit(s,'unit-1',{kind:'bench',slot:0})])expect(command(terminal)).toEqual({ok:false,state:terminal,reason:'wrong-phase'});
  });
  it('a nonempty starting roster naturally loses without HP/result injection',()=>{

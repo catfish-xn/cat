@@ -99,7 +99,9 @@ export async function transferPreparation({equipGloves=true,checkpointRound,onPr
 // deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
 // 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
 const TERMINAL_SEED=2253;
-export const TERMINAL_EMPTY_BOARD_ROUNDS=['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2'] as const;
+// 2026-10-29 damage: 1-4 +1, 2-7 +2, 3-7 +7 = +10 versus fixed 3.
+// Play 3-7 normally instead of conceding its new 10 damage; retain the exact 3 HP / 97 lost boundary.
+export const TERMINAL_EMPTY_BOARD_ROUNDS=['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','4-1','4-2'] as const;
 // A route that pauses after each complete battle (generate-m5-route's awaited onRound), so one long public
 // campaign can be played a round per test case. Pausing never changes a command or a state.
 export function pausableRoute(start:(onRound:(state:MatchState)=>Promise<void>)=>Promise<void>) {

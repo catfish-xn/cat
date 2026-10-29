@@ -25,8 +25,8 @@ describe('G5 economyPreview in the private seat view', () => {
   });
 
   it('equals the settled incomeBreakdown item by item over a match into overtime (1-x opening, 2-1, overtime, 10-gold steps)', () => {
-    // Public seed 0 reaches overtime-3 with the combined v25 pool.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 0 });
+    // Public seed 4 reaches overtime under the 2026-10-29 PvE damage rule.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 4 });
     /** Per seat: its preview as last projected before its next round record, with the streak it was computed on. */
     const last = new Map<string, { preview: RoundEconomyPreview | null; streak: MatchState['streak']; round: number }>();
     const settled = new Map<string, number>();
