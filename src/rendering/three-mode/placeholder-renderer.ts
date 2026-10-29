@@ -17,6 +17,7 @@ import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
+import { installShopOriginalSkin } from './shop-original-skin';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
@@ -332,6 +333,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined,
     (url, readMs, parseMs) => loadReport.read(modelByUrl.get(url) ?? url, readMs, parseMs));
   if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
+  const shopSkin = installShopOriginalSkin(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
   const actionEffects = await openActionEffects(models, options.assetBase);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
@@ -1595,7 +1597,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     status: models.status, detail: models.detail, resize,
     dispose() {
       clearDescription();
-      closed = true;
+      closed = true; shopSkin.dispose();
       if (typeof window !== 'undefined' && (window as unknown as { __render3d?: unknown }).__render3d === debug) delete (window as unknown as { __render3d?: unknown }).__render3d;
       cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
