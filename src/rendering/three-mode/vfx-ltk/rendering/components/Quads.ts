@@ -33,10 +33,10 @@ import {
   QUAD_LAYOUT,
   QUAD_STRIDE,
   type QuadBuffers,
-  quadBuffers,
   QUADS_PER_EMITTER,
   rowsWritten,
 } from "../utils/buffers";
+import { borrowQuadBuffers, releaseQuadBuffers } from "../utils/drawBufferPool";
 import { colorLookupInto } from "../utils/colorLookup";
 import { drawsAsQuad, facesTheCamera } from "../utils/drawKind";
 import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
@@ -111,7 +111,7 @@ export function createQuads({
   room = QUADS_PER_EMITTER,
 }: QuadsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
-  const buffers = memo(() => quadBuffers(room), [room]);
+  const buffers = memo(() => borrowQuadBuffers(room), [room]);
   const orientation = memo(() => quadOrientation(emitter), [emitter]);
   const material = memo(
     () =>
@@ -126,7 +126,7 @@ export function createQuads({
     [emitter, samplers, orientation],
   );
 
-  cleanup(() => () => buffers.geometry.dispose(), [buffers]);
+  cleanup(() => () => releaseQuadBuffers(buffers, room), [buffers, room]);
 
   const pair = makePair(material);
 

@@ -27,6 +27,17 @@ describe('upstream simulation in the bare Three.js host', () => {
     expect(unitAnchor(root, body, 'R_Hand').originAt(0)[0]).toBeCloseTo(-120);
     const basis = unitAnchor(root, body).basisInto(0, new Float32Array(9)); expect([...basis].map(n => n || 0)).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   });
+  it('pools quad GPU buffers when the same system is played again after dispose', async () => {
+    const { library, prepared: system } = await prepared(), root = new Group();
+    const options = { anchor: unitAnchor(root, null), target: null, joints: unitJoints(root, null), duration: 0.2, seed: 3 };
+    const first = createLtkParticles(system, options);
+    const geometry = first.draws[0].object.geometry;
+    first.dispose();
+    const second = createLtkParticles(system, options);
+    expect(second.draws[0].object.geometry).toBe(geometry);
+    second.dispose();
+    library.dispose();
+  });
   it('simulates seeded particles, writes original GPU rows, stops emission and disposes once', async () => {
     const { library, prepared: system } = await prepared(), root = new Group(), camera = new Camera();
     root.position.set(44, 0, 0);

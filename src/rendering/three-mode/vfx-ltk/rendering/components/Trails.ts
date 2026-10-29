@@ -37,11 +37,11 @@ import {
   commitRibbon,
   type Cursor,
   packUv,
-  ribbonBuffers,
   strand,
   UV_STRIDE,
   writeTrail,
 } from "../utils/ribbon";
+import { borrowRibbonBuffers, releaseRibbonBuffers } from "../utils/drawBufferPool";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { uvDraw, uvTransformInto } from "../utils/uvTransform";
 
@@ -89,7 +89,7 @@ export interface TrailsProps {
 export function createTrails({ emitter, sources, samplers, rank, hidden }: TrailsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
   const trail = emitter.trail;
-  const buffers = memo(() => ribbonBuffers(TRAIL_VERTICES), []);
+  const buffers = memo(() => borrowRibbonBuffers(TRAIL_VERTICES), []);
   const material = memo(
     () =>
       ribbonMaterial(
@@ -102,13 +102,7 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
     [emitter, samplers],
   );
 
-  cleanup(
-    () => () => {
-      buffers.geometry.dispose();
-      buffers.edgeGeometry.dispose();
-    },
-    [buffers],
-  );
+  cleanup(() => () => releaseRibbonBuffers(buffers, TRAIL_VERTICES), [buffers]);
 
   const pair = makePair(material);
 

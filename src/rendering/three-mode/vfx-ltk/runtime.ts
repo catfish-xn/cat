@@ -5,6 +5,8 @@ import { AXIS_SIGN } from './space';
 import type { VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
+import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
+import { flushFrameTargetPool } from './rendering/utils/frame';
 
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
@@ -222,6 +224,6 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     },
     get active() { return running.size; },
     get queued() { return waiting.length; },
-    dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); library.dispose(); },
+    dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); flushDrawBufferPool(); flushFrameTargetPool(); library.dispose(); },
   };
 }
