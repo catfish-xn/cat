@@ -60,6 +60,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactF
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
+import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -293,6 +294,7 @@ interface PieceView {
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
+  castBranch?: string;
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
   /**
@@ -636,6 +638,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
   }, { groundPass: true }), scene, id => pieces.get(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')] }) : null;
+  const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
+    play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
@@ -807,7 +811,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.root.add(lease.scene);
       lighting.registerBody(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form, branch: view.castBranch }));
       view.mixer.apply(view.state.output);
       flushRise(view);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
@@ -850,7 +854,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form, branch: view.castBranch }));
       view.mixer.apply(view.state.output);
     }
   };
@@ -898,9 +902,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Seconds each piece's animation still holds still for a cast's impact. */
   const holds = new Map<PieceView, number>();
   const shakeOffset = new Vector3();
-  const clearEffects = () => {
+  const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; ltk?.clear(); ltkCastCounts.clear(); ltkEvents.clear();
+    generation++; queued.length = 0; ltk?.clear(preserveSave); ltkCastCounts.clear(); ltkEvents.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const fx of referenceEffects) fx.dispose();
@@ -945,10 +949,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0, variant?: TimelineVariant) => {
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
-    if (!reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, variant)) return;
+    const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
+      : extra && typeof extra === 'object' && 'cast' in extra ? extra.cast : undefined;
+    const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
+    if (!reducedMotion() && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast)
+      ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, variant))) return;
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
     if (sample && action === 'attack') {
@@ -1042,11 +1051,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
-      if (saveGoldLeft !== null && (saveGoldLeft -= seconds) <= 0) {
-        saveGoldLeft = null;
-        if (performance.now() < saveExpires && !reducedMotion()) tabletop.saved();
-      }
       if (saveBurst.finished || performance.now() >= saveExpires) { saveBurst.dispose(); saveBurst = null; }
+    }
+    if (saveGoldLeft !== null && (saveGoldLeft -= seconds) <= 0) {
+      saveGoldLeft = null;
+      if (performance.now() < saveExpires && !reducedMotion()) tabletop.saved();
     }
     // Oldest first, MAX_STARTS_PER_FRAME at most; the rest wait for the next frame unless their moment has passed.
     let started = 0;
@@ -1095,7 +1104,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const combatBegan = combatStarted && fighting === false && !joined;
     if (!frame.fighting) joined = false;
     if (fighting !== frame.fighting) rising.clear();
-    if (fighting !== null && fighting !== frame.fighting) { if (frame.fighting) starUps.clear(); clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
+    if (fighting !== null && fighting !== frame.fighting) { if (frame.fighting) starUps.clear(); clearEffects(true); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
     const hints = feed?.warmHints?.();
@@ -1164,11 +1173,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const tickOf = (event: DisplayCombatEvent) => 'tick' in event && typeof event.tick === 'number' ? event.tick : null;
     let latest = -Infinity;
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
+    batch2Vfx.begin(events);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
       if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, 0, fx.action, fx.variant);
+      // Observe old casts/landings as well; only particle playback uses this window.
+      batch2Vfx.event(event, currentEffect);
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       if (recipient?.alive && recipient.root.visible) {
@@ -1186,6 +1198,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         continue;
       }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
+      if (event.type === 'cast') {
+        const source = pieces.get(event.sourceId); if (source) source.castBranch = batch2Vfx.branch(event);
+      }
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') {
@@ -1198,7 +1213,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const castIndex = ltkCastCounts.get(event.sourceId) ?? 0;
         ltkCastCounts.set(event.sourceId, castIndex + 1);
         face(event.sourceId, event.targetIds[0]);
-        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, planned.variant); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
@@ -1272,7 +1287,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     playerDamage: hit => { if (!visiting() && !reducedMotion()) tabletop.damage(hit); }, playerSaved: event => {
     if (event.source !== 'mel' && !visiting()) tabletop.saved();
     if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
-    saveBurst?.dispose();
+    saveBurst?.dispose(); saveBurst = null;
+    saveExpires = performance.now() + 2000; saveGoldLeft = .65;
+    if (batch2Vfx.save(event.battleId)) return;
     const f = lastFrame, spanX = Math.sqrt(3) * f.hexRadius * f.columns, spanZ = f.hexRadius * 1.5 * (f.rows - 1);
     saveBurst = createReferenceBurst('mel', Math.hypot(spanX, spanZ) * .55, reducedMotion());
     saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);

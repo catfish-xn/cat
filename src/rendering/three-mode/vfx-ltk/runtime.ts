@@ -1,29 +1,52 @@
 import type { Camera, Object3D, Scene, WebGLRenderer } from 'three';
 import { applyStencil, stencilStates } from './rendering/utils/stencil';
-import { createLtkParticles, unitAnchor, unitJoints, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { AXIS_SIGN } from './space';
 import type { VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn } from './timeline';
+import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
+
+/** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
+function needsLivingSource(spawn: TimelineSpawn): boolean {
+  if (spawn.event === 'hit') return false;
+  return !(spawn.point && spawn.event !== 'projectile');
+}
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
-interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary }
-interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles }
+export interface LtkPlayOptions {
+  /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
+  skill?: string;
+  board?: WorldPoint;
+  /** Explicit board stage only, e.g. a confirmed storm after all recipients died. */
+  boardOnly?: boolean;
+  /** Only a confirmed post-death effect (devoured) may capture a dead victim's position. */
+  snapshotTargets?: boolean;
+  /** Observed channel duration; soft-stopped emitters end at this offset from cast. */
+  channelSeconds?: number;
+  /** Only independent board effects (Mel's settlement receipt) may outlive a combat phase. */
+  persistAcrossPhase?: boolean;
+}
+interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean }
+interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   const release = (run: Running) => { run.fx.dispose(); if (options.budget) options.budget.live -= slots; };
-  const clear = () => { waiting.length = 0; for (const run of running) release(run); running.clear(); };
+  const clear = (preserveWorldEffects = false) => {
+    for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
+    for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run); running.delete(run); }
+  };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
     const held = warming.get(champion); if (held) return held;
     const pending = library.champion(champion).then(async catalog => {
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
-      const cues = catalog.index?.skills[champion] ?? [];
+      const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
@@ -32,23 +55,49 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warm,
     /** True means every active cue is covered and queued. Partial/unsupported actions
      * return false without enqueueing anything, so the host runs its entire fallback. */
-    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: TimelineAction = 'cast', variant?: TimelineVariant): boolean {
+    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
       if (closed) return false;
       void warm(champion);
+      const context: LtkPlayOptions = extra !== undefined && typeof extra !== 'string' ? extra : {};
+      const variant = typeof extra === 'string' ? extra : undefined;
       const catalog = catalogs.get(champion) ?? library;
-      const available = catalog.index?.skills[champion];
-      const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action && cue.variant === variant), id => !!catalog.get(id), !!available);
+      const skill = context.skill ?? champion;
+      if (skill !== champion && !skill.startsWith(champion + '-')) return false;
+      const available = catalog.index?.skills[skill];
+      let selected = available?.filter(cue => (cue.action ?? 'cast') === action
+        && (extra === undefined || typeof extra === 'string' ? cue.variant === variant : true)
+        && (cue.phase === undefined || cue.phase === castIndex % 3)
+        && (!context.boardOnly || cue.location === 'board'));
+      if (context.channelSeconds !== undefined) {
+        if (!Number.isFinite(context.channelSeconds) || context.channelSeconds <= 0 || context.channelSeconds > 10) return false;
+        const end = context.channelSeconds;
+        selected = selected?.map(cue => cue.stopAfter === undefined ? cue : { ...cue,
+          duration: Math.min(10, Math.max(0, end - cue.delay) + .5), stopAfter: Math.max(0, end - cue.delay) });
+      }
+      const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
-      if (!cues || !source?.alive || source.disposed) return false;
-      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
+      if (!cues) return false;
+      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board);
       if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
+      const independent = spawns.every(s => s.point && s.event !== 'projectile');
+      // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.
+      if (spawns.some(needsLivingSource) && (!source?.alive || source.disposed)) return false;
       // All targets are required before suppressing the old cast; later disappearance cancels its visual.
       if (spawns.some(spawn => {
         if (spawn.targetId === undefined) return false;
         const target = findUnit(spawn.targetId);
-        return !target?.alive || target.disposed;
+        return !target || target.disposed || (!target.alive && !context.snapshotTargets);
       })) return false;
-      for (const spawn of spawns) waiting.push({ at: clock + spawn.delay, spawn, library: catalog });
+      for (const spawn of spawns) {
+        let snapshot: WorldPoint | undefined;
+        if (context.snapshotTargets && spawn.targetId) {
+          const p = unitAnchor(findUnit(spawn.targetId)!.root, findUnit(spawn.targetId)!.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone);
+          // Snapshot as a world point, rather than retaining the dead object's bones.
+          const engine = p.originAt(0);
+          snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
+        }
+        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase });
+      }
       return true;
     },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
@@ -57,8 +106,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (const run of running) if (run.source === sourceId && run.action === action) { release(run); running.delete(run); }
     },
     stopUnit(id: string) {
-      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === id || waiting[at].spawn.targetId === id) waiting.splice(at, 1);
-      for (const run of running) if (run.source === id || run.target === id) run.fx.stop();
+      for (let at = waiting.length - 1; at >= 0; at--) {
+        const row = waiting[at];
+        if ((needsLivingSource(row.spawn) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
+      }
+      for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) run.fx.stop();
     },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
@@ -70,28 +122,31 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
-        const { at: when, spawn, library: catalog } = waiting[at];
+        const { at: when, spawn, library: catalog, snapshot, persistent } = waiting[at];
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
         if (clock - when > 0.3 || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
-        if (!source?.alive || source.disposed || (spawn.targetId && (!target?.alive || target.disposed))) continue;
+        if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
-        const host = spawn.event === 'hit' ? target! : source;
+        const host = spawn.event === 'hit' ? target : source;
+        const fixed = snapshot ?? spawn.point;
+        const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone);
         let fx: LtkParticles | undefined;
         try {
-          fx = createLtkParticles(prepared, { anchor: unitAnchor(host.root, host.body, spawn.bone),
-            attachment: host,
-            target: target ? unitAnchor(target.root, target.body, spawn.targetBone) : null, joints: unitJoints(host.root, host.body),
-            duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' ? spawn.travelSeconds : undefined,
+          fx = createLtkParticles(prepared, { anchor,
+            attachment: fixed && spawn.event !== 'projectile' ? undefined : host,
+            target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+            joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
+            duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
             stopAfter: spawn.stopAfter, seed: seed++ });
           // Scheduling is frame-quantized; the visual still expires at its planned
           // timeline end, so a late flight start cannot displace its landing cue.
           fx.object.userData.ltkSystem = spawn.system;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += slots;
-          running.add({ source: spawn.sourceId, target: spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx }); starts++;
+          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn) }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       const claims = [...running].flatMap(run => run.fx.stencils);

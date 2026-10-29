@@ -106,6 +106,10 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatFinished': return { ...envelope, ...pick(event, ['type', 'result', 'reason']) };
     case 'packetDamage': return { ...envelope, type: event.type, sourceId: event.outcome.context.source.ownerId,
       targetId: event.outcome.context.targetId, damageType: event.outcome.context.damageType,
+      // Display provenance only: skill vs equipment, not the source object or packet id.
+      sourceKind: event.outcome.context.source.sourceKind,
+      definitionId: event.outcome.context.source.definitionId,
+      delivery: event.outcome.context.delivery,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
       shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
@@ -131,7 +135,16 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
-export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
+type PacketOrigin = {
+  readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth';
+  readonly definitionId: string;
+  readonly delivery: 'basic-attack' | 'ability-direct' | 'ability-periodic' | 'attack-extra' | 'equipment-proc' | 'item-burn';
+};
+/** Older replays omit these. New projections always send them; callers must not treat a missing tag as ability damage. */
+type RelaxPacketOrigin<T> = T extends { readonly type: 'packetDamage' }
+  ? Omit<T, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] }
+  : T;
+export type CombatAnimationEvent = RelaxPacketOrigin<NonNullable<ReturnType<typeof animationEvent>>>;
 export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
   | import('./seat-mechanics/replay-units').ReplayMembershipEvent;

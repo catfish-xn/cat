@@ -1412,7 +1412,7 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | attack | attackerId, targetId；普攻动画 |
 | targetChanged | unitId, before, after；目标标记 |
 | death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
-| packetDamage | sourceId, targetId, damageType, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字，不执行规则 |
+| packetDamage | sourceId, targetId, damageType, sourceKind, definitionId, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字和特效归属，不执行规则 |
 | heal | targetId, actual, shares: {sourceId, actual}[]；实际治疗与施加者份额 |
 | manaChanged | targetId, before, after；表现事实 |
 | cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |
@@ -1420,6 +1420,8 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | statusChanged | reason, targetId, kind, effectiveMagnitudeBps；无内部贡献/定时执行程序 |
 | statChanged / maxHpChanged | unitId, stat, before, after / unitId, beforeMax, afterMax, beforeHp, afterHp |
 | combatFinished | result, reason；全局胜负仍由对局调度决定 |
+
+packetDamage 另复制三枚来源标量，供表现区分技能自身伤害与装备伤害，不重算伤害：`sourceKind`（攻击/技能/羁绊/装备/强化/异常/敌方成长）、`definitionId`（技能或装备 id，例如 `viktor-ability`、`TFT9_Item_OrnnDeathfireGrasp`）、`delivery`（`basic-attack` / `ability-direct` / `ability-periodic` / `attack-extra` / `equipment-proc` / `item-burn`）。不下发完整 Source、instanceId、effectIndex、packetId 或 permissions。缺这三项的旧回放不能当成技能包。B 视角不改写这三项。不升版本号或 digest。
 
 activityChanged/effectTriggered 的执行程序不下发，可见数值后果在 unitUpdated。当前视图不承诺完整的状态图标/持续时间选择器；若 C 需要这些，应另提具体白名单字段，不能回填 runtime。B 视角沿用 §12.6 的纯显示镜像：所有首末/关键帧 unit.cell/startingCell、movement.from/to、cast.completionCell，以及新增 unitUpdated.changes.cell/startingCell 都要翻转 row；队伍/胜负互换、ID/seq/数值不变。对 changes.team（若存在）与 combatFinished.result 同样转换，不镜像 RNG 或重跑战斗。
 
