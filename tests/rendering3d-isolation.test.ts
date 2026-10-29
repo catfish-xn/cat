@@ -149,6 +149,10 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     expect(staticModuleIds.filter(id => /\/src\/presentation\/team-planner\//.test(id))).toEqual([]);
     console.info('planner JS gzip-9:', plannerChunks.reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
+    const damageChunks = uiChunks.filter(chunk => chunk.moduleIds.some(id => id.endsWith('/pvp-damage.ts')));
+    expect(damageChunks, 'PvP damage presentation must remain in its own on-demand UI chunk').toHaveLength(1);
+    expect(damageChunks[0]!.imports, 'PvP damage UI must have no runtime imports').toEqual([]);
+    expect(damageChunks[0]!.dynamicImports, 'PvP damage UI must not load domain or application code').toEqual([]);
     for (const chunk of threeDChunks) {
       expect(chunk.imports.filter(name => !name.startsWith('assets/3d/')),
         '3D chunks must not import 2D or UI chunks').toEqual([]);

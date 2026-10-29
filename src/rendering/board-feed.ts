@@ -8,6 +8,7 @@ import type { DisplayCombatEvent } from '../presentation/combat-display';
 import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
 import { readLegendChoice } from './legend-choice';
+import type { PvpDamage } from '../presentation/pvp-damage';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
@@ -79,7 +80,11 @@ export interface BoardOrb {
   readonly source?: string;
 }
 /** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
-export interface BoardHit { readonly key: string; readonly damage: number }
+export interface BoardHit {
+  readonly key: string; readonly damage: number;
+  /** Online PvP is presented through playerDamage; solo and PvE retain the legacy HP hit. */
+  readonly pvp?: boolean;
+}
 export interface BoardDropHint {
   /** Where the dragged unit would land, as BoardScene's own hit test reads the point; undefined over nothing. */
   readonly target?: { readonly kind: 'board'; readonly x: number; readonly y: number } | { readonly kind: 'bench'; readonly x: number; readonly y: number };
@@ -119,6 +124,7 @@ export interface BoardMerge {
 }
 export interface BoardFeedListener {
   merges?(merges: readonly BoardMerge[]): void;
+  playerDamage?(hit: PvpDamage): void;
   playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
@@ -225,6 +231,7 @@ export function publishScout(build: () => BoardScout | null): boolean {
 }
 export function publishBoardMerges(merges: readonly BoardMerge[]): void { listener?.merges?.(merges); }
 export function publishPlayerSaved(event: MelSaveReceipt): void { listener?.playerSaved?.(event); }
+export function publishPlayerDamage(hit: PvpDamage): void { listener?.playerDamage?.(hit); }
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {

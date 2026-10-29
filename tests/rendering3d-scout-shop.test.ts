@@ -22,6 +22,7 @@ class Node {
   removeEventListener(type: string) { this.listeners.delete(type); }
   click() { this.listeners.get('click')?.(); }
   querySelector() { return null; }
+  querySelectorAll() { return []; }
   closest(_selector?: string): Node | null { return null; }
   isContentEditable = false;
   remove() {}
