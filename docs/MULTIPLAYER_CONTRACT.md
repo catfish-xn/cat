@@ -2167,13 +2167,23 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 - 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
 - 客户端：`RemoteSession.moveItemSummon` 发送后等回执和下一次 state 推送，本地不先移动；战斗回放期间不发。
 
-**私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席阶段不是 `preparation` 时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
+**私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席不在 `preparation` 或备战内强化选择窗口时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
 
 **界面**：准备阶段且棋盘上没有战斗时，`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
 
 **公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
 
 **机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。
+
+### 26.1 黑色玫瑰赛恩准备期（用户2026-10-29）
+
+本节扩展§26的线指令和显示结构；覆盖旧文“只开战召唤赛恩”的描述。新增 `ItemSummonView.kind='sion'`，`itemInstanceId='g23-sion'` 为席位专属位置键，不是物品。仍使用 `moveItemSummon` 的完整字段校验、房间阶段门、服务器规则分派、席位回执和重连状态推送，无新命令、定时器或客户端规则。
+
+`isSummonPreparation(state)` 由 `src/server-entry` 导出；准备期及其 `returnPhase:'preparation'` 的强化选择窗口可显示、移动，包括本地房间与单人。本分支保证强化窗口可拖赛恩；普通英雄在此窗口上下棋盘由 D2 `claude/v26-d2-brb` 解锁，合并后统一窗口语义，不在本分支重复修改。服务器发空数组表示其他阶段没有备战投影；RemoteSession以收到的数组为准，不从被白名单省略的私有相位字段推算。
+
+项目约定：赛恩默认 `(3,4)`、不占人口/备战席、不可出售/装备，`g23-sion` 位置键整局保留。公开棋盘显示与虚空生物/熔炉一致，带 `{definitionId:'g23-sion',starLevel:1,cell,items:[],summon:true}`，不带命名成员id/保存键；不计普通英雄人口或羁绊，不选作玩家头像。准备期计数与战斗编译共用成员投影，包含纹章、R3复制体及镜厅；服务器只读取投影，不另算阈值。PvP两侧始终传编译羁绊预占格，再镜像坐标，保持赛恩与熔炉准备/开战位置一致。
+
+位置保存、阈值、失败枚举、冻结与战斗身份见 [MATCH_CONTRACT 可移动准备期召唤物](MATCH_CONTRACT.md#可移动准备期召唤物含赛恩2026-10-29)。机器人不发移动赛恩意图：`formationAction` 继续只摆永久英雄，赛恩由规则在剩余格中放置；英雄占其保存格时按同一最近空格算法让位，不增加人口或备战席压力。18场既有默认站位对照的战斗字节未变；历史fixture未重录，源代码摘要/内容身份待统一处理，见 [实施报告](SION_PREPARATION_REPORT.md)。
 
 ## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
 

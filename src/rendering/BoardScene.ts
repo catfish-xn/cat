@@ -73,8 +73,8 @@ export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
 /** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
 /** Gesture owner id for the 3D layer's pointer; Phaser pointer ids are never negative. */
 const POINTER_3D = -3;
-/** A movable preparation summon's name: 兹若特传送门's 虚空生物, or 杰斯's 海克斯科技锻炉 (kind 'forge'). */
-const summonName = (summon: Pick<ItemSummonView, 'kind'> | undefined) => summon?.kind === 'forge' ? '海克斯科技锻炉' : '虚空生物';
+/** Names for the rules' movable preparation summons. */
+const summonName = (summon: Pick<ItemSummonView, 'kind'> | undefined) => summon?.kind === 'sion' ? '赛恩' : summon?.kind === 'forge' ? '海克斯科技锻炉' : '虚空生物';
 const summonBoardOnly = (summon: Pick<ItemSummonView, 'kind'> | undefined) => `${summonName(summon)}只能在我方棋盘区域移动，不能放入备战席`;
 /** v15: success line of a per-card augment reroll; stays shown during the choice window. */
 const AUGMENT_REROLL_SUCCESS = '这张强化已刷新 · 等级不变，刷掉的强化本局不再出现';
@@ -529,7 +529,7 @@ export class BoardScene extends Phaser.Scene {
 
   private sell(id: string) {
     const summon = this.summonOf(id);
-    if (summon) { this.setStatus(summon.kind === 'forge' ? '海克斯科技锻炉由杰斯召唤 · 不能出售' : '虚空生物由兹若特传送门召唤 · 不能出售'); return; }
+    if (summon) { this.setStatus(`${summonName(summon)}由${summon.kind === 'sion' ? '黑色玫瑰' : summon.kind === 'forge' ? '杰斯' : '兹若特传送门'}召唤 · 不能出售`); return; }
     const anvil = anvilInfo(this.state.units.find(unit => unit.id === id)?.definitionId ?? '');
     const result = this.session.sell(id);
     // A hover sale must also clear a different old selection: holding E must
@@ -725,12 +725,12 @@ export class BoardScene extends Phaser.Scene {
       && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
   }
   private boardEditable(): boolean { return this.session.phase === 'preparation' || isAugmentPreparationChoice(this.session.state); }
-  private dragPhase(): boolean { return this.boardEditable() || this.benchOps(); }
+  private dragPhase(): boolean { return this.boardEditable() || this.shownSummons().length > 0 || this.benchOps(); }
   /**
-   * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物, 杰斯's 海克斯科技锻炉) as the rules place them, shown on the board only while I
+   * G2-4b: my movable preparation summons (虚空生物、海克斯科技锻炉、黑色玫瑰赛恩) as the rules place them, shown on the board only while I
    * prepare and no battle is on it. They are not assets: no bench, sale, equipment or population.
    */
-  private shownSummons() { return this.session.phase === 'preparation' && !this.session.combatView ? this.session.itemSummons : []; }
+  private shownSummons() { return !this.session.combatView ? this.session.itemSummons : []; }
   private summonOf(id: string | null | undefined) { return id ? this.shownSummons().find(summon => summon.unit.id === id) : undefined; }
   private displayedUnit(id: string): Unit | undefined { return this.state.units.find(unit => unit.id === id) ?? this.summonOf(id)?.unit as Unit | undefined; }
   /** Display-only drag hint for a summon (board cell, my rows, free); the rules' moveItemSummon decides the move itself. */
@@ -741,7 +741,7 @@ export class BoardScene extends Phaser.Scene {
       .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
     return taken ? `该位置已有单位 · ${summonName(summon)}只能移到空格` : undefined;
   }
-  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.boardEditable() || (this.benchOps() && unit.location.kind === 'bench')); }
+  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.boardEditable() || !!this.summonOf(unit.id) || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
     return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
@@ -1018,7 +1018,13 @@ export class BoardScene extends Phaser.Scene {
     if (!this.boardEditable()) {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
       if (this.benchOps()) this.syncOperable();
-      this.syncCombat(); return;
+      this.syncCombat();
+      for (const { unit } of this.shownSummons()) {
+        const p = this.position(unit.location), token = this.tokens.get(unit.id)!;
+        token.setPosition(p.x, p.y).setVisible(true).setAlpha(1);
+        if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
+      }
+      return;
     }
     for (const unit of [...this.state.units, ...this.shownSummons().map(summon => summon.unit as Unit)]) {
       const p = this.position(unit.location), token = this.tokens.get(unit.id)!;

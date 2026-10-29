@@ -47,10 +47,10 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   return drainSetup(snapshotCombatSteps(preparationState, strategy, combatId, rngState));
 }
 function combatPreparation(preparationState: GameState, strategy?: StrategySnapshot): GameState {
-  const forgeCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.slice(0,-':g23-forge'.length),u.summonCell]]:[])):undefined;
+  const summonCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.endsWith(':g23-forge')?u.unitId.slice(0,-':g23-forge'.length):u.unitId,u.summonCell]]:[])):undefined;
   // Freeze summon identities/placement from the same formal army as the strategy compiler.
   // A sacrificed Black Rose may still name Sion; excluding it first would request a second, uncompiled Sion.
-  preparationState=projectG23Summons(projectR3Preparation(preparationState,strategy),strategy?.traits,forgeCells);
+  preparationState=projectG23Summons(projectR3Preparation(preparationState,strategy),strategy?.traits,summonCells);
   const participants = excludeMutationSacrifice(preparationState.units, strategy);
   if (participants !== preparationState.units) preparationState = { ...preparationState, units: participants };
   return projectItemSummons(preparationState,strategy);

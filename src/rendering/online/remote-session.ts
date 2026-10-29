@@ -301,9 +301,9 @@ export class RemoteSession extends MatchSession {
   override claimOrb(orbId: string) { return this.intent({ type: 'claimOrb', round: this.matchState.round, orbId }); }
   /** G2-4b (§26): the room hands it to the rules' moveItemSummon; refused outside preparation like any board move. */
   override moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.intent({ type: 'moveItemSummon', itemInstanceId, cell: { col: cell.col, row: cell.row } }); }
-  /** G2-4b: the summons of my last state push as the server placed them; never derived from items or rounds here. */
+  /** The server sends summons only during preparation and its augment window; never derive them from display placeholders. */
   override get itemSummons(): readonly ItemSummonView[] {
-    return this.matchState.phase === 'preparation' && !this.inBattle ? (this.matchState as DisplayMatch).itemSummons ?? [] : [];
+    return !this.inBattle ? (this.matchState as DisplayMatch).itemSummons ?? [] : [];
   }
   override newMatch(): void { /* the server owns match lifecycle */ }
 }
