@@ -59,6 +59,7 @@ import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
 import { registerGolemModels } from './summon-models';
+import { AttackCadence } from './attack-cadence';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -281,6 +282,7 @@ interface PieceView {
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
+  readonly attackCadence: AttackCadence;
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
   /**
@@ -698,7 +700,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Shows or ends a piece's control; a new one stops its action at once (no swing finishes while it is stunned). */
   const setControl = (view: PieceView, kind: BoardPiece['control'] | null) => {
-    if (view.control.set(kind ?? null)) { view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
+    if (view.control.set(kind ?? null)) { view.attackCadence.pause(); view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
     if (kind && !view.halo) { view.halo = createStunHalo(); scene.add(view.halo.object); }
     else if (!kind && view.halo) { view.halo.dispose(); view.halo = null; }
   };
@@ -762,7 +764,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       stand?.removeFromParent();
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+        { starLevel: view.starLevel, form: view.form, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
       flushRise(view);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
@@ -790,7 +793,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
+      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
@@ -802,13 +805,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
-    held.delete(view); cancelLunge(view);
+    held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
+      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+        { starLevel: view.starLevel, form: view.form, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
     }
   };
@@ -1124,6 +1128,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view) { cancelLunge(view); view.hop = 0; }
         continue;
       }
+      // Observe even attacks covered by a cast's protected ending; the next visible swing needs their spacing.
+      if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
+      else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;

@@ -14,6 +14,7 @@ import { readyMatch } from './match-helpers';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-replay';
 
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -40,7 +41,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'kogmaw', 'mordekaiser'].map(id => [id, { path: `${id}.glb` }])),
       effects: { flash: { path: 'flash.json' } },
       actionEffects: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])) };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -78,6 +79,35 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   afterEach(() => {
     mounted?.dispose(); mounted = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals();
     vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/asset-reader'); vi.resetModules();
+  });
+
+  it.each([false, true])('uses attack spacing through Mordekaiser cast endings (skill feel=%s)', async skillFeel => {
+    vi.stubGlobal('location', { search: skillFeel ? '?debug3d' : '?debug3d&skillfx=off' });
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'mordekaiser' }] });
+    await flush();
+    const piece = debug().pieces.get('a')!;
+    expect(piece.lease.placeholder).toBe(false);
+    // Synthetic clips on the real renderer's mixer; no model files or WebGL context are required.
+    const swingClip = piece.lease.animations.find(c => c.name === 'attack')!;
+    swingClip.duration = 3;
+    piece.lease.animations.find(c => c.name === 'cast')!.duration = 2.6;
+    const completed: number[] = [];
+    const swing = piece.mixer.mixer.clipAction(swingClip);
+    for (const tick of mordekaiserAnimationReplay()) {
+      const previous = piece.state.output.state;
+      listener.events!(tick.events);
+      await advance(50);
+      if (tick.tick === 38) expect(piece.state.output.state).toBe('cast');
+      if (tick.tick === 75) {
+        expect(piece.state.output.playback?.clips).toEqual(['attack']);
+        expect(piece.state.output.playback!.durationSeconds).toBeLessThan(1.85);
+      }
+      if (previous === 'attack' && piece.state.output.state === 'idle') {
+        expect(swing.paused).toBe(true); expect(swing.time).toBeCloseTo(3);
+        completed.push(tick.tick);
+      }
+    }
+    expect(completed.length).toBeGreaterThanOrEqual(4);
   });
 
   it.each([
@@ -207,6 +237,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     listener.events!([attack(1)]); await advance(80);
     const oldAttack = original.mixer.clipAction(piece.lease.animations.find(clip => clip.name === 'attack')!);
     expect(oldAttack.isRunning()).toBe(true);
+    listener.events!([attack(11)]);
+    expect(piece.state.output.playback?.durationSeconds).toBe(0.45);
     if (reason === 'phase') { listener.frame({ ...frame, fighting: false }); listener.frame(frame); }
     if (reason === 'visibility') {
       listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], visible: false }] }); listener.frame(frame);
@@ -221,6 +253,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(piece.mixer).not.toBe(original); expect(oldAttack.isRunning()).toBe(false);
     expect(piece.state.output.state).toBe('idle'); expect(piece.state.output.revision).toBe(0);
     expect(piece.mixer.mixer.clipAction(piece.lease.animations[0]).isRunning()).toBe(true);
+    listener.events!([attack(1)]);
+    expect(piece.state.output.playback?.durationSeconds).toBe(1); // no cadence inherited from the old action
     const step = (tick: number): CombatViewEvent => ({ type: 'movement', tick, eventSeq: tick, unitId: 'a',
       from: { row: 0, col: 0 }, to: { row: 0, col: 1 } });
     listener.events!([step(2)]); const moving = piece.state.output;
