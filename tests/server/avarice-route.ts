@@ -24,10 +24,11 @@ export function* avariceRoute(env: RouteEnvironment, beforeDrain?: (room: Room) 
 export function* nextBattleRoute(room: Room, clock: RouteEnvironment['clock'], roundName: string) {
   return yield* routeUntil(room, clock, state => { claimAllOrbs(room); return state.roundName === roundName && state.phase === 'battle'; });
 }
-export function* atBattleRoute(env: RouteEnvironment) {
+export function* atBattleRoute(env: RouteEnvironment, seatId?: string) {
   const { room, clock } = yield* avariceRoute(env);
   yield* nextBattleRoute(room, clock, '4-6');
-  const { a: seat, battle: frozen } = humanVsBot(room.state);
+  const { a: seat, battle: frozen } = seatId
+    ? {a:seatId,battle:pvpBattleOf(room.state,seatId)!} : humanVsBot(room.state);
   expect(pvpBattleOf(room.state, seat)).toBe(frozen);
   return { room, clock, seat, frozen, end: frozen.battle.terminal.tick, startedAt: clock.now() };
 }

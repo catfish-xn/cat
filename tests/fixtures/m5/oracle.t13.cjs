@@ -178,21 +178,12 @@ function validateLootTransition(before,after,command,events){
 }
 function investment(before,record){return {pumpingRounds:before.augmentProgress.pumpingRounds+(before.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),investmentHp:before.augmentProgress.investmentHp+(before.augments.some(a=>a.definitionId==='investment-strategy-i')?8*record.incomeBreakdown.interest:0)};}
 class Ledger {
- constructor(initial){this.anomalyOffers=[];this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+ constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   const lootReceipts=validateLootTransition(before,after,command,events);
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
-  if(command?.type==='target'||command?.type==='anomalyReroll'){
-   const retained=command.type==='target'&&before.pendingChoice.offers.length>0;
-   if(retained)assert.deepEqual(after.pendingChoice.offers,before.pendingChoice.offers,'retarget preserves quote');
-   else{choice=word(choice);const target=before.preparation.units.find(u=>u.id===(command.unitId??command.id??before.pendingChoice.targetId));
-    const blocked=this.anomalyOffers.length<12?this.anomalyOffers:this.anomalyOffers.slice(-1);
-    const pool=ANOMALIES.filter(id=>!blocked.includes(id)&&(id!=='ultimate-hero'||target?.location.kind==='board'&&target.starLevel===3&&COST[target.definitionId]===1)&&(id!=='into-the-unknown'||target?.location.kind==='board'));
-    const offer=pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)];
-    assert.deepEqual(after.pendingChoice.offers,[offer],'independent anomaly offer');this.anomalyOffers.push(offer);
-   }
-  }
+  if(command?.type==='target'||command?.type==='anomalyReroll'){choice=word(choice);const pool=ANOMALIES.filter(id=>command.type!=='anomalyReroll'||!before.pendingChoice.offers.includes(id));assert.deepEqual(after.pendingChoice.offers,[pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)]],'independent anomaly offer');}
   for(const event of events){
    if(event.type==='choiceOpened'&&event.choice.kind==='augment'){const pool=AUGMENTS.filter(id=>!after.augments.some(a=>a.definitionId===id));for(let i=0;i<3;i++){choice=word(choice);const j=i+choice%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}assert.deepEqual(event.choice.offers,pool.slice(0,3),'independent augment offers');}
    if(event.type==='rewardGranted'){reward=word(reward);assert.equal(event.receipt.itemIds.length,1);assert.equal(after.items.find(i=>i.id===event.receipt.itemIds[0]).definitionId,COMPONENTS[reward%8],'independent random component');}

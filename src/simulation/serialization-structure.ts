@@ -214,6 +214,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     requireValue(!units.has(held.unit.id)&&held.items.every(i=>!state.items.some(v=>v.id===i.id)),'D14 duplicate holding');
     units.set(held.unit.id,held.unit);
   }
+  if (state.anomalySelection !== null) {
+    record(state.anomalySelection); const selection = state.anomalySelection;
+    requireValue(Object.keys(selection).sort().join(',') === 'boundRound,championDefinitionId,choiceId,definitionId', 'anomaly selection fields');
+    definitionId(selection.definitionId, ANOMALY_DEFINITIONS, 'selected anomaly');
+    definitionId(selection.championDefinitionId, UNIT_DEFINITIONS, 'anomaly champion');
+    id(selection.choiceId); integer(selection.boundRound, 1); requireValue(selection.boundRound <= state.round, 'selection round');
+  }
   if (state.anomalyBinding !== null) {
     record(state.anomalyBinding); const binding = state.anomalyBinding;
     definitionId(binding.definitionId, ANOMALY_DEFINITIONS, 'anomaly definition'); id(binding.unitId);

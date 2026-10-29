@@ -14,6 +14,7 @@ import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { run } from '../scripts/generate-m5-route.cjs';
 import type { MatchState } from '../src/simulation/match-types';
 import { historyFreeRerollPriorities } from './fixtures/history-free-augments';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
 let before19: MatchState, anomaly: MatchState;
 
 describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling', () => {
@@ -101,9 +102,22 @@ beforeAll(async () => {
     const later = accepted(api.sellUnit(chosen,chosen.anomalyBinding!.unitId));
     expect(later.anomalyOfferHistory).toBe(sealed);
     expect(restoreMatch(serializeMatch(later))).toEqual(later);
-    const forgedTarget = {...later,anomalyBinding:chosen.anomalyBinding};
-    // Selling after confirmation is legal; the sealed proof cannot resurrect the sold recipient.
-    expect(()=>restoreMatch(forgedTarget)).toThrow();
+    expect(later.anomalySelection).toEqual(chosen.anomalySelection);
+    const restoredHolder = accepted(grantMechanicUnit(later, {receiptId:'audit:anomaly-reacquired',source:'anomaly-audit',
+      definitionId:chosen.anomalySelection!.championDefinitionId}));
+    expect(restoredHolder.anomalyBinding).not.toBeNull();
+    expect(restoredHolder.anomalyBinding!.unitId).not.toBe(chosen.anomalyBinding!.unitId);
+    expect(restoredHolder.anomalySelection).toEqual(chosen.anomalySelection);
+    expect(restoredHolder.anomalyOfferHistory).toBe(sealed);
+    expect(restoreMatch(serializeMatch(restoredHolder))).toEqual(restoredHolder);
+    // R5 permits a real replacement, but neither dormant nor restored ownership
+    // permits resurrecting the sold instance from the sealed quote proof.
+    for (const state of [later, restoredHolder]) {
+      const forgedTarget = {...state,anomalyBinding:chosen.anomalyBinding};
+      expect(()=>restoreMatch(forgedTarget)).toThrow();
+      expect(()=>restoreMatch(JSON.stringify(forgedTarget))).toThrow();
+      expect(()=>serializeMatch(forgedTarget)).toThrow();
+    }
     const changed = structuredClone(s);
     const facts = changed.anomalyOfferHistory!.facts.filter(f => f.kind === 'anomaly-offer');
     Object.assign(facts[1], {definitionId:facts[0].definitionId});

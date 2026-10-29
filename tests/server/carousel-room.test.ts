@@ -485,9 +485,10 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   it('a seat eliminated after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // With the v25 combined pool, s0 dies at 6-1, four battle phases after 5-4 (including 5-7 PvE).
-    expect(atDeath.roundId).toBe('6-1');
-    expect(death!.fightsSinceCarousel).toBe(4);
+    // R1 timeout deployment also fields bots: s0 dies in the first fight after the 5-4 carousel.
+    expect(atDeath.roundId).toBe('5-5');
+    expect(afterCarousel).toBe('5-4');
+    expect(death!.fightsSinceCarousel).toBe(1);
     const lethal=atDeath.seats.find(candidate=>candidate.seatId==='s0')!.match.roundResults.at(-1)!;
     expect(lethal.hpBefore).toBeGreaterThan(0);expect(lethal.hpAfter).toBe(0);expect(lethal.hpLost).toBe(lethal.hpBefore);
     const was = beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match;

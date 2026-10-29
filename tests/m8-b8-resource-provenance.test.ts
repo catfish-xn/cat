@@ -107,7 +107,7 @@ describe('B8 provenance opening, append and prefix projections', () => {
     expect(Object.isFrozen(next.entries[1])).toBe(true);
     expect(Object.isFrozen(source)).toBe(false);
     expect(foldResourceProvenance(initial, context({ throughRoundOrdinal: 1 }))).toEqual({
-      units: [{ id: 'unit-1', definitionId: 'irelia', starLevel: 1 }], items: [], persistentGrowth: [], nextUnitSerial: 2, nextItemSerial: 1,
+      anomalySelection:null, anomalyBinding:null, lastAnomalyBinding:null, units: [{ id: 'unit-1', definitionId: 'irelia', starLevel: 1 }], items: [], persistentGrowth: [], nextUnitSerial: 2, nextItemSerial: 1,
     });
     expect(next.entries.map(entry => entry.sequence)).toEqual([0, 1]);
   });
@@ -115,7 +115,7 @@ describe('B8 provenance opening, append and prefix projections', () => {
   it('projects any prefix while authenticating the complete stream and later receipts', () => {
     const { provenance, ctx } = thousandFixture();
     const zero = foldResourceProvenance(provenance, { ...ctx, prefixLength: 0 });
-    expect(zero).toEqual({ units: [], items: [], persistentGrowth: [], nextUnitSerial: 1, nextItemSerial: 1 });
+    expect(zero).toEqual({ anomalySelection:null, anomalyBinding:null, lastAnomalyBinding:null, units: [], items: [], persistentGrowth: [], nextUnitSerial: 1, nextItemSerial: 1 });
     const start = foldResourceProvenance(provenance, { ...ctx, prefixLength: 4 });
     expect(start.units).toEqual([
       { id: 'unit-1', definitionId: 'irelia', starLevel: 1 },

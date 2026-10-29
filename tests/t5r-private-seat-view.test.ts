@@ -33,6 +33,7 @@ function richSeat():MatchState {
     augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],returnPhase:'preparation'},
     shop:{generation:17,locked:true,slots:[{status:'available',definitionId:'maddie'},{status:'purchased',empty:true},{status:'purchased'}]},
     augments:[{definitionId:'pumping-up-i',choiceId:'known',acquiredRound:4}],
+    anomalySelection:{definitionId:'mage-armor',championDefinitionId:state.preparation.units[0].definitionId,choiceId:'known-anomaly',boundRound:20},
     anomalyBinding:{definitionId:'mage-armor',unitId:id,choiceId:'known-anomaly',boundRound:20},
     persistentGrowth:[{unitId:id,attackDamageBps:125},{unitId:'opponent',attackDamageBps:999}],
     preparation:{...state.preparation,units:[...state.preparation.units,{id:'opponent',definitionId:'maddie',starLevel:1,team:'enemy',location:{kind:'board',cell:{col:0,row:0}}}]},
@@ -118,13 +119,14 @@ describe('T5R private own-seat whitelist',()=>{
         {optionIndex:2,definitionId:'backup',rerollAvailable:false},
       ]});
     expect(view.temporaryEquipment).toEqual(state.temporaryEquipment);expect(view.augments).toEqual(state.augments);
+    expect(view.anomalySelection).toEqual(state.anomalySelection);
     expect(view.anomalyBinding).toEqual(state.anomalyBinding);expect(view.roundResults).toHaveLength(38);
     expect(view.m8.round).toMatchObject({roundId:'overtime-1',kind:'pvp'});
     expect(JSON.stringify(view)).not.toMatch(/opponent|their-item|secret-event|settlementId/);
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
     expect(Object.keys(view).sort()).toEqual(['anomalyTargetIds','openingMelProgress','openingEncounter','schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
-      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
+      'anomalySelection','anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
       'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds','augmentDynamicValues'].sort());
     expect(view.augmentDynamicValues).toEqual({'pumping-up-i':{attackSpeedBps:600}});
     expect(view.unclaimedOrbs).toEqual([]);expect(view.orbClaimReceipts).toEqual([]);

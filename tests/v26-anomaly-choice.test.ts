@@ -106,6 +106,37 @@ describe('v26 R3 qualification', () => {
     expect(skipped.choiceRngState).toBe(onlyLocked.choiceRngState);
     expect(readAnomalyOfferHistory(skipped)).toEqual(readAnomalyOfferHistory(onlyLocked));
   });
+  it('manual projection and timeout exclude unsettled carousel cards through the same target predicate', () => {
+    const base = targetState(true);
+    const receipt: import('../src/simulation/carousel-types').CarouselReceipt = {
+      id:'choice:deferred',carouselId:'choice:carousel:4-4',seatId:'s0',slot:0,
+      definitionId:'irelia',itemId:'sword',holdingSource:'choice:carousel',unitId:'unit-20',
+      itemInstanceId:null,status:'granted',
+    };
+    const state = {...base,carousel:{receipts:[receipt],heldCarouselUnits:[],pendingUnits:[],preparationReceipts:[]}};
+    expect(readAnomalyTargetIds(state)).toEqual(['unit-3']);
+    const choice = state.pendingChoice!;
+    expect(selectAnomalyTarget(state,choice.choiceId,choice.generation,'unit-20'))
+      .toEqual({ok:false,state,reason:'invalid-target'});
+    expect(timeout(state).anomalyBinding?.unitId).toBe('unit-3');
+    expect(readAnomalyTargetIds({...state,carousel:{...state.carousel,preparationReceipts:[receipt.id]}}))
+      .toEqual(['unit-20','unit-3']);
+  });
+  it('a dormant R5 entitlement forbids a second manual or automatic selection without consuming a word', () => {
+    const base = targetState(true);
+    const state = {...base,anomalySelection:{definitionId:'bulwark',championDefinitionId:'darius',
+      choiceId:'round:4-6:anomaly',boundRound:23}};
+    const choice = state.pendingChoice!;
+    expect(readAnomalyTargetIds(state)).toEqual([]);
+    const refused = selectAnomalyTarget(state,choice.choiceId,choice.generation,'unit-20');
+    expect(refused).toEqual({ok:false,state,reason:'invalid-target'});
+    expect(refused.state).toBe(state);
+    const resolved = timeout(state);
+    expect(resolved.anomalySelection).toEqual(state.anomalySelection);
+    expect(resolved.anomalyBinding).toBeNull();
+    expect(resolved.choiceRngState).toBe(state.choiceRngState);
+    expect(readAnomalyOfferHistory(resolved)).toEqual([]);
+  });
   it('benching a locked D14 target preserves the R2 lock; moving back restores eligibility without a free quote', () => {
     let s=target(targetState(true));
     for(let i=0;i<200&&!s.pendingChoice!.offers.includes('into-the-unknown');i++)s=reroll(s);

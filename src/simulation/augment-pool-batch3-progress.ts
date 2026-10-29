@@ -1,3 +1,4 @@
+import { reconcileMatchAnomaly } from './anomaly-ownership';
 import type { MatchState } from './match-types';
 import type { AugmentGift } from './augment-gift-plan';
 import { planAugmentGifts } from './augment-gift-plan';
@@ -214,7 +215,7 @@ export function formingTotals(state:Pick<MatchState,'augments'|'resourceProvenan
  return Object.keys(out).length?out:undefined;
 }
 /** On acquisition (outside combat) every non-summon champion on the board and bench is removed once, like a sale
- * without gold: items return to the inventory (P 2026-10-24, as when selling), an anomaly binding ends, AD growth is
+ * without gold: items return to the inventory (P 2026-10-24, as when selling), the instance binding ends (R5 seat entitlement remains), AD growth is
  * dropped; online the pool ledger returns every copy (shared-pool-ledger reconcileHoldings on unit-removed). */
 export function drainBatch3Forming(initial:MatchState):MatchState {
  let state=initial;if(state.phase==='combat')return state;
@@ -228,6 +229,7 @@ export function drainBatch3Forming(initial:MatchState):MatchState {
     persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),
     preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)},
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel as 1|2|3})};
+   state=reconcileMatchAnomaly(state);
   }
   state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
  }

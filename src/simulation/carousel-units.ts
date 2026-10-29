@@ -1,3 +1,4 @@
+import { reconcileMatchAnomaly } from './anomaly-ownership';
 import type { MatchState, MatchEvent } from './match-types';
 import type { PendingCarouselUnit } from './carousel-types';
 import type { GameState } from './game';
@@ -98,5 +99,5 @@ export function resolveCarouselPreparation(state: MatchState): {state:MatchState
     resourceProvenance:appendResourceProvenance(next.resourceProvenance,next.roundDefinitionId,
       {kind:'carousel-preparation-settled',receiptIds,claimedUnitIds,upgrades})};
   events.push({type:'carouselPreparationSettled',receiptIds,claimedUnitIds});
-  return {state:next,events};
+  return {state:reconcileMatchAnomaly(next,events),events};
 }

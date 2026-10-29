@@ -15,7 +15,8 @@ export type AnomalyTargetPurpose = 'manual' | 'timeout';
 export function isEligibleAnomalyTarget(state: MatchState, unit: Unit | undefined,
   offers: readonly string[] = [], purpose: AnomalyTargetPurpose = 'manual'): boolean {
   if (!unit || unit.team !== 'player' || !UNIT_DEFINITIONS[unit.definitionId]
-    || isAnvil(unit.definitionId) || state.anomalyBinding !== null) return false;
+    || isAnvil(unit.definitionId) || state.anomalyBinding !== null || state.anomalySelection !== null
+    || state.carousel?.receipts.some(r => r.unitId === unit.id && !state.carousel!.preparationReceipts.includes(r.id))) return false;
   if (purpose === 'timeout' && UNIT_DEFINITIONS[unit.definitionId].summon) return false;
   return offers.every(id => r2AnomalyAllowed(state.augments, id) && eligibleD14Target(unit, id));
 }

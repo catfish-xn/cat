@@ -1,4 +1,3 @@
-import { traceBoundUnitIdentity } from './bound-unit-identity';
 import type { MatchState } from './match-types';
 import { canonicalContent } from './content';
 import { AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -9,7 +8,7 @@ import * as commands from './match';
 
 const check = (ok: unknown, reason: string): void => { if (!ok) throw new RangeError(`Invalid anomaly history: ${reason}`); };
 // Only independently replayed canonical evidence strings are retained, bounded by UTF-16 text bytes.
-interface Evidence { readonly state: string; readonly resolved: boolean; readonly receipts: string; readonly prefix: string; readonly prefixLength: number; readonly binding: string; readonly bytes: number }
+interface Evidence { readonly state: string; readonly resolved: boolean; readonly receipts: string; readonly prefix: string; readonly prefixLength: number; readonly selection: string; readonly bytes: number }
 const replayed = new Map<string, Evidence>();
 const MAX_BYTES = 4 * 1024 * 1024;
 let retainedBytes = 0;
@@ -61,7 +60,7 @@ export function validateAnomalyHistoryProof(state: MatchState, authority?: Augme
     check(canonicalContent(replay.anomalyOfferHistory) === key, 'replayed quotes mismatch');
     const texts = {
       state: canonicalContent(replay), receipts: canonicalContent(replay.scheduleReceipts.filter(r=>r.kind==='anomaly')),
-      prefix: canonicalContent(replay.resourceProvenance.entries), binding: canonicalContent(replay.anomalyBinding),
+      prefix: canonicalContent(replay.resourceProvenance.entries), selection: canonicalContent(replay.anomalySelection),
     };
     const bytes = 2 * (key.length + Object.values(texts).reduce((n,t)=>n+t.length,0));
     evidence = { ...texts, resolved:replay.pendingChoice?.kind !== 'anomaly', prefixLength:replay.resourceProvenance.entries.length, bytes };
@@ -79,14 +78,12 @@ export function validateAnomalyHistoryProof(state: MatchState, authority?: Augme
     check(evidence.resolved, 'unfinished proof');
     check(canonicalContent(state.resourceProvenance.entries.slice(0,evidence.prefixLength))
       === evidence.prefix, 'resource prefix');
-    const selected = JSON.parse(evidence.binding) as MatchState['anomalyBinding'];
-    let unitId = selected?.unitId ?? null;
-    for (const fact of state.resourceProvenance.entries.slice(evidence.prefixLength)) {
-      if (unitId === null) break;
-      unitId = fact.kind === 'unit-transformed' && fact.unitId === unitId ? null : traceBoundUnitIdentity(unitId,[fact]);
-    }
-    const binding = unitId && selected ? {...selected,unitId} : null;
-    check(canonicalContent(state.anomalyBinding) === canonicalContent(binding), 'selected target lineage');
+    // The quote proof seals the seat entitlement, not its original physical holder.
+    // Before this check, validateB8Resources has independently folded all ordered
+    // births/sales/upgrades and authenticated the current binding (including the
+    // acquisitions that emit anomalyRestored). A sold ID cannot be resurrected by
+    // editing the binding, while a real same-champion acquisition retains selection.
+    check(canonicalContent(state.anomalySelection) === evidence.selection, 'selected entitlement');
     check(evidence.receipts
       === canonicalContent(state.scheduleReceipts.filter(r=>r.kind==='anomaly')), 'selection receipt');
   }
