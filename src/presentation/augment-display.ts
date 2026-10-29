@@ -65,6 +65,19 @@ export function augmentIconOrBadgeHtml(id: string, size: number): string {
   return augmentIconHtml(id, size) || `<span class="augment-icon augment-badge" data-augment="${id}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px" aria-hidden="true">${[...augmentDisplayName(id)][0] ?? '?'}</span>`;
 }
 
+/** Swap one owned-augment chip's badge or image. Leaves the chip element itself in place. */
+export function syncOwnedAugmentIcon(chip: HTMLElement, id: string): void {
+  const url = augmentIconUrl(id);
+  if (!url) return;
+  const image = chip.querySelector('img.augment-icon');
+  if (image) {
+    if (image.getAttribute('src') !== url) image.setAttribute('src', url);
+    return;
+  }
+  chip.querySelector('.augment-badge')?.remove();
+  chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
+}
+
 /** Team-up augments (v19 姐妹, v20 关系): the two champions they grant, by repo unit id. */
 const TEAMUP_PARTNERS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   sisters: ['vi', 'jinx'], ...Object.fromEntries(TEAMUP_IDS.map(id => [id, V20_TRAITS[id].partners])),

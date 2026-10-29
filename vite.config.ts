@@ -37,7 +37,7 @@ const stripAssetChecks: Plugin = {
 // augment-dynamic-values 的客户端计算只供单机显示，由强化文本 loader 按需加载。
 // restore-checks 只被单人存档恢复引用，跟着 application 进 assets/solo/。
 // 单独 manualChunks 会把共享依赖吸进入口的静态 import，所以不另开入口能直接 import 的包。
-const AUGMENT_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:augment-text-data|augment-pool-text|augment-zh|s13-augment-asset-manifest)\.ts$/;
+const AUGMENT_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:augment-text-data|augment-pool-text|augment-zh|s13-augment-asset-manifest|augment-hud)\.ts$/;
 const TOOLTIP_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:tooltip-text-data|ability-zh|trait-official-text|unit-roles|trait-display-text|trait-extra-text|special-item-templates)\.ts$/;
 const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
 

@@ -37,7 +37,7 @@ import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentIconUrl, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription, syncOwnedAugmentIcon } from '../presentation/augment-display';
 import type { AugmentDynamicValues } from '../simulation/augment-dynamic-values';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
@@ -272,7 +272,12 @@ export class StrategyPanel {
     }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip';
-    (document.getElementById('board-root') ?? this.traitColumn.root.parentElement)?.append(this.augmentStrip);
+    // On body, position:fixed is the viewport. #board-frame is a size container and would shift a fixed row.
+    document.body.append(this.augmentStrip);
+    void import('../presentation/augment-hud').then(mod => {
+      if (!this.augmentStrip.isConnected) return;
+      this.disposers.push(mod.bindAugmentStrip(this.augmentStrip));
+    }).catch(() => undefined);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     if (isOnline()) {
@@ -440,6 +445,14 @@ export class StrategyPanel {
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
     this.root.dispatchEvent(new CustomEvent<string>(PANEL_STATUS_EVENT, { detail: message, bubbles: true }));
   }
+  /** Late asset-root icons: replace the chip's badge or src only. Does not rebuild the panel, shop or drag. */
+  refreshAugmentIcons(): void {
+    for (const chip of Array.from(this.augmentStrip.querySelectorAll<HTMLElement>('[data-augment]'))) {
+      if (chip.parentElement !== this.augmentStrip) continue;
+      const id = chip.dataset.augment;
+      if (id) syncOwnedAugmentIcon(chip, id);
+    }
+  }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string, values: AugmentDynamicValues): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
@@ -572,7 +585,7 @@ export class StrategyPanel {
     // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
     const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
     const values = this.dynamicValues(state);
-    const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentIconUrl(augment.definitionId), augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
+    const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
     if (augmentKey !== this.augmentKey) {
       this.augmentKey = augmentKey;
       this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId, values)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));

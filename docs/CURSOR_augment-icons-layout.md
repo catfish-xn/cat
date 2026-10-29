@@ -1,6 +1,31 @@
 # 审查：海克斯栏位置与缺图标
 
-审查对象是 `claude/v26-augment-icons-layout` 的 `6bbb4002`（父提交 `901d63d0`）。本文件只记录独立复核，没有改规则、没有改既有断言、没有动 `src/simulation/` 或 `src/server/`。素材下载、组包、上传和浏览器实机验收没有做。
+审查对象是 `claude/v26-augment-icons-layout` 的 `6bbb4002`（父提交 `901d63d0`）。本文件先记录那次独立复核，再记录随后在 `cursor/augment-icons-layout` 上的定位修正。没有改规则、没有改既有断言、没有动 `src/simulation/` 或 `src/server/`。
+
+## 后续：视口定位与只换图标
+
+横排改挂到 `document.body`，`position: fixed` 的原点是视口，不再受 `#board-frame` 的 layout containment 影响。定位算法在懒加载的 `src/presentation/augment-hud.ts`（打进已有的 `augment-text` chunk，`vite.config.ts:40`）。`ResizeObserver` 监听棋盘、左栏、商店、物品槽和窗口，尺寸变化时重算。
+
+2D：横排右缘贴在 `#board-root` 左缘外侧 4px，垂直中心在棋盘高度的 20%。左栏如果贴在棋盘旁边，行宽超过实测间隙时缩小图标，使整行落在左栏右缘和棋盘左缘之间。物品卡片挡住时上移。不改成竖排。
+
+3D：行中心是视口的 26.7% × 23.8%，没有再加 8px。元素在 `body` 上，不再相对棋盘框偏移。
+
+素材根晚到时 `BoardScene.ts:369` 只调用 `refreshAugmentIcons`（`strategy-panel.ts:449`）。`syncOwnedAugmentIcon`（`augment-display.ts:69`）只改芯片里的徽章或 `img` 的 `src`。刷新键不再包含图标 URL（`strategy-panel.ts:588`），因此晚到的地址不会整段替换横排。
+
+`vite build --configLoader runner` 后，顶层 `dist/assets/*.js` 的 gzip-9 为 **634,621** 字节（index 510,722 + phaser 123,899），低于 637,144，余 2,523。相对修正前的 634,396 增加 225。入口里没有 `0.267`；布局函数在 `assets/ui/augment-text-*.js`。`tests/rendering3d-isolation.test.ts` 通过。
+
+本地房间：`VITE_LOCAL_ROOM=1 npm run dev`，`?mode=online&prep=15&settle=2&choice=8&seed=7`。打到 4-2 准备阶段，3 个强化、人口 7/8、左侧羁绊、左侧物品、底部商店。3D 未配置原版素材，画面是占位棋子（页面写着「未配置 3D 素材，显示占位棋子」）。
+
+| 截图 | 遮挡 |
+| --- | --- |
+| `docs/screenshots/augment-strip/2d-1280x720.png` | 3 枚约 28px，在棋盘左缘外、羁绊列右侧、物品列上方。与羁绊行、物品卡、商店、棋盘 canvas、倒计时的矩形相交数都是 0。 |
+| `docs/screenshots/augment-strip/2d-1920x1080.png` | 应用最宽 1440，间隙仍约 56px，图标缩到 18px 才放得下。相交数都是 0，没有伸进左栏或盖住棋子。 |
+| `docs/screenshots/augment-strip/2d-1440x1000.png` | 同样缩到 18px。相交数都是 0。 |
+| `docs/screenshots/augment-strip/3d-1280x720.png` | 3D 层已挂上。行中心约在视口 (26.7%, 23.8%)。图标在占位棋子左侧空位，不压羁绊、物品、商店或棋子。相交数都是 0。 |
+| `docs/screenshots/augment-strip/3d-1920x1080.png` | 图标约 42px，仍在棋子左侧。相交数都是 0。 |
+| `docs/screenshots/augment-strip/3d-1440x1000.png` | 画面上图标在前排棋子左侧空位，不压棋子、羁绊、物品或商店。矩形检测与隐藏的 2D canvas 盒相交 1 次：3D 下这块 canvas 仍占着棋盘布局盒，图标按视口锚点落在它的左上范围内，不是压在圆柱棋子上。 |
+
+测试：`npx vitest run tests/presentation/augment-strip-layout.test.ts tests/presentation/augment-strip-late-icons.test.ts tests/presentation/s13-root-ui-assets.test.ts tests/assets3d-augment-icons.test.ts tests/rendering3d-isolation.test.ts --maxWorkers=4`。布局 5 项、晚到图标 1 项，加上原有图标合同与隔离测试，均通过。`tsc --noEmit` 通过。
 
 ## 结论
 

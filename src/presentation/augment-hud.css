@@ -1,11 +1,13 @@
-/* S13 evidence and measurements: docs/V26_AUGMENT_ICONS_LAYOUT.md.
-   Loaded with augment-text, so the online entry does not carry this HUD addition. */
+/* S13 evidence: docs/V26_AUGMENT_ICONS_LAYOUT.md.
+   Loaded with augment-text. left/top are viewport pixels written by augment-hud.ts
+   (the row is mounted on document.body, outside #board-frame's containing block). */
 body[data-online] .augment-strip:not(:empty) {
   --augment-size: clamp(24px, 2.2vw, 44px);
-  position: absolute; top: 20%; left: -4px; transform: translate(-100%, -50%); z-index: 8; visibility: visible;
+  position: fixed; z-index: 8; visibility: hidden;
   display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; margin: 0;
   pointer-events: auto;
 }
+body[data-online] .augment-strip:not(:empty)[data-placed] { visibility: visible; }
 body[data-online] .augment-strip .augment-chip {
   box-sizing: border-box; display: inline-flex; flex: none; align-items: center; justify-content: center;
   width: var(--augment-size); height: var(--augment-size); padding: 1px; font-size: 0;
@@ -16,9 +18,4 @@ body[data-online] .augment-strip .augment-icon {
   display: block; width: 100%; height: 100%; border-radius: 1px;
 }
 body[data-online] .augment-strip .augment-badge { display: grid; font-size: 14px !important; }
-/* The original row is over the arena's left Hexcore, to the right of the trait rail.
-   The 3D camera fills the viewport; 2D uses its board's own containing block above. */
-body[data-online]:has(> .render3d-layer) .augment-strip:not(:empty) {
-  position: fixed; left: 26.7vw; top: 23.8dvh; transform: translate(-50%, -50%);
-}
 body:has(.opponent-board[data-scout-3d]:not([hidden])) .augment-strip { display: none; }
