@@ -11,12 +11,10 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { makeRoom, runUntil } from './server/helpers';
-import { COST, Ledger, createH3Ledger as createObservedH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
+import { COST, Ledger, createH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
 
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
 const copy = <T>(x:T):Mutable<T> => structuredClone(x) as Mutable<T>;
-// Exercise in-place tampering and reconnect audits on mutable production inputs.
-const createH3Ledger = (state: MatchState) => createObservedH3Ledger(state, { freezeInputs: false });
 type Transition = {before:MatchState;after:MatchState;memory:H3Ledger};
 type Route = {trace:Transition[];final:MatchState;memory:H3Ledger};
 const routes:Record<string,Route>={};
@@ -47,6 +45,8 @@ for(const id of ['no-scout-no-pivot','cooking-pot'] as const) {
       room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
       const c=mine().pendingChoice!;expect(c.offers).toContain(id);
       let memory=createH3Ledger(mine());
+      expect(memory).toMatchObject({freezeInputs:true});
+      expect(Object.isFrozen(mine().preparation.units[0])).toBe(true);
       const command={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:id},before=mine();
       expect(room.handle(seatId,command)).toMatchObject({ok:true});memory=checkH3Growth(memory,before,mine(),command);
       const act=(command:Parameters<typeof room.handle>[1])=>{
@@ -95,7 +95,7 @@ describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth
     const {trace}=routes[id];expect(trace.length).toBeGreaterThan(0);
     const heroes=(trace[0].memory as unknown as {heroes:string[]}).heroes;
     let original=originalH3.createH3Ledger(trace[0].before,heroes),
-      optimized=createH3Ledger(trace[0].before);
+      optimized=createH3Ledger(trace[0].before,{freezeInputs:false});
     for(const t of trace) {
       original=originalH3.checkH3Growth(original,t.before,t.after);
       optimized=checkH3Growth(optimized,t.before,t.after);
@@ -106,8 +106,12 @@ describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth
     auditH3(optimized,trace.at(-1)!.after);
   });
   it('catches a retained in-place edit at the reconnect checkpoint before it is restored',()=>{
+    // Replay into a separate mutable ledger so the room route keeps its freeze checks.
+    const {trace}=routes[id];
+    let memory=createH3Ledger(trace[0].before,{freezeInputs:false});
+    for(const t of trace)memory=checkH3Growth(memory,t.before,t.after);
     const final=copy(routes[id].final);
-    let memory=checkH3Growth(routes[id].memory,routes[id].final,final);
+    memory=checkH3Growth(memory,routes[id].final,final);
     const record=final.augmentHistory!.facts[0],originalPrefix=record.resourcePrefix;
     record.resourcePrefix=originalPrefix+1;
     // No round, phase or roster-lock transition: only the forced checkpoint can catch this.
