@@ -32,7 +32,7 @@ class RouteFirstSequencer extends BaseSequencer {
     };
     return sorted.sort((a, b) => weight(b) - weight(a));
   }
-  // CI runs the fast project as four `--shard` machines. Vitest's own shard cuts the
+  // CI runs the fast project as eight `--shard` machines. Vitest's own shard cuts the
   // hash-sorted file list into equal counts, which left one shard with over twice the
   // work of another. Assign files greedily by measured duration instead (longest first,
   // to the least-loaded shard), so every file still lands in exactly one shard.
