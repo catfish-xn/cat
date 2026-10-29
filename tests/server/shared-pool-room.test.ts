@@ -224,19 +224,6 @@ describe('Room on the shared pool: elimination and round advance (§12.3, §12.4
 });
 
 describe('Room on the shared pool: whole matches stay balanced', () => {
-  const placeholderBattles: BattleResultCache = new Map();
-  let warmPlace: ReturnType<typeof makeRoom> | undefined;
-  // Two-sided results carry death samples on the event objects themselves; a cloned
-  // replay is not a substitute. Placeholder PvP settles without that side channel.
-  beforeAll(() => {
-    warmPlace = makeRoom(battleCacheResolver(placeholderBattles, 'record', placeholderPvp), { pvpMode: 'placeholder' });
-    warmPlace.room.start();
-    runUntil(warmPlace.room, warmPlace.clock, state => state.round >= 8 || state.phase === 'ended', 20_000);
-  });
-  beforeAll(() => {
-    runUntil(warmPlace!.room, warmPlace!.clock, state => state.phase === 'ended', 20_000);
-    warmPlace!.room.dispose();
-  });
   function playToEnd(resolver: BattleResolver, pvpMode: 'two-sided' | 'placeholder') {
     const { room, clock } = makeRoom(resolver, { pvpMode });
     room.start();
@@ -256,5 +243,25 @@ describe('Room on the shared pool: whole matches stay balanced', () => {
     return state;
   }
   it('pvpMode=two-sided', () => { playToEnd(new TwoSidedBattleResolver(), 'two-sided'); }, 90_000);
-  it('pvpMode=placeholder', () => { playToEnd(battleCacheResolver(placeholderBattles, 'read', placeholderPvp), 'placeholder'); }, 90_000);
+
+  // Placeholder warm hooks stay in this nested suite. A hook failure here does not skip two-sided.
+  // Two-sided results carry death samples on the event objects themselves; a cloned replay is not a substitute.
+  describe('placeholder replay', () => {
+    const placeholderBattles: BattleResultCache = new Map();
+    let warmPlace: ReturnType<typeof makeRoom> | undefined;
+    const warmUntil = (done: (state: RoomState) => boolean) => {
+      runUntil(warmPlace!.room, warmPlace!.clock, done, 20_000);
+    };
+    beforeAll(() => {
+      warmPlace = makeRoom(battleCacheResolver(placeholderBattles, 'record', placeholderPvp), { pvpMode: 'placeholder' });
+      warmPlace.room.start();
+      warmUntil(state => state.round >= 2 || state.phase === 'ended');
+    });
+    for (const round of [4, 8, 12, 16, 20, 24, 28, 32, 36]) beforeAll(() => warmUntil(state => state.round >= round || state.phase === 'ended'));
+    beforeAll(() => {
+      warmUntil(state => state.phase === 'ended');
+      warmPlace!.room.dispose();
+    });
+    it('pvpMode=placeholder', () => { playToEnd(battleCacheResolver(placeholderBattles, 'read', placeholderPvp), 'placeholder'); }, 90_000);
+  });
 });
