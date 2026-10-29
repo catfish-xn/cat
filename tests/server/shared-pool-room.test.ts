@@ -4,7 +4,7 @@ import { selectOpeningUnit } from '../../src/simulation/opening-unit';
  * free failure of an empty paid reroll, one release per eliminated seat (§12.4), conservation after every publication
  * and through whole matches in both PvP modes, and no pool revision change on a refused command.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   applyRoundSettlement, assertSharedPoolConservation, releaseSeatOnElimination, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt,
 } from '../../src/server-entry';
@@ -14,6 +14,7 @@ import { toPlayerView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import type { BattleSeatOutcome, RoomState, SeatState } from '../../src/server/room/types';
 import { expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { battleCacheResolver, type BattleResultCache } from './battle-result-cache';
 
 const conserved = (state: RoomState) => {
   expect(state.poolRevision).toBe(state.pool.revision);
@@ -223,6 +224,19 @@ describe('Room on the shared pool: elimination and round advance (§12.3, §12.4
 });
 
 describe('Room on the shared pool: whole matches stay balanced', () => {
+  const placeholderBattles: BattleResultCache = new Map();
+  let warmPlace: ReturnType<typeof makeRoom> | undefined;
+  // Two-sided results carry death samples on the event objects themselves; a cloned
+  // replay is not a substitute. Placeholder PvP settles without that side channel.
+  beforeAll(() => {
+    warmPlace = makeRoom(battleCacheResolver(placeholderBattles, 'record', placeholderPvp), { pvpMode: 'placeholder' });
+    warmPlace.room.start();
+    runUntil(warmPlace.room, warmPlace.clock, state => state.round >= 8 || state.phase === 'ended', 20_000);
+  });
+  beforeAll(() => {
+    runUntil(warmPlace!.room, warmPlace!.clock, state => state.phase === 'ended', 20_000);
+    warmPlace!.room.dispose();
+  });
   function playToEnd(resolver: BattleResolver, pvpMode: 'two-sided' | 'placeholder') {
     const { room, clock } = makeRoom(resolver, { pvpMode });
     room.start();
@@ -242,5 +256,5 @@ describe('Room on the shared pool: whole matches stay balanced', () => {
     return state;
   }
   it('pvpMode=two-sided', () => { playToEnd(new TwoSidedBattleResolver(), 'two-sided'); }, 90_000);
-  it('pvpMode=placeholder', () => { playToEnd(placeholderPvp, 'placeholder'); }, 90_000);
+  it('pvpMode=placeholder', () => { playToEnd(battleCacheResolver(placeholderBattles, 'read', placeholderPvp), 'placeholder'); }, 90_000);
 });
