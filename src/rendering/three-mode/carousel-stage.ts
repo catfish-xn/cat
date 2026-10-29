@@ -63,9 +63,6 @@ const FX = {
   wall: 'carousel-shareddraft-firstdraftwall-galaxy', wallEnd: 'carousel-shareddraft-firstdraftwall-death-galaxy',
   selected: 'carousel-shareddraft-unitselected', indicator: 'carousel-shareddraft-playerindicator',
 } as const;
-/** Quality ring under each carousel unit, by its cost (S13 shared-draft unittier1..6); bounded and rebuilt like the others. */
-const TIER_FX = (cost: number) => `carousel-shareddraft-unittier${Math.min(6, Math.max(1, Math.round(cost)))}`;
-const TIER_SECONDS = 4;
 const RESTRAINT_EARLY_SECONDS = 1.2, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SELECTED_SECONDS = 1.5, INDICATOR_SECONDS = 30;
 /** Stand-in feedback when an effect is missing: a ring that swells and fades this long. */
 const POP_SECONDS = 0.5;
@@ -77,8 +74,8 @@ const PICK_HALF_WIDTH = 0.65;
  * unit reads at a glance (playtest 10-22: "make the pieces bigger, easier to tell apart").
  */
 const UNIT_SIZE = 1.7;
-/** Their feet rings grow less: on the ring's 9 places (UNIT_RADIUS) larger rings would run into each other. */
-const RING_SIZE = 1.35;
+/** Lightweight hover/pending feedback, in board units; cost/availability live over the head. */
+const HOVER_LIFT = 5, PENDING_LIFT = 10, QUALITY_SIZE = 8;
 /**
  * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
  * until the room confirms contact). It waits within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
@@ -88,7 +85,7 @@ const GRAB_CELLS = 0.25, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
 /** Opening push-in: the camera starts this much farther and higher and settles on the fixed view. */
 const INTRO_SECONDS = 1.5, INTRO_PULL = 0.45, INTRO_LIFT = 0.5;
 const COUNTDOWN_SIZE = 32;
-const COLOR = { me: '#7fd8cf', seat: '#e3a08f', takable: '#68ddd0', pending: '#e6bc76', hover: '#ffd782', lock: '#b4a1f5', item: '#c9d4da' } as const;
+const COLOR = { me: '#7fd8cf', seat: '#e3a08f', pending: '#e6bc76', lock: '#b4a1f5', item: '#c9d4da' } as const;
 
 export interface CarouselStageContext {
   /** A champion's height and width cap (board units), as on the board; a legend stands half a champion. */
@@ -107,7 +104,7 @@ export interface CarouselStageContext {
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
-  /** The 2D theme's cost color (1 gray … 5 gold) for the ring at each unit's feet; a neutral gray without it. */
+  /** The 2D theme's cost color (1 gray … 5 gold) for the overhead quality mark; a neutral gray without it. */
   readonly costColor?: (cost: number) => string;
   /** Item icon textures (tests pass a stub); defaults to three's TextureLoader. */
   readonly loadTexture?: (url: string) => Promise<Texture>;
@@ -137,7 +134,7 @@ export interface CarouselStage {
   /** A walk the room took: that legend goes where the room has it, arriving when the room says. */
   walk(walk: BoardLegendWalk): void;
   /** Acceptance read (?debug3d). Legends read `seat:body[:locked][:chase|:carry|:walk]`; `fetched` names who holds which slot. */
-  debug(): { platform: string[]; legends: string[]; units: { slot: number; body: string; items: number; ring: string }[]; effects: string[]; angle: number;
+  debug(): { platform: string[]; legends: string[]; units: { slot: number; body: string; items: number; cue: string }[]; effects: string[]; angle: number;
     fetched: Record<string, number>; countdowns: Record<string, string> };
   dispose(): void;
 }
@@ -152,10 +149,10 @@ class Stride {
 }
 interface Body { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: Stride; disposed: boolean }
 interface UnitView extends Body {
-  readonly slot: number; readonly definitionId: string; readonly holder: Group; readonly ring: Mesh;
-  /** Ring in the unit's cost color at its feet (TFT's quality circle), under the extracted tier effect; null without a cost. */
-  readonly costRing: Mesh | null;
-  stars: StarMark; items: Sprite[]; data: BoardCarouselSlot; tier: Loop | null;
+  readonly slot: number; readonly definitionId: string; readonly holder: Group;
+  /** Small cost-colored overhead square: bright when takable/pending, dim while unavailable. */
+  readonly quality: Sprite;
+  stars: StarMark; items: Sprite[]; data: BoardCarouselSlot;
   /** Seat named by the view as having taken it: the unit has left the turning ring for that seat's legend. */
   takenBy: string | null;
 }
@@ -194,7 +191,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     disc: own(new CylinderGeometry(7.55 * cell, 7.55 * cell, 0.2 * cell, 64)), glass: own(new CylinderGeometry(3.37 * cell, 3.37 * cell, 0.06 * cell, 48)),
     cradle: own(new CylinderGeometry(0.62 * cell, 0.7 * cell, 0.2 * cell, 24)), wall: own(new CylinderGeometry(4.2 * cell, 4.2 * cell, 0.6 * cell, 48, 1, true)),
     pawn: own(new CylinderGeometry(9, 13, 34, 16)), head: own(new SphereGeometry(10, 16, 12)), legend: own(new SphereGeometry(14, 20, 14)),
-    ring: own(new RingGeometry(20, 26, 32)), cost: own(new RingGeometry(28, 36, 40)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
+    lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
     marker: own(new SphereGeometry(5, 12, 8)),
     // Unit-length tether along +y, stretched and turned between legend and unit each frame.
     tether: own(new CylinderGeometry(1.4, 1.4, 1, 6, 1, true).translate(0, 0.5, 0)),
@@ -205,16 +202,6 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     pawn: material('#9aaeb9'), me: material(COLOR.me), seat: material(COLOR.seat), lock: material(COLOR.lock, { emissive: COLOR.lock, emissiveIntensity: 0.6, transparent: true, opacity: 0.8 }),
     marker: material(COLOR.me, { emissive: COLOR.me, emissiveIntensity: 0.8 }),
     tether: { me: material(COLOR.me, { emissive: COLOR.me, emissiveIntensity: 0.9 }), seat: material(COLOR.seat, { emissive: COLOR.seat, emissiveIntensity: 0.9 }) },
-    ring: Object.fromEntries((['takable', 'pending', 'hover'] as const).map(key => [key,
-      material(COLOR[key], { emissive: COLOR[key], emissiveIntensity: 0.6 })])) as Record<'takable' | 'pending' | 'hover', MeshStandardMaterial>,
-  };
-  /** One ring material per cost color, made on first use. */
-  const costMaterials = new Map<string, MeshStandardMaterial>();
-  const costMaterial = (cost: number) => {
-    const color = ctx.costColor?.(cost) ?? '#9aa4ae';
-    let made = costMaterials.get(color);
-    if (!made) { made = material(color, { emissive: color, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 }); costMaterials.set(color, made); }
-    return made;
   };
   const textures = new Map<string, Promise<Texture | null>>();
   const loadTexture = ctx.loadTexture ?? (url => new TextureLoader().loadAsync(url));
@@ -288,7 +275,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const resurface = () => {
     for (const view of seatViews.values()) { view.anchor.y = surfaceAt(view.anchor.x, view.anchor.z, LEGEND_SURFACE); view.root.position.copy(view.anchor); }
     unitFeet = surfaceAt(0, UNIT_RADIUS * cell, UNIT_SURFACE);
-    for (const view of unitViews.values()) view.holder.position.y = unitFeet;
+    for (const view of unitViews.values()) if (!view.takenBy) styleCue(view);
     measureRim(); frameCamera();
   };
   let azimuth = 0, intro = 0;
@@ -503,14 +490,14 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const body = new Mesh(geometry.pawn, materials.pawn); body.position.y = 17;
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6)); root.scale.setScalar(UNIT_SIZE);
-    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false; ring.scale.setScalar(RING_SIZE);
-    // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
-    const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
-    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(RING_SIZE); }
+    const quality = new Sprite(new SpriteMaterial({ color: data.cost ? ctx.costColor?.(data.cost) ?? '#9aa4ae' : '#9aa4ae',
+      depthTest: false, depthWrite: false, transparent: true }));
+    quality.name = 'render3d-carousel-quality'; quality.renderOrder = 1001; quality.scale.setScalar(QUALITY_SIZE);
+    quality.position.set(-STAR_SIZE * 3, ctx.championHeight * UNIT_SIZE + STAR_GAP, 0);
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight * UNIT_SIZE + STAR_GAP;
-    holder.add(root, ring, stars.object); if (costRing) holder.add(costRing);
-    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, costRing, stars, items: [], data, tier: null, takenBy: null,
+    holder.add(root, stars.object, quality);
+    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, quality, stars, items: [], data, takenBy: null,
       lease: null, mixer: null, state: new Stride(), disposed: false };
     // Item marks bound to the same slot, above the stars.
     data.items.forEach((item, at) => {
@@ -521,12 +508,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     });
     units.add(holder);
     attach(view, data.definitionId, ctx.championHeight, ctx.championWidth);
-    // Quality ring at the unit's feet, turning with it; none without a known cost (stand-ins only, no guess).
-    if (data.cost) view.tier = loop(TIER_FX(data.cost), TIER_SECONDS, new Vector3(0, 0.5, 0), null, holder);
     return view;
   };
   const dropUnit = (view: UnitView) => {
-    endLoop(view.tier); view.tier = null;
+    view.quality.material.dispose();
     releaseBody(view); view.stars.dispose();
     for (const sprite of view.items) sprite.material.dispose();
     view.holder.removeFromParent();
@@ -535,10 +520,12 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   // --- view ------------------------------------------------------------------------------------------------------
   let current: BoardCarousel | null = null, hovered: number | null = null;
   const claimedSeats = new Set<string>();
-  const styleRing = (view: UnitView) => {
+  const styleCue = (view: UnitView) => {
+    if (view.takenBy) return;
     const { takable, pending } = view.data;
-    view.ring.visible = takable || pending;
-    view.ring.material = pending ? materials.ring.pending : hovered === view.slot ? materials.ring.hover : materials.ring.takable;
+    view.quality.visible = !!view.data.cost || takable || pending;
+    view.quality.material.opacity = takable || pending ? 1 : 0.35;
+    view.holder.position.y = unitFeet + (pending ? PENDING_LIFT : takable && hovered === view.slot ? HOVER_LIFT : 0);
   };
   const clear = () => {
     for (const view of unitViews.values()) dropUnit(view);
@@ -595,7 +582,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
     claimedSeats.add(seat.seatId);
     unit.takenBy = seat.seatId;
-    endLoop(unit.tier); unit.tier = null; unit.ring.visible = false; if (unit.costRing) unit.costRing.visible = false;
+    unit.quality.visible = false; unit.holder.position.y = unitFeet;
     taken.attach(unit.holder);
     for (const other of seatViews.values()) if (other !== seat && other.chase === unit) { other.chase = null; other.goal = null; }
     // A receipt confirms contact on the server. Never start another chase or replace the walk with a trip home.
@@ -654,7 +641,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       if (!entry) { entry = createUnit(slot, index, standing.length); unitViews.set(slot.slot, entry); }
       entry.data = slot; entry.stars.setLevel(slot.starLevel);
       if (taker && entry.takenBy !== taker.seatId) take(entry, taker, first);
-      if (!entry.takenBy) styleRing(entry);
+      if (!entry.takenBy) styleCue(entry);
     });
     for (const [slot, entry] of unitViews) if (!standing.some(candidate => candidate.slot === slot)) { releaseTaken(entry); dropUnit(entry); unitViews.delete(slot); }
     if (hovered !== null && (!unitViews.has(hovered) || unitViews.get(hovered)!.takenBy)) hovered = null;
@@ -859,14 +846,14 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     hover(slot) {
       if (hovered === slot) return;
       hovered = slot;
-      for (const view of unitViews.values()) styleRing(view);
+      for (const view of unitViews.values()) styleCue(view);
     },
     debug: () => ({
       platform: [...pieces.keys()].concat(standIn.visible && built ? ['standin'] : []).concat(platformLoading ? [`loading:${platformLoading}`] : []),
       legends: [...seatViews.values()].map(view => `${view.seatId}:${view.lease ? 'model' : 'standin'}${view.lock ? ':locked' : ''}`
         + (view.chase ? ':chase' : view.carry ? ':carry' : view.goal || view.path ? ':walk' : '')),
       units: [...unitViews.values()].map(view => ({ slot: view.slot, body: view.lease ? 'model' : 'standin', items: view.items.length,
-        ring: view.ring.visible ? view.data.pending ? 'pending' : hovered === view.slot ? 'hover' : 'takable' : 'none' })),
+        cue: view.takenBy ? 'none' : view.data.pending ? 'pending' : view.data.takable ? hovered === view.slot ? 'hover' : 'takable' : 'none' })),
       effects: [...loops].map(entry => `${entry.id}:${entry.fx ? 'fx' : 'standin'}`).concat([...bursts].map(entry => `burst:${entry.fx ? 'fx' : 'standin'}`)),
       angle: units.rotation.y,
       fetched: Object.fromEntries([...seatViews.values()].flatMap(view => view.carry ? [[view.seatId, view.carry.slot]] : [])),

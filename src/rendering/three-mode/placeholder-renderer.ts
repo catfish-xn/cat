@@ -82,6 +82,8 @@ const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 
 const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
 const DRAG_LIFT = 10;
+/** A selected piece stays close to the floor; dragging raises it a little further. */
+const SELECT_LIFT = 5;
 const DROP_COLOR = { allowed: '#68ddd0', refused: '#f08080' } as const;
 /** Live action effects at most; later ones are dropped rather than queued. */
 const MAX_EFFECTS = 48;
@@ -119,7 +121,7 @@ const STAR_SIZE = 12, STAR_GAP = 12;
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
 const PICK_RADIUS = 0.8;
-/** Board units the camera fit adds beyond the near (bench) edge: a piece ring's outer radius (33) and a little. */
+/** Board units the camera fit adds beyond the near (bench) edge, including the drop marker's outer radius (33). */
 const FRAME_NEAR_PAD = 36;
 /** Fit-then-centre passes for the camera framing (each pass shrinks the off-centre left by the previous one). */
 const FRAME_PASSES = 4;
@@ -165,7 +167,7 @@ export function useContextRestored(next: () => void): void { contextRestored = n
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
-// Injected the same way: the 2D theme's cost color (presentation/theme.ts costColor) for the carousel's cost rings.
+// Injected the same way: the 2D theme's cost color (presentation/theme.ts costColor) for the carousel's overhead marks.
 let costColorFor: ((cost: number) => string) | undefined;
 export function useCostColor(next: (cost: number) => string): void { costColorFor = next; }
 // Injected the same way: the 2D theme's meter colors (presentation/theme.ts THEME.color), so 2D and 3D bars match.
@@ -265,9 +267,9 @@ async function openActionEffects(models: Models, assetBase: string | null): Prom
 }
 
 interface PieceView {
-  readonly root: Group; readonly ring: Mesh; state: UnitActionState;
+  readonly root: Group; state: UnitActionState;
   /**
-   * Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay ring and body).
+   * Overhead stars, a scene child that follows `root` each frame (kept out of root so its bounds stay the body's).
    * Null on a PvE monster: as in TFT, monsters carry only their health bar.
    */
   stars: StarMark | null; starHeight: number;
@@ -349,14 +351,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const owned: { dispose(): void }[] = [];
   const own = <T extends { dispose(): void }>(resource: T): T => { owned.push(resource); return resource; };
   const pawnBody = own(new CylinderGeometry(9, 13, 34, 16)), pawnHead = own(new SphereGeometry(10, 16, 12));
-  const ringGeometry = own(new RingGeometry(18, 23, 32));
   const teamMaterial = {
     player: own(new MeshStandardMaterial({ color: TEAM_COLOR.player, roughness: 0.6 })),
     enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, roughness: 0.6 })),
-  };
-  const ringMaterial = {
-    player: own(new MeshStandardMaterial({ color: TEAM_COLOR.player, emissive: TEAM_COLOR.player, emissiveIntensity: 0.4 })),
-    enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, emissive: TEAM_COLOR.enemy, emissiveIntensity: 0.4 })),
   };
 
   // Every lease on a model goes through the retention (model-memory.ts), so a template nothing shows is let go after a
@@ -461,7 +458,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
-  // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the rings under the
+  // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the drop marker by the
   // bench pieces, as large as they fit. The camera keeps its tilt; it moves to the closest distance at which every corner
   // projects inside the frame, then slides along its own up/right axes so the drawn extents sit centred (a tilted board
   // is wider at its near edge, so centring on the box's middle left the top of the frame empty). A few passes settle both.
@@ -756,7 +753,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
         view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
       }
-      // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
+      // Remove the pawn only after fitting succeeded; a malformed model must not leave an invisible piece.
       stand?.removeFromParent();
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
@@ -781,12 +778,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const createPiece = (piece: BoardPiece): PieceView => {
     const root = new Group();
-    const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
-    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
-    root.add(ring);
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
-    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
@@ -1060,7 +1054,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.form = Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
       }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
-        view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
+        view.definitionId = piece.definitionId; view.team = piece.team; attachBody(view);
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted);
@@ -1143,7 +1137,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
     for (const view of pieces.values()) if (view.dance !== 'clip') view.mixer?.apply(view.state.output);
   };
-  // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
+  // Hover cards and combat floats: the drawn piece's fitted body bounds projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
   const screenBox = (id: string): BoardScreenBox | undefined => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
@@ -1499,7 +1493,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     camera.updateMatrixWorld();
     frustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     for (const [id, view] of pieces) {
-      if (id === dragging) view.root.position.copy(view.target).setY(view.target.y + DRAG_LIFT); // follows the pointer exactly
+      if (id === dragging || id === lastFrame?.dragging) view.root.position.copy(view.target).setY(view.target.y + DRAG_LIFT); // follows the pointer exactly
       else {
         view.root.position.y = view.target.y; // the floor it stands on: 0, or an arena bench cell's own height
         const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
@@ -1508,6 +1502,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           alive: view.alive, fighting: !!fighting, position: { x: view.root.position.x, z: view.root.position.z },
           destination: { x: view.target.x, z: view.target.z }, target }), seconds);
         view.root.position.addScaledVector(step, follow);
+        if (view.alive && id === lastFrame?.selectedId) view.root.position.y += SELECT_LIFT;
         // Hop: two bounces a second, each dancer a little out of step with the next.
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
