@@ -33,7 +33,8 @@ if (!process.argv.includes('--child')) {
       ? '../tests/fixtures/m5/h3-growth-oracle-v25-baseline.cjs' : oraclePath);
     const verdicts = [];
     require.cache[oraclePath] = { id: oraclePath, filename: oraclePath, loaded: true, exports: {
-      ...h3, checkH3Growth(...args) {
+      ...h3, auditH3: h3.auditH3 ?? ((memory, state) => { h3.checkH3Growth(memory, state, state); }),
+      checkH3Growth(...args) {
         try { const next = h3.checkH3Growth(...args); verdicts.push('1'); return next; }
         catch (error) { verdicts.push(`0:${error.code}:${error.message}`); throw error; }
       },

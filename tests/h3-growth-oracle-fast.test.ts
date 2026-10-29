@@ -137,6 +137,32 @@ describe.each(['facts', 'resources', 'results', 'receipts'] as const)('%s append
     expect(() => fast.checkH3Growth(next, before, { ...before, round: 2, roundDefinitionId: '1-2' }))
       .toThrow(/H3 independent observed checkpoint/);
   });
+  it('catches an in-place edit after the final boundary at the closing audit', () => {
+    const { before, records } = vector();
+    const start = { ...before, phase: 'preparation' };
+    let memory = fast.checkH3Growth(fast.createH3Ledger(start, []), start, before);
+    records(before)[0].tampered = { nested: true };
+    // No later round/phase/lock boundary exists on this truncated route.
+    memory = fast.checkH3Growth(memory, before, before);
+    const saved = copy(memory);
+    expect(() => fast.auditH3(memory, before)).toThrow(/H3 independent observed checkpoint/);
+    expect(verdict(original, memory, before, before).ok).toBe(false);
+    expect(memory).toEqual(saved); // A failed audit must not repair/bless the input.
+    expect(memory.observed[key][0].tampered).toBeUndefined();
+  });
+  it('accepts an edit restored before closing but catches it at an earlier forced checkpoint', () => {
+    const { before, records, memory } = vector();
+    const saved = copy(memory);
+    records(before)[0].tampered = true;
+    const next = fast.checkH3Growth(memory, before, before);
+    // Same semantics as an explicit disconnect/reconnect checkpoint before a boundary.
+    expect(() => fast.auditH3(next, before)).toThrow(/H3 independent observed checkpoint/);
+    delete records(before)[0].tampered;
+    expect(() => fast.auditH3(next, before)).not.toThrow();
+    expect(verdict(original, memory, before, before).ok).toBe(true);
+    expect(memory).toEqual(saved);
+    expect(next.observed[key]).toEqual(memory.observed[key]);
+  });
   it('compares changed references deeply and accepts an identical detached clone as before', () => {
     const { before, memory } = vector();
     expect(() => fast.checkH3Growth(memory, copy(before), copy(before))).not.toThrow();
@@ -173,6 +199,7 @@ it('matches every verdict and detached ledger value on an independent multi-boun
     expect(detached).toEqual(old);
     before = after;
   }
+  fast.auditH3(next, before);
 });
 
 it('clones only the added history and preserves earlier ledger snapshots', () => {

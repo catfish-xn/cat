@@ -23,6 +23,7 @@ async function openingWithRealConsumedReward() {
 function prefixLedger(count = timeline.length) {
   const ledger = new Ledger(initial);
   for (const t of timeline.slice(0, count)) ledger.apply(t.before, t.after, t.command, t.events);
+  ledger.audit(count === 0 ? initial : timeline.slice(0, count).at(-1)!.after);
   return ledger;
 }
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
@@ -99,7 +100,7 @@ describe('independent B8 oracle checks authentic command transitions', () => {
         }
       }
       ledger.apply(before,after,command,result.events);
-      if(returned)throw stop;
+      if(returned){ledger.audit(after);throw stop;}
     }});}catch(e){if(e!==stop)throw e;}
     expect([departures,returns]).toEqual([1,1]);
   },120000);
@@ -145,6 +146,7 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     const repeated = api.selectChoice(result.state, c.choiceId, c.generation, definitionId);
     expect(repeated.ok).toBe(false); expect(repeated.state).toBe(result.state);
     ledger.apply(result.state, repeated.state, undefined, []);
+    ledger.audit(repeated.state);
   });
 
   it('rejects duplicate grant, reveal and resolution events independently of event-sequence checks', () => {

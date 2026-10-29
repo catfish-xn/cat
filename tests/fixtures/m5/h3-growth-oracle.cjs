@@ -46,6 +46,12 @@ function observe(memory,c,full) {
     assert.deepEqual(c,memory.observed,'H3 independent observed checkpoint');throw error;
   }
 }
+// Read-only closing/checkpoint audit: the original whole detached checkpoint
+// comparison, independent of reference-cache hits or round/phase/lock changes.
+// Call at route ends (including truncated routes) and explicit reconnect points.
+function auditH3(memory,state) {
+  assert.deepEqual(checkpoint(state),memory.observed,'H3 independent observed checkpoint');
+}
 function saveObserved(memory,c) {
   // Prior detached entries are immutable ledger data. Clone only the suffix;
   // sharing these snapshots between returned ledgers preserves old checkpoints.
@@ -198,4 +204,4 @@ function h3GrowthForUnit(memory,unitId) {
     for(const k of growthFields)value[k]+=d[k];
   return value;
 }
-module.exports={createH3Ledger,checkH3Growth,h3GrowthForUnit};
+module.exports={createH3Ledger,checkH3Growth,auditH3,h3GrowthForUnit};

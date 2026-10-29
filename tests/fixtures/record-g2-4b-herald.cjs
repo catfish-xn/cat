@@ -40,9 +40,10 @@ async function main() {
     // No restored fixture or saved state is an input to this generation.
     const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: 42,
       onStep(before,result,command) {
-        if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
+        if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {observedLedger.audit(before);rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
         observedLedger.apply(before,result.state,command,result.events);
       } });
+    observedLedger.audit(route.final);
     assert(rawPrefix && route.final.phase === 'gameOver' && route.final.roundDefinitionId === '6-7'
       && route.final.outcome === 'victory', 'Complete real public acquisition route');
     assert.equal(route.rounds.length, 33, 'Unchanged complete acquisition route battle count');
@@ -93,6 +94,7 @@ async function main() {
       };
       const generationStarted = performance.now();
       const rawState = builder.buildRawHeraldEquipment(rawPrefix, entry.definitions, observer);
+      ledger.audit(rawState);
       assert.equal(canonicalHash(rawPrefix), prefixHash, 'Generator never mutates the shared raw prefix');
       assert.equal(rawState.roundDefinitionId, '6-7');
       assert.equal(rawState.phase, 'preparation');

@@ -417,6 +417,7 @@ try {
   await run(matchApi,{seed:HEROIC_SEED,build:'cannon',augmentPriorities:['heroic-grab-bag'],augmentRerollPriorities:{'2-1':['heroic-grab-bag']},onStep(before,result,command){
     if(!('events' in result))throw Error(result.reason);
     if(command?.type==='select'&&command.definitionId==='heroic-grab-bag'){
+      routeLedger.audit(before);
       heroicCase.push({before,after:result.state,command,events:result.events,ledger:routeLedger});throw stopHeroic;
     }
     routeLedger.apply(before,result.state,command,result.events);

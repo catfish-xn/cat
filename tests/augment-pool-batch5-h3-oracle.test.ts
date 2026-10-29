@@ -11,7 +11,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { makeRoom, runUntil } from './server/helpers';
-import { COST, Ledger, createH3Ledger, checkH3Growth, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
+import { COST, Ledger, createH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
 
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
 const copy = <T>(x:T):Mutable<T> => structuredClone(x) as Mutable<T>;
@@ -64,15 +64,15 @@ for(const id of ['no-scout-no-pivot','cooking-pot'] as const) {
         const after=mine();memory=checkH3Growth(memory,before,after);trace.push({before,after,memory:prior});
       }
       expect(room.state.fault).toBeNull();
-      const final=mine();
+      const final=mine();auditH3(memory,final);
       // Holding either augment through a room disconnect/reconnect must preserve
       // receipts and independently computed growth, including the battle snapshot.
       const snapshot=snapshotForBattle(final,seatId);
       expect(room.setConnected(seatId,false)).toBe(true);expect(room.setConnected(seatId,true)).toBe(true);
-      memory=checkH3Growth(memory,final,mine());expect(mine()).toEqual(final);
+      memory=checkH3Growth(memory,final,mine());auditH3(memory,mine());expect(mine()).toEqual(final);
       expect(snapshotForBattle(mine(),seatId)).toEqual(snapshot);
       expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),room.augmentHistoryAuthority(seatId))).toEqual(final);
-      routes[id]={trace,final,memory};
+      auditH3(memory,mine());routes[id]={trace,final,memory};
     } finally {room.dispose();}
   });
 }
@@ -100,6 +100,18 @@ describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth
       const {references,...detached}=optimized as unknown as {references:unknown;[k:string]:unknown};
       expect(references).toBeDefined();expect(detached).toEqual(original);
     }
+    auditH3(optimized,trace.at(-1)!.after);
+  });
+  it('catches a retained in-place edit at the reconnect checkpoint before it is restored',()=>{
+    const final=copy(routes[id].final);
+    let memory=checkH3Growth(routes[id].memory,routes[id].final,final);
+    const record=final.augmentHistory!.facts[0],originalPrefix=record.resourcePrefix;
+    record.resourcePrefix=originalPrefix+1;
+    // No round, phase or roster-lock transition: only the forced checkpoint can catch this.
+    memory=checkH3Growth(memory,final,final);
+    expect(()=>auditH3(memory,final)).toThrow(/H3 independent observed checkpoint/);
+    record.resourcePrefix=originalPrefix;
+    expect(()=>auditH3(memory,final)).not.toThrow();
   });
   it('accepts the observed room boundaries and matches independently calculated totals',()=>{
     const {final,memory}=routes[id],step=growthStep(id);expect(step).toBeDefined();

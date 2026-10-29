@@ -41,12 +41,15 @@ export class Ledger {
   receipts: Set<string>;
   apply(before: MatchState, after: MatchState, command?: OracleCommand | null, events?: readonly MatchEvent[]): void;
   check(state: MatchState): void;
+  audit(state: MatchState): void;
 }
 
 /** Detached observations, initialized before H3 growth; no production growth is an expectation. */
 export interface H3Ledger { readonly kind: 'h3-oracle-v1' }
 export function createH3Ledger(initial: MatchState): H3Ledger;
 export function checkH3Growth(memory: H3Ledger, before: MatchState, after: MatchState, command?: OracleCommand | null): H3Ledger;
+/** Full read-only comparison against the detached observed checkpoint. */
+export function auditH3(memory: H3Ledger, state: MatchState): void;
 export function h3GrowthForUnit(memory: H3Ledger, unitId: string): import('../../../src/simulation/augment-history-types').AugmentGrowth;
 
 export function blackMarket(tier: number, rng: number): { offers: string[]; rng: number; draws: number };
