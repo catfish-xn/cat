@@ -3,6 +3,7 @@ import type { Unit } from '../src/simulation/units';
 import type { CombatState, CombatUnit } from '../src/simulation/combat-types';
 import { createMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { MatchSession } from '../src/rendering/match-session';
+import { RemoteSession } from '../src/rendering/online/remote-session';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -55,9 +56,9 @@ const display = vi.hoisted(() => {
   return { Token, View, created };
 });
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
-vi.mock('../src/presentation/unit-view', () => ({ UnitView: display.View }));
+vi.mock('../src/presentation/unit-view', () => ({ UnitView: display.View, PIECE_RADIUS: 27 }));
 import { OnlineApplication } from '../src/rendering/online/online-application';
-import type { BoardFrame } from '../src/rendering/board-feed';
+import { subscribeBoardFeed, type BoardFrame } from '../src/rendering/board-feed';
 import { BoardScene } from '../src/rendering/BoardScene';
 
 type Token = InstanceType<typeof display.Token>;
@@ -86,6 +87,9 @@ interface SceneBridge {
   syncLoadoutTip(): void;
   renderActiveStats(): void;
   showEvents(): void;
+  showUpgrades(events: readonly import('../src/simulation/match-types').MatchEvent[]): readonly unknown[];
+  mergeFx: { play: ReturnType<typeof vi.fn> };
+  scale: { gameSize: { width: number; height: number } };
   setStatus(): void;
   clearCombatEffects(): void;
   command(result: MatchCommandResult, message: string): void;
@@ -156,6 +160,47 @@ function resolveRewardAndContinue(scene: SceneBridge, beforeContinue?: () => voi
 }
 
 describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser claim)', () => {
+  it.each([false, true])('keeps consumed-token origins through repeated syncs and plays each receipt once (3D=%s)', use3d => {
+    const initial = createMatch(42), base = initial.preparation.units.find(unit => unit.team === 'player')!;
+    const a: Unit = { ...base, id: 'a', location: { kind: 'board', cell: { col: 2, row: 4 } } };
+    const b: Unit = { ...base, id: 'b', location: { kind: 'bench', slot: 0 } };
+    const c: Unit = { ...base, id: 'c', location: { kind: 'bench', slot: 1 } };
+    const before = { ...initial, preparation: { ...initial.preparation, units: [a, b, c] } };
+    const scene = makeScene(before), play = vi.fn(), merges = vi.fn();
+    scene.mergeFx = { play }; scene.scale = { gameSize: { width: 900, height: 600 } };
+    const expected = [b, c].map(unit => ({ id: unit.id, x: token(scene, unit.id).x, y: token(scene, unit.id).y,
+      benchSlot: unit.location.kind === 'bench' ? unit.location.slot : undefined }));
+    scene.session = new MatchSession({ ...before, preparation: { ...before.preparation, units: [{ ...a, starLevel: 2 }] } });
+    sessions.push(scene.session);
+    scene.reconcileTokens(); scene.reconcileTokens();
+    const event = { type: 'unitUpgraded', survivorId: 'a', consumedIds: ['b', 'c'], definitionId: base.definitionId,
+      fromStar: 1, toStar: 2, location: a.location } as const;
+    const off = use3d ? subscribeBoardFeed({ frame() {}, events() {}, merges }) : () => {};
+    try {
+      expect(scene.showUpgrades([event])).toHaveLength(1);
+      expect((use3d ? merges : play).mock.calls[0][0][0].from).toEqual(expected);
+      expect((use3d ? play : merges)).not.toHaveBeenCalled();
+      expect(scene.showUpgrades([event])).toHaveLength(0);
+      expect((use3d ? merges : play)).toHaveBeenCalledTimes(1);
+      expect(scene.session.preparation.units).toHaveLength(1);
+      expect(scene.session.preparation.units[0].starLevel).toBe(2);
+    } finally { off(); }
+  });
+
+  it('still animates a synchronous local-online command result through RemoteSession', () => {
+    const scene = makeScene(), initial = scene.session.state, unit = initial.preparation.units.find(unit => unit.team === 'player')!;
+    const event = { type: 'unitUpgraded', survivorId: unit.id, consumedIds: ['b', 'c'], definitionId: unit.definitionId,
+      fromStar: 1, toStar: 2, location: unit.location } as const;
+    const state = { ...initial, preparation: { ...initial.preparation, units: initial.preparation.units.map(entry => entry.id === unit.id ? { ...entry, starLevel: 2 as const } : entry) } };
+    const result = { ok: true, state, events: [event] } as const;
+    const client = { send: vi.fn(() => result) } as unknown as import('../src/rendering/online/protocol').GameClient;
+    scene.session = new RemoteSession(client, initial); sessions.push(scene.session);
+    const play = vi.fn(); scene.mergeFx = { play }; scene.scale = { gameSize: { width: 900, height: 600 } };
+    scene.command(scene.session.buy(0, initial.shop.generation), 'local');
+    expect(client.send).toHaveBeenCalledTimes(1); expect(play).toHaveBeenCalledTimes(1);
+    expect(play.mock.calls[0][0][0].toStar).toBe(2); expect(scene.session.state).toBe(state);
+  });
+
   it('creates the actual seed-42 Tristana before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
     const scene = makeScene();
     const initialIds = [...scene.tokens.keys()];

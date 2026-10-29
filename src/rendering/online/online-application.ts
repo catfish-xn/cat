@@ -55,6 +55,8 @@ export interface OnlineHooks {
   refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
   /** The server's own events behind a state push (T10: deadline auto-deployment, post-battle merges), after it is shown. */
   serverEvents?(events: readonly MatchEvent[]): void;
+  /** All receipted merges in this push, once after its final redraw (commands and server events together). */
+  upgrades?(events: readonly MatchEvent[]): void;
   /** v15: an orb claimed in the frozen moment before the battle was refused by the rules after its ok receipt. */
   orbClaimRefused?(orbId: string, reason: string): void;
 }
@@ -200,6 +202,8 @@ export class OnlineApplication implements SceneApplication {
       const line = this.phaseLine;
       if (line && line.round === state.round && line.phase === state.phase) { this.phaseLine = null; this.hooks.status(line.text); }
     }
+    const upgrades = [...confirmed.flatMap(command => command.events), ...serverEvents].filter(event => event.type === 'unitUpgraded');
+    this.hooks.upgrades?.(upgrades);
     // The settlement's merges arrive before the phase change; its status line keeps them (syncStatus).
     const merged = mergeNotice(serverEvents);
     if (merged) this.mergeNote = { round: state.round, text: merged };

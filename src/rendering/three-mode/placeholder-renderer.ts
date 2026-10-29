@@ -1,6 +1,7 @@
 import { projectedBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { unitModelId } from './unit-model';
+import { createStarUpFx } from './star-up-fx';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -794,7 +795,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
     if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
-    const level = piece.effectiveStarLevel ?? piece.starLevel;
+    const level = starUps.level(piece.id, piece.effectiveStarLevel ?? piece.starLevel);
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
     view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
@@ -841,6 +842,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
+
+  const starUps = createStarUpFx({ scene, reduced: () => reducedMotion(), color: level => starColorFor(level),
+    target: id => pieces.get(id)?.root,
+    point: point => point.benchSlot !== undefined && benchSlots?.[point.benchSlot]
+      ? benchSlots[point.benchSlot]!.clone() : new Vector3(point.x, 0, point.y),
+    take: id => {
+      const view = pieces.get(id);
+      if (!view) return;
+      loadReport.dropped(id); pieces.delete(id); ltk?.stopUnit(id); cancelLunge(view);
+      view.stars && (view.stars.object.visible = false); view.overhead.object.visible = false;
+      view.halo && (view.halo.object.visible = false);
+      return { object: view.root, release: () => removePiece(view) };
+    },
+  });
 
   // Action effects (attack/cast): staged by render time, owned by a phase generation so a new combat, preparation or
   // dispose drops everything still queued, loading or playing.
@@ -1057,7 +1072,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const combatBegan = combatStarted && fighting === false && !joined;
     if (!frame.fighting) joined = false;
     if (fighting !== frame.fighting) rising.clear();
-    if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
+    if (fighting !== null && fighting !== frame.fighting) { if (frame.fighting) starUps.clear(); clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
     const hints = feed?.warmHints?.();
@@ -1179,6 +1194,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     tabletop.away(scout.active || active, active);
     scout.away(active);
     if (view && !stage.active) {
+      starUps.clear();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
     }
@@ -1190,6 +1206,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onScout = (view: Parameters<typeof scout.show>[0]) => {
     if (view) portal.cancel();
     if (view && !visiting()) {
+      starUps.clear();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag(); canvas.style.cursor = '';
     }
@@ -1218,7 +1235,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (walk) legend()?.walk({ scene: 'board', ...walk });
     return walk !== null;
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, merges: merges => { if (!visiting() && !stage.active) starUps.play(merges); }, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
     if (event.source !== 'mel' && !visiting()) tabletop.saved();
     if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
     saveBurst?.dispose();
@@ -1518,6 +1535,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     portal.advance(seconds, arrivalsEnabled());
+    if (!matchShown) starUps.clear();
+    starUps.update(seconds);
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
     camera.updateMatrixWorld();
     frustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
@@ -1561,6 +1580,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
       }
       if (view.stars) {
+        view.stars.setLevel(starUps.level(id, view.starLevel));
+        view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
         view.stars.object.visible = view.root.visible;
       }
@@ -1630,7 +1651,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); ltk?.dispose(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); starUps.dispose(); clearEffects(); ltk?.dispose(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); clearBoard();
       originalUi.dispose();

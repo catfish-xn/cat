@@ -109,7 +109,14 @@ export type BoardDescription =
   | { readonly kind: 'item'; readonly id: string }
   | { readonly kind: 'orb'; readonly id: string }
   | { readonly kind: 'public-orbs'; readonly count: number; readonly tiers: readonly string[] };
+/** Presentation coordinates captured before consumed tokens disappear. Never infers a promotion from roster diffs. */
+export interface BoardMergePoint { readonly id: string; readonly x: number; readonly y: number; readonly benchSlot?: number }
+export interface BoardMerge {
+  readonly definitionId: string; readonly fromStar: number; readonly toStar: number;
+  readonly from: readonly BoardMergePoint[]; readonly to: BoardMergePoint;
+}
 export interface BoardFeedListener {
+  merges?(merges: readonly BoardMerge[]): void;
   playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
@@ -214,6 +221,7 @@ export function publishScout(build: () => BoardScout | null): boolean {
   listener.scout(build());
   return true;
 }
+export function publishBoardMerges(merges: readonly BoardMerge[]): void { listener?.merges?.(merges); }
 export function publishPlayerSaved(event: MelSaveReceipt): void { listener?.playerSaved?.(event); }
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
