@@ -1,4 +1,5 @@
 import type { MatchState } from './match-types';
+import { whatYouReallyAreProgress } from './augment-d1';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { AUGMENT_BRONZE_THRESHOLDS } from './content/augment-policy';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -131,6 +132,7 @@ export function augmentDynamicValues(state: MatchState): AugmentDynamicValues {
   }
   else if (id === 'diversified-portfolio' || id === 'diversified-portfolio-plus') result[id] = { values: [owner ? portfolioShown(state, owner) : null] };
   else if (id === 'glorious-evolution') result[id] = { values: [owner ? gloriousShown(state) : null] };
+  else if (id === 'what-you-really-are') result[id] = { values: [owner ? whatYouReallyAreProgress(state).count : null] };
   else if (id === 'lunch-money') result[id] = { values: [owner ? lunchShown(state, owner) : null] };
   else if (id === 'forward-thinking') result[id] = { values: [owner ? forwardShown(state, owner) : null] };
   else if (id === 'ghost-of-friends-past') result[id] = { values: owner && state.augmentHistory ? ghostValues(state) : [null, null, null] };

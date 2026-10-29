@@ -1,3 +1,7 @@
+## 2026-10-29 D0–D1：对手实扣血与真心本色
+
+联机 PvP 的可选 `RoundResult.damageDealt` 为对手同轮 `hpLost`（截过杀、含梅尔保命、镜像为 0），房间收据必带并在全轮发布前双边校验；单人/PvE/选秀不增加键。D1 `what-you-really-are` 从取得当轮起累计此字段，35 点给沃里克与护手，取得给饮血剑；本单仅实现效果，不注册候选池。字段、函数签名、失败原因、所有调用入口、奖励及投影读取路径见 [D0–D1 合同](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md)。用户已允许预期的 v25 源码 SHA/联机快照变化，重录留待 D5/集成由 Claude 执行，本单不运行 `--write`。
+
 ## 2026-10-27 v25-h8：三项历史依赖强化
 
 本分支新增 B5-45/46/47，原分支 rules/content 为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`，schema/save/replay/command 保持 **12/8/8/7**，NET=5。三项均已开放；旧身份不迁移，epoch 不重录。P 约定与全部内部接口见 [历史设计的 B5-45／46／47 调用约定](AUGMENT_HISTORY_DESIGN.md#b5-454647-调用约定2026-10-27)。

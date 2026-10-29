@@ -855,7 +855,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
 | 本轮已揭示掉落（SR-C7-02） | 可选 `revealedLoot.{roundId,revealedDrops}`；条目仅 `dropId,encounterId,sourceUnitId,roundId,payload,status,receiptId,allowedActions,reason?`，payload 仅 `{kind:'gold',quantity}` 或 `{kind:'unit'\|'item',definitionId,quantity}` | 仅本席当前 PvE 轮已揭示内容，具体门槛、状态及排序见 §14.1；不是 m8.loot 账本，不含计划、未来候选或随机流 |
-| 已提交本席轮结果 | `roundResults[].{round,roundId,roundKind,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 已提交本席轮结果 | `roundResults[].{round,roundId,roundKind,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,damageDealt?,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；`damageDealt` 仅联机 PvP，等于对手实扣血（镜像 0），详见 [D0–D1](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md)；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
 | 本轮已公开 PvE 遭遇预览（SR-B7-02） | `m8.preparation.{roundId,encounterId,enemies}`；enemies 每项按准备单位白名单复制 | 仅 m8.round.kind=pve、轮 ID 与 roundDefinitionId 相同且 preparation.encounterId 与本轮一致时存在；仅 enemy 棋盘单位。相同单位也进入 preparation.units，供站位和 readEncounterPreview 使用；不公开未来计划、掉落或 PvP 模板 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
@@ -941,6 +941,7 @@ interface RoundSettlementReceipt {
   readonly settlementEligible: boolean;
   readonly result: 'win' | 'loss' | 'draw';
   readonly damage: number;       // T2 未截断伤害，不能改成 hpLost
+  readonly damageDealt?: number; // D0 房间 PvP 必带：对手同轮 hpLost；镜像为 0
   readonly baseDamage: number;
   readonly opposingSurvivors: number;
   readonly growth: readonly PersistentGrowth[]; // 本席原始 unitId 的增量
@@ -970,6 +971,8 @@ interface RoundSettlementReceipt {
 所有失败返回**原 state 引用，无 events 字段、无资源/RNG/序号改变**。去重在阶段/轮次检查前；输入首先经过有限 JSON 数据检查，非 JSON 载荷不享受去重。一个合法获胜收据亦必须写入收入和成长一次，不能把 damage=0 当成无操作。
 
 ### 11.3 B4 全轮编排（由 Claude 在 src/server 实现）
+
+2026-10-29 D0 补充：房间通过公开 `pvpSettlementHpLost(opponentLiveState, oppositeProposal)` 构建本席 `damageDealt`，全部席位提交规则后逐项核对本席待提交收据/已保存收据/RoundResult 与对手同轮 `hpLost` 一致；镜像为 0，任何不一致原子拒绝全轮。字段数值/失败语义、D1 35 点奖励与完整调用表以 [D0–D1 合同](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md) 为准。旧无 D1 的直接规则调用可省略此可选键；本节旧示意不代表房间可漏填。
 
 1. 冻结本轮 active 席位、配对、battleSeed、battleId、roomRevision；准备截止时先处理 §11.4 与 §15.4 自动上场，随后冻结快照。运行中冻结输入不可修改，live seat 运营按 §15。
 2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。

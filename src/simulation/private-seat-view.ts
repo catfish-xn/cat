@@ -121,7 +121,7 @@ export function toPrivateSeatView(state: MatchState) {
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
       ['round', 'roundId', 'roundKind', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',
-        'playerDamage', 'hpLost', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
+        'playerDamage', 'hpLost', 'damageDealt', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
         'levelBefore', 'levelAfter', 'xpBefore', 'xpAfter']),
       incomeBreakdown: pick(result.incomeBreakdown, ['base', 'win', 'interest', 'streak']) })),
     m8: { round: pick(state.m8.round, ['roundId', 'ordinal', 'stage', 'subround', 'kind', 'encounterId', 'displayName']),
