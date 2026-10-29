@@ -4,7 +4,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const fast = require('./fixtures/m5/h3-growth-oracle.cjs');
+const implementation = require('./fixtures/m5/h3-growth-oracle.cjs');
+// Mutation vectors must reach the independent audit rather than a freeze error.
+const fast = { ...implementation, createH3Ledger: (state: unknown, heroes: string[]) =>
+  implementation.createH3Ledger(state, heroes, { freezeInputs: false }) };
 // Exact 686f3086 implementation; do not optimize this comparison fixture.
 const original = require('./fixtures/m5/h3-growth-oracle-v25-baseline.cjs');
 const copy = structuredClone;
@@ -62,6 +65,16 @@ it('checks the after side at a boundary even when the before side is intact', ()
   const after = { ...before, phase: 'settlement' };
   (before.augmentHistory.facts[0] as Record<string, unknown>).deaths = ['forged'];
   expect(() => fast.checkH3Growth(memory, intact, after)).toThrow(/H3 retained facts/);
+});
+
+it('never adopts an edited retained reference when before is an intact clone between boundaries', () => {
+  const { before, memory } = accepted();
+  const intact = copy(before);
+  before.augmentHistory.facts[0].resourcePrefix = 999;
+  const next = fast.checkH3Growth(memory, intact, before);
+  expect(next.observed.facts[0]).toBe(memory.observed.facts[0]);
+  expect(next.observed.facts[0].resourcePrefix).toBe(0);
+  expect(() => fast.auditH3(next, before)).toThrow(/H3 independent observed checkpoint/);
 });
 
 it('also performs a full audit on a roster-lock boundary without a phase change', () => {
@@ -181,7 +194,8 @@ it('matches every verdict and detached ledger value on an independent multi-boun
       const a = verdict(original, old, before, after), b = verdict(fast, next, before, after);
       expect(b.ok).toBe(a.ok); expect(a.ok).toBe(true);
       old = a.memory; next = b.memory;
-      const { references, ...detached } = next;
+      const { references, freezeInputs, ...detached } = next;
+      expect(freezeInputs).toBe(false);
       expect(references.facts).toEqual(after.augmentHistory.facts);
       expect(detached).toEqual(old);
       before = after;
@@ -194,7 +208,8 @@ it('matches every verdict and detached ledger value on an independent multi-boun
     const a = verdict(original, old, before, after), b = verdict(fast, next, before, after);
     expect(b.ok).toBe(a.ok); expect(a.ok).toBe(true);
     old = a.memory; next = b.memory;
-    const { references, ...detached } = next;
+    const { references, freezeInputs, ...detached } = next;
+    expect(freezeInputs).toBe(false);
     expect(references.facts).toEqual(after.augmentHistory.facts);
     expect(detached).toEqual(old);
     before = after;

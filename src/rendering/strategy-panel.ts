@@ -1,6 +1,6 @@
 import { attachTextCards, textCard, hoverAction } from '../presentation/text-card';
 import { onTooltipTextChanged } from '../presentation/tooltip-text-loader';
-import { onAugmentTextChanged } from '../presentation/augment-text-loader';
+import { readAugmentText, onAugmentTextChanged } from '../presentation/augment-text-loader';
 import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
@@ -37,7 +37,7 @@ import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
 import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
-import { augmentDynamicValues, type AugmentDynamicValues } from '../simulation/augment-dynamic-values';
+import type { AugmentDynamicValues } from '../simulation/augment-dynamic-values';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -555,7 +555,8 @@ export class StrategyPanel {
   refreshBench(): void { if (this.tab === 'units') this.render(); }
   private dynamicValues(state: MatchState): AugmentDynamicValues {
     if (isOnline()) return (state as MatchState & { augmentDynamicValues?: AugmentDynamicValues }).augmentDynamicValues ?? {};
-    return augmentDynamicValues(state);
+    if (!state.augments.length && state.pendingChoice?.kind !== 'augment') return {};
+    return readAugmentText()?.augmentDynamicValues?.(state) ?? {};
   }
   render(): void {
     const spectating = isOnlineSpectating();

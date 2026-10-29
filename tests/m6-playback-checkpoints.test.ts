@@ -54,7 +54,8 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // Independent native stepping of the v25 input: pin all 685 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
     expect(bytesHash([...expected.hashes])).toBe('cf8c0c9136360c088e39d1259b8fd4bdf44d0940bb482be12c335b9b651a2a6d');
-    expect(bytesHash(record)).toBe('4371559d3bd53b99b3dfd91d6b48b6180a2fd7af90b63cfd86215a21979cec46');
+    // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
+    expect(bytesHash(record)).toBe('64fb5f0af6a6d507d574c2ba2e6db53d291dc296d1d66671f797a583ce7d6566');
     expect(bytesHash(record.events)).toBe('c619dab88165e2ee1e3ca6a5e01c2eb0387fdabf69d1d8d79e35588b2345a519');
     expect(bytesHash(expected.terminal)).toBe('c4c0d27c2df046bd5f9986873249715bfa97950a3238544555efd3e532091d8d');
     // An external JSON record is cold on each constructor, like browser fixtures.

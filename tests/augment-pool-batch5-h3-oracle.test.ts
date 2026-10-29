@@ -11,10 +11,12 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { makeRoom, runUntil } from './server/helpers';
-import { COST, Ledger, createH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
+import { COST, Ledger, createH3Ledger as createObservedH3Ledger, checkH3Growth, auditH3, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
 
 type Mutable<T> = { -readonly [K in keyof T]: Mutable<T[K]> };
 const copy = <T>(x:T):Mutable<T> => structuredClone(x) as Mutable<T>;
+// Exercise in-place tampering and reconnect audits on mutable production inputs.
+const createH3Ledger = (state: MatchState) => createObservedH3Ledger(state, { freezeInputs: false });
 type Transition = {before:MatchState;after:MatchState;memory:H3Ledger};
 type Route = {trace:Transition[];final:MatchState;memory:H3Ledger};
 const routes:Record<string,Route>={};
@@ -97,7 +99,8 @@ describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth
     for(const t of trace) {
       original=originalH3.checkH3Growth(original,t.before,t.after);
       optimized=checkH3Growth(optimized,t.before,t.after);
-      const {references,...detached}=optimized as unknown as {references:unknown;[k:string]:unknown};
+      const {references,freezeInputs,...detached}=optimized as unknown as {references:unknown;freezeInputs:boolean;[k:string]:unknown};
+      expect(freezeInputs).toBe(false);
       expect(references).toBeDefined();expect(detached).toEqual(original);
     }
     auditH3(optimized,trace.at(-1)!.after);

@@ -187,7 +187,13 @@ describe('independent B8 oracle checks authentic command transitions', () => {
   });
 
   it.each([42, 230])('runs the complete real cannon route, seed %i, through the unchanged public-command driver', async seed => {
-    const route = await run(api, { seed, build: 'cannon' });
+    // Seed 42 keeps production inputs untouched: oracle freezing must not make
+    // all main routes benefit from src's frozen-object validation caches.
+    const route = await run(api, { seed, build: 'cannon', freezeObservations: seed !== 42,
+      onStep(_before: MatchState, result: { state: MatchState }) {
+        if (seed === 42 && result.state.augmentHistory)
+          expect(Object.isFrozen(result.state.augmentHistory.facts)).toBe(false);
+      } });
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);

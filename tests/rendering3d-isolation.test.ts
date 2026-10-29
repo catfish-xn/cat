@@ -52,8 +52,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
 
     // Keep the path as evidence: a regression reports each leaking module and
     // the exact chunk import chain, rather than relying on filenames or sizes.
-    function reachable(includeDynamic: boolean): Map<string, string[]> {
-      const paths = new Map<string, string[]>([[entry.fileName, [entry.fileName]]]);
+    function reachable(includeDynamic: boolean, from = entry.fileName): Map<string, string[]> {
+      const paths = new Map<string, string[]>([[from, [from]]]);
       for (const [name, path] of paths) {
         const chunk = byName.get(name);
         if (!chunk) throw new Error(`Missing emitted chunk: ${path.join(' → ')}`);
@@ -67,14 +67,44 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const staticPaths = reachable(false);
     const allPaths = reachable(true);
+    // Path-based accounting is valid only when excluded directories are truly
+    // on demand. This also catches a future new directory outside 3d/solo/ui.
+    expect([...staticPaths.keys()].filter(name => !/^assets\/[^/]+\.js$/.test(name)),
+      'every eagerly loaded JS chunk must count toward the 2D budget').toEqual([]);
     const threeDChunks = chunks.filter(chunk => chunk.moduleIds.some(is3dModule));
     const leaks = [...staticPaths].flatMap(([name, path]) => byName.get(name)!.moduleIds
       .filter(is3dModule).map(module => ({ module: normalize(module), chain: path.join(' ') })));
     expect.soft(leaks, '3D modules reachable from the 2D entry using only static imports').toEqual([]);
 
     const staticModuleIds = [...staticPaths.keys()].flatMap(name => byName.get(name)!.moduleIds).map(normalize);
+    const phaserModules = staticModuleIds.filter(id => id.includes('/node_modules/phaser/src/'));
+    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad)\//.test(id)
+      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower)\.js(?:\?|$)/.test(id)),
+    'unused Phaser subsystems and public utility collections must stay out').toEqual([]);
+    for (const module of ['display/color/Color.js', 'display/color/ValueToColor.js',
+      'renderer/canvas/CanvasRenderer.js', 'input/InputPlugin.js', 'input/touch/TouchManager.js',
+      'loader/filetypes/ImageFile.js', 'tweens/TweenManager.js', 'animations/AnimationManager.js']) {
+      expect(phaserModules.some(id => id.endsWith(`/phaser/src/${module}`)),
+        `required or deliberately retained Phaser module: ${module}`).toBe(true);
+    }
     expect(staticModuleIds.filter(id => /\/src\/simulation\/restore-checks\//.test(id)),
       'restore-checks must not be in entry static reachable chunks').toEqual([]);
+
+    for (const module of ['augment-dynamic-values.ts', 'private-seat-view.ts']) {
+      expect(staticModuleIds.filter(id => id.endsWith(`/src/simulation/${module}`)),
+        `${module} must not enter the online client's static graph`).toEqual([]);
+    }
+    const dynamicValuesChunks = chunks.filter(chunk => chunk.moduleIds.some(id =>
+      normalize(id).endsWith('/src/simulation/augment-dynamic-values.ts')));
+    expect(dynamicValuesChunks, 'the shared dynamic projection must remain emitted on demand').toHaveLength(1);
+    expect(dynamicValuesChunks[0]!.fileName).toMatch(/^assets\/solo\//);
+    expect(allPaths.has(dynamicValuesChunks[0]!.fileName)).toBe(true);
+
+    const augmentTextChunks = chunks.filter(chunk => chunk.moduleIds.some(id =>
+      normalize(id).endsWith('/src/presentation/augment-text-data.ts')));
+    expect(augmentTextChunks, 'online augment text must remain independently loadable').toHaveLength(1);
+    expect([...reachable(true, augmentTextChunks[0]!.fileName).keys()].filter(name => name.startsWith('assets/solo/')),
+      'loading augment text must not transitively request solo code, including dynamic values').toEqual([]);
 
     const soloChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/solo/'));
     expect(soloChunks.length, 'solo functionality must actually be emitted').toBeGreaterThan(0);
@@ -106,11 +136,14 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
+    console.info('2D entry JS gzip-9:', gzip2d);
     expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))
       .map(([tag]) => attribute(tag, 'href')).filter((href): href is string => href !== undefined);
+    expect([...preloads, ...scriptEntries].map(outputPath).filter(path => path.endsWith('.js') && !/^assets\/[^/]+\.js$/.test(path)),
+      'HTML must not preload JS excluded by the 2D budget').toEqual([]);
     expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/solo/')), 'HTML must not preload solo code').toEqual([]);
     const threeDNames = new Set(threeDChunks.map(chunk => chunk.fileName));
     expect.soft(preloads.filter(href => threeDNames.has(outputPath(href))), 'HTML must not preload 3D chunks').toEqual([]);

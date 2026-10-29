@@ -1,7 +1,7 @@
 import { M8_VERSION } from '../src/simulation/m8/version';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, startMatchCombat, stepMatch, buyUnit, sellUnit, rerollShop, deployMatchUnit, buyXp, combineItems, equipItem, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
@@ -11,6 +11,7 @@ import { BattleHistory, validateBattleCollection } from '../src/replay';
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { accepted, emptyBoard } from './match-helpers';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices as choices } from './fixtures/b8-public-equipment';
 import { vi } from 'vitest';
@@ -19,14 +20,16 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const AUGMENTS=['fractured-crystals'];
 function start(equipped = true, history?: BattleHistory): MatchState {
-  // xp/batch-3 merge: seed 42's 2-1 offer is now crimson-pact, crownguard-spirit, fractured-crystals and the default
-  // first pick (crimson-pact) leaves this army dead at 4-3. Prefer fractured-crystals (then the route's own 3-2/4-2
-  // picks): it reaches 4-5 at 14 HP (6 unequipped) with the unchanged level history and seed-42 equipment rolls.
+  // v25 no longer naturally offers this card on seed 42. The suite scripts the
+  // 2-1 draw only: once acquired, eligibility excludes it from all later draws.
   let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15, augmentPriorities:AUGMENTS });
   if(history){
     const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15,augmentPriorities:AUGMENTS});
     expect(shared).toEqual(state); expect(shared).not.toBe(state);
   }
+  // Fixture self-check under installB1Offers, not a natural-RNG assertion.
+  expect(state.augments.filter(a=>a.definitionId==='fractured-crystals'))
+    .toEqual([{definitionId:'fractured-crystals',choiceId:'round:2-1:augment',acquiredRound:4}]);
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
   const parent = `item-${state.nextItemSerial}`;
   state = accepted(combineItems(state, gloves[0].id, gloves[1].id));
@@ -38,6 +41,18 @@ function settle(state: MatchState, history?: BattleHistory): MatchState {
   // Retain the original holder and its independent seed-42 equipment stream.
   const protectedDefinition=state.preparation.units.find(u=>u.id==='unit-1')!.definitionId;
   const targets=['darius','vander','maddie','zyra','rell'].filter(id=>id!==protectedDefinition);
+  const roster=state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>
+    (b.starLevel-a.starLevel)||Number(b.id==='unit-1')-Number(a.id==='unit-1'));
+  for(const unit of roster){
+    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
+    if(unit.location.kind!=='bench')continue;
+    const ranged=['maddie','zyra','lux','powder'].includes(unit.definitionId);
+    const cells=Array.from({length:28},(_,i)=>({col:[3,2,4,1,5,0,6][i%7],row:ranged?7-Math.floor(i/7):4+Math.floor(i/7)}));
+    const cell=cells.find(c=>!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===c.col&&u.location.cell.row===c.row))!;
+    state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell}));
+  }
+  // Deploy before buying: emptyBoard can fill all nine bench slots. Buying
+  // first then aborts on bench-full and leaves the survival army at one star.
   if(state.roundDefinitionId >= '2-5'){
     const budget=state.gold-20;
     let spent=0;
@@ -48,16 +63,6 @@ function settle(state: MatchState, history?: BattleHistory): MatchState {
       const result=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);
       if(!result.ok)break;state=result.state;spent+=before-state.gold;
     }
-  }
-  const roster=state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>
-    (b.starLevel-a.starLevel)||Number(b.id==='unit-1')-Number(a.id==='unit-1'));
-  for(const unit of roster){
-    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
-    if(unit.location.kind!=='bench')continue;
-    const ranged=['maddie','zyra','lux','powder'].includes(unit.definitionId);
-    const cells=Array.from({length:28},(_,i)=>({col:[3,2,4,1,5,0,6][i%7],row:ranged?7-Math.floor(i/7):4+Math.floor(i/7)}));
-    const cell=cells.find(c=>!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===c.col&&u.location.cell.row===c.row))!;
-    state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell}));
   }
   // New v17 drops are real surplus components. Spend them on the paid army,
   // retaining the original TG parent and every natural XP/roll boundary.
@@ -112,6 +117,10 @@ function rejectWithoutRepair(raw: MatchState): void {
 }
 
 describe('B5 audit R1: equipment roll level belongs to its round history', () => {
+  let restoreOffers = () => {};
+  // Keep the same pure draw policy for construction and every history replay.
+  beforeAll(() => { restoreOffers = installB1Offers(AUGMENTS); });
+  afterAll(() => { restoreOffers(); });
   const archiveHistory = new CompletedBattleHistory('b5-r1');
   let archivedState: MatchState;
   // Generate the public command/history fixture separately from its save assertions.

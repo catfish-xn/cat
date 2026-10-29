@@ -32,7 +32,7 @@ export function lootPlan(seed: number, ordinal: number): { readonly rng: RngStre
 export function validateLoot(state: MatchState): Map<string, FrozenDirectDrop | LootChoiceDescriptor>;
 export function validateLootTransition(before: MatchState, after: MatchState, command: OracleCommand | undefined, events: readonly MatchEvent[]): readonly LootReceipt[];
 export class Ledger {
-  constructor(initial: MatchState);
+  constructor(initial: MatchState, options?: { freezeObservations?: boolean });
   gold: number;
   cards: number;
   combinations: number;
@@ -46,7 +46,7 @@ export class Ledger {
 
 /** Detached observations, initialized before H3 growth; no production growth is an expectation. */
 export interface H3Ledger { readonly kind: 'h3-oracle-v1' }
-export function createH3Ledger(initial: MatchState): H3Ledger;
+export function createH3Ledger(initial: MatchState, options?: { freezeInputs?: boolean }): H3Ledger;
 export function checkH3Growth(memory: H3Ledger, before: MatchState, after: MatchState, command?: OracleCommand | null): H3Ledger;
 /** Full read-only comparison against the detached observed checkpoint. */
 export function auditH3(memory: H3Ledger, state: MatchState): void;

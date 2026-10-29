@@ -7,6 +7,7 @@ import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices }
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { needsCrownHistory } from '../src/simulation/crown-history';
+import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 
 /** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
 export const H12_MAX_CAP_SEED = 16;
@@ -35,6 +36,7 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * Re-searched (first seed from 0 whose route reaches the node and offers the card) after the v23 integration
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
+ * v25 drift-13: fielded route seed 576 retained; batch3 scripts the 4-2 draw and expects XP outcome under that route.
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * v25 integration B refreshes the exercised B5A routes for 250 cards; other entries retain their earlier fixture scope.
  * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
@@ -138,10 +140,14 @@ export function fieldedLegCases(id: string): (readonly [number, string])[] {
   if (!at?.fielded) throw new Error(`${id} has no fielded stage route`);
   return FIELDED_LEGS.slice(0, FIELDED_LEGS.indexOf(at.node) + 1).map(leg => [at.seed, leg] as const);
 }
-const fieldedRoutes = new Map<number, { entries: Map<string, MatchState>; last: MatchState }>();
+const fieldedRoutes = new Map<string, { entries: Map<string, MatchState>; last: MatchState }>();
+/** Test-only: rebuild fielded routes after scripted-offer installs change generateChoices. */
+export function resetFieldedRouteCache(): void { fieldedRoutes.clear(); }
 export function fieldedRoute(seed: number, roundId: string): MatchState {
-  let route = fieldedRoutes.get(seed);
-  if (!route) fieldedRoutes.set(seed, route = { entries: new Map(), last: createMatch(seed) });
+  // The draw policy is an input even when the explicit seed/node are unchanged.
+  const key = JSON.stringify([seed, b1OfferCacheKey()]);
+  let route = fieldedRoutes.get(key);
+  if (!route) fieldedRoutes.set(key, route = { entries: new Map(), last: createMatch(seed) });
   route.entries.set(route.last.roundDefinitionId, route.last);
   let state = route.entries.get(roundId) ?? route.last;
   while (state.roundDefinitionId !== roundId) {
