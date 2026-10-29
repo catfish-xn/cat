@@ -235,5 +235,5 @@ it('has no CSS self-pinning in either mode and places the flame outside the clip
   expect(css).toContain('#online-sidebar .seat-portrait { grid-area: avatar; }');
   expect(css).toMatch(/\.seat-streak-fire\s*\{[^}]*pointer-events:\s*none/);
   expect(css).toContain('.seat-streak-fire.level-2');
-  expect(css).toContain('@media (prefers-reduced-motion: reduce) { .seat-streak-fire::before, .seat-streak-fire::after { animation: none; } }');
+  expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[^{]*\{[^}]*\.seat-streak-fire::before[^}]*\.seat-streak-fire\.level-2::before[^}]*animation:\s*none/);
 });

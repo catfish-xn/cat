@@ -36,6 +36,8 @@ JSON 有两档 Loop、无数值 → 代码使用 **`SIDEBAR_FIRE_WINS_LEVEL1 = 3
 
 - `sidebarWinStreak()` 返回 `{ count, level: 1 | 2 } | null`。
 - CSS：`.seat-streak-fire.level-2` 更大光晕、`seat-flame-strong` 动画；仍无图集请求。
+- **返修：** `level-2` 的 `animation-name` 特异性高于旧版 reduced-motion 规则，已在 `@media (prefers-reduced-motion: reduce)` 内显式覆盖 `.seat-streak-fire.level-2::before/::after { animation: none; }`；单测断言该块包含 level-2。
+- 换位恢复焦点时使用 `focus({ preventScroll: true })`，避免侧栏滚动跳动。
 - **不做**连败头像冰效（scoreboard 无对应字段）。
 
 ## 验证

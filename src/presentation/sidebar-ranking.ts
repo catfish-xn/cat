@@ -41,7 +41,7 @@ export class SidebarRanking {
       syncSidebarListChildren(list, rows);
       if (focusKey) {
         const target = rows.find(node => node.dataset.debug === focusKey);
-        if (target && document.activeElement !== target) target.focus();
+        if (target && document.activeElement !== target) target.focus({ preventScroll: true });
       }
       for (const node of rows) {
         const from = before.get(node);

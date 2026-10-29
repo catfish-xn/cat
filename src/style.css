@@ -1042,7 +1042,10 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 @keyframes seat-flame { from { transform: scale(.96, .86) skewX(-4deg); opacity: .8; } to { transform: scale(1.04, 1.08) skewX(4deg); opacity: 1; } }
 @keyframes seat-flame-strong { from { transform: scale(1, .92) skewX(-5deg); opacity: .88; } to { transform: scale(1.12, 1.16) skewX(5deg); opacity: 1; } }
 .seat-streak-fire.level-2::before, .seat-streak-fire.level-2::after { animation-name: seat-flame-strong; }
-@media (prefers-reduced-motion: reduce) { .seat-streak-fire::before, .seat-streak-fire::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .seat-streak-fire::before, .seat-streak-fire::after,
+  .seat-streak-fire.level-2::before, .seat-streak-fire.level-2::after { animation: none; }
+}
 .online-seat .seat-main { display: grid; gap: 5px; min-width: 0; }
 .online-seat .seat-head { gap: 4px; font-size: 13px; }
 .online-seat.me .seat-name { color: #f0e6d2; font-weight: 700; }
