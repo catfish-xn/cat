@@ -784,7 +784,7 @@ P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolut
 
 `forfeitTerminalOrbs(state: MatchState): MatchStep` 从 `simulation/match` 和 `server-entry` 公共导出，返回 `{state, events}`，无失败枚举。这是服务器确认**整局终局**后对每席调用的可信领域钩子，不是客户端命令；房间终局不等于席位淘汰，因此不要求 `phase=gameOver` 或 `multiplayer.status=eliminated`，赢家及其他 active 存活席位同样要调用。调用者负责终局判定及提交返回的 state/事件，不能在普通轮次截止调用。
 
-清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机为空操作；重复调用（包括 JSON 快照恢复后）无新事件或收据，队列也为空时返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
+清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。状态仍为 `carried`、尚未到发放场或发放场尚未领取的失败顺延条目同样作废：只发 `lootForfeited`，不写收据、不发资源。已在发放场写成收据的顺延奖励不动。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机没有已赚未领法球；若仍有未发放的失败顺延，单机同样只发 `lootForfeited`。没有任何待作废条目时重复调用（包括 JSON 快照恢复后）无新事件或收据，并返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
 
 ## 强化等级与按卡刷新：待 v15 收口（用户确认 2026-10-20）
 

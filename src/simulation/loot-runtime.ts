@@ -13,7 +13,8 @@ import { planPermanentItemGrant } from './item-grants';
 import { orderedUnresolvedLootChoices } from './loot-choice';
 import { advanceFrozenLootLedger, freezeLootThroughRound } from './loot-freeze';
 import { compareLootFreezeSlots, lootReceiptId } from './loot-identity';
-import type { FrozenDirectDrop, LootChoiceDescriptor, MatchLootState } from './loot-types';
+import type { FrozenDirectDrop, LootCarry, LootChoiceDescriptor, MatchLootState } from './loot-types';
+import { pveLossCarryRound } from './pve-loot-carry';
 import type { LootPayload, LootReceipt } from './m8/contracts';
 import type { MatchEvent, MatchState } from './match-types';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
@@ -50,6 +51,7 @@ export function prepareMatchLoot(seed: number, round: number, previous?: MatchLo
     direct: [...previous?.direct ?? [], ...added.flatMap(value => value.encounterPlan.drops.map(drop => ({ dropId: drop.dropId, status: 'planned' as const, receiptId: null })))],
     choiceEligibility: [...previous?.choiceEligibility ?? [], ...added.flatMap(value => value.choices.map(choice => ({ dropId: choice.dropId, status: 'planned' as const })))],
     choiceResolutions: previous?.choiceResolutions ?? [], earnedEvidence: previous?.earnedEvidence ?? [], receipts: previous?.receipts ?? [],
+    ...(previous?.carry?.length ? { carry: previous.carry } : {}),
     ...(previous?.rewardOrbs ? { rewardOrbs: previous.rewardOrbs } : {}),
     ...(previous?.queuedOrbClaims ? { queuedOrbClaims: previous.queuedOrbClaims } : {}),
     guaranteeCounters: previous?.guaranteeCounters ?? Object.fromEntries(ROUND_CATALOG.filter(value => value.kind === 'pve').map(value => [counterKey(value.roundId), 0])),
@@ -62,6 +64,8 @@ export function revealMatchLoot(state: MatchState, combat: CombatState): { state
   if (!plan) return { state, events };
   if (combat.combatId !== `round-${state.round}`) throw new RangeError('Loot combat mismatch');
   const loot = state.m8.loot, earnedEvidence = [...loot.earnedEvidence];
+  const carry: LootCarry[] = [...loot.carry ?? []];
+  const deliver = combat.status === 'finished' ? pveLossCarryRound(state, combat) : null;
   const transition = (drop: { readonly dropId: string; readonly status: string }, sourceUnitId: string) => {
     if (drop.status !== 'planned') return drop.status;
     sourceUnitId=openingCrabCarrier(state,state.roundDefinitionId,sourceUnitId);
@@ -76,23 +80,28 @@ export function revealMatchLoot(state: MatchState, combat: CombatState): { state
       earnedEvidence.push({ dropId: drop.dropId, death }); events.push({ type: 'lootRevealed', dropId: drop.dropId, death });
       return 'revealed';
     }
-    if (combat.status === 'finished') { events.push({ type: 'lootForfeited', dropId: drop.dropId }); return 'forfeited'; }
+    if (combat.status === 'finished') {
+      if (deliver) { carry.push({ dropId: drop.dropId, deliverRoundId: deliver }); events.push({ type: 'lootCarried', dropId: drop.dropId, deliverRoundId: deliver }); return 'carried'; }
+      events.push({ type: 'lootForfeited', dropId: drop.dropId }); return 'forfeited';
+    }
     return 'planned';
   };
   const direct = loot.direct.map(drop => {
     const frozen = plan.encounterPlan.drops.find(value => value.dropId === drop.dropId);
     if (!frozen || drop.status !== 'planned') return drop;
     if (!frozen.sourceUnitId) throw new RangeError('Missing loot source');
-    const status = transition(drop, frozen.sourceUnitId) as 'planned' | 'revealed' | 'forfeited';
+    const status = transition(drop, frozen.sourceUnitId) as 'planned' | 'revealed' | 'forfeited' | 'carried';
     return status === drop.status ? drop : { ...drop, status };
   });
   const choiceEligibility = loot.choiceEligibility.map(choice => {
     const descriptor = plan.choices.find(value => value.dropId === choice.dropId);
     if (!descriptor || choice.status !== 'planned') return choice;
-    const status = transition(choice, descriptor.sourceUnitId) as 'planned' | 'revealed' | 'forfeited';
+    const status = transition(choice, descriptor.sourceUnitId) as 'planned' | 'revealed' | 'forfeited' | 'carried';
     return status === choice.status ? choice : { ...choice, status };
   });
-  return { state: events.length ? withLoot(state, { ...loot, direct, choiceEligibility, earnedEvidence }) : state, events };
+  if (!events.length) return { state, events };
+  const { carry: _previous, ...rest } = loot;
+  return { state: withLoot(state, { ...rest, direct, choiceEligibility, earnedEvidence, ...(carry.length ? { carry } : {}) }), events };
 }
 
 export function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
@@ -118,7 +127,7 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
   if (state.multiplayer && !claimedDrops) return {state, events, upgradeEvents};
   for (const drop of [...claimedDrops ?? currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
     const progress = state.m8.loot.direct.find(value => value.dropId === drop.dropId);
-    if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity') continue;
+    if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity' && !(claimedDrops && progress?.status === 'carried')) continue;
     if (!claimedDrops && state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
     const receiptId = lootReceiptId(drop.dropId);
     const purchase = drop.payload.kind === 'unit' || drop.payload.kind === 'forge' ? planUnitAcquisition(state, drop.payload.definitionId,
@@ -182,7 +191,45 @@ function grantItem(state: MatchState, definitionId: string, receiptId: string) {
 }
 
 export function unresolvedLootChoices(state: MatchState): readonly LootChoiceDescriptor[] {
-  return orderedUnresolvedLootChoices(currentPlan(state)?.choices ?? [], state.m8.loot.choiceEligibility, state.m8.loot.choiceResolutions);
+  const due = new Set((state.m8.loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
+  const choices = [...currentPlan(state)?.choices ?? []];
+  if (due.size) for (const choice of state.m8.loot.frozen.rounds.flatMap(round => round.choices)) if (due.has(choice.dropId) && !choices.some(existing => existing.dropId === choice.dropId)) choices.push(choice);
+  return orderedUnresolvedLootChoices(choices, state.m8.loot.choiceEligibility, state.m8.loot.choiceResolutions);
+}
+/** Direct drops a previous PvE loss parked on this round and that this round has not granted yet. */
+export function dueCarriedDirectDrops(state: MatchState): readonly FrozenDirectDrop[] {
+  const due = new Set((state.m8.loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
+  if (!due.size) return [];
+  return state.m8.loot.frozen.rounds.flatMap(round => round.encounterPlan.drops)
+    .filter(drop => due.has(drop.dropId) && state.m8.loot.direct.some(progress => progress.dropId === drop.dropId && progress.status === 'carried'))
+    .sort(compareLootFreezeSlots);
+}
+/** Component picks parked on this round become the same post-combat choice as this round's own picks. */
+export function revealDueCarriedChoices(state: MatchState): MatchState {
+  const due = new Set((state.m8.loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
+  if (!due.size) return state;
+  let changed = false;
+  const choiceEligibility = state.m8.loot.choiceEligibility.map(choice => {
+    if (!due.has(choice.dropId) || choice.status !== 'carried') return choice;
+    changed = true; return { dropId: choice.dropId, status: 'revealed' as const };
+  });
+  return changed ? withLoot(state, { ...state.m8.loot, choiceEligibility }) : state;
+}
+/** Elimination or a final round with no later PvE voids loot that was still waiting. Granted rows keep their carry record. */
+export function forfeitCarriedLoot(state: MatchState): { state: MatchState; events: MatchEvent[] } {
+  const carry = state.m8.loot.carry ?? [];
+  if (!carry.length) return { state, events: [] };
+  const pending = carry.filter(row => state.m8.loot.direct.some(drop => drop.dropId === row.dropId && drop.status === 'carried')
+    || state.m8.loot.choiceEligibility.some(choice => choice.dropId === row.dropId && choice.status === 'carried'));
+  if (!pending.length) return { state, events: [] };
+  const ids = new Set(pending.map(row => row.dropId));
+  const kept = carry.filter(row => !ids.has(row.dropId));
+  const { carry: _previous, ...rest } = state.m8.loot;
+  return { events: pending.map(row => ({ type: 'lootForfeited' as const, dropId: row.dropId })), state: withLoot(state, {
+    ...rest, ...(kept.length ? { carry: kept } : {}),
+    direct: state.m8.loot.direct.map(drop => ids.has(drop.dropId) && drop.status === 'carried' ? { dropId: drop.dropId, status: 'forfeited' as const, receiptId: null } : drop),
+    choiceEligibility: state.m8.loot.choiceEligibility.map(choice => ids.has(choice.dropId) && choice.status === 'carried' ? { dropId: choice.dropId, status: 'forfeited' as const } : choice),
+  }) };
 }
 export function hasPendingLootCapacity(state: MatchState): boolean {
   return !state.multiplayer && state.m8.loot.direct.some(value => value.status === 'pending-capacity');

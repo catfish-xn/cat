@@ -372,6 +372,8 @@ function lootCarrier(combat,sourceId){
  return crabs.length&&index>=0?crabs[Math.min(index,crabs.length-1)]:sourceId;
 }
 function roundOrdinal(id){const round=ROUNDS.find(r=>r.roundId===id);assert(round,`Unknown independent round ${id}`);return round.ordinal;}
+function nextPveRound(roundId){const start=ROUNDS.findIndex(r=>r.roundId===roundId);for(let i=start+1;i<ROUNDS.length;i++)if(ROUNDS[i].kind==='pve')return ROUNDS[i].roundId;return null;}
+function carryRow(loot,dropId){return (loot.carry??[]).find(row=>row.dropId===dropId);}
 // Public helper accepts the pre-combat snapshot too. Derive ungranted gold from the
 // approved independent plan plus formal source deaths, never from production income.
 function ungrantedLootGold(before,combat){
@@ -453,19 +455,26 @@ function validateLoot(state){
  }
  const receipts=new Map(loot.receipts.map(r=>[r.dropId,r]));
  const resolutions=new Map(loot.choiceResolutions.map(r=>[r.dropId,r]));
- for(const drop of loot.direct){assert(['planned','revealed','pending-capacity','retained-terminal','forfeited','granted'].includes(drop.status));
-  if(mechanicIds.has(drop.dropId))assert(['revealed','granted'].includes(drop.status),'shop orb lifecycle');
-  else assert.equal(earned.has(drop.dropId),!['planned','forfeited'].includes(drop.status),'direct earned-only status');
+ for(const drop of loot.direct){assert(['planned','revealed','pending-capacity','retained-terminal','forfeited','granted','carried'].includes(drop.status));
+  const carry=carryRow(loot,drop.dropId),entry=entries.get(drop.dropId);
+  if(mechanicIds.has(drop.dropId)){assert(['revealed','granted'].includes(drop.status),'shop orb lifecycle');assert(!carry,'shop orb is not PvE carry');}
+  else if(carry){assert(!earned.has(drop.dropId)&&carry.deliverRoundId===nextPveRound(entry.roundId)&&!['planned','forfeited'].includes(drop.status),'PvE loss carry');
+   const result=state.roundResults[roundOrdinal(entry.roundId)-1];if(result)assert(result.result!=='playerWin'&&result.hpAfter>0,'carry only a survived loss');
+   if(drop.status==='granted')assert(roundOrdinal(receipts.get(drop.dropId).claimedRoundId)>=roundOrdinal(carry.deliverRoundId),'carry pays on the next PvE or later');
+  }else assert.equal(earned.has(drop.dropId),!['planned','forfeited'].includes(drop.status),'direct earned-only status');
   assert.equal(receipts.has(drop.dropId),drop.status==='granted','direct actual receipt');
   assert.equal(drop.receiptId,drop.status==='granted'?receiptId(drop.dropId):null);
   if(['pending-capacity','retained-terminal'].includes(drop.status))assert.equal(entries.get(drop.dropId).payload.kind,'unit','only heroes wait for capacity');
  }
- for(const choice of loot.choiceEligibility){assert(['planned','revealed','forfeited'].includes(choice.status));assert.equal(earned.has(choice.dropId),choice.status==='revealed','choice earned-only status');
+ for(const choice of loot.choiceEligibility){assert(['planned','revealed','forfeited','carried'].includes(choice.status));
+  const carry=carryRow(loot,choice.dropId);
+  if(carry)assert(!earned.has(choice.dropId)&&choice.status!=='forfeited'&&carry.deliverRoundId===nextPveRound(entries.get(choice.dropId).roundId),'choice carry');
+  else assert.equal(earned.has(choice.dropId),choice.status==='revealed','choice earned-only status');
   assert.equal(receipts.has(choice.dropId),resolutions.has(choice.dropId),'choice receipt and resolution atomic');
   if(resolutions.has(choice.dropId))assert.equal(choice.status,'revealed','resolved choice is earned');
  }
  const itemIds=[],unitIds=[],counters=Object.fromEntries(LOOT_TABLE.map(([id])=>[counterKey(id),0]));
- for(const receipt of loot.receipts){const entry=entries.get(receipt.dropId);assert(entry,'receipt must have approved source');assert(earned.has(receipt.dropId)||mechanicIds.has(receipt.dropId),'receipt must be earned');
+ for(const receipt of loot.receipts){const entry=entries.get(receipt.dropId);assert(entry,'receipt must have approved source');assert(earned.has(receipt.dropId)||mechanicIds.has(receipt.dropId)||carryRow(loot,receipt.dropId),'receipt must be earned or carried');
   assert.equal(receipt.receiptId,receiptId(receipt.dropId),'canonical loot receipt');
   if(entry.payload)assert.deepEqual(receipt.payload,entry.payload,'independent loot receipt payload');
   else{const resolution=resolutions.get(receipt.dropId);assert(resolution,'choice resolution required');assert.equal(resolution.receiptId,receipt.receiptId);
@@ -505,14 +514,19 @@ function validateLootTransition(before,after,command,events){
  assert.deepEqual(events.filter(e=>e.type==='lootChoiceResolved').map(e=>bare(e)),resolved.map(e=>({type:'lootChoiceResolved',...e})),'exactly one event per choice resolution');
  const newlyForfeited=[...next.direct,...next.choiceEligibility].filter(d=>d.status==='forfeited'&&![...prior.direct,...prior.choiceEligibility].some(p=>p.dropId===d.dropId&&p.status==='forfeited'));
  assert.deepEqual(events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId),newlyForfeited.map(d=>d.dropId),'exactly one event per loot forfeit');
- for(const drop of newlyForfeited){assert.equal(after.combat?.status,'finished','forfeit only after combat');assert.equal(entries.get(drop.dropId).roundId,after.roundDefinitionId,'forfeit only current round');}
+ for(const drop of newlyForfeited){assert.equal(after.combat?.status,'finished','forfeit only after combat');
+  assert(entries.get(drop.dropId).roundId===after.roundDefinitionId||(prior.carry??[]).some(row=>row.dropId===drop.dropId),'forfeit only current round or undelivered carry');}
+ const newlyCarried=[...next.direct,...next.choiceEligibility].filter(d=>d.status==='carried'&&![...prior.direct,...prior.choiceEligibility].some(p=>p.dropId===d.dropId&&p.status==='carried'));
+ assert.deepEqual(events.filter(e=>e.type==='lootCarried').map(e=>e.dropId),newlyCarried.map(d=>d.dropId),'exactly one event per carried drop');
+ for(const event of events.filter(e=>e.type==='lootCarried'))assert.equal(event.deliverRoundId,nextPveRound(entries.get(event.dropId).roundId),'carry names the next PvE');
  for(const evidence of earned){const entry=entries.get(evidence.dropId);assert(events.some(e=>e.domain==='combat'&&e.type==='death'&&e.unitId===lootCarrier(after.combat,entry.sourceUnitId)&&e.tick===evidence.death.tick&&e.eventSeq===evidence.death.eventSeq),'reveal requires this transition actual source death');}
  for(const receipt of receipts){const entry=entries.get(receipt.dropId);
   if(entry.encounterId==='mechanic'){
    assert.equal(command?.type,'claimOrb','shop orb claim requires a command');assert.equal(command.orbId,entry.orbId);
    assert(['preparation','settlement','choice'].includes(before.phase),'solo shop orb claim phase');
    assert(roundOrdinal(entry.roundId)<=after.round,'shop orb claim timing');
-  }else {assert.equal(after.combat?.status,'finished','loot only after combat');assert.equal(entry.roundId,after.roundDefinitionId,'grant only current round');}
+  }else {assert.equal(after.combat?.status,'finished','loot only after combat');
+   const carry=carryRow(next,receipt.dropId);assert(carry?carry.deliverRoundId===after.roundDefinitionId:entry.roundId===after.roundDefinitionId,'grant only current round or the carried PvE');}
 
   for(const id of receipt.grantedItemIds){if(buffetPlan(after).consumed.has(id))assert(!after.items.some(i=>i.id===id),'converted loot component is consumed');else assert.equal(after.items.find(i=>i.id===id)?.definitionId,receipt.payload.definitionId,'actual granted component definition');}
  }

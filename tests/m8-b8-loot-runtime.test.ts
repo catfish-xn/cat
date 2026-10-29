@@ -84,18 +84,31 @@ describe('B8 real loot preparation and earned-only transitions', () => {
     const again = revealMatchLoot(running, running.combat!); expect(again.state).toBe(running); expect(again.events).toEqual([]);
     expect(() => grantDirectLoot(running, false)).toThrow('before combat finish');
     const finished = { ...running.combat!, status: 'finished' as const, result: 'enemyWin' as const };
-    const forfeited = revealMatchLoot(running, finished);
-    expect(forfeited.events).toHaveLength(plan(state).encounterPlan.drops.length-sourceDrops.length);
-    expect(forfeited.state.m8.loot.choiceEligibility).toEqual([]);
-    expect(forfeited.state.m8.loot.earnedEvidence).toEqual(running.m8.loot.earnedEvidence);
+    const carried = revealMatchLoot(running, finished);
+    const missed = plan(state).encounterPlan.drops.length - sourceDrops.length;
+    expect(carried.events).toHaveLength(missed);
+    expect(carried.events.every(event => event.type === 'lootCarried' && event.deliverRoundId === '3-7')).toBe(true);
+    expect(carried.state.m8.loot.direct.filter(drop => drop.status === 'carried')).toHaveLength(missed);
+    expect(carried.state.m8.loot.direct.some(drop => drop.status === 'forfeited')).toBe(false);
+    expect(carried.state.m8.loot.carry?.map(row => row.deliverRoundId)).toEqual(Array.from({ length: missed }, () => '3-7'));
+    expect(revealMatchLoot(carried.state, finished).events).toEqual([]);
+    expect(carried.state.m8.loot.choiceEligibility).toEqual([]);
+    expect(carried.state.m8.loot.earnedEvidence).toEqual(running.m8.loot.earnedEvidence);
   });
 
-  it('forfeits unearned slots, ignores no-loot monsters and rejects forged observation inputs', () => {
+  it('carries a loss to the next PvE, forfeits the same slots on a win, and rejects forged observation inputs', () => {
     const state = fixture(2), noLoot = state.m8.preparation.enemies.find(unit => !plan(state).encounterPlan.drops.some(drop => carrier(state, drop.sourceUnitId!) === unit.id))!;
     const running = observed(state, [noLoot.id], false);
     expect(running.m8.loot.direct[0].status).toBe('planned'); expect(running.m8.loot.earnedEvidence).toEqual([]);
-    const finished = observed(state, [noLoot.id]); expect(finished.m8.loot.direct.find(d=>d.dropId===plan(state).encounterPlan.drops[0].dropId)!.status).toBe('forfeited');
+    const finished = observed(state, [noLoot.id]);
+    const current = new Set([...plan(state).encounterPlan.drops, ...plan(state).choices].map(drop => drop.dropId));
+    expect(finished.m8.loot.direct.filter(drop => current.has(drop.dropId)).every(drop => drop.status === 'carried')).toBe(true);
+    expect(finished.m8.loot.choiceEligibility.filter(choice => current.has(choice.dropId)).every(choice => choice.status === 'carried')).toBe(true);
+    expect(new Set(finished.m8.loot.carry?.map(row => row.deliverRoundId))).toEqual(new Set(['1-4']));
     expect(grantDirectLoot(finished, false).state).toBe(finished);
+    const won = revealMatchLoot(state, { ...finished.combat!, result: 'playerWin' });
+    expect(won.state.m8.loot.direct.filter(drop => current.has(drop.dropId)).every(drop => drop.status === 'forfeited')).toBe(true);
+    expect(won.state.m8.loot.carry).toBeUndefined();
     const earned = observed(state);
     expect(() => revealMatchLoot(state, { ...earned.combat!, combatId: 'round-99' })).toThrow();
     const death = earned.combat!.neutralReceipts!.deaths[0];

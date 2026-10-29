@@ -96,7 +96,7 @@ import { FINAL_ROUND } from './round-schedule';
 import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
-import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
+import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity, dueCarriedDirectDrops, revealDueCarriedChoices } from './loot-runtime';
 import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, validateCombatStart, type CombatState } from './combat';
@@ -575,18 +575,21 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const revealed=revealMatchLoot(initial,combat), events=[...revealed.events];
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
-  const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
+  const opened=revealDueCarriedChoices({...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null});
+  const before=opened;
   let terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&countsG23SurvivorDamage(unit)).length}).hpAfter===0;
   if(terminal&&melCanSave(before,g23SoloFacts(before,combat),0)&&!before.m8.round.isFinal)terminal=false;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
+  const carried=state.multiplayer?{state,events:[] as MatchEvent[],upgradeEvents:[] as import('./unit-types').UnitUpgradedEvent[]}:grantDirectLoot(state,terminal,unitLootPolicy,dueCarriedDirectDrops(state));
+  state=carried.state; events.push(...carried.events);
   if (terminal) for (const descriptor of unresolvedLootChoices(state)) {
     const fallback=grantLootChoice(state,descriptor,descriptor.terminalFallbackDefinitionId,'terminal-fallback');
     state=fallback.state;events.push(...fallback.events);
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
-  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
+  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),[...granted.upgradeEvents,...carried.upgradeEvents]),unitLootPolicy,events));
   const afterUpgrades=settledPlan.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainP2Gifts(settledPlan.state,unitLootPolicy) : settledPlan.state;
   let settled=pruneForgePositions(reconcileD14(afterUpgrades,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});

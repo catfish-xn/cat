@@ -27,8 +27,10 @@ function revealedLootView(state: MatchState) {
   if (round.kind !== 'pve' || round.roundId !== state.roundDefinitionId || round.ordinal !== state.round) return undefined;
   const plan = state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === round.roundId);
   if (!plan || plan.encounterPlan.encounterId !== round.encounterId) return undefined;
-  const revealedDrops = readLootView(state).revealedDrops
-    .filter(drop => drop.roundId === round.roundId && drop.encounterId === round.encounterId)
+  const lootView = readLootView(state);
+  const carriedOrbs = new Set((lootView.unclaimedOrbs ?? []).map(orb => orb.orbId));
+  const revealedDrops = lootView.revealedDrops
+    .filter(drop => drop.roundId === round.roundId && drop.encounterId === round.encounterId || carriedOrbs.has(drop.orbId))
     .map((drop): RevealedDropView => {
       const payload=payloadView(drop.payload);
       const identity = { ...pick(drop, ['orbId','entryOrdinal','dropId', 'encounterId', 'sourceUnitId', 'roundId']), payload };
@@ -40,7 +42,7 @@ function revealedLootView(state: MatchState) {
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
     });
-  return { roundId: round.roundId, revealedDrops, revealedOrbs:readLootView(state).revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
+  return { roundId: round.roundId, revealedDrops, revealedOrbs:lootView.revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
 }
 
 export type ConsumableTargetView =

@@ -7,9 +7,10 @@ import { familyOrbs, claimFamilyOrb } from './family-orbs';
 import type { MatchState, MatchEvent } from './match-types';
 import type { FrozenDirectDrop, RewardOrb } from './loot-types';
 import type { MultiplayerCommandResult } from './round-settlement';
-import { commitReceipt, grantDirectLoot, type UnitLootPolicy } from './loot-runtime';
+import { commitReceipt, forfeitCarriedLoot, grantDirectLoot, type UnitLootPolicy } from './loot-runtime';
 import { lootOrbId, lootEntryId, lootReceiptId } from './loot-identity';
 import { getMultiplayerRoundById } from './multiplayer-round';
+import { carryByDrop } from './pve-loot-carry';
 import { isCombatRosterLocked } from './operation-policy';
 import { drainG23Rewards, claimG23Atom, mechanicGrantEvents } from './g2-3-runtime';
 import { planTemporaryEquipment } from './temporary-equipment';
@@ -24,9 +25,13 @@ export function allClaimableOrbPlans(state: MatchState) {
 }
 export function unclaimedOrbPlans(state: MatchState) {
   if (state.multiplayer?.status==='eliminated' || state.phase==='gameOver') return [];
+  const carry=state.multiplayer?carryByDrop(state):null;
   return [...openingAnvilOrbs(state),...g23AnvilOrbs(state),...openingRewardOrbs(state),...batchBRewardOrbs(state),...familyOrbs(state),...allClaimableOrbPlans(state).filter(o=>getMultiplayerRoundById(o.roundId).ordinal<=state.round
-    && o.entries.length && o.entries.some(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId && d.status==='revealed')
-      && (o.source==='mechanic'||state.m8.loot.earnedEvidence.some(v=>v.dropId===e.dropId))))];
+    && o.entries.length && o.entries.some(e=>{
+      const progress=state.m8.loot.direct.find(d=>d.dropId===e.dropId), delivered=carry?.get(e.dropId);
+      const parked=progress?.status==='carried'&&!!delivered&&getMultiplayerRoundById(delivered.deliverRoundId).ordinal<=state.round;
+      return !!progress&&(parked||progress.status==='revealed'&&(o.source==='mechanic'||state.m8.loot.earnedEvidence.some(v=>v.dropId===e.dropId)));
+    }))];
 }
 /** Enqueue once under the mechanic receipt identity; no inventory, RNG or pool allocation. */
 export function enqueueRewardOrb(state: MatchState, receiptId: string, definitionId: string, starLevel: 1|2|3 = 1): {state:MatchState;orbId:string} {
@@ -122,8 +127,10 @@ export function settleQueuedOrbClaims(initial: MatchState, policy?: UnitLootPoli
 
 /** Once per pending entry, on elimination or terminal match finalization. */
 export function forfeitUnclaimedOrbs(initial: MatchState): {state:MatchState;events:MatchEvent[]} {
+  const parked=forfeitCarriedLoot(initial);
+  initial=parked.state;
   if (!initial.multiplayer) return {state:initial.m8.loot.queuedOrbClaims?.length
-    ?{...initial,m8:{...initial.m8,loot:{...initial.m8.loot,queuedOrbClaims:[]}}}:initial,events:[]};
+    ?{...initial,m8:{...initial.m8,loot:{...initial.m8.loot,queuedOrbClaims:[]}}}:initial,events:parked.events};
   let state=initial.m8.loot.queuedOrbClaims?.length
     ? {...initial,m8:{...initial.m8,loot:{...initial.m8.loot,queuedOrbClaims:[]}}} : initial;
   const events:MatchEvent[]=[];
@@ -135,5 +142,5 @@ export function forfeitUnclaimedOrbs(initial: MatchState): {state:MatchState;eve
     state={...state,m8:{...state.m8,loot:{...state.m8.loot,direct:state.m8.loot.direct.map(d=>d.dropId===drop.dropId?{dropId:d.dropId,status:'forfeited',receiptId:null}:d)}}};
     events.push({type:'lootForfeited',dropId:drop.dropId},{type:'lootGranted',receipt});
   }
-  return {state,events};
+  return {state,events:[...parked.events,...events]};
 }
