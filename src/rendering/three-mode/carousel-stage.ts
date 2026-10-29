@@ -25,7 +25,8 @@ import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease,
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
-import { fitModel, standingFeet, type Envelope } from './model-fit';
+import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { updateModelGrounding } from './model-grounding';
 import { CarouselLeash } from './carousel-leash';
 
 /** Board units per carousel cell, as the asset review lays out the stage (one grid interval; models and effects at .44). */
@@ -376,7 +377,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       const unitScale = ctx.unitScale?.(id) ?? null;
       if (unitScale) {
         const envelope = ctx.envelope?.(id, lease);
-        fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(id, envelope) });
+        fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(id, envelope), support: standingSupport(id, envelope) });
         view.root.add(lease.scene);
       }
       else view.root.add(fit(lease.scene, height, width));
@@ -791,6 +792,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const view of [...seatViews.values(), ...unitViews.values()]) {
       const output = view.state.output;
       if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      if (view.lease) updateModelGrounding(view.lease.scene, output.state === 'idle', seconds);
     }
     for (const entry of loops) {
       if (!entry.fx) continue;

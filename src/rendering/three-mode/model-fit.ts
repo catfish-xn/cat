@@ -7,6 +7,7 @@
  * model is fitted to `height` and its x/z box to `width` exactly as before.
  */
 import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
+import { createSupportSampler, registerModelGrounding, supportRotation, supportVertexSteps, MESH_PENETRATION_RATIO, type ModelSupport } from './model-grounding';
 
 /** A drawn champion may be at most this many times the reference height (the plan's 1.6 × 92). */
 export const MAX_HEIGHT_RATIO = 1.6;
@@ -45,21 +46,26 @@ export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boo
  * pieces floating. fitModel never puts the feet below the bind box with it, so a hovering model (root raised in its
  * clips: Malzahar, Nocturne) keeps its height and no clip sinks under the cell.
  */
-export interface Envelope { readonly radius: number; readonly ground: number | null; readonly feet?: number | null }
+export interface Envelope { readonly radius: number; readonly ground: number | null; readonly feet?: number | null;
+  /** Indexed idle body/foot contacts, preferred to the legacy whole-mesh floor for grounded models. */
+  readonly support?: ModelSupport }
 
 /**
  * Models whose idle hovers on purpose (Malzahar, Nocturne, Corki's flyer): they keep the root-motion-free `ground`.
  * Every other official-scale model stands its idle's lowest point on the cell. Netting out the root's rise floated
  * pieces whose clips lift the skeleton root while the feet stay put (Steb ~77 board units up, Rell, Jayce, Mordekaiser).
  */
-export const HOVERING_MODELS: ReadonlySet<string> = new Set(['malzahar', 'nocturne', 'corki']);
+export const HOVERING_MODELS: ReadonlySet<string> = new Set(['malzahar', 'nocturne', 'corki', 'pve-elder-dragon']);
 /** The `feet` fitModel takes for this model: the envelope's idle feet, unless the model hovers by design. */
 export function standingFeet(id: string, envelope: Envelope | undefined): number | null {
   return HOVERING_MODELS.has(id) ? null : envelope?.feet ?? null;
 }
+export function standingSupport(id: string, envelope: Envelope | undefined): ModelSupport | undefined {
+  return HOVERING_MODELS.has(id) ? undefined : envelope?.support;
+}
 
 /** Vertices read between time checks in the sliced envelope (a few hundred microseconds of work). */
-const ENVELOPE_CHUNK = 1500;
+const ENVELOPE_CHUNK = 512;
 
 /**
  * How far from the body's upright axis its skinned vertices reach (ENVELOPE_QUANTILE of the samples) over the given
@@ -82,7 +88,8 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   // with the greatest skin weight on this mesh, never an unused first skeleton bone.
   // Detached leaf facial/weapon controls are pose changes, not whole-body locomotion.
   // A prop-only mesh follows the skeleton body root even when none of its vertices weights that root.
-  const roots = meshes.map(mesh => {
+  const roots: (Bone | null)[] = [];
+  for (const mesh of meshes) {
     const byBone = mesh.skeleton.bones.map(bone => {
       let root = bone;
       while (root.parent instanceof Bone) root = root.parent;
@@ -90,13 +97,16 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
     });
     const totals = new Map<Bone, number>();
     const indices = mesh.geometry.getAttribute('skinIndex'), weights = mesh.geometry.getAttribute('skinWeight');
-    for (let vertex = 0; vertex < indices.count; vertex++) for (let component = 0; component < 4; component++) {
-      const weight = weights.getComponent(vertex, component), root = byBone[indices.getComponent(vertex, component)];
-      if (weight > 0 && root?.children.some(child => child instanceof Bone)) totals.set(root, (totals.get(root) ?? 0) + weight);
+    for (let vertex = 0; vertex < indices.count; vertex++) {
+      if (++work >= ENVELOPE_CHUNK) { work = 0; yield; }
+      for (let component = 0; component < 4; component++) {
+        const weight = weights.getComponent(vertex, component), root = byBone[indices.getComponent(vertex, component)];
+        if (weight > 0 && root?.children.some(child => child instanceof Bone)) totals.set(root, (totals.get(root) ?? 0) + weight);
+      }
     }
-    return [...totals].sort((a, b) => b[1] - a[1])[0]?.[0]
-      ?? byBone.find(root => root.children.some(child => child instanceof Bone)) ?? byBone[0] ?? null;
-  });
+    roots.push([...totals].sort((a, b) => b[1] - a[1])[0]?.[0]
+      ?? byBone.find(root => root.children.some(child => child instanceof Bone)) ?? byBone[0] ?? null);
+  }
   // This is an independent, freshly loaded lease. In quantized glTFs the inverse bind matrices can include
   // dequantization: Skeleton.pose() reconstructs different TRS, not the authored loading pose.
   // Include non-bone animated ancestors as well as bones (including skeleton nodes outside the mesh subtree).
@@ -108,13 +118,21 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   const loaded = [...nodes].map(node => ({ node, position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone() }));
   body.updateWorldMatrix(true, true);
   for (const node of nodes) node.updateWorldMatrix(true, false);
-  const boxes = meshes.map(mesh => {
-    mesh.skeleton.update(); mesh.computeBoundingBox();
-    return mesh.boundingBox!.clone();
-  });
+  const boxes: Box3[] = [];
+  for (const mesh of meshes) {
+    mesh.skeleton.update(); const box = new Box3();
+    for (let v = 0; v < mesh.geometry.attributes.position!.count; v++) {
+      box.expandByPoint(mesh.getVertexPosition(v, point));
+      if (++work >= ENVELOPE_CHUNK) { work = 0; yield; }
+    }
+    mesh.boundingBox = box; boxes.push(box.clone());
+  }
   // Some clips hide a weapon by moving its bones thousands of units below the floor (Draven's thrown axes).
   // That is not a foot. Keep every vertex near the loaded body, including feet between the radius sampler's strides.
   const bindBox = new Box3().setFromObject(body);
+  const classified: (readonly (string | null)[])[] = [];
+  for (const mesh of meshes) classified.push(yield* supportVertexSteps(mesh));
+  const support = createSupportSampler(meshes, Math.max(bindBox.max.y - bindBox.min.y, 1), classified);
   const groundLimit = bindBox.min.y - Math.max(bindBox.max.y - bindBox.min.y, 1) * 2;
   const restore = () => {
     for (const { node, position, quaternion, scale } of loaded) {
@@ -151,6 +169,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           const count = mesh.geometry.attributes.position?.count ?? 0;
           for (let v = 0; v < count; v += standing || stands ? 1 : ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
+            if (stands) support.vertex(index, v, point);
             if (v % ENVELOPE_STRIDE === 0) radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
             // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
             // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
@@ -160,6 +179,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
             if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }
+        if (stands) yield* support.frameSteps();
       }
       action.stop();
       restore();
@@ -173,7 +193,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   // The quantile in its own slice: a typed numeric sort (no comparator calls) of every sample.
   yield;
   const sorted = Float64Array.from(radii).sort();
-  return { radius: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!, ground: low, feet: plain };
+  const measuredSupport = support.finish();
+  return { radius: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!, ground: low, feet: plain,
+    ...(measuredSupport ? { support: measuredSupport } : {}) };
 }
 
 /** The envelope at once (a piece mounting outside combat with nothing measured yet). */
@@ -219,8 +241,13 @@ export async function animationEnvelopeSliced(body: Object3D, clips: readonly En
 export function fitModel(body: Object3D, options: { height: number; width?: number; unitScale?: number | null; sourceScale: number; envelopeRadius?: number;
   /** Official scale only: the standing clip's lowest point (Envelope.ground) goes on y=0 instead of the bind box's. */
   ground?: number | null;
-  /** Official scale only: the idle's plain lowest point (Envelope.feet via standingFeet) goes on y=0; wins over `ground`. */
-  feet?: number | null }): number {
+  /** Official scale only: the idle's plain lowest point; wins over `ground` when no support calibration is supplied. */
+  feet?: number | null;
+  /** Idle support calibration; omit for intentionally hovering models. Shared by board, scout and carousel. */
+  support?: ModelSupport }): number {
+  const support = options.unitScale ? options.support : undefined;
+  const correction = support ? supportRotation(support) : null;
+  if (correction) { body.quaternion.premultiply(correction); body.updateWorldMatrix(true, true); }
   const box = new Box3().setFromObject(body), size = box.getSize(new Vector3()), width = options.width ?? Infinity;
   const { min, max } = box, official = !!options.unitScale;
   // Official scale: the footprint's diameter about the upright axis (the piece turns to face its target), over its
@@ -237,7 +264,11 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   // below the bind floor is raised onto the cell. Without a measured ground, the bind box's bottom goes on y=0 as before.
   const standing = official && options.feet != null && Number.isFinite(options.feet);
   const measured = official && options.ground != null && Number.isFinite(options.ground);
-  const floor = standing ? options.feet! : measured ? options.ground! - Math.max(box.min.y, 0) : box.min.y;
+  const center = support ? new Vector3(...support.center).applyQuaternion(correction!) : null;
+  const floor = support ? new Vector3(support.center[0], Math.min(support.floor, support.meshFloor + support.height * MESH_PENETRATION_RATIO), support.center[2]).applyQuaternion(correction!).y
+    : standing ? options.feet! : measured ? options.ground! - Math.max(box.min.y, 0) : box.min.y;
   body.position.y -= floor * scale;
+  if (center) { body.position.x -= center.x * scale; body.position.z -= center.z * scale; }
+  if (support) registerModelGrounding(body, support, floor * scale, scale);
   return (box.max.y - floor) * scale;
 }
