@@ -1403,8 +1403,8 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | attack | attackerId, targetId；普攻动画 |
 | targetChanged | unitId, before, after；目标标记 |
 | death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
-| packetDamage | sourceId, targetId, damageType, sourceKind, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字。sourceKind 与 delivery 只供表现区分技能和装备等来源，不执行规则，不下发完整 Source |
-| heal | targetId, actual, shares: {sourceId, actual}[]；实际治疗与施加者份额 |
+| packetDamage | sourceId, targetId, damageType, sourceKind, definitionId, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字。sourceKind、definitionId、delivery 只供表现区分技能和装备，不执行规则，不下发 instanceId、effectIndex 或完整 Source |
+| heal | targetId, actual, shares: {sourceId, sourceKind, definitionId, delivery, actual}[]；实际治疗与施加者份额。份额的三个来源字段与伤害包相同，只供表现区分；治疗账本没有伤害 delivery，投影按 sourceKind 收成 ability-direct / equipment-proc / basic-attack / attack-extra，不执行规则 |
 | manaChanged | targetId, before, after；表现事实 |
 | cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |
 | shieldLayerChanged | reason, key, targetId, remaining；单层提示，不累加为总盾 |
@@ -1416,7 +1416,7 @@ activityChanged/effectTriggered 的执行程序不下发，可见数值后果在
 
 toCombatReplay 失败以 RangeError 抛出：`invalid-replay-input`（非 tick0 初态、末态未结束或 tick 超界）；`replay-divergence`（重执行未逐 tick 推进、单位集合变化、末视图或投影动画序列不符）。底层非法引擎输入异常原样传播；这些都是服务器故障，不能据此伪造平局/结算。该函数不是不可信战斗验证器，不能用其接受动画序列来证明战斗真实性。toCombatViewState/显示 reducer 无业务失败枚举；只用于可信状态/本协议 DTO。
 
-**SR-G5-01 治疗来源。** heal 保留单条领域事件及原 tick/eventSeq，不拆分或重复序号；actual 为目标实际获得的总治疗，新增 `shares: {sourceId: string, actual: number}[]`，按 outcome.shares 原顺序逐条复制 ownerId 与 actual。包括零份额，同一 owner 的多个来源不合并。权威机制已完成重伤、取整与生命上限裁剪，不得重新按比例分配；可信账本满足 `sum(shares.actual) === actual`。不下发完整 Source、contributions 或执行计划。B 视角保持 sourceId/targetId/份额数值不变。重执行、终态与动画序列校验保持，新增来源和份额同样纳入 replay-divergence 比对。历史无 shares 的缓存回放需从完整账本重新生成才能使用来源统计；本包不改版本号或 digest。
+**SR-G5-01 治疗来源。** heal 保留单条领域事件及原 tick/eventSeq，不拆分或重复序号；actual 为目标实际获得的总治疗，`shares: {sourceId, sourceKind, definitionId, delivery, actual}[]` 按 outcome.shares 原顺序逐条复制 ownerId、sourceKind、definitionId 与 actual。delivery 不是伤害上下文：治疗账本没有该字段，只按 sourceKind 收成与伤害包相同的 PacketOrigin 取值（ability→ability-direct，item→equipment-proc，attack→basic-attack，其余→attack-extra），供表现区分技能和装备。包括零份额，同一 owner 的多个来源不合并。权威机制已完成重伤、取整与生命上限裁剪，不得重新按比例分配；可信账本满足 `sum(shares.actual) === actual`。不下发 instanceId、effectIndex、contributions 或执行计划。B 视角保持 sourceId、sourceKind、definitionId、delivery、targetId 和份额数值不变。重执行、终态与动画序列校验保持，来源和份额同样纳入 replay-divergence 比对。历史无 shares 的缓存回放需从完整账本重新生成才能使用来源统计；本包不改版本号或 digest。
 
 **G5 战斗统计权威入口**（simulation/combat-summary.ts 与 server-entry 导出）：
 

@@ -65,23 +65,37 @@ describe('batch 3 display lifecycle', () => {
   it('uses actual Illaoi endpoints and the magic slam event, never the self-cast receipt as a missile', () => {
     const { controller, runtime } = fixture('illaoi');
     controller.event(event({type: 'cast', tick: 1, sourceId: 's', targetIds: ['s']}), true); controller.cast('s', ['s']); controller.update(.01);
-    controller.event(event({type: 'packetDamage', tick: 21, sourceId: 's', targetId: 't', damageType: 'true'}), true);
+    controller.event(event({type: 'packetDamage', tick: 21, sourceId: 's', targetId: 't', damageType: 'true', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-direct'}), true);
     expect(runtime.playVariant).toHaveBeenCalledWith('illaoi', 'illaoi-drain', 's', ['t'], undefined);
     const mapping = mapSkillTimeline(batch3Timelines.illaoi['illaoi-drain'], 's', ['t']);
     expect(mapping.unsupported).toEqual([]); expect(mapping.spawns[0]).toMatchObject({ event: 'link', sourceId: 's', targetId: 't' });
-    controller.event(event({type: 'packetDamage', tick: 31, sourceId: 's', targetId: 't', damageType: 'magic'}), true);
+    controller.event(event({type: 'packetDamage', tick: 31, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-direct'}), true);
     expect(runtime.stopGroup).not.toHaveBeenCalled();
     controller.event(event({type: 'statusChanged', tick: 61, targetId: 's', kind: 'damage-reduction', reason: 'expired'}), true);
-    controller.event(event({type: 'packetDamage', tick: 61, sourceId: 's', targetId: 't', damageType: 'magic'}), true);
+    controller.event(event({type: 'packetDamage', tick: 61, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-direct'}), true);
     expect(runtime.stopGroup).toHaveBeenCalledWith('s:illaoi-channel');
     expect(runtime.playVariant).toHaveBeenLastCalledWith('illaoi', 'illaoi-slam', 's', ['t'], undefined);
   });
   it('keeps Swain ascension for observed extended pulses and removes the drawing when pulses stop', () => {
     const { controller, runtime } = fixture('swain');
     controller.event(event({type: 'cast', tick: 1, sourceId: 's', targetIds: []}), true); controller.update(.01);
-    for (let i = 0; i < 12; i++) { controller.update(1); controller.event(event({type: 'heal', targetId: 's', shares: [{sourceId: 's', actual: 0}]}), true); }
+    const abilityHeal = { sourceId: 's', actual: 0, sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' };
+    for (let i = 0; i < 12; i++) { controller.update(1); controller.event(event({type: 'heal', targetId: 's', shares: [abilityHeal]}), true); }
     expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-ascension')).toHaveLength(2);
     expect(runtime.stopGroup).not.toHaveBeenCalled(); controller.update(1.3); expect(runtime.stopGroup).toHaveBeenCalledWith('s:swain-ascension');
+  });
+  it('does not extend Swain ascension for an equipment self-heal or a share missing provenance', () => {
+    const heal = (sourceKind?: string, definitionId?: string, delivery?: string) => event({ type: 'heal', tick: 2, targetId: 's',
+      shares: [{ sourceId: 's', actual: 40, ...(sourceKind ? { sourceKind, definitionId, delivery } : {}) }] });
+    const run = (share: ReturnType<typeof heal>) => {
+      const { controller, runtime } = fixture('swain');
+      controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), true);
+      controller.update(.01); controller.update(1); controller.event(share, true); controller.update(.3);
+      return runtime.stopGroup.mock.calls.map(call => call[0]);
+    };
+    expect(run(heal())).toContain('s:swain-ascension');
+    expect(run(heal('item', 'bloodthirster', 'equipment-proc'))).toContain('s:swain-ascension');
+    expect(run(heal('ability', 'swain-ability', 'ability-direct'))).not.toContain('s:swain-ascension');
   });
   it('does not leak a late model lease or leave a proxy after reset or endpoint death', async () => {
     let finish!: (lease: ModelLease) => void;
@@ -115,45 +129,47 @@ describe('batch 3 display lifecycle', () => {
     runtime.stopGroup('shield'); runtime.update(.51, new Camera()); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); runtime.dispose(); expect(scene.children).toHaveLength(0);
   });
   it('does not treat equipment magic as a batch-3 ability phase', () => {
-    const magic = (tick: number, sourceKind: string, delivery: string, damageType: 'magic' | 'true' = 'magic') =>
-      event({ type: 'packetDamage', tick, sourceId: 's', targetId: 't', damageType, sourceKind, delivery });
+    const magic = (tick: number, sourceKind: string, definitionId: string, delivery: string, damageType: 'magic' | 'true' = 'magic') =>
+      event({ type: 'packetDamage', tick, sourceId: 's', targetId: 't', damageType, sourceKind, definitionId, delivery });
     const swain = fixture('swain');
-    swain.controller.event(magic(3, 'item', 'equipment-proc'), true);
-    swain.controller.event(magic(4, 'ability', 'ability-direct'), true);
+    swain.controller.event(magic(3, 'item', 'bloodthirster', 'equipment-proc'), true);
+    swain.controller.event(magic(4, 'ability', 'swain-ability', 'ability-direct'), true);
+    swain.controller.event(event({ type: 'packetDamage', tick: 4, sourceId: 's', targetId: 't', damageType: 'magic' }), true);
     swain.controller.update(1);
     expect(swain.runtime.playVariant).not.toHaveBeenCalled();
     swain.controller.event(event({ type: 'cast', tick: 5, sourceId: 's', targetIds: [] }), true);
     swain.controller.update(.01);
-    swain.controller.event(magic(6, 'item', 'item-burn'), true);
-    swain.controller.event(magic(6, 'attack', 'attack-extra'), true);
+    swain.controller.event(magic(6, 'item', 'morellonomicon', 'item-burn'), true);
+    swain.controller.event(magic(6, 'attack', 'swain', 'attack-extra'), true);
+    swain.controller.event(event({ type: 'packetDamage', tick: 6, sourceId: 's', targetId: 't', damageType: 'magic' }), true);
     swain.controller.update(1.3);
     expect(swain.runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
     expect(swain.runtime.stopGroup).toHaveBeenCalledWith('s:swain-ascension');
     const pulsed = fixture('swain');
     pulsed.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), true);
-    pulsed.controller.event(magic(2, 'ability', 'ability-periodic'), true);
+    pulsed.controller.event(magic(2, 'ability', 'swain-ability', 'ability-periodic'), true);
     expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-pulse', 's', ['t'], undefined);
     const illaoi = fixture('illaoi');
     illaoi.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['s'] }), true);
     illaoi.controller.update(.01);
-    illaoi.controller.event(magic(21, 'item', 'equipment-proc', 'true'), true);
+    illaoi.controller.event(magic(21, 'item', 'bloodthirster', 'equipment-proc', 'true'), true);
     expect(illaoi.runtime.playVariant.mock.calls.filter(c => c[1] === 'illaoi-drain')).toHaveLength(0);
     illaoi.controller.event(event({ type: 'statusChanged', tick: 61, targetId: 's', kind: 'damage-reduction', reason: 'expired' }), true);
-    illaoi.controller.event(magic(61, 'item', 'equipment-proc'), true);
+    illaoi.controller.event(magic(61, 'item', 'bloodthirster', 'equipment-proc'), true);
     expect(illaoi.runtime.playVariant.mock.calls.filter(c => c[1] === 'illaoi-slam')).toHaveLength(0);
-    illaoi.controller.event(magic(61, 'ability', 'ability-direct'), true);
+    illaoi.controller.event(magic(61, 'ability', 'illaoi-ability', 'ability-direct'), true);
     expect(illaoi.runtime.playVariant).toHaveBeenLastCalledWith('illaoi', 'illaoi-slam', 's', ['t'], undefined);
     const loris = fixture('loris');
     loris.shield(0, 'expired');
-    loris.controller.event(magic(2, 'item', 'equipment-proc'), true);
+    loris.controller.event(magic(2, 'item', 'bloodthirster', 'equipment-proc'), true);
     expect(loris.runtime.playVariant.mock.calls.filter(c => c[1] === 'loris-retaliation')).toHaveLength(0);
-    loris.controller.event(magic(2, 'ability', 'ability-direct'), true);
+    loris.controller.event(magic(2, 'ability', 'loris-ability', 'ability-direct'), true);
     expect(loris.runtime.playVariant).toHaveBeenCalledWith('loris', 'loris-retaliation', 's', ['t'], undefined);
   });
   it('keeps a caught-up ascension and summon that are still running, and drops ones that already ended', async () => {
     const swain = fixture('swain');
     swain.controller.event(event({ type: 'cast', tick: 10, sourceId: 's', targetIds: [] }), false);
-    swain.controller.event(event({ type: 'packetDamage', tick: 20, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', delivery: 'ability-direct' }), false);
+    swain.controller.event(event({ type: 'packetDamage', tick: 20, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' }), false);
     expect(swain.runtime.playVariant).not.toHaveBeenCalled();
     swain.controller.update(.01);
     expect(swain.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-ascension', 's', [], 's:swain-ascension');
@@ -198,9 +214,9 @@ describe('batch 3 display lifecycle', () => {
       await Promise.resolve(); await Promise.resolve(); controller.update(.01);
       const armed = play.mock.calls.length;
       expect(armed).toBeGreaterThan(0);
-      controller.event(event({ type: 'packetDamage', tick: 30, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'item', delivery: 'equipment-proc' }), true);
+      controller.event(event({ type: 'packetDamage', tick: 30, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'item', definitionId: 'bloodthirster', delivery: 'equipment-proc' }), true);
       expect(play.mock.calls.length).toBe(armed);
-      controller.event(event({ type: 'packetDamage', tick: 40, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', delivery: 'ability-direct' }), true);
+      controller.event(event({ type: 'packetDamage', tick: 40, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'silco-ability', delivery: 'ability-direct' }), true);
       expect(play.mock.calls.length).toBeGreaterThan(armed);
     } finally { play.mockRestore(); }
   });

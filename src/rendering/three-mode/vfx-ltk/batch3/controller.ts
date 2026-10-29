@@ -18,24 +18,19 @@ export function ownAbilityShield(key: string, target: string): boolean {
   try { const t: unknown = JSON.parse(key); return Array.isArray(t) && t.length === 9 && t[1] === target && t[2] === 'ability' && t[7] === target; }
   catch { return false; }
 }
-/** Equipment procs are not this batch's ability phase. Untagged packets stay eligible
- * so callers that predate sourceKind/delivery keep their existing gates. */
-export function isAbilityPacket(event: { sourceKind?: unknown; delivery?: unknown }): boolean {
-  const sourceKind = typeof event.sourceKind === 'string' ? event.sourceKind : undefined;
-  const delivery = typeof event.delivery === 'string' ? event.delivery : undefined;
-  if (sourceKind === undefined && delivery === undefined) return true;
-  if (sourceKind === 'item' || delivery === 'equipment-proc' || delivery === 'item-burn') return false;
-  if (sourceKind !== undefined && sourceKind !== 'ability') return false;
-  if (delivery !== undefined && delivery !== 'ability-direct' && delivery !== 'ability-periodic') return false;
-  return true;
+/** PacketOrigin fields. A missing tag is an old replay and is not this batch's ability. */
+const ABILITY_DELIVERY = new Set(['ability-direct', 'ability-periodic']);
+export function isAbilityPacket(event: { sourceKind?: unknown; definitionId?: unknown; delivery?: unknown }): boolean {
+  return event.sourceKind === 'ability' && typeof event.definitionId === 'string' && event.definitionId.length > 0
+    && typeof event.delivery === 'string' && ABILITY_DELIVERY.has(event.delivery);
 }
-function packetOrigin(event: DisplayCombatEvent): { sourceKind?: string; delivery?: string } {
+function packetOrigin(event: DisplayCombatEvent): { sourceKind?: unknown; definitionId?: unknown; delivery?: unknown } {
   if (event.type !== 'packetDamage') return {};
-  const tagged = event as { sourceKind?: unknown; delivery?: unknown };
-  return {
-    sourceKind: typeof tagged.sourceKind === 'string' ? tagged.sourceKind : undefined,
-    delivery: typeof tagged.delivery === 'string' ? tagged.delivery : undefined,
-  };
+  const tagged = event as { sourceKind?: unknown; definitionId?: unknown; delivery?: unknown };
+  return { sourceKind: tagged.sourceKind, definitionId: tagged.definitionId, delivery: tagged.delivery };
+}
+function shareOrigin(share: { sourceKind?: unknown; definitionId?: unknown; delivery?: unknown }) {
+  return { sourceKind: share.sourceKind, definitionId: share.definitionId, delivery: share.delivery };
 }
 interface PendingSummon {
   key: string; owner: string; tick: number; duration: number; presented: boolean;
@@ -128,7 +123,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
         }
       } else if (event.type === 'heal') {
         for (const share of event.shares) {
-          if (share.sourceId !== event.targetId || find(share.sourceId)?.definitionId !== 'swain' || !ascension.has(share.sourceId)) continue;
+          if (share.sourceId !== event.targetId || find(share.sourceId)?.definitionId !== 'swain' || !ascension.has(share.sourceId) || !isAbilityPacket(shareOrigin(share))) continue;
           const held = ascension.get(share.sourceId)!;
           if (typeof event.tick === 'number') held.lastTick = event.tick;
           if (loops.has(`${share.sourceId}:swain-ascension`)) last.set(share.sourceId, clock);
