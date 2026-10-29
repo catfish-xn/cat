@@ -32,7 +32,6 @@ function packetOrigin(event: DisplayCombatEvent): { sourceKind?: unknown; defini
 function shareOrigin(share: { sourceKind?: unknown; definitionId?: unknown; delivery?: unknown }) {
   return { sourceKind: share.sourceKind, definitionId: share.definitionId, delivery: share.delivery };
 }
-}
 interface PendingSummon {
   key: string; owner: string; tick: number; duration: number; presented: boolean;
   ids: string[]; groups: string[];
