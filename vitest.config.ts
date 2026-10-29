@@ -51,8 +51,8 @@ class RouteFirstSequencer extends BaseSequencer {
     return mine;
   }
 }
-// Seconds per fast-project file from one full local run (8 workers); refresh with
-// `node scripts/update-shard-weights.cjs <vitest json report>`. Files not listed count as
+// Seconds per fast-project file (hooks included) from one full local run; refresh with
+// `node scripts/update-shard-weights.cjs` (see its header). Files not listed count as
 // UNKNOWN_WEIGHT, so a stale table only costs balance, never coverage.
 const SHARD_WEIGHTS: Record<string, number> = JSON.parse(readFileSync(new URL('./tests/fixtures/shard-weights.json', import.meta.url), 'utf8'));
 const UNKNOWN_WEIGHT = 2;
