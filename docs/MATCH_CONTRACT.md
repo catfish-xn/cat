@@ -1792,6 +1792,6 @@ readonly anomalyBinding: AnomalyBinding | null; // 当前真实持有实例；�
 
 `toPrivateSeatView(state)` 白名单公开本人资格四字段；对手 `toPublicBoard` 与双方 `snapshotForBattle` 仍只公开当前实体效果，不公开休眠资格或待确认报价。战斗输入冻结当前真实绑定。`lockMatchCombatRoster(state)` 原签名不变，内部 `multiplayer.combatAnomaly={binding,provenancePrefixLength}` 冻结当时场上原生持有者（没有则 null）；战斗中出售备战席导致的恢复只影响未来战斗，本场 Headhunter 结算用冻结身份。结算解除锁定时移除此内部字段。
 
-`restoreMatch` / `serializeMatch` 重放已认证出生、出售、移除、变形、合星和唯一选择事实，比对资格、单一绑定、冻结输入及 D14 原期限；`restoreSharedOrbSnapshot` / `restoreCarouselSeat` 补做同一历史装备/异变路径校验。无法从候选资格字段自行授权一名新英雄，也不可信任悬空 unitId 或把绑定随意挪给另一副本。
+`restoreMatch` / `serializeMatch` 重放已认证出生、出售、移除、变形、合星和唯一选择事实，比对资格、单一绑定、冻结输入及 D14 原期限；`restoreSharedOrbSnapshot` / `restoreCarouselSeat` 补做同一历史装备/异变路径校验。无法从候选资格字段自行授权一名新英雄，也不可信任悬空 unitId 或把绑定随意挪给另一副本。历史装备折叠按候选选择收据重建 `definitionId`，因此不能单独认证异变定义。从目录 4-6 起（含删除报价历史的空席），两个联机入口都必须带独立 `AugmentHistoryAuthority`。`restoreCarouselSeat` 对无强化历史的多人席，只要带有资格、绑定、选择收据、`anomaly-selected` 或报价历史，同样要求该句柄，候选把 `round` 改小也不能跳过。缺句柄为 `Invalid augment history: missing independent server authority`，句柄与候选不一致为 `server facts/state mismatch`。对象与 JSON 相同。同步改写 selection、binding、选择收据定义（以及最后一条报价）必须拒绝。
 
 合并身份统一为 rules `s13-g2-3-v26-online-rules` / content `s13-14.24b-g2-3-v26-online-rules`；CONTENT=`fnv1a32-utf16:038b00ca`，LOOT=`fnv1a32-utf16:9af7b4d0`，已纳入 R1/R3/R4a/R5 与待选禁售策略。schema/save/replay/command 仍为 12/8/8/7，NET=5；旧纪元不迁移。固定证据另按统一 v26 身份重录；不改已发布证据，不执行 `--write`。

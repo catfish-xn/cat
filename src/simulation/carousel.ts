@@ -8,7 +8,7 @@ import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
-import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
+import { appendAugmentFact, historyRoster, validateAugmentAuthority, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { mechanicGrantEvents } from './g2-3-runtime';
@@ -585,9 +585,13 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     validateTombRaider(match);
     validateMadChemistOnlineSave(carousel.pool, match, authority);
-    if(match.anomalySelection||match.anomalyBinding||match.scheduleReceipts.some(r=>r.kind==='anomaly')||match.resourceProvenance.entries.some(e=>e.kind==='anomaly-selected')) {
-      validateHistoricalEquipment(null,match);validatePortableAnomaly(match);
-    }
+    // Historical equipment rebuilds entitlement from the candidate receipt, so a
+    // rewritten definition stays self-consistent. From 4-6, and for any multiplayer
+    // anomaly carried without augment history, require the same independent
+    // checkpoint as restoreSharedOrbSnapshot (absence included; round cannot opt out).
+    const anomalyEvidence = !!(match.anomalySelection || match.anomalyBinding || match.scheduleReceipts.some(r => r.kind === 'anomaly') || match.resourceProvenance.entries.some(e => e.kind === 'anomaly-selected'));
+    if (!(match.round < getCatalogRoundById('4-6').ordinal) || match.multiplayer && !match.augmentHistory && (anomalyEvidence || match.anomalyOfferHistory)) validateAugmentAuthority(match, authority, true);
+    if (anomalyEvidence) { validateHistoricalEquipment(null, match); validatePortableAnomaly(match); }
     return match;
 }
 
