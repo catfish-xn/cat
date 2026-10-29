@@ -85,18 +85,16 @@ describe('D1 What You Really Are with D5 production offers', () => {
     expect(receipts(dead)).toHaveLength(1);
   });
 
-  it('requires matching committed D0 authority and tolerates paired legacy absence without earning damage', () => {
+  it('requires matching committed D0 authority and atomically rejects a missing field at settlement', () => {
     const s = acquire(), { damageDealt: _, ...legacy } = receipt(s);
-    const legacyResult = applyRoundSettlement(freeze(s), legacy);
-    expect(legacyResult.ok).toBe(true);
-    expect(whatYouReallyAreProgress(legacyResult.state)).toEqual({ count: 0 });
-    expect(legacyResult.state.roundResults.at(-1)).not.toHaveProperty('damageDealt');
+    const rejected = applyRoundSettlement(freeze(s), legacy);
+    expect(rejected).toEqual({ ok: false, state: s, reason: 'invalid-receipt' });
+    expect(rejected.state).toBe(s);
     const settled = settle(s, { damageDealt: 12 });
     const missingResult = structuredClone(settled), missingReceipt = structuredClone(settled);
     delete (missingResult.roundResults.at(-1)! as { damageDealt?: number }).damageDealt;
     delete (missingReceipt.multiplayer!.receipts.at(-1)! as { damageDealt?: number }).damageDealt;
     for (const bad of [missingResult, missingReceipt,
-
       { ...settled, multiplayer: { ...settled.multiplayer!, receipts: [] } },
       { ...settled, multiplayer: { ...settled.multiplayer!, receipts: settled.multiplayer!.receipts.map(r => ({ ...r, damageDealt: 35 })) } },
       { ...settled, roundResults: settled.roundResults.map(r => r.roundKind === 'pvp' ? { ...r, damageDealt: -1 } : r) },
