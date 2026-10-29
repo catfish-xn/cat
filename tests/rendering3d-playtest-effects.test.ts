@@ -236,4 +236,28 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     advance(600);
     expect(Math.hypot(offsetOf('ambessa').x, offsetOf('ambessa').z)).toBeLessThan(1e-6);
   });
+  it('routes explicit merges into flying models and changes the real star row at impact across settlement', async () => {
+    const a = piece({ id: 'a', definitionId: 'renata', x: 200, y: 200 });
+    await publish([a, piece({ id: 'b', definitionId: 'renata', x: 0, y: 200 }), piece({ id: 'c', definitionId: 'renata', x: 100, y: 200 })]);
+    const scene = bodies.get('renata')!.parent!.parent!;
+    const row = scene.children.find(object => object.position.x === 200 && object.children.length === 1
+      && object.children[0] instanceof three.Mesh && object.children[0].geometry instanceof three.ShapeGeometry)!;
+    expect(row.children).toHaveLength(1);
+    listener.merges!([{ definitionId: 'renata', fromStar: 1, toStar: 2, to: { id: 'a', x: 200, y: 200 },
+      from: [{ id: 'b', x: 0, y: 200 }, { id: 'c', x: 100, y: 200 }] }]);
+    // The authoritative roster is already merged; the renderer's settlement transition must keep the visual alive.
+    await publish([{ ...a, starLevel: 2 }], false);
+    expect(scene.getObjectByName('render3d-star-up')).toBeDefined();
+    expect(row.children).toHaveLength(1);
+    advance(150);
+    const copies = scene.getObjectByName('render3d-star-up')!.children.filter(object => object instanceof three.Group);
+    expect(copies).toHaveLength(2); expect(copies.every(object => object.visible && object.position.x > 0)).toBe(true);
+    advance(160); expect(row.children).toHaveLength(2);
+    expect(scene.getObjectByName('merge-flash')?.visible).toBe(true);
+    advance(400); expect(scene.getObjectByName('render3d-star-up')).toBeUndefined(); expect(row.children).toHaveLength(2);
+    // A state refresh with no event is static: it cannot invent/replay another animation.
+    await publish([{ ...a, starLevel: 2 }], false);
+    expect(scene.getObjectByName('render3d-star-up')).toBeUndefined();
+  });
+
 });

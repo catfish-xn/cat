@@ -19,7 +19,7 @@ import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
 import { DISPLACEMENT_SLIDE_2D, isDisplacement, unitControl, type ControlKind } from '../presentation/control-display';
-import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
+import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardMerges, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics, type BoardMergePoint } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -43,14 +43,14 @@ import { familyReunionDancers, g23BoardMechanics } from './trait-column';
 import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
-import { THEME, toNumber } from '../presentation/theme';
+import { THEME, toNumber, starColor } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
-import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, s13AssetUrl, championPortraitKey } from '../presentation/s13-assets';
 import { readAssetBase3d } from './render-mode';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
-import { playMerge } from '../presentation/merge-fx';
+import { lazyMergeFx } from '../presentation/merge-fx-loader';
 import { battleLoadout, battleLoadoutText, BATTLE_EQUIPMENT_SUBMITTED, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
@@ -182,8 +182,17 @@ export class BoardScene extends Phaser.Scene {
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
-  /** Where tokens removed by the last reconcile were drawn: merges fly the consumed copies from there (I6). */
-  private readonly departed = new Map<string, Point>();
+  /** Last drawn origins, retained through repeated reconciles until the receipt is presented. */
+  private readonly departed = new Map<string, BoardMergePoint>();
+  private mergeFx: ReturnType<typeof lazyMergeFx> | null = null;
+  private mergeSeed: number | undefined;
+  private readonly seenMerges = new Set<string>();
+
+  private resetMergeFx() {
+    this.mergeFx?.dispose();
+    this.mergeFx = lazyMergeFx({ scene: this, radius: PIECE_RADIUS, reduced: reducedMotion, color: starColor });
+    this.departed.clear(); this.seenMerges.clear(); this.mergeSeed = undefined;
+  }
 
   constructor() { super('Board'); }
   create() {
@@ -195,6 +204,7 @@ export class BoardScene extends Phaser.Scene {
     // Phaser reuses the Scene instance on restart but destroys its display list.
     // Keep the authoritative MatchSession; all cached display references must be new.
     this.resetViewReferences();
+    this.resetMergeFx();
     const oldHudStart = this.children.length;
     this.add.text(48, 28, 'HEX / 自动战棋', { fontSize: '25px', color: '#edf4f3', fontStyle: 'bold' });
     this.phaseLabel = this.add.text(48, 67, '', { fontSize: '14px', color: '#9aaeb9' });
@@ -315,6 +325,7 @@ export class BoardScene extends Phaser.Scene {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
       confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
       serverEvents: events => this.serverEvents(events),
+      upgrades: events => this.showUpgrades(events),
       refused: (commandId, reason, text) => {
         this.pendingSuccess.delete(commandId);
         this.pendingBenchMoves.delete(commandId);
@@ -329,6 +340,7 @@ export class BoardScene extends Phaser.Scene {
       },
     }, mounts) : createSoloApplication(this.session, {
       replace: session => {
+        this.resetMergeFx();
         this.melSave?.reset();
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
         this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
@@ -371,6 +383,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private resetViewReferences() {
+    this.mergeFx?.dispose(); this.mergeFx = null; this.departed.clear();
     this.conquerorFlag?.dispose(); this.conquerorFlag = null;
     this.views.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
@@ -821,9 +834,9 @@ export class BoardScene extends Phaser.Scene {
     const benchMove = commandIds.length > 0 && commandIds.every(id => this.pendingBenchMoves.has(id));
     for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); this.pendingBenchMoves.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
-    this.command({ ok: true, state: this.session.state, events }, success, false, benchMove);
+    this.command({ ok: true, state: this.session.state, events }, success, false, benchMove, false);
   }
-  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false) {
+  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false, animateUpgrades = true) {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
@@ -846,7 +859,7 @@ export class BoardScene extends Phaser.Scene {
     this.sync();
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
     this.strategyPanel?.recordOperations(result.events);
-    const upgrades = this.showUpgrades(result.events);
+    const upgrades = animateUpgrades ? this.showUpgrades(result.events) : result.events.filter(event => event.type === 'unitUpgraded');
     // An empty success text (an online confirmation with nothing to say, an orb claim) leaves the status line as it was.
     const done = upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success;
     if (done) this.setStatus(done);
@@ -882,24 +895,28 @@ export class BoardScene extends Phaser.Scene {
     if (notice !== null) this.pendingOrbClaims.set(notice, orbId);
     else if (!result.ok) this.releaseOrb(orbId);
   }
-  /** I6: each upgrade among `events` plays its merge (copies fly in, then a ring); returns the upgrades. */
+  /** Confirmed domain events only. Capture coordinates now; animations never delay the authoritative sync. */
   private showUpgrades(events: readonly MatchEvent[]) {
-    const upgrades = events.filter(event => event.type === 'unitUpgraded');
-    if (!upgrades.length) return upgrades;
-    const host = { scene: this, reduced: reducedMotion(), fade: (effect: Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) => this.fadeEffect(effect, duration) };
-    const shop = { x: this.scale.gameSize.width / 2, y: this.scale.gameSize.height + PIECE_RADIUS };
-    let delay = 0;
-    for (const event of upgrades) {
-      const token = this.tokens.get(event.survivorId);
-      // A cascade can consume an intermediate survivor in the same transaction.
-      // Its immutable event still identifies where to show that upgrade.
-      const to = token ?? this.departed.get(event.survivorId) ?? this.position(event.location);
-      // A copy that was never drawn (the card just bought) comes up from the shop.
-      const from = event.consumedIds.map(id => this.departed.get(id) ?? this.tokens.get(id) ?? shop);
-      // A cascade's second merge waits for the first ring.
-      delay = playMerge(host, { definitionId: event.definitionId, toStar: event.toStar, from, to: { x: to.x, y: to.y }, survivor: token }, delay);
-      this.renderedUpgradeCount++;
-    }
+    if (this.mergeSeed !== this.session.state.seed) { this.mergeSeed = this.session.state.seed; this.seenMerges.clear(); }
+    const upgrades = events.filter(event => event.type === 'unitUpgraded').filter(event => {
+      const key = `${event.survivorId}:${event.toStar}:${event.consumedIds.join(',')}`;
+      if (this.seenMerges.has(key)) return false;
+      this.seenMerges.add(key); return true;
+    });
+    if (!upgrades.length) { this.departed.clear(); return upgrades; }
+    const shop = { x: this.scale.gameSize.width / 2, y: this.scale.gameSize.height - PIECE_RADIUS };
+    const point = (id: string, fallback: Point & { readonly benchSlot?: number }): BoardMergePoint => {
+      const token = this.tokens.get(id), slot = token?.getData('benchSlot');
+      return token ? { id, x: token.x, y: token.y, ...(slot !== undefined ? { benchSlot: slot } : {}) }
+        : this.departed.get(id) ?? { id, ...fallback };
+    };
+    const merges = upgrades.map(event => ({ definitionId: event.definitionId, fromStar: event.fromStar, toStar: event.toStar,
+      to: point(event.survivorId, { ...this.position(event.location), ...(event.location.kind === 'bench' ? { benchSlot: event.location.slot } : {}) }), from: event.consumedIds.map((id, index) => point(id, { x: shop.x + (index - .5) * PIECE_RADIUS, y: shop.y })) }));
+    if (boardFeedActive()) publishBoardMerges(merges);
+    else this.mergeFx?.play(merges.map(merge => ({ ...merge, portrait: championPortraitKey(merge.definitionId),
+      color: getHeroIdentity(merge.definitionId).colorNumber, survivor: this.tokens.get(merge.to.id), star: this.views.get(merge.to.id)?.star })));
+    this.renderedUpgradeCount += upgrades.length;
+    this.departed.clear();
     return upgrades;
   }
   /** Offline: the opening encounter of the local match, read with the rules' own readers (online: OnlineApplication). */
@@ -918,7 +935,7 @@ export class BoardScene extends Phaser.Scene {
   private serverEvents(events: readonly MatchEvent[]) {
     this.melSave?.push(events);
     const deployed = events.filter(event => event.type === 'unitDeployed').length;
-    const merged = this.showUpgrades(events).length ? mergeNotice(events) : null;
+    const merged = mergeNotice(events);
     if (merged) this.setStatus(merged);
     else if (deployed) this.setStatus(`准备时间结束 · 已自动上场 ${deployed} 个单位`);
   }
@@ -933,7 +950,7 @@ export class BoardScene extends Phaser.Scene {
     const units = watching ? [] : this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
-    this.departed.clear();
+    // Keep departures until their receipt is shown: a second sync must not erase merge origins.
     // Rewards can consume an old unit while its finished combat is still displayed.
     // Keep that combat view until Continue clears it, including restored settlements.
     for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
@@ -943,7 +960,7 @@ export class BoardScene extends Phaser.Scene {
     }
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
-      this.departed.set(id, { x: token.x, y: token.y });
+      this.departed.set(id, { id, x: token.x, y: token.y, ...(token.getData('benchSlot') !== undefined ? { benchSlot: token.getData('benchSlot') } : {}) });
       this.views.get(id)?.destroy(); if (token.active) token.destroy();
       this.tokens.delete(id); this.views.delete(id); this.renderedCells.delete(id);
       this.namedObjects.delete(`unit:${id}`);
@@ -958,6 +975,7 @@ export class BoardScene extends Phaser.Scene {
       const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
       const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
+      this.tokens.get(unit.id)!.setData('benchSlot', unit.location.kind === 'bench' ? unit.location.slot : undefined);
       this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
     }
   }
@@ -1100,6 +1118,7 @@ export class BoardScene extends Phaser.Scene {
   }
   /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
+    if (change.reason === 'new-match' || change.after.round < change.before.round) this.resetMergeFx();
     this.melSave?.push(change.events);
     if (this.session instanceof RemoteSession) { this.drawSpecialCells(); if (!this.session.combatView) this.feedback?.reset(); return; }
     const combat = change.after.combat;
