@@ -1285,6 +1285,15 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 
 **2026-10-27 合并更新：**双重目的唯一内容行迁到 `src/simulation/content/augment-pool-batch5.ts`，显示名称/说明保留。权威行为为每次成功买经验强制刷新、保留锁定开关，实际刷新也触发棱彩门票；房间入口已统一共享事务。原八项商店数据需求继续有效，无新增界面接线请求。
 
+## VFX-BATCH1-PROVENANCE（2026-10-29，后续只读投影需求，本批未实现）
+
+vfxb1 用户范围仅允许 rendering 接线，本次未改 simulation/server。当前在线 `packetDamage` 缺少来源定义、动作序号和 delivery，`statusChanged` 缺少到期贡献者身份；只能实现有限的事件关联。详细限制见 [VFX_BATCH1.md](VFX_BATCH1.md)。
+
+- 字段：为伤害显示事件补充既有 `outcome.context` 的 `sourceDefinitionId`、`sourceKind`、`actionSeq`、`delivery`，需要时附 `rootActionSeq`／`triggeringCastActionSeq`。含义：标识这次可见伤害由哪个原有技能／装备／羁绊和动作产生；只投影现有权威事实，不新增结算。
+- 字段：为状态／护盾变化补充所变贡献者的 `key`、`sourceDefinitionId` 与 `sourceId`（多贡献者用数组），供显示仅停止对应技能增益／护盾，不依据同类状态猜来源。
+- 字段：在战斗初始／重连快照提供权威攻击形态或足够的既有攻击／施法计数、剩余强化攻击数、可见增益到期 tick。客户端仅选动画／粒子，不另算伤害或资源。
+- 用途与验收：Amumu 的 W 与同拍普攻／装备包并存时只播真实被动；Twitch 按同一动作的权威主目标／穿透收件人接线；Zeri 弹射与第三击在中途接入后仍正确；Leona 只在自身技能减伤到期时爆炸；Lux 提前破盾只停止该技能对应的盾。完整账本、replay whitelist、镜像、恢复及去重契约一起验收。
+
 ## B5-34-SETTLEMENT-EVENT（2026-10-27，已完成：h4w 用户授权 Codex 接线）
 
 **已完成：**`recordRoomSettlementTable` 改调规则公开入口 `recordAugmentSettlementTable`，由规则层比较 receiptId、生成并编号 `mechanicGranted`，在 `Room.commitSettlement` 的同一次发布中追加到原结算事件。网络 `state.events` 按 session/room/receiptId 去重，成功发送后才记账，重连沿用记录。接口及失败边界见 `MULTIPLAYER_CONTRACT.md` 的 B5-34 结算事件接线节；验收和调用点见 `B5_H4W_REPORT.md`。以下保留原请求。

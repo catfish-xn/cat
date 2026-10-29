@@ -32,6 +32,8 @@ import {
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
+import { createBatch1VfxEvents } from './vfx-ltk/batch1-events';
+import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader, type ModelTiming } from './asset-reader';
@@ -624,6 +626,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   const pieces = new Map<string, PieceView>();
   const ltkCastCounts = new Map<string, number>();
+  const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId);
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
@@ -895,7 +898,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = () => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; ltk?.clear(); ltkCastCounts.clear();
+    generation++; queued.length = 0; ltk?.clear(); ltkCastCounts.clear(); ltkEvents.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const fx of referenceEffects) fx.dispose();
@@ -940,10 +943,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0) => {
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0, variant?: TimelineVariant) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
-    if (!reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action)) return;
+    if (!reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, variant)) return;
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
     if (sample && action === 'attack') {
@@ -1159,8 +1162,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const tickOf = (event: DisplayCombatEvent) => 'tick' in event && typeof event.tick === 'number' ? event.tick : null;
     let latest = -Infinity;
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
-    for (const event of events) {
+    for (const planned of ltkEvents.batch(events)) {
+      const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
+      if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
+      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, 0, fx.action, fx.variant);
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       if (recipient?.alive && recipient.root.visible) {
@@ -1180,12 +1186,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
-      if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
+      if (event.type === 'attack') {
+        const targets = planned.targets ?? [event.targetId];
+        face(event.attackerId, targets[0]);
+        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, 0, planned.variant);
+      }
       else if (event.type === 'cast') {
+        if (planned.skipCast) continue;
         const castIndex = ltkCastCounts.get(event.sourceId) ?? 0;
         ltkCastCounts.set(event.sourceId, castIndex + 1);
         face(event.sourceId, event.targetIds[0]);
-        if (current) { playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, planned.variant); startLunge(event.sourceId, event.targetIds[0]); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
