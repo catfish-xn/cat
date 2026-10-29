@@ -106,21 +106,42 @@ describe('equal-distance tie break', () => {
     }
   });
 
+  const decisionPhaseTie = (patch: Partial<CombatUnit>) => {
+    const p = actor('p', patch);
+    // 'a' has one shortest attack hex, (3,1), so movement never draws.
+    // Its current target also avoids a p/survivor target tie in the live control.
+    const units = [p,
+      actor('survivor', { cell: { col: 4, row: 0 }, attackRange: 7, targetId: 'a' }),
+      enemy('a', 3, 2, { moveCooldownTicks: 0, targetId: 'survivor' }),
+      enemy('b', 2, 2), enemy('z', 5, 4)];
+    return { p, units };
+  };
+
   it.each([{ alive: false, hp: 100 }, { alive: true, hp: 0 }])(
     'does not draw in either decision phase for alive=$alive, hp=$hp', life => {
-      const p = actor('p', life);
-      const units = [p,
-        actor('survivor', { cell: { col: 3, row: 0 }, attackRange: 7, targetId: 'a' }),
-        enemy('a', 3, 3, { moveCooldownTicks: 0 }),
-        enemy('b', 2, 3), enemy('z', 4, 4)];
+      const { p, units } = decisionPhaseTie(life);
       expect(ordinaryNearestTies(p, units, 1).map(u => u.id)).toEqual(['a', 'b', 'z']);
       const result = step(units);
-      expect(result.events).toContainEqual({ type: 'movement', tick: 1, unitId: 'a', from: { col: 3, row: 3 }, to: { col: 3, row: 2 } });
+      expect(result.events).toContainEqual({ type: 'movement', tick: 1, unitId: 'a', from: { col: 3, row: 2 }, to: { col: 3, row: 1 } });
       // Moving 'a' removes the predecision winner, leaving a fresh action-phase tie.
       expect(ordinaryNearestTies(p, result.state.units as S13Unit[], 1).map(u => u.id)).toEqual(['b', 'z']);
       expect(result.state.rngDraws).toBe(0);
       expect(result.state.rngState).toBe(0);
     });
+
+  it.each([
+    { phase: 'predecision', targetId: null, winner: 'b' },
+    { phase: 'action recheck', targetId: 'a', winner: 'z' },
+  ])('draws exactly once in the $phase for the same layout with p alive', ({ targetId, winner }) => {
+    const { p, units } = decisionPhaseTie({ alive: true, hp: 100, targetId });
+    expect(ordinaryNearestTies(p, units, 1).map(u => u.id)).toEqual(['a', 'b', 'z']);
+    const result = step(units);
+    expect(result.events).toContainEqual({ type: 'movement', tick: 1, unitId: 'a', from: { col: 3, row: 2 }, to: { col: 3, row: 1 } });
+    expect(ordinaryNearestTies(p, result.state.units as S13Unit[], 1).map(u => u.id)).toEqual(['b', 'z']);
+    expect(get(result.state).targetId).toBe(winner);
+    expect(result.state.rngDraws).toBe(1);
+    expect(result.state.rngState).toBe(nextRandom(0).state);
+  });
 });
 
 describe('hard-control target hold', () => {
