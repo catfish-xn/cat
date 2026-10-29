@@ -27,7 +27,6 @@ import { epicForgeOffers, openEpicForge, EPIC_REWARD_NAMES, settleTerminalEpicFo
 import { validateAnvils as validateEpicForges } from '../src/simulation/restore-checks/anvils-check';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {publicAuthoredPreparation} from './fixtures/m8-neutral-public-route';
-import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import type {MatchState} from '../src/simulation/match-types';
@@ -241,8 +240,21 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(()=>validateShopHistory(forged)).toThrow('Invalid shop history: anomaly fee');
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
-  // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
-  // take the 6-7 prefix from the crab-free public route instead (Rift Herald keeps its opening state).
+  // Wolves still execute an opening. An earned radiant aura must be reflected in
+  // the authenticated initial HP, and changing that frozen HP must be rejected.
+  let wolves=publicAuthoredPreparation('3-7');
+  const holder=wolves.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!wolves.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
+  const plain=accepted(startMatchCombat(wolves));
+  wolves=accepted(grantMechanicItem(wolves,{receiptId:'test:radiant-wolf-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
+  wolves=accepted(equipItem(wolves,wolves.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,holder.id,0));
+  const opened=stepMatch(accepted(startMatchCombat(wolves))).state;
+  const frozen=opened.combat!.openingState!.initialUnits.find(u=>u.id===holder.id)!;
+  expect(frozen.hp).toBeGreaterThan(plain.combat!.units.find(u=>u.id===holder.id)!.hp);
+  expect(opened.combat!.openingState!.plans).toHaveLength(5);
+  expect(restoreMatch(serializeMatch(opened))).toEqual(opened);
+  const corrupt=structuredClone(opened);Object.assign(corrupt.combat!.openingState!.initialUnits.find(u=>u.id===holder.id)!,{hp:frozen.hp+1});
+  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
+  // The later real dragon prefix keeps the anomaly-fee provenance checks.
   let state=publicAuthoredPreparation('6-7');
   const anomalyHolder=state.anomalyBinding!.unitId;
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
@@ -252,11 +264,8 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
   state=accepted(equipItem(state,state.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,target.id,0));
-  // v22: a lone holder reaches overtime (tick 600), where the full overtime replay authenticates first;
-  // corrupt the last pre-overtime checkpoint so the neutral opening validator is the first to see it.
-  let checkpoint=accepted(startMatchCombat(state));
-  while(checkpoint.phase==='combat'&&checkpoint.combat!.tick<S13_COMBAT_RULES.overtimeStartTick-1)checkpoint=stepMatch(checkpoint).state;
-  expect(checkpoint.combat!.openingState!.initialUnits.length).toBeGreaterThan(0);
+  const checkpoint=stepMatch(accepted(startMatchCombat(state))).state;
+  expect(checkpoint.combat!.units.find(u=>u.team==='enemy')!.definitionId).toBe('pve-elder-dragon');
   expect(restoreMatch(serializeMatch(checkpoint))).toEqual(checkpoint);
   const forgedFee=structuredClone(checkpoint),fee=forgedFee.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
   Object.assign(fee,{choiceId:'round:6-7:anomaly'});
@@ -267,8 +276,6 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(afterFee.point.schedulePrefix).toBe(receiptIdx);
   Object.assign(afterFee.point,{schedulePrefix:receiptIdx+1});
   expect(()=>restoreMatch(forgedAfterReceipt)).toThrow('anomaly fee');
-  const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
-  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
  });

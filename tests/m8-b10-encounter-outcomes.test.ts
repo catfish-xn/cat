@@ -70,7 +70,7 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
       expect(state.phase).toBe('gameOver');
       expect(state.seed).toBe(HERALD_ROUTE_SEED);
       expect(openingEncounter(state.seed)).toBe('none');
-      expect(independentLootPlan(state.seed,38).rounds.at(-1)!.encounterPlan.encounterId).toBe('rift-herald-v1');
+      expect(independentLootPlan(state.seed,38).rounds.at(-1)!.encounterPlan.encounterId).toBe('elder-dragon-v1');
       // Use the fixture's current command-only route seed (v25: 65); payloads and their order
       // still come from the independent literal-table BigInt loot oracle, never the runtime plan.
       expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(HERALD_ROUTE_SEED,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));

@@ -1282,3 +1282,11 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 - `Room.commitSettlement` 调用 `recordRoomSettlementTable` 时，规则层可在该调用中给存活的幸存者持有者写入唯一 60 金收据及金币；当前服务器 `serverEvents` 仍只携带原结算事件，未包含该次新收据的 `mechanicGranted` 事件。
 - 请求服务器流水线在整桌淘汰/排名确定后比较该席位结算表记录前后的机制收据，将新事件按 Match 的事件序号规则与原结算事件一并原子发布；不在服务器重算获奖条件或金币。若需要显式携带已编号事件，请由规则层另提供适配接口，不从客户端状态推断。
 - 验收：三人同轮出局时，存活持有者只收到一次正确编号的 `mechanicGranted`；同时出局的持有者无奖励和事件；重复结算及重连不补发。金币和唯一收据已由规则层发放，此请求仅补事件传递。
+
+## NEUTRALS-1424（2026-10-29，Codex → Claude）
+
+规则按用户已批准表恢复，差异、所有调用点、旧断言替换及重录清单见 [NEUTRALS_14_24_RESTORATION.md](NEUTRALS_14_24_RESTORATION.md)。无新字段或命令；`definitionId / monsterFamily / encounterId / unitId / stats` 的结构不变。4-7为1大鸟+4小鸟；6-7为 `elder-dragon-v1 / d01 / pve-elder-dragon`，实例ID仍含roundId。既有2D名字／头像与3D模型映射自动复用远古龙。
+
+- 静态样例 `src/presentation/loot-preview/fixtures.ts:SAMPLE_SOURCES` 已按本次用户明确指示替换为上述龙身份；`stage-track.ts` 已改按roundId查询，5-7/6-7可共用encounterId。该模块非实际游戏状态，游戏入口不导入它。
+- 3D使用已有 `pve-elder-dragon` manifest key，不增加素材。模型文件已在本机忽略目录只读核对；当前工作树没有完整本地素材包。验收：配置已有素材根时5-7/6-7均显示龙，失败仍走已有占位回退；不根据中文名或回合另造规则。
+- Claude统一重录新纪元的生成digest、golden及存档／路线fixture（三份独立可执行oracle由Codex手写更新）；本轮未运行 `--write`。特别是旧6-7先锋的冲锋、眩晕、控制收据Match场景不能通过仅重录JSON来保留，本轮已改为狼跳、远古龙与鸟buff的真实Match等价覆盖；先锋通用纯战斗回归已保留且独立于旧路线执行。PvE失败扣血仍保持原公式。

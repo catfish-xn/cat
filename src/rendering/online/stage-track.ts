@@ -34,15 +34,15 @@ function iconOf(round: RoundDefinition): StageIcon {
   if (marks.includes('anomaly')) return 'anomaly';
   return round.kind === 'supply' ? 'carousel' : round.kind;
 }
-function monsters(encounterId: string | null): string {
-  const slots = NEUTRAL_ENCOUNTERS.find(encounter => encounter.encounterId === encounterId)?.slots ?? [];
+function monsters(roundId: string): string {
+  const slots = NEUTRAL_ENCOUNTERS.find(encounter => encounter.roundId === roundId)?.slots ?? [];
   const counts = new Map<string, number>();
   for (const slot of slots) { const name = FAMILY[NEUTRAL_DEFINITIONS[slot.definitionId]!.monsterFamily]; counts.set(name, (counts.get(name) ?? 0) + 1); }
   return [...counts].map(([name, count]) => `${name} ×${count}`).join('、');
 }
 function titleOf(round: RoundDefinition, icon: StageIcon): string {
   const what = icon === 'augment' ? `${LABEL.augment} · ${LABEL.pvp}` : icon === 'anomaly' ? `${LABEL.pvp} · ${LABEL.anomaly}`
-    : icon === 'pve' ? `${LABEL.pve}：${monsters(round.encounterId)}` : LABEL[icon];
+    : icon === 'pve' ? `${LABEL.pve}：${monsters(round.roundId)}` : LABEL[icon];
   return `${round.displayName} ${what}`;
 }
 

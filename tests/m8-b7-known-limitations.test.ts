@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat } from '../src/simulation/combat';
-import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
 import { battle, unit } from './combat-helpers';
+import { legacyHeraldVector } from './neutral-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -9,7 +9,7 @@ vi.setConfig({ testTimeout: 20_000 });
 /** B7 regression migrated after the approved B3 fix: never bless the historical defect. */
 describe('B7 accepts the fixed B3 charge-control ordering without changing the generic layer', () => {
   it('does not apply stun or emit fake death cleanup for a lethal charge packet', () => {
-    const compiled = compileNeutralEncounter('6-7');
+    const compiled = legacyHeraldVector();
     const herald = { ...compiled.units[0], cooldownTicks: 1000, moveCooldownTicks: 1000 };
     // maxHP1000 => 150 charge damage; current HP100 makes that packet lethal.
     const victim = unit('p', 'player', 3, 4, { hp: 100, maxHp: 1000, armor: 0, magicResist: 0,
@@ -28,7 +28,7 @@ describe('B7 accepts the fixed B3 charge-control ordering without changing the g
     expect(result.state.rngDraws).toBe(0);
   });
   it('commits a nonlethal packet before applying next-tick stun to the survivor', () => {
-    const compiled = compileNeutralEncounter('6-7');
+    const compiled = legacyHeraldVector();
     const herald = { ...compiled.units[0], cooldownTicks: 1000, moveCooldownTicks: 1000 };
     const victim = unit('p', 'player', 3, 4, { hp: 1000, maxHp: 1000, armor: 0, magicResist: 0,
       cooldownTicks: 1000, moveCooldownTicks: 1000, mana: 0, maxMana: 0,

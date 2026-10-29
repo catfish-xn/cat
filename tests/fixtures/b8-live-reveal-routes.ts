@@ -8,11 +8,12 @@ export const PARTIAL_REVEAL_SEEDS = {loris:29,zyra:29} as const;
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
-// is a public Match command, preserving the exact tick/eventSeq assertions below.
+// is a public Match command. Current 14.24 timing is checked by the live-reveal suite.
 // v25: first no-opening seed from 2000 whose independent 4-7 plan has nine
-// entries (r03 one hero, r04 three entries including a hero, r05 unloaded), whose
+// entries (r03 one hero, r04 three entries including a hero), whose
 // public route fields all eight two-star holders/four recipes, and whose lawful
-// Lux/Nami swap kills r03/r04 together after three earlier deaths, then r05 last.
+// 14.24 Leona/Loris swap kills r03/r04 together after three earlier deaths.
+// Five current birds are all loaded; unloaded-source coverage uses the actual 1-4 minions.
 export const SIMULTANEOUS_REVEAL_SEED=2634;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};

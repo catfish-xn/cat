@@ -5,23 +5,24 @@ import { NEUTRAL_ENCOUNTERS } from '../src/simulation/content/neutral-encounters
 import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
+import { legacyHeraldVector } from './neutral-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
 // Independent transcription of the approved table, not computed from compiler output.
 const stats = [
-  ['pve-minion-melee-a', 'minion', 110, 8, 5000, 40, 0, 0, 1],
-  ['pve-minion-melee-b', 'minion', 160, 10, 6000, 34, 0, 0, 1],
-  ['pve-minion-ranged-b', 'minion', 120, 9, 6000, 34, 0, 0, 3],
-  ['pve-minion-melee-c', 'minion', 220, 12, 6000, 34, 0, 0, 1],
-  ['pve-minion-ranged-c', 'minion', 160, 10, 6000, 34, 0, 0, 3],
-  ['pve-krug', 'krug', 400, 30, 8000, 25, 20, 20, 1],
-  ['pve-wolf-large', 'wolf', 900, 50, 8000, 25, 15, 15, 1],
-  ['pve-wolf-small', 'wolf', 450, 22, 8000, 25, 15, 15, 1],
-  ['pve-razorbeak-large', 'razorbeak', 1400, 65, 8000, 25, 25, 25, 1],
-  ['pve-razorbeak-small', 'razorbeak', 680, 32, 8000, 25, 25, 25, 1],
-  ['pve-elder-dragon', 'elder-dragon', 6000, 85, 10000, 20, 50, 50, 2],
+  ['pve-minion-melee-a', 'minion', 250, 20, 8000, 25, 10, 10, 1],
+  ['pve-minion-melee-b', 'minion', 250, 20, 8000, 25, 10, 10, 1],
+  ['pve-minion-ranged-b', 'minion', 150, 40, 8000, 25, 10, 10, 3],
+  ['pve-minion-melee-c', 'minion', 250, 20, 8000, 25, 10, 10, 1],
+  ['pve-minion-ranged-c', 'minion', 150, 40, 8000, 25, 10, 10, 3],
+  ['pve-krug', 'krug', 1200, 110, 8000, 25, 50, 25, 1],
+  ['pve-wolf-large', 'wolf', 1300, 230, 10000, 20, 15, 15, 1],
+  ['pve-wolf-small', 'wolf', 550, 135, 10000, 20, 15, 15, 1],
+  ['pve-razorbeak-large', 'razorbeak', 2400, 230, 8000, 25, 25, 25, 1],
+  ['pve-razorbeak-small', 'razorbeak', 1450, 180, 8000, 25, 25, 25, 1],
+  ['pve-elder-dragon', 'elder-dragon', 10000, 900, 8000, 25, 50, 50, 2],
   ['pve-rift-herald', 'rift-herald', 9000, 120, 10000, 20, 60, 60, 2],
 ] as const;
 const formations = [
@@ -30,17 +31,19 @@ const formations = [
   ['1-4', 'minions-c-v1', [['m01', 'pve-minion-melee-c', 2, 3], ['m02', 'pve-minion-melee-c', 4, 3], ['r01', 'pve-minion-ranged-c', 2, 1], ['r02', 'pve-minion-ranged-c', 4, 1]]],
   ['2-7', 'krugs-v1', [['k01', 'pve-krug', 1, 3], ['k02', 'pve-krug', 3, 3], ['k03', 'pve-krug', 5, 3]]],
   ['3-7', 'wolves-v1', [['w00', 'pve-wolf-large', 3, 2], ['w01', 'pve-wolf-small', 1, 3], ['w02', 'pve-wolf-small', 2, 3], ['w03', 'pve-wolf-small', 4, 3], ['w04', 'pve-wolf-small', 5, 3]]],
-  ['4-7', 'razorbeaks-v1', [['r00', 'pve-razorbeak-large', 3, 2], ['r01', 'pve-razorbeak-small', 0, 3], ['r02', 'pve-razorbeak-small', 1, 3], ['r03', 'pve-razorbeak-small', 2, 3], ['r04', 'pve-razorbeak-small', 4, 3], ['r05', 'pve-razorbeak-small', 5, 3]]],
+  ['4-7', 'razorbeaks-v1', [['r00', 'pve-razorbeak-large', 3, 2], ['r01', 'pve-razorbeak-small', 0, 3], ['r02', 'pve-razorbeak-small', 1, 3], ['r03', 'pve-razorbeak-small', 2, 3], ['r04', 'pve-razorbeak-small', 4, 3]]],
   ['5-7', 'elder-dragon-v1', [['d01', 'pve-elder-dragon', 3, 2]]],
-  ['6-7', 'rift-herald-v1', [['h01', 'pve-rift-herald', 3, 1]]],
+  ['6-7', 'elder-dragon-v1', [['d01', 'pve-elder-dragon', 3, 1]]],
 ] as const;
 
-describe('B7 isolated approved content, not the enabled Match catalog', () => {
+describe('14.24 restored neutral catalog and preserved legacy programs', () => {
   it('compiles all 12 authored base stats, 25%/1.4 critical inputs and 0/0 mana', () => {
     // Opening encounters batch B (Jinx's crabs) adds its own scuttle/giant-crab neutrals beside the 12 B7 rows.
     const openingCrabs = ['pve-giant-crab', ...[110, 146, 147, 190, 400, 540, 960, 6000, 9000] /* P 10-24 crab HP split */.map(hp => `pve-scuttle-${hp}`)];
     expect(Object.keys(NEUTRAL_DEFINITIONS).sort()).toEqual([...stats.map(row => row[0]), ...openingCrabs].sort());
-    const compiled = NEUTRAL_ENCOUNTERS.flatMap(e => compileNeutralEncounter(e.roundId).units);
+    const active = NEUTRAL_ENCOUNTERS.flatMap(e => compileNeutralEncounter(e.roundId).units);
+    expect(active.map(u => u.definitionId)).not.toContain('pve-rift-herald');
+    const compiled = [...active, ...legacyHeraldVector().units];
     for (const [id, family, hp, ad, as, ticks, armor, mr, range] of stats) {
       const definition = NEUTRAL_DEFINITIONS[id];
       expect(definition).toMatchObject({ unitKind: 'neutral', monsterFamily: family, starLevel: 1, health: hp, attack: ad,
@@ -56,14 +59,35 @@ describe('B7 isolated approved content, not the enabled Match catalog', () => {
     }
   });
 
+  it('compiles the unscheduled legacy charge against independent literal expectations', () => {
+    const compiled = legacyHeraldVector();
+    const id = '["pve","test-legacy","test-legacy-herald","h01"]';
+    expect(compiled.units).toHaveLength(1);
+    expect(compiled.units[0]).toMatchObject({ id, definitionId: 'pve-rift-herald', hp: 9000,
+      maxHp: 9000, attackDamage: 120, baseAttackSpeedBps: 10000, attackIntervalTicks: 20,
+      armor: 60, magicResist: 60, attackRange: 2, ability: { id: 'void-charge-project-v1' } });
+    expect(compiled.openingDefinitions).toEqual([{
+      kind: 'path-charge', source: { ownerId: id, sourceKind: 'ability', definitionId: 'void-charge-project-v1',
+        instanceId: id, effectIndex: 0, parentItemInstanceId: null },
+      effects: [
+        { kind: 'damage', damageType: 'magic', delivery: 'ability-direct', critEligibility: 'never',
+          amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 1500, missingHpBps: 0,
+            actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'target', sample: 'packet', cap: 300 } },
+        { kind: 'apply-status', status: { kind: 'stun', magnitudeBps: 0, activation: 'next-tick',
+          duration: { kind: 'ticks', ticks: 10 }, stackPolicy: { kind: 'independent-instances' },
+          removable: true, polarity: 'harmful', damageFilter: null, onEnd: null } },
+      ],
+    }]);
+  });
+
   it('matches every round, slot, definition and position, including phase1 2/3/4 units', () => {
     expect(NEUTRAL_ENCOUNTERS.map(e => [e.roundId, e.encounterId, e.slots.map(s => [s.slotId, s.definitionId, s.cell.col, s.cell.row])])).toEqual(formations);
-    expect(NEUTRAL_ENCOUNTERS.map(e => e.slots.length)).toEqual([2, 3, 4, 3, 5, 6, 1, 1]);
+    expect(NEUTRAL_ENCOUNTERS.map(e => e.slots.length)).toEqual([2, 3, 4, 3, 5, 5, 1, 1]);
     const ids: string[] = [];
     for (const [roundId, encounterId, slots] of formations) {
       const result = compileNeutralEncounter(roundId);
       expect(result).toMatchObject({ roundId, encounterId, encounterRngDraws: 0,
-        catalogVersion: 'm8b-encounters-project-v1', policyVersion: 'm8b-pve-project-v2' });
+        catalogVersion: 's13-14.24-neutrals-v1', policyVersion: 'm8b-pve-project-v2' });
       expect(result.deployment).toEqual(slots.map(([slotId, definitionId, col, row]) => ({
         id: JSON.stringify(['pve', roundId, encounterId, slotId]), definitionId, encounterId,
         team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } },
@@ -73,15 +97,16 @@ describe('B7 isolated approved content, not the enabled Match catalog', () => {
       for (const u of result.units) expect(isDeploymentCell(DEFAULT_BOARD, 'enemy', u.cell)).toBe(true);
       ids.push(...result.units.map(u => u.id));
     }
-    expect(ids).toHaveLength(25); expect(new Set(ids).size).toBe(25);
+    expect(ids).toHaveLength(24); expect(new Set(ids).size).toBe(24);
   });
 
-  it('binds exactly the five mechanisms to real ability sources, not ID-based executor branches', () => {
+  it('binds the active mechanisms to real ability sources, not ID-based executor branches', () => {
     expect(compileNeutralEncounter('2-7').units.map(u => u.companionDefinitions?.[0].maxReactions)).toEqual([2, 2, 2]);
     expect(compileNeutralEncounter('3-7').openingDefinitions.map(d => d.kind)).toEqual(Array(5).fill('backline-jump'));
-    expect(compileNeutralEncounter('4-7').units.map(u => u.companionDefinitions?.[0].maxReactions)).toEqual(Array(6).fill(5));
+    expect(compileNeutralEncounter('4-7').units.map(u => u.companionDefinitions?.[0].maxReactions)).toEqual(Array(5).fill(5));
     expect(compileNeutralEncounter('5-7').units[0].attackCone).toEqual({ secondaryDamageBps: 3500 });
-    expect(compileNeutralEncounter('6-7').openingDefinitions[0]).toMatchObject({ kind: 'path-charge', source: { definitionId: 'void-charge-project-v1' } });
+    expect(compileNeutralEncounter('6-7').units[0].attackCone).toEqual({ secondaryDamageBps: 3500 });
+    expect(compileNeutralEncounter('6-7').openingDefinitions).toEqual([]);
     for (const e of NEUTRAL_ENCOUNTERS) {
       const compiled = compileNeutralEncounter(e.roundId);
       for (const source of [...compiled.openingDefinitions.map(d => d.source), ...compiled.units.flatMap(u => u.companionDefinitions?.map(d => d.source) ?? [])]) {

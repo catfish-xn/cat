@@ -24,20 +24,20 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-// Independent transcription of M8B_ENCOUNTERS §2–3, not derived from the
+// Independent transcription of the approved 2026-10-29 restoration table, not derived from the
 // production content/compiler or from readEncounterPreview's own output.
 const NEUTRAL_STATS = [
-  ['pve-minion-melee-a', 'minion', 110, 8, 40, 0, 0, 1],
-  ['pve-minion-melee-b', 'minion', 160, 10, 34, 0, 0, 1],
-  ['pve-minion-ranged-b', 'minion', 120, 9, 34, 0, 0, 3],
-  ['pve-minion-melee-c', 'minion', 220, 12, 34, 0, 0, 1],
-  ['pve-minion-ranged-c', 'minion', 160, 10, 34, 0, 0, 3],
-  ['pve-krug', 'krug', 400, 30, 25, 20, 20, 1],
-  ['pve-wolf-large', 'wolf', 900, 50, 25, 15, 15, 1],
-  ['pve-wolf-small', 'wolf', 450, 22, 25, 15, 15, 1],
-  ['pve-razorbeak-large', 'razorbeak', 1400, 65, 25, 25, 25, 1],
-  ['pve-razorbeak-small', 'razorbeak', 680, 32, 25, 25, 25, 1],
-  ['pve-elder-dragon', 'elder-dragon', 6000, 85, 20, 50, 50, 2],
+  ['pve-minion-melee-a', 'minion', 250, 20, 25, 10, 10, 1],
+  ['pve-minion-melee-b', 'minion', 250, 20, 25, 10, 10, 1],
+  ['pve-minion-ranged-b', 'minion', 150, 40, 25, 10, 10, 3],
+  ['pve-minion-melee-c', 'minion', 250, 20, 25, 10, 10, 1],
+  ['pve-minion-ranged-c', 'minion', 150, 40, 25, 10, 10, 3],
+  ['pve-krug', 'krug', 1200, 110, 25, 50, 25, 1],
+  ['pve-wolf-large', 'wolf', 1300, 230, 20, 15, 15, 1],
+  ['pve-wolf-small', 'wolf', 550, 135, 20, 15, 15, 1],
+  ['pve-razorbeak-large', 'razorbeak', 2400, 230, 25, 25, 25, 1],
+  ['pve-razorbeak-small', 'razorbeak', 1450, 180, 25, 25, 25, 1],
+  ['pve-elder-dragon', 'elder-dragon', 10000, 900, 25, 50, 50, 2],
   ['pve-rift-herald', 'rift-herald', 9000, 120, 20, 60, 60, 2],
 ] as const;
 const ENCOUNTERS = [
@@ -46,9 +46,9 @@ const ENCOUNTERS = [
   ['1-4', 'minions-c-v1', [['m01', 'pve-minion-melee-c', 2, 3], ['m02', 'pve-minion-melee-c', 4, 3], ['r01', 'pve-minion-ranged-c', 2, 1], ['r02', 'pve-minion-ranged-c', 4, 1]]],
   ['2-7', 'krugs-v1', [['k01', 'pve-krug', 1, 3], ['k02', 'pve-krug', 3, 3], ['k03', 'pve-krug', 5, 3]]],
   ['3-7', 'wolves-v1', [['w00', 'pve-wolf-large', 3, 2], ['w01', 'pve-wolf-small', 1, 3], ['w02', 'pve-wolf-small', 2, 3], ['w03', 'pve-wolf-small', 4, 3], ['w04', 'pve-wolf-small', 5, 3]]],
-  ['4-7', 'razorbeaks-v1', [['r00', 'pve-razorbeak-large', 3, 2], ['r01', 'pve-razorbeak-small', 0, 3], ['r02', 'pve-razorbeak-small', 1, 3], ['r03', 'pve-razorbeak-small', 2, 3], ['r04', 'pve-razorbeak-small', 4, 3], ['r05', 'pve-razorbeak-small', 5, 3]]],
+  ['4-7', 'razorbeaks-v1', [['r00', 'pve-razorbeak-large', 3, 2], ['r01', 'pve-razorbeak-small', 0, 3], ['r02', 'pve-razorbeak-small', 1, 3], ['r03', 'pve-razorbeak-small', 2, 3], ['r04', 'pve-razorbeak-small', 4, 3]]],
   ['5-7', 'elder-dragon-v1', [['d01', 'pve-elder-dragon', 3, 2]]],
-  ['6-7', 'rift-herald-v1', [['h01', 'pve-rift-herald', 3, 1]]],
+  ['6-7', 'elder-dragon-v1', [['d01', 'pve-elder-dragon', 3, 1]]],
 ] as const;
 
 // Original opening/live-value assertions now use complete public acquisition
@@ -137,12 +137,12 @@ function expectRestoredPreview(state: match.MatchState): void {
 }
 
 describe('U5 EncounterPreview additive opening-state contract', () => {
-  it('covers the eight authored PvE encounters and exactly 25 distinct instances', () => {
+  it('covers the eight authored PvE encounters and exactly 24 distinct instances', () => {
     expect(ROUND_CATALOG.filter(round => round.kind === 'pve').map(round => round.roundId))
       .toEqual(ENCOUNTERS.map(([roundId]) => roundId));
     const ids = ENCOUNTERS.flatMap(([roundId]) => preview(prepared(roundId)).units.map(unit => unit.unitId));
-    expect(ids).toHaveLength(25);
-    expect(new Set(ids).size).toBe(25);
+    expect(ids).toHaveLength(24);
+    expect(new Set(ids).size).toBe(24);
   });
 
   it.each(ENCOUNTERS)('%s projects independent family/stats/identity anchors and real tick-zero combat', (roundId, encounterId, slots) => {
@@ -299,7 +299,7 @@ describe('U5 EncounterPreview additive opening-state contract', () => {
     while (state.phase === 'combat') state = match.stepMatch(state).state;
     expect(state.phase).toBe('gameOver');
     expect(preview(state)).toEqual(opening);
-    expect(opening.encounterId).toBe('rift-herald-v1');
+    expect(opening.encounterId).toBe('elder-dragon-v1');
     expectRestoredPreview(state);
   });
 });
