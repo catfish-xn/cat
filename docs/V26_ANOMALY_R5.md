@@ -32,7 +32,7 @@ R5 来源：`claude/v26-anomaly-r5` / `761871a9`；集成工作区：`claude/v26
 | 独立所有权/D14 参考引擎 | `owned-resources.transactOwnership` 在每项操作后对 acquire/duplicate/claim/hold/sell/merge/deploy/equip 做统一协调；`createOwnershipState` 从可信边界复制 selection；`d14-anomalies.transactD14` 同步保留资格与原期限，仍不接入生产 Match |
 | 本人/对手显示数据 | `toPrivateSeatView` 新增四字段 selection 白名单；`server/room/projection.toPublicBoard` 无需改动，只读取当前 binding；休眠资格不公开给对手。`snapshotForBattle` 和 `two-sided-battle` 只冻结/映射实际上场实例 |
 | 单人存档/回放 | `restoreMatch` / `serializeMatch` → `foldResourceProvenance` 重建 selection、当前及历史最后绑定；`validateHistoricalEquipment`、获取奖励/D14/便携校验与冻结输入相互对照。`b8-restore` 三个后续获取重演点透传 selection；历史 basis 不被当前绑定覆盖 |
-| 联机/轮盘快照 | `restoreSharedOrbSnapshot` / `restoreCarouselSeat` 对已选异变补做同一历史装备/绑定认证；拒绝删除资格、乱改英雄或实例、伪造原生持有者装备便携异常 |
+| 联机/轮盘快照 | `restoreSharedOrbSnapshot` / `restoreCarouselSeat` 对已选异变补做同一历史装备/绑定认证；从 4-6 起两者都要独立服务器 authority。选秀入口对无强化历史的多人异变证据同样要求该句柄，不接受只改 selection/binding/选择收据定义的自洽伪造。拒绝删除资格、乱改英雄或实例、伪造原生持有者装备便携异常 |
 | 服务器现有入口（仅核对） | `room.applySeatCommand` 分发 buy/sell/choose/target/reroll/consumable；`Room` 准备期腾位调用 `resolvePendingCarouselUnits`，两条战斗入口调用 `lockMatchCombatRoster`；结算仍调用公共领域 API。本次服务器零改动、无新计时 API |
 
 内部新 helper 的签名：`resolveAnomalyBinding(selection:AnomalySelection|null|undefined,binding:AnomalyBinding|null,units:readonly Hero[]):AnomalyBinding|null`；`reconcileAnomalyResources(selection,binding,units,items):{anomalyBinding,items,events}`；`reconcileMatchAnomaly(state:MatchState,events?:MatchEvent[]):MatchState`。只接受领域持有实体/已认证历史投影，不供客户端指定候选列表。公共命令没有新增失败枚举，合法失败保持资源/RNG/ID/事件原子性。
