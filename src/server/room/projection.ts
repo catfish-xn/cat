@@ -8,7 +8,7 @@ import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
-  freeRerollsAvailable, previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
+  isAnomalyPreparationChoice, freeRerollsAvailable, previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
 import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
@@ -190,10 +190,10 @@ export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoice
 }
 /**
  * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
- * outside preparation (they exist in a battle only as its own units). Never minted, moved or scaled here.
+ * outside preparation/its anomaly choice (in battle they are its own units). Never minted, moved or scaled here.
  */
 export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
-  if (match.phase !== 'preparation') return [];
+  if (match.phase !== 'preparation' && !isAnomalyPreparationChoice(match)) return [];
   return readItemSummons(match).filter(origin => origin.unit.team === 'player').map(origin => ({
     kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId,
     unit: { id: origin.unit.id, definitionId: origin.unit.definitionId, team: origin.unit.team, starLevel: origin.unit.starLevel,

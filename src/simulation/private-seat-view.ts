@@ -1,3 +1,4 @@
+import { readAnomalyTargetIds } from './anomaly-choice';
 import { readMasterworkOptions } from './masterwork-choice';
 import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
@@ -74,6 +75,7 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    anomalyTargetIds: readAnomalyTargetIds(state),
     openingEncounter: readOpeningEncounterView(state),
     openingMelProgress: readOpeningMelProgress(state),
     ...(readOpeningForgeProgress(state) ? {openingForgeProgress: readOpeningForgeProgress(state)} : {}),

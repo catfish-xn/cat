@@ -44,8 +44,9 @@ it.each([false, true].flatMap(online => (['bench', 'board', 'three-star'] as con
     }
   }
   const rerollPool = expected.filter(id => id !== 'mage-armor');
-  const input = { ...state, gold: 2, pendingChoice: { ...state.pendingChoice,
-    step: 'offer' as const, targetId: target, generation: 1, offers: ['mage-armor'] } };
+  const firstWord = Math.ceil(expected.indexOf('mage-armor') * 0x100000000 / expected.length);
+  const input = accepted(selectAnomalyTarget({ ...state, gold: 2, choiceRngState: stateForWord(firstWord) }, choiceId, 0, target));
+  expect(input.pendingChoice!.offers).toEqual(['mage-armor']);
   for (const [index, id] of rerollPool.entries()) {
     const word = Math.ceil(index * 0x100000000 / rerollPool.length);
     const offered = accepted(rerollAnomaly({ ...input, choiceRngState: stateForWord(word) }, choiceId, 1));

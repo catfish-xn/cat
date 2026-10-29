@@ -73,7 +73,7 @@ export function readItemSummons(state:MatchState):readonly MovableSummon[] {
  return movableSummons(state).summons;
 }
 export function moveItemSummon(state:MatchState,itemInstanceId:string,cell:HexCell):MatchCommandResult {
- if(state.phase!=='preparation'||isCombatRosterLocked(state)||!canOperateMatch(state))return {ok:false,state,reason:'wrong-phase'};
+ if(!(state.phase==='preparation'||state.phase==='choice'&&state.pendingChoice?.kind==='anomaly'&&state.pendingChoice.returnPhase==='preparation')||isCombatRosterLocked(state)||!canOperateMatch(state))return {ok:false,state,reason:'wrong-phase'};
  const {projection,summons}=movableSummons(state);
  const origin=summons.find(o=>o.itemInstanceId===itemInstanceId&&o.unit.team==='player');
  if(!origin)return {ok:false,state,reason:'unknown-unit'};

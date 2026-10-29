@@ -13,7 +13,7 @@ export function* avariceRoute(env: RouteEnvironment, beforeDrain?: (room: Room) 
   for (let fired = 0; ; fired++) {
     expect(fired).toBeLessThan(5_000);
     claimAllOrbs(room);
-    if (room.state.phase === 'choice' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) break;
+    if (room.state.phase === 'preparation' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) break;
     if (room.state.phase === 'ended' || !(yield* clockGroup(room, clock))) throw new Error('no anomaly window');
   }
   for (const seatId of HUMANS) { offerAvarice(room, seatId, 'reroll'); chooseAvarice(room, seatId); yield room.state.round; }

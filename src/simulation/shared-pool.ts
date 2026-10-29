@@ -1,3 +1,5 @@
+import { validateAnomalyHistoryProof } from './anomaly-history-restore';
+import { getCatalogRoundById } from './round-selectors';
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
@@ -86,12 +88,14 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
+  // From the anomaly node onward an independent checkpoint also certifies absence/deletion of quote history.
+  if (!(state.round < getCatalogRoundById('4-6').ordinal)) validateAugmentAuthority(state, authority, true);
   preflightAugmentHistory(state);
   validateCarryGolem(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);
   if(trustedPoolGiftRequiresAuthority(pool,state))validateAugmentAuthority(state,authority,true);
   validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);if(!state.augmentHistory)validateAnomalyHistoryProof(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);
   if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces

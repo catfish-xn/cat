@@ -579,7 +579,7 @@ function validateChemTransition(before,after){
  if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
 }
 class Ledger {
- constructor(initial,{freezeObservations=true}={}){this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial,{freezeInputs:freezeObservations});
+ constructor(initial,{freezeObservations=true}={}){this.anomalyOffers=[];this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial,{freezeInputs:freezeObservations});
   // v22 openings can start with extra cards; conservation starts from the actual opening roster (Trainer Golem excluded).
   this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.transformInputs=0;this.transformOutputs=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
@@ -606,7 +606,16 @@ class Ledger {
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,entryXp(before),xpCap(before));assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
-  if(command?.type==='target'||command?.type==='anomalyReroll'){choice=word(choice);const target=before.preparation.units.find(u=>u.id===(command.unitId??before.pendingChoice.targetId));const pool=ANOMALIES.filter(id=>(command.type!=='anomalyReroll'||!before.pendingChoice.offers.includes(id))&&(id!=='ultimate-hero'||target?.location.kind==='board'&&target.starLevel===3&&COST[target.definitionId]===1)&&(id!=='into-the-unknown'||target?.location.kind==='board'));assert.deepEqual(after.pendingChoice.offers,[pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)]],'independent anomaly offer');}
+  if(command?.type==='target'||command?.type==='anomalyReroll'){
+   const retained=command.type==='target'&&before.pendingChoice.offers.length>0;
+   if(retained)assert.deepEqual(after.pendingChoice.offers,before.pendingChoice.offers,'retarget preserves quote');
+   else{choice=word(choice);const target=before.preparation.units.find(u=>u.id===(command.unitId??command.id??before.pendingChoice.targetId));
+    const blocked=this.anomalyOffers.length<12?this.anomalyOffers:this.anomalyOffers.slice(-1);
+    const pool=ANOMALIES.filter(id=>!blocked.includes(id)&&(id!=='ultimate-hero'||target?.location.kind==='board'&&target.starLevel===3&&COST[target.definitionId]===1)&&(id!=='into-the-unknown'||target?.location.kind==='board'));
+    const offer=pool[Number(BigInt(choice)*BigInt(pool.length)/4294967296n)];
+    assert.deepEqual(after.pendingChoice.offers,[offer],'independent anomaly offer');this.anomalyOffers.push(offer);
+   }
+  }
   for(const event of events){
    if(event.type==='choiceOpened'&&event.choice.kind==='augment'){
     const c=event.choice,tier=effectiveAugmentTier(after,c.choiceId),rerolled=command?.type==='rerollAugment';
