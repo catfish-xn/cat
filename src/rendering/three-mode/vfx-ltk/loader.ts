@@ -47,7 +47,6 @@ export interface PreparedVfx {
   surfaces?: EmissionSurfaces;
   /** An original empty definition is an intentional no-op, never a failed replacement. */
   empty?: boolean;
-  surfaces?: EmissionSurfaces;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -212,6 +211,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         }
         if (e.emissionMesh || e.emissionSurface) {
           const surface = e.emissionSurface;
+          if (e.emissionMesh && !reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
+          if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
           if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
             throw new VfxLoadError('unsupported', 'surface-host-pose');
           const mesh = e.emissionMesh ? await emission(e.emissionMesh.mesh) : null;

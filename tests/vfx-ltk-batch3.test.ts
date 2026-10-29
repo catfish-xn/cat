@@ -65,14 +65,14 @@ describe('batch 3 display lifecycle', () => {
   it('uses actual Illaoi endpoints and the magic slam event, never the self-cast receipt as a missile', () => {
     const { controller, runtime } = fixture('illaoi');
     controller.event(event({type: 'cast', tick: 1, sourceId: 's', targetIds: ['s']}), true); controller.cast('s', ['s']); controller.update(.01);
-    controller.event(event({type: 'packetDamage', tick: 21, sourceId: 's', targetId: 't', damageType: 'true'}), true);
+    controller.event(event({type: 'packetDamage', tick: 21, sourceId: 's', targetId: 't', damageType: 'true', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-direct'}), true);
     expect(runtime.playVariant).toHaveBeenCalledWith('illaoi', 'illaoi-drain', 's', ['t'], undefined);
     const mapping = mapSkillTimeline(batch3Timelines.illaoi['illaoi-drain'], 's', ['t']);
     expect(mapping.unsupported).toEqual([]); expect(mapping.spawns[0]).toMatchObject({ event: 'link', sourceId: 's', targetId: 't' });
-    controller.event(event({type: 'packetDamage', tick: 31, sourceId: 's', targetId: 't', damageType: 'magic'}), true);
+    controller.event(event({type: 'packetDamage', tick: 31, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-periodic'}), true);
     expect(runtime.stopGroup).not.toHaveBeenCalled();
     controller.event(event({type: 'statusChanged', tick: 61, targetId: 's', kind: 'damage-reduction', reason: 'expired'}), true);
-    controller.event(event({type: 'packetDamage', tick: 61, sourceId: 's', targetId: 't', damageType: 'magic'}), true);
+    controller.event(event({type: 'packetDamage', tick: 61, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'illaoi-ability', delivery: 'ability-direct'}), true);
     expect(runtime.stopGroup).toHaveBeenCalledWith('s:illaoi-channel');
     expect(runtime.playVariant).toHaveBeenLastCalledWith('illaoi', 'illaoi-slam', 's', ['t'], undefined);
   });
