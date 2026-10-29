@@ -3,6 +3,9 @@
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
 const STYLE = `
+/* The tabletop owns online PvP survivor volleys (or direct hits without sources) and the legacy solo/PvE HP bolt;
+   hide the shared DOM flight for both while 3D is mounted. */
+body:has(.render3d-layer) .outcome-bolt { display: none; }
 /* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
 body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
 body:has(.render3d-layer) .mel-save-feedback::before {

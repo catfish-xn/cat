@@ -1446,7 +1446,8 @@ export class BoardScene extends Phaser.Scene {
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
       orbRefusals: this.orbRefusalsOf(),
       mutationSacrificeCell: this.mutationCell(),
-      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
+      hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost,
+        pvp: this.application instanceof OnlineApplication && result.roundKind === 'pvp' } : null,
       ...this.feedMechanics() };
   }
   /** ?render=3d: my unclaimed orbs, each with the monster that dropped it while this round's loot names one (3D drops it there). */

@@ -1190,7 +1190,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (walk) legend()?.walk({ scene: 'board', ...walk });
     return walk !== null;
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk,
+    playerDamage: hit => { if (!visiting() && !reducedMotion()) tabletop.damage(hit); }, playerSaved: event => {
     if (event.source !== 'mel' && !visiting()) tabletop.saved();
     if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
     saveBurst?.dispose();

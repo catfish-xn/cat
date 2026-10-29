@@ -12,7 +12,8 @@ import { anomalyDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName } from '../../presentation/augment-display';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishPlayerDamage, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
+import type { PvpDamageFeedback } from '../../presentation/pvp-damage';
 import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
@@ -116,6 +117,7 @@ export class OnlineApplication implements SceneApplication {
   private unlisten: () => void;
   private unsubscribe: () => void;
   private disposed = false;
+  private damageFx: Promise<PvpDamageFeedback | null>;
   private ignoreNextDelta = true;
   replaySelectedUnit: string | null = null;
   /** @param mounts Online-only board-frame mounts (countdown above the board, shop dock below); the sidebar then keeps only the phase badge. */
@@ -125,6 +127,11 @@ export class OnlineApplication implements SceneApplication {
     this.lobby = new Lobby(app, { join: name => client.joinQueue(name, readLegendChoice()), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
+    this.damageFx = import('../../presentation/pvp-damage').then(module => {
+      const feedback = module.createPvpDamageFeedback(this.sidebar.root, publishPlayerDamage);
+      if (this.disposed) feedback.dispose();
+      return feedback;
+    }).catch(error => { console.warn('PvP 扣血表现加载失败', error); return null; });
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.minimap = new ScoutMinimap(app, seatId => this.toggleBoard(seatId));
@@ -171,6 +178,8 @@ export class OnlineApplication implements SceneApplication {
   private onLobby(view: LobbyView) { this.lobby.render(view); }
   /** A push that only confirms my own commands keeps selection and panels (like a local command); anything else redraws. */
   private onState(state: MatchState, confirmed: readonly ConfirmedCommand[], serverEvents: readonly MatchEvent[]) {
+    const damageBattle = this.session.lastBattle;
+    void this.damageFx.then(fx => fx?.state(state, damageBattle));
     const before = this.session.state;
     if (state.phase === 'gameOver' && before.phase !== 'gameOver') this.leaveScouting();
     // A push I did not cause (no confirmation) that closes my open choice: say what it settled. Usually the room's timeout pick,
@@ -273,6 +282,7 @@ export class OnlineApplication implements SceneApplication {
     if (this.mode === 'active') this.noteOutcome(view);
     noteServerNow(view.phase.serverNow); // the anvil armory counts the server's own deadline down
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
+    void this.damageFx.then(fx => fx?.view(view));
     // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
     setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
@@ -494,6 +504,7 @@ export class OnlineApplication implements SceneApplication {
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
+    void this.damageFx.then(fx => fx?.reset());
     this.opening.hideAll(); this.opening.forgetMatch();
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
     this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; forgetServerNow(); setBoardLegends(null); setBoardWarmHints([]);
@@ -547,6 +558,7 @@ export class OnlineApplication implements SceneApplication {
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
+    void this.damageFx.then(fx => fx?.dispose());
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
