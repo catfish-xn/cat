@@ -21,6 +21,8 @@ import { augmentDeathsFromEvents, readAugmentCombatDeaths } from './augment-deat
 import { shopGlitchRefreshes } from './augment-pool-batch5-h1';
 import { drawSoloAugmentShop, recordShopReroll } from './shop-augments';
 import { sixCostShopContext } from './six-cost-shop';
+import { appendHistoryFact, augmentFactLog, augmentPreparationElapsed, augmentDeathBoundary, augmentRecordedDeathEvents, withHistoryProof } from './augment-history-log';
+import { appendLog, createAppendLog, logValues, type AppendLog } from './append-only-log';
 
 export function historyCheck(ok: unknown, reason: string): asserts ok {
   if (!ok) throw new RangeError(`Invalid augment history: ${reason}`);
@@ -34,11 +36,12 @@ export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): His
 }
 export function appendAugmentFact(s: MatchState, fact: AugmentFactData): MatchState {
   if (!s.augmentHistory) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return s; }
-  historyCheck(s.augmentHistory.facts.length < LIMIT.facts && s.round <= LIMIT.rounds, 'recording bounds');
-  const row: AugmentHistoryFact = { ...clonePlainData(fact), sequence: s.augmentHistory.facts.length,
+  const length = augmentFactLog(s.augmentHistory).length;
+  historyCheck(length < LIMIT.facts && s.round <= LIMIT.rounds, 'recording bounds');
+  const row: AugmentHistoryFact = { ...clonePlainData(fact), sequence: length,
     seatId: historySeatId(s), round: s.round, roundId: getMultiplayerRoundByOrdinal(s.round).roundId,
     resourcePrefix: s.resourceProvenance.entries.length };
-  return { ...s, augmentHistory: { ...s.augmentHistory, facts: [...s.augmentHistory.facts, row] } };
+  return { ...s, augmentHistory: appendHistoryFact(s.augmentHistory, row) };
 }
 export function recordAugmentRoundEntry(s: MatchState): MatchState {
   return appendAugmentFact(s, { kind: 'round-entry', roster: historyRoster(s) });
@@ -131,8 +134,7 @@ export function advanceAugmentPreparationTime(s: MatchState, elapsedMs: number, 
   return traceHistoryCommand('advanceAugmentPreparationTime', [s, elapsedMs], () => {
     historyCheck(s.phase === 'preparation' || s.phase === 'choice' && s.pendingChoice?.returnPhase === 'preparation', 'preparation clock phase');
     historyCheck(Number.isSafeInteger(elapsedMs) && elapsedMs >= 0 && elapsedMs <= LIMIT.preparationMs, 'preparation clock bounds');
-    const last = s.augmentHistory?.facts.filter(f => f.kind === 'preparation-time' && f.round === s.round).at(-1);
-    const previous = last?.kind === 'preparation-time' ? last.elapsedMs : preparationElapsed(s);
+    const previous = (s.augmentHistory && augmentPreparationElapsed(s.augmentHistory, s.round, true)) ?? preparationElapsed(s);
     historyCheck(elapsedMs >= previous, 'preparation clock regression');
     if(elapsedMs===previous)return s;
     const refreshes = shopGlitchRefreshes(s, previous, elapsedMs);
@@ -160,17 +162,22 @@ export function prepareAugmentAcquisition(s: MatchState, previousBattle: Previou
 }
 function preparationElapsed(s:MatchState):number {
   const clock=preparationTimes.get(s);if(clock?.round===s.round)return clock.elapsedMs;
-  const fact=s.augmentHistory?.facts.filter(f=>f.round===s.round&&(f.kind==='preparation-time'||f.kind==='acquire')).at(-1);
-  return fact?.kind==='preparation-time'?fact.elapsedMs:fact?.kind==='acquire'?fact.preparationElapsedMs:0;
+  return s.augmentHistory ? augmentPreparationElapsed(s.augmentHistory,s.round) ?? 0 : 0;
 }
-interface Trace { readonly origin: MatchState; readonly commands: readonly HistoryCommand[]; readonly previousBattle: PreviousAugmentBattle }
+interface Trace { readonly origin: MatchState; readonly commands: AppendLog<HistoryCommand>; readonly tail?: HistoryCommand; readonly previousBattle: PreviousAugmentBattle }
+function traceFromProof(s: MatchState): Trace {
+  const proof = s.augmentHistory?.proof;
+  const commands = proof?.kind === 'solo' ? proof.commands : [];
+  return { origin: proof?.kind === 'solo' ? proof.origin : s,
+    commands: createAppendLog(commands.slice(0,-1)), tail: commands.at(-1), previousBattle: {status:'unavailable'} };
+}
 const traces = new WeakMap<MatchState, Trace>();
 let depth = 0;
 export function initializeAugmentTrace(s: MatchState): MatchState {
   if (!s.multiplayer && s.openingEncounter.mode !== 'shared-deferred' && !needsAugmentHistory(s)) {
     const basis=s.combatInputBasis;
     const previousBattle:PreviousAugmentBattle=s.combat&&basis ? {status:'recorded',round:s.round,roundId:s.roundDefinitionId,battleId:s.combat.combatId!,roster:historyRoster({...s,preparation:basis.inputs.preparation,items:basis.inputs.items})} : {status:s.round===1?'none':'unavailable'};
-    traces.set(s, { origin: s, commands: [], previousBattle });
+    traces.set(s, { origin: s, commands: createAppendLog(), previousBattle });
   }
   return s;
 }
@@ -221,10 +228,9 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
   const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
   const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
-  const deathRows = next.augmentHistory!.facts.filter(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId);
-  const recorded = new Set(after.combat?.status === 'finished' ? deathRows.flatMap(f => f.kind === 'deaths' ? f.deaths.map(d => d.eventSeq) : []) : []);
+  const recorded = after.combat?.status === 'finished' ? augmentRecordedDeathEvents(next.augmentHistory!, after.combat.combatId!) : new Set<number>();
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
-  const boundaryRecorded = deathRows.some(f => f.kind === 'deaths' && f.completeThroughTick === after.combat?.tick);
+  const boundaryRecorded = augmentDeathBoundary(next.augmentHistory!, after.combat?.combatId, after.combat?.tick);
   // Settlement may already hold the finished CombatState (including tick 0).
   // Its explicit terminal boundary must exist before rewards, even without any deaths.
   if (after.combat && (deaths.length || !boundaryRecorded && (before.combat?.tick !== after.combat.tick || !before.combat || after.combat.status === 'finished')))
@@ -265,20 +271,21 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     const settled = settleBatch5H9History(next); next = settled.state; effectEvents = settled.events;
   }
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
-    const stored = before.augmentHistory?.proof;
-    let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };
-    if (!next.augmentHistory && trace.commands.length >= LIMIT.commands) trace = {origin:before,commands:[],previousBattle:{status:'unavailable'}};
+    let trace: Trace = traces.get(before) ?? traceFromProof(before);
+    if (!next.augmentHistory && trace.commands.length + (trace.tail ? 1 : 0) >= LIMIT.commands) trace = {origin:before,commands:createAppendLog(),previousBattle:{status:'unavailable'}};
     historyCheck(!needsAugmentHistory(trace.origin) && !trace.origin.augmentHistory, 'missing solo command origin');
-    const tail = trace.commands.at(-1), repeated = name === 'stepMatch' && tail?.name === name;
+    const tail = trace.tail, repeated = name === 'stepMatch' && tail?.name === name;
     let savedArgs: readonly unknown[];
-    try { savedArgs = structuredClone(args.slice(1).map(a => a === undefined ? null : a)); } catch (error) { if (next.augmentHistory) throw error; return result; }
-    const commands = repeated ? [...trace.commands.slice(0, -1), { ...tail, count: tail.count + 1 }]
-      : [...trace.commands, { name, args: savedArgs, count: 1 }];
-    historyCheck(commands.length <= LIMIT.commands, 'command bounds');
+    try { savedArgs = repeated && args.length === 1 ? [] : structuredClone(args.slice(1).map(a => a === undefined ? null : a)); } catch (error) { if (next.augmentHistory) throw error; return result; }
+    const commands = repeated || !tail ? trace.commands : appendLog(trace.commands, tail);
+    const command = repeated ? { ...tail, count: tail.count + 1 } : { name, args: savedArgs, count: 1 };
+    historyCheck(commands.length + 1 <= LIMIT.commands, 'command bounds');
     const origin = next.augmentHistory && !before.augmentHistory ? freezeContent(structuredClone(trace.origin)) : trace.origin;
-    const proof = { kind: 'solo' as const, origin, commands };
-    if (next.augmentHistory) next = { ...next, augmentHistory: { ...next.augmentHistory, proof } };
-    traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
+    if (next.augmentHistory) {
+      const proof = { kind: 'solo' as const, origin, commands: [...logValues(commands), command] };
+      next = { ...next, augmentHistory: withHistoryProof(next.augmentHistory, proof) };
+    }
+    traces.set(next, { origin, commands, tail: command, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
   const extraEvents = [...tracker.events, ...rewarded.events, ...payoutEvents, ...effectEvents];
