@@ -32,7 +32,7 @@ async function main() {
     const builder = await server.ssrLoadModule('/tests/fixtures/v25-online-rules-herald-support/generate.ts');
     const canonicalHash = value => sha256(canonicalContent(value));
     const files = [...sourceFiles('src/simulation'), 'tests/fixtures/record-v25-online-rules-herald.cjs',
-      'scripts/generate-m5-route.cjs', 'scripts/m4-evidence.cjs', 'tests/fixtures/m5/oracle.g2.cjs',
+      'scripts/generate-m5-route.cjs', 'scripts/m5-route-hash.cjs', 'tests/fixtures/m5/oracle.g2.cjs',
       'tests/fixtures/v25-online-rules-herald-support/generate.ts', 'tests/fixtures/m8-neutral-public-route.ts',
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));

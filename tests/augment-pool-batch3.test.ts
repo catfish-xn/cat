@@ -3,7 +3,7 @@ import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { existsSync } from 'node:fs';
 import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
 import { RULES_GAP_MANIFEST, ARCHIVED_AUGMENT_DEFINITIONS } from '../scripts/augment-content-archive';
-import { offeredAt, STAGE_SEEDS, fieldedRoute, resetFieldedRouteCache } from './augment-stage-helpers';
+import { offeredAt, STAGE_SEEDS, fieldedRoute } from './augment-stage-helpers';
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
@@ -869,14 +869,19 @@ function chaosLeg(leg:typeof CHAOS_LEGS[number]):MatchState {
  chaosRoute.set(leg,state);return state;
 }
 describe('Call to Chaos at 4-2', ()=>{
-for(const leg of CHAOS_LEGS)beforeAll(()=>{chaosLeg(leg);});
+for(const leg of CHAOS_LEGS)beforeAll(()=>{
+ chaosLeg(leg);
+ // The pick uses a scripted 4-2 draw, so it needs its own route cache (keyed
+ // by seed and draw policy). Warm that exact route in the same bounded legs;
+ // rebuilding all seventeen fights inside the pick consumed most of its 5 s.
+ withB1Offers(['call-to-chaos'],()=>{fieldedRoute(STAGE_SEEDS['call-to-chaos'].seed,leg);});
+});
 it.each(CHAOS_LEGS)('Call to Chaos fielded 4-2 route: the leg to %s settles every fight', leg=>{
  expect(STAGE_SEEDS['call-to-chaos']).toMatchObject({node:'4-2',fielded:true});expect(offeredAt('call-to-chaos','2-1')).toBe(false);
  expect(chaosLeg(leg).roundDefinitionId).toBe(leg);
 });
 it('Call to Chaos public pick at 4-2: the outcome is granted once and the save restores (XP branch through the acquisition XP chain)', ()=>{
  withB1Offers(['call-to-chaos'],()=>{
- resetFieldedRouteCache();
  const open=fieldedRoute(STAGE_SEEDS['call-to-chaos'].seed,'4-2'),c=open.pendingChoice!;
  expect(open.pendingChoice?.offers,'call-to-chaos at 4-2 seed '+STAGE_SEEDS['call-to-chaos'].seed).toContain('call-to-chaos'); // 包装内的 toContain 只是夹具自检
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;

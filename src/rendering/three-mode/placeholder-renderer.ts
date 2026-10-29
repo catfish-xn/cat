@@ -17,6 +17,7 @@ import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
+import { startAugmentStripSkin } from './augment-strip-skin';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
@@ -348,6 +349,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Shared geometry/materials owned by this renderer; model templates are owned by the ModelCache.
   const owned: { dispose(): void }[] = [];
   const own = <T extends { dispose(): void }>(resource: T): T => { owned.push(resource); return resource; };
+  own(startAugmentStripSkin(options.assetBase));
   const pawnBody = own(new CylinderGeometry(9, 13, 34, 16)), pawnHead = own(new SphereGeometry(10, 16, 12));
   const ringGeometry = own(new RingGeometry(18, 23, 32));
   const teamMaterial = {

@@ -1,5 +1,7 @@
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installAugmentReplayCommandCache } from './fixtures/augment-replay-command-cache';
+import { validateAugmentHistory } from '../src/simulation/augment-history-restore';
 import * as api from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -11,14 +13,66 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 20_000 });
 import anchor from './fixtures/v25-online-rules-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
-const prepared=await transferPreparation();
+let prepared: MatchState;
+let replayCache: ReturnType<typeof installAugmentReplayCommandCache>;
+beforeAll(() => { replayCache=installAugmentReplayCommandCache(['rerollAugment','selectAnomalyTarget','rerollAnomaly','setShopLock']); });
+afterAll(() => { replayCache?.restore(); });
+
+// Each hook resumes the actual public route to its next round checkpoint.
+// No live command output can populate the history replay cache.
+function stagedRoute(start: (onProgress: (state: MatchState) => Promise<void>) => Promise<MatchState>) {
+  let target=0, pausedAt=0, done=false, latest: MatchState;
+  let running: Promise<MatchState>|undefined, resume: (()=>void)|undefined, reached: (()=>void)|undefined;
+  const onProgress=(state:MatchState) => {
+    latest=state;
+    if(state.round<target)return Promise.resolve();
+    return new Promise<void>(resolve=>{pausedAt=state.round;resume=resolve;reached?.();});
+  };
+  return {
+    async through(round:number) {
+      if(done||pausedAt>=round)return;
+      target=round;
+      const checkpoint=new Promise<void>(resolve=>{reached=resolve;});
+      if(!running)running=start(onProgress).then(state=>{latest=state;done=true;return state;});
+      else {const next=resume;resume=undefined;next?.();}
+      await Promise.race([checkpoint,running]);
+    },
+    get state() { if(!done)throw Error('Unfinished transfer route'); return latest; },
+  };
+}
+const route=stagedRoute(onProgress=>transferPreparation({onProgress}));
+for(let round=1;round<24;round++)beforeAll(()=>route.through(round));
+beforeAll(async()=>{await route.through(Infinity);prepared=route.state;});
 // These IDs/provenance counts are an archived epoch anchor. Diagnose the epoch
 // mismatch before a stale donor/survivor ID can masquerade as a command failure.
-expect(prepared.contentDigest, 'v23 transfer anchor requires re-recording for this content epoch').toBe(anchor.contentDigest);
+beforeAll(()=>{expect(prepared.contentDigest, 'v23 transfer anchor requires re-recording for this content epoch').toBe(anchor.contentDigest);});
+let replayReady=false;
+beforeAll(()=>{expect(replayCache.counts.recorded).toBe(0);});
+// Bound each hook to 256 new commands of the production proof validator. The
+// public route's 23 x 1200 ticks plus shop/choice commands fit this slice budget.
+// Every retry reconstructs from the validated origin, reusing only real replay
+// outputs; neither a saved candidate nor a live expected state seeds the cache.
+for(let part=0;part<128;part++)beforeAll(()=>{
+  if(!replayReady)replayReady=replayCache.warm(prepared,256);
+});
+beforeAll(()=>{expect(replayReady).toBe(true);});
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
-const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-13',SURVIVOR,0)));
-const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'conflicting TG returns',live:conflict,returned:true}];
-function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
+type LiveTransfer=ReturnType<typeof make>;
+let migration:LiveTransfer, conflict:LiveTransfer;
+beforeAll(()=>{migration=make(prepared);});
+beforeAll(()=>{conflict=make(accepted(api.equipItem(prepared,'item-13',SURVIVOR,0)));});
+const scenarios=[{name:'TG migrates',live:()=>migration,returned:false},{name:'conflicting TG returns',live:()=>conflict,returned:true}];
+// Original save construction is fixture work. Only immutable text is cached;
+// every restore/forgery still receives a fresh, mutable candidate and validates it.
+const saves=new WeakMap<MatchState,string>();
+const originalSave=(state:MatchState)=>saves.get(state)??serializeMatch(state);
+function cacheOriginal(state:MatchState) {
+  validateAugmentHistory(structuredClone(state));
+  saves.set(state,serializeMatch(state));
+}
+for(const scenario of scenarios)for(const key of ['prepared','started','revealed','beforeFinal','ended'] as const)
+  beforeAll(()=>{cacheOriginal(scenario.live()[key]);});
+function roundTrip(s:MatchState):MatchState {const saved=originalSave(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 describe('B8 live randomized reward upgrade with equipment, anomaly and G12 transfer',()=>{
  it('pins the real two paid Tristanas, glove recipe, anomaly target and reward identity',()=>{
   expect(players(prepared).filter(u=>u.definitionId==='tristana').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
@@ -42,7 +96,8 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(prepared.nextUnitSerial).toBe(anchor.nextUnitSerial);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(4,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
  });
- it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live,returned})=>{
+ it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live:getLive,returned})=>{
+  const live=getLive();
   const {ended,prepared:p}=live,basis=ended.combatInputBasis!;
   expect(basis).toEqual(live.started.combatInputBasis);
   for(const key of ['preparation','items','anomalyBinding','temporaryEquipment'] as const)expect(basis.inputs[key]).toEqual(p[key]);
@@ -64,7 +119,8 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   const upgrade=ended.resourceProvenance.entries.find(e=>e.kind==='unit-upgraded'&&e.event.consumedIds.includes(REWARD))!;
   expect(upgrade).toMatchObject({sequence:birth.sequence+1,acquisitionSequence:birth.sequence});
  });
- it.each(scenarios)('$name: restores every boundary and compares full resumed state/events through Continue',({live,returned})=>{
+ it.each(scenarios)('$name: restores every boundary and compares full resumed state/events through Continue',({live:getLive,returned})=>{
+  const live=getLive();
   for(const s of [live.prepared,live.started,live.revealed,live.beforeFinal,live.ended])roundTrip(s);
   let a=live.revealed,b=roundTrip(a);const events=[...live.revealPrefix];
   while(a.phase==='combat'){const x=api.stepMatch(a),y=api.stepMatch(b);expect(y).toEqual(x);events.push(...x.events);a=x.state;b=y.state;}
@@ -78,10 +134,11 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(next.temporaryEquipment).toHaveLength(returned?0:2);
   expect(next.temporaryEquipment.every(c=>c.holderId===SURVIVOR&&c.roundId==='5-1')).toBe(true);
  });
- it.each(scenarios)('$name: repeated commands cannot reroll, regrant, resettle or consume serials',({live})=>{
+ it.each(scenarios)('$name: repeated commands cannot reroll, regrant, resettle or consume serials',({live:getLive})=>{
+  const live=getLive();
   const advanced=accepted(api.nextRound(live.ended,24));
   for(const s of [live.ended,roundTrip(live.ended),advanced]){
-   const saved=serializeMatch(s);expect(api.stepMatch(s)).toEqual({state:s,events:[]});expect(serializeMatch(s)).toBe(saved);
+   const saved=originalSave(s);expect(api.stepMatch(s)).toEqual({state:s,events:[]});expect(serializeMatch(s)).toBe(saved);
    expect(s.resourceProvenance.entries.filter(e=>e.kind==='combat-growth-committed'&&e.combatId==='round-24')).toHaveLength(1);
    expect(s.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&e.unitId===REWARD)).toHaveLength(1);
   }
@@ -96,9 +153,9 @@ type MutableMatch = Mutable<MatchState>;
 // This separate public route preserves the transfer but avoids history-dependent
 // augments. Some tampered states otherwise fail solo replay before the specific
 // B8/resource checks below are reached.
-async function corruptionRoute() {
-  let state=await configuredPrefix('4-7',{
-    seed:25,build:'cannon',augmentRerollPriorities:{
+async function corruptionPreparation(onProgress:(state:MatchState)=>Promise<void>) {
+  const state=await configuredPrefix('4-7',{
+    seed:25,build:'cannon',onRound:onProgress,onBattleProgress:onProgress,augmentRerollPriorities:{
       '2-1':['pumping-up-i','manaflow-i','backup','bronze-for-life-i','bulky-buddies-i','placebo','lineup','little-buddies','bulky-buddies-ii','blistering-strikes'],
       '4-2':['pumping-up-ii','blistering-strikes','bronze-for-life-ii','item-collector-ii','mentorship-ii','little-buddies','bulky-buddies-ii','lineup','backup','manaflow-ii','glass-cannon-ii'],
     },equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
@@ -106,6 +163,10 @@ async function corruptionRoute() {
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
     goldReserveByRound:{'4-5':19,'4-7':0},
   });
+  return state;
+}
+function corruptionRoute(initial:MatchState) {
+  let state=initial;
   expect(state.augmentHistory).toBeUndefined();
   const donor=state.anomalyBinding!.unitId;
   const survivor=players(state).find(u=>u.definitionId==='tristana'&&u.id!==donor)!.id;
@@ -122,8 +183,16 @@ async function corruptionRoute() {
   expect(restoreMatch(serializeMatch(live.selected))).toEqual(live.selected);
   return {live,donor,survivor,tg,reward:'unit-38'};
 }
-const alternate=await corruptionRoute();
-const {donor:CORRUPT_DONOR,survivor:CORRUPT_SURVIVOR,tg:CORRUPT_TG,reward:CORRUPT_REWARD}=alternate;
+let alternate:ReturnType<typeof corruptionRoute>;
+let CORRUPT_DONOR:string, CORRUPT_SURVIVOR:string, CORRUPT_TG:string, CORRUPT_REWARD:string;
+const alternateRoute=stagedRoute(corruptionPreparation);
+for(let round=1;round<24;round++)beforeAll(()=>alternateRoute.through(round));
+beforeAll(async()=>{await alternateRoute.through(Infinity);});
+beforeAll(()=>{
+  alternate=corruptionRoute(alternateRoute.state);
+  ({donor:CORRUPT_DONOR,survivor:CORRUPT_SURVIVOR,tg:CORRUPT_TG,reward:CORRUPT_REWARD}=alternate);
+  cacheOriginal(alternate.live.selected);
+});
 // Isolate the finished-combat authenticator from unrelated campaign augments.
 // Mechanic grants retain real provenance; the Mirror Jayce creates its own forge
 // through normal combatStart, and the Tristana owns actual TG child sources.
@@ -152,7 +221,8 @@ function mirrorForgeBoundary() {
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
   return {state,donor,tg};
 }
-const mirror=mirrorForgeBoundary();
+let mirror:ReturnType<typeof mirrorForgeBoundary>;
+beforeAll(()=>{mirror=mirrorForgeBoundary();cacheOriginal(mirror.state);});
 const corruptions: readonly [string, (state: MutableMatch) => void, string][] = [
   ['basis equipment roll prefix', state => { state.combatInputBasis!.equipmentRollPrefixLength--; }, 'Invalid combat input basis'],
   ['basis TG parent moved without its children', state => {
@@ -183,12 +253,20 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
   ['neutral death identity rewritten', state => { state.combat!.neutralReceipts!.deaths[0].eventSeq++; },
     'Invalid B8 Match: current death evidence'],
 ];
-describe('B8 strict live transfer corruption boundaries', () => {
-  it('does not retain or freeze a candidate command target in replay evidence', () => {
+let moved:MatchState;
+beforeAll(()=>{
     const occupied=new Set(players(prepared).flatMap(u=>u.location.kind==='board'?[JSON.stringify(u.location.cell)]:[]));
     const cell=Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c=>!occupied.has(JSON.stringify(c)))!;
-    const moved=accepted(api.deployMatchUnit(prepared,DONOR,{kind:'board',cell}));
-    const saved=JSON.stringify(moved),input:MutableMatch=JSON.parse(saved),proof=input.augmentHistory!.proof;
+    moved=accepted(api.deployMatchUnit(prepared,DONOR,{kind:'board',cell}));
+    // JSON.stringify is intentional: this case tests an object candidate too.
+    saves.set(moved,JSON.stringify(moved));
+    // Keep the new deploy suffix cold: its first execution must use the object
+    // candidate's arguments inside the test, so a missing clone still fails.
+});
+beforeAll(()=>{expect(replayCache.counts.recorded).toBeGreaterThan(0);replayCache.seal();});
+describe('B8 strict live transfer corruption boundaries', () => {
+  it('does not retain or freeze a candidate command target in replay evidence', () => {
+    const saved=originalSave(moved),input:MutableMatch=JSON.parse(saved),proof=input.augmentHistory!.proof;
     if(proof.kind!=='solo')throw Error('Expected solo proof');
     expect(proof.commands.at(-1)!.name).toBe('deployMatchUnit');
     const target=proof.commands.at(-1)!.args[1] as {kind:'board';cell:{col:number;row:number}};
@@ -199,7 +277,7 @@ describe('B8 strict live transfer corruption boundaries', () => {
     expect(restoreMatch(saved)).toEqual(moved);
   });
   it.each(['facts','commands'] as const)('keeps warm historical replay evidence independent of candidate %s and detached origins', field => {
-    const saved=serializeMatch(migration.beforeFinal),restored=restoreMatch(saved);
+    const saved=originalSave(migration.beforeFinal),restored=restoreMatch(saved);
     expect(restored).toEqual(migration.beforeFinal);
     const bad:MutableMatch=JSON.parse(saved);
     if(field==='facts')Object.assign(bad.augmentHistory!.facts.at(-1)!,{invented:true});
@@ -222,7 +300,7 @@ describe('B8 strict live transfer corruption boundaries', () => {
   it.each(corruptions)('rejects %s without changing its source state', (label, change, message) => {
     const state=label.startsWith('original finished Combat')?mirror.state
       :label==='current child moved back to consumed donor'||label==='neutral death identity rewritten'?migration.selected:alternate.live.selected;
-    const saved = serializeMatch(state), bad: MutableMatch = JSON.parse(saved);
+    const saved = originalSave(state), bad: MutableMatch = JSON.parse(saved);
     change(bad);
     expect(() => restoreMatch(bad)).toThrowError(new RegExp(`^${message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
     expect(serializeMatch(state)).toBe(saved);
