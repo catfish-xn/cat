@@ -793,7 +793,7 @@ export class StrategyPanel {
     for (const item of state.items.filter(item => item.location.kind === 'inventory')) {
       const definition = ITEM_DEFINITIONS[item.definitionId];
       const tags = catalogEntry(item.definitionId) ? itemTags(catalogEntry(item.definitionId)!).map(tag => tag.text) : [];
-      const button = this.button(`item:${item.id}`, `${definition.name}${tags.length ? `\n${tags.join(' · ')}` : ''}`, () => {}, !open);
+      const button = this.button(`item:${item.id}`, `${itemDisplayName(item.definitionId)}${tags.length ? `\n${tags.join(' · ')}` : ''}`, () => {}, !open);
       button.setAttribute('aria-pressed', String(this.selectedItems.includes(item.id))); button.classList.add('item-card');
       button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 28));
       button.dataset.itemDef = item.definitionId; button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
