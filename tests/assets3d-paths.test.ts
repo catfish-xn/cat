@@ -52,7 +52,7 @@ describe('assets3d filesystem boundaries', () => {
       await expect(safeOutputPath(path, { force: true })).rejects.toThrow('unsafe-output-path');
     }
     const root = await temporary(true), file = join(root, 'nested/report.json');
-    expect(await safeOutputPath(file)).toBe(file);
+    expect(await safeOutputPath(file)).toBe(join(await realpath(root), 'nested/report.json'));
   });
   it('requires force before overwriting any file, and creates nested safe parents', async () => {
     const root = await temporary(true), path = join(root, 'nested/report.json');
@@ -79,6 +79,30 @@ describe('assets3d filesystem boundaries', () => {
     expect(await isolated.safeOutputPath('assets3d-local/report.json', { force: true })).toBe(output);
     await isolated.writeOutputFile('assets3d-local/nested/report.json', '{}', { force: true });
     expect(await readFile(join(external, 'nested/report.json'), 'utf8')).toBe('{}');
+  });
+  it('rejects assets3d-local symlinks that point at the repository root or in-repo directories', async () => {
+    async function isolatedModule(repo: string, query: string) {
+      const scripts = join(repo, 'scripts/assets3d');
+      await mkdir(scripts, { recursive: true });
+      const modulePath = join(scripts, 'safe-path.mjs');
+      await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
+      return import(pathToFileURL(`${modulePath}?${query}=${Date.now()}`).href);
+    }
+    const repo = await temporary();
+    await rm(join(repo, 'assets3d-local'), { recursive: true, force: true });
+    await linkDirectory(repo, join(repo, 'assets3d-local'));
+    const rootLink = await isolatedModule(repo, 'symlink-repo-root');
+    await expect(rootLink.writeOutputFile('assets3d-local/escape-root.json', 'escaped', { force: true })).rejects.toThrow('unsafe-output-path');
+    await expect(readFile(join(repo, 'escape-root.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await rm(join(repo, 'assets3d-local'), { recursive: true, force: true });
+    const src = join(repo, 'src');
+    await mkdir(src, { recursive: true });
+    const style = join(src, 'style.css');
+    await writeFile(style, 'original-style');
+    await linkDirectory(src, join(repo, 'assets3d-local'));
+    const srcLink = await isolatedModule(repo, 'symlink-src');
+    await expect(srcLink.writeOutputFile('assets3d-local/style.css', 'escaped', { force: true })).rejects.toThrow('unsafe-output-path');
+    expect(await readFile(style, 'utf8')).toBe('original-style');
   });
   it('rejects a nested directory link that escapes the bound assets3d-local tree', async () => {
     const repo = await temporary(), external = await temporary(), scripts = join(repo, 'scripts/assets3d');

@@ -4,24 +4,31 @@
 
 | 文件 | 行号 | 内容 |
 | --- | --- | --- |
-| `.gitignore` | 9 | 新增 `/assets3d-local`（无尾斜杠），忽略仓库根下的目录软链本身 |
-| `.gitignore` | 10 | 保留 `assets3d-local/` 忽略目录内容 |
-| `scripts/assets3d/safe-path.mjs` | 22–35 | `assets3dLocalBound()`：解析 repo 根 `assets3d-local` 目录软链到真实目录 |
-| `scripts/assets3d/safe-path.mjs` | 38–81 | `safeOutputPath()`：逻辑路径 + `localBound` 双 containment；根为外链时从 bound 树遍历；嵌套 link 仍用 `realpath` 限制在 bound 内 |
-| `tests/assets3d-paths.test.ts` | 71–95 | 软链根写入通过；bound 内二次目录软链逃逸仍拒 |
+| `.gitignore` | 9–10 | `/assets3d-local` + `assets3d-local/` |
+| `scripts/assets3d/safe-path.mjs` | 22–26 | `insideRoot()`：判断严格包含关系 |
+| `scripts/assets3d/safe-path.mjs` | 28–43 | `assets3dLocalBound()`：软链目标为 repo 根、repo 内目录或 repo 祖先时抛 `unsafe-output-path`；普通目录或非 repo 外置目录软链仍解析为 `realpath` |
+| `scripts/assets3d/safe-path.mjs` | 45–89 | `safeOutputPath()`：逻辑/bound 双 containment；遍历返回 `realpath` |
+| `tests/assets3d-paths.test.ts` | 54–55 | 绝对路径期望改为 `join(await realpath(root), 'nested/report.json')` |
+| `tests/assets3d-paths.test.ts` | 83–105 | 软链根可写；指向 repo 根 / `src` 拒写且目标文件不变；bound 内二次逃逸仍拒 |
 
 ## 测试结果
 
+常规克隆（`assets3d-local` 为目录或不存在）：
+
 ```text
-npm test -- tests/assets3d-paths.test.ts tests/assets3d-carousel.test.ts \
-  tests/assets3d-fetch.test.ts tests/assets3d-extract.test.ts \
-  tests/assets3d-batch.test.ts tests/assets3d-merge.test.ts --maxWorkers=4
+npm test -- tests/assets3d-paths.test.ts --maxWorkers=4
+→ 1 文件、12 用例通过
 ```
 
-6 个文件、65 个用例全部通过。
+`assets3d-local` 为指向临时目录的仓库根软链：
+
+```text
+npm test -- tests/assets3d-paths.test.ts tests/assets3d-carousel.test.ts --maxWorkers=4
+→ 2 文件、19 用例通过
+```
 
 ## 未完成项
 
-- 未在真实「本机 assets3d-local → 外部素材盘」克隆上跑完整 `test:headless` / 全量 assets3d 套件；仅上述相关 fast 项目子集。
-- `safeInputPath()` 未改；若输入侧也存在同类软链根场景，需另开任务。
+- `safeInputPath()` 未改；输入侧软链根场景未覆盖。
 - 未合入 `multiplayer`；本分支仅推送，无 PR。
+- 未跑全量 assets3d / headless 套件。

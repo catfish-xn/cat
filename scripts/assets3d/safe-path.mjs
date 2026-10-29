@@ -19,7 +19,12 @@ export async function safeInputPath(root, candidate) {
   return withinRoot(input, await realpath(candidate), 'unsafe-source-path');
 }
 
-/** Resolved assets3d-local directory; follows a repo-root symlink to a real directory. */
+function insideRoot(root, candidate) {
+  try { withinRoot(root, candidate, 'unsafe-output-path'); return candidate !== root; }
+  catch { return false; }
+}
+
+/** Resolved assets3d-local directory; follows a repo-root symlink only to storage outside the repo. */
 async function assets3dLocalBound(repo) {
   const logical = join(repo, 'assets3d-local');
   try {
@@ -27,6 +32,9 @@ async function assets3dLocalBound(repo) {
     if (!info.isSymbolicLink() && !info.isDirectory()) throw new Error('unsafe-output-path');
     const resolved = await realpath(logical);
     if (!(await lstat(resolved)).isDirectory()) throw new Error('unsafe-output-path');
+    if (info.isSymbolicLink()) {
+      if (resolved === repo || insideRoot(repo, resolved) || insideRoot(resolved, repo)) throw new Error('unsafe-output-path');
+    }
     return resolved;
   } catch (error) {
     if (error.code === 'ENOENT') return logical;
