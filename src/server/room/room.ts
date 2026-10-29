@@ -25,7 +25,7 @@ import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders, pvpSettlementHpLost,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
@@ -705,7 +705,13 @@ export class Room {
           const proposal = [result.proposals.a, result.proposals.b].find(candidate => candidate.seatId === seatId);
           if (!proposal) return { ok: false, detail: `battle ${result.battleId} has no proposal for seat ${seatId}` };
           if (!proposal.settlementEligible) return { ok: false, detail: `seat ${seatId} proposal is not eligible` };
-          const problem = queue(seatId, { kind: 'receipt', receipt: buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length), damage: proposal.damage });
+          const opposite = [result.proposals.a, result.proposals.b].find(candidate => candidate.seatId !== seatId);
+          const opponent = opposite && byId.get(opposite.seatId);
+          if (!opposite || (!envelope.mirrorOf && !opponent)) return { ok: false, detail: `seat ${seatId}: missing opponent damage proposal` };
+          let damageDealt: number;
+          try { damageDealt = envelope.mirrorOf ? 0 : pvpSettlementHpLost(opponent!.match, opposite); }
+          catch { return { ok: false, detail: `seat ${seatId}: invalid opponent damage proposal` }; }
+          const problem = queue(seatId, { kind: 'receipt', receipt: buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length, damageDealt), damage: proposal.damage });
           if (problem) return { ok: false, detail: problem };
         }
       } else {
@@ -780,6 +786,15 @@ export class Room {
       // Neither in a live battle nor settled by the rules (a state the resolver left as it was): only an unchanged seat may pass.
       if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
       seats.push(settled(seat.match, outcome.damage, null, []));
+    }
+    // Both rules commits exist now. Cross-check before the room's post-damage hooks.
+    for (const result of results) if (result.kind === 'two-sided') for (const seatId of result.participants) {
+      const seat = seats.find(s => s.seatId === seatId)!;
+      const envelope = envelopes.get(result.battleId)!;
+      const opponent = seats.find(s => s.seatId === (result.battle.a.seatId === seatId ? result.battle.b.seatId : result.battle.a.seatId));
+      const lost = envelope.mirrorOf ? 0 : opponent?.match.roundResults.find(r => r.round === state.round)?.hpLost;
+      if (lost === undefined || seat.receipt?.damageDealt !== lost || seat.match.multiplayer?.receipts.at(-1)?.damageDealt !== lost
+        || seat.match.roundResults.at(-1)?.damageDealt !== lost) return { ok: false, detail: `seat ${seatId}: damageDealt disagrees with opponent hpLost` };
     }
     seats = [...recordRoomBattleFacts(seats, results)];
     // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
@@ -2211,7 +2226,7 @@ function conservationProblem(pool: SharedPoolState, states: readonly MatchState[
 }
 
 /** §11.3 receipt: a trusted hand-over built from the frozen envelope and the rules' own proposal, never from a client. */
-function buildReceipt(roomId: string, envelope: BattleInput, proposal: SideProposal, combatTicks: number, combatEventCount: number): RoundSettlementReceipt {
+function buildReceipt(roomId: string, envelope: BattleInput, proposal: SideProposal, combatTicks: number, combatEventCount: number, damageDealt: number): RoundSettlementReceipt {
   const own = envelope.seats.find(s => s.seatId === proposal.seatId)!.state;
   const opponent = (envelope.mirrorOf ?? envelope.seats.find(s => s.seatId !== proposal.seatId))?.state;
   return {
@@ -2220,7 +2235,7 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
     battleId: envelope.battleId, seatId: proposal.seatId,
     round: envelope.round, roundId: envelope.roundId,
     settlementEligible: proposal.settlementEligible, result: proposal.result,
-    damage: proposal.damage, baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors,
+    damage: proposal.damage, damageDealt, baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors,
     growth: proposal.growth, combatTicks, combatEventCount,
     // G23-SERVER-FACTS: the rules' own battle facts, forwarded verbatim (a mirror copy has none and never settles).
     ...(proposal.g23Facts ? { g23Facts: proposal.g23Facts } : {}),

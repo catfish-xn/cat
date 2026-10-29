@@ -19,6 +19,8 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  /** Online PvP only: opponent's actual HP loss, after overkill/Mel; mirrors are zero. */
+  readonly damageDealt?: number;
   /** Private PvE replay inputs, never included in seat/public projections. */
   readonly bankSamples?: readonly import('./combat-types').CombatBankSample[];
   readonly mechanicReceiptPrefixLength?:number;

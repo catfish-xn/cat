@@ -12,7 +12,8 @@ import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
-import { melCanSave, commitMelSave } from './mel-save';
+import { commitMelSave } from './mel-save';
+import { pvpSettlementHpLost } from './pvp-settlement-health';
 import { reconcileD14 } from './d14-runtime';
 import { pruneForgePositions } from './forge-positions';
 import type {TraitProjectionContext} from './traits/effective-membership';
@@ -50,6 +51,8 @@ export interface MultiplayerProgress {
 }
 /** Trusted server receipt; income is calculated from seat resources, never supplied by a client. */
 export interface RoundSettlementReceipt {
+  /** Present on room PvP receipts. Optional for existing direct rules callers. */
+  readonly damageDealt?:number;
   readonly g23Facts?:G23BattleFacts;
   /** Opponent's frozen battle-start health; present exactly when this seat owns Kingslayer for the round. */
   readonly opponentHp?:number;
@@ -157,9 +160,14 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
     if(r.opponentHp!==undefined)fields.push('opponentHp');
+    if(Object.hasOwn(r,'damageDealt')){
+      fields.push('damageDealt');
+      if(!integer(r.damageDealt)||r.damageDealt>MAX_SUPPORTED_PLAYER_HP)return fail(state,'invalid-receipt');
+    }
     if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>MAX_SUPPORTED_PLAYER_HP)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
-    const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
+    const hpAfter=state.playerHp-pvpSettlementHpLost(state,r);
+    const saved=hpAfter>Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
       round:r.round,roundId:r.roundId,settlementId:r.settlementId,roundKind:'pvp',result,
       combatTicks:r.combatTicks,combatEventCount:r.combatEventCount,income:plan.income,incomeBreakdown:plan.incomeBreakdown,
@@ -168,6 +176,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       levelBefore:state.level,levelAfter:plan.progression.level,xpBefore:state.xp,xpAfter:plan.progression.xp,
       hpBefore:state.playerHp,hpAfter,baseDamage:r.baseDamage,survivingEnemyCount:r.opposingSurvivors,
       playerDamage:r.damage,hpLost:state.playerHp-hpAfter,
+      ...(r.damageDealt!==undefined?{damageDealt:r.damageDealt}:{}),
     };
     const augmentProgress = {
       pumpingRounds:state.augmentProgress.pumpingRounds+(state.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),
@@ -196,7 +205,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
     hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
     const merged = resolveDeferredUpgrades(settled);
-    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
+    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution'||a.definitionId==='what-you-really-are') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
     const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const inventory=drainBatch5Inventory(forfeited.state);hookEvents.push(...mechanicGrantEvents(forfeited.state,inventory));
