@@ -106,11 +106,11 @@ jobs:
             done
           fi
           if [ "$tier" = ui ]; then
-            tb='["tests-1","tests-2","tests-3","tests-4"]'
+            tb='["tests-1","tests-2","tests-3","tests-4","tests-5","tests-6","tests-7","tests-8"]'
             input='[{"mode":"dev","part":"input"},{"mode":"dev","part":"archives"},{"mode":"preview","part":"input"}]'
           else
             # Full lists also for docs: those jobs are skipped by tier, and a matrix needs values.
-            tb='["tests-1","tests-2","tests-3","tests-4","headless"]'
+            tb='["tests-1","tests-2","tests-3","tests-4","tests-5","tests-6","tests-7","tests-8","headless"]'
             input='[{"mode":"dev","part":"input"},{"mode":"dev","part":"touch"},{"mode":"dev","part":"archives"},{"mode":"dev","part":"m6-performance"},{"mode":"preview","part":"input"},{"mode":"preview","part":"touch"}]'
           fi
           {
@@ -134,7 +134,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The fast Vitest project is split into four shards (vitest --shard) on separate machines.
+        # The fast Vitest project is split into eight shards (vitest --shard) on separate machines.
         part: ${{ fromJSON(needs.changes.outputs.tb_parts) }}
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
     env:
@@ -151,11 +151,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - name: Fast tests (parallel, one of four shards)
+      - name: Fast tests (parallel, one of eight shards)
         if: ${{ startsWith(matrix.part, 'tests-') }}
         env:
           PART: ${{ matrix.part }}
-        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/4"
+        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/8" --passWithNoTests
       - name: Timing tests (one worker, serial files)
         if: ${{ !cancelled() && matrix.part == 'tests-1' && needs.changes.outputs.tier == 'full' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing

@@ -272,10 +272,13 @@ export class StrategyPanel {
     }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
-    this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
+    this.augmentStrip.setAttribute('role', 'group'); this.augmentStrip.setAttribute('aria-label', '已选强化与异常');
+    // BoardScene creates this panel before OnlineApplication sets data-online. The strip's delegated
+    // descriptions must already be attached when that first online inventory arrives.
+    this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root), attachTextCards(this.augmentStrip));
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     if (isOnline()) {
-      for (const scope of [this.root, this.modal, this.augmentStrip, this.shopDock, this.itemDock]) if (scope) {
+      for (const scope of [this.root, this.modal, this.shopDock, this.itemDock]) if (scope) {
         this.disposers.push(attachTextCards(scope));
       }
       for (const scope of [this.modal, this.shopDock]) if (scope) this.disposers.push(attachItemPopover(scope, scope === this.modal ? 'modal-item-popover' : 'shop-item-popover', { pin: true, longPress: hoverAction }));

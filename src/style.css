@@ -1195,12 +1195,22 @@ body[data-online]:has(.render3d-layer) .shop-dock .shop-choice-bar { max-width: 
    canvas. Left: owned augment icons over the trait strip; the strategy panel starts folded and opens as a drawer over the trait strip, clear of the
    board. Right: a slim player list (portrait, HP, thin bar; level on hover) and the foldable battle chart. Translucent all round. */
 .augment-strip { display: none; }
-body[data-online] .augment-strip:not(:empty) { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; }
-.augment-strip .augment-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151fb3; font-size: 11px; cursor: help; }
-.augment-strip .augment-chip:has(.augment-icon) { padding: 2px; border-radius: 6px; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e66; }
-.augment-strip .augment-icon { display: block; width: 28px; height: 28px; border-radius: 4px; }
+/* The reference HUD has a left rail beside the board. Keep the owned icons in that rail's
+   normal flow above traits: three augments + an anomaly fit its 196px width (188px total).
+   44px targets are independent of the 32px artwork, including mouse/keyboard desktops. */
+body[data-online] .augment-strip:not(:empty) { display: flex; flex-wrap: wrap; gap: 4px; width: fit-content; max-width: 100%; margin: 0 0 8px; pointer-events: none; }
+.augment-strip .augment-chip { position: relative; display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 6px;
+  background: #0b151fb3; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e66; cursor: help; pointer-events: auto; }
+.augment-strip .augment-chip:focus-visible { outline: 2px solid #68ddd0; outline-offset: -2px; }
+.augment-strip .augment-icon { display: block; width: 32px !important; height: 32px !important; border-radius: 4px; }
 .augment-badge { display: inline-grid; place-items: center; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 30%, #6a4f22, #2b2112); color: #ffe3a1; font-weight: 700; line-height: 1; box-shadow: inset 0 0 0 1px #c8aa6e; }
 .augment-strip .augment-badge { display: grid; font-size: 14px !important; }
+@media (max-width: 700px) and (orientation: portrait) {
+  /* At 390px the right-hand player controls start beside this rail: two 44px columns
+     keep even a fourth (anomaly) icon clear of those controls. Traits follow in normal flow. */
+  body[data-online]:has(> .render3d-layer) .augment-strip { max-width: 92px; }
+}
 .summary-head[role="button"] { cursor: pointer; }
 .summary-head[role="button"]::after { content: "▾"; font-size: 11px; color: #9aaeb9; }
 .battle-summary[data-folded] .summary-head::after { content: "▸"; }

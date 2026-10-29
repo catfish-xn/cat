@@ -127,11 +127,20 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, caro
     }
     throw new Error(`did not reach ${round}: ${room.state.roundId}/${room.state.phase}, ${JSON.stringify(room.state.fault)}`);
   }
-  // Split real combat legs so each test retains Vitest's unchanged deadline.
+  // Each hook plays one real combat leg. Cases only read frozen observations;
+  // the suite's live room continues through commands, never a cached clone.
+  const entries = new Map<string, Readonly<Pick<RoomState, 'roundId' | 'fault'>>>();
   for (const round of ['1-3', '1-4', '2-1', '2-2', '2-3', '2-4', '2-5', '2-6', '2-7',
-    '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2']) it(`reaches ${round} through the room`, () => {
-    reach(round); expect(room.state.fault).toBeNull();
-  });
+    '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2']) {
+    beforeAll(() => {
+      reach(round);
+      entries.set(round, Object.freeze({ roundId: room.state.roundId, fault: room.state.fault }));
+    });
+    it(`reaches ${round} through the room`, () => {
+      expect(entries.get(round)?.roundId).toBe(round);
+      expect(entries.get(round)?.fault).toBeNull();
+    });
+  }
 
   it('selects the augment from an actual room offer', () => {
     for (const seat of room.state.seats) {
@@ -376,10 +385,18 @@ describe('tomb raider bot seat grants one receipt after one elimination', () => 
     }
     throw new Error(`did not reach ${round}: ${room.state.roundId}/${room.state.phase}, ${JSON.stringify(room.state.fault)}`);
   }
+  const entries = new Map<string, Readonly<Pick<RoomState, 'roundId' | 'fault'>>>();
   for (const round of ['1-3', '1-4', '2-1', '2-2', '2-3', '2-4', '2-5', '2-6', '2-7',
-    '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2']) it(`reaches ${round} through the bot room`, () => {
-    reach(round); expect(room.state.fault).toBeNull();
-  });
+    '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2']) {
+    beforeAll(() => {
+      reach(round);
+      entries.set(round, Object.freeze({ roundId: room.state.roundId, fault: room.state.fault }));
+    });
+    it(`reaches ${round} through the bot room`, () => {
+      expect(entries.get(round)?.roundId).toBe(round);
+      expect(entries.get(round)?.fault).toBeNull();
+    });
+  }
 
   it('selects the tomb choice once after one elimination and keeps a single receipt', () => {
     for (const seat of room.state.seats) {
