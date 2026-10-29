@@ -1,5 +1,6 @@
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { carryGolemStar } from '../augment-pool-batch5-g6-stats';
+import { restartMissionRemovalId } from '../restart-mission';
 import { carryGolemFixedItemIds } from '../augment-pool-batch5-g6-equipment';
 import { projectBatch5Items } from '../augment-pool-batch5-s3a';
 import { academicCraft } from '../augment-pool-batch5-s3b';
@@ -136,7 +137,14 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           && commit.combatStartProvenancePrefixLength < index, 'mechanic reward combat prefix');
       }
     }
-    if (entry.kind === 'unit-transformed' || entry.kind === 'augment-transform-completed') {
+    if (entry.kind === 'restart-mission-completed') {
+      keys(entry, [...common, 'choiceId']);
+      requireValue(context.scheduleReceipts.some(r=>r.kind==='augment'&&r.definitionId==='restart-mission'
+        &&r.eventId===entry.choiceId&&r.round===round.ordinal), 'restart owner/round');
+      requireValue(!entries.slice(0,index).some(e=>e.kind==='restart-mission-completed'&&e.choiceId===entry.choiceId), 'duplicate restart');
+      requireValue([...units.values()].every(u=>absent.has(u.id)||deferredCarouselIds.has(u.id)
+        ||context.pendingCarouselUnitIds?.includes(u.id)||isAnvil(u.definitionId)), 'restart removal completeness');
+    } else if (entry.kind === 'unit-transformed' || entry.kind === 'augment-transform-completed') {
       keys(entry, [...common, 'choiceId', ...(entry.kind === 'unit-transformed' ? ['unitId','from','to','starLevel'] : [])]);
       const receipt = context.scheduleReceipts.find(r => r.eventId === entry.choiceId && r.kind === 'augment');
       const recombobulator = receipt?.definitionId === 'recombobulator';
@@ -272,8 +280,14 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const forming=Object.hasOwn(entry,'definitionId');
       keys(entry,[...common,'unitId','receiptId',...(forming?['definitionId','starLevel']:[])]);nonempty(entry.receiptId);
       const removed=units.get(entry.unitId);
-      requireValue(removed&&!absent.has(entry.unitId)&&(forming?removed.definitionId===entry.definitionId&&removed.starLevel===entry.starLevel&&!UNIT_DEFINITIONS[removed.definitionId]?.summon
-        &&entry.receiptId.endsWith(',"forming"]'):removed.definitionId==='training-dummy'),'mechanic removal ownership');
+      const restart=context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='restart-mission'
+        &&entry.receiptId===restartMissionRemovalId({choiceId:r.eventId})&&r.round===round.ordinal);
+      const removedStar=removed?.definitionId==='carry-golem'?carryGolemStar(round.ordinal,context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='im-the-carry-now')?.round??round.ordinal)
+        :removed?.definitionId===TRAINER_ID?trainerStar(round.stage):removed?.starLevel;
+      requireValue(removed&&!absent.has(entry.unitId)&&(forming?removed.definitionId===entry.definitionId&&(restart?removedStar:removed.starLevel)===entry.starLevel
+        &&(restart?!isAnvil(removed.definitionId)&&!deferredCarouselIds.has(removed.id)&&!context.pendingCarouselUnitIds?.includes(removed.id)
+          &&!entries.slice(0,index).some(e=>e.kind==='restart-mission-completed'&&e.choiceId===restart.eventId)
+          :!UNIT_DEFINITIONS[removed.definitionId]?.summon&&entry.receiptId.endsWith(',"forming"]')):removed.definitionId==='training-dummy'),'mechanic removal ownership');
       units.delete(entry.unitId);growth=growth.filter(value=>value.unitId!==entry.unitId);
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);

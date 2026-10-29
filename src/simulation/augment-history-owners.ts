@@ -30,7 +30,7 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],
-  'restart-mission': ['carousel', 'positions'],
+  'restart-mission': ['acquire', 'carousel', 'positions'],
   'brb': ['carousel', 'positions'],
   'diversified-portfolio': ['round-entry'], 'diversified-portfolio-plus': ['round-entry'],
   'survivor': ['table'], 'table-scraps': ['carousel'], 'young-and-wild-and-free': ['carousel'],
