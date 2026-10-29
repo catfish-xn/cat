@@ -49,6 +49,6 @@
 ## 未完成与执行端待办
 
 - 任务 1 已补合，无需再合 `cursor/anomaly-rules`。
-- 纪元 / 内容摘要统一重录仍按 `docs/V26_ANOMALY_MERGE_TEST_RESULTS.md` 与 `docs/V26_ANOMALY_R1_R3_R4A.md` 的清单，由执行端处理。不要 `--write` 覆盖已发布 v25 证据。任务 1 复跑时 `tests/augment-history.test.ts` 仍有 2 项纯身份漂移，维持原断言。
+- 纪元 / 内容摘要统一重录仍按 `docs/V26_ANOMALY_MERGE_TEST_RESULTS.md` 与 `docs/V26_ANOMALY_R1_R3_R4A.md` 的清单，由执行端处理。不要 `--write` 覆盖已发布 v25 证据。任务 1 自己的记录里，`tests/augment-history.test.ts` 仍有 2 项纯身份漂移，本轮没有改那些断言，也没有重跑该文件。
 - 素材下载、提取、上传测试服（ssh tencent）和测试服部署：未做。
 - 浏览器 / GPU 实机验收（codex-browser）：按本任务要求未做。隐藏后的移动与备战席禁售只在 Vitest 里走到真实房间和本地房间。
