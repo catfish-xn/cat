@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createCombat } from '../src/simulation/combat';
-import { createMatch, nextRound, readLootView, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, readLootView, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { prepareMatchLoot, revealMatchLoot } from '../src/simulation/loot-runtime';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { createRoundEnemies } from '../src/simulation/round-enemies';
 import { enterOpeningCrabs, openingCrabCarrier } from '../src/simulation/opening-crabs';
+import { shareGeneratedJson } from '../src/simulation/immutable-json';
+import { lootChoiceId, lootDropId } from '../src/simulation/loot-identity';
+import type { LootChoiceDescriptor } from '../src/simulation/loot-types';
 
 function accepted<T extends { ok: boolean; state: MatchState }>(result: T): MatchState {
   expect(result.ok).toBe(true);
@@ -76,6 +79,45 @@ describe('PvE loot lost on a defeat is paid on the next PvE', () => {
     const tampered = JSON.parse(serializeMatch(state)) as { m8: { loot: { earnedEvidence: { dropId: string; death?: { combatId: string; tick: number; eventSeq: number } }[] } } };
     tampered.m8.loot.earnedEvidence.push({ dropId: parked[0], death: { combatId: 'round-1', tick: 1, eventSeq: 0 } });
     expect(() => restoreMatch(JSON.stringify(tampered))).toThrow(/carry kill|pve carry|death history/);
+  });
+
+  it('pays a carried component choice on the next PvE once through the normal choice flow', () => {
+    let state = createMatch(11);
+    const prior = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '1-2')!;
+    const descriptor: LootChoiceDescriptor = {
+      roundId: '1-2', encounterId: prior.encounterPlan.encounterId, sourceUnitId: prior.encounterPlan.drops[0].sourceUnitId, slotOrdinal: 0,
+      dropId: lootDropId('1-2', prior.encounterPlan.encounterId, prior.encounterPlan.drops[0].sourceUnitId, 0),
+      kind: 'component-choice', quantity: 1, poolVersion: 'm8b-components-v1',
+      terminalFallbackDefinitionId: 'tear', revealCondition: 'source-killed',
+    };
+    state = fight(clearBoard(state));
+    state = accepted(nextRound(state, state.round));
+    expect(state.roundDefinitionId).toBe('1-3');
+    const frozen = shareGeneratedJson({
+      ...state.m8.loot.frozen,
+      rounds: state.m8.loot.frozen.rounds.map(round =>
+        round.encounterPlan.roundId === '1-2' ? shareGeneratedJson({ ...round, choices: [descriptor] }) : round),
+    });
+    state = { ...state, m8: shareGeneratedJson({
+      ...state.m8,
+      loot: shareGeneratedJson({
+        ...state.m8.loot, frozen,
+        carry: [{ dropId: descriptor.dropId, deliverRoundId: '1-3' }],
+        choiceEligibility: [...state.m8.loot.choiceEligibility, { dropId: descriptor.dropId, status: 'carried' as const }],
+      }),
+    }) };
+    state = fight(clearBoard(state));
+    expect(state.phase).toBe('choice');
+    expect(state.pendingChoice?.choiceId).toBe(lootChoiceId(descriptor.dropId));
+    state = accepted(selectChoice(state, state.pendingChoice!.choiceId, 0, 'tear'));
+    while (state.phase === 'choice') {
+      const pending = state.pendingChoice!;
+      state = accepted(selectChoice(state, pending.choiceId, pending.generation, pending.offers[0]));
+    }
+    const receipts = state.m8.loot.receipts.filter(receipt => receipt.dropId === descriptor.dropId);
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0].payload).toEqual({ kind: 'item', definitionId: 'tear', quantity: 1 });
+    expect(selectChoice(state, lootChoiceId(descriptor.dropId), 0, 'tear').ok).toBe(false);
   });
 
   it('forfeits a lethal loss and the last PvE, and still grants a partial kill immediately', () => {

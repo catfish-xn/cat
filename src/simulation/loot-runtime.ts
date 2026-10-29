@@ -190,6 +190,10 @@ function grantItem(state: MatchState, definitionId: string, receiptId: string) {
     { kind: 'item-acquired', itemId: grant.grantedItemIds[0], source: { kind: 'loot', receiptId } }) }) };
 }
 
+function frozenLootChoice(state: MatchState, dropId: string): LootChoiceDescriptor | undefined {
+  return state.m8.loot.frozen.rounds.flatMap(round => round.choices).find(choice => choice.dropId === dropId);
+}
+
 export function unresolvedLootChoices(state: MatchState): readonly LootChoiceDescriptor[] {
   const due = new Set((state.m8.loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
   const choices = [...currentPlan(state)?.choices ?? []];
@@ -236,7 +240,7 @@ export function hasPendingLootCapacity(state: MatchState): boolean {
 }
 export function grantLootChoice(state: MatchState, descriptor: LootChoiceDescriptor, definitionId: string,
   method: 'player-choice' | 'terminal-fallback'): { state: MatchState; events: MatchEvent[] } {
-  const actual = currentPlan(state)?.choices.find(value => value.dropId === descriptor.dropId);
+  const actual = frozenLootChoice(state, descriptor.dropId);
   if (!actual || canonicalContent(actual) !== canonicalContent(descriptor)
     || !COMPONENT_POOL.some(value => value.definitionId === definitionId)
     || method !== 'player-choice' && method !== 'terminal-fallback'
