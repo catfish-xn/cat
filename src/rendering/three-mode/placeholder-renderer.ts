@@ -1161,7 +1161,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
     if (!!view !== stage.active) clearDescription();
-    stage.show(view);
+    stage.show(view, active);
   };
   // Scouting replaces my board the same way: let go of a press or drag first.
   const onScout = (view: Parameters<typeof scout.show>[0]) => {
@@ -1570,6 +1570,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (ltk) ltk.render(camera); else renderer.render(scene, camera);
         loadReport.uploaded(performance.now() - started); timeUpload = false;
       } else if (ltk) ltk.render(camera); else renderer.render(scene, camera);
+      if (stage.departing) {
+        // The board resumes immediately; carousel legends and their leashed units leave together above it.
+        const autoClear = renderer.autoClear;
+        renderer.autoClear = false;
+        try { renderer.clearDepth(); renderer.render(stage.scene, stage.camera); }
+        finally { renderer.autoClear = autoClear; }
+      }
     }
     if (!reported && loadReport.report.wallMs !== null && !timeUpload) {
       reported = true;
