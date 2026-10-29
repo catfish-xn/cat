@@ -79,7 +79,7 @@ export function shareP2Energy(ctx:AbilityContext,onlyItems?:ReadonlySet<string>)
 export function p2Stoneskin(u: CombatUnit,tick:number):number {
   const v=p2Values('stoneskin');return p2HasAnomaly(u,'stoneskin')?Math.max(0,v.BonusArmorMR-Math.floor(tick/20)*v.ArmorMRLossPerSecond):0;
 }
-export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
+export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number,ordinary?:(nearest:S13Unit|undefined)=>S13Unit|undefined):S13Unit|undefined {
   const taunted=b5VoidSwarmTarget(u,units,tick);if(taunted)return taunted;
   const forced=batch2Target(u,units);if(forced)return forced;
   const cull=p2HasAnomaly(u,'cull-the-weak');
@@ -88,15 +88,15 @@ export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit
   // without sorting a copy of the roster for every unit on every tick.
   let normal:S13Unit|undefined, distance=Infinity;
   for (const candidate of units) {
-    if(candidate.team===u.team||!isSelectable(candidate,u.mechanismState?.sampledAtTick??0))continue;
+    if(candidate.team===u.team||!isSelectable(candidate,tick))continue;
     if(cull)candidates.push(candidate);
     const next=hexDistance(u.cell,candidate.cell);
     if (next<distance || next===distance && (!normal || candidate.id<normal.id)) { normal=candidate;distance=next; }
   }
-  if(!cull)return normal;
+  if(!cull)return ordinary ? ordinary(normal) : normal;
   const inRange=candidates.filter(t=>hexDistance(u.cell,t.cell)<=range(u));
-  if(tick%(p2Values('cull-the-weak').Period*20)===0)return inRange.sort((a,b)=>a.hp*b.maxHp-b.hp*a.maxHp||(a.id<b.id?-1:a.id>b.id?1:0))[0]??normal;
-  return inRange.find(t=>t.id===u.targetId)??normal;
+  if(tick%(p2Values('cull-the-weak').Period*20)===0)return inRange.sort((a,b)=>a.hp*b.maxHp-b.hp*a.maxHp||(a.id<b.id?-1:a.id>b.id?1:0))[0]??(ordinary ? ordinary(normal) : normal);
+  return inRange.find(t=>t.id===u.targetId)??(ordinary ? ordinary(normal) : normal);
 }
 export function p2Crit(u:S13Unit|undefined,target:CombatUnit|undefined,base:SpellCritAuthorization):SpellCritAuthorization {
   if(!u||!target||!p2HasAnomaly(u,'cull-the-weak'))return base;

@@ -1,5 +1,17 @@
 ## 2026-10-27 v25 H7 历史强化
 
+## v26 索敌 P0（2026-10-29 用户批准）
+
+普通 S13 单位保持仍存活、可选且在有效射程内的当前目标；已交战目标出射程时，先检查按现有移动资格与占格能否走一格恢复射程，能则等移动冷却后追这一步，不能才走原最近距离／字符串 ID 回退。首次尚未接战的多步 BFS、邻居顺序、首步抢格和失败等待不变。移动前选择与行动阶段复核共享本 tick 决策；行动阶段仍验证目标资格、射程和 override。
+
+优先级仍为虚空嘲讽 → 背叛 → 剔除弱者 → 普通规则；鱼骨头每次普攻的独立随机目标、技能专用选敌／已绑定任务、疯化学家与河蟹专用移动保持原规则。受控期间原有重扫、阻断和任务取消不变，刚解控制时使用原最近目标决策；本次没有新增受控暂停状态或控制结束锁存器。死亡、缺席／隐身／不可选使目标失效。固定对象不能把空邻格当成可追击落点；移动冷却与本 tick 预留竞争只影响何时成功移动，不改变一步追击的几何可行性。
+
+`CombatUnit.targetEngaged?:true` 表示当前目标曾进入有效射程，跨等待 tick 保留；普通换目标／失去目标、死亡、赛恩待复活、机制清目标、名单移除清除该标记；特殊选敌直接改写目标时不得继承旧标记。恢复从可信战斗输入逐 tick 独立重演，认证 targetId 与标记的值和存在性；篡改报 `Invalid Match save: target binding facts`，结构不合法报 `engaged target`。没有新增公共命令、失败枚举、事件类别、网络计时 API 或 RNG 流。
+
+内部签名：`decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?):{target:S13Unit|undefined,engaged:boolean}`；`chaseStep(board,unit,target,occupied):HexCell|undefined`；`p2Target(unit,units,tick,ordinary?:(nearest)=>S13Unit|undefined):S13Unit|undefined`。没有目标／一步不可行均返回 undefined，不消耗 RNG；保持原先命令失败语义。历史非 S13 的 M3/M4 独立引擎保留。
+
+规则／内容身份升为 `s13-g2-3-v26-online-rules` / `s13-14.24b-g2-3-v26-online-rules`，schema/save/replay/command 仍为 12/8/8/7，旧身份拒绝。`S13_COMBAT_RULES.ordinaryTargeting` 纳入内容摘要；只同步生产摘要，不改录制。证据、全部调用点、原断言替代向量与待重录检查见 [TARGETING_P0_V26](TARGETING_P0_V26.md)。
+
 B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的独立 death event 另判定；不改战斗 tick、事件封套或回放事实。B5-43 仅使用双方已结算的实际玩家 HP 扣减。B5-44 扩展玩家生命上限后，Spirit Link／Comeback Story 按真实缺失生命计算，输入和恢复按拥有条目验证上限。当前版本及接口见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 和 [H7 合同](AUGMENT_BATCH5_H7_DELIVERY.md)；未重录 epoch。
 
 ## 2026-10-27 v25-h8：吸血与死亡收据
