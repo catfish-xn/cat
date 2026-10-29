@@ -134,6 +134,33 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
   const cast = (sourceId: string, targetId: string, tick = 1) =>
     listener.events([{ type: 'cast', tick, eventSeq: tick, sourceId, targetIds: [targetId] } as unknown as DisplayCombatEvent]);
 
+  it('retains one shared fallback icon material through 40 rounds of summon churn and releases it once', async () => {
+    const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
+    const texture = new three.Texture();
+    vi.spyOn(three.TextureLoader.prototype, 'loadAsync').mockResolvedValue(texture);
+    renderer.useChampionIcon(id => id === 'g23-test' ? 'synthetic-icon.png' : null);
+    try {
+      const anchor = piece({ id: 'anchor', definitionId: 'renata' });
+      await publish([anchor], false);
+      const scene = bodies.get('renata')!.parent!.parent!;
+      const retained = new Set<import('three').SpriteMaterial>();
+      for (let round = 0; round < 40; round++) {
+        listener.frame(frame([anchor, piece({ id: `summon-${round}`, definitionId: 'g23-test' })], true));
+        const pawn = scene.getObjectByName('render3d-fallback-g23-test')!;
+        const badge = pawn.children.find(child => child instanceof three.Sprite) as import('three').Sprite;
+        retained.add(badge.material);
+        await publish([anchor], false);
+      }
+      expect(retained.size).toBe(1);
+      const material = [...retained][0], disposed = vi.spyOn(material, 'dispose'), textureDisposed = vi.spyOn(texture, 'dispose');
+      expect(material.map).toBe(texture);
+      expect(three.TextureLoader.prototype.loadAsync).toHaveBeenCalledTimes(1);
+      mounted!.dispose(); mounted = undefined;
+      expect(disposed).toHaveBeenCalledTimes(1); expect(textureDisposed).toHaveBeenCalledTimes(1);
+      expect(callbacks.size).toBe(0);
+    } finally { renderer.useChampionIcon(() => null); }
+  });
+
   it('plays Renata ground impact without assets, shows only receipted shields and clears combat effects at a phase change', async () => {
     loadFx.mockRejectedValue(new Error('missing-test-effect'));
     const me = piece({ id: 'me', definitionId: 'renata' }), ally = piece({ id: 'ally', definitionId: 'sett' });

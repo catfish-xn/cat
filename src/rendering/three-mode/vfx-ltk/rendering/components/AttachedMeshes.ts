@@ -4,7 +4,7 @@
  */
 import { BackSide, DetachedBindMode, DoubleSide, FrontSide, Matrix4, MeshBasicMaterial, SkinnedMesh, type Object3D } from 'three';
 import type { EmitterModel } from '../../engine/model/model';
-import { age01, appearance, erosionDrive, frameOf, type Source } from '../../engine/simulation/particleRead';
+import { age01, appearance, erosionDrive, type Source } from '../../engine/simulation/particleRead';
 import type { EmitterSamplers } from '../hooks/useVfxTextures';
 import type { ParticleDraw } from '../lifetime';
 import { attachedMaterial } from '../utils/materials';
@@ -41,18 +41,24 @@ export function createAttachedMeshes(emitter: EmitterModel, sources: readonly So
         // A model swap/removal may release the borrowed skeleton while particles linger.
         if (attachment?.disposed || !attachment?.body || !ancestor) { mesh.visible = false; return; }
         let wanted = slot, found = false;
+        const tint = material.uniforms.particleTint.value as number[];
+        const turn = material.uniforms.particleTurn.value as number[];
+        const turnMult = material.uniforms.particleTurnMult.value as number[];
+        const shift = material.uniforms.particleShift.value as number[];
+        const shiftMult = material.uniforms.particleShiftMult.value as number[];
         for (const held of sources) {
-          const pool = held.pool, frame = frameOf(held, emitter), time = frame.now;
+          const pool = held.pool, time = held.time;
           for (let at = 0; at < pool.count; at++) {
             if (pool.emitter[at] !== emitter.index || wanted-- !== 0) continue;
             appearance(pool, at, emitter, time, drawn); premultiplyInto(emitter, drawn.color);
-            material.uniforms.particleTint.value = Array.from(drawn.color);
+            tint[0] = drawn.color[0]; tint[1] = drawn.color[1]; tint[2] = drawn.color[2]; tint[3] = drawn.color[3];
             material.uniforms.particleErode.value = erosionDrive(pool, at, emitter, time);
             for (let layer = 0; layer < 2; layer++) {
               const over = layerOf(emitter, layer); if (!over) continue;
               uvTransformInto(pool, at, over, layer, time - pool.birthTime[at], age01(pool, at, time), time, uv);
-              material.uniforms[layer ? 'particleTurnMult' : 'particleTurn'].value = [uv.turn, uv.scaleU, uv.scaleV];
-              material.uniforms[layer ? 'particleShiftMult' : 'particleShift'].value = [uv.offsetU, uv.offsetV, uv.cellU, uv.cellV];
+              const turnOut = layer ? turnMult : turn, shiftOut = layer ? shiftMult : shift;
+              turnOut[0] = uv.turn; turnOut[1] = uv.scaleU; turnOut[2] = uv.scaleV;
+              shiftOut[0] = uv.offsetU; shiftOut[1] = uv.offsetV; shiftOut[2] = uv.cellU; shiftOut[3] = uv.cellV;
             }
             sourcesScrollInto(emitter, sources, material.uniforms.paletteScroll.value);
             source.updateWorldMatrix(true, false); attachment!.root.updateWorldMatrix(true, false); parent.updateWorldMatrix(true, false);

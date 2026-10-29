@@ -17,7 +17,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -133,6 +135,7 @@ export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsP
   const pair = makePair(material);
 
   const drawn = !hidden && !emitter.disabled && beam !== null && emitter.mesh === null;
+  let frameSlot: FrameSlot | undefined;
 
   eachFrame((state) => {
     if (!drawn || beam === null) {
@@ -158,7 +161,8 @@ export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsP
     for (const source of sources) {
       const pool = source.pool;
       const origin = source.origin;
-      const frame = frameOf(source, emitter);
+      frameSlot ??= frameOf(source, emitter) as FrameSlot;
+      const frame = frameInto(source, emitter, frameSlot);
       beamEndsInto(source, beam, SOURCE, TARGET);
       const bound = beamTint(source, beam);
 

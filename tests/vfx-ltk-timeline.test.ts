@@ -2,7 +2,7 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { createLtkRuntime, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
@@ -101,6 +101,13 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBeLessThanOrEqual(MAX_LTK_SYSTEMS);
     runtime.clear(); runtime.play('jinx', 'caster', []); runtime.stopUnit('caster'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(0); runtime.dispose();
+  });
+  it('drops distortion and soft passes once four systems are live, and keeps them below that', () => {
+    const heavy = { passes: { early: true, late: true, soft: true } };
+    expect(LTK_PASS_DEGRADE_AT).toBe(4);
+    expect(ltkRenderNeeds([heavy, heavy, heavy])).toEqual({ early: true, late: true, soft: true });
+    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([{ passes: { early: false, late: false, soft: true } }])).toEqual({ early: false, late: false, soft: true });
   });
 });
 

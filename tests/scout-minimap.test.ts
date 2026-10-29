@@ -13,6 +13,40 @@ const seat = (seatId: string, extra: Partial<SeatPublic> = {}): SeatPublic => ({
   connected: true, controller: 'bot', publicBoard: { units: [] }, ...extra } as SeatPublic);
 
 describe('3D scouting minimap', () => {
+  it('keeps nodes/listeners through repeated cloned publications and invalidates every drawn field', () => {
+    const createElement = vi.fn(() => new Node());
+    vi.stubGlobal('document', { createElement });
+    try {
+      const minimap = new ScoutMinimap(new Node() as unknown as HTMLElement, () => {});
+      const initial = { mySeatId: 's1', opponentSeatId: 's2', seats: [seat('s1'), seat('s2', { publicBoard: { units: [
+        { definitionId: 'missing-unit', starLevel: 1, cell: { row: 4, col: 0 }, items: [] },
+      ] } })] } as unknown as PlayerView;
+      minimap.render(initial, null);
+      const original = (minimap.root as unknown as Node).children, count = createElement.mock.calls.length;
+      for (let round = 1; round <= 40; round++) for (let push = 0; push < 20; push++) minimap.render(structuredClone(initial), null);
+      expect((minimap.root as unknown as Node).children).toBe(original);
+      expect(createElement).toHaveBeenCalledTimes(count);
+      const changes = [
+        (v: any) => { v.seats[1].name = '改名'; }, (v: any) => { v.seats[1].hp--; },
+        (v: any) => { v.seats[1].alive = false; }, (v: any) => { v.mySeatId = 's2'; },
+        (v: any) => { v.opponentSeatId = null; }, (v: any) => { v.seats.reverse(); },
+        (v: any) => { v.seats[1].publicBoard.units[0].cell.col++; },
+        (v: any) => { v.seats[1].publicBoard.units[0].cell.row++; },
+        (v: any) => { v.seats[1].publicBoard.units[0].summon = true; },
+        (v: any) => { v.seats[1].publicBoard.units[0].definitionId = 'vex'; },
+      ];
+      for (const change of changes) {
+        minimap.render(initial, null);
+        const before = (minimap.root as unknown as Node).children;
+        const next = structuredClone(initial); change(next); minimap.render(next, null);
+        expect((minimap.root as unknown as Node).children).not.toBe(before);
+      }
+      minimap.render(initial, 's2');
+      expect((minimap.root as unknown as Node).children[1].className).toContain('shown');
+      minimap.render(null, null); expect((minimap.root as unknown as Node).children).toEqual([]);
+      minimap.dispose();
+    } finally { vi.unstubAllGlobals(); }
+  });
   it('draws one tile per seat from the public board, marks me, my opponent and the shown seat, and opens a seat on click', () => {
     vi.stubGlobal('document', { createElement: () => new Node() });
     try {

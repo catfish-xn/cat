@@ -6,11 +6,20 @@
 import type { Camera, Material, Mesh, Object3D, Scene, WebGLRenderer } from 'three';
 import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER } from './utils/frame';
 
+/** Visit `node` and its descendants, skipping bone hierarchies under skinned units. */
+function walkDrawable(node: Object3D, visit: (node: Object3D) => void): void {
+  const skinned = node as { isBone?: boolean; isSkinnedMesh?: boolean };
+  if (skinned.isBone) return;
+  visit(node);
+  if (skinned.isSkinnedMesh) return;
+  for (const child of node.children) walkDrawable(child, visit);
+}
 export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Object3D[]) {
+  const masks = new Map<Object3D, number>(), ground = new Map<Material, Pick<Material, 'depthWrite' | 'polygonOffset' | 'polygonOffsetFactor' | 'polygonOffsetUnits'>>();
   return {
     render(scene: Scene, camera: Camera, needs: { early: boolean; late: boolean; soft: boolean }) {
       const layers = camera.layers.mask, autoClear = gl.autoClear, background = scene.background, target = gl.getRenderTarget();
-      const masks = new Map<Object3D, number>(), ground = new Map<Material, Pick<Material, 'depthWrite' | 'polygonOffset' | 'polygonOffsetFactor' | 'polygonOffsetUnits'>>();
+      masks.clear(); ground.clear();
       const draw = (held: readonly number[], over = false) => {
         camera.layers.disableAll(); for (const layer of held) camera.layers.enable(layer);
         gl.autoClear = over ? false : autoClear; scene.background = over ? null : background; gl.render(scene, camera);
@@ -19,7 +28,7 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
         bindFrameTargets(gl);
         if (needs.soft) grabDepth(gl, scene, camera);
         const first = needs.late ? [UNDER_LAYER] : [UNDER_LAYER, PARTICLE_LAYER];
-        scene.traverse(node => {
+        walkDrawable(scene, node => {
           if (!node.layers.isEnabled(GROUND_LAYER)) return;
           const material = (node as Mesh).material;
           for (const one of material ? Array.isArray(material) ? material : [material] : [])
@@ -30,7 +39,7 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           // Separate calls avoid Three's opaque/transparent sorting putting ground
           // beneath opaque hexes or beneath the arena's transparent cell overlay.
           for (const root of floors()) root.traverse(node => { masks.set(node, node.layers.mask); node.layers.set(FLOOR_LAYER); });
-          scene.traverse(node => {
+          walkDrawable(scene, node => {
             if ((node as { isLight?: boolean }).isLight) { masks.set(node, node.layers.mask); node.layers.enable(FLOOR_LAYER); }
           });
           draw([FLOOR_LAYER]);

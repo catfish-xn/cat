@@ -2,7 +2,7 @@ import type { CombatState } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { planFx, type FxSpec } from '../presentation/fx-plan';
 import { reducedMotion } from '../presentation/preferences';
-import { HexLayout } from './hex-layout';
+import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
@@ -24,6 +24,12 @@ export class ReplayView {
   readonly canvas = document.createElement('canvas');
   private last: { state: CombatState; selected: string | null } | null = null;
   private effects: { spec: FxSpec; start: number; rect?: LabelRect | null }[] = [];
+  private hex: HexLayout | null = null;
+  private hexRows = -1;
+  private hexCols = -1;
+  private readonly cornerScratch: Point[] = [];
+  private readonly pointA: Point = { x: 0, y: 0 };
+  private readonly pointB: Point = { x: 0, y: 0 };
   private consumed = 0;
   private combatId: string | undefined;
   /** Read-only counters for acceptance checks. */
@@ -74,14 +80,19 @@ export class ReplayView {
     const ctx = this.canvas.getContext('2d')!;
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     ctx.fillStyle = '#101923'; ctx.fillRect(0, 0, 480, 520);
-    const layout = new HexLayout(state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
+    if (!this.hex || this.hexRows !== state.board.rows || this.hexCols !== state.board.columns) {
+      this.hex = new HexLayout(state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
+      this.hexRows = state.board.rows; this.hexCols = state.board.columns;
+    }
+    const layout = this.hex;
     for (let row = 0; row < state.board.rows; row++) for (let col = 0; col < state.board.columns; col++) {
-      ctx.beginPath(); layout.corners({ row, col }).forEach(p => ctx.lineTo(p.x, p.y)); ctx.closePath();
+      layout.cornersInto({ row, col }, this.cornerScratch);
+      ctx.beginPath(); for (let i = 0; i < 6; i++) ctx.lineTo(this.cornerScratch[i]!.x, this.cornerScratch[i]!.y); ctx.closePath();
       ctx.fillStyle = row < 4 ? C.boardEnemy : C.boardAlly; ctx.fill(); ctx.strokeStyle = C.boardLine; ctx.lineWidth = 1; ctx.stroke();
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const unit of state.units) {
-      const p = layout.center(unit.cell), identity = getHeroIdentity(unit.definitionId), radius = 27;
+      const p = layout.centerInto(unit.cell, this.pointA), identity = getHeroIdentity(unit.definitionId), radius = 27;
       ctx.globalAlpha = unit.alive ? 1 : 0.3;
       ctx.save(); ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2); ctx.closePath();
       ctx.fillStyle = identity.color; ctx.fill();
@@ -122,7 +133,13 @@ export class ReplayView {
   }
   private drawEffects(ctx: CanvasRenderingContext2D, layout: HexLayout, state: CombatState, now: number) {
     const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
-    this.effects = this.effects.filter(({ spec, start }) => now - start < ('duration' in spec ? spec.duration : 160));
+    let kept = 0;
+    for (let i = 0; i < this.effects.length; i++) {
+      const effect = this.effects[i]!;
+      const life = 'duration' in effect.spec ? effect.spec.duration : 160;
+      if (now - effect.start < life) this.effects[kept++] = effect;
+    }
+    this.effects.length = kept;
     // Each label takes a free slot on its first frame and keeps it until it fades (same rule as the live board).
     const taken: LabelRect[] = [];
     for (const effect of this.effects) {
@@ -130,7 +147,7 @@ export class ReplayView {
       if (spec.kind !== 'label') continue;
       if (effect.rect === undefined) {
         ctx.font = '12px system-ui, sans-serif';
-        effect.rect = placeLabel(layout.center(spec.at), ctx.measureText(spec.text).width + 6, 16, spec.dy, taken, { width: 480, height: 520 });
+        effect.rect = placeLabel(layout.centerInto(spec.at, this.pointA), ctx.measureText(spec.text).width + 6, 16, spec.dy, taken, { width: 480, height: 520 });
       }
       if (effect.rect) taken.push(effect.rect);
     }
@@ -139,23 +156,24 @@ export class ReplayView {
       const age = now - start, life = 'duration' in spec ? spec.duration : 160, alpha = Math.max(0, 1 - age / life);
       ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round';
       if (spec.kind === 'slash') {
-        const to = layout.center(spec.at), from = layout.center(spec.from), angle = Math.atan2(to.y - from.y, to.x - from.x);
+        const to = layout.centerInto(spec.at, this.pointA), from = layout.centerInto(spec.from, this.pointB), angle = Math.atan2(to.y - from.y, to.x - from.x);
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(to.x, to.y, 20, angle - 0.9, angle + 0.9); ctx.stroke();
         ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(to.x, to.y, 24, angle - 0.7, angle + 0.7); ctx.stroke();
       } else if (spec.kind === 'bolt') {
-        const from = layout.center(spec.from), to = layout.center(spec.to);
+        const from = layout.centerInto(spec.from, this.pointA), to = layout.centerInto(spec.to, this.pointB);
         if (spec.travel) {
           const t = Math.min(1, age / 140), x = from.x + (to.x - from.x) * t, y = from.y + (to.y - from.y) * t;
           ctx.fillStyle = hex(spec.color); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         } else { ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke(); }
       } else if (spec.kind === 'cast') {
-        const from = layout.center(spec.at);
-        ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(from.x, from.y, 34, 0, Math.PI * 2); ctx.stroke();
-        for (const cell of spec.targets) { const to = layout.center(cell); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.beginPath(); ctx.arc(to.x, to.y, 30, 0, Math.PI * 2); ctx.stroke(); }
+        const from = layout.centerInto(spec.at, this.pointA);
+        const fromX = from.x, fromY = from.y;
+        ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(fromX, fromY, 34, 0, Math.PI * 2); ctx.stroke();
+        for (const cell of spec.targets) { const to = layout.centerInto(cell, this.pointB); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.beginPath(); ctx.arc(to.x, to.y, 30, 0, Math.PI * 2); ctx.stroke(); }
       } else if (spec.kind === 'ring') {
-        const p = layout.center(spec.at); ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x, p.y, spec.radius, 0, Math.PI * 2); ctx.stroke();
+        const p = layout.centerInto(spec.at, this.pointA); ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x, p.y, spec.radius, 0, Math.PI * 2); ctx.stroke();
       } else if (spec.kind === 'death') {
-        const p = layout.center(spec.at); ctx.strokeStyle = C.danger; ctx.fillStyle = C.danger; ctx.lineWidth = 3;
+        const p = layout.centerInto(spec.at, this.pointA); ctx.strokeStyle = C.danger; ctx.fillStyle = C.danger; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(p.x, p.y, 26, 0, Math.PI * 2); ctx.stroke();
         ctx.font = 'bold 40px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('×', p.x, p.y);
       } else if (spec.kind === 'label' && rect) {
@@ -165,7 +183,7 @@ export class ReplayView {
       } else if (spec.kind === 'flash' || spec.kind === 'target') {
         const unit = state.units.find(value => value.id === spec.unitId);
         if (unit?.alive) {
-          const p = layout.center(unit.cell); ctx.beginPath(); ctx.arc(p.x, p.y, spec.kind === 'flash' ? 27 : 29, 0, Math.PI * 2);
+          const p = layout.centerInto(unit.cell, this.pointA); ctx.beginPath(); ctx.arc(p.x, p.y, spec.kind === 'flash' ? 27 : 29, 0, Math.PI * 2);
           if (spec.kind === 'flash') { ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); } else { ctx.strokeStyle = C.focus; ctx.lineWidth = 3; ctx.stroke(); }
         }
       }

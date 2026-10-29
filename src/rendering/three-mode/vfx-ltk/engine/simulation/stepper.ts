@@ -33,17 +33,21 @@ export interface Stepper {
 export const MAX_STEPS = 20;
 
 /** A stepper that runs one step per frame, however long the frame was. */
+const NO_STEPS: Step[] = [];
 export function variableStepper(now = 0): Stepper {
   let clock = now;
+  const step = { dt: 0, now: 0 };
+  const once: Step[] = [step];
 
   return {
     get now() {
       return clock;
     },
     advance(frameTime) {
-      if (frameTime <= 0) return [];
+      if (frameTime <= 0) return NO_STEPS;
       clock += frameTime;
-      return [{ dt: frameTime, now: clock }];
+      step.dt = frameTime; step.now = clock;
+      return once;
     },
     reset(to = 0) {
       clock = to;
@@ -60,6 +64,7 @@ export function variableStepper(now = 0): Stepper {
 export function fixedRateStepper(rate: number, now = 0, everyFrame = false): Stepper {
   let clock = now;
   let banked = 0;
+  const steps: { dt: number; now: number }[] = [];
 
   return {
     get now() {
@@ -71,11 +76,13 @@ export function fixedRateStepper(rate: number, now = 0, everyFrame = false): Ste
       let count = Math.floor(banked * rate);
       if (count <= 0 && everyFrame && banked > 0) {
         clock += banked;
-        const step = { dt: banked, now: clock };
+        const step = steps[0] ?? (steps[0] = { dt: 0, now: 0 });
+        step.dt = banked; step.now = clock;
         banked = 0;
-        return [step];
+        steps.length = 1;
+        return steps;
       }
-      if (count <= 0) return [];
+      if (count <= 0) return NO_STEPS;
 
       /* The client halves the count as a float and truncates once, after the loop. */
       let dt = 1 / rate;
@@ -87,10 +94,11 @@ export function fixedRateStepper(rate: number, now = 0, everyFrame = false): Ste
       count = Math.trunc(halved);
       banked -= count * dt;
 
-      const steps: Step[] = [];
+      steps.length = count;
       for (let at = 0; at < count; at += 1) {
         clock += dt;
-        steps.push({ dt, now: clock });
+        const step = steps[at] ?? (steps[at] = { dt: 0, now: 0 });
+        step.dt = dt; step.now = clock;
       }
       return steps;
     },
