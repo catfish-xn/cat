@@ -9,6 +9,7 @@ import { initializeStreams, validateEquipmentState } from '../src/simulation/m8/
 import { TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { BattleHistory, validateBattleCollection } from '../src/replay';
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
+import { installAugmentReplayCommandCache } from './fixtures/augment-replay-command-cache';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
@@ -115,18 +116,43 @@ function rejectWithoutRepair(raw: MatchState): void {
   expect(() => serializeMatch(raw)).toThrow(/equipment.*level/);
   expect(JSON.stringify(raw)).toBe(before);
 }
+function mutableObjects(root: unknown): object[] {
+  const seen = new Set<object>(), pending = [root], mutable: object[] = [];
+  while (pending.length) {
+    const value = pending.pop();
+    if (!value || typeof value !== 'object' || seen.has(value)) continue;
+    seen.add(value);
+    if (!Object.isFrozen(value)) mutable.push(value);
+    pending.push(...Object.values(value));
+  }
+  return mutable;
+}
 
 describe('B5 audit R1: equipment roll level belongs to its round history', () => {
   let restoreOffers = () => {};
+  let replayCache: ReturnType<typeof installAugmentReplayCommandCache>;
   // Keep the same pure draw policy for construction and every history replay.
-  beforeAll(() => { restoreOffers = installB1Offers(AUGMENTS); });
-  afterAll(() => { restoreOffers(); });
+  beforeAll(() => { restoreOffers = installB1Offers(AUGMENTS); replayCache = installAugmentReplayCommandCache(); });
+  afterAll(() => { replayCache?.restore(); restoreOffers(); });
   const archiveHistory = new CompletedBattleHistory('b5-r1');
   let archivedState: MatchState;
+  let independentlyReplayedState: MatchState;
   // Generate the public command/history fixture separately from its save assertions.
   // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。钩子 10 秒 → 20 秒（CI 上钩子超时 3 次）。
   beforeAll(() => { archivedState = historicalProgression(true, archiveHistory); }, 20_000);
   beforeAll(() => { historicalProgression(false); }, 20_000);
+  beforeAll(() => {
+    // Only independent restore replay may populate the cache. Equal serialized
+    // live states can have different trace/preparation/acquisition side data.
+    expect(replayCache.counts.recorded).toBe(0);
+    const mutable = mutableObjects(archivedState);
+    expect(restoreMatch(archivedState)).toEqual(archivedState);
+    expect(replayCache.counts.hits).toBe(0);
+    expect(replayCache.counts.recorded).toBeGreaterThan(0);
+    expect(mutable.filter(Object.isFrozen)).toEqual([]);
+    independentlyReplayedState = replayCache.lastReplayState!;
+    replayCache.seal();
+  }, 20_000);
   it('rejects a historical level5 roll forged as level7 with RNG-consistent two completed items', () => {
     const state = historicalProgression();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -194,10 +220,19 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     let envelope: SaveEnvelope;
     beforeAll(async () => {
       envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
-        runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: archivedState,
+        runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: structuredClone(archivedState),
         battles: archiveHistory.completedRecords, currentBattle: null };
       // Fully validate the shared control before exercising the forged copy.
+      replayCache.resetBattleCounts();
+      const priorHits = replayCache.counts.hits;
+      const mutable = mutableObjects(envelope.match);
       await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
+      expect(mutable.filter(Object.isFrozen)).toEqual([]);
+      // Memoization is confined to augment proof reconstruction. Every archived
+      // battle still starts and executes every original replay tick here.
+      expect(replayCache.counts.battleStarts).toBe(envelope.battles.length);
+      expect(replayCache.counts.battleTicks).toBe(envelope.battles.reduce((ticks, battle) => ticks + battle.endTick, 0));
+      expect(replayCache.counts.hits).toBeGreaterThan(priorHits);
     }, 20_000);
     it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
       expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
@@ -210,6 +245,50 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
       await expect(validateEnvelope(raw, validateBattleCollection)).rejects.toThrow(/equipment.*level/);
       expect(JSON.stringify(raw)).toBe(before);
     });
+  });
+  it.each(['origin', 'command', 'facts'] as const)('rejects a forged augment proof %s after warming shared replay prefixes', field => {
+    const raw = structuredClone(archivedState), history = raw.augmentHistory!;
+    if (history.proof.kind !== 'solo') throw new Error('Expected a solo fixture proof');
+    if (field === 'origin') Object.assign(history.proof.origin, { gold: history.proof.origin.gold + 1 });
+    else if (field === 'command') {
+      // A suffix command must select another branch, even after the authentic
+      // origin and every earlier command have been replayed and cached.
+      const command = [...history.proof.commands].reverse().find(command => command.name === 'buyXp')!;
+      Object.assign(command, { name: 'rerollShop' });
+    } else Object.assign(history, { facts: history.facts.slice(0, -1) });
+    const before = JSON.stringify(raw);
+    const failure = () => {
+      try { restoreMatch(raw); return null; }
+      catch (error) { if (!(error instanceof Error)) throw error; return error.message; }
+    };
+    const priorHits = replayCache.counts.hits;
+    const priorMisses = replayCache.counts.misses;
+    const priorExecutions = replayCache.counts.executions;
+    const cachedFailure = failure();
+    expect(cachedFailure).not.toBeNull();
+    expect(cachedFailure).toBe('Invalid augment history: replayed facts/state mismatch');
+    if (field !== 'origin') expect(replayCache.counts.hits).toBeGreaterThan(priorHits);
+    const replayed = replayCache.lastReplayState!;
+    if (field === 'origin') {
+      expect(replayCache.counts.hits).toBe(priorHits);
+      expect(replayCache.counts.misses).toBeGreaterThan(priorMisses);
+      expect(replayCache.counts.executions - priorExecutions).toBe(history.proof.commands.reduce((n, c) => n + c.count, 0));
+      expect(replayed.augmentHistory!.proof).toEqual(history.proof);
+      expect(replayed.gold).toBeGreaterThan(archivedState.gold);
+    } else if (field === 'command') {
+      expect(replayCache.counts.misses - priorMisses).toBe(1);
+      expect(replayCache.counts.executions - priorExecutions).toBe(1);
+      expect(replayed.augmentHistory!.proof).toEqual(history.proof);
+      expect(replayed.gold).toBe(archivedState.gold + 2); // Reroll costs 2; the replaced XP purchase costs 4.
+      expect(replayed.shop.generation).toBe(archivedState.shop.generation + 1);
+    } else {
+      expect(replayCache.counts.misses).toBe(priorMisses);
+      expect(replayCache.counts.executions).toBe(priorExecutions);
+      expect(replayed).toEqual(archivedState);
+      expect(replayed).toBe(independentlyReplayedState); // Preserve every WeakMap association on recall.
+      expect(replayed.augmentHistory!.facts).toHaveLength(history.facts.length + 1);
+    }
+    expect(JSON.stringify(raw)).toBe(before);
   });
 });
 
