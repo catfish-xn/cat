@@ -88,12 +88,16 @@ const PHASER_HASHES: Record<string, string> = {
   'input/InputManager.js': '79793d816c885405de019c8660020f378765901cd56f552c43a93c7adc4f49b4',
   'utils/array/index.js': 'a9d7c3f1aa8199d22e373a7a7919604b48e2ac077e01d2fb556f27a7b74a7c1a',
 };
-const CAMERA_NO_EFFECT = [
+export const CAMERA_NO_EFFECT = [
   'function CameraNoEffect(camera) { this.camera = camera; }',
   'CameraNoEffect.prototype.start = function () { throw new Error("camera effects are not in this build"); };',
   'CameraNoEffect.prototype.reset = function () {};',
   'CameraNoEffect.prototype.update = function () {};',
   'CameraNoEffect.prototype.preRender = function () {};',
+  'CameraNoEffect.prototype.postRenderCanvas = function () { return false; };',
+  'CameraNoEffect.prototype.postRenderWebGL = function () { return false; };',
+  'CameraNoEffect.prototype.isComplete = false;',
+  'CameraNoEffect.prototype.destroy = function () { this.camera = null; };',
   'Object.defineProperty(CameraNoEffect.prototype, "isRunning", { get: function () { return false; } });',
   'var Effects = { Fade: CameraNoEffect, Flash: CameraNoEffect, Shake: CameraNoEffect, Pan: CameraNoEffect, RotateTo: CameraNoEffect, Zoom: CameraNoEffect };',
 ].join('\n');
@@ -147,8 +151,8 @@ export function trimPhaserRuntime(code: string, module: string): string {
   // Image/Text). No game code creates effect controllers; don't bundle them.
   if (module === 'gameobjects/components/FX.js')
     return code.replace("var Effects = require('../../fx/');", 'var Effects = {};');
-  // The board never calls camera fade/flash/shake/pan/zoom/rotateTo. update() still
-  // ticks the effect objects every frame, so they stay as no-ops and start() throws.
+  // The board never calls camera fade/flash/shake/pan/zoom/rotateTo. Camera and
+  // renderer lifecycle hooks still run every frame; keep them inactive and start() throwing.
   if (module === 'cameras/2d/Camera.js')
     return code.replace("var Effects = require('./effects');", CAMERA_NO_EFFECT);
   // Tweens in this game use Sine, Cubic and Quad only. Power0 (Linear) is Phaser's default.
