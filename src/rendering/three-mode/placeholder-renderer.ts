@@ -18,6 +18,7 @@ import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { installShopOriginalSkin } from './shop-original-skin';
+import { startOriginalUi } from './ui-original-assets';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
@@ -335,6 +336,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
   const shopSkin = installShopOriginalSkin(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
   const actionEffects = await openActionEffects(models, options.assetBase);
+  // Optional sidecar shares the model root/cache but never holds up mounting or model readiness.
+  // Do not import a shared HUD component here: that would make the 2D entry pull Three.js in.
+  const originalUi = startOriginalUi(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
+  const canvasFont = () => originalUi.font('title') === 'system-ui' ? 'sans-serif' : 'Render3dBeaufort, sans-serif';
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
   host.append(renderer.domElement);
@@ -434,6 +439,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return effects.load(id, maxDuration);
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
+    font: canvasFont,
     loadModel, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
     loadEffect, starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
@@ -459,6 +465,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
+    font: canvasFont,
     loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
@@ -626,6 +633,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   renderer.domElement.addEventListener('webglcontextrestored', () => { if (!closed) restored?.(); });
   const textureLoader = new TextureLoader();
   const overheadContext = {
+    ui: originalUi,
+    font: canvasFont,
     colors: () => meterColors,
     itemTexture: (url: string) => {
       let texture = itemTextures.get(url);
@@ -1591,7 +1600,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, goldMines, stage, scout, ltk };
+  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, goldMines, stage, scout, ltk, ui: originalUi };
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = debug;
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
@@ -1609,6 +1618,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       withdrawPicker(); clearEffects(); ltk?.dispose(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); clearBoard();
+      originalUi.dispose();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
       renderer.domElement.remove();

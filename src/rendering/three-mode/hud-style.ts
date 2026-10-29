@@ -2,6 +2,7 @@
  * Online HUD styles that only apply with the 3D layer mounted (item column, augment pick); installed by mountRenderer3d so
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
+import type { ReadyUiSprite } from './ui-original-assets';
 const STYLE = `
 /* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
 body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
@@ -56,4 +57,45 @@ export function installHudStyle(): void {
   if (typeof document === 'undefined' || typeof document.querySelector !== 'function' || !document.head || document.querySelector('style[data-owner="render3d-hud"]')) return;
   const style = document.createElement('style'); style.dataset.owner = 'render3d-hud'; style.textContent = STYLE;
   document.head.append(style);
+}
+
+const UI_SCOPE = 'body:has(.render3d-layer)';
+/** CSS selectors use existing DOM hooks; widths, values, visibility and controls stay with their current owners. */
+const HUD_TARGETS: Readonly<Record<string, string>> = {
+  'hud.panel': '.shop-dock',
+  'hud.level': '.shop-dock .hud-level',
+  'hud.gold': '.shop-dock .hud-gold',
+  'hud.gold-icon': '.shop-dock .hud-gold .hud-label',
+  'hud.xp-track': '.shop-dock .hud-xp-bar',
+  'hud.xp-fill': '.shop-dock .hud-xp-fill',
+  'hud.timer': '#online-countdown.online-countdown',
+};
+export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fonts: ReadonlyMap<string, string>): string {
+  const rules: string[] = [];
+  for (const [id, selector] of Object.entries(HUD_TARGETS)) {
+    const sprite = sprites.get(id); if (!sprite) continue;
+    const url = `url(${JSON.stringify(sprite.url)})`;
+    if (id === 'hud.gold-icon') {
+      // Online owns its circular 13px coin and transparent label in style.css.
+      const label = `body:not([data-online]):has(.render3d-layer) ${selector}`;
+      rules.push(`${label}{display:inline-flex;align-items:center;gap:4px;width:auto;height:auto;overflow:visible;color:inherit;background:none;border-image:none;border-radius:0;box-shadow:none;}`);
+      rules.push(`${label}::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:${url} center / contain no-repeat;}`);
+      continue;
+    }
+    if (id === 'hud.xp-fill' && !sprite.slice) {
+      // cqw measures the full track, so the existing percentage width clips the source from its left edge.
+      rules.push(`${UI_SCOPE} .shop-dock .hud-xp-bar{container-type:inline-size;}`);
+    }
+    // Absolute border-image widths paint the panel without changing its existing
+    // border style/width (none/0 offline, solid/1px online) or its content box.
+    const borderStyle = id === 'hud.panel' ? '' : 'border-style:solid;';
+    const image = sprite.slice
+      ? `${borderStyle}border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
+      : `border-image:none;background:${url} ${id === 'hud.xp-fill' ? 'left center / 100cqw' : 'center / 100%'} 100% no-repeat;`;
+    rules.push(`${UI_SCOPE} ${selector}{${image}border-color:transparent;border-radius:0;box-shadow:none;}`);
+  }
+  // Override only after a face loaded. Each character outside the Latin range uses the same fallback as before.
+  if (fonts.has('body')) rules.push(`${UI_SCOPE} :is(.shop-dock,.online-countdown,#online-sidebar,#panels-root,.hover-card,.choice-overlay,.unit-panel,.render3d-layer),${UI_SCOPE} :is(button,input,select){font-family:Render3dSpiegel,system-ui,sans-serif;}`);
+  if (fonts.has('title')) rules.push(`${UI_SCOPE} :is(.hud-level,.hud-gold,.seat-hp,.countdown-round,.online-timer,h2,h3){font-family:Render3dBeaufort,system-ui,sans-serif;}`);
+  return rules.join('\n');
 }

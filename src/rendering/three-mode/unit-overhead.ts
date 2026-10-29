@@ -7,6 +7,7 @@ import type { Camera } from 'three';
  */
 import { CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
 import type { BoardMeters, BoardPiece } from '../board-feed';
+import type { OriginalUi } from './ui-original-assets';
 
 export interface MeterColors { readonly hp: string; readonly hpEnemy: string; readonly mana: string; readonly manaFull: string; readonly shield: string }
 export const DEFAULT_METER_COLORS: MeterColors = { hp: '#5fd68a', hpEnemy: '#f08080', mana: '#449cfa', manaFull: '#bde5ff', shield: '#e8f4ff' };
@@ -35,6 +36,9 @@ export interface OverheadContext {
   colors(): MeterColors;
   /** Shared, cached item icon texture (null while loading or when it failed); owned by the host. */
   itemTexture(url: string): Promise<Texture | null>;
+  /** Optional verified atlas regions; these remain owned by the mounted 3D UI skin. */
+  ui?: Pick<OriginalUi, 'sprite' | 'subscribe'>;
+  font?: () => string;
 }
 
 export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
@@ -59,12 +63,15 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const label = wantedCanvas?.getContext('2d');
   if (label?.fillText) { label.fillStyle = '#291b0a'; label.fillRect(0, 0, 128, 40); label.fillStyle = '#ffd84d'; label.font = 'bold 30px sans-serif'; label.textAlign = 'center'; label.fillText('通缉', 64, 31); wantedTexture!.needsUpdate = true; }
   const badgeTextures: CanvasTexture[] = [];
+  const badgeDrawers: (() => void)[] = [];
   const badges = new Group(); badges.name = 'render3d-item-stacks'; object.add(badges);
   const clearItems = () => {
     for (const sprite of [...icons.children, ...badges.children] as Sprite[]) sprite.material.dispose();
     icons.clear(); badges.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
+    badgeDrawers.length = 0;
   };
   let barKey = '', itemKey = '', disposed = false, flashing = false;
+  let shownItems: NonNullable<BoardPiece['items']> = [], itemFont = ctx.font?.() ?? 'sans-serif';
   let shown: { team: BoardPiece['team']; meters: BoardMeters } | null = null;
 
   const drawBar = (team: BoardPiece['team'], m: BoardMeters) => {
@@ -73,19 +80,40 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     const c = ctx.colors(), w = canvas.width, pad = 2, inner = w - pad * 2;
     const hpRatio = m.maxHp > 0 ? Math.max(0, Math.min(1, m.hp / m.maxHp)) : 0;
     const manaRatio = m.maxMana > 0 ? Math.max(0, Math.min(1, m.mana / m.maxMana)) : 0;
+    const fill = (id: string, color: string, x: number, y: number, width: number, height: number) => {
+      if (width <= 0) return;
+      const sprite = ctx.ui?.sprite(id);
+      if (sprite && typeof g.drawImage === 'function') {
+        // Clip the source as well as the destination, preserving the bar's texture scale as its value changes.
+        const ratio = Math.min(1, width / inner);
+        g.drawImage(sprite.source, 0, 0, sprite.width * ratio, sprite.height, x, y, width, height);
+      } else { g.fillStyle = color; g.fillRect(x, y, width, height); }
+    };
     g.clearRect(0, 0, w, canvas.height);
     g.fillStyle = '#091219'; g.fillRect(0, 0, w, 16); g.fillRect(0, 17, w, 9);
-    g.fillStyle = team === 'player' ? c.hp : c.hpEnemy; g.fillRect(pad, pad, inner * hpRatio, 12);
+    // Client frames can include an opaque empty-bar backing. Draw them before the live values and tick marks.
+    const frame = ctx.ui?.sprite('health.frame');
+    if (frame && typeof g.drawImage === 'function') g.drawImage(frame.source, 0, 0, w, canvas.height);
+    fill(team === 'player' ? 'health.hp-player' : 'health.hp-enemy', team === 'player' ? c.hp : c.hpEnemy, pad, pad, inner * hpRatio, 12);
     if (m.shield > 0 && m.maxHp > 0) {
       const start = inner * hpRatio, segment = Math.min(inner - start, inner * Math.min(1, m.shield / m.maxHp));
-      g.fillStyle = c.shield; g.fillRect(pad + start, pad, Math.max(segment, 3), 12);
+      fill('health.shield', c.shield, pad + start, pad, Math.max(segment, 3), 12);
     }
     g.fillStyle = 'rgba(9, 18, 25, 0.6)';
     for (let mark = 300; mark < m.maxHp; mark += 300) g.fillRect(pad + inner * mark / m.maxHp, pad, 2, 12);
     if (flashing) { g.fillStyle = '#ffffff'; g.fillRect(pad, 19, inner, 5); }
-    else { g.fillStyle = m.maxMana > 0 && m.mana >= m.maxMana ? c.manaFull : c.mana; g.fillRect(pad, 19, inner * manaRatio, 5); }
+    else {
+      const full = m.maxMana > 0 && m.mana >= m.maxMana;
+      fill(full ? 'health.mana-full' : 'health.mana', full ? c.manaFull : c.mana, pad, 19, inner * manaRatio, 5);
+    }
     if (texture) texture.needsUpdate = true;
   };
+  const unsubscribeUi = ctx.ui?.subscribe(() => {
+    if (disposed) return;
+    if (shown) drawBar(shown.team, shown.meters);
+    const font = ctx.font?.() ?? 'sans-serif';
+    if (font !== itemFont) { itemFont = font; for (const draw of badgeDrawers) draw(); }
+  });
 
   const placeItems = (items: NonNullable<BoardPiece['items']>) => {
     clearItems();
@@ -100,12 +128,17 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
         const badgeCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
         if (badgeCanvas) { badgeCanvas.width = 64; badgeCanvas.height = 40; }
         const g = badgeCanvas?.getContext('2d');
-        if (g?.fillText) {
-          g.fillStyle = '#091219'; g.fillRect(0, 0, 64, 40); g.fillStyle = full ? '#ffd84d' : '#ffffff';
-          g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.fillText(`${item.stacks}${full ? '满' : ''}`, 32, 31);
-        }
         const map = badgeCanvas ? new CanvasTexture(badgeCanvas) : null;
         if (map) { map.colorSpace = SRGBColorSpace; map.minFilter = LinearFilter; map.generateMipmaps = false; badgeTextures.push(map); }
+        if (g?.fillText && map) {
+          const draw = () => {
+            g.clearRect(0, 0, 64, 40);
+            g.fillStyle = '#091219'; g.fillRect(0, 0, 64, 40); g.fillStyle = full ? '#ffd84d' : '#ffffff';
+            g.font = `bold 30px ${itemFont}`; g.textAlign = 'center'; g.fillText(`${item.stacks}${full ? '满' : ''}`, 32, 31);
+            map.needsUpdate = true;
+          };
+          badgeDrawers.push(draw); draw();
+        }
         const badge = new Sprite(new SpriteMaterial({ map, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
         badge.name = `render3d-item-stack-${index}`; badge.userData = { stacks: item.stacks, maxStacks: item.maxStacks, full };
         badge.scale.set(10, 6.25, 1); badge.position.set(sprite.position.x + 3, 3, 0); badge.renderOrder = RENDER_ORDER + 1; badges.add(badge);
@@ -127,7 +160,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       shown = meters ? { team, meters } : null;
       if (nextBar !== barKey) { barKey = nextBar; bar.visible = Boolean(meters); if (meters) drawBar(team, meters); }
       const nextItems = (items ?? []).map(item => `${item.id}@${item.icon ?? ''}:${item.stacks ?? ''}/${item.maxStacks ?? ''}`).join(',');
-      if (nextItems !== itemKey) { itemKey = nextItems; placeItems(items ?? []); }
+      if (nextItems !== itemKey) { itemKey = nextItems; shownItems = items ?? []; placeItems(shownItems); }
       // Icons sit above the bar while it shows, in its place otherwise.
       icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
       badges.position.y = icons.position.y;
@@ -142,6 +175,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     dispose() {
       if (disposed) return;
       disposed = true;
+      unsubscribeUi?.();
       clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
     },
