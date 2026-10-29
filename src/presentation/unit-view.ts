@@ -18,6 +18,7 @@ import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 import { DISPLACEMENT_SLIDE_2D, KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
 import { anvilIconUrl, isAnvilUnit } from './anvil-display';
+import type { UnitAnomaly } from './anomaly-display';
 
 export const PIECE_RADIUS = 27;
 /** v22 anvil piece: icon size and disc colour (dark forge bronze). */
@@ -73,6 +74,8 @@ export class UnitView {
   declare confiscationTag?: Phaser.GameObjects.Text;
   /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
   private readonly pendingTag: Phaser.GameObjects.Text;
+  private readonly anomalyMark: Phaser.GameObjects.Text;
+  anomalies: readonly UnitAnomaly[] = [];
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
@@ -98,12 +101,13 @@ export class UnitView {
     this.items = add.graphics();
     this.flash = add.circle(0, 0, PIECE_RADIUS, 0xffffff).setAlpha(0);
     this.pendingTag = add.text(21, -19, '', { fontSize: '10px', fontStyle: 'bold', color: '#0b151f', backgroundColor: '#68ddd0', padding: { x: 2, y: 1 }, resolution: 2 }).setOrigin(0.5).setVisible(false);
+    this.anomalyMark = add.text(20, 14, '异', { fontSize: '11px', fontStyle: 'bold', color: '#f0dcff', backgroundColor: '#492f60', padding: { x: 3, y: 1 }, resolution: 2 }).setOrigin(0.5).setName('anomaly-mark').setVisible(false);
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
     this.statusIcons = add.graphics().setVisible(false);
     this.shieldLabel = add.text(0, 48, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag, this.anomalyMark];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
@@ -122,6 +126,13 @@ export class UnitView {
   invalidate(): void { this.renderKey = ''; }
   get name(): string { return this.identity.name; }
   get symbol(): string { return this.label.text; }
+
+  /** Kept separate from identity redraws so combat equipment refreshes cannot erase a native mark. */
+  setAnomalies(anomalies: readonly UnitAnomaly[]): void {
+    this.anomalies = anomalies;
+    this.anomalyMark.setText(anomalies.some(entry => entry.source === 'portable') ? '异·复' : '异').setVisible(anomalies.length > 0);
+    this.token.setData('anomalies', anomalies);
+  }
 
   /**
    * Preparation identity: hero, star level, cost and equipped item pips. `pending` (C18): items worn now that enter the

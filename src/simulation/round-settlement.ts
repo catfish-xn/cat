@@ -45,6 +45,8 @@ export interface MultiplayerProgress {
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly seatId: string;
   readonly combatRosterLocked?: true;
+  /** R5: bench trading may restore a future native holder during a frozen PvP battle. */
+  readonly combatAnomaly?: { readonly binding: import('./strategy-types').AnomalyBinding | null; readonly provenancePrefixLength: number };
   readonly status: 'active' | 'eliminated';
   readonly receipts: readonly RoundSettlementReceipt[];
   readonly forfeitedChoices: readonly string[];
@@ -114,6 +116,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
     if(openingEncounterId(state)==='warwicks-hunger'&&!r.g23Facts?.openingDeaths)return fail(state,'invalid-receipt');
+    const openingBinding=multiplayer.combatAnomaly ? multiplayer.combatAnomaly.binding : state.anomalyBinding;
     if(r.g23Facts){
       if(r.g23Facts.openingDeaths?.some(d=>d.eventSeq>=r.combatEventCount))return fail(state,'invalid-receipt');
       validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext,state.items);
@@ -128,13 +131,13 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
-      const hunter=state.anomalyBinding?.definitionId==='headhunter'?state.anomalyBinding:null;
+      const hunter=openingBinding?.definitionId==='headhunter'?openingBinding:null;
       if(facts.d11Headhunter&&(!hunter||facts.round<hunter.boundRound
         ||facts.d11Headhunter.holderId!==JSON.stringify(['t2',multiplayer.seatId,'unit',hunter.unitId])
         ||facts.d11Headhunter.kills.some(k=>k.eventSeq>=r.combatEventCount)))return fail(state,'invalid-receipt');
       if(hunter&&state.preparation.units.some(u=>u.id===hunter.unitId&&u.location.kind==='board')&&!facts.d11Headhunter)return fail(state,'invalid-receipt');
     }
-    else if(state.anomalyBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===state.anomalyBinding!.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
+    else if(openingBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===openingBinding.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');
@@ -183,7 +186,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       investmentHp:state.augmentProgress.investmentHp,
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
-    const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;
+    const {combatRosterLocked: _combatRosterLocked, combatAnomaly: _combatAnomaly, ...unlockedMultiplayer} = state.multiplayer;
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
       gold:plan.goldAfter-deferredRoundIncome(plan),playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),

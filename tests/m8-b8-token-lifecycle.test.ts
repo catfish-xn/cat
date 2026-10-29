@@ -6,6 +6,7 @@ import { MatchSession } from '../src/rendering/match-session';
 import { RemoteSession } from '../src/rendering/online/remote-session';
 import { sionPreparation } from './fixtures/sion-preparation';
 import type { BoardControls } from '../src/rendering/board-feed';
+import type { UnitAnomaly } from '../src/presentation/anomaly-display';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -48,6 +49,7 @@ const display = vi.hoisted(() => {
     meter() { return { value: 0, maxValue: 0 }; }
     destroyCount = 0;
     resetCount = 0;
+    anomalies: readonly UnitAnomaly[] = [];
     constructor(_scene: unknown, unit: Unit, x: number, y: number) {
       this.token = new Token(`unit:${unit.id}`, x, y).setData('unitId', unit.id)
         .setData('definitionId', unit.definitionId).setData('team', unit.team).setData('starLevel', unit.starLevel);
@@ -55,6 +57,7 @@ const display = vi.hoisted(() => {
       created.push(this);
     }
     update(unit: Unit, _equipped: readonly string[]) { this.lastUnit = unit; }
+    setAnomalies(anomalies: readonly UnitAnomaly[]) { this.anomalies = anomalies; }
     setRing(ring: string) { this.ring = ring; }
     drawCombat(unit: CombatUnit, _combat: CombatState) { this.lastCombatUnit = unit; }
     resetMeters() { this.resetCount++; }
@@ -213,6 +216,25 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
     scene.command(scene.session.buy(0, initial.shop.generation), 'local');
     expect(client.send).toHaveBeenCalledTimes(1); expect(play).toHaveBeenCalledTimes(1);
     expect(play.mock.calls[0][0][0].toStar).toBe(2); expect(scene.session.state).toBe(state);
+  });
+
+  it('P4 reads native and portable holders across board/bench moves and clears removed effects', () => {
+    // Isolated display fixture: this is not a naturally progressed or restore-valid 4-6 save.
+    const base = createMatch(42), unit = base.preparation.units.find(unit => unit.team === 'player')!;
+    const copy = { ...unit, id: 'copy-holder', location: { kind: 'bench' as const, slot: 1 } };
+    const initial: MatchState = { ...base, anomalyBinding: { definitionId: 'the-finisher', unitId: unit.id, choiceId: 'display-fixture', boundRound: 1 },
+      preparation: { ...base.preparation, units: [...base.preparation.units, copy] },
+      items: [{ id: 'portable-fixture', definitionId: 'TFT13_AnotherAnomaly_Item:the-finisher', location: { kind: 'unit', unitId: copy.id, slot: 0 } }] };
+    const scene = makeScene(initial), view = scene.views.get(unit.id)!, original = token(scene, unit.id), copied = scene.views.get(copy.id)!;
+    const effects = [{ id: 'the-finisher', source: 'native' }], copiedEffects = [{ id: 'the-finisher', source: 'portable' }];
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects);
+    command(scene, scene.session.deploy(unit.id, { kind: 'bench', slot: 0 }));
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects); expect(token(scene, unit.id)).toBe(original);
+    command(scene, scene.session.deploy(unit.id, { kind: 'board', cell: { col: 0, row: 4 } }));
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects); expect(token(scene, unit.id)).toBe(original);
+    scene.session = new MatchSession({ ...scene.session.state, items: [], anomalyBinding: null }); sessions.push(scene.session);
+    scene.sync();
+    expect(view.anomalies).toEqual([]); expect(copied.anomalies).toEqual([]); expect(token(scene, unit.id)).toBe(original);
   });
 
   it('creates the actual seed-42 Tristana before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {

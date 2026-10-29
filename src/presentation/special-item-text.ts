@@ -53,6 +53,7 @@ export function specialItemLines(definition: ItemDefinition, radiantOfName?: str
   const descriptions = definition.id.startsWith(PORTABLE_ANOMALY_PREFIX)
     ? [`携带者获得【${anomalyDisplayName(definition.id.slice(PORTABLE_ANOMALY_PREFIX.length))}】的异常突变进化效果。`,
       anomalyPlayerDescription(definition.id.slice(PORTABLE_ANOMALY_PREFIX.length)),
+      ...(definition.effectDescriptions ?? []).slice(1),
       '卸下后效果失效，原异常英雄不能装备；不会继承原英雄已累计的成长。']
     : definition.effectDescriptions ?? [];
   return [...(radiantOfName ? [`「${radiantOfName}」的光明版本。`] : []), ...(stats.length ? [stats.join(' · ')] : []),

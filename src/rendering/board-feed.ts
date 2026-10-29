@@ -11,6 +11,8 @@ import { readLegendChoice } from './legend-choice';
 import type { PvpDamage } from '../presentation/pvp-damage';
 
 export interface BoardPiece {
+  /** Obtained effects only (native binding or public portable item); never pending offers. */
+  readonly anomalies?: readonly import('../presentation/anomaly-display').UnitAnomaly[];
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
   /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
   readonly effectiveStarLevel?: 4;

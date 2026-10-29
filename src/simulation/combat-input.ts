@@ -49,6 +49,7 @@ export interface CombatInputBasis {
 }
 /** Produced by the independently validated resource prefix, not candidate basis data. */
 export interface CombatResourcePrefix {
+  readonly anomalyBinding?: import('./strategy-types').AnomalyBinding | null;
   readonly units: readonly Pick<Unit, 'id' | 'definitionId' | 'starLevel'>[];
   readonly items: readonly Pick<ItemInstance, 'id' | 'definitionId'>[];
   readonly persistentGrowth: readonly PersistentGrowth[];
@@ -174,6 +175,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
       && receipts.some(receipt => receipt.kind === 'anomaly' && receipt.eventId === binding.choiceId
         && receipt.definitionId === binding.definitionId && receipt.round === binding.boundRound));
   }
+  requireBasis(equal(input.anomalyBinding, authority.resources.anomalyBinding && !authority.heldUnitIds?.includes(authority.resources.anomalyBinding.unitId) ? authority.resources.anomalyBinding : null));
   requireBasis(equal(input.augmentCopyKills??[],authority.augmentCopyKills??[]));
   requireBasis(equal(input.augmentHistoryGrowth ?? [],authority.augmentHistoryGrowth ?? []));
   requireBasis(Array.isArray(input.persistentGrowth) && equal(input.persistentGrowth, authority.resources.persistentGrowth.filter(g=>!authority.heldUnitIds?.includes(g.unitId))));

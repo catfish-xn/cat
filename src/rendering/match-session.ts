@@ -106,8 +106,9 @@ export class MatchSession {
   moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.paused ? this.blocked() : this.commit(moveItemSummon(this.matchState, itemInstanceId, cell)); }
   private summonCache: { readonly state: MatchState; readonly summons: readonly ItemSummonView[] } | null = null;
   /**
-   * G2-4b: my movable preparation summons where the rules place them now (empty outside preparation). Offline the rules'
-   * `readItemSummons` of my state, in the same fields the server sends online (RemoteSession reads its push instead).
+   * G2-4b: my movable preparation summons where the rules place them now (also shown during an anomaly choice). Offline the rules'
+   * `readItemSummons` of my state, including the anomaly choice over the preparation board, in the same fields the
+   * server sends online (RemoteSession reads its push instead).
    */
   get itemSummons(): readonly ItemSummonView[] {
     const state = this.matchState;

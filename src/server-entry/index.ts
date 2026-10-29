@@ -7,6 +7,7 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
+  isAnomalyPreparationChoice, isAnomalyPreparationRound, readAnomalyTargetIds, readAnomalyOfferHistory, isEligibleAnomalyTarget,
   forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
   readItemSummons, moveItemSummon, isSummonPreparation, d14PublicUnitMark, recordAugmentSettlementTable,
 } from '../simulation/match';

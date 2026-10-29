@@ -1,3 +1,5 @@
+import { resolveAnomalyBinding } from '../anomaly-ownership';
+import type { AnomalySelection, AnomalyBinding } from '../strategy-types';
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { carryGolemStar } from '../augment-pool-batch5-g6-stats';
 import { restartMissionRemovalId } from '../restart-mission';
@@ -86,6 +88,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     requireValue(commitIndex >= 0, 'mechanic reward settlement');
     return [claim.id, {claimRound:claim.round, commitIndex}] as const;
   }));
+  let anomalySelection: AnomalySelection | null = null, anomalyBinding: AnomalyBinding | null = null;
+  let lastAnomalyBinding: AnomalyBinding | null = null;
   const absent=new Set<string>();
   const units = new Map<string, ProvenanceUnit>(), items = new Map<string, ProvenanceItem>();
   let growth: readonly PersistentGrowth[] = [], nextUnitSerial = 1, nextItemSerial = 1, lastOrdinal = 1;
@@ -97,7 +101,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
   let inventoryPrefix=-1,inventoryRound=0;
-  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId==='carry-golem'?{starLevel:carryGolemStar(context.throughRoundOrdinal,context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='im-the-carry-now')?.round??context.throughRoundOrdinal)}:unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
+  const projection = (): FoldedResourceProvenance => ({ anomalySelection, anomalyBinding, lastAnomalyBinding, units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId==='carry-golem'?{starLevel:carryGolemStar(context.throughRoundOrdinal,context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='im-the-carry-now')?.round??context.throughRoundOrdinal)}:unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
     items: projectBatch5Items([...items.values()],context.batch5Inventory??{conversions:[],anvils:[]},prefixLength,context.throughRoundOrdinal,inventoryPrefix,inventoryRound).map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
@@ -144,6 +148,13 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(!entries.slice(0,index).some(e=>e.kind==='restart-mission-completed'&&e.choiceId===entry.choiceId), 'duplicate restart');
       requireValue([...units.values()].every(u=>absent.has(u.id)||deferredCarouselIds.has(u.id)
         ||context.pendingCarouselUnitIds?.includes(u.id)||isAnvil(u.definitionId)), 'restart removal completeness');
+    } else if (entry.kind === 'anomaly-selected') {
+      keys(entry, [...common, 'choiceId', 'unitId']);
+      const receipt = context.scheduleReceipts.find(r => r.kind === 'anomaly' && r.eventId === entry.choiceId);
+      const unit = units.get(entry.unitId);
+      requireValue(!anomalySelection && receipt && receipt.unitId === entry.unitId && receipt.round === round.ordinal && receipt.definitionId && unit && !absent.has(unit.id) && !deferredCarouselIds.has(unit.id), 'anomaly selection');
+      anomalySelection = { definitionId: receipt.definitionId, championDefinitionId: unit.definitionId, choiceId: entry.choiceId, boundRound: receipt.round };
+      anomalyBinding = { definitionId: receipt.definitionId, unitId: unit.id, choiceId: entry.choiceId, boundRound: receipt.round };
     } else if (entry.kind === 'unit-transformed' || entry.kind === 'augment-transform-completed') {
       keys(entry, [...common, 'choiceId', ...(entry.kind === 'unit-transformed' ? ['unitId','from','to','starLevel'] : [])]);
       const receipt = context.scheduleReceipts.find(r => r.eventId === entry.choiceId && r.kind === 'augment');
@@ -265,6 +276,15 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       event.consumedIds.forEach(id => units.delete(id));
       units.set(event.survivorId, { id: event.survivorId, definitionId: event.definitionId, starLevel: event.toStar });
       growth = mergeGrowthLedger(growth, [event]); acquisition.survivorId = event.survivorId; acquisition.star = event.toStar;
+    } else if(entry.kind==='unit-upgraded-after-combat') {
+      keys(entry,[...common,'event']);validateUpgrade(entry.event);
+      const event=entry.event;
+      for(const id of [event.survivorId,...event.consumedIds]) {
+        const unit=units.get(id);requireValue(unit&&!absent.has(id)&&unit.definitionId===event.definitionId&&unit.starLevel===event.fromStar,'deferred upgrade ownership');
+      }
+      event.consumedIds.forEach(id=>units.delete(id));
+      units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});
+      growth=mergeGrowthLedger(growth,[event]);
     } else if(entry.kind==='carousel-preparation-settled') {
       keys(entry,[...common,'receiptIds','claimedUnitIds','upgrades']);
       requireValue(Array.isArray(entry.receiptIds)&&Array.isArray(entry.claimedUnitIds)&&Array.isArray(entry.upgrades),'carousel preparation');
@@ -418,10 +438,16 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       growth = [...next].map(([unitId, attackDamageBps]) => ({ unitId, attackDamageBps })).sort(compareGrowth);
       commits.set(entry.roundId, { roundId: entry.roundId, combatId: entry.combatId, settlementId: entry.settlementId });
     } else requireValue(false, 'fact kind');
+    const upgrades = entry.kind === 'unit-upgraded' || entry.kind === 'unit-upgraded-after-combat' ? [entry.event]
+      : entry.kind === 'carousel-preparation-settled' || entry.kind === 'carousel-unit-claimed' ? entry.upgrades : [];
+    for (const upgrade of upgrades) if (anomalyBinding && upgrade.consumedIds.includes(anomalyBinding.unitId)) anomalyBinding = { ...anomalyBinding, unitId: upgrade.survivorId };
+    anomalyBinding = resolveAnomalyBinding(anomalySelection, anomalyBinding, [...units.values()].filter(u => !deferredCarouselIds.has(u.id) && !context.pendingCarouselUnitIds?.includes(u.id)));
+    if (anomalyBinding) lastAnomalyBinding = anomalyBinding;
     requireValue(index !== 0 || entry.kind === 'unit-acquired' && (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
     if (index + 1 === prefixLength) result = projection();
   }
   finishAcquisition();
+  requireValue(context.scheduleReceipts.filter(r => r.kind === 'anomaly').length === (anomalySelection ? 1 : 0), 'missing anomaly selection');
   if(context.scheduleReceipts.some(r=>r.kind==='augment'&&r.definitionId==='anger-issues'))requireValue([...items.values()].every(i=>fixedItemIds.has(i.id)||i.definitionId==='rageblade'||!isAngerIssuesConvertibleItem(i.definitionId)),'missing anger issues conversion');
   requireValue(usedBirths.size === births.size, 'missing receipt birth');
   {

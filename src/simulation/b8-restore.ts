@@ -1,4 +1,6 @@
 import { brbGiftPlan } from './augment-brb';
+import { reconcileAnomalyResources } from './anomaly-ownership';
+import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2CopyKills } from './augment-pool-batch5-r2-history';
 import { replayAngerConversion } from './augment-pool-batch5-r2';
@@ -114,12 +116,24 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
   let items: readonly ItemInstance[] = previous?d14OwnedItems(previous):[], serial = previous?.nextItemSerial ?? 1;
   let preparation = previous?.preparation ?? {...next.preparation, units:[]};
   let historicalBinding=previous?.anomalyBinding??null;
+  let historicalSelection=previous?.anomalySelection??null;
+  if(previous?.d14?.held)preparation={...preparation,units:[...preparation.units,previous.d14.held.unit]};
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
   const birthById = new Map([...births.values()].map(birth => [birth.id, birth]));
+  const deferredCarousel=new Set(previous?.carousel?.receipts.filter(r=>!previous.carousel!.preparationReceipts.includes(r.id)).map(r=>r.unitId)??[]);
   const absentItems=new Set<string>(),s3b=s3bInventoryReplay(next,previous);
+  const frozenAnomaly=next.multiplayer?.combatAnomaly;
+  if(next.multiplayer?.combatRosterLocked&&next.anomalySelection)check(frozenAnomaly, 'missing frozen anomaly ownership');
+  if(frozenAnomaly)check(next.multiplayer?.combatRosterLocked&&Number.isSafeInteger(frozenAnomaly.provenancePrefixLength)
+    &&Object.keys(frozenAnomaly).sort().join(',')==='binding,provenancePrefixLength'
+    &&frozenAnomaly.provenancePrefixLength>=0&&frozenAnomaly.provenancePrefixLength<=next.resourceProvenance.entries.length, 'frozen anomaly prefix');
   const checkOpening = (prefixLength: number) => {
+    if(frozenAnomaly?.provenancePrefixLength===prefixLength) {
+      const expected=historicalBinding&&next.preparation.units.some(u=>u.id===historicalBinding!.unitId&&u.location.kind==='board')?historicalBinding:null;
+      check(equal(frozenAnomaly.binding,expected),'frozen anomaly ownership');
+    }
     for(const evidence of (next.seatMechanics?.hidden.grantEvidence??[]) as readonly G23GrantEvidence[]) {
       if(evidence.resourcePrefixLength!==prefixLength||!evidence.receiptId.startsWith('g23:academy:'))continue;
       const tier=Number(evidence.receiptId.split(':').at(-1));
@@ -130,6 +144,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
     if (basis?.provenancePrefixLength === prefixLength) {
       const hidden=new Set(d14HeldAtPrefix(next,prefixLength).heldItemIds);
       check(equipmentContinuation(items.filter(i=>!hidden.has(i.id)), basis.inputs.items), 'historical opening equipment continuation');
+      check(equal(basis.inputs.anomalyBinding, historicalBinding && !d14HeldAtPrefix(next,prefixLength).heldUnitIds.includes(historicalBinding.unitId) ? historicalBinding : null), 'historical opening anomaly continuation');
     }
   };
   for (const fact of next.resourceProvenance.entries.slice(previous?.resourceProvenance.entries.length ?? 0)) {
@@ -140,6 +155,13 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
     if(fact.kind==='item-combined')check(fact.event.consumedIds.every(id=>!absentItems.has(id)),'D14 hidden combine');
     if(fact.kind==='consumable-used')check(fact.record.affectedItems.every(i=>!absentItems.has(i.id)),'D14 hidden consumable');
     switch (fact.kind) {
+      case 'anomaly-selected': {
+        const receipt=next.scheduleReceipts.find(r=>r.eventId===fact.choiceId&&r.kind==='anomaly');
+        check(!historicalSelection&&receipt&&receipt.definitionId&&Object.hasOwn(ANOMALY_DEFINITIONS,receipt.definitionId)&&receipt.unitId===fact.unitId&&receipt.round===getMultiplayerRoundById(fact.roundId).ordinal&&preparation.units.some(u=>u.id===fact.unitId&&!deferredCarousel.has(u.id)), 'historical anomaly selection');
+        historicalSelection={definitionId:receipt.definitionId!,championDefinitionId:preparation.units.find(u=>u.id===fact.unitId)!.definitionId,choiceId:fact.choiceId,boundRound:receipt.round};
+        historicalBinding={definitionId:receipt.definitionId!,unitId:fact.unitId,choiceId:fact.choiceId,boundRound:receipt.round};
+        break;
+      }
       case 'd14-selected': {
         const receipt=next.scheduleReceipts.find(r=>r.eventId===fact.choiceId);
         if(receipt?.definitionId==='into-the-unknown'){
@@ -153,15 +175,15 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         const definitionId = fact.source.kind === 'opening' ? selectOpeningUnit(fact.source.seed, fact.source.seatId)
           : fact.source.kind === 'shop' ? fact.source.definitionId : birthById.get(fact.unitId)?.definitionId;
         check(definitionId, 'historical unit birth');
+        if(fact.source.kind==='carousel')deferredCarousel.add(fact.unitId);
         // Equip planners inspect identity/team/definition only; deployment has no resource fact.
         preparation = {...preparation, units:[...preparation.units, {id:fact.unitId, definitionId,
-          team:'player', starLevel:1, location:{kind:'bench',slot:0}}]};
+          team:'player', starLevel:fact.source.kind==='shop'?(fact.source.starLevel??1):(birthById.get(fact.unitId)?.starLevel??1), location:{kind:'bench',slot:0}}]};
         break;
       }
       case 'item-acquired': {
         const birth = birthById.get(fact.itemId);
         check(birth, 'historical item birth');
-        if(portableAnomalyId(birth.definitionId)!==null){const chosen=next.scheduleReceipts.find(r=>r.kind==='anomaly')!;historicalBinding={definitionId:chosen.definitionId!,choiceId:chosen.eventId,unitId:chosen.unitId!,boundRound:chosen.round};}
         items = [...items, {id:fact.itemId,definitionId:birth.definitionId,location:{kind:'inventory'}}];
         serial++;
         break;
@@ -191,6 +213,10 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         // Final placements may follow this upgrade and a later removal. Keep the
         // current bindings until their ordered resource fact changes them; using
         // next.items here would let future equips occupy the migration slots.
+        if(fact.kind==='carousel-preparation-settled') {
+          for(const id of fact.receiptIds)deferredCarousel.delete(next.carousel?.receipts.find(r=>r.id===id)?.unitId??null);
+          fact.claimedUnitIds.forEach(id=>deferredCarousel.delete(id));
+        } else if(fact.kind==='carousel-unit-claimed')deferredCarousel.delete(fact.unitId);
         const upgrades = 'event' in fact ? [fact.event] : fact.upgrades;
         const transfer=transferUpgradeResources(items,historicalBinding,upgrades);items=transfer.items;historicalBinding=transfer.anomalyBinding;
         for (const event of upgrades) preparation = {...preparation,units:preparation.units
@@ -222,10 +248,14 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         break;
       case 'combat-growth-committed': break;
     }
+    const resources=reconcileAnomalyResources(historicalSelection,historicalBinding,preparation.units.filter(u=>!deferredCarousel.has(u.id)&&!next.carousel?.pendingUnits.some(p=>p.unitId===u.id)),items);
+    historicalBinding=resources.anomalyBinding;items=resources.items;
   }
   items=projectBatch5Items(items,inventoryPlan,next.resourceProvenance.entries.length,next.round,inventoryPrefix,inventoryRound);
   s3b.finish(items);
   checkOpening(next.resourceProvenance.entries.length);
+  check(equal(historicalSelection,next.anomalySelection)&&equal(historicalBinding,next.anomalyBinding)
+    &&next.scheduleReceipts.filter(r=>r.kind==='anomaly').length===(historicalSelection?1:0), 'historical anomaly ownership');
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
 
@@ -422,8 +452,8 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   validateG23GrantEvidence(state,context,parsedJsonInput);
   validateAnomalyAcquisition(state,context,parsedJsonInput);
-  validateD14(state,context);
-  check(equal(current,{units:sorted([...d14OwnedUnits(state).filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
+  validateD14(state,context,current);
+  check(equal(current,{lastAnomalyBinding:current.lastAnomalyBinding,anomalySelection:state.anomalySelection,anomalyBinding:state.anomalyBinding,units:sorted([...d14OwnedUnits(state).filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
     items:sorted(d14OwnedItems(state).map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
   // Academy grants must authenticate their historical deployment/equipment even
@@ -452,7 +482,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     return receipt.round;
   }) } : undefined;
   const openingResources=parsedJsonInput&&prefixLength===entries.length?current:foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput);
-  const basis = restoreCombatInput(state.combatInputBasis,{...(shared?{shared}:{}),ghostFriendsGrowth:ghostFriendsGrowth(state),augmentCopyKills:r2CopyKills(state,openingResources.items),cabalGrowth:readCabalGrowth(state),sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{...(shared?{shared}:{}),ghostFriendsGrowth:ghostFriendsGrowth(state),augmentCopyKills:r2CopyKills(state,openingResources.items),cabalGrowth:readCabalGrowth(state),sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state,openingResources.anomalyBinding),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -541,7 +571,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     const birth=entries[cursor];
     if(payload.kind==='forge'&&(birth?.kind!=='unit-acquired'||birth.source.kind!=='loot'||birth.source.receiptId!==lootReceiptId(slot.dropId)))return false;
     if (payload.kind === 'unit'||payload.kind==='forge') {
-      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,anomalySelection:state.anomalySelection,d14:state.d14,nextUnitSerial:nextUnit},
         payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
       for (const fact of plan.facts) take(fact);
@@ -597,7 +627,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
         const target = atom.options.find(id => preparation.units.some(unit => unit.team === 'player' && unit.definitionId === id));
         check(target !== undefined && receipt.definitionId === target, 'mechanic duplicator target');
       }
-      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor,false,receipt.starLevel??1);
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,anomalySelection:state.anomalySelection,d14:state.d14,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor,false,receipt.starLevel??1);
       check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
       for (const fact of plan.facts) take(fact);
       preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding; nextUnit = plan.nextUnitSerial;
@@ -630,7 +660,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
           const orb=state.m8.loot.rewardOrbs?.find(o=>o.source==='mechanic'&&o.entries.some(e=>lootReceiptId(e.dropId)===receiptId));
           const drop=orb?.entries[0],receipt=drop&&receipts.get(drop.dropId);
           check(drop?.payload.kind==='unit'&&receipt&&receipt.grantedUnitIds.length===1,'shop orb claim');
-          const plan=planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},drop.payload.definitionId,
+          const plan=planUnitAcquisition({preparation,items,anomalyBinding:binding,anomalySelection:state.anomalySelection,d14:state.d14,nextUnitSerial:nextUnit},drop.payload.definitionId,
             {kind:'loot',receiptId},cursor,false,drop.payload.starLevel??1);
           check(plan.ok&&receipt.grantedUnitIds[0]===plan.unitId,'shop orb unit transaction');
           for(const value of plan.facts)take(value);

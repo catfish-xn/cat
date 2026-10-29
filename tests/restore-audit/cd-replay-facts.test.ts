@@ -233,7 +233,11 @@ it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async
   // 3-2; the driver selects that real card (no scripted offers).
   // Keep the original Mirror-labelled dynamic replay path and reserve for paid anomaly rerolls.
   const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 49, anomalyDefinitionId,
-    augmentPriorities:['wealthy-rehab-ii'],goldReserveByRound:{'4-5':150} });
+    augmentPriorities:['wealthy-rehab-ii'],
+    // R4a reaches eagle-eye at paid refresh 151; save real income before the late XP/shop push.
+    goldReserveByRound: anomalyDefinitionId === 'eagle-eye'
+      ? Object.fromEntries(['3-5','3-6','3-7','4-1','4-2','4-3','4-4','4-5'].map(round=>[round,180]))
+      : {'4-5':150} });
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   expect(prep.augments.map(a => a.definitionId)).toContain('wealthy-rehab-ii');
   const id = prep.anomalyBinding!.unitId;

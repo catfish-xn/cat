@@ -7,6 +7,7 @@ import type { FrozenDirectDrop } from '../loot-types';
 import type { MatchEvent, MatchState } from '../match-types';
 import { appendResourceProvenance, mergeGrowthLedger } from '../resource-provenance';
 import { planUnitAcquisition } from '../unit-acquisition';
+import { reconcileD14 } from '../d14-runtime';
 import { SHOP_CATALOG } from '../match-rules';
 import { UNIT_DEFINITIONS } from '../units';
 import type { UnitUpgradedEvent } from '../unit-types';
@@ -82,8 +83,9 @@ export function grantMechanicUnit(state: MatchState, request: MechanicGrantReque
   const born: MatchState = { ...state, preparation: plan.preparation, nextUnitSerial: plan.nextUnitSerial, items: plan.items,
     anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents),
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts) };
-  return commit(born, { ...identity(state, request), kind: 'unit', definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'held', unitId: plan.unitId, gold: 0 },
-    plan.events, plan.upgradeEvents);
+  const events: MatchEvent[] = [...plan.events];
+  return commit(reconcileD14(born, events), { ...identity(state, request), kind: 'unit', definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'held', unitId: plan.unitId, gold: 0 },
+    events, plan.upgradeEvents);
 }
 
 /** Generic exactly-once consumable grant, including both champion duplicators. */

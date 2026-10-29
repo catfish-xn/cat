@@ -10,6 +10,12 @@
 
 用户规则 9／10／11 已实现：选择 `restart-mission` 清除场上／备战席棋子、不发出售金币，永久装备回库存；锻造器、选秀暂存保留。固定六个二星（1×一费、3×二费、2×三费）从对应完整商店目录等权有放回抽取，先入奖励法球，领取时按共享池现有缺池折金／合星协议处理。公开命令与失败枚举不变，独立 RNG 子流不影响商店等现有流。导出签名、唯一清除标记、魔像退场、恢复拒绝边界与单人／server／本地房间／bot／2D／3D 调用点见 [D4 合同](D4_RESTART_MISSION.md)。未注册候选池、未改身份或纪元证据，源码摘要留 D5 统一重录。
 
+## 2026-10-29 v26 anomA：异变准备、资格和初始 12 项报价
+
+本节覆盖下文旧异变“30 秒独立选择再准备”及“仅排上一项”的描述。4-6 从入场共用一次 75 秒 preparation 截止点，提前确认不重置；待选可执行准备期合法部署/上下场/移动及其他经济操作，**所有棋子禁止出售**（含锁定目标，返回原 state 和 `wrong-phase`），确认后可卖，单人同步。用户 11:38/12:02 补充决定覆盖此前待选出售权限。前端打开异变界面时锁盘、隐藏后允许调阵，由另一单接线；隐藏不解除服务器禁售。本人私有投影新增 `anomalyTargetIds: readonly string[]`；公共资格查询、失败语义、召唤物已知/待证分类、报价事实及所有生产调用链见 [v26 anomA 完整合同](V26_ANOMALY_R1_R3_R4A.md)。
+
+首次免费报价计入初始 12 项排重，之后只排紧接上一项。独立 `anomaly-offer-history-v1` 记录报价事实，离线只重演报价窗口并封存最终选择证明，普通局不因此启用永久强化/战斗历史；联机从 4-6 起恢复必须另给独立 server authority，以认证候选删除历史的情况。rules/content 升 v26，schema/save/replay/command 保持 12/8/8/7。R2 保留目标锁定；D14 超时先按人口上限自动部署锁定目标，再做资格判断。R6/R7 保持，R5 卖后重买保留留后续任务；旧纪元/快照不在本单重录。
+
 ## 2026-10-27 v25-h8：三项历史依赖强化
 
 ## 2026-10-29 PvE 失败扣血（用户 10:55 批准，待统一纪元）
@@ -854,7 +860,7 @@ Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and
 - Tactician's Crown (金铲铲冠冕, `TFT_Item_ForceOfNature`, source `MaxArmySizeIncrease` 1; user rule 2026-10-17): every G2-3 reward claim with `kind:'item'` and `definitionId:'TFT_Item_ForceOfNature'` adds +1 to `getDeploymentCap` permanently, wherever the crown sits (inventory, board or bench unit) and even after its holder is sold, it is removed or the instance is gone. A grant that fails records no claim and adds nothing. Saves, frozen combat inputs and PvP snapshots add no field: each validates population against the claims in the G2-3 progress it already carries, and a frozen input's claims must be a prefix of the authoritative claims. In this slice crowns come only from Conqueror tiers 12/15 (no spatula, no recipe).
 - Crown win gold (`TFT_Item_ForceOfNature`, source `PercentGoldChance=10`): user conventions G24-CROWN-GOLD-01..05 count only crowns equipped on deployed units at combat start (dead holders still count, inventory/bench excluded). Each crown independently rolls 10% for 1 gold on PvE/PvP wins; losses/draws do not roll. The G23 lcg32-v1 stream consumes one draw per crown after the battle's black-market draw. Gold is credited directly, after high-roller/chest payouts, once under `g23:crown:<battleId>` with source `tacticians-crown`; no pickup orb. `G23BattleFacts.crowns?:number` is omitted when zero (otherwise 1..84, the structural 7×4 deployment cells × 3 equipment slots bound); `G23EconomyAction.crownGold?:number` exists when rolled, including zero. Restore validates deterministic economy replay, mechanic receipt linkage, frozen combat input and terminal facts; repeated step/settlement/Continue never pays again. Rules/content v5 and policy `g2-4a-v5`; schema/save/replay unchanged; previous identity rejected, no migration. Evidence and convention provenance: `docs/evidence/g2-3/RECONCILIATION.md`.
 
-- `combineItems` and `equipItem` are atomic. Two inventory components become one new item ID; only the nine supported recipes are legal. Three equipment slots, deterministic upgrade transfer, overflow return and sale return remain authoritative in Match. Tristana growth sums into an upgrade survivor; selling destroys that unit's growth and anomaly binding.
+- `combineItems` and `equipItem` are atomic. Two inventory components become one new item ID; only the nine supported recipes are legal. Three equipment slots, deterministic upgrade transfer, overflow return and sale return remain authoritative in Match. Tristana growth sums into an upgrade survivor; selling destroys that instance's growth. v26 R5 retains the seat's `anomalySelection`; sale only detaches the current `anomalyBinding`, which restores to one eligible copy of the same champion (see the R5 contract below).
 - Choice is a real phase; all ordinary commands reject until it resolves. Choices validate ID/generation. Seven-way component choices consume no RNG; augment three-way offers consume three words; anomaly single offers consume one word, with1G rerolls excluding only the previous offer. Target binding precedes offers. Confirmation is free. Upgrades migrate bindings.
 - Choice may carry a finished Combat snapshot during post-PvE rewards, and `returnPhase` distinguishes preparation from settlement. Restore verifies it against the scheduled timing (supply always returns settlement) and rejects forged return phases. Rendering must refresh on every transition out of Combat, including Combat→choice. A supply round has no Combat: selecting its component atomically settles income and XP. No early Continue can bypass rewards.
 - Shop, choice, reward and battle-seed streams are independent. Successful Start consumes one battle-seed word and freezes a separate Combat RNG. A random component consumes one reward word. Other command/choice/settlement operations consume no words unless explicitly specified by R4.
@@ -1756,3 +1762,36 @@ G4 出生修订 `augment-pool-batch5-g4-v25-spawn-1`：内部 `castB5Voidcaller(
 - `validateCarryGolem(state: MatchState): void` 在离线与共享恢复入口执行：核对持有者、唯一单位、推导星级、四张获取收据、固定装备位置与7条连续资源来源事实；魔像坐标必须为默认棋盘己方部署区内无重叠的整数格。从资源流起点独立累计装备获取、合成、消耗品替换产生的分配，核对每次连续序号及最终 `nextItemSerial`，不依赖收据或当前装备ID反推起始值。无持有者的残留单位/收据同样拒绝。对象、JSON、规范文本及传入房间 authority 的恢复均检查；失败为 `RangeError('Invalid carry golem authority')`，沿各恢复入口原有错误封装；不修补缺失凭证。
 - 存活伤害沿用训练师魔像政策：附赠魔像不进入 `countsG23SurvivorDamage` 的伤害人数，10英雄加魔像全存活时 `opposingSurvivors=10`，正常进入 `applyRoundSettlement`，不修改伤害上限。`applyG23Radiant(state, newItemIds?)` 的全量与后续新增装备转换均跳过魔像固定套装；消耗品拒绝原子保留state与空事件，精工候选查询返回空列表。普通英雄的同款装备仍正常转换。
 - 正式 `StarLevel` 类型可表达4，但 `getUnitStats`、`resolveAbility` 和资源结构检查仅允许carry-golem的正式四星，普通英雄仍一至三星；既有战斗临时四星规则不变。无新增历史事实或保存节，内容身份脚本重算，旧epoch不重录。研究状态及取整/装备/人口政策详见 `S13_RULES_GAP.md` P-B5-83。
+
+
+## v26 R5 — 出售后保留异变（2026-10-29 用户批准）
+
+此条与 [R1/R3/R4a/R5 统一合同](V26_ANOMALY_R1_R3_R4A.md) 一起覆盖 M5 的“出售销毁异变”。4-6 共用一次75秒准备时钟，待选期间全部禁售、部署和移动放行；确认后可卖，资格按下文保留。首次免费报价计入前12项去重，第13项起只排上一项。R2 首次目标锁定、R6 字符串 ID 升序默认目标及 P-B5-81 保持现状。
+
+```ts
+interface AnomalySelection {
+  readonly definitionId: string;          // 已选择的异变
+  readonly championDefinitionId: string;  // 确认当时的英雄定义
+  readonly choiceId: string;
+  readonly boundRound: number;            // 原获得轮，恢复不更新
+}
+// MatchState / toPrivateSeatView(state)
+readonly anomalySelection: AnomalySelection | null;
+readonly anomalyBinding: AnomalyBinding | null; // 当前真实持有实例；无可用持有者必须为 null
+```
+
+选择事务同时写入唯一 schedule receipt、`anomalySelection`、原生绑定及资源事实 `{kind:'anomaly-selected',choiceId,unitId,sequence,roundId}`。事实中的 unitId 和选择收据的 unitId 是历史身份，可指向后来卖出的实例；当前 `anomalyBinding.unitId` 只可指向己方实体或进入未知的原实体托管。资格本身不含 unitId，不借悬空绑定保留效果。恢复不重新开启选择、不更换异变、不扣金币、不推进 RNG、不分配新选择身份。
+
+现持有者保持优先权，上场/下场和移动不抢占；合星按原 survivor 迁移。持有者出售、移除或永久变成另一英雄后，规则在当前可用的同英雄副本中按字符串 unitId 升序绑定**一个**实例，不按星级或站位重新排序。没有候选则休眠。仅原生异变限制为一份；便携异常作为 P-B5-81 已批准的独立复制物品照常生效。当轮轮盘卡维持原先的准备期结算边界，待归位和合星后才参与恢复；托管未入位的卡不抢占已有持有者。`isEligibleAnomalyTarget(state, unit, offers?, purpose?)` 统一拒绝未结算轮盘卡、已有 anomalySelection 或 anomalyBinding、非己方/未知定义/锻造器；timeout 另排全部 catalog summon。`readAnomalyTargetIds`、手动选择、刷新、确认和超时选目标共用此谓词。`selectAnomalyTarget` 对轮盘收据尚未准备期结算的目标返回 `invalid-target`，即使该卡已入位；失败保留原 state、零事件、零 RNG 消耗，收据结算后可正常选择。
+
+终极英雄恢复还须实体三星一费，等待与晋升都按最初的三次真实结算期限，空持有者期间不重开时钟；进入未知只离场/归来一次，出售已归来实体后重获同英雄沿用归来效果。`d14.phase='retired'` 表示上一实例退出；原资格及期限仍在，再获合格实例可恢复。Tristana 等实例成长继续在出售时删除；Headhunter 的原生累计击杀沿原 boundRound 的席位账本延续，便携异常仍独立按 itemId 累计。单场计数器沿原规则每场重建。
+
+`buyUnit`/`buySharedUnit`、掉落领取、机制/强化奖励、复制器、轮盘准备期归位、延迟合星及独立 ownership 引擎共用规则恢复。现有命令签名和失败 reason 枚举不变（如 `bench-full`、`purchased-slot`、`stale-shop`、`wrong-phase`、`item-restricted`）；失败保持原 state/pool、零事件、零资源/RNG 消耗。完整入口表见 [R5 交接](V26_ANOMALY_R5.md)。
+
+新增事件 `anomalyRestored: {definitionId,unitId,choiceId,boundRound}`；`anomalyTransferred` 继续表示实例迁移，`anomalyRemoved` 表示当前绑定解除，不再表示资格销毁。选择初次获得仍发 `choiceSelected`。恢复若使便携异常持有者成为原生持有者，原物品退库存并发 `itemsReturned`，后续装备预览/提交都返回 `item-restricted`。不重发双刀流装备、贪财金币或 Another Anomaly 复制物品；原收据身份不变。
+
+`toPrivateSeatView(state)` 白名单公开本人资格四字段；对手 `toPublicBoard` 与双方 `snapshotForBattle` 仍只公开当前实体效果，不公开休眠资格或待确认报价。战斗输入冻结当前真实绑定。`lockMatchCombatRoster(state)` 原签名不变，内部 `multiplayer.combatAnomaly={binding,provenancePrefixLength}` 冻结当时场上原生持有者（没有则 null）；战斗中出售备战席导致的恢复只影响未来战斗，本场 Headhunter 结算用冻结身份。结算解除锁定时移除此内部字段。
+
+`restoreMatch` / `serializeMatch` 重放已认证出生、出售、移除、变形、合星和唯一选择事实，比对资格、单一绑定、冻结输入及 D14 原期限；`restoreSharedOrbSnapshot` / `restoreCarouselSeat` 补做同一历史装备/异变路径校验。无法从候选资格字段自行授权一名新英雄，也不可信任悬空 unitId 或把绑定随意挪给另一副本。
+
+合并身份统一为 rules `s13-g2-3-v26-online-rules` / content `s13-14.24b-g2-3-v26-online-rules`；CONTENT=`fnv1a32-utf16:038b00ca`，LOOT=`fnv1a32-utf16:9af7b4d0`，已纳入 R1/R3/R4a/R5 与待选禁售策略。schema/save/replay/command 仍为 12/8/8/7，NET=5；旧纪元不迁移。固定证据另按统一 v26 身份重录；不改已发布证据，不执行 `--write`。

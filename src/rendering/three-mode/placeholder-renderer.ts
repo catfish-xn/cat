@@ -185,6 +185,8 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 // Injected the same way: the 2D bundle's item icon URL (presentation/s13-assets.ts), for a scouted seat's items.
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
+let hasAnomalyFor: (native: string | undefined, items: readonly string[]) => boolean = native => Boolean(native);
+export function useAnomalyMark(next: typeof hasAnomalyFor): void { hasAnomalyFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
 /**
  * Anvils (锻造器) are bench units without stars; their own icon stands in until their optional model loads. The rules' isAnvil
@@ -669,7 +671,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
     },
     myLegend: () => feed?.legends?.().me ?? null,
-    starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
+    starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), hasAnomaly: (native, items) => hasAnomalyFor(native, items), own });
   let scoutView: Parameters<typeof scout.show>[0] = null;
   const pawnFor = (team: BoardPiece['team'], definitionId: string): Object3D => {
     const pawn = new Group();
@@ -1120,7 +1122,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.team = piece.team; attachBody(view);
       }
       syncStars(view, piece);
-      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated);
+      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated, piece.anomalies);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {

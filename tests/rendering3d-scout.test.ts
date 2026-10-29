@@ -4,6 +4,7 @@ import { createScoutStage, readScout } from '../src/rendering/three-mode/scout-s
 import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
+import { unitAnomalies } from '../src/presentation/anomaly-display';
 
 /** Synthetic seats only: no asset files, no real players. */
 const frame: BoardFrame = {
@@ -75,7 +76,7 @@ describe('3D scouting stage', () => {
     const scene = new Scene(), owned: { dispose(): void }[] = [];
     const icons: string[] = [];
     const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, legendModel: () => null, myLegend: () => null,
-      starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; },
+      starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; }, hasAnomaly: (native, items) => unitAnomalies(native, items).length > 0,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => { owned.push(resource); return resource; } });
     return { scene, stage, icons };
@@ -101,6 +102,15 @@ describe('3D scouting stage', () => {
     expect(stage.active).toBe(false);
     expect(group.visible).toBe(false);
     expect(stage.debug().units).toEqual([]);
+  });
+
+  it('marks a portable anomaly on a public bench unit without a native anomaly field', () => {
+    const { scene, stage } = setup();
+    stage.show(scoutOf({ board: { units: [], bench: [{ definitionId: 'vex', starLevel: 1, slot: 0, items: ['TFT13_AnotherAnomaly_Item:the-finisher'] }] } }), frame);
+    expect(scene.getObjectByName('render3d-scout-anomaly')).toBeDefined();
+    stage.show(scoutOf({ board: { units: [], bench: [{ definitionId: 'vex', starLevel: 1, slot: 0, items: [] }] } }), frame);
+    expect(scene.getObjectByName('render3d-scout-anomaly')).toBeUndefined();
+    stage.dispose();
   });
 
   it('loads each unit model once per build and releases them on stop', async () => {

@@ -1,3 +1,4 @@
+import { readAnomalyTargetIds } from './anomaly-choice';
 import { readMasterworkOptions } from './masterwork-choice';
 import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
@@ -74,6 +75,7 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    anomalyTargetIds: readAnomalyTargetIds(state),
     openingEncounter: readOpeningEncounterView(state),
     openingMelProgress: readOpeningMelProgress(state),
     ...(readOpeningForgeProgress(state) ? {openingForgeProgress: readOpeningForgeProgress(state)} : {}),
@@ -107,6 +109,7 @@ export function toPrivateSeatView(state: MatchState) {
         && parent.location.unitId === item.holderId)).map(item => pick(item,
       ['temporaryId', 'parentItemInstanceId', 'roundId', 'holderId', 'definitionId', 'slot', 'expiresAfterRoundId'])),
     augments: state.augments.map(augment => pick(augment, ['definitionId', 'choiceId', 'acquiredRound'])),
+    anomalySelection: state.anomalySelection ? pick(state.anomalySelection, ['definitionId', 'championDefinitionId', 'choiceId', 'boundRound']) : null,
     anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId)
       ? pick(state.anomalyBinding, ['definitionId', 'unitId', 'choiceId', 'boundRound']) : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),

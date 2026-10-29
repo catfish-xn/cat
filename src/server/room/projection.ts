@@ -193,7 +193,7 @@ export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoice
 }
 /**
  * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
- * outside preparation and its augment choice (a battle supplies its own units). Never minted, moved or scaled here.
+ * outside preparation and its augment or anomaly choice (a battle supplies its own units). Never minted, moved or scaled here.
  */
 export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
   if (!isSummonPreparation(match)) return [];

@@ -195,9 +195,9 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(state.phase).toBe('settlement');expect(restoreMatch(serializeMatch(state))).toEqual(state);
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
- it('authenticates a paid online anomaly reroll after selling the target and timing out',()=>{
+ it('authenticates a paid online anomaly reroll through refused sales and automatic confirmation',()=>{
   let state=publicAuthoredPreparation('4-5');
-  // Board units cannot be sold during an anomaly choice; clear them in the preceding preparation.
+  // Keep the original bench-target route by clearing board units in the preceding preparation.
   for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))state=accepted(sellUnit(state,unit.id));
   state=battle(state).ended;
   while(state.phase==='choice'){const choice=state.pendingChoice!;state=accepted(selectChoice(state,choice.choiceId,choice.generation,choice.offers[0]));}
@@ -210,13 +210,16 @@ describe('v17 epic rewards and unified consumables',()=>{
   c=state.pendingChoice!;const gold=state.gold;
   state=accepted(rerollAnomaly(state,c.choiceId,c.generation));expect(state.gold).toBe(gold-1);
   expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
-  for(const unit of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,unit.id));
-  c=state.pendingChoice!;expect(c).toMatchObject({kind:'anomaly',step:'target',targetId:null});
+  for(const unit of state.preparation.units.filter(u=>u.team==='player')) {
+    const refused=sellUnit(state,unit.id);
+    expect(refused).toEqual({ok:false,state,reason:'wrong-phase'});expect(refused.state).toBe(state);
+  }
+  c=state.pendingChoice!;expect(c).toMatchObject({kind:'anomaly',step:'offer',targetId:target.id});
   const result=forfeitPendingChoice(state,state.round,c.choiceId,c.generation);
   expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-  expect(result.events).toContainEqual(expect.objectContaining({type:'choiceTimedOut',choiceId:c.choiceId,resolution:'empty-anomaly'}));
-  expect(result.state.multiplayer!.forfeitedChoices).toContain(c.choiceId);
-  expect(result.state.scheduleReceipts.some(r=>r.eventId===c.choiceId)).toBe(false);
+  expect(result.events).toContainEqual(expect.objectContaining({type:'choiceTimedOut',choiceId:c.choiceId,resolution:'first-offer'}));
+  expect(result.state.multiplayer!.forfeitedChoices).not.toContain(c.choiceId);
+  expect(result.state.scheduleReceipts).toContainEqual(expect.objectContaining({eventId:c.choiceId,definitionId:c.offers[0],unitId:target.id}));
   expect(result.state.pendingChoice).toBeNull();
   validateShopHistory(JSON.parse(JSON.stringify(result.state)));
   const forged=structuredClone(result.state),fee=forged.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;

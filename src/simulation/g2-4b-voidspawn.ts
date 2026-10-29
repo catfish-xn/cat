@@ -80,9 +80,10 @@ function movableSummons(state:MatchState){
 export function readItemSummons(state:MatchState):readonly MovableSummon[] {
  return movableSummons(state).summons;
 }
-/** Movable summons remain editable during the preparation augment choice. */
+/** Movable summons stay editable during preparation and during an augment or anomaly choice that returns there. */
 export function isSummonPreparation(state:Pick<MatchState,'phase'|'pendingChoice'>):boolean {
- return state.phase==='preparation'||state.phase==='choice'&&state.pendingChoice?.kind==='augment'&&state.pendingChoice.returnPhase==='preparation';
+ return state.phase==='preparation'||state.phase==='choice'&&state.pendingChoice?.returnPhase==='preparation'
+   &&(state.pendingChoice.kind==='augment'||state.pendingChoice.kind==='anomaly');
 }
 export function moveItemSummon(state:MatchState,itemInstanceId:string,cell:HexCell):MatchCommandResult {
  if(!isSummonPreparation(state)||isCombatRosterLocked(state)||state.multiplayer?.status==='eliminated'

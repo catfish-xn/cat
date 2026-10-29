@@ -13,7 +13,7 @@ import { nextShopGlitchPreparationTime } from '../../simulation/augment-pool-bat
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStreamSteps, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStreamSteps, combineItems, createMatch, deployMatchUnit, equipItem, isAnomalyPreparationRound, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
@@ -905,9 +905,15 @@ export class Room {
     this.continueRound();
   }
 
-  /** After round entry (and its carousel, when it had one): the round's own choice phase, or what follows it. */
+  /** Round entry: augment/anomaly choices share their preparation clock; other rounds keep their own choice phase. */
   private continueRound(): void {
     if (this.opensAugmentPreparation()) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.augmentPreparationMs ?? AUGMENT_PREPARATION_MS); }
+    if (this.aliveSeats().every(seat => isAnomalyPreparationRound(seat.match)
+      && (seat.match.phase === 'preparation' || seat.match.phase === 'choice' && seat.match.pendingChoice?.returnPhase === 'preparation'))) {
+      this.resolvePendingOnEntry();
+      const duration = this.options.preparationMs;
+      return this.setPhase('preparation', duration === PER_ROUND_PREPARATION ? getRoundPreparationMs(this.aliveSeats()[0].match.roundDefinitionId) : duration);
+    }
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
   }

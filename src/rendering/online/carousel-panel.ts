@@ -310,8 +310,8 @@ export class CarouselHoldingSlot {
     this.root.setAttribute('aria-label', '临时位 · 不参战');
     host.append(this.root); this.detach = attachCarouselCards(this.root);
   }
-  render(units: readonly HeldCarouselUnitView[], operable: boolean): void {
-    const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
+  render(units: readonly HeldCarouselUnitView[], operable: boolean, refusal = '准备阶段可出售'): void {
+    const key = `${operable}|${refusal}|${units.map(unit => unit.unitId).join(',')}`;
     if (key === this.key) return;
     this.key = key;
     this.root.hidden = units.length === 0;
@@ -325,7 +325,7 @@ export class CarouselHoldingSlot {
       portrait.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40));
       const sell = element('button', `出售 +${cost}`, 'carousel-holding-sell'); sell.type = 'button'; sell.disabled = !operable;
       sell.dataset.debug = `online:carousel-holding-sell:${unit.unitId}`;
-      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : '准备阶段可出售';
+      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : refusal;
       sell.addEventListener('click', () => { if (!sell.disabled) this.onSell(unit.unitId); });
       card.append(portrait, element('span', unitName(unit.definitionId), 'carousel-holding-name'), element('span', '不参战', 'carousel-holding-idle'), sell);
       return card;

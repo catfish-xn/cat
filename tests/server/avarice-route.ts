@@ -13,7 +13,7 @@ export function* avariceRoute(env: RouteEnvironment, beforeDrain?: (room: Room) 
   for (let fired = 0; ; fired++) {
     expect(fired).toBeLessThan(5_000);
     claimAllOrbs(room);
-    if (room.state.phase === 'choice' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) break;
+    if (room.state.phase === 'preparation' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) break;
     if (room.state.phase === 'ended' || !(yield* clockGroup(room, clock))) throw new Error('no anomaly window');
   }
   for (const seatId of HUMANS) { offerAvarice(room, seatId, 'reroll'); chooseAvarice(room, seatId); yield room.state.round; }
@@ -24,10 +24,11 @@ export function* avariceRoute(env: RouteEnvironment, beforeDrain?: (room: Room) 
 export function* nextBattleRoute(room: Room, clock: RouteEnvironment['clock'], roundName: string) {
   return yield* routeUntil(room, clock, state => { claimAllOrbs(room); return state.roundName === roundName && state.phase === 'battle'; });
 }
-export function* atBattleRoute(env: RouteEnvironment) {
+export function* atBattleRoute(env: RouteEnvironment, seatId?: string) {
   const { room, clock } = yield* avariceRoute(env);
   yield* nextBattleRoute(room, clock, '4-6');
-  const { a: seat, battle: frozen } = humanVsBot(room.state);
+  const { a: seat, battle: frozen } = seatId
+    ? {a:seatId,battle:pvpBattleOf(room.state,seatId)!} : humanVsBot(room.state);
   expect(pvpBattleOf(room.state, seat)).toBe(frozen);
   return { room, clock, seat, frozen, end: frozen.battle.terminal.tick, startedAt: clock.now() };
 }

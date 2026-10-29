@@ -5,7 +5,7 @@ import type { Camera } from 'three';
  * worn item icons, drawn from the BoardFeed values the 2D piece shows (unit-view.ts drawCombat) — the 3D layer covers
  * that view. Billboard sprites, above models and effects; nothing here is computed from rules. Display only.
  */
-import { CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
+import { CanvasTexture, Group, LinearFilter, Mesh, MeshBasicMaterial, OctahedronGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
 import type { BoardMeters, BoardPiece } from '../board-feed';
 import type { OriginalUi } from './ui-original-assets';
 import { createConfiscationStamp } from './confiscation-stamp';
@@ -24,7 +24,7 @@ export interface UnitOverhead {
   /** Scene child: the host moves it to the piece's head each frame. Its origin is the bar's bottom edge. */
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
-  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean): void;
+  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean, anomalies?: BoardPiece['anomalies']): void;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
@@ -55,6 +55,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
   const confiscation = createConfiscationStamp(); object.add(confiscation.sprite);
+  const anomaly = new Mesh(new OctahedronGeometry(4), new MeshBasicMaterial({ color: '#c6a0ff', depthTest: false, depthWrite: false }));
+  anomaly.name = 'render3d-overhead-anomaly'; anomaly.visible = false; anomaly.renderOrder = RENDER_ORDER; object.add(anomaly);
   const wantedCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
   if (wantedCanvas) { wantedCanvas.width = 128; wantedCanvas.height = 40; }
   const wantedTexture = wantedCanvas ? new CanvasTexture(wantedCanvas) : null;
@@ -155,8 +157,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   return {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
-    get drawn() { return bar.visible || wanted.visible || confiscation.sprite.visible || icons.children.length > 0; },
-    set(team, meters, items, enforcerWanted = false, itemsConfiscated = false) {
+    get drawn() { return bar.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
+    set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
@@ -166,6 +168,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       // Icons sit above the bar while it shows, in its place otherwise.
       icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
       badges.position.y = icons.position.y;
+      anomaly.visible = Boolean(anomalies?.length);
+      anomaly.position.set(BAR_WIDTH / 2 + 5, icons.position.y + ITEM_SIZE / 2, 0);
       wanted.visible = enforcerWanted && Boolean(meters);
       confiscation.sprite.visible = itemsConfiscated && Boolean(meters);
       confiscation.sprite.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
@@ -183,6 +187,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
       confiscation.dispose();
+      anomaly.geometry.dispose(); anomaly.material.dispose();
     },
   };
 }

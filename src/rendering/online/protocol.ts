@@ -51,6 +51,8 @@ export interface ClientListeners {
    */
   replayRevised?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
+  /** These commands lost receipt tracking; release pending UI without assuming whether the server applied them. */
+  interrupted?(commandIds: readonly number[]): void;
   /** v15: an orb claim held while the round was frozen was refused by the rules at battle entry (its receipt was ok). */
   notice?(notice: SeatNotice): void;
   connection?(status: ConnectionStatus): void;

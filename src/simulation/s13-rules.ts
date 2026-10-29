@@ -42,6 +42,7 @@ export const S13_COMBAT_RULES = Object.freeze({
   shieldPipeline: 'initial-linear-decay-distinct-from-absorption-end-consumed-once',
   survivalPipeline: 'whole-batch-positive-damage-surviving-hp-and-maxhp-frozen-before-effects',
   anomalySampling: 'one-word-full-range-scale-exclude-last',
+  anomalyOwnership: 'v26-r5-seat-champion-entitlement-sticky-single-copy-lexical-fallback-no-regrant',
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
