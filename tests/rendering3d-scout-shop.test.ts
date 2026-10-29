@@ -229,7 +229,7 @@ describe('3D scouting shop availability', () => {
       constructor(_scene: unknown, private unit: { id: string }, x: number, y: number) {
         drawn.add(unit.id); this.token = new Drawing(x, y).setName(`unit:${unit.id}`).setData('unitId', unit.id);
       }
-      update() {} setRing() {} resetMeters() {} drawCombat() {} destroy() { drawn.delete(this.unit.id); }
+      update() {} setAnomalies() {} setRing() {} resetMeters() {} drawCombat() {} destroy() { drawn.delete(this.unit.id); }
     } }));
     vi.doMock('../src/stats/stats-panel', () => ({ createStatsPanel: () => ({ render() {}, dispose() {} }) }));
     vi.doMock('../src/stats/combat-feedback-renderer', () => ({ createCombatFeedbackRenderer: () => ({ reset() {}, dispose() {} }) }));

@@ -17,6 +17,7 @@ import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
 import { readTooltipText } from './tooltip-text-loader';
 import type { CombatViewUnit } from './combat-display';
+import { anomalyNotes, unitAnomalies } from './anomaly-display';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -171,6 +172,7 @@ export function attachUnitCards(scope: HTMLElement): () => void {
   return attachHoverCards(scope, unitHoverCard(), '[data-unit-def]', anchor => {
     const definitionId = anchor.dataset.unitDef ?? '', star = Number(anchor.dataset.unitStar ?? 1) || 1;
     if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId)) return null;
-    return { key: `unit:${definitionId}:${star}`, build: () => unitCardBody(definitionId, star)! };
+    const notes = anomalyNotes(unitAnomalies(anchor.dataset.unitAnomaly, Array.from(anchor.querySelectorAll<HTMLElement>('[data-item-def]')).map(item => item.dataset.itemDef!)));
+    return { key: `unit:${definitionId}:${star}:${notes.join('|')}`, build: () => unitCardBody(definitionId, star, null, '', notes)! };
   });
 }

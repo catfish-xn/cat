@@ -43,6 +43,15 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
 .choice-cards button { min-height: 150px; font-size: 16px; line-height: 1.65; }
 .choice-cards .augment-icon { display: block; margin: 0 auto 6px; border-radius: 8px; }
+.choice-dialog[data-choice-source="anomaly"] { width: min(680px, 100%); }
+.choice-dialog[data-choice-source="anomaly"] .choice-cards { grid-template-columns: minmax(0, 1fr); }
+.anomaly-offer { padding: 18px; border: 1px solid #b49cde; border-radius: 10px; background: #201e36; overflow-wrap: anywhere; }
+.anomaly-offer-label { color: #c6b5e6; font-size: 13px; }
+.anomaly-offer h3 { margin: 6px 0 12px; font-size: 23px; color: #f0e5ff; }
+.anomaly-offer p { white-space: pre-line; margin: 8px 0 0; }
+.anomaly-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.anomaly-actions button { flex: 1; }
+.anomaly-actions .anomaly-evolve { font-size: 18px; font-weight: 700; border-color: #d8bd80; background: #665027; }
 .owned-augments .augment-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151f; cursor: help; }
 .owned-augments .augment-icon { border-radius: 4px; }
 .choice-targets { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -278,6 +287,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 /* Reopen pill sits on the board just under the online countdown bar (top of the board offline), clear of the shop dock. */
 .choice-reopen { position: absolute; left: 50%; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); transform: translateX(-50%); z-index: 90; width: max-content; max-width: calc(100% - 16px); white-space: nowrap; padding: 8px 16px; border-color: #ffd782; background: #24404d; box-shadow: 0 6px 24px #000a; }
 .choice-reopen.page-top { position: fixed; top: 12px; }
+.choice-collapse, .choice-reopen { min-width: 44px; min-height: 44px; }
 body[data-m6-mode="startup"] .choice-reopen, body[data-m6-mode="import"] .choice-reopen, body[data-m6-mode="replay"] .choice-reopen,
 body[data-online-mode="online-ended"] .choice-reopen, body[data-online-spectating] .choice-reopen { display: none !important; }
 .codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }

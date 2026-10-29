@@ -97,6 +97,8 @@ export interface ScoutStageContext {
   readonly overhead: OverheadContext;
   /** Item icon URL (the 2D bundle's) for an item definition id; null when there is none. */
   readonly itemIcon: (id: string) => string | null;
+  /** 2D presentation adapter recognizes both native and equipment-copy effects from public identities. */
+  readonly hasAnomaly?: (native: string | undefined, items: readonly string[]) => boolean;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
 }
 export interface ScoutStage {
@@ -187,7 +189,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.stars.object.scale.setScalar(STAR_SIZE); piece.stars.object.position.copy(at).setY(ctx.championHeight + STAR_GAP);
       group.add(piece.stars.object);
     }
-    if (unit.anomaly) {
+    if (ctx.hasAnomaly ? ctx.hasAnomaly(unit.anomaly, unit.items) : unit.anomaly) {
       const gem = new Mesh(anomalyGeometry, anomalyMaterial); gem.name = 'render3d-scout-anomaly';
       gem.position.set(STAR_SIZE * 2.2, ctx.championHeight + STAR_GAP, 0); piece.root.add(gem);
     }

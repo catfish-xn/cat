@@ -86,6 +86,8 @@ const ONLINE_END_TEXT = '对局结束 · 查看排名';
 /** My seat is out but the match goes on (C5): watch only, every command control is disabled. */
 const isOnlineSpectating = () => isOnline() && document.body.dataset.onlineSpectating === 'true';
 const ONLINE_SPECTATE_TEXT = '已淘汰 · 观战中 · 点击右侧玩家查看阵容';
+export const ANOMALY_SELL_BLOCKED = '异变选择期间不能出售棋子 · 完成进化后可出售';
+export const ANOMALY_BOARD_LOCKED = '异变界面已打开 · 隐藏界面后可上下场和移动棋子';
 
 interface PanelActions {
   readonly state: () => MatchState;
@@ -113,6 +115,8 @@ interface PanelActions {
   readonly control: (name: ControlName) => void;
   readonly unitAt: (x: number, y: number) => string | undefined;
   readonly cancelGesture: () => void;
+  /** The shared 2D/3D board refreshes its input flags after a choice opens, hides or restores. */
+  readonly choiceVisibilityChanged?: () => void;
   readonly status: (message: string) => void;
   readonly help: () => void;
   readonly highlight: (unitIds: readonly string[]) => void;
@@ -224,10 +228,18 @@ export class StrategyPanel {
   /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
-  /** Anomaly offer step: online gold can change under one choice token, so the open popup repaints its balance in place. */
-  private anomalyGold?: ((gold: number) => void) | null;
+  /** Anomaly balance and target details can change under one choice token; update them without reopening the popup. */
+  private anomalyGold?: ((state: MatchState) => void) | null;
+  /** Anomaly target, evolve and reroll share one in-flight lock, independent of snapshot identity or popup redraws. */
+  private anomalySubmitted?: { choiceId: string; generation: number } | null;
   /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
   private choiceReopen: HTMLButtonElement | null = null;
+  private hiddenChoiceId = '';
+  /** Pending anomalies lock every piece until the player explicitly hides this choice. */
+  get blocksBoard(): boolean {
+    const choice = this.actions.state().pendingChoice;
+    return choice?.kind === 'anomaly' && this.hiddenChoiceId !== choice.choiceId;
+  }
   /** v16 进入未知: a chip on the board while the hero is away (the panel line can be folded or scrolled out of view). */
   private awayChip: HTMLElement | null = null;
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
@@ -354,6 +366,7 @@ export class StrategyPanel {
       if (!drag.moved) { this.selectItem(drag.gesture.id); return; }
       const target = this.dropTarget(event.clientX, event.clientY);
       if (!target) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
+      if (this.blocksBoard) { this.actions.status(ANOMALY_BOARD_LOCKED); return; }
       if (target.slot !== null) { this.equipAt(drag.gesture.id, target.unitId, target.slot); return; }
       // Dropped on a board piece: a slot whose preview combines wins (C17), else the first slot the domain accepts.
       const previews = this.unitPreviews(drag.gesture.id, target.unitId), slot = pickUnitDropSlot(previews);
@@ -474,6 +487,7 @@ export class StrategyPanel {
    * slot of this unit combines the component, the drop goes there (routeSlotDrop), whichever slot button was hit.
    */
   private equipAt(itemId: string, unitId: string, slot: number): void {
+    if (this.blocksBoard) { this.actions.status(ANOMALY_BOARD_LOCKED); return; }
     const previews = this.unitPreviews(itemId, unitId), target = routeSlotDrop(previews, slot);
     const preview = previews[target], combined = combinationResult(preview);
     if (preview.allowed) this.actions.equip(itemId, unitId, target, combined ? itemDefinitionName(combined) : undefined);
@@ -497,6 +511,7 @@ export class StrategyPanel {
   }
   /** What dropping the dragged item on this target would do, in previewEquip's words (C17). */
   private dropPreviewText(itemId: string, unitId: string, slot: number | null): string {
+    if (this.blocksBoard) return ANOMALY_BOARD_LOCKED;
     if (slot !== null) {
       const previews = this.unitPreviews(itemId, unitId), target = routeSlotDrop(previews, slot), preview = previews[target];
       return preview.allowed ? allowedPreviewText(preview, target, itemDefinitionName) : equipmentFailureText(preview.reason);
@@ -635,6 +650,10 @@ export class StrategyPanel {
         button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
       }
       if (spectating || (name === 'buy-xp' && xp === null)) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); if (!spectating) button.title = '已满级'; }
+      if (name === 'sell' && state.pendingChoice?.kind === 'anomaly') {
+        button.disabled = true; button.title = ANOMALY_SELL_BLOCKED; button.textContent = 'E · 异变待选（禁售）';
+        button.setAttribute('aria-disabled', 'true');
+      }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
@@ -698,7 +717,7 @@ export class StrategyPanel {
     if (this.tab === 'traits') this.renderTraits(state);
     // Docked, the item bench stays on the board whichever tab is open.
     if (this.tab === 'items' || this.itemDock) this.renderItems(state, this.itemsOpen(), this.tab === 'items');
-    if (this.tab === 'units') this.renderUnits(state, ready);
+    if (this.tab === 'units') this.renderUnits(state, !this.blocksBoard && !spectating && (ready || state.pendingChoice?.kind === 'anomaly'));
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
     const augments = element('p', state.augments.length ? '强化：' : '强化： 尚未选择', 'owned-augments');
@@ -1001,10 +1020,29 @@ export class StrategyPanel {
       this.clearChoiceDismissal(); this.renderChoice(this.actions.state());
     }, CHOICE_POINTER_QUIET_MS);
   }
+  /** A matching refusal or interrupted receipt releases an online anomaly action before the offer advances. */
+  choiceRefused(choiceId: string, generation: number): void {
+    if (this.anomalySubmitted?.choiceId !== choiceId || this.anomalySubmitted.generation !== generation) return;
+    this.anomalySubmitted = null;
+    this.anomalyGold?.(this.actions.state());
+  }
+  private submitAnomaly(choice: { choiceId: string; generation: number }, send: () => void): boolean {
+    const current = this.actions.state(), pending = current.pendingChoice;
+    if (this.anomalySubmitted || !pending || pending.choiceId !== choice.choiceId || pending.generation !== choice.generation) return false;
+    this.anomalySubmitted = { choiceId: choice.choiceId, generation: choice.generation };
+    this.anomalyGold?.(current);
+    send();
+    // Offline commands finish synchronously. An unchanged token means refusal; online awaits its own receipt/notice.
+    const after = this.actions.state().pendingChoice;
+    if (!isOnline() && after?.choiceId === choice.choiceId && after.generation === choice.generation) this.choiceRefused(choice.choiceId, choice.generation);
+    return true;
+  }
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
+    if (this.anomalySubmitted && (choice?.choiceId !== this.anomalySubmitted.choiceId || choice.generation !== this.anomalySubmitted.generation)) this.anomalySubmitted = null;
     if (!choice || isShopChoice(choice)) {
-      this.choiceToken = ''; this.dropChoiceReopen();
+      this.hiddenChoiceId = '';
+      this.choiceToken = ''; this.anomalyGold = null; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
         this.modal.hidden = true; this.modal.replaceChildren();
@@ -1016,8 +1054,10 @@ export class StrategyPanel {
     }
     this.clearChoiceDismissal();
     const values = choice.kind === 'augment' ? this.dynamicValues(state) : {};
-    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : ''}`;
-    if (token === this.choiceToken) { this.anomalyGold?.(state.gold); return; }
+    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : choice.targetId}`;
+    if (token === this.choiceToken) { this.anomalyGold?.(state); return; }
+    const hidden = this.hiddenChoiceId === choice.choiceId;
+    if (!hidden) this.hiddenChoiceId = '';
     this.dropChoiceReopen();
     this.choiceToken = token; this.anomalyGold = null; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
@@ -1040,7 +1080,8 @@ export class StrategyPanel {
     }
     card.append(heading);
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
-    const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
+    const blocking = choice.kind === 'anomaly' ? `${ANOMALY_BOARD_LOCKED}；${ANOMALY_SELL_BLOCKED}。`
+      : isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
@@ -1052,9 +1093,12 @@ export class StrategyPanel {
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+      // TODO: use authoritative anomalyTargetIds after the backend eligibility contract is merged.
+      const buttons = state.preparation.units.filter(unit => unit.team === 'player').map(unit => this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.submitAnomaly(choice, () => this.actions.target(choice.choiceId, choice.generation, unit.id))));
+      (this.anomalyGold = (_current: MatchState) => { for (const button of buttons) button.disabled = !!this.anomalySubmitted; })(state);
+      targets.append(...buttons);
       card.append(targets);
-      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
+      if (isOnline() || choice.kind === 'anomaly') card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
       const lock = element('p', '', 'anomaly-target-lock');
       if (choice.kind === 'anomaly') card.append(lock);
@@ -1070,6 +1114,14 @@ export class StrategyPanel {
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
         const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id, values[id]), effects].filter(Boolean).join('\n')
           : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
+        if (choice.kind === 'anomaly') {
+          const effect = element('article', '', 'anomaly-offer'); effect.dataset.debug = `anomaly-offer:${id}`;
+          effect.append(element('span', '当前效果', 'anomaly-offer-label'), element('h3', anomalyDisplayName(id)),
+            element('p', anomalyPlayerDescription(id), 'anomaly-offer-description'));
+          if (effects) effect.append(element('p', effects, 'anomaly-offer-stats'));
+          offers.append(effect);
+          continue;
+        }
         const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
@@ -1106,18 +1158,30 @@ export class StrategyPanel {
         slot.append(button, reroll); offers.append(slot);
       }
       card.append(offers);
-      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
+      if (generic || isOnline() || choice.kind === 'anomaly') card.append(this.choiceExtras(choice, title, generic, extras));
       if (choice.kind === 'anomaly') {
-        const target = state.preparation.units.find(unit => unit.id === choice.targetId), name = target ? displayUnitName(target.definitionId) : '';
-        const reroll = this.button('anomaly-reroll', '', () => this.actions.rerollAnomaly(choice.choiceId, choice.generation));
-        card.append(reroll);
-        (this.anomalyGold = gold => {
+        const reroll = this.button('anomaly-reroll', '', () => this.submitAnomaly(choice, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation)));
+        const id = choice.offers[0], actions = element('div', '', 'anomaly-actions');
+        const evolve = this.button(`choice:${id}`, '进化 · 免费', () => {
+          if (!this.submitAnomaly(choice, () => this.actions.choose(choice.choiceId, choice.generation, id))) return;
+          const after = this.actions.state().pendingChoice;
+          if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+        }, !id);
+        evolve.className = 'anomaly-evolve';
+        evolve.dataset.choiceId = choice.choiceId; evolve.dataset.generation = String(choice.generation);
+        actions.append(evolve, reroll); card.append(actions, element('p', '点击「进化」将当前效果永久赋予目标；确认不消耗金币。', 'anomaly-confirm-note'));
+        (this.anomalyGold = current => {
+          const target = current.preparation.units.find(unit => unit.id === choice.targetId), gold = current.gold;
+          const name = target ? `${displayUnitName(target.definitionId)} ${starText(displayStarLevel(current, target))} · ${target.location.kind === 'bench' ? `备战席 ${target.location.slot + 1}` : `棋盘 (${target.location.cell.col},${target.location.cell.row})`}` : '目标暂不可见';
           lock.textContent = `已锁定 ${name} · 余额 ${gold} 金币 · 已刷新 ${choice.rerollCount} 次`;
-          reroll.textContent = `刷新异常 · 1 金币（余额 ${gold} 金币）`; reroll.disabled = gold < 1;
-        })(state.gold);
+          evolve.disabled = !id || !!this.anomalySubmitted;
+          reroll.textContent = `刷新异常 · 1 金币（余额 ${gold} 金币）`; reroll.disabled = gold < 1 || !!this.anomalySubmitted;
+        })(state);
       }
     }
     this.modal.append(card);
+    if (hidden) this.collapseChoice(title);
+    else if (choice.kind === 'anomaly') this.actions.choiceVisibilityChanged?.();
     // Session replacement changes the mode at the end of this same task.
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
@@ -1135,15 +1199,22 @@ export class StrategyPanel {
   }
   /** Hides the popup without answering it; the pending choice and its deadline are unchanged. */
   private collapseChoice(title: string): void {
+    const choiceId = this.actions.state().pendingChoice?.choiceId;
+    if (!choiceId) return;
+    this.hiddenChoiceId = choiceId;
     this.dropChoiceReopen();
     this.modal.hidden = true;
-    const reopen = this.button('choice-reopen', `展开 ${title}`, () => {
-      this.dropChoiceReopen(); this.modal.hidden = false; this.focusChoice();
+    const reopen = this.button('choice-reopen', `恢复界面 · ${title}`, () => {
+      if (this.actions.state().pendingChoice?.choiceId !== choiceId) return;
+      this.hiddenChoiceId = '';
+      this.dropChoiceReopen(); this.modal.hidden = false;
+      this.actions.choiceVisibilityChanged?.(); this.focusChoice();
     });
     // On the board under the countdown bar, never over the shop dock or the side panels; without a board frame, top of the page.
     const frame = document.getElementById('board-frame');
     reopen.className = frame ? 'choice-reopen' : 'choice-reopen page-top';
     (frame ?? document.body).append(reopen); this.choiceReopen = reopen;
+    this.actions.choiceVisibilityChanged?.();
     this.root.focus({ preventScroll: true });
   }
   private dropChoiceReopen(): void { this.choiceReopen?.remove(); this.choiceReopen = null; }
@@ -1151,7 +1222,8 @@ export class StrategyPanel {
   private choiceExtras(choice: MatchState['pendingChoice'] & object, title: string, generic: boolean, extras: ReturnType<typeof readChoiceExtras>): HTMLElement {
     const row = element('div', '', 'choice-extras');
     if (generic && extras.skip) row.append(this.button('choice-skip', extras.skip.label ?? '跳过', () => this.actions.choose(choice.choiceId, choice.generation, SKIP_OPTION)));
-    row.append(this.button('choice-collapse', '收起 · 查看棋盘', () => this.collapseChoice(title)));
+    const hide = this.button('choice-collapse', '隐藏界面 · 查看棋盘', () => this.collapseChoice(title));
+    hide.className = 'choice-collapse'; row.append(hide);
     return row;
   }
 

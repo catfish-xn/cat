@@ -8,6 +8,7 @@ import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import { displayUnitName } from '../display-names';
+import { ANOMALY_SELL_BLOCKED } from '../strategy-panel';
 import { anomalyDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName } from '../../presentation/augment-display';
 import type { ReplaySnapshot } from '../../replay';
@@ -45,7 +46,7 @@ export interface OnlineHooks {
   changed?(change: SessionChange): void;
   /** The server confirmed pending commands of mine; the state already shows them. */
   confirmed?(commands: readonly ConfirmedCommand[]): void;
-  /** The server refused a pending command; `text` is set for network/room refusals, else `reason` is a rule failure. */
+  /** A pending command was refused or lost receipt tracking; `text` names transport/room issues, else `reason` is a rule failure. */
   refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
   /** The server's own events behind a state push (T10: deadline auto-deployment, post-battle merges), after it is shown. */
   serverEvents?(events: readonly MatchEvent[]): void;
@@ -155,6 +156,7 @@ export class OnlineApplication implements SceneApplication {
         if (!this.session.watchReplay(seatId, replay)) { this.syncScout(); this.hooks.refresh(); }
       },
       refused: refusal => this.onRefused(refusal),
+      interrupted: commandIds => this.onInterrupted(commandIds),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
       // The room's clock onto mine (the push is taken as fresh), and whose legend it is from my seat.
@@ -204,6 +206,10 @@ export class OnlineApplication implements SceneApplication {
     this.carousel.clearPending(); this.publishCarousel3d();
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
+  }
+  private onInterrupted(commandIds: readonly number[]) {
+    this.carousel.clearPending(); this.publishCarousel3d();
+    for (const commandId of commandIds) this.hooks.refused?.(commandId, null, '操作回执中断 · 请确认最新状态后重试');
   }
   private connectionText: string | null = null;
   private reclaimedTimer: number | null = null;
@@ -406,8 +412,9 @@ export class OnlineApplication implements SceneApplication {
     this.economy.render(state, playing);
     // A held unit is sold in the room's preparation or choice window; the seat stays in preparation through the x-4 carousel
     // and under the PvP roster lock, where the server refuses it, so the button follows the room phase too.
-    const sellable = state.phase === 'preparation' && (this.view?.phase.kind === 'preparation' || this.view?.phase.kind === 'choice');
-    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], sellable);
+    const anomaly = state.pendingChoice?.kind === 'anomaly';
+    const sellable = !anomaly && state.phase === 'preparation' && (this.view?.phase.kind === 'preparation' || this.view?.phase.kind === 'choice');
+    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], sellable, anomaly ? ANOMALY_SELL_BLOCKED : undefined);
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {

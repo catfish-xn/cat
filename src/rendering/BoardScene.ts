@@ -25,7 +25,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
 import { InputRouter, type Gesture } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
-import { StrategyPanel } from './strategy-panel';
+import { ANOMALY_BOARD_LOCKED, ANOMALY_SELL_BLOCKED, StrategyPanel } from './strategy-panel';
 import { createSoloApplication } from '../m6/application-loader';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
@@ -41,6 +41,7 @@ import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-vie
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { familyReunionDancers, g23BoardMechanics } from './trait-column';
 import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
+import { anomalyNotes, unitAnomalies } from '../presentation/anomaly-display';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
@@ -82,6 +83,7 @@ const ORB_FAILURE_TEXT: Readonly<Partial<Record<string, string>>> = {
   'already-claimed': '这个法球已领取或已排队', 'unknown-orb': '这个法球已不存在', 'seat-eliminated': '已淘汰，不能领取法球',
 };
 const SPECIAL_CELL_COLORS: Readonly<Record<string, string>> = { trial: THEME.color.gold };
+type ChoiceCommandToken = { choiceId: string; generation: number };
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -277,14 +279,15 @@ export class BoardScene extends Phaser.Scene {
       // C18-B (§18.3): online the room forwards it to the rules' shared transaction; offline the session runs useConsumable.
       useConsumable: (id: string, target: ConsumableTarget, success: string) => this.command(this.session.useConsumable(id, target), success),
       equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null, this.session.combatView?.status === 'running' && this.session.state.preparation.units.some(entry => entry.id === unit && entry.location.kind === 'board')), true),
-      choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
-      target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
-      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
+      choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择', false, false, { choiceId: choice, generation }),
+      target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定', false, false, { choiceId: choice, generation }),
+      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币', false, false, { choiceId: choice, generation }),
       rerollAugment: (choice, generation, slot) => this.command(this.session.augmentReroll(choice, generation, slot), AUGMENT_REROLL_SUCCESS),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
-      deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
+      deploy: (id, location) => this.deploy(id, location),
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
+      choiceVisibilityChanged: () => this.syncChoiceInputs(),
       status: message => this.setStatus(message),
     }, this.inputRouter, mounts?.shopDock ?? null, mounts?.itemDock ?? null);
     // ?render=3d: a dock click sends my legend onto the orb (it claims on arrival); the 3D layer's arrival comes back as claimOrb.
@@ -315,14 +318,7 @@ export class BoardScene extends Phaser.Scene {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
       confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
       serverEvents: events => this.serverEvents(events),
-      refused: (commandId, reason, text) => {
-        this.pendingSuccess.delete(commandId);
-        this.pendingBenchMoves.delete(commandId);
-        const equipment = this.pendingEquipment.delete(commandId);
-        const orbId = this.pendingOrbClaims.get(commandId);
-        if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.releaseOrb(orbId); }
-        this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
-      },
+      refused: (commandId, reason, text) => this.refused(commandId, reason, text),
       orbClaimRefused: (orbId, reason) => {
         this.releaseOrb(orbId);
         this.setStatus(`法球未能排队 · ${ORB_FAILURE_TEXT[reason] ?? '已放回，可再次点击领取'}`);
@@ -416,6 +412,7 @@ export class BoardScene extends Phaser.Scene {
         if (!this.draggingId && !event.repeat) this.benchBoardSwap(this.hoveredId() ?? this.selectedId);
       } else if (event.code === 'KeyE') {
         event.preventDefault();
+        if (this.session.state.pendingChoice?.kind === 'anomaly') { this.setStatus(ANOMALY_SELL_BLOCKED); return; }
         if (this.strategyPanel?.blocksSell) { this.setStatus('无出售单位目标 · 物品操作不会出售背景单位'); return; }
         const id = this.draggingId ?? this.hoveredId() ?? this.selectedId;
         if (id) this.sell(id);
@@ -460,7 +457,7 @@ export class BoardScene extends Phaser.Scene {
    */
   private showDropZones(unit: Unit) {
     this.dropZones.clear();
-    const state = this.session.state;
+    const state = this.deploymentPreviewState();
     for (const target of this.ownLocations()) {
       if ((target.kind === 'board' ? unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row
         : unit.location.kind === 'bench' && unit.location.slot === target.slot) || validateMatchDeployment(state, unit.id, target)) continue;
@@ -479,9 +476,10 @@ export class BoardScene extends Phaser.Scene {
    * whichever the rules' validateMatchDeployment accepts first; the deploy command itself decides.
    */
   private benchBoardSwap(id: string | null | undefined) {
+    if (this.boardLocked()) { this.setStatus(ANOMALY_BOARD_LOCKED); return; }
     const unit = id ? this.state.units.find(entry => entry.id === id && entry.team === 'player') : undefined;
     if (!unit || this.summonOf(unit.id)) { this.setStatus('请悬停一个我方单位，再按 W 上下场'); return; }
-    const want = unit.location.kind === 'board' ? 'bench' : 'board', state = this.session.state;
+    const want = unit.location.kind === 'board' ? 'bench' : 'board', state = this.deploymentPreviewState();
     const open = this.ownLocations().filter(target => target.kind === want && !this.occupied(target, unit.id));
     const target = open.find(candidate => !validateMatchDeployment(state, unit.id, candidate));
     if (target) { this.command(this.session.deploy(unit.id, target), want === 'bench' ? '已下场到备战席' : '已上场'); this.sync(); return; }
@@ -500,7 +498,7 @@ export class BoardScene extends Phaser.Scene {
   private watchSellZone(unit: Unit) {
     this.stopSellZone();
     const anvil = anvilInfo(unit.definitionId);
-    const hint = anvil ? anvilSellHint(anvil) : `松手出售 · +${getUnitSellPrice(unit)} 金币`;
+    const hint = this.session.state.pendingChoice?.kind === 'anomaly' ? ANOMALY_SELL_BLOCKED : anvil ? anvilSellHint(anvil) : `松手出售 · +${getUnitSellPrice(unit)} 金币`;
     let marked: HTMLElement | null = null;
     const mark = (zone: HTMLElement | null) => {
       if (zone === marked) return;
@@ -514,6 +512,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private sell(id: string) {
+    if (this.session.state.pendingChoice?.kind === 'anomaly') { this.setStatus(ANOMALY_SELL_BLOCKED); return; }
     const summon = this.summonOf(id);
     if (summon) { this.setStatus(summon.kind === 'forge' ? '海克斯科技锻炉由杰斯召唤 · 不能出售' : '虚空生物由兹若特传送门召唤 · 不能出售'); return; }
     const anvil = anvilInfo(this.state.units.find(unit => unit.id === id)?.definitionId ?? '');
@@ -526,6 +525,11 @@ export class BoardScene extends Phaser.Scene {
 
   private setStatus(message: string) { this.status.setText(message); this.strategyPanel?.status(message); }
   private newMatch() { this.application?.requestNew(); }
+  private deploy(id: string, location: UnitLocation) {
+    if (this.boardLocked()) { this.setStatus(ANOMALY_BOARD_LOCKED); return; }
+    const swap = this.swapsWith(id, location);
+    this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功');
+  }
   private panelControl(name: 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match') {
     if (name === 'new-match') { this.newMatch(); return; }
     if (name === 'reroll') this.command(this.session.reroll(), '商店已刷新');
@@ -622,7 +626,7 @@ export class BoardScene extends Phaser.Scene {
     }
     if (!target) { this.setStatus(this.failureMessage('invalid-location')); return { allowed: false }; }
     // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
-    const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
+    const reason = this.boardOps() ? validateMatchDeployment(this.deploymentPreviewState(), token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
     this.setStatus(reason ? (reason === 'population-cap' ? this.populationCapText() : this.failureMessage(reason)) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
     this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
     if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
@@ -631,6 +635,7 @@ export class BoardScene extends Phaser.Scene {
   }
   /** Shared release: the same deploy / summon move commands as the 2D drag; the caller has already released the gesture. */
   private dropAt(token: Phaser.GameObjects.Container, point: Point | null) {
+    if (this.boardLocked()) { this.setStatus(ANOMALY_BOARD_LOCKED); return; }
     const target = point ? this.target(point) : undefined;
     // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
     const swap = !!target && this.swapsWith(token.getData('unitId'), target);
@@ -638,11 +643,11 @@ export class BoardScene extends Phaser.Scene {
     if (summon) {
       if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), `${summonName(summon)}已移动 · 之后每回合保持此位置`);
       else this.setStatus(summonBoardOnly(summon));
-    } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+    } else if (target && !this.boardOps() && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
     else if (target) {
       const unit = this.displayedUnit(token.getData('unitId'));
       const benchMove = this.benchOps() && unit?.location.kind === 'bench' && target.kind === 'bench';
-      this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售', false, benchMove);
+      this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功', false, benchMove);
     }
     else this.setStatus(this.failureMessage('invalid-location'));
   }
@@ -710,12 +715,36 @@ export class BoardScene extends Phaser.Scene {
     return this.online && session instanceof RemoteSession && !session.spectating && session.offline === null
       && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
   }
-  private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
+  private boardLocked(): boolean { return this.strategyPanel?.blocksBoard ?? this.session.state.pendingChoice?.kind === 'anomaly'; }
+  private anomalyBoardOps(): boolean {
+    return this.session.state.pendingChoice?.kind === 'anomaly' && !this.boardLocked() && !this.session.combatView
+      && (this.session.phase === 'preparation' || this.session.phase === 'choice')
+      && (!(this.session instanceof RemoteSession) || (!this.session.spectating && this.session.offline === null));
+  }
+  private boardOps(): boolean { return this.session.phase === 'preparation' || this.anomalyBoardOps(); }
+  /** R1 uses preparation semantics for a hidden anomaly. Only the read-only placement preview is adapted;
+   * deploy intents always carry the real, unchanged authority state and can still be refused by an older server. */
+  private deploymentPreviewState(): MatchState {
+    const state = this.session.state;
+    return this.anomalyBoardOps() && state.phase === 'choice' ? { ...state, phase: 'preparation', combat: null } : state;
+  }
+  private dragPhase(): boolean { return !this.boardLocked() && (this.boardOps() || this.benchOps()); }
+  private syncChoiceInputs() {
+    this.clearDrag();
+    for (const [id, token] of this.tokens) {
+      const unit = this.displayedUnit(id);
+      if (token.input) {
+        token.input.enabled = !!unit && unit.team === 'player' && !this.boardLocked() && (this.boardOps() || this.benchOps());
+        this.input.setDraggable(token, !!unit && this.canDrag(unit));
+      }
+    }
+    this.syncSelection(); this.strategyPanel?.refreshBench();
+  }
   /**
    * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物, 杰斯's 海克斯科技锻炉) as the rules place them, shown on the board only while I
    * prepare and no battle is on it. They are not assets: no bench, sale, equipment or population.
    */
-  private shownSummons() { return this.session.phase === 'preparation' && !this.session.combatView ? this.session.itemSummons : []; }
+  private shownSummons() { return !this.session.combatView && (this.session.phase === 'preparation' || (this.session.phase === 'choice' && this.session.state.pendingChoice?.kind === 'anomaly')) ? this.session.itemSummons : []; }
   private summonOf(id: string | null | undefined) { return id ? this.shownSummons().find(summon => summon.unit.id === id) : undefined; }
   private displayedUnit(id: string): Unit | undefined { return this.state.units.find(unit => unit.id === id) ?? this.summonOf(id)?.unit as Unit | undefined; }
   /** Display-only drag hint for a summon (board cell, my rows, free); the rules' moveItemSummon decides the move itself. */
@@ -726,7 +755,7 @@ export class BoardScene extends Phaser.Scene {
       .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
     return taken ? `该位置已有单位 · ${summonName(summon)}只能移到空格` : undefined;
   }
-  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
+  private canDrag(unit: Unit): boolean { return !this.boardLocked() && unit.team === 'player' && (this.boardOps() || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
     return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
@@ -804,6 +833,8 @@ export class BoardScene extends Phaser.Scene {
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
+  /** A refusal or interrupted receipt for this exact command releases its anomaly action's in-flight lock. */
+  private pendingChoices = new Map<number, ChoiceCommandToken>();
   /** Pending combine/equip commands: a refusal is named by the equipment wording table, like the previews. */
   private pendingEquipment = new Set<number>();
   /** v15: pending claimOrb commands (socket) by command id, so a refusal releases the orb shown as queued. */
@@ -819,15 +850,26 @@ export class BoardScene extends Phaser.Scene {
   private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
     const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '';
     const benchMove = commandIds.length > 0 && commandIds.every(id => this.pendingBenchMoves.has(id));
-    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); this.pendingBenchMoves.delete(id); }
+    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingChoices.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); this.pendingBenchMoves.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
     this.command({ ok: true, state: this.session.state, events }, success, false, benchMove);
   }
-  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false) {
+  private refused(commandId: number, reason: MatchFailure | null, text: string | null): void {
+    this.pendingSuccess.delete(commandId);
+    this.pendingBenchMoves.delete(commandId);
+    const choice = this.pendingChoices.get(commandId); this.pendingChoices.delete(commandId);
+    if (choice) this.strategyPanel?.choiceRefused(choice.choiceId, choice.generation);
+    const equipment = this.pendingEquipment.delete(commandId);
+    const orbId = this.pendingOrbClaims.get(commandId);
+    if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.releaseOrb(orbId); }
+    this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
+  }
+  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false, choice?: ChoiceCommandToken) {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); if (sentBenchMove) this.pendingBenchMoves.add(notice.commandId); if (success === BATTLE_EQUIPMENT_SUBMITTED) this.setStatus(BATTLE_EQUIPMENT_SUBMITTED); return; }
+      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (choice) this.pendingChoices.set(notice.commandId, choice); if (equipment) this.pendingEquipment.add(notice.commandId); if (sentBenchMove) this.pendingBenchMoves.add(notice.commandId); if (success === BATTLE_EQUIPMENT_SUBMITTED) this.setStatus(BATTLE_EQUIPMENT_SUBMITTED); return; }
+      if (choice) this.strategyPanel?.choiceRefused(choice.choiceId, choice.generation);
       this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
     this.melSave?.push(result.events);
@@ -959,6 +1001,7 @@ export class BoardScene extends Phaser.Scene {
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
       const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
       this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
+      this.views.get(unit.id)!.setAnomalies(unitAnomalies(this.nativeAnomaly(unit.id), [...gear.equipped, ...gear.extras.temporary]));
     }
   }
   /**
@@ -975,6 +1018,11 @@ export class BoardScene extends Phaser.Scene {
   private equipmentOwner(id: string): string {
     const session = this.session;
     return session instanceof RemoteSession ? session.equipmentOwnerId(id) : id;
+  }
+  private nativeAnomaly(id: string): string | undefined {
+    const fighting = this.session.combatView?.units.some(unit => unit.id === id);
+    const binding = (fighting ? this.battleItems?.state ?? this.session.state : this.session.state).anomalyBinding;
+    return binding?.unitId === this.equipmentOwner(id) ? binding.definitionId : undefined;
   }
   private createToken(unit: Unit) {
     const p = this.position(unit.location);
@@ -995,7 +1043,7 @@ export class BoardScene extends Phaser.Scene {
     this.drawSpecialCells();
     this.strategyPanel?.render();
     this.syncOrbs();
-    if (this.session.phase !== 'preparation') {
+    if (!this.boardOps()) {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
       if (this.benchOps()) this.syncOperable();
       this.syncCombat(); return;
@@ -1004,7 +1052,7 @@ export class BoardScene extends Phaser.Scene {
       const p = this.position(unit.location), token = this.tokens.get(unit.id)!;
       token.setPosition(p.x, p.y).setVisible(true).setAlpha(1).setScale(1).setDepth(0);
       this.views.get(unit.id)!.resetMeters();
-      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
+      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, this.canDrag(unit)); }
     }
   }
   /** A pending bench move has not changed the HUD. Its confirmation does the one full sync when state arrives. */
@@ -1024,7 +1072,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.draggingId !== unit.id) { const p = this.position(unit.location); token.setPosition(p.x, p.y); }
       token.setVisible(true).setAlpha(1).setScale(1).setDepth(0);
       if (laidOut) { this.views.get(unit.id)?.resetMeters(); this.renderedCells.delete(unit.id); }
-      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench'); }
+      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, this.canDrag(unit)); }
     }
   }
   private syncConquerorFlag() {
@@ -1086,16 +1134,18 @@ export class BoardScene extends Phaser.Scene {
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     const anvil = displayed ? anvilInfo(displayed.definitionId) : null;
-    if (displayed && anvil) this.selectionLabel.setText(`${anvil.name}\n${anvil.description}\n拖到商店或按 E：${anvil.sellText}`);
+    if (displayed && anvil) this.selectionLabel.setText(`${anvil.name}\n${anvil.description}\n${this.session.state.pendingChoice?.kind === 'anomaly' ? ANOMALY_SELL_BLOCKED : `拖到商店或按 E：${anvil.sellText}`}`);
     else if (displayed) {
       const definition = getDefinition(displayed), star = displayStarLevel(this.session.state, displayed);
       // v16 Ultimate Hero: the rules' certified 4★ base (physically 3★, so the sell price stays the rules' 3★ price).
       const stats = (star === 4 ? fourStarBaseStats(displayed.definitionId) : null) ?? getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
+      this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : this.session.state.pendingChoice?.kind === 'anomaly' ? ANOMALY_SELL_BLOCKED : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     const selectedAnvil = selected ? anvilInfo(selected.definitionId) : null;
-    this.sellButton.setText(this.selectedId && selected ? selectedAnvil ? 'E · 打开武器库' : `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
-    this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
+    const saleBlocked = this.session.state.pendingChoice?.kind === 'anomaly';
+    this.sellButton.setText(saleBlocked ? 'E · 异变待选（禁售）' : this.selectedId && selected ? selectedAnvil ? 'E · 打开武器库' : `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
+    this.sellButton.setAlpha(!saleBlocked && this.selectedId ? 1 : 0.4);
+    if (this.sellButton.input) this.sellButton.input.enabled = !saleBlocked;
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
   /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
@@ -1215,7 +1265,7 @@ export class BoardScene extends Phaser.Scene {
     const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
     const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
-    const star = displayStarLevel(this.session.state, unit), notes = unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [];
+    const star = displayStarLevel(this.session.state, unit), notes = [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])];
     const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
     unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}`,
       () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks)!);
@@ -1230,6 +1280,7 @@ export class BoardScene extends Phaser.Scene {
       if (!boardFeedActive() && chip.getClientRects().length === 0) return null;
       if (boardFeedActive() && !boardFeedScreenBox(id)) return null;
       return { id, definitionId: chip.dataset.unitDef!, starLevel: Number(chip.dataset.unitStar), team: 'enemy',
+        notes: anomalyNotes(unitAnomalies(chip.dataset.unitAnomaly, Array.from(chip.querySelectorAll<HTMLElement>('[data-item-def]')).map(item => item.dataset.itemDef!))),
         items: Array.from(chip.querySelectorAll<HTMLElement>('[data-item-def]')).map(item => item.dataset.itemDef!) };
     }
     const token = this.tokens.get(id);
@@ -1241,7 +1292,7 @@ export class BoardScene extends Phaser.Scene {
     const view = this.views.get(id);
     return { id, definitionId: unit.definitionId, starLevel: displayStarLevel(this.session.state, unit), team: remote?.watchedSeat != null ? 'enemy' : unit.team,
       combat, items: view ? [...view.equipped, ...view.extras.temporary] : [],
-      notes: unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [],
+      notes: [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])],
       battle: history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null };
   }
   private inspectAt(point: { x: number; y: number }, target: EventTarget | null): UnitPanelData | null | undefined {
@@ -1348,6 +1399,7 @@ export class BoardScene extends Phaser.Scene {
       const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
       drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
         gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
+      drawn.setAnomalies(unitAnomalies(this.nativeAnomaly(unit.id), [...gear.equipped, ...gear.extras.temporary]));
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
@@ -1474,14 +1526,14 @@ export class BoardScene extends Phaser.Scene {
     return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
-  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted'> {
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'anomalies'> {
     const view = this.views.get(id);
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
     const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
     const ids = [...view.equipped, ...view.extras.temporary];
     const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
-    return { ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    return { ...(view.anomalies.length ? { anomalies: view.anomalies } : {}), ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
         ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };

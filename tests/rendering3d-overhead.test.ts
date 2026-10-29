@@ -12,6 +12,19 @@ function fakeCanvas() {
 describe('3D overhead meters and items', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('keeps obtained anomaly marks visible on board and bench without meters, and clears them with the binding', () => {
+    vi.stubGlobal('document', { createElement: () => fakeCanvas().canvas });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const mark = overhead.object.getObjectByName('render3d-overhead-anomaly')!;
+    for (const source of ['native', 'portable'] as const) {
+      overhead.set('player', undefined, undefined, false, [{ id: 'the-finisher', source }]);
+      expect(mark.visible).toBe(true); expect(overhead.drawn).toBe(true);
+    }
+    overhead.set('player', undefined, undefined);
+    expect(mark.visible).toBe(false); expect(overhead.drawn).toBe(false);
+    overhead.dispose();
+  });
+
   it('draws HP in team color with a shield segment and mana, and redraws only when the values change', () => {
     const { rects, canvas } = fakeCanvas();
     vi.stubGlobal('document', { createElement: () => canvas });
