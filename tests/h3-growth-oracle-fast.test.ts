@@ -186,16 +186,16 @@ describe.each(['facts', 'resources', 'results', 'receipts'] as const)('%s append
   });
 });
 
-it('matches every verdict and detached ledger value on an independent multi-boundary trace', () => {
-  let before = origin(), old = original.createH3Ledger(before, []), next = fast.createH3Ledger(before, []);
+it.each([false, true])('matches every verdict and detached ledger value on an independent multi-boundary trace (freezeInputs=%s)', freezeInputs => {
+  let before = origin(), old = original.createH3Ledger(before, []), next = implementation.createH3Ledger(before, [], { freezeInputs });
   for (let round = 1; round <= 3; round++) {
     for (const phase of ['combat', 'combat', 'settlement']) {
       const after = { ...before, phase, augmentHistory: { facts: [...before.augmentHistory.facts, death(before)] } };
       const a = verdict(original, old, before, after), b = verdict(fast, next, before, after);
       expect(b.ok).toBe(a.ok); expect(a.ok).toBe(true);
       old = a.memory; next = b.memory;
-      const { references, freezeInputs, ...detached } = next;
-      expect(freezeInputs).toBe(false);
+      const { references, freezeInputs: actualFreezeInputs, ...detached } = next;
+      expect(actualFreezeInputs).toBe(freezeInputs);
       expect(references.facts).toEqual(after.augmentHistory.facts);
       expect(detached).toEqual(old);
       before = after;
@@ -208,8 +208,8 @@ it('matches every verdict and detached ledger value on an independent multi-boun
     const a = verdict(original, old, before, after), b = verdict(fast, next, before, after);
     expect(b.ok).toBe(a.ok); expect(a.ok).toBe(true);
     old = a.memory; next = b.memory;
-    const { references, freezeInputs, ...detached } = next;
-    expect(freezeInputs).toBe(false);
+    const { references, freezeInputs: actualFreezeInputs, ...detached } = next;
+    expect(actualFreezeInputs).toBe(freezeInputs);
     expect(references.facts).toEqual(after.augmentHistory.facts);
     expect(detached).toEqual(old);
     before = after;

@@ -9,7 +9,7 @@
 - 单独筛选 seed 230 重新采样。初始采样文件包含 seed-49 预热：125.86 s 文件墙钟、seed230 测试体 111.991 s；H3 累计 53.212 s，其中 CPU 自耗主要为 `plainEqual` 26.640 s、`freezeObservation` 15.934 s。src 历史记录采样累计 30.945 s，哈希 11.794 s。这组累计值**包含预热**，不能相加当成 seed230 测试体分项。
 - 隔离预热后的中间采样（`artifacts/f5/continued/seed230-r5.*`）：seed230 测试体 88.098 s；H3 墙钟 38.494 s、其余 ledger 校验 19.391 s、哈希 3.881 s，剩余 26.332 s 是公开命令/战斗、路线编排、最终断言和采样开销。CPU 分组为 H3 37.115 s、其他独立 oracle 19.390 s、src live history 24.732 s、其他 7.192 s。`plainEqual` 的已认证行 WeakMap 查询仍是最大叶热点（约 12,747 个源码位置样本）；据此改成数组级行凭据。
 - `tests/fixtures/m5/observed-equal.cjs`：普通数组直接检查完整保留前缀，避免先切片再构造全部字符串索引；依照 ECMAScript 数组键顺序认证稠密索引，稀疏、额外属性、符号和特殊类型保留 Node 比较语义。独立副本构建时一次完成映射、冻结和认证，减少额外冻结遍历；完整比较仍逐行扫描。按独立期望数组保存行凭据，每个旧行仍检查当前来源身份，只有**完整比较成功且双方深不可变**的行能复用；新克隆、新行和可变来源必须比较字段。
-- `tests/fixtures/m5/h3-growth-oracle.cjs`：仍保留完整 detached before 检查点、四类完整前缀、逐项边界/来源/合并和完整增长收据断言；仅复用 oracle 自己的旧副本。复制变化分支时顺便冻结变化的生产小节点，取消结尾再次遍历全部生产历史。没有将任何生产 growth reader 或规则实现作为神谕。
+- `tests/fixtures/m5/h3-growth-oracle.cjs`：仍保留完整 detached before 检查点、四类历史的独立副本、逐项边界/来源/合并和完整增长收据断言；仅复用 oracle 自己的旧副本。合并后的快路径逐行检查历史引用；同引用历史行的字段到回合/阶段/阵容锁定边界或显式 `auditH3` 才全量比较，新引用和新增行仍立即检查。复制变化分支时顺便冻结变化的生产小节点，取消结尾再次遍历全部生产历史。没有将任何生产 growth reader 或规则实现作为神谕。当前检查语义与路线收尾审计见 [v25 H3 收尾全量审计](V25_H3_ORACLE_CLOSING_AUDIT.md)。
 - `tests/fixtures/m5/augment-h6-oracle.cjs`：同一条 append-only 断言改用精确前缀比较器，保持全部旧行和原错误标签。
 - `scripts/m5-route-hash.cjs`：单条路线中复用共享不可变子树的原 canonical 文本；仍是相同键排序、数组顺序、undefined/稀疏编码和 SHA-256，未换摘要或跳过摘要。通用坏档/可变证据继续使用原 `m4-evidence.hash`。
 
@@ -17,7 +17,7 @@
 
 评审提醒属实：oracle 主动冻结生产对象会让原本可变的真实输入进入 src 的深冻结认证/缓存路径。相关入口包括 `immutable-json.ts:71` 的 `isImmutableJson`、`battle-record-validation.ts:25`、`loot-freeze.ts:38`、`combat-static.ts:91` 和 `shared-pool-ledger.ts:156`。因此冻结路线的速度不能直接当成真实联机未冻结输入的性能；本轮没有修改这些 src。
 
-`tests/m8-b8-oracle.test.ts:190` 的 **完整 seed42 主路线**显式传入 `freezeObservations:false`，oracle 只冻结独立副本，不冻结生产输入；每次公开命令/tick 观察都断言生产 `augmentHistory.facts` 未被冻结。`scripts/generate-m5-route.cjs` / `.d.cts` 和 `tests/fixtures/m5/oracle.g2.cjs` 只传递这一测试选项。生产构造器自己冻结的常量仍维持原行为。新增无冻结篡改回归确认原地修改 roster/shop/history 后，独立 before 检查点仍拒绝，而非依赖抛 TypeError 才能发现。
+`tests/m8-b8-oracle.test.ts:190` 的 **完整 seed42 主路线**显式传入 `freezeObservations:false`，oracle 只冻结独立副本，不冻结生产输入；每次公开命令/tick 观察都断言生产 `augmentHistory.facts` 未被冻结。`scripts/generate-m5-route.cjs` / `.d.cts` 和 `tests/fixtures/m5/oracle.g2.cjs` 只传递这一测试选项。生产构造器自己冻结的常量仍维持原行为。新增无冻结篡改回归确认原地修改 roster/shop 后独立 before 检查点仍拒绝；合并后同引用历史行的字段篡改延迟到边界或 `auditH3` 检查，而非依赖抛 TypeError 才能发现，详见 [v25 H3 收尾全量审计](V25_H3_ORACLE_CLOSING_AUDIT.md)。
 
 seed230 保留默认冻结小节点观察；生产大日志容器仍不冻结。曾试验整体冻结大日志，首个试跑超过原 120 s，已撤回；没有扩大预算。两条原种子、默认炮手公开命令策略、6-7 终局、38 结果、33 战斗和全部原收据断言均保留。
 
@@ -73,7 +73,7 @@ seed230 最差 83.581 s，距 84 s 目标仍仅约 **0.419 s**；达到本机实
 | `tests/fixtures/m5/oracle.g2.cjs:16` / `:579` | Ledger 仅转发冻结选项，不改独立数学 |
 | `tests/m8-b8-oracle.test.ts:190` | seed42 主路线不冻结生产输入并逐步检查 facts 容器 |
 | `tests/h3-observed-equal.test.ts:58` / `:108` / `:126` | 前缀差分、缓存行篡改和循环回退回归 |
-| `tests/h3-oracle-checkpoint.test.ts:56` | 原地修改未冻结生产输入仍被独立 checkpoint 拒绝 |
+| `tests/h3-oracle-checkpoint.test.ts:56` | 未冻结输入的 roster/shop 篡改由独立 checkpoint 拒绝；合并后同引用历史行的字段到边界或 `auditH3` 才检查，见 [v25 H3 收尾全量审计](V25_H3_ORACLE_CLOSING_AUDIT.md) |
 | `tests/m5-route-hash.test.ts:28` | 确定性 DAG 与原编码逐值比对 |
 
 ```sh
@@ -117,7 +117,7 @@ git diff --check
 ## 根因与测试修改
 
 1. **主要热点在测试 H3 oracle。** 原 m4 采样窗口 132.40 s 中，H3 占 91.30 s，其余独立 oracle 8.09 s，生产历史记录 16.67 s，路线哈希仅 3.78 s。通用 `structuredClone` 自身占 57.79 s（含各调用方），Node 深比较的 `objectComparisonStart/keyCheck/objEquiv` 另有显著成本。本次改前的 H3 每 tick 深复制整份 memory（含之前检查点），结尾再深复制整个新检查点，并反复深比较所有历史前缀。v25 的逐 tick 历史放大了这些成本。Git 历史中，历史记录模块首次加入于 `4fbb08f3`，H3 独立 oracle 首次加入于 `22131959`；本次未跑 v24 同机对照，不报告 v24→v25 的纯性能倍数。
-2. **保留脱离生产的独立期望。** `tests/fixtures/m5/h3-growth-oracle.cjs` 改为只复制变化分支；复用的都是 oracle 自己的副本，不把生产 facts 或 growth reader 当期望。保留完整 before 检查点、全部四种前缀、合并、归属、增长、边界和拒绝原因检查。
+2. **保留脱离生产的独立期望。** `tests/fixtures/m5/h3-growth-oracle.cjs` 改为只复制变化分支；复用的都是 oracle 自己的副本，不把生产 facts 或 growth reader 当期望。保留完整 detached before 检查点和四类历史副本，以及合并、归属、增长、边界和拒绝原因检查。合并后同引用历史行的字段只在回合/阶段/阵容锁定边界或显式 `auditH3` 全量比较；新引用与新增行立即检查。路线结束和重连观察点的收尾要求见 [v25 H3 收尾全量审计](V25_H3_ORACLE_CLOSING_AUDIT.md)。
 3. **只复用已比较过的不可变对象对。** `tests/fixtures/m5/observed-equal.cjs` 对普通数据执行完整逐字段比较，其他类型/失败回到 Node `deepStrictEqual`。观察时冻结小数据节点和独立副本；大日志数组继续逐次扫描、保持独立副本，不冻结/缓存整个大数组，避免每 tick 重建所有索引描述符。只有双方均已认证为深不可变且完整比较成功，才能复用对象对。原地改节点抛错，替换日志行或克隆后联合篡改仍被拒绝。WeakMap/WeakSet 不保留失去所有者的旧状态。
 4. **哈希仍是原编码和 SHA-256。** `scripts/m5-route-hash.cjs` 在单次 `run` 内复用同一不可变状态的摘要；上一命令 after 与下一命令 before 往往是同一个对象。`m4-evidence.hash` 对可变坏档和通用证据的行为不变，没有换算法或跳过 oracle/事件校验。
 5. **容量夹具的两个独立问题。** `tests/m4-ledger-bound.test.ts` 原来捕获第 33 回合后仍跑到终局；现在只生成被使用的真实前缀。seed 42 的 v25 历史认证会先拒绝人为超载阵容，使原 `/current resource fold/` 断言失去隔离性；换成 4-2 为金色节点的 seed 1。原 9 个三星单位、27 成装、3 强化、1 异常，事件序列/深复制/20 MiB 等所有断言保留。增加默认种子重开验证，再显式重开 42，保留原 `createMatch(42)` 断言。
