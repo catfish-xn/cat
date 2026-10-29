@@ -6,4 +6,5 @@ coverage/
 *.log
 artifacts/
 # Local-only 3D models, textures, animations and generated manifests.
+/assets3d-local
 assets3d-local/

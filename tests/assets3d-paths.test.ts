@@ -68,15 +68,30 @@ describe('assets3d filesystem boundaries', () => {
     await expect(writeOutputFile(join(link, 'new/file.json'), '{}', { force: true })).rejects.toThrow('unsafe-output-path');
     await expect(readFile(join(external, 'new/file.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
-  it('does not trust assets3d-local itself when it is an external directory link', async () => {
+  it('follows a repo-root assets3d-local directory symlink to a real storage tree', async () => {
     const repo = await temporary(), external = await temporary(), scripts = join(repo, 'scripts/assets3d');
     await mkdir(scripts, { recursive: true });
-    // Isolated copy retains the production rule: the repository is derived from the module location.
     const modulePath = join(scripts, 'safe-path.mjs');
     await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
     await linkDirectory(external, join(repo, 'assets3d-local'));
-    const isolated = await import(pathToFileURL(modulePath).href);
-    await expect(isolated.safeOutputPath('assets3d-local/report.json', { force: true })).rejects.toThrow('unsafe-output-path');
+    const isolated = await import(pathToFileURL(modulePath + '?symlink-root=' + Date.now()));
+    const output = join(external, 'report.json');
+    expect(await isolated.safeOutputPath('assets3d-local/report.json', { force: true })).toBe(output);
+    await isolated.writeOutputFile('assets3d-local/nested/report.json', '{}', { force: true });
+    expect(await readFile(join(external, 'nested/report.json'), 'utf8')).toBe('{}');
+  });
+  it('rejects a nested directory link that escapes the bound assets3d-local tree', async () => {
+    const repo = await temporary(), external = await temporary(), scripts = join(repo, 'scripts/assets3d');
+    await mkdir(scripts, { recursive: true });
+    const modulePath = join(scripts, 'safe-path.mjs');
+    await copyFile(resolve('scripts/assets3d/safe-path.mjs'), modulePath);
+    await linkDirectory(external, join(repo, 'assets3d-local'));
+    const isolated = await import(pathToFileURL(modulePath + '?symlink-escape=' + Date.now()));
+    const inner = join(external, 'workspace');
+    await mkdir(inner, { recursive: true });
+    await linkDirectory(await temporary(), join(inner, 'escape'));
+    await expect(isolated.writeOutputFile('assets3d-local/workspace/escape/out.json', '{}', { force: true })).rejects.toThrow('unsafe-output-path');
+    await expect(readFile(join(external, 'escape/out.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
   it('particle CLI refuses repository files and supports explicit safe overwrites', async () => {
     const root = await temporary(true), source = join(root, 'source.json'), output = join(root, 'nested/report.json');

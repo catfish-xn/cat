@@ -19,15 +19,47 @@ export async function safeInputPath(root, candidate) {
   return withinRoot(input, await realpath(candidate), 'unsafe-source-path');
 }
 
+/** Resolved assets3d-local directory; follows a repo-root symlink to a real directory. */
+async function assets3dLocalBound(repo) {
+  const logical = join(repo, 'assets3d-local');
+  try {
+    const info = await lstat(logical);
+    if (!info.isSymbolicLink() && !info.isDirectory()) throw new Error('unsafe-output-path');
+    const resolved = await realpath(logical);
+    if (!(await lstat(resolved)).isDirectory()) throw new Error('unsafe-output-path');
+    return resolved;
+  } catch (error) {
+    if (error.code === 'ENOENT') return logical;
+    throw error;
+  }
+}
+
 /** Resolve existing ancestors before any mkdir/write. The trust root is never caller supplied. */
 export async function safeOutputPath(output, { force = false, directory = false } = {}) {
-  const repo = await realpath(repository), local = join(repo, 'assets3d-local');
+  const repo = await realpath(repository);
+  const localLogical = join(repo, 'assets3d-local');
+  const localBound = await assets3dLocalBound(repo);
   if (typeof output !== 'string' || !output || output.split(/[\\/]/).includes('..')) throw new Error('unsafe-output-path');
-  const target = withinRoot(local, resolve(repo, output), 'unsafe-output-path');
-  if (target === local && !directory) throw new Error('unsafe-output-path');
-  // Walk from the repository so assets3d-local itself cannot become a new trust root via a link.
-  let current = repo;
-  const parts = relative(repo, target).split(sep);
+  const candidate = resolve(isAbsolute(output) ? output : join(repo, output));
+  let target;
+  try {
+    target = withinRoot(localLogical, candidate, 'unsafe-output-path');
+  } catch (error) {
+    if (localBound === localLogical) throw error;
+    target = withinRoot(localBound, candidate, 'unsafe-output-path');
+  }
+  if (target === localLogical && !directory) throw new Error('unsafe-output-path');
+  // Walk from the repository, or from the bound tree when the root is an external directory link.
+  let current;
+  let parts;
+  try {
+    withinRoot(localLogical, target, 'unsafe-output-path');
+    current = repo;
+    parts = relative(repo, target).split(sep).filter(Boolean);
+  } catch {
+    current = localBound;
+    parts = relative(localBound, target).split(sep).filter(Boolean);
+  }
   for (let i = 0; i < parts.length; i++) {
     current = join(current, parts[i]);
     let info;
@@ -36,7 +68,7 @@ export async function safeOutputPath(output, { force = false, directory = false 
       if (error.code !== 'ENOENT') throw error;
       return join(current, ...parts.slice(i + 1));
     }
-    current = withinRoot(local, await realpath(current), 'unsafe-output-path');
+    current = withinRoot(localBound, await realpath(current), 'unsafe-output-path');
     const last = i === parts.length - 1;
     if (!last || directory) {
       if (!(await lstat(current)).isDirectory()) throw new Error('output-not-directory');
