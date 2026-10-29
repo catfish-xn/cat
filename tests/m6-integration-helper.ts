@@ -59,7 +59,7 @@ describe('M6 independent route/history/playback/session integration', () => {
       for (const tick of [81, 80, 79, 41, 40, 39].filter(tick => tick <= record.endTick))
         expect(trajectoryHash(playback.seek(tick).combat), `checkpoint-neighbor ${tick}`).toBe(trajectory.get(tick));
       const middle = Math.floor(record.endTick / 2);
-      let model = api.startMatchCombat(record.context).state;
+      let model = independentlyStarted.state;
       while (model.combat!.tick < middle) model = api.stepMatch(model).state;
       deepStrictEqual(playback.seek(middle).combat, model.combat);
       playback.pause(); const paused = playback.read(); playback.advance(10000); deepStrictEqual(playback.read(), paused);

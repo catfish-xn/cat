@@ -4,7 +4,7 @@ import { selectOpeningUnit } from '../../src/simulation/opening-unit';
  * free failure of an empty paid reroll, one release per eliminated seat (§12.4), conservation after every publication
  * and through whole matches in both PvP modes, and no pool revision change on a refused command.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   applyRoundSettlement, assertSharedPoolConservation, releaseSeatOnElimination, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt,
 } from '../../src/server-entry';
@@ -14,6 +14,7 @@ import { toPlayerView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import type { BattleSeatOutcome, RoomState, SeatState } from '../../src/server/room/types';
 import { expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { battleCacheResolver, type BattleResultCache } from './battle-result-cache';
 
 const conserved = (state: RoomState) => {
   expect(state.poolRevision).toBe(state.pool.revision);
@@ -242,5 +243,25 @@ describe('Room on the shared pool: whole matches stay balanced', () => {
     return state;
   }
   it('pvpMode=two-sided', () => { playToEnd(new TwoSidedBattleResolver(), 'two-sided'); }, 90_000);
-  it('pvpMode=placeholder', () => { playToEnd(placeholderPvp, 'placeholder'); }, 90_000);
+
+  // Placeholder warm hooks stay in this nested suite. A hook failure here does not skip two-sided.
+  // Two-sided results carry death samples on the event objects themselves; a cloned replay is not a substitute.
+  describe('placeholder replay', () => {
+    const placeholderBattles: BattleResultCache = new Map();
+    let warmPlace: ReturnType<typeof makeRoom> | undefined;
+    const warmUntil = (done: (state: RoomState) => boolean) => {
+      runUntil(warmPlace!.room, warmPlace!.clock, done, 20_000);
+    };
+    beforeAll(() => {
+      warmPlace = makeRoom(battleCacheResolver(placeholderBattles, 'record', placeholderPvp), { pvpMode: 'placeholder' });
+      warmPlace.room.start();
+      warmUntil(state => state.round >= 2 || state.phase === 'ended');
+    });
+    for (const round of [4, 8, 12, 16, 20, 24, 28, 32, 36]) beforeAll(() => warmUntil(state => state.round >= round || state.phase === 'ended'));
+    beforeAll(() => {
+      warmUntil(state => state.phase === 'ended');
+      warmPlace!.room.dispose();
+    });
+    it('pvpMode=placeholder', () => { playToEnd(battleCacheResolver(placeholderBattles, 'read', placeholderPvp), 'placeholder'); }, 90_000);
+  });
 });

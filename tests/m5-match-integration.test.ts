@@ -57,7 +57,8 @@ describe('M5 Match atomic integration', () => {
       const started=startMatchCombat(state); if(!started.ok) throw new Error(started.reason);state=started.state;
       while(state.phase==='combat') {
         const restored=restoreMatch(serializeMatch(state));
-        expect(stepMatch(restored)).toEqual(stepMatch(state));state=stepMatch(state).state;
+        const live=stepMatch(state);
+        expect(stepMatch(restored)).toEqual(live);state=live.state;
       }
       state=choices(state);expect(state.roundResults).toHaveLength(round);
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
