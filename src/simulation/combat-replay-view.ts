@@ -106,6 +106,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatFinished': return { ...envelope, ...pick(event, ['type', 'result', 'reason']) };
     case 'packetDamage': return { ...envelope, type: event.type, sourceId: event.outcome.context.source.ownerId,
       targetId: event.outcome.context.targetId, damageType: event.outcome.context.damageType,
+      sourceKind: event.outcome.context.source.sourceKind, delivery: event.outcome.context.delivery,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
       shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
@@ -131,7 +132,15 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
-export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
+/** sourceKind/delivery are projected for display, but handwritten and older view
+ * events omit them. Equipment filtering treats a missing pair as untagged. */
+type OptionalPacketProvenance<T> = T extends { readonly type: 'packetDamage' }
+  ? Omit<T, 'sourceKind' | 'delivery'> & {
+      readonly sourceKind?: T extends { readonly sourceKind: infer S } ? S : never;
+      readonly delivery?: T extends { readonly delivery: infer D } ? D : never;
+    }
+  : T;
+export type CombatAnimationEvent = OptionalPacketProvenance<NonNullable<ReturnType<typeof animationEvent>>>;
 export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
   | import('./seat-mechanics/replay-units').ReplayMembershipEvent;

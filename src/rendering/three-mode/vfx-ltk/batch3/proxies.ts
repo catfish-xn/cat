@@ -32,6 +32,7 @@ export function createSummonProxies(scene: Object3D, find: (id: string) => VfxUn
       const clip = p.lease?.animations.find(c => c.name === p.lease?.animationNames.attack);
       if (clip && p.mixer) { p.mixer.stopAllAction(); p.mixer.clipAction(clip).reset().setLoop(LoopOnce, 1).play(); }
     },
+    drop(ids: readonly string[]) { for (const id of ids) { const held = proxies.get(id); if (held) remove(id, held); } },
     stopUnit(id: string) { for (const [key, p] of proxies) if (p.owner === id || p.target === id) remove(key, p); },
     update(seconds: number) {
       clock += seconds;

@@ -28,7 +28,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };
-  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], castIndex: number, action: 'cast' | 'attack', group?: string): boolean => {
+  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], castIndex: number, action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
@@ -37,20 +37,25 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const source = findUnit(sourceId);
       if (!cues || !source?.alive || source.disposed) return false;
       const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
-      if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
-      if (spawns.some(spawn => {
-        if (spawn.targetId === undefined) return false;
+      if (unsupported.length || !spawns.length) return false;
+      const living = (spawn: TimelineSpawn) => {
+        if (spawn.targetId === undefined) return true;
         const target = findUnit(spawn.targetId);
-        return !target?.alive || target.disposed;
-      })) return false;
-      for (const spawn of spawns) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group });
+        return !!target?.alive && !target.disposed;
+      };
+      // The legacy action stays atomic: one dead target keeps the handwritten fallback.
+      // A variant takeover drops only that target and keeps the caster's windup plus living targets.
+      if (!partialTargets && spawns.some(spawn => !living(spawn))) return false;
+      const chosen = partialTargets ? spawns.filter(living) : spawns;
+      if (!chosen.length || waiting.length + chosen.length > MAX_LTK_QUEUED) return false;
+      for (const spawn of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group });
       return true;
   };
   return {
     warm,
     /** Variants live inside the champion's own catalogue; no global ID flattening. */
     playVariant(champion: string, variant: string, sourceId: string, targetIds: readonly string[] = [], group?: string): boolean {
-      return enqueue(champion, variant, sourceId, targetIds, 0, 'cast', group);
+      return enqueue(champion, variant, sourceId, targetIds, 0, 'cast', group, true);
     },
     stopGroup(group: string) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].group === group) waiting.splice(at, 1);
@@ -79,7 +84,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
-        if (clock - when > 0.3 || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
+        // One-shots miss their moment after 0.3s. A grouped cue is a persistent skill
+        // the controller still has registered; catch-up must start it while its
+        // display duration remains. The 0.3s window and the six-start cap stay.
+        const overdue = clock - when > 0.3 && !(group && clock < when + spawn.duration);
+        if (overdue || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if (!source?.alive || source.disposed || (spawn.targetId && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;

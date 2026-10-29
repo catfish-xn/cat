@@ -1,11 +1,11 @@
-import { AnimationClip, Camera, Group, Scene, Texture } from 'three';
+import { AnimationClip, AnimationMixer, Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { createBatch3Vfx, type Batch3Unit } from '../src/rendering/three-mode/vfx-ltk/batch3/controller';
 import { createSummonProxies } from '../src/rendering/three-mode/vfx-ltk/batch3/proxies';
 import { batch3Timelines } from '../src/rendering/three-mode/vfx-ltk/batch3';
 import { SionAnimation } from '../src/rendering/three-mode/vfx-ltk/batch3/sion';
 import { UnitActionState } from '../src/rendering3d/animation-state';
-import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createVfxLibrary, type VfxReader } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import type { BoardFrame } from '../src/rendering/board-feed';
@@ -114,4 +114,133 @@ describe('batch 3 display lifecycle', () => {
     runtime.update(.01, new Camera()); expect(runtime.active).toBe(1); expect(runtime.queued).toBe(1);
     runtime.stopGroup('shield'); runtime.update(.51, new Camera()); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); runtime.dispose(); expect(scene.children).toHaveLength(0);
   });
+  it('does not treat equipment magic as a batch-3 ability phase', () => {
+    const magic = (tick: number, sourceKind: string, delivery: string, damageType: 'magic' | 'true' = 'magic') =>
+      event({ type: 'packetDamage', tick, sourceId: 's', targetId: 't', damageType, sourceKind, delivery });
+    const swain = fixture('swain');
+    swain.controller.event(magic(3, 'item', 'equipment-proc'), true);
+    swain.controller.event(magic(4, 'ability', 'ability-direct'), true);
+    swain.controller.update(1);
+    expect(swain.runtime.playVariant).not.toHaveBeenCalled();
+    swain.controller.event(event({ type: 'cast', tick: 5, sourceId: 's', targetIds: [] }), true);
+    swain.controller.update(.01);
+    swain.controller.event(magic(6, 'item', 'item-burn'), true);
+    swain.controller.event(magic(6, 'attack', 'attack-extra'), true);
+    swain.controller.update(1.3);
+    expect(swain.runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
+    expect(swain.runtime.stopGroup).toHaveBeenCalledWith('s:swain-ascension');
+    const pulsed = fixture('swain');
+    pulsed.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), true);
+    pulsed.controller.event(magic(2, 'ability', 'ability-periodic'), true);
+    expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-pulse', 's', ['t'], undefined);
+    const illaoi = fixture('illaoi');
+    illaoi.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['s'] }), true);
+    illaoi.controller.update(.01);
+    illaoi.controller.event(magic(21, 'item', 'equipment-proc', 'true'), true);
+    expect(illaoi.runtime.playVariant.mock.calls.filter(c => c[1] === 'illaoi-drain')).toHaveLength(0);
+    illaoi.controller.event(event({ type: 'statusChanged', tick: 61, targetId: 's', kind: 'damage-reduction', reason: 'expired' }), true);
+    illaoi.controller.event(magic(61, 'item', 'equipment-proc'), true);
+    expect(illaoi.runtime.playVariant.mock.calls.filter(c => c[1] === 'illaoi-slam')).toHaveLength(0);
+    illaoi.controller.event(magic(61, 'ability', 'ability-direct'), true);
+    expect(illaoi.runtime.playVariant).toHaveBeenLastCalledWith('illaoi', 'illaoi-slam', 's', ['t'], undefined);
+    const loris = fixture('loris');
+    loris.shield(0, 'expired');
+    loris.controller.event(magic(2, 'item', 'equipment-proc'), true);
+    expect(loris.runtime.playVariant.mock.calls.filter(c => c[1] === 'loris-retaliation')).toHaveLength(0);
+    loris.controller.event(magic(2, 'ability', 'ability-direct'), true);
+    expect(loris.runtime.playVariant).toHaveBeenCalledWith('loris', 'loris-retaliation', 's', ['t'], undefined);
+  });
+  it('keeps a caught-up ascension and summon that are still running, and drops ones that already ended', async () => {
+    const swain = fixture('swain');
+    swain.controller.event(event({ type: 'cast', tick: 10, sourceId: 's', targetIds: [] }), false);
+    swain.controller.event(event({ type: 'packetDamage', tick: 20, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', delivery: 'ability-direct' }), false);
+    expect(swain.runtime.playVariant).not.toHaveBeenCalled();
+    swain.controller.update(.01);
+    expect(swain.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-ascension', 's', [], 's:swain-ascension');
+    expect(swain.runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
+    const expired = fixture('swain');
+    expired.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), false);
+    expired.controller.event(event({ type: 'death', unitId: 'other', tick: 80 }), false);
+    expired.controller.update(.01);
+    expect(expired.runtime.playVariant).not.toHaveBeenCalled();
+    const source = unit('silco'), enemy = unit('enemy'), scene = new Scene();
+    const load = async () => ({ scene: new Group(), animations: [], animationNames: {}, placeholder: false, release: vi.fn() });
+    const runtime = { playVariant: vi.fn(() => true), stopGroup: vi.fn() };
+    const find = (id: string) => id === 's' ? source : id === 't' ? enemy : undefined;
+    const live = createBatch3Vfx(runtime as unknown as ReturnType<typeof createLtkRuntime>, scene, find, { load });
+    live.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), false);
+    expect(live.proxyCount).toBe(0);
+    live.event(event({ type: 'death', unitId: 'other', tick: 20 }), false);
+    expect(live.proxyCount).toBe(4);
+    live.update(1); expect(live.proxyCount).toBe(4);
+    const gone = createBatch3Vfx(runtime as unknown as ReturnType<typeof createLtkRuntime>, new Scene(), find, { load });
+    gone.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), false);
+    gone.event(event({ type: 'death', unitId: 'other', tick: 300 }), false);
+    gone.update(.01); expect(gone.proxyCount).toBe(0);
+    source.definitionId = 'elise'; source.form = 'back';
+    const spiders = createBatch3Vfx(runtime as unknown as ReturnType<typeof createLtkRuntime>, new Scene(), find, { load });
+    spiders.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), false);
+    spiders.event(event({ type: 'death', unitId: 'other', tick: 4 }), false);
+    expect(spiders.proxyCount).toBe(1);
+    const oldSpiders = createBatch3Vfx(runtime as unknown as ReturnType<typeof createLtkRuntime>, new Scene(), find, { load });
+    oldSpiders.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), false);
+    oldSpiders.event(event({ type: 'death', unitId: 'other', tick: 20 }), false);
+    oldSpiders.update(.01); expect(oldSpiders.proxyCount).toBe(0);
+  });
+  it('does not spend a Silco proxy attack on equipment magic', async () => {
+    const source = unit('silco'), scene = new Scene(), clip = new AnimationClip('hit', .2, []);
+    const play = vi.spyOn(AnimationMixer.prototype, 'clipAction');
+    try {
+      const enemy = unit('enemy');
+      const controller = createBatch3Vfx({ playVariant: vi.fn(() => true), stopGroup: vi.fn() } as unknown as ReturnType<typeof createLtkRuntime>, scene,
+        id => id === 's' ? source : enemy, { load: async () => ({ scene: new Group(), animations: [clip], animationNames: { attack: 'hit', move: 'hit' }, placeholder: false, release: vi.fn() }) });
+      controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), true);
+      await Promise.resolve(); await Promise.resolve(); controller.update(.01);
+      const armed = play.mock.calls.length;
+      expect(armed).toBeGreaterThan(0);
+      controller.event(event({ type: 'packetDamage', tick: 30, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'item', delivery: 'equipment-proc' }), true);
+      expect(play.mock.calls.length).toBe(armed);
+      controller.event(event({ type: 'packetDamage', tick: 40, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', delivery: 'ability-direct' }), true);
+      expect(play.mock.calls.length).toBeGreaterThan(armed);
+    } finally { play.mockRestore(); }
+  });
+});
+
+it('keeps variant windup and living targets when one target is dead, and still rejects the atomic action', async () => {
+  const cues = [
+    { system: 'start', event: 'cast-start' as const, delay: 0, duration: 1 },
+    { system: 'hit', event: 'hit' as const, delay: 0, duration: 1 },
+  ];
+  const reader: VfxReader = { readJson: async url => url.endsWith('index.json') ? { version: 1, systems: { start: 'start.json', hit: 'hit.json', loop: 'loop.json', burst: 'burst.json' }, assets: { 'synthetic.tex': 't.png' },
+    skills: { hero: cues, 'hero-hits': [cues[1]], 'hero-loop': [{ system: 'loop', event: 'cast-start', delay: 0, duration: 9 }], 'hero-burst': [{ system: 'burst', event: 'cast-start', delay: 0, duration: 1 }] } } : syntheticSystem(),
+  readTexture: async () => new Texture() };
+  const units = new Map<string, { root: Group; body: null; alive: boolean }>();
+  for (const id of ['self', 'ally', 'enemy']) {
+    const root = new Group(); root.position.set(0, 0, 0);
+    units.set(id, { root, body: null, alive: true });
+  }
+  const scene = new Scene(), runtime = createLtkRuntime(createVfxLibrary('/', reader), scene, id => units.get(id));
+  await runtime.warm('hero');
+  units.get('ally')!.alive = false;
+  expect(runtime.playVariant('hero', 'hero', 'self', ['self', 'ally', 'enemy'])).toBe(true);
+  expect(runtime.queued).toBe(3);
+  runtime.update(.01, new Camera());
+  expect(scene.children.map(child => child.userData.ltkSystem).sort()).toEqual(['hit', 'hit', 'start']);
+  runtime.clear();
+  expect(runtime.play('hero', 'self', ['self', 'ally', 'enemy'])).toBe(false);
+  expect(runtime.queued).toBe(0);
+  units.get('enemy')!.alive = false;
+  expect(runtime.playVariant('hero', 'hero', 'self', ['ally', 'enemy'])).toBe(true);
+  expect(runtime.queued).toBe(1);
+  runtime.clear();
+  expect(runtime.playVariant('hero', 'hero-hits', 'self', ['ally'])).toBe(false);
+  expect(runtime.queued).toBe(0);
+  expect(runtime.playVariant('hero', 'hero-burst', 'self')).toBe(true);
+  runtime.update(1.2, new Camera()); expect(runtime.active).toBe(0);
+  expect(runtime.playVariant('hero', 'hero-loop', 'self', [], 'loop')).toBe(true);
+  runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
+  runtime.clear();
+  expect(runtime.playVariant('hero', 'hero-loop', 'self', [], 'loop')).toBe(true);
+  runtime.update(9.1, new Camera()); expect(runtime.active).toBe(0);
+  runtime.dispose();
 });
