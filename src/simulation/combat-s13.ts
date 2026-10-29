@@ -327,8 +327,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   // selects. The first tick after release is an ordinary decision again.
   const hardControlled = (unit: S13Unit) => isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy;
   const targets = new Map<string, CombatTargetDecision>();
+  // Dead units keep deterministic decisions without consuming the combat stream.
   for (const unit of units) if (!isAttackProxy(unit) && !isMadChemist(unit))
-    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, false, undefined, hardControlled(unit), ctx.draw));
+    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, false, undefined, hardControlled(unit),
+      unit.alive && unit.hp > 0 ? ctx.draw : undefined));
   const chemistPaths = new Map<string, readonly HexCell[]>();
   const intents = units.map(unit => {
     if (isMadChemist(unit) && unit.alive && unit.hp > 0) leaveMadChemistCloud(unit, [unit.cell], tick);
@@ -409,7 +411,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const mover = units.find(u => u.id === id); if (mover) actionOccupied.delete(key(mover.cell));
       }
       const decision = unit.hp > 0 && !isMadChemist(unit)
-        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, false, prior, hardControlled(unit), ctx.draw) : undefined;
+        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, false, prior, hardControlled(unit),
+          unit.alive && unit.hp > 0 ? ctx.draw : undefined) : undefined;
       const target = unit.hp>0?(isMadChemist(unit)?byDistance(unit,enemies(unit,units))[0]:decision?.target):undefined;
       if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
       const previousTarget = unit.targetId;

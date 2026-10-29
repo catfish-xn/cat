@@ -4,6 +4,8 @@
 
 普通最近目标在距离严格更近时仍唯一确定。最近距离上有多名可选敌人时，候选只按代码点 ID 升序排列当抽词下标，不再把最低 ID 当作胜者。当前目标已经在这组里则沿用且不抽词；否则用本场 `ctx.draw`（`lcg32-v1`，与普攻暴击同一条流）拒绝采样，均匀取下标，被拒的词计入 `rngDraws`。不传 draw 的直接调用仍返回最低 ID。遗留 M3/M4 引擎不走这条路径。同一种子、同一抽词序结果相同；单位先按 ID 排序再抽，输入数组反序不改变抽到谁。移动阶段先抽，行动复核只在落点改变了等距集合且先前选择已不在其中时再抽。
 
+移动预决策和行动复核仅在决策单位 `alive && hp > 0` 时传入 `ctx.draw`。死亡单位即使面对等距候选也不消耗战斗流；保留的决策调用不传 draw，沿用最低 ID 回退。存活单位的索敌逻辑不变。
+
 眩晕和击飞（击飞是 stun 上的 `knockup`）期间不重选普通目标：目标死亡、出射程或出现更近敌人都不换，`targetEngaged` 原样保留。永久狂暴不视作硬控。嘲讽、背叛、剔除弱者脉冲仍按原优先级生效。解控后的第一个 tick 不再强制改锁最近敌人，而是走 P0：旧目标仍存活、可选且在射程内就继续打，否则一步追击或最近目标（含上面的等距抽词）。引导和根深蒂固不冻结索敌。不新增 RNG 流、命令、事件或存档字段。
 
 `decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?,hardControlled=false,draw?)`；`ordinaryNearestTies(unit,units,tick)` 返回等距候选。`S13_COMBAT_RULES.ordinaryTargeting` 为 `v26-p1-retain-in-range-one-step-equal-distance-lcg32-hard-cc-hold`，内容摘要因此变化；不重录 fixture。证据见 [CURSOR_targeting-p1](CURSOR_targeting-p1.md)。
