@@ -5,7 +5,7 @@ import { Room, ROOM_TIMING_DEFAULTS, type RoomOptions } from '../../src/server/r
 import { Lobby } from '../../src/server/room/lobby';
 import { BotDriver, deriveBotRng, type BotDriverOptions, type BotStepRecord } from '../../src/server/room/bot-driver';
 import { toPlayerView } from '../../src/server/room/projection';
-import { BOT_MAX_STEPS, assertSharedPoolConservation } from '../../src/server-entry';
+import { BOT_MAX_STEPS } from '../../src/server-entry';
 import type { RoomCommandResult, SeatCommand, SeatSpec } from '../../src/server/room/types';
 import { expectUniqueRanking, runUntil, SEATS } from './helpers';
 import { expectWallClockBelow } from '../fixtures/wallclock';
@@ -40,24 +40,14 @@ export function registerBotDriver(mode: 'fast' | 'timing'): void {
 if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
   if (mode === 'timing') { it('plays eight bots from the first round to a unique ranking; every intention is accepted by the rules', () => {
     const started = performance.now();
-    // The room's per-publication pool check repeats the same full invariant many times inside one round.
-    // Keep that invariant, once, at every round boundary (settlement count changes) and at the final state.
-    const { room, clock, bots, log } = botRoom(BOTS, {}, { assertPoolConservation: false });
-    const conserve = () => {
-      expect(room.state.poolRevision).toBe(room.state.pool.revision);
-      assertSharedPoolConservation(room.state.pool, room.state.seats.map(seat => seat.match));
-    };
+    const { room, clock, bots, log } = botRoom();
     room.start();
-    conserve();
     let idleChecks = 0;
-    let settlements = room.state.settlements.length;
     for (let fired = 0; room.state.phase !== 'ended' && fired < 200_000; fired++) {
       clock.runNext();
-      if (room.state.settlements.length !== settlements) { settlements = room.state.settlements.length; conserve(); }
       // Frozen and battle phases never hold a pending bot step.
       if (room.state.phase === 'frozen' || room.state.phase === 'battle') { idleChecks++; for (const seat of BOTS) expect(bots.inspect(seat.seatId)!.pending).toBe(false); }
     }
-    conserve();
     expect(room.state.fault).toBeNull();
     expectUniqueRanking(room.state);
     expect(room.state.round).toBeGreaterThanOrEqual(20);
