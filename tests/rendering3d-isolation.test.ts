@@ -78,8 +78,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
 
     const staticModuleIds = [...staticPaths.keys()].flatMap(name => byName.get(name)!.moduleIds).map(normalize);
     const phaserModules = staticModuleIds.filter(id => id.includes('/node_modules/phaser/src/'));
-    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad)\//.test(id)
-      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower)\.js(?:\?|$)/.test(id)),
+    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad|input\/keyboard\/|cameras\/2d\/effects\/|math\/easing\/(?:back|bounce|circular|elastic|expo|quartic|quintic|stepped)\/|textures\/parsers\/(?:KTX|PVR|SpriteSheet|JSON|Atlas|Unity|Canvas)|utils\/array\/(?:matrix\/|EachInRange|NumberArrayStep|RemoveRandomElement|RotateLeft|RotateRight))/.test(id)
+      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower|textures\/DynamicTexture)\.js(?:\?|$)/.test(id)),
     'unused Phaser subsystems and public utility collections must stay out').toEqual([]);
     for (const module of ['display/color/Color.js', 'display/color/ValueToColor.js',
       'renderer/canvas/CanvasRenderer.js', 'input/InputPlugin.js', 'input/touch/TouchManager.js',

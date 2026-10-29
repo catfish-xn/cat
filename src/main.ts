@@ -26,7 +26,8 @@ async function startGame(): Promise<void> {
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   // CSS touch-action:none controls canvas gestures. Phaser must still track
   // cancellation without preventDefault on a noncancelable touchcancel event.
-  input: { touch: { capture: false } },
+  // Shortcuts are window keydown listeners in BoardScene. Phaser's KeyboardManager is unused.
+  input: { keyboard: false, touch: { capture: false } },
   render: { antialias: true },
   callbacks: {
     postBoot(game) {
