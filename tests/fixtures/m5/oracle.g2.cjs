@@ -14,7 +14,7 @@ const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "m
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const createH3Ledger=(initial,options)=>h3.createH3Ledger(initial,[...CATALOG.flat(),'elise-ranged','gangplank-ranged','jayce-ranged','swain-ranged'],options);
-const {checkH3Growth,h3GrowthForUnit}=h3;
+const {checkH3Growth,auditH3,h3GrowthForUnit}=h3;
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // Literal W4 + S13 P2 pools independently transcribed from the retained raw source.
@@ -742,13 +742,14 @@ class Ledger {
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);this.h3=h3;
  }
+ audit(state){auditH3(this.h3,state);}
  check(state,lootChecked=false){validateGhostCombatInputs(state);if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger R'+state.round+' sim='+state.gold+' ledger='+this.gold+' '+state.roundDefinitionId+' '+state.phase+' '+JSON.stringify(state.m8?.round?.kind));const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
   const academic=require('./augment-batch5-s3b-oracle.cjs').academicConsumed(state);
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations-buffetPlan(state).consumed.size-academic,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
 module.exports={benchXp,entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
-Object.assign(module.exports,{createH3Ledger,checkH3Growth,h3GrowthForUnit});
+Object.assign(module.exports,{createH3Ledger,checkH3Growth,auditH3,h3GrowthForUnit});
 
 // Shop stream implemented with bigint arithmetic; no runtime RNG/content imports.
 function shopWord(state,parts){

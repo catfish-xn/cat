@@ -1,6 +1,13 @@
 import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
-const { createH3Ledger, checkH3Growth } = createRequire(import.meta.url)('./fixtures/m5/h3-growth-oracle.cjs');
+const { createH3Ledger, checkH3Growth, auditH3 } = createRequire(import.meta.url)('./fixtures/m5/h3-growth-oracle.cjs');
+
+// Reference-cache rows deliberately point at live input; expectations do not.
+function detachedMemory(memory: Record<string, unknown>) {
+  const { references, ...detached } = memory;
+  expect(references).toBeDefined();
+  return detached;
+}
 
 // Hand-authored oracle observation vectors, never admitted as production saves.
 function origin() {
@@ -36,12 +43,26 @@ it('retains independent full checkpoints through shared, appended and replaced p
   expect(() => checkH3Growth(memory, changed, changed)).toThrow('H3 independent observed checkpoint');
 });
 
+it.each([false, true])('retains detached rows and freezes equal replacement inputs only when requested (%s)', freezeInputs => {
+  const state = origin();
+  state.augmentHistory.facts.push({ kind: 'deaths', sequence: 0, seatId: 's0', round: 1, roundId: '1-2', resourcePrefix: 0, deaths: [] });
+  const memory = createH3Ledger(state, ['amumu'], { freezeInputs });
+  const after = { ...state, augmentHistory: structuredClone(state.augmentHistory) };
+  const next = checkH3Growth(memory, state, after);
+  expect(next.observed.facts[0]).toBe(memory.observed.facts[0]);
+  expect(next.observed.facts[0]).not.toBe(after.augmentHistory.facts[0]);
+  expect(Object.isFrozen(after.augmentHistory.facts[0])).toBe(freezeInputs);
+  expect(Object.isFrozen(after.augmentHistory.facts)).toBe(freezeInputs);
+  expect(Object.isFrozen(next.observed)).toBe(true);
+  expect(() => auditH3(next, after)).not.toThrow();
+});
+
 it.each(['roster', 'shop', 'history'] as const)('detects an in-place %s edit after an inert observation', field => {
   const state = origin();
   state.augmentHistory.facts.push({ kind: 'deaths', sequence: 0, seatId: 's0', round: 1, roundId: '1-2', resourcePrefix: 0, deaths: [] });
   let memory = createH3Ledger(state, ['amumu']);
   memory = checkH3Growth(memory, state, state);
-  const snapshot = structuredClone(memory);
+  const snapshot = structuredClone(detachedMemory(memory));
   const mutate=(s:typeof state)=>{
     if (field === 'roster') s.preparation.units[0].definitionId = 'lux';
     if (field === 'shop') s.shop.generation++;
@@ -49,7 +70,7 @@ it.each(['roster', 'shop', 'history'] as const)('detects an in-place %s edit aft
   };
   expect(()=>mutate(state)).toThrow(TypeError);
   const changed=structuredClone(state);mutate(changed);
-  expect(memory).toEqual(snapshot);
+  expect(detachedMemory(memory)).toEqual(snapshot);
   expect(() => checkH3Growth(memory, changed, changed)).toThrow('H3 independent observed checkpoint');
 });
 
@@ -58,13 +79,17 @@ it.each(['roster', 'shop', 'history'] as const)('keeps mutable production %s det
   state.augmentHistory.facts.push({ kind: 'deaths', sequence: 0, seatId: 's0', round: 1, roundId: '1-2', resourcePrefix: 0, deaths: [] });
   let memory = createH3Ledger(state, ['amumu'], { freezeInputs: false });
   memory = checkH3Growth(memory, state, state);
-  const snapshot = structuredClone(memory);
+  const snapshot = structuredClone(detachedMemory(memory));
   expect(Object.isFrozen(state.preparation.units[0])).toBe(false);
   expect(Object.isFrozen(state.shop)).toBe(false);
   expect(Object.isFrozen(state.augmentHistory.facts)).toBe(false);
   if (field === 'roster') state.preparation.units[0].definitionId = 'lux';
   if (field === 'shop') state.shop.generation++;
   if (field === 'history') state.augmentHistory.facts[0].roundId = 'forged';
-  expect(memory).toEqual(snapshot);
-  expect(() => checkH3Growth(memory, state, state)).toThrow('H3 independent observed checkpoint');
+  expect(detachedMemory(memory)).toEqual(snapshot);
+  // Mutable history reference hits defer field checks until an explicit audit
+  // or the next boundary; neither is allowed to adopt the edited live row.
+  expect(() => auditH3(memory, state)).toThrow('H3 independent observed checkpoint');
+  const after = field === 'history' ? { ...state, phase: 'settlement' } : state;
+  expect(() => checkH3Growth(memory, state, after)).toThrow('H3 independent observed checkpoint');
 });
