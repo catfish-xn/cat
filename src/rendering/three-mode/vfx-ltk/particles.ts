@@ -39,6 +39,10 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   return geometry;
 }
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
+export function pointAnchor(point: readonly [number, number, number]): Anchor {
+  return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
+    basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
+}
 export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
   const point = new Vector3(), matrix = new Matrix4();
   let attachment: Object3D | undefined;
@@ -78,7 +82,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / options.projectileSeconds } } }
       : { kind: 'bone', anchor: options.anchor, target: options.target },
   };
-  driver.swap(prepared.model); driver.steer(rig);
+  driver.swap(prepared.model); if (prepared.surfaces) driver.setSurfaces(prepared.surfaces); driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };

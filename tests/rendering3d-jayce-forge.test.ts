@@ -252,4 +252,28 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
     await publish([jayce(), forge()]);
     expect(starMeshes()).toBe(jayceOnly);
   });
+
+  it('records a caught-up Viktor cast before the current landing without replaying its old warning', async () => {
+    const runtimeModule = await import('../src/rendering/three-mode/vfx-ltk/runtime');
+    const createRuntime = runtimeModule.createLtkRuntime;
+    let play: MockInstance<ReturnType<typeof createRuntime>['play']> | undefined;
+    vi.spyOn(runtimeModule, 'createLtkRuntime').mockImplementation((...args) => {
+      const runtime = createRuntime(...args);
+      play = vi.spyOn(runtime, 'play').mockReturnValue(true);
+      return runtime;
+    });
+    const lease = model('viktor', { idle: 'idle', cast: 'cast' }, [['idle', 2], ['cast', 1]]);
+    vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+    await mount();
+    await publish([piece({ id: 'v', definitionId: 'viktor' }), piece({ id: 'target', team: 'enemy' })]);
+    const cast: DisplayCombatEvent = { type: 'cast', eventSeq: 1, tick: 1, sourceId: 'v', targetIds: ['target'], actionSeq: 1,
+      completed: true, actualManaSpent: 0, refundedMana: 0, completionCell: { col: 0, row: 0 } };
+    const landing: DisplayCombatEvent = { type: 'packetDamage', eventSeq: 2, tick: 41, sourceId: 'v', targetId: 'target',
+      damageType: 'magic', hit: true, hpDamage: 100, absorbed: 0, critical: false, killingPacket: false };
+    listener.events([cast, landing]);
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(play!.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor-slam' }]);
+    listener.events([{ ...landing, eventSeq: 3, tick: 42 }]);
+    expect(play).toHaveBeenCalledTimes(1);
+  });
 });
