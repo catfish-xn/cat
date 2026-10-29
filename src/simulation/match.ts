@@ -1,4 +1,5 @@
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
+import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { transformPandorasBench, transformRecombobulator } from './augment-pool-batch5-r6';
 import { grantCarryGolem, growCarryGolem } from './augment-pool-batch5-g6';
@@ -296,7 +297,7 @@ export function isAugmentPreparationChoice(state: MatchState): boolean {
 function isBoardEditablePhase(state: MatchState): boolean { return state.phase === 'preparation' || isAugmentPreparationChoice(state); }
 export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
-  if (!canOperateMatch(state)) return 'wrong-phase';
+  if (!canOperateMatch(state) && !(isAugmentPreparationChoice(state) && state.multiplayer?.status !== 'eliminated')) return 'wrong-phase';
   if ((!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && (target?.kind === 'board'
     || state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board'))) return 'wrong-phase';
   const planned = deployUnit(state.preparation, unitId, target);
@@ -333,6 +334,9 @@ function execute_lockMatchCombatRoster(state: MatchState): MatchCommandResult {
 /** Server preparation-deadline hook. Never called by the offline Start path. */
 function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
   if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation' || isCombatRosterLocked(state)) return fail(state, 'wrong-phase');
+  return autoDeployFormation(state);
+}
+function autoDeployFormation(state: MatchState): MatchCommandResult {
   const cap = getDeploymentCap(state), count = getPlayerDeploymentCount(state.preparation);
   if (count > cap) return fail(state, 'population-cap');
   const board = state.preparation.board, zone = board.deploymentZones.player;
@@ -357,6 +361,7 @@ function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
   return { ok: true, state: next, events };
 }
 function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
@@ -384,6 +389,7 @@ function execute_openAnvil(state:MatchState,unitId:string):MatchCommandResult {
 }
 function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if(state.preparation.units.some(u=>u.id===unitId&&isAnvil(u.definitionId)))return openAnvil(state,unitId);
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -401,6 +407,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   return acceptEquipment(sold,events);
 }
 function execute_setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (typeof locked !== 'boolean') return fail(state, 'invalid-choice');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -408,6 +415,7 @@ function execute_setShopLock(state: MatchState, locked: boolean, expectedGenerat
   return accept(recordShopLock(state,{ ...state, shop: { ...state.shop, locked } }));
 }
 function execute_rerollShop(state: MatchState): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
@@ -418,11 +426,13 @@ function execute_rerollShop(state: MatchState): MatchCommandResult {
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 function execute_buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if(state.sharedPool&&state.augments.some(a=>a.definitionId==='dual-purpose'))return fail(state,'invalid-mechanic-state');
   return buyXpWithShopRefresh(state,unitLootPolicy);
 }
 /** Shared-pool transactions supply their authoritative shop generator; direct shared Dual Purpose is refused. */
 export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= augmentLevelCap(state.augments)) return fail(state, 'max-level');
   const cost = xpPurchaseCost(state.augments, state.round);
@@ -554,6 +564,11 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
 }
 function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = matchStartFailure(state); if (reason) return fail(state, reason);
+  // The offline Start button is its preparation deadline. BRB uses the same
+  // deterministic fill as the room; player shop restrictions never gate it.
+  const deployment = !state.multiplayer && brbShopDisabled(state) ? autoDeployFormation(state) : null;
+  if (deployment && !deployment.ok) return deployment;
+  if (deployment?.ok) state = deployment.state;
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
@@ -562,7 +577,7 @@ function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPo
     && state.augments.some(a=>a.definitionId==='contested'||a.definitionId==='void-swarm')
     ? recordAugmentPvpRoster(state, started.state.combatId!, [{...historyRoster(state),seatId:'solo',index:0,hp:state.playerHp,alive:true,rank:1,eliminatedRound:null}], null) : state;
   const next = withCombat({ ...combatStart, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
-  return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
+  return accept(next.state, [...(deployment?.ok ? deployment.events : []), ...toLedgerEvents(started.events), ...next.events]);
 }
 /** Streaming PvE: only open/advance combat here. Terminal loot, income and pool reservations
  * are committed later in fixed seat order by settleCombatStream. No wall clock enters rules. */
@@ -676,7 +691,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
   const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
-  const gifted=drained.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='glorious-evolution'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'||a.definitionId==='expected-unexpectedness'||a.definitionId==='prismatic-pipeline'))?drainP2Gifts(drained):drained;
+  const gifted=drained.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='glorious-evolution'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'||a.definitionId==='expected-unexpectedness'||a.definitionId==='prismatic-pipeline'))?drainP2Gifts(drained):drained;
   const shopEntry=enterShopAugmentRound(gifted),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
   prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {
@@ -725,7 +740,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
     const entry=growCarryGolem(drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))));
-    const gifted=entry.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
+    const gifted=entry.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }

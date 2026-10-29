@@ -188,8 +188,17 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         &&context.mechanicReceipts?.some(r=>r.kind==='unit'&&r.source===SHOP_AUGMENT_SOURCE
           &&r.receiptId===source.receiptId&&r.resolution==='held'&&r.unitId===entry.unitId
           &&r.round===round.ordinal&&r.roundId===entry.roundId);
+      // D2 matures at 2-4. Authenticate only its two completed-item anvils;
+      // ordinary unit births still require the original supply-round sources.
+      const brbBirth=round.kind==='supply'&&source.kind==='mechanic'
+        &&context.brbRewards?.some(gift=>gift.receiptId===source.receiptId
+          &&gift.kind==='unit'&&gift.definitionId==='TFT_ArmoryKeyCompleted'&&gift.acquiredRound<=round.ordinal)
+        &&context.mechanicReceipts?.some(r=>r.kind==='unit'&&r.source==='augment-pool-batch1'
+          &&r.receiptId===source.receiptId&&r.definitionId==='TFT_ArmoryKeyCompleted'
+          &&r.unitId===entry.unitId&&r.resolution==='held'&&r.gold===0
+          &&r.round===round.ordinal&&r.roundId===entry.roundId);
       requireValue(round.kind !== 'supply'||entry.source.kind==='carousel'||entry.source.kind==='loot'
-        &&explicitOrbReceipt?.resolution==='held'||pilferBirth||firesaleBirth, 'unit birth in supply');
+        &&explicitOrbReceipt?.resolution==='held'||pilferBirth||firesaleBirth||brbBirth, 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {

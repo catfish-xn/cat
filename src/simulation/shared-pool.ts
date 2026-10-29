@@ -15,6 +15,7 @@ import { validateBatch5H7Gold } from './restore-checks/batch5-h7-check';
 import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
 import { headStartShopDisabled } from './augment-pool-batch5-h12';
+import { brbShopDisabled } from './augment-brb';
 import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
@@ -259,7 +260,7 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
-    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state)&&!brbShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
@@ -268,7 +269,7 @@ export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
-    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state)&&!brbShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
