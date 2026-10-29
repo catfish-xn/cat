@@ -12,9 +12,9 @@ import { batch2HpAfterSettlement } from '../src/simulation/augment-pool-batch2-h
 import { recordRoomBattleFacts } from '../src/server/room/augment-history';
 import type { SettledSeat, TwoSidedBattleResult } from '../src/server/room/types';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
-// Seed 15 offers Dhampyr to an injured winner at 3-2; seed 10 only offered it to a full-HP winner.
+// Fixed-composition carousel: seed 10 offers Dhampyr to an injured 3-2 winner (v25 used seed 15).
 const clock=new ManualClock();
-const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:15,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:10,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 beforeAll(()=>{room.start();});
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');});
 afterAll(()=>room.dispose());

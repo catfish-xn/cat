@@ -65,10 +65,13 @@ for (const [id, seed, at, supply] of [
       for (const input of [s, JSON.stringify(s)]) expect(restore(input)).toEqual(s);
       for (const edit of [
         (x: any) => { delete x.augmentHistory; },
-        (x: any) => { x.augmentHistory.facts.find((f: any) => f.kind === 'augment-item-transform').outputs[0].definitionId = 'sword'; },
+        (x: any) => {
+          const output = x.augmentHistory.facts.find((f: any) => f.kind === 'augment-item-transform').outputs[0];
+          output.definitionId = output.definitionId === 'sword' ? 'tear' : 'sword';
+        },
         (x: any) => { x.augmentHistory.facts.find((f: any) => f.kind === 'augment-item-transform').resourcePrefix++; },
       ]) {
-        const bad = structuredClone(s); edit(bad);
+        const bad = structuredClone(s); edit(bad); expect(bad).not.toEqual(s);
         for (const input of [bad, JSON.stringify(bad)]) expect(() => restore(input)).toThrow();
       }
     }
