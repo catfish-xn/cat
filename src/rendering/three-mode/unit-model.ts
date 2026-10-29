@@ -9,11 +9,10 @@ export function unitModelId(definitionId: string, anvil: boolean): string | null
 }
 
 /**
- * Temporary display ratio relative to the owner's fitted body, after its official unitScale and size caps.
- * This is NOT a verified Riot constant: 14.24 map22's DeftHands record only supplies PercentAD, MiniCount,
- * ArmorReduction and AttackCadence; the official Into the Arcane mechanics article confirms copies of the selected
- * unit but gives no size ratio. Keep this explicit until an original size source is available; 30%/40% AD is not size.
- * https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/mechanics-into-the-arcane/
+ * Display ratio relative to the owner's fitted body, after official unitScale and size caps (see placeholder-renderer).
+ * 待核，来源未知: 14.24b map22 TFT13_GoopBuff_DeftHands ({3ef46724}) has PercentAD/MiniCount/ArmorReduction/AttackCadence
+ * only — no size field (contrast Giant-Sized {88bfedc3}≈1.8). MiniMees missile mTravelTime 0.5s is not model scale.
+ * Evidence log: docs/CURSOR_mini-scale.md
  */
 export const MINI_MODEL_SCALE = 0.5;
 
