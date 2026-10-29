@@ -1030,12 +1030,18 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 /* No extracted streak atlas: draw behind the clipped portrait, with no layout or input footprint. */
 .seat-streak-fire { position: absolute; inset: -30% -8% -10%; pointer-events: none; z-index: 0;
   background: radial-gradient(ellipse at 50% 66%, #ffb12b99, #ff631b66 40%, transparent 70%); }
+.seat-streak-fire.level-2 { inset: -38% -12% -14%;
+  background: radial-gradient(ellipse at 50% 64%, #ffd04dcc, #ff631b99 38%, transparent 72%); }
 .seat-streak-fire::before, .seat-streak-fire::after { content: ''; position: absolute; inset: 0; transform-origin: 50% 90%;
   background: linear-gradient(0deg, #ff4d10 8%, #ff9a16 50%, #ffe195 90%); filter: drop-shadow(0 0 3px #ff6d16);
   clip-path: polygon(9% 80%, 3% 45%, 21% 57%, 16% 20%, 36% 43%, 47% 0, 59% 38%, 79% 14%, 76% 53%, 96% 36%, 91% 82%, 72% 100%, 27% 100%);
   animation: seat-flame .65s ease-in-out infinite alternate; }
+.seat-streak-fire.level-2::before { filter: drop-shadow(0 0 7px #ff9a20); }
 .seat-streak-fire::after { inset: 14% 16% 0; opacity: .75; animation-delay: -.4s; animation-direction: alternate-reverse; }
+.seat-streak-fire.level-2::after { opacity: .92; animation-duration: .55s; }
 @keyframes seat-flame { from { transform: scale(.96, .86) skewX(-4deg); opacity: .8; } to { transform: scale(1.04, 1.08) skewX(4deg); opacity: 1; } }
+@keyframes seat-flame-strong { from { transform: scale(1, .92) skewX(-5deg); opacity: .88; } to { transform: scale(1.12, 1.16) skewX(5deg); opacity: 1; } }
+.seat-streak-fire.level-2::before, .seat-streak-fire.level-2::after { animation-name: seat-flame-strong; }
 @media (prefers-reduced-motion: reduce) { .seat-streak-fire::before, .seat-streak-fire::after { animation: none; } }
 .online-seat .seat-main { display: grid; gap: 5px; min-width: 0; }
 .online-seat .seat-head { gap: 4px; font-size: 13px; }

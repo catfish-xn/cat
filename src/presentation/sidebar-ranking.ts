@@ -12,6 +12,15 @@ export function rankSidebarSeats<T extends RankedSeat>(seats: readonly T[], prev
     || (last.get(a.seatId) ?? fallback.get(a.seatId)!) - (last.get(b.seatId) ?? fallback.get(b.seatId)!));
 }
 
+/** Reorder list children in place so retained nodes keep keyboard focus. */
+export function syncSidebarListChildren(list: HTMLElement, rows: readonly HTMLElement[]): void {
+  for (let index = 0; index < rows.length; index++) {
+    const want = rows[index]!;
+    if (list.children[index] !== want) list.insertBefore(want, list.children[index] ?? null);
+  }
+  while (list.children.length > rows.length) list.lastElementChild!.remove();
+}
+
 /** FLIP, with retained row nodes: unchanged pushes leave a running move alone. On another
  * rank change, start from the current visual position, including the unfinished move. */
 export class SidebarRanking {
@@ -26,8 +35,14 @@ export class SidebarRanking {
     }
     const rows = ordered.map(row);
     if (changed) {
+      const active = document.activeElement as HTMLElement | null;
+      const focusKey = active && list.contains(active) ? active.dataset.debug : undefined;
       this.dispose();
-      list.replaceChildren(...rows);
+      syncSidebarListChildren(list, rows);
+      if (focusKey) {
+        const target = rows.find(node => node.dataset.debug === focusKey);
+        if (target && document.activeElement !== target) target.focus();
+      }
       for (const node of rows) {
         const from = before.get(node);
         if (!from || !node.animate) continue;

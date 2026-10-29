@@ -114,14 +114,18 @@ export class PlayersSidebar {
     const unit = avatarUnit(seat.publicBoard);
     if (unit) { avatar.dataset.definition = unit.definitionId; avatar.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40)); }
     else { delete avatar.dataset.definition; avatar.replaceChildren(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder')); }
-    const wins = sidebarWinStreak(seat);
+    const winFire = sidebarWinStreak(seat);
     // Local ui/manifest.json lists tft_winstreak_atlas as unavailable. Code-drawn flame
     // stays outside the clipped portrait and works in both render modes, without an asset request.
     if (!portrait.children.length) portrait.append(avatar);
-    if (wins !== null && !portrait.children[1]) {
-      const fire = element('span', '', 'seat-streak-fire'); fire.setAttribute('aria-hidden', 'true');
-      fire.dataset.debug = `online:streak:${seat.seatId}`; portrait.append(fire);
-    } else if (wins === null) portrait.children[1]?.remove();
+    const streakNode = portrait.children[1] as HTMLElement | undefined;
+    if (winFire !== null) {
+      const fire = streakNode ?? element('span', '', 'seat-streak-fire');
+      fire.setAttribute('aria-hidden', 'true');
+      fire.dataset.debug = `online:streak:${seat.seatId}`;
+      fire.classList.toggle('level-2', winFire.level === 2);
+      if (!streakNode) portrait.append(fire);
+    } else streakNode?.remove();
     const head = element('div', '', 'seat-head');
     // 机: a fill-in bot for the whole match; a human seat a bot is playing while its player is away shows 机 in the
     // takeover style plus 接管中 (B6). Only one of them controls a seat at a time.
@@ -150,7 +154,7 @@ export class PlayersSidebar {
       const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
       chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
     }
-    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, wins === null ? '' : `${wins} 连胜`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
+    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, winFire === null ? '' : `${winFire.count} 连胜`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
     for (const node of Array.from(head.querySelectorAll<HTMLElement>('[title]'))) { node.setAttribute('aria-label', node.title); node.removeAttribute('title'); }
     bar.append(fill);
     // TFT player list: round portrait on the left, name and bar in the middle, HP and level on the right.
