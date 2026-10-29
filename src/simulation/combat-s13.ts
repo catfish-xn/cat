@@ -321,7 +321,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   for(const unit of units)if(unit.mechanics?.some(m=>m.mechanic==='quickstriker')&&unit.alive){
     unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+quickstrikerMoveTenths(tick))};
   }
-  const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
+  const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>(), ordinaryMoved = new Set<string>();
   ctx.movementReservations = reserved;
   // Keep the old controlled-tick rescans and release boundary. P0 does not add
   // a controlled pause/latch or change cancellation/action eligibility.
@@ -347,7 +347,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   });
   units.forEach((unit, n) => {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
-    reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination }); recordAerialMovement(ctx, unit, destination);
+    reserved.add(key(destination)); ordinaryMoved.add(unit.id); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination }); recordAerialMovement(ctx, unit, destination);
     if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
     if (isMadChemist(unit)) leaveMadChemistCloud(unit, chemistPaths.get(unit.id)!, tick);
     unit.cell = destination; unit.moveCooldownTicks = isMadChemist(unit) ? madChemistMoveInterval(unit, tick) : movementIntervalTicks(unit.definitionId==='warwick'&&Boolean(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick), tick);
@@ -374,8 +374,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const firstPacket = ctx.packets.length;
       if(isAttackProxy(unit))continue;
       let guaranteedAttackSeq: number | undefined;
+      const prior = targets.get(unit.id);
+      // Stationary bodies and the accepted target's cell still block. Landings won
+      // in this tick's ordinary move do not: losing that reservation waits.
+      const actionOccupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell)));
+      for (const id of ordinaryMoved) if (id !== prior?.target?.id) {
+        const mover = units.find(u => u.id === id); if (mover) actionOccupied.delete(key(mover.cell));
+      }
       const decision = unit.hp > 0 && !isMadChemist(unit)
-        ? decideCombatTarget(state.board, unit, units, tick, new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reselect.has(unit.id), targets.get(unit.id)) : undefined;
+        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, reselect.has(unit.id), prior) : undefined;
       const target = unit.hp>0?(isMadChemist(unit)?byDistance(unit,enemies(unit,units))[0]:decision?.target):undefined;
       if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
       const previousTarget = unit.targetId;

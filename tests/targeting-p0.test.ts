@@ -57,6 +57,30 @@ describe('P0 target retention', () => {
     expect(decide(p, [old, near]).target?.id).toBe(near.id);
   });
 
+  it('taunt and Betrayal override a pending one-step chase; a dead taunt falls through to that chase', () => {
+    const p = actor('p', { attackRange: 1, targetId: 'old', targetEngaged: true, voidSwarmTaunt: 'forced' });
+    const old = enemy('old', 3, 2), forced = enemy('forced', 0, 0), near = enemy('near', 4, 4);
+    expect(hexDistance(p.cell, old.cell)).toBeGreaterThan(range(p));
+    expect(decide(p, [near, old, forced]).target?.id).toBe('forced');
+    forced.alive = false; forced.hp = 0;
+    expect(decide(p, [near, old, forced]).target?.id).toBe('old');
+    expect(p.voidSwarmTaunt).toBeUndefined();
+    const source = { ...origin(p), sourceKind: 'augment' as const, definitionId: 'betrayal' };
+    p.definitionId = 'maddie'; p.mechanics = [{ source, mechanic: 'traitAugmentB2', values: {} }];
+    const ambessa = actor('ambessa', { definitionId: 'ambessa', targetId: forced.id });
+    forced.alive = true; forced.hp = 10000;
+    expect(decide(p, [near, old, forced, ambessa]).target?.id).toBe('forced');
+  });
+
+  it('Cull between pulses chases the engaged target; the pulse still takes the in-range lowest ratio', () => {
+    const p = actor('p', { attackRange: 1, targetId: 'old', targetEngaged: true });
+    const source = { ...origin(p), sourceKind: 'anomaly' as const, definitionId: 'cull-the-weak' };
+    p.mechanics = [{ source, mechanic: 's13P2Anomaly', values: {} }];
+    const old = enemy('old', 3, 2), near = enemy('near', 4, 4, { hp: 10 });
+    expect(decide(p, [near, old], 1).target?.id).toBe('old');
+    expect(decide(p, [near, old], 60).target?.id).toBe('near');
+  });
+
   it('preserves taunt > Betrayal > Cull > ordinary retention', () => {
     const p = actor('p', { definitionId: 'maddie', attackRange: 4, targetId: 'old', targetEngaged: true });
     const old = enemy('old', 3, 3), low = enemy('low', 4, 3, { hp: 10 }), forced = enemy('forced', 6, 1);
@@ -142,6 +166,39 @@ describe('P0 engaged-target chase', () => {
   it('does not treat an empty adjacent cell as a legal chase for an immobile unit', () => {
     const p = actor('p', { definitionId: 'training-dummy', targetId: 'old', targetEngaged: true });
     expect(decide(p, [enemy('old', 3, 2), enemy('near', 4, 4)]).target?.id).toBe('near');
+  });
+
+  it('waits when the only one-step landing is reserved, and does not attack the nearer enemy', () => {
+    const p = actor('p', { targetId: 'old', targetEngaged: true });
+    const a = actor('a', { targetId: 'old', targetEngaged: true, cell: { col: 1, row: 3 }, cooldownTicks: 1000, attackDamage: 0 });
+    const old = enemy('old', 3, 2), near = enemy('near', 3, 3);
+    const units = [p, a, old, near];
+    const result = run(units);
+    expect(get(result.state, 'a').cell).toEqual({ col: 2, row: 3 });
+    expect(get(result.state).cell).toEqual(p.cell);
+    expect(get(result.state).targetId).toBe('old');
+    expect(get(result.state).targetEngaged).toBe(true);
+    expect(result.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([]);
+    expect(result.events.filter(e => e.type === 'targetChanged' && e.unitId === 'p')).toEqual([]);
+    expect(result.state.rngDraws).toBe(0);
+    const reversed = stepCombat(freeze(battle([...units].reverse(), { tick: 0, rngState: 42, rngDraws: 0 })));
+    expect(reversed.state.units.map(u => ({ id: u.id, cell: u.cell, targetId: u.targetId, targetEngaged: u.targetEngaged }))).toEqual(
+      result.state.units.map(u => ({ id: u.id, cell: u.cell, targetId: u.targetId, targetEngaged: u.targetEngaged })));
+    expect(stepCombat(JSON.parse(JSON.stringify(freeze(battle(units, { tick: 0, rngState: 42, rngDraws: 0 })))))).toEqual(result);
+  });
+
+  it('reselects when the engaged target walks out of one-step recovery on the same tick', () => {
+    const p = actor('p', { targetId: 'old', targetEngaged: true, moveCooldownTicks: 2 });
+    const old = enemy('old', 3, 2, { moveCooldownTicks: 0, targetId: 'far' });
+    const far = actor('far', { cell: { col: 3, row: 0 }, cooldownTicks: 1000, moveCooldownTicks: 1000, attackDamage: 0 });
+    const near = enemy('near', 4, 4);
+    const result = run([p, old, far, near]);
+    expect(get(result.state, 'old').cell).toEqual({ col: 2, row: 1 });
+    expect(get(result.state).cell).toEqual(p.cell);
+    expect(get(result.state).targetId).toBe('near');
+    expect(result.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
+      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near' },
+    ]);
   });
 });
 
