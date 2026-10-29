@@ -10,15 +10,15 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { readEconomyPreview, readRevealedLoot, readSixCostBps } from './online/seat-view-adapter';
+import { readEconomyPreview, readProjectedAnomalyTargetIds, readRevealedLoot, readSixCostBps } from './online/seat-view-adapter';
 import { economyIncomeText } from './online/economy-hint';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { deriveTraits } from '../simulation/trait-snapshot';
-import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } from '../simulation/match';
+import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment, readAnomalyTargetIds } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
-import type { UnitLocation } from '../simulation/units';
+import type { Unit, UnitLocation } from '../simulation/units';
 import type { CombatOrigin } from '../simulation/combat-types';
 import type { CombatState } from '../simulation/combat-types';
 import { isLedgerEvent, type CombatViewState, type SceneCombatEvent } from '../presentation/combat-display';
@@ -88,6 +88,16 @@ const isOnlineSpectating = () => isOnline() && document.body.dataset.onlineSpect
 const ONLINE_SPECTATE_TEXT = '已淘汰 · 观战中 · 点击右侧玩家查看阵容';
 export const ANOMALY_SELL_BLOCKED = '异变选择期间不能出售棋子 · 完成进化后可出售';
 export const ANOMALY_BOARD_LOCKED = '异变界面已打开 · 隐藏界面后可上下场和移动棋子';
+
+/** Target-step buttons follow the server projection. Offline authority states use the same public query the projection is built from. */
+function anomalyTargetUnits(state: MatchState): readonly Unit[] {
+  const ids = readProjectedAnomalyTargetIds(state) ?? readAnomalyTargetIds(state);
+  const own = new Map(state.preparation.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit]));
+  return ids.flatMap(id => {
+    const unit = own.get(id);
+    return unit ? [unit] : [];
+  });
+}
 
 interface PanelActions {
   readonly state: () => MatchState;
@@ -1054,7 +1064,8 @@ export class StrategyPanel {
     }
     this.clearChoiceDismissal();
     const values = choice.kind === 'augment' ? this.dynamicValues(state) : {};
-    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : choice.targetId}`;
+    const anomalyTargets = choice.kind === 'anomaly' && choice.step === 'target' ? anomalyTargetUnits(state) : [];
+    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : choice.targetId}:${anomalyTargets.map(unit => unit.id).join(',')}`;
     if (token === this.choiceToken) { this.anomalyGold?.(state); return; }
     const hidden = this.hiddenChoiceId === choice.choiceId;
     if (!hidden) this.hiddenChoiceId = '';
@@ -1093,8 +1104,7 @@ export class StrategyPanel {
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      // TODO: use authoritative anomalyTargetIds after the backend eligibility contract is merged.
-      const buttons = state.preparation.units.filter(unit => unit.team === 'player').map(unit => this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.submitAnomaly(choice, () => this.actions.target(choice.choiceId, choice.generation, unit.id))));
+      const buttons = anomalyTargets.map(unit => this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.submitAnomaly(choice, () => this.actions.target(choice.choiceId, choice.generation, unit.id))));
       (this.anomalyGold = (_current: MatchState) => { for (const button of buttons) button.disabled = !!this.anomalySubmitted; })(state);
       targets.append(...buttons);
       card.append(targets);

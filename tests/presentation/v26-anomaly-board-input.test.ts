@@ -86,7 +86,7 @@ function setup(phase: 'preparation' | 'choice' = 'choice') {
     strategyPanel: { get blocksBoard() { return !hidden && scene.session.state.pendingChoice?.kind === 'anomaly'; }, render: vi.fn(), cancel: vi.fn(), refreshBench: vi.fn() },
     input: { on: (name: string, fn: (pointer: Pointer, token: Token) => void) => handlers.set(name, fn), setDraggable,
       manager: { pointers: [] }, setDragState: vi.fn() },
-    cameras: { main: {} }, tweens: { killTweensOf: vi.fn() }, events: { once: vi.fn() }, scene: { isActive: () => true },
+    cameras: { main: {} }, tweens: { killTweensOf: vi.fn(), killAll: vi.fn() }, events: { once: vi.fn() }, scene: { isActive: () => true },
     sync: vi.fn(), syncAfterDrag: vi.fn(), syncSelection: vi.fn(), command: vi.fn(), setStatus: vi.fn(),
     target: vi.fn(() => ({ kind: 'board', cell: { col: 1, row: 4 } })), overlay: graphic, dropZones: graphic,
   });
@@ -125,10 +125,19 @@ describe('anomaly board input shared by 2D and 3D', () => {
     const deploy = vi.spyOn(session, 'deploy');
     t.start('2d', id); expect(t.scene.draggingId).toBe(id); t.end('2d', id);
     expect(deploy).toHaveBeenCalledExactlyOnceWith(id, { kind: 'board', cell: { col: 1, row: 4 } });
-    // This branch still has the old domain policy: exercise the real intent without bypassing its refusal.
-    expect(deploy.mock.results[0].value).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    // R1 accepts this deploy on the real choice state. The scene does not rewrite phase to preparation.
+    const moved = deploy.mock.results[0]!.value;
+    expect(moved).toMatchObject({ ok: true });
+    expect(session.state.preparation.units.find(unit => unit.id === id)?.location).toEqual({ kind: 'board', cell: { col: 1, row: 4 } });
+    expect(session.phase).toBe('choice');
+    const beforeSell = session.state;
+    const sold = session.sell('bench');
+    expect(sold).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    expect(sold).not.toHaveProperty('events');
+    expect(sold.state).toBe(beforeSell);
+    expect(session.state).toBe(beforeSell);
+    expect(session.state.preparation.units.find(unit => unit.id === 'bench')?.location.kind).toBe(id === 'bench' ? 'board' : 'bench');
     expect(token.input).toEqual({ enabled: true, draggable: true });
-    expect(session.phase).toBe('choice'); // UI never rewrites authority phase to permit a command.
     t.toggle(false); t.scene.sync();
     expect(token.input).toEqual({ enabled: false, draggable: false });
     t.scene.selectedId = null; token.click(); expect(t.scene.selectedId).toBeNull();

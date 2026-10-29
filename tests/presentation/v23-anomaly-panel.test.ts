@@ -242,6 +242,30 @@ describe('4-6 anomaly private view and rendered steps', () => {
     expect(ui.actions.target).toHaveBeenCalledExactlyOnceWith('round:4-6:anomaly', 0, 'target-a');
   });
 
+  it('lists only anomalyTargetIds, in that order, and refreshes when the projection gains a unit', () => {
+    const base = targetStep(), source = base.preparation.units[0]!;
+    const state: MatchState = { ...base, preparation: { ...base.preparation, units: [
+      base.preparation.units[0]!,
+      { ...source, id: 'anvil', definitionId: 'TFT_ArmoryKeyCompleted', location: { kind: 'bench', slot: 1 } },
+      { ...source, id: 'trainer', definitionId: 'trainer-golem', starLevel: 2, location: { kind: 'bench', slot: 2 } },
+      base.preparation.units[1]!,
+      { ...source, id: 'ghost', definitionId: 'not-a-champion', location: { kind: 'bench', slot: 3 } },
+      base.preparation.units[2]!,
+    ] } };
+    const shown = display(state);
+    expect(shown.anomalyTargetIds).toEqual(['target-b', 'trainer', 'target-a']);
+    expect(shown.anomalyTargetIds).not.toEqual(expect.arrayContaining(['anvil', 'ghost', 'enemy']));
+    const reversed = { ...shown, preparation: { ...shown.preparation, units: [...shown.preparation.units].reverse() } };
+    const ui = panel(reversed as MatchState, true, false);
+    const buttons = () => ui.modal.all().filter(node => node.dataset.debug?.startsWith('anomaly-target:')).map(node => node.dataset.debug);
+    expect(buttons()).toEqual(shown.anomalyTargetIds!.map(id => `anomaly-target:${id}`));
+    const bought = { ...source, id: 'bought', definitionId: 'vex', location: { kind: 'bench' as const, slot: 6 } };
+    const grown: MatchState = { ...state, preparation: { ...state.preparation, units: [...state.preparation.units, bought] } };
+    ui.render(grown);
+    expect(buttons()).toEqual(['anomaly-target:target-b', 'anomaly-target:trainer', 'anomaly-target:target-a', 'anomaly-target:bought']);
+    expect(toSeatPrivateView(grown).anomalyTargetIds).toEqual(['target-b', 'trainer', 'target-a', 'bought']);
+  });
+
   it('projects the locked target and one offer, renders its Chinese text, and sends choice/reroll ids unchanged', () => {
     const state = offerStep(), c = state.pendingChoice!, vm = display(state), ui = panel(state);
     expect(vm.pendingChoice).toEqual(toSeatPrivateView(state).pendingChoice);
