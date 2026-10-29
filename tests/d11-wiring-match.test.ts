@@ -73,7 +73,9 @@ const history=new BattleHistory('d11-public-anomaly');
 let prefix:MatchState|undefined;
 const stop=new Error('D11 captured public 4-5 prefix');
 try{
-  await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:10,
+  await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:25,
+    // R4a changes the paid search sequence; retain earned gold before the late XP push.
+    goldReserveByRound:{'4-3':80,'4-4':80},
     onStep(before:MatchState,result:{state:MatchState;events:readonly api.MatchEvent[]}){
       observe(history,before,result);
       if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation'){prefix=result.state;throw stop;}

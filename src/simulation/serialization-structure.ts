@@ -1,3 +1,4 @@
+import { validateAnomalyHistoryProof } from './anomaly-history-restore';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
@@ -213,6 +214,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     requireValue(!units.has(held.unit.id)&&held.items.every(i=>!state.items.some(v=>v.id===i.id)),'D14 duplicate holding');
     units.set(held.unit.id,held.unit);
   }
+  if (state.anomalySelection !== null) {
+    record(state.anomalySelection); const selection = state.anomalySelection;
+    requireValue(Object.keys(selection).sort().join(',') === 'boundRound,championDefinitionId,choiceId,definitionId', 'anomaly selection fields');
+    definitionId(selection.definitionId, ANOMALY_DEFINITIONS, 'selected anomaly');
+    definitionId(selection.championDefinitionId, UNIT_DEFINITIONS, 'anomaly champion');
+    id(selection.choiceId); integer(selection.boundRound, 1); requireValue(selection.boundRound <= state.round, 'selection round');
+  }
   if (state.anomalyBinding !== null) {
     record(state.anomalyBinding); const binding = state.anomalyBinding;
     definitionId(binding.definitionId, ANOMALY_DEFINITIONS, 'anomaly definition'); id(binding.unitId);
@@ -255,7 +263,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
     requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
     requireValue(choice.returnPhase === (event?.timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' : 'preparation'), 'choice return phase');
-    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
+    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && (choice.offers.length === 0 ? choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player') : choice.offers.length === 1 && choice.generation >= choice.rerollCount + 2), 'target substate');
     else {
       requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 8 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
       const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : choice.kind === 'component' ? ITEM_DEFINITIONS : ANOMALY_DEFINITIONS;
@@ -263,7 +271,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       if (choice.kind === 'component') { validateComponentCandidates(choice.offers); }
       if (choice.kind === 'component') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => ITEM_DEFINITIONS[def].kind === 'component'), 'component offers');
       else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
-      else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
+      else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation >= choice.rerollCount + 1, 'locked target');
     }
   } else if (!lootChoice) requireValue(state.pendingChoice === null, 'pending outside choice');
   validateAugmentOfferHistory(state);
@@ -440,6 +448,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
     if(!verifiedDynamic&&parsedImmutable)replay.shareValidatedDeclarations(combat);
   }
+  // A validated full-state augment proof already authenticates the quote section and target.
+  if (!state.augmentHistory) validateAnomalyHistoryProof(state);
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);

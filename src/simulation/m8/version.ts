@@ -4,11 +4,11 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v25-online-rules: batch-5 history-backed augments, including Golden Find, Forbidden Magic and H13 item transforms.
- * Conditional shop-history-v1 and augment-history-v1 authenticate affected saves; no new replay facts or commands.
+/** v26-online-rules: anomaly planning, shared eligibility, initial-twelve quote protection and R5 sale-persistent entitlement.
+ * Ordered resource provenance authenticates selection and restored holders; anomaly-offer facts retain window proofs. No new client commands.
  * Schema/save/replay/command remain 12/8/8/7; older identities are rejected. */
 export const M8_VERSION = {
-  schemaVersion: 12, rulesVersion: 's13-g2-3-v25-online-rules', contentVersion: 's13-14.24b-g2-3-v25-online-rules',
+  schemaVersion: 12, rulesVersion: 's13-g2-3-v26-online-rules', contentVersion: 's13-14.24b-g2-3-v26-online-rules',
   saveFormatVersion: 8, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** D2-A: the shipped M7 identifiers, used only to recognize files for read-only preservation. */

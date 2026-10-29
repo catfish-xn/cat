@@ -1,3 +1,4 @@
+import { traceAnomalyCommand } from './anomaly-history';
 import { recordR2PortableBattle } from './augment-pool-batch5-r2-history';
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainSurvivorGold } from './augment-pool-batch5-h4-survivor';
@@ -264,6 +265,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   if (next.roundResults.length > before.roundResults.length && (!next.multiplayer || next.m8.round.kind !== 'pvp')) {
     const settled = settleBatch5H9History(next); next = settled.state; effectEvents = settled.events;
   }
+  next = traceAnomalyCommand(before, next, name, args.slice(1));
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
     const stored = before.augmentHistory?.proof;
     let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };

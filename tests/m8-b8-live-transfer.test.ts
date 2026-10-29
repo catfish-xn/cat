@@ -165,11 +165,11 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
     state.combatInputBasis!.inputs.preparation.units.find(unit => unit.id === CORRUPT_DONOR)!.starLevel = 2;
   }, 'Invalid combat input basis'],
   ['basis anomaly target rewritten after upgrade', state => { state.combatInputBasis!.inputs.anomalyBinding!.unitId = CORRUPT_SURVIVOR; },
-    'Invalid Match save: resolved strategy'],
+    'Invalid combat input basis'],
   ['current TG parent falsely returned with matching empty children', state => {
     state.items.find(item => item.id === CORRUPT_TG)!.location = { kind: 'inventory' }; state.temporaryEquipment = [];
   }, 'Invalid B8 Match: finished resource projection'],
-  ['current anomaly silently removed', state => { state.anomalyBinding = null; }, 'Invalid B8 Match: finished resource projection'],
+  ['current anomaly silently removed', state => { state.anomalyBinding = null; }, 'Invalid B8 Match: current resource fold'],
   ['current child moved back to consumed donor', state => { state.temporaryEquipment.forEach(child => { child.holderId = DONOR; }); },
     'Invalid current temporary equipment projection'],
   ['original finished Combat star rewritten', state => { state.combat!.units.find(unit => unit.id === mirror.donor)!.starLevel = 2; },

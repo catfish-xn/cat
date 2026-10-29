@@ -22,6 +22,8 @@ export interface ChoiceDefinition { readonly id: string; readonly name: string; 
 export interface ItemInstance { readonly id: string; readonly definitionId: string; readonly location: { readonly kind: 'inventory' } | { readonly kind: 'unit'; readonly unitId: string; readonly slot: number } }
 export interface OwnedAugment { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }
 export interface AnomalyBinding { readonly definitionId: string; readonly unitId: string; readonly choiceId: string; readonly boundRound: number }
+/** Seat entitlement. It survives sale/removal and never points at a potentially absent unit. */
+export interface AnomalySelection { readonly definitionId: string; readonly championDefinitionId: string; readonly choiceId: string; readonly boundRound: number }
 export interface PendingChoice {
   readonly kind: 'augment' | 'anomaly' | 'component' | import('./seat-mechanics/types').MechanicChoiceKind; readonly step: 'target' | 'offer'; readonly choiceId: string;
   readonly returnPhase?: 'preparation' | 'settlement';
@@ -61,6 +63,7 @@ export type StrategyEvent =
  | { readonly type: 'itemsReturned'; readonly itemIds: readonly string[]; readonly unitId: string }
  | { readonly type: 'anomalyTransferred'; readonly fromId: string; readonly toId: string }
  | { readonly type: 'anomalyRemoved'; readonly unitId: string }
+ | ({ readonly type: 'anomalyRestored' } & AnomalyBinding)
  | { readonly type: 'rewardGranted'; readonly receipt: ScheduleReceipt }
  | { readonly type: 'choiceOpened'; readonly choice: PendingChoice }
  | { readonly type: 'choiceSelected'; readonly choiceId: string; readonly definitionId: string; readonly unitId: string | null }

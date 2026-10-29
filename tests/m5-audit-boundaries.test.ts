@@ -1,3 +1,4 @@
+import { advanceAugmentPreparationTime } from '../src/simulation/augment-history';
 import {G23_ANOMALY_SOURCE as ANOMALY_SOURCE} from '../src/simulation/content/g2-3-anomaly-source';
 import { S13_P2_SOURCE } from '../src/simulation/content/s13-augments-p2-source';
 import { P4_SOURCE } from '../src/simulation/anomalies/source';
@@ -5,7 +6,7 @@ import { COST } from './fixtures/m5/oracle.g2.cjs';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
-import { restoreMatch } from '../src/simulation/serialization';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, purchasedThreeHeroMatch, finish } from './match-helpers';
 import { describeEffect, describeTraitTier } from '../src/rendering/strategy-panel';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
@@ -13,6 +14,7 @@ import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { run } from '../scripts/generate-m5-route.cjs';
 import type { MatchState } from '../src/simulation/match-types';
 import { historyFreeRerollPriorities } from './fixtures/history-free-augments';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
 let before19: MatchState, anomaly: MatchState;
 
 describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling', () => {
@@ -75,6 +77,57 @@ beforeAll(async () => {
       COST[o.definitionId] <= s.gold);
     expect(slot).toBeGreaterThanOrEqual(0); expect(api.buyUnit(s, slot, s.shop.generation).ok).toBe(true);
   });
+  it('v26 authenticates quote history through object/JSON/text restore and exact continuation', () => {
+    const c = anomaly.pendingChoice!, unit = anomaly.preparation.units.find(u => u.team === 'player')!;
+    let s = accepted(api.selectAnomalyTarget(anomaly, c.choiceId, c.generation, unit.id));
+    expect(s.gold).toBeGreaterThanOrEqual(13);
+    for (let i = 0; i < 13; i++) {
+      const p = s.pendingChoice!;
+      s = accepted(api.rerollAnomaly(s, p.choiceId, p.generation));
+    }
+    expect(api.readAnomalyOfferHistory(s)).toHaveLength(14);
+    s = advanceAugmentPreparationTime(s,1000);
+    const text = serializeMatch(s);
+    for (const input of [s, JSON.parse(text), text]) {
+      const restored = restoreMatch(input), p = s.pendingChoice!;
+      expect(restored).toEqual(s);
+      expect(api.rerollAnomaly(restored, p.choiceId, p.generation)).toEqual(api.rerollAnomaly(s, p.choiceId, p.generation));
+    }
+    const refused = api.sellUnit(s, s.pendingChoice!.targetId!);
+    expect(refused).toEqual({ok:false,state:s,reason:'wrong-phase'});
+    expect(refused.state).toBe(s);
+    expect(restoreMatch(serializeMatch(s))).toEqual(s);
+    const chosen = accepted(api.selectChoice(s,s.pendingChoice!.choiceId,s.pendingChoice!.generation,s.pendingChoice!.offers[0]));
+    const sealed = chosen.anomalyOfferHistory;
+    const later = accepted(api.sellUnit(chosen,chosen.anomalyBinding!.unitId));
+    expect(later.anomalyOfferHistory).toBe(sealed);
+    expect(restoreMatch(serializeMatch(later))).toEqual(later);
+    expect(later.anomalySelection).toEqual(chosen.anomalySelection);
+    const restoredHolder = accepted(grantMechanicUnit(later, {receiptId:'audit:anomaly-reacquired',source:'anomaly-audit',
+      definitionId:chosen.anomalySelection!.championDefinitionId}));
+    expect(restoredHolder.anomalyBinding).not.toBeNull();
+    expect(restoredHolder.anomalyBinding!.unitId).not.toBe(chosen.anomalyBinding!.unitId);
+    expect(restoredHolder.anomalySelection).toEqual(chosen.anomalySelection);
+    expect(restoredHolder.anomalyOfferHistory).toBe(sealed);
+    expect(restoreMatch(serializeMatch(restoredHolder))).toEqual(restoredHolder);
+    // R5 permits a real replacement, but neither dormant nor restored ownership
+    // permits resurrecting the sold instance from the sealed quote proof.
+    for (const state of [later, restoredHolder]) {
+      const forgedTarget = {...state,anomalyBinding:chosen.anomalyBinding};
+      expect(()=>restoreMatch(forgedTarget)).toThrow();
+      expect(()=>restoreMatch(JSON.stringify(forgedTarget))).toThrow();
+      expect(()=>serializeMatch(forgedTarget)).toThrow();
+    }
+    const changed = structuredClone(s);
+    const facts = changed.anomalyOfferHistory!.facts.filter(f => f.kind === 'anomaly-offer');
+    Object.assign(facts[1], {definitionId:facts[0].definitionId});
+    for (const bad of [changed, {...s,anomalyOfferHistory:undefined}, {...s,choiceRngState:s.choiceRngState ^ 1},
+      {...s,pendingChoice:{...s.pendingChoice!,rerollCount:99}}]) {
+      expect(() => restoreMatch(bad)).toThrow();
+      expect(() => restoreMatch(JSON.stringify(bad))).toThrow();
+      expect(() => serializeMatch(bad)).toThrow();
+    }
+  });
   it.each([0, 1, 42, 0xffffffff])('maps one complete random word at each draw and revisits all offers, seed %i', seed => {
     let s = { ...anomaly, choiceRngState: seed, gold: 500 } as MatchState;
     const c = s.pendingChoice!, target = s.preparation.units.find(u => u.team === 'player')!;
@@ -93,7 +146,8 @@ beforeAll(async () => {
     expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * BigInt(ids.length) / 4294967296n)]);
     const seen = new Set(s.pendingChoice!.offers);
     for (let i = 0; i < 400; i++) {
-      const previous = s.pendingChoice!.offers[0], pool = ids.filter(id => id !== previous), before = s;
+      const previous = s.pendingChoice!.offers[0], history = api.readAnomalyOfferHistory(s),
+        excluded = history.length < 12 ? history : [previous], pool = ids.filter(id => !excluded.includes(id)), before = s;
       word = (word * 1664525n + 1013904223n) % 4294967296n;
       const pending = s.pendingChoice!; s = accepted(api.rerollAnomaly(s, pending.choiceId, pending.generation));
       expect(s.choiceRngState).toBe(Number(word)); expect(s.pendingChoice!.offers[0]).toBe(pool[Number(word * BigInt(pool.length) / 4294967296n)]);

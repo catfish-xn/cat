@@ -38,6 +38,7 @@ export type ResourceFact =
   | {readonly kind:'dual-purpose-selected';readonly choiceId:string;readonly level:number;readonly xp:number}
   | {readonly kind:'dual-purpose-xp-purchased';readonly levelBefore:number;readonly xpBefore:number;readonly generation:number;readonly settled:boolean}
   | {readonly kind:'form-swapper-selected';readonly choiceId:string}
+  | {readonly kind:'anomaly-selected';readonly choiceId:string;readonly unitId:string}
   | {readonly kind:'d14-selected';readonly choiceId:string;readonly unitId:string;readonly heldItems:readonly import('./strategy-types').ItemInstance[]}
   | {readonly kind:'d14-returned';readonly choiceId:string;readonly unitId:string;readonly settledOrdinal:number}
   | {readonly kind:'anger-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
@@ -69,6 +70,9 @@ export interface ResourceProvenance {
 export interface ProvenanceUnit { readonly id: string; readonly definitionId: string; readonly starLevel: StarLevel }
 export interface ProvenanceItem { readonly id: string; readonly definitionId: string }
 export interface FoldedResourceProvenance {
+  readonly lastAnomalyBinding: import('./strategy-types').AnomalyBinding | null;
+  readonly anomalySelection: import('./strategy-types').AnomalySelection | null;
+  readonly anomalyBinding: import('./strategy-types').AnomalyBinding | null;
   readonly units: readonly ProvenanceUnit[];
   readonly items: readonly ProvenanceItem[];
   readonly persistentGrowth: readonly PersistentGrowth[];
