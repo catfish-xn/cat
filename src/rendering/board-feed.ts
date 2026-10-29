@@ -43,6 +43,8 @@ export interface BoardFrame {
   readonly fighting: boolean;
   /** The unit BoardScene is dragging (either input), or null; the 3D layer drops its own drag once this clears. */
   readonly dragging: string | null;
+  /** BoardScene's current selection; the 3D view lifts it slightly, without a foot ring. */
+  readonly selectedId?: string | null;
   /** Owner-only sacrifice marker from the private seat view, or null when hidden. */
   readonly mutationSacrificeCell?: { readonly col: number; readonly row: number } | null;
   /** v15 (online): my unclaimed orbs as the private view lists them (oldest first); empty offline. Where they sit is the layer's own layout. */

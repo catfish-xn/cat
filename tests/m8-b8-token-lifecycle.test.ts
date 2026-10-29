@@ -344,6 +344,24 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
 
 
 describe('BoardScene online interest feed', () => {
+  it('publishes the real selection and keeps optional piece metadata unchanged for the 3D view', () => {
+    const scene = makeScene();
+    scene.tokens.clear(); scene.views.clear();
+    const token = new display.Token('unit:chosen', 100, 200)
+      .setData('definitionId', 'unit').setData('team', 'player').setData('starLevel', 3)
+      .setData('effectiveStarLevel', 4).setData('neutral', true);
+    scene.tokens.set('chosen', token); scene.selectedId = 'chosen';
+    const frame = scene.boardFrame();
+    expect(frame.selectedId).toBe('chosen'); expect(frame.dragging).toBeNull();
+    expect(frame.pieces).toHaveLength(1);
+    expect(frame.pieces[0]).toMatchObject({ id: 'chosen', effectiveStarLevel: 4, neutral: true, x: 100, y: 200 });
+    expect(frame.pieces[0].control).toBeUndefined();
+    token.setData('effectiveStarLevel', 3).setData('neutral', false); scene.selectedId = null;
+    const cleared = scene.boardFrame();
+    expect(cleared.selectedId).toBeNull(); expect(cleared.pieces[0].effectiveStarLevel).toBeUndefined();
+    expect(cleared.pieces[0].neutral).toBeUndefined(); expect(cleared.pieces[0].control).toBeUndefined();
+  });
+
   it('omits mines offline/before the private view, caps banked gold, and keys only income already paid on next entry', () => {
     const scene = makeScene();
     // No unit meters are needed for this frame-only check.

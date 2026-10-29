@@ -23,6 +23,21 @@ describe('3D overhead meters and items', () => {
     expect(stamp.visible).toBe(false); expect(overhead.drawn).toBe(false); overhead.dispose();
   });
 
+  it('distinguishes allies in green and enemies in red without a foot marker', () => {
+    const { rects, canvas } = fakeCanvas();
+    vi.stubGlobal('document', { createElement: () => canvas });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const meters = { hp: 300, maxHp: 600, mana: 0, maxMana: 50, shield: 0 };
+    expect(DEFAULT_METER_COLORS.hp).toBe('#5fd68a'); expect(DEFAULT_METER_COLORS.hpEnemy).toBe('#f08080');
+    overhead.set('player', meters, undefined);
+    expect(rects.find(rect => rect.fill === '#5fd68a')?.w).toBe(62);
+    expect(rects.some(rect => rect.fill === '#f08080')).toBe(false);
+    overhead.set('enemy', meters, undefined);
+    expect(rects.find(rect => rect.fill === '#f08080')?.w).toBe(62);
+    expect(rects.some(rect => rect.fill === '#5fd68a')).toBe(false);
+    overhead.dispose();
+  });
+
   it('draws HP in team color with a shield segment and mana, and redraws only when the values change', () => {
     const { rects, canvas } = fakeCanvas();
     vi.stubGlobal('document', { createElement: () => canvas });

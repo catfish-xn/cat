@@ -1443,26 +1443,27 @@ export class BoardScene extends Phaser.Scene {
 
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
-    const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const state = this.session.state, combat = this.session.combatView;
+    const board = this.state.board, fallen = new Set(combat?.units.filter(unit => !unit.alive).map(unit => unit.id));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
-    const result = this.session.state.roundResults?.at(-1);
+    const result = state.roundResults?.at(-1);
     // A result freezes income before it is paid; entering a later round is the authoritative payment boundary.
-    const paid = [...this.session.state.roundResults].reverse().find(record => record.round < this.session.state.round);
+    const paid = [...state.roundResults].reverse().find(record => record.round < state.round);
     const online = this.application instanceof OnlineApplication && this.application.isActive;
-    return { ...(online ? { goldMines: Math.min(ECONOMY_RULES.interestCap, Math.floor(this.session.state.gold / ECONOMY_RULES.interestDivisor)),
+    return { ...(online ? { goldMines: Math.min(ECONOMY_RULES.interestCap, Math.floor(state.gold / ECONOMY_RULES.interestDivisor)),
       goldMineIncomeKey: paid ? `round:${paid.round}:${paid.roundId}` : null } : {}), rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
-        starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
-        ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
+        starLevel: token.getData('starLevel'), effectiveStarLevel: token.getData('effectiveStarLevel') === 4 ? 4 as const : undefined,
+        neutral: token.getData('neutral') === true || undefined,
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id),
-        ...(this.controls.has(id) && this.session.combatView ? { control: this.controls.get(id)! } : {}) })),
-      fighting: this.session.combatView !== null, dragging: this.draggingId,
+        control: combat ? this.controls.get(id) : undefined })),
+      fighting: combat !== null, dragging: this.draggingId, selectedId: this.selectedId,
       orbs: this.feedOrbs(),
-      openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
+      openedOrbs: grantedOrbIds(readOrbClaimReceipts(state)),
       orbRefusals: this.orbRefusalsOf(),
       mutationSacrificeCell: this.mutationCell(),
       hit: result && result.hpLost > 0 ? { key: `round:${result.round}:${result.roundId}`, damage: result.hpLost } : null,
