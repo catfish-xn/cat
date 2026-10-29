@@ -155,7 +155,7 @@ jobs:
         if: ${{ startsWith(matrix.part, 'tests-') }}
         env:
           PART: ${{ matrix.part }}
-        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/8"
+        run: node scripts/ci-m5-step.cjs tests npm test -- --shard="${PART#tests-}/8" --passWithNoTests
       - name: Timing tests (one worker, serial files)
         if: ${{ !cancelled() && matrix.part == 'tests-1' && needs.changes.outputs.tier == 'full' }}
         run: node scripts/ci-m5-step.cjs timing npm run test:timing

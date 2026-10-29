@@ -59,6 +59,8 @@ const UNKNOWN_WEIGHT = 2;
 const shardWeight = (path: string): number => SHARD_WEIGHTS[path] ?? UNKNOWN_WEIGHT;
 // Shard 1 also runs the timing project after its fast tests (ci.yml, full tier): 150-250 s
 // on CI, which is about 900 of these table seconds (CI shards finish ~4.8 table seconds per second).
+// With eight shards that exceeds a shard's share, so shard 1 gets no fast files (ci.yml passes
+// --passWithNoTests for it).
 const SHARD_ONE_HEADSTART = 900;
 export default defineConfig({
   test: {
