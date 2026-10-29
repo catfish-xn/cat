@@ -72,8 +72,18 @@ it('chooses Cabal through the room, queues three exact gifts and claims them wit
  expect(readCabalGrowth(mine())).toEqual({healthFlat:0,attackDamageBps:0});
  fieldBlackRose(seatId,3);
 });
-for(const round of [12,13,15,16,17])it(`round ${round} records actual participants and exactly-once permanent Sion growth`,()=>{
- runUntil(room,clock,s=>s.round===round&&s.phase==='settlement');expect(room.state.fault).toBeNull();
+// Advance the same real room once per leg, outside the assertion deadline.
+// Each settlement case only reads its state; tampering cases below clone paid.
+for(const round of [12,13,15,16,17])describe(`settlement fixture ${round}`,()=>{
+ const settled=()=>room.state.round===round&&room.state.phase==='settlement';
+ // Preserve runUntil's 2,000-timer budget, but give streamed PvE ticks separate
+ // hooks so the 4-1 leg has headroom under the unchanged 10 s hook deadline.
+ for(let part=0;part<8;part++)beforeAll(()=>{
+  for(let fired=0;fired<250&&!settled();fired++)if(!clock.runNext())break;
+ });
+ beforeAll(()=>runUntil(room,clock,settled,0));
+ it(`round ${round} records actual participants and exactly-once permanent Sion growth`,()=>{
+ expect(room.state.fault).toBeNull();
  const state=mine(),rows=requireAugmentFacts(state,'deaths',round);
  expect(rows.flatMap(f=>f.deaths).every(d=>Array.isArray(d.takedowns))).toBe(true);
  const plan=cabalGrowthPlan(state),growth=state.augmentHistory!.facts.filter(f=>f.kind==='summon-growth');
@@ -81,6 +91,7 @@ for(const round of [12,13,15,16,17])it(`round ${round} records actual participan
   .toEqual(plan.map(p=>({receiptId:p.receiptId,stacks:p.stacks,healthFlat:p.healthFlat,attackDamageBps:p.attackDamageBps})));
  expect(settleCabalGrowth(state)).toBe(state);
  if(round===17){expect(plan.reduce((n,p)=>n+p.stacks,0)).toBeGreaterThan(0);paid=state;authority=room.augmentHistoryAuthority(seatId);pool=room.state.pool;}
+ });
 });
 it('projects authenticated prior growth into the next frozen PvP snapshot and real Sion compiler',()=>{
  runUntil(room,clock,s=>s.round===18&&s.phase==='preparation');answerOpenChoices(room,[seatId]);

@@ -22,7 +22,7 @@ vi.mock('node:http', async () => {
   }) };
 });
 
-// One route per file; each round continues its cached run under the default case timeout.
+// Private independent routes per file; bounded beforeAll hooks prepare their cached observations.
 // The streamed path (production default) plans from sealed terminals and usually commits within one slice.
 describe('commands arriving during sliced settlement', () => {
   registerBusyMatch(socket => transport.connect!(socket), true, 0);
