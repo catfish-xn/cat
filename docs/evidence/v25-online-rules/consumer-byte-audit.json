@@ -1281,6 +1281,14 @@
       "currentSha256": "05e30d7ed45f6924e72a029943f377677f87b20947e8543e77cc998ee07568bc",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/augment-replay-command-cache.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6988,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f751c5d6f28afe82964b800e9622bda2f8b7b1b9d369b45890ae949cb4a851b0",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/b1-offer-cache-key.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2094,9 +2102,9 @@
     },
     "tests/m8-b5-equipment-history.test.ts": {
       "previousBytes": 15166,
-      "currentBytes": 15674,
+      "currentBytes": 20393,
       "previousSha256": "df80ed196c8bf749f230b13afa06befa530b986ed343856f24a101d82e224281",
-      "currentSha256": "0ad50802f69d28eaf7ecc05fc5989d694b22a4bcf0f6eb7b6bc11b445aa16e41",
+      "currentSha256": "6fcd98ef718be6bf923a330967cba67e5dae602f2f001fc97c10bde398fccdfc",
       "firstDifferentByte": 207
     },
     "tests/m8-b5-grant-upgrade.test.ts": {
@@ -2382,6 +2390,13 @@
       "previousSha256": "e69b907ecbb46b46f1f906ea29c42d28a36e83555e86d9e75afaa815e785a9aa",
       "currentSha256": "5c24ef632819635a6d45f15d4c5667ed182dea7e1ccc9ea15116f0ae6f311ba8",
       "firstDifferentByte": 600
+    },
+    "tests/rumble-shop-layout.test.ts": {
+      "previousBytes": 15883,
+      "currentBytes": 16680,
+      "previousSha256": "fc52055b1921961c4c298254d7c50de1c870da3a81d5713b0a62875bcd0e96b0",
+      "currentSha256": "0ff0ea4dcb641fc69639cdc08d6b8f2780db797adf7dc63664cf86205fe736e0",
+      "firstDifferentByte": 1298
     },
     "tests/s13-anomalies-restore-review.test.ts": {
       "previousBytes": 5156,
