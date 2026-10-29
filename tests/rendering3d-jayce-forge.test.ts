@@ -150,7 +150,7 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
     expect(apply.mock.contexts.some(mixer => (mixer as unknown as { root: Group }).root.name === 'rendering3d-placeholder')).toBe(false);
   });
 
-  it.each(['TFT_ArmoryKeyComponent', 'TFT_ArmoryKeyCompleted'])('loads %s by its own manifest key and hides champion stars', async definitionId => {
+  it.each(['TFT_ArmoryKeyComponent', 'TFT_ArmoryKeyCompleted', 'TFT_ArmoryKeyOrnn', 'TFT_ArmoryKeySupport'])('loads %s by its own manifest key and hides champion stars', async definitionId => {
     const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
     renderer.useAnvilTest(id => id.startsWith('TFT_ArmoryKey'));
     const lease = model(definitionId, { idle: 'anvil_idle' }, [['anvil_idle', 2]]);
@@ -159,6 +159,89 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
     expect(load).toHaveBeenCalledWith(definitionId);
     expect(scene.getObjectByName(`model-${definitionId}`)).toBe(lease.scene);
     expect(scene.getObjectByName('render3d-stars')).toBeUndefined();
+  });
+
+  it.each(['TFT_ArmoryKeyOrnn', 'TFT_ArmoryKeySupport'])('keeps the existing pawn when %s is missing from the asset root', async definitionId => {
+    const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
+    renderer.useAnvilTest(id => id.startsWith('TFT_ArmoryKey'));
+    await mount(); await publish([piece({ definitionId })], false);
+    await vi.dynamicImportSettled();
+    expect(scene.getObjectByName('render3d-pawn')?.parent?.visible).toBe(true);
+    expect(scene.getObjectByName('rendering3d-placeholder')).toBeUndefined();
+    expect(scene.getObjectByName('render3d-stars')).toBeUndefined();
+  });
+
+  const mini = (owner: BoardPiece, ordinal = 0): BoardPiece => piece({
+    id: JSON.stringify([owner.id, 'source', 'anomaly', 'mini', ordinal]), definitionId: 's13-mini', team: owner.team,
+  });
+
+  it.each(['jinx', 'vi', 'elise-ranged'])('fits minis as smaller independent %s models after the owner size caps', async definitionId => {
+    const { MINI_MODEL_SCALE } = await import('../src/rendering/three-mode/unit-model');
+    const loaded: ModelLease[] = [];
+    const load = vi.spyOn(core.ModelCache.prototype, 'load').mockImplementation(async id => {
+      const lease = model(id, { idle: 'idle' }, [['idle', 2]]);
+      // Force the width cap, so multiplying unitScale before the fit cannot pass this ratio check.
+      lease.scene.scale.x = 20;
+      loaded.push(lease); return lease;
+    });
+    const owner = piece({ id: 'owner', definitionId });
+    await mount(); await publish([owner, mini(owner, 0), mini(owner, 1), mini(owner, 2)]);
+    expect(load.mock.calls.map(([id]) => id)).toEqual([definitionId, definitionId, definitionId, definitionId]);
+    const size = (lease: ModelLease) => new three.Box3().setFromObject(lease.scene).getSize(new three.Vector3());
+    const ownerSize = size(loaded[0]!);
+    for (const lease of loaded.slice(1)) {
+      expect(lease.scene).not.toBe(loaded[0]!.scene);
+      expect(lease.scene.parent).not.toBe(loaded[0]!.scene.parent);
+      expect(size(lease).x / ownerSize.x).toBeCloseTo(MINI_MODEL_SCALE);
+      expect(size(lease).y / ownerSize.y).toBeCloseTo(MINI_MODEL_SCALE);
+      expect(lease.scene.position.y / loaded[0]!.scene.position.y).toBeCloseTo(MINI_MODEL_SCALE);
+      expect(apply.mock.contexts.some(mixer => (mixer as unknown as { root: Group }).root === lease.scene)).toBe(true);
+    }
+    expect(loaded[0]!.scene.scale.x).toBeGreaterThan(loaded[1]!.scene.scale.x);
+  });
+
+  it('shrinks the source model at its official scale and keeps a pawn if that hero model is missing', async () => {
+    const { MINI_MODEL_SCALE } = await import('../src/rendering/three-mode/unit-model');
+    vi.mocked(fetch).mockResolvedValue(Response.json({ schemaVersion: 1, models: { jinx: { path: 'jinx.glb', unitScale: 0.8 } } }));
+    const loaded: ModelLease[] = [];
+    const load = vi.spyOn(core.ModelCache.prototype, 'load').mockImplementation(async id => {
+      const lease = model(id, { idle: 'idle' }, [['idle', 2]]); loaded.push(lease); return lease;
+    });
+    const owner = piece({ id: 'owner', definitionId: 'jinx' });
+    await mount(); await publish([owner, mini(owner)], false);
+    expect(loaded).toHaveLength(2);
+    expect(loaded[1]!.scene.scale.x / loaded[0]!.scene.scale.x).toBeCloseTo(MINI_MODEL_SCALE);
+    expect(loaded[1]!.scene.position.y / loaded[0]!.scene.position.y).toBeCloseTo(MINI_MODEL_SCALE);
+    load.mockRestore();
+    const absent = { ...owner, definitionId: 'unpublished-hero' };
+    await publish([absent, mini(absent)]); await vi.dynamicImportSettled();
+    const pawns = scene.children.filter(root => root.getObjectByName('render3d-pawn'));
+    expect(pawns).toHaveLength(2);
+    expect(scene.getObjectByName('rendering3d-placeholder')).toBeUndefined();
+  });
+
+  it('resolves a mini when its owner arrives later, releases stale loads, and follows owner definition changes', async () => {
+    const pending: ((lease: ModelLease) => void)[] = [];
+    const load = vi.spyOn(core.ModelCache.prototype, 'load').mockImplementation(id =>
+      id === 'jinx' ? new Promise(resolve => { pending.push(resolve); }) : Promise.resolve(model(id, { idle: 'idle' }, [['idle', 2]])));
+    const jinx = piece({ id: 'owner', definitionId: 'jinx' }), viOwner = { ...jinx, definitionId: 'vi' };
+    await mount(); await publish([mini(jinx)]);
+    expect(load).not.toHaveBeenCalled();
+    expect(scene.getObjectByName('render3d-pawn')?.parent?.visible).toBe(true);
+    await publish([mini(jinx), jinx]); // both Jinx leases are still in flight
+    await publish([mini(viOwner), viOwner]);
+    expect(pending).toHaveLength(2);
+    const releases = pending.map(finish => {
+      const stale = model('jinx', { idle: 'idle' }, [['idle', 2]]), release = stale.release;
+      finish(stale); return release;
+    });
+    await Promise.resolve(); await Promise.resolve();
+    for (const release of releases) expect(release).toHaveBeenCalledExactlyOnceWith();
+    expect(scene.getObjectByName('model-jinx')).toBeUndefined();
+    expect(scene.children.filter(root => root.getObjectByName('model-vi'))).toHaveLength(2);
+    await publish([mini(viOwner)]); // source is no longer in this view: never keep the previous hero
+    expect(scene.getObjectByName('model-vi')).toBeUndefined();
+    expect(scene.getObjectByName('render3d-pawn')?.parent?.visible).toBe(true);
   });
 
   it('rises with its spawn clip when it appears in combat, then stands in idle', async () => {

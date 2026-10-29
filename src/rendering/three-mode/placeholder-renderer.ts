@@ -1,6 +1,6 @@
 import { projectedBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
-import { unitModelId } from './unit-model';
+import { pieceModel, type UnitModelChoice } from './unit-model';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -274,7 +274,7 @@ interface PieceView {
   /** HP/mana bars and worn items over the head (unit-overhead.ts); a scene child placed each frame like the stars. */
   readonly overhead: UnitOverhead;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
-  definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
+  definitionId: string; model: UnitModelChoice; bodyRevision: number; target: Vector3; placed: boolean; disposed: boolean;
   /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
   rise: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
@@ -709,15 +709,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
   const attachBody = (view: PieceView) => {
+    const revision = ++view.bodyRevision;
     cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
+    view.body.scale.multiplyScalar(view.model.scale);
+    view.starHeight = PAWN_HEIGHT * view.model.scale + STAR_GAP;
+    const definitionId = view.model.id;
     if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
-      if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
+      if (view.disposed || view.bodyRevision !== revision) { lease.release(); return; }
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
@@ -756,6 +759,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
         view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
       }
+      // Shrink after the owner's normal fit, including grounding/centering offsets. Multiplying unitScale before
+      // the caps would make a wide/tall champion's mini larger than the intended fraction of its owner's body.
+      lease.scene.scale.multiplyScalar(view.model.scale); lease.scene.position.multiplyScalar(view.model.scale);
+      view.starHeight = (view.starHeight - STAR_GAP) * view.model.scale + STAR_GAP;
+      if (view.modelScale !== null) view.modelScale *= view.model.scale;
       // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
       stand?.removeFromParent();
       view.root.add(lease.scene);
@@ -766,6 +774,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
       if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) { loadReport.attached(id, definitionId); timeUpload = true; }
     }).catch(() => {
+      if (view.disposed || view.bodyRevision !== revision) return;
       // A disposed cache rejects late loads; the piece keeps its pawn (and a dying one hides).
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
@@ -779,7 +788,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
     view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
   };
-  const createPiece = (piece: BoardPiece): PieceView => {
+  const createPiece = (piece: BoardPiece, model: UnitModelChoice): PieceView => {
     const root = new Group();
     const ring = new Mesh(ringGeometry, ringMaterial[piece.team]);
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5;
@@ -787,7 +796,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
+      definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
     root.rotation.y = view.turn.heading;
@@ -1044,23 +1053,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Back in preparation: measure what a combat skipped and re-attach those pieces at their full envelope.
     if (!fighting && envelopePending.size) {
       const ids = new Set(envelopePending); envelopePending.clear();
-      for (const view of pieces.values()) if (ids.has(view.definitionId) && view.lease && !view.lease.placeholder) attachBody(view);
+      for (const view of pieces.values()) if (view.model.id && ids.has(view.model.id) && view.lease && !view.lease.placeholder) attachBody(view);
     }
     const seen = new Set<string>();
+    const modelPieces = new Map(frame.pieces.map(piece => [piece.id, piece]));
     for (const piece of frame.pieces) {
       if (!piece.definitionId || (piece.team !== 'player' && piece.team !== 'enemy')) continue;
       seen.add(piece.id);
       let view = pieces.get(piece.id);
+      const model = pieceModel(piece, modelPieces, isAnvilPiece(piece.definitionId));
       const created = !view;
-      if (!view) { view = createPiece(piece); pieces.set(piece.id, view); if (frame.fighting && (combatBegan || rising.has(piece.id))) view.rise = true; }
+      if (!view) { view = createPiece(piece, model); pieces.set(piece.id, view); if (frame.fighting && (combatBegan || rising.has(piece.id))) view.rise = true; }
       view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
       // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
       if (!frame.fighting || combatStarted || created) {
         const middle = frame.origin.y + (frame.rows - 1) * frame.hexRadius * 1.5 / 2;
         view.form = Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
       }
-      if (view.definitionId !== piece.definitionId || view.team !== piece.team) {
-        view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
+      if (view.definitionId !== piece.definitionId || view.team !== piece.team || view.model.id !== model.id || view.model.scale !== model.scale) {
+        view.definitionId = piece.definitionId; view.model = model; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted);
@@ -1087,7 +1098,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); ltk?.stopUnit(id); removePiece(view); pieces.delete(id); }
     if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
-      [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
+      [...pieces.values()].filter(view => view.model.id && warmup?.warmed(view.model.id)).length);
     if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
