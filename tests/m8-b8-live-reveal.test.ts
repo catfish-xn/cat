@@ -23,13 +23,13 @@ const sourceDrops=(slot:string)=>independentDrops.filter(d=>d.sourceUnitId===JSO
 expect(sourceDrops('r03').map(d=>d.payload.kind)).toEqual(['unit']);
 expect(sourceDrops('r04')).toHaveLength(3);expect(sourceDrops('r04').some(d=>d.payload.kind==='unit')).toBe(true);
 expect([...new Set(independentDrops.map(d=>JSON.parse(d.sourceUnitId!)[3]))]).toEqual(['r00','r01','r02','r03','r04']);
-const lorisPrefix=await barePartialPrefix('loris',PARTIAL_REVEAL_SEEDS.loris,['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii']);
+const lorisPrefix=await barePartialPrefix('loris',PARTIAL_REVEAL_SEEDS.loris,['visionary-crest','building-a-collection-iii','enforcer-crown']);
 for(const state of [lorisPrefix]){
  expect(openingEncounter(state.seed)).toBe('none');
  expect(state.augments.find(a=>a.choiceId==='round:2-1:augment')?.definitionId).toBe('visionary-crest');
  expect(state.augmentOffers.find(a=>a.choiceId==='round:2-1:augment')?.rerolledIndices).toEqual([]);
 }
-expect(lorisPrefix.augments.map(a=>a.definitionId)).toEqual(['visionary-crest','bulky-buddies-iii','the-golden-egg']);
+expect(lorisPrefix.augments.map(a=>a.definitionId)).toEqual(['visionary-crest','building-a-collection-iii','enforcer-crown']);
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
@@ -50,33 +50,33 @@ const clone = (state: api.MatchState): api.MatchState => {
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals both carrier entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
-    while (state.phase === 'combat' && state.combat.tick < 109) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 126) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(109);
+    expect(state.combat!.tick).toBe(126);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
     state = transition.state;
     expect(state.phase).toBe('combat');
     const revealed = transition.events.filter(event => event.type === 'lootRevealed');
-    expect(revealed).toHaveLength(3); // r00 component+anvil and r01 component, in a live combat batch.
+    expect(revealed).toHaveLength(3); // r02's two entries and r03's hero, in a live combat batch.
     const plan = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7')!;
     expect(revealed.map(event => event.dropId)).toEqual([
-      ...plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r00"]')||d.sourceUnitId!.endsWith('r01"]')).map(drop => drop.dropId), ...plan.choices.map(choice => choice.dropId),
+      ...plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r02"]')||d.sourceUnitId!.endsWith('r03"]')).map(drop => drop.dropId), ...plan.choices.map(choice => choice.dropId),
     ]);
     const expectedDeaths = [
-      // Seed 2634 with the lawful Leona/Loris swap: three earlier deaths, then
-      // hero carriers r03/r04 die in the same tick-178 action batch. These are
-      // recorded public-combat checkpoints, not independently derived constants.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 110, eventSeq: 765 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 110, eventSeq: 766 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 164, eventSeq: 1112 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 178, eventSeq: 1206 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 178, eventSeq: 1207 },
+      // Seed 15972 after the lawful Leona/Loris swap. r04 dies alone, then
+      // r02/r03 die in the tick-127 batch, and r00/r01 close the fight together.
+      // These are recorded public-combat checkpoints, not independently derived constants.
+      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 40, eventSeq: 446 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 127, eventSeq: 1226 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 127, eventSeq: 1227 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 165, eventSeq: 1504 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 165, eventSeq: 1505 },
     ];
-    expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths.slice(0,2));
-    expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(expectedDeaths.slice(0,2).map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([765, 765, 766]);
+    expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths.slice(0,3));
+    expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(expectedDeaths.slice(1,3).map(death => [death.unitId, death.tick, death.eventSeq]));
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([1226, 1226, 1227]);
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -87,7 +87,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[2].dropId).death.eventSeq = 765; // Substitute r00's real death identity for r01's evidence.
+    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[2].dropId).death.eventSeq = 1226; // Substitute r02's real death identity for r03's evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: duplicate death identity');
     let resumed = restoredReveal, terminalEvents:readonly api.MatchEvent[]=[];
     while (state.phase === 'combat') {
@@ -97,15 +97,15 @@ describe('B8 real simultaneous loot-source deaths', () => {
     }
     expect(state.phase).toBe('settlement');
     expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths);
-    // Removing the sixth bird makes the hero-carrier pair the terminal batch.
+    // The last two birds die in the action that ends combat.
     // Preserve both obligations: live reveal above, and atomic terminal reveal+grant here.
     const terminalRevealed=terminalEvents.filter(e=>e.type==='lootRevealed');
-    expect(terminalRevealed).toHaveLength(4);
-    expect(terminalRevealed.map(e=>e.dropId)).toEqual(plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r03"]')||d.sourceUnitId!.endsWith('r04"]')).map(d=>d.dropId));
-    expect(terminalRevealed.map(e=>e.death.eventSeq)).toEqual([1206,1207,1207,1207]);
+    expect(terminalRevealed).toHaveLength(3);
+    expect(terminalRevealed.map(e=>e.dropId)).toEqual(plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r00"]')||d.sourceUnitId!.endsWith('r01"]')).map(d=>d.dropId));
+    expect(terminalRevealed.map(e=>e.death.eventSeq)).toEqual([1504,1504,1505]);
     expect(terminalEvents.flatMap(e=>e.type==='death'?[[e.unitId,e.tick,e.eventSeq]]:[])).toEqual(expectedDeaths.slice(3).map(d=>[d.unitId,d.tick,d.eventSeq]));
     const forgedTerminal=JSON.parse(serializeMatch(state));
-    forgedTerminal.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===terminalRevealed[0].dropId).death.eventSeq=1207;
+    forgedTerminal.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===terminalRevealed[2].dropId).death.eventSeq=1504;
     expect(()=>restoreMatch(forgedTerminal)).toThrow('Invalid B8 Match: duplicate death identity');
     expect(revealMatchLoot(state,state.combat!)).toEqual({state,events:[]});
     expect(state.pendingChoice).toBeNull();expect(clone(state)).toEqual(state);
@@ -117,21 +117,21 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    // Restored birds defeat bare two-star Loris/Zyra before either scores a kill.
-    // Publicly equip actual seed-29 inventory: these two lawful positions/loadouts
-    // preserve one killed carrier, contrasting the anvil+hero group with one component.
-    ['r00', 655, 'settlement', 3, 1, 2],
-    ['r01', 357, 'settlement', 1, 1, 0],
+    // Restored birds defeat bare two-star Loris before he scores a kill.
+    // Seed 54239 inventory, Shojin/Gargoyle/Crownguard: (6,7) kills only r04 and
+    // (0,6) kills only r01. Counts are that fight's granted receipts.
+    ['r04', 520, 'settlement', 2, 0, 1],
+    ['r01', 353, 'settlement', 1, 1, 0],
   ] as const)('earns only killed source rewards after an actual equipped Loris partial defeat at %s', (source, deathTick, phase, directReceipts, itemBirths, unitBirths) => {
     let prepared=partialB8Preparation(lorisPrefix,'loris');
     const holder=prepared.preparation.units.find(u=>u.team==='player'&&u.definitionId==='loris')!;
-    const loadout=['shojin','gargoyle',source==='r00'?'crownguard':'ionic-spark'];
+    const loadout=['shojin','gargoyle','crownguard'];
     for(const [slot,definitionId]of loadout.entries()){
       const item=prepared.items.find(i=>i.location.kind==='inventory'&&i.definitionId===definitionId)!;
       expect(item).toBeDefined();prepared=accepted(api.equipItem(prepared,item.id,holder.id,slot));
     }
-    prepared=accepted(api.deployMatchUnit(prepared,holder.id,{kind:'board',cell:source==='r00'?{col:6,row:7}:{col:0,row:4}}));
-    expect(prepared.augments.map(a=>a.definitionId)).toEqual(['visionary-crest','bulky-buddies-iii','the-golden-egg']);
+    prepared=accepted(api.deployMatchUnit(prepared,holder.id,{kind:'board',cell:source==='r04'?{col:6,row:7}:{col:0,row:6}}));
+    expect(prepared.augments.map(a=>a.definitionId)).toEqual(['visionary-crest','building-a-collection-iii','enforcer-crown']);
     let state=clone(prepared);
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId==='loris')!.id;
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
@@ -158,7 +158,8 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(state.phase).toBe(phase); expect(state.combat!.result).toBe('enemyWin');
     expect(state.combat!.neutralReceipts!.deaths).toHaveLength(1);
     expect(state.m8.loot.receipts).toHaveLength(beforeReceipts + directReceipts);
-    expect(state.m8.loot.direct.filter(d=>frozen.rounds.at(-1)!.encounterPlan.drops.some(p=>p.dropId===d.dropId)).map(drop => drop.status)).toEqual(independentLootPlan(state.seed,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.sourceUnitId===JSON.stringify(['pve','4-7','razorbeaks-v1',source])?'granted':'forfeited'));
+    // A non-lethal loss carries every unrevealed 4-7 drop to the next PvE. Only the killed source is granted.
+    expect(state.m8.loot.direct.filter(d=>frozen.rounds.at(-1)!.encounterPlan.drops.some(p=>p.dropId===d.dropId)).map(drop => drop.status)).toEqual(independentLootPlan(state.seed,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.sourceUnitId===JSON.stringify(['pve','4-7','razorbeaks-v1',source])?'granted':'carried'));
     expect(state.m8.loot.choiceEligibility).toEqual([]);
     expect(state.nextUnitSerial).toBe(unitSerial + unitBirths);
     expect(state.nextItemSerial).toBe(beforeItemSerial + itemBirths);

@@ -126,13 +126,15 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
   // Match #98's public-fixture setup: warm the exact paid acquisition routes,
   // while every upgrade/restore assertion and its original timeout stays in the case.
   for (const [definitions, seed] of [
-    [['blue-buff', 'blue-buff'], 11], [['thiefs-gloves', 'sword']],
+    [['blue-buff', 'blue-buff'], 104], [['thiefs-gloves', 'sword']],
     // v23 fmix32 openings: seed 1's late four-component route now loses out at 4-3; seed 3 is the next funded route.
     [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak'], 3],
   ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
-    // Seed 11 keeps the real double-TG purchases off the default Spoils history route.
-    const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves'], false, 11);
+    // Seed 11 now takes Cluttered Mind, so a save without battles is missing B4XP evidence.
+    // Seed 24 is the next loot-legal double TG whose augments need no crown or augment
+    // history. After the route sells non-cards, nine Trundles cost 45 with 61 gold in hand.
+    const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves'], false, 24);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;
     // Upgrade transfers consumed holders in code-point ID order. Public purchases
     // cross unit-9, so unit-10 precedes unit-7; derive that order from their IDs.
@@ -172,8 +174,10 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(() => restoreMatch(serializeMatch(forgedNext))).toThrow('Invalid resource provenance: unit serial');
   });
   it.each([
-    // Seed 11 funds all nine purchases at 4-5; seed 1 now reaches the anomaly first.
-    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 11],
+    // Seed 11 walks to 16, which cannot pay nine copies before the next round leaves
+    // pending loot. Seed 104 is loot-legal for both tears and stops at 3-5; after selling
+    // non-cards, nine Violets cost 61 with 83 gold, and the save needs no crown or augment history.
+    ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 104],
     ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1], undefined],
     ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1], undefined],
     ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], 3],

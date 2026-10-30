@@ -3,25 +3,29 @@ import { accepted, configuredPrefix } from './t13-loot-public';
 
 // v25: bounded public-route search requires no opening, a two-star holder and a
 // defeat killing only r00 (Loris) or r01 (Zyra), with the original reward shapes.
-export const PARTIAL_REVEAL_SEEDS = {loris:29,zyra:29} as const;
+// v26: seed 29 no longer opens on an unrerolled Visionary Crest. Seed 54239 does,
+// with Building a Collection III and Enforcer Crown behind it, and the reserved
+// components craft Shojin, Gargoyle, Crownguard and Ionic Spark.
+export const PARTIAL_REVEAL_SEEDS = {loris:54239,zyra:29} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command. Current 14.24 timing is checked by the live-reveal suite.
-// v25: first no-opening seed from 2000 whose independent 4-7 plan has nine
-// entries (r03 one hero, r04 three entries including a hero), whose
-// public route fields all eight two-star holders/four recipes, and whose lawful
-// 14.24 Leona/Loris swap kills r03/r04 together after three earlier deaths.
-// Five current birds are all loaded; unloaded-source coverage uses the actual 1-4 minions.
-export const SIMULTANEOUS_REVEAL_SEED=2634;
+// v26 melee pathing: seed 2634 no longer fields eight two-star holders, and no
+// player hex is closer to the large bird than to a living front bird. Seed 15972
+// is a no-opening route with the same nine-entry 4-7 plan (r03 one hero, r04 three
+// entries including a hero). The board below is the pre-swap placement: the suite's
+// Leona/Loris exchange then kills r02+r03 together, and r00+r01 together as the
+// terminal batch. Five current birds are all loaded; unloaded-source coverage uses the actual 1-4 minions.
+export const SIMULTANEOUS_REVEAL_SEED=15972;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[
-  {definitionId:'irelia',col:1,row:4},{definitionId:'lux',col:5,row:7},
-  {definitionId:'rell',col:3,row:4},{definitionId:'nami',col:0,row:7},
-  {definitionId:'zoe',col:3,row:7},{definitionId:'loris',col:5,row:4},
-  {definitionId:'leona',col:0,row:5},{definitionId:'zyra',col:1,row:7},
+  {definitionId:'lux',col:0,row:5},{definitionId:'rell',col:1,row:5},
+  {definitionId:'leona',col:2,row:5},{definitionId:'zoe',col:3,row:5},
+  {definitionId:'irelia',col:4,row:5},{definitionId:'loris',col:6,row:5},
+  {definitionId:'zyra',col:4,row:6},{definitionId:'nami',col:6,row:7},
  ];
  let state=await configuredPrefix('4-7',{build:'mage',seed,goldReserves:{'4-7':0},goldReserveByRound:{'4-3':100,'4-5':100,'4-7':100},
   augmentPriorities:['bronze-for-life-ii','pumping-up-iii','item-collector-ii'],anomalyDefinitionId:'protective-shielding',anomalyTargetDefinitionId:'zoe',
@@ -55,7 +59,9 @@ export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<
 }
 // Recreate each bare two-star holder by public sales, purchases and an earned remover.
 export async function barePartialPrefix(name:'zyra'|'loris',seed:number,augmentPriorities:string[]):Promise<api.MatchState>{
- let state=await configuredPrefix('4-7',{build:'mage',seed,equipItems:false,goldReserves:{'4-7':0},augmentPriorities,augmentRerollPriorities:seed===2125?{'2-1':['bulky-buddies-i'],...(name==='loris'?{'3-2':['crownguard-spirit'],'4-2':['academy-crest']}:{})}:{},anomalyDefinitionId:'protective-shielding'});
+ let state=await configuredPrefix('4-7',{build:'mage',seed,equipItems:false,goldReserves:{'4-7':0},augmentPriorities,augmentRerollPriorities:seed===2125?{'2-1':['bulky-buddies-i'],...(name==='loris'?{'3-2':['crownguard-spirit'],'4-2':['academy-crest']}:{})}:{},anomalyDefinitionId:'protective-shielding',
+  equipmentTargets:{shojin:{definitionId:name},gargoyle:{definitionId:name},crownguard:{definitionId:name},'ionic-spark':{definitionId:name}},
+  reservedComponents:['sword','tear','vest','cloak','rod']});
  let target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===name)!;
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))state=accepted(api.sellUnit(state,unit.id));
  for(let rolls=0;rolls<100&&target.starLevel!==2;rolls++){

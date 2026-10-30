@@ -11,6 +11,7 @@ import { historyCheck, needsAugmentHistory, historySeatId, validateAugmentAuthor
 import * as commands from './match';
 import { validateMatchStructure } from './serialization-structure';
 import { freezeContent } from './content/freeze';
+import { grantMechanicUnit } from './seat-mechanics/grants';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 
 interface ReplayEvidence {
@@ -236,7 +237,7 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
     // retain or freeze any object owned by the candidate save.
     const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
     for (let i = skipped; i < c.count; i++) {
-      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
+      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : c.name === 'grantMechanicUnit' ? grantMechanicUnit : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
       const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState };
       historyCheck(result && result.ok !== false, `replay command ${c.name}`);
       const next = result.state ?? result as unknown as MatchState;
@@ -248,5 +249,5 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   if (cacheable) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
-export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);
+export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime','grantMechanicUnit']);
 

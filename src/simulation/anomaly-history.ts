@@ -27,10 +27,12 @@ export function appendAnomalyOffer(state: MatchState): MatchState {
 }
 export function traceAnomalyCommand(before: MatchState, after: MatchState, name: string, args: readonly unknown[]): MatchState {
   if (!after.anomalyOfferHistory || before.multiplayer || before.openingEncounter.mode === 'shared-deferred') return after;
+  // Once the choice is resolved, the proof is immutable. Later play is authenticated by its own ledgers.
+  // This precedes the augment-history rewrap: that rewrap allocated a new object on every later command
+  // even when the proof kind was already augment-history, so a sell no longer shared the sealed quote.
+  if (before.anomalyOfferHistory && before.pendingChoice?.kind !== 'anomaly') return after;
   // An existing full-state augment proof already replays these commands and quote facts.
   if (before.augmentHistory) return {...after,anomalyOfferHistory:{...after.anomalyOfferHistory,proof:{kind:'augment-history'}}};
-  // Once the choice is resolved, the proof is immutable. Later play is authenticated by its own ledgers.
-  if (before.anomalyOfferHistory && before.pendingChoice?.kind !== 'anomaly') return after;
   const old = before.anomalyOfferHistory?.proof;
   const origin = old?.kind === 'solo' ? old.origin : freezeContent(structuredClone(before));
   const commands: readonly HistoryCommand[] = [...(old?.kind === 'solo' ? old.commands : []),

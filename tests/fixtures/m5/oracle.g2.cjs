@@ -318,6 +318,15 @@ function augmentSeed(state){
  if(!state.multiplayer)assert.equal(state.augmentTierSeed,state.seed,'independent solo tier seed binding');
  return state.augmentTierSeed;
 }
+// Once a solo proof exists, a prismatic 4-2 reroll appends an offer-level fact and the reroll command.
+// Any earlier solo proof also replays the reroll itself. The independent state must include that evidence.
+function soloRerollHistory(before,command,generation){
+ const history=before.augmentHistory;
+ if(!history||history.proof?.kind!=='solo'||before.multiplayer||before.openingEncounter?.mode==='shared-deferred')return null;
+ const choice=before.pendingChoice,facts=[...history.facts];
+ if(choice?.choiceId==='round:4-2:augment'&&choice.augmentTier==='prismatic')facts.push({kind:'offer-level',choiceId:choice.choiceId,generation,level:before.level,xp:before.xp,sequence:history.facts.length,seatId:history.seatId,round:before.round,roundId:before.roundDefinitionId,resourcePrefix:before.resourceProvenance.entries.length});
+ return {...history,facts,proof:{...history.proof,commands:[...history.proof.commands,{name:'rerollAugment',args:[command.choiceId,command.generation,command.optionIndex],count:1}]}};
+}
 function validateAugmentReroll(before,result,command){
  assert.equal(command.type,'rerollAugment');const c=before.pendingChoice;
  let reason=null,tier;
@@ -330,9 +339,11 @@ function validateAugmentReroll(before,result,command){
  assert.equal(result.ok,true);const after=result.state,draw=augmentCardDraw(before,command.optionIndex);
  const next={...c,offers:draw.offers,augmentTier:tier,generation:c.generation+1,rerollCount:c.rerollCount+1,rerollsRemaining:3+extraAugmentRolls(before,c.choiceId)-c.rerollCount-1,rerolledSlots:draw.rerolledSlots};
  assert.equal(c.augmentTier,tier,'reroll locks node tier');
+ const history=soloRerollHistory(before,command,next.generation);
  assert.deepEqual(after,{...before,choiceRngState:draw.rng,pendingChoice:next,nextMatchEventSeq:before.nextMatchEventSeq+1,
   removedAugmentIds:[...before.removedAugmentIds,draw.offers[command.optionIndex]],
-  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount,rerolledIndices:[...r.rerolledIndices,command.optionIndex],externalBlocks:[...r.externalBlocks,[]]}:r)},'independent free atomic reroll state');
+  augmentOffers:before.augmentOffers.map(r=>r.choiceId===c.choiceId?{...r,rerollCount:next.rerollCount,rerolledIndices:[...r.rerolledIndices,command.optionIndex],externalBlocks:[...r.externalBlocks,[]]}:r),
+  ...(history?{augmentHistory:history}:{})},'independent free atomic reroll state');
  assert.deepEqual(result.events,[{domain:'match',eventSeq:before.nextMatchEventSeq,type:'choiceOpened',choice:next}],'independent reroll event');
 }
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
