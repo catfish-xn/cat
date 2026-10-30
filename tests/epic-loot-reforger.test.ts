@@ -188,7 +188,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(useConsumable(full,full.consumables.at(-1)!.consumableId,{kind:'unit',unitId:'unit-1'})).toEqual({ok:false,state:full,reason:'bench-full'});
  });
  it('a real 5-7 command path restores new forge receipts and never repeats the rewards',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v25-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='5-7'&&s.phase==='preparation'));
   let state:MatchState=battle(initial).ended;
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
@@ -283,7 +283,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v25-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const heroes=initial.m8.loot.frozen.rounds.at(-1)!.encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);expect(heroes.length).toBeGreaterThan(0);
   const state=battle(fillBench(initial,heroes)).ended;expect(state.phase).toBe('gameOver');

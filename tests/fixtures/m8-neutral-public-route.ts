@@ -1,14 +1,14 @@
-import ionicRaw from './v25-online-rules-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './v25-online-rules-herald-raw/evenshroud.json?raw';
-import dualRaw from './v25-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './v25-online-rules-herald-raw/quicksilver.json?raw';
-import edgeRaw from './v25-online-rules-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './v26-neutrals-1424-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './v26-neutrals-1424-herald-raw/evenshroud.json?raw';
+import dualRaw from './v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './v26-neutrals-1424-herald-raw/quicksilver.json?raw';
+import edgeRaw from './v26-neutrals-1424-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v25-online-rules-herald-support/generate';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v26-neutrals-1424-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
-// v25: seed 65 has no opening encounter; its sniper route wins all 33 battles,
+// v25 (kept for v26-neutrals-1424): seed 65 has no opening encounter; its sniper route wins all 33 battles,
 // reaches the authored Rift Herald, and supports all five raw equipment cases.
 const HERALD_ROUTE_SEED = 65;
 const preparations = new Map<string, api.MatchState>();

@@ -9,7 +9,7 @@ import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
-import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
+import { routeOptions } from '../scripts/v26-neutrals-1424-route.cjs';
 import { roundRouteCache } from './fixtures/round-route-cache';
 
 // Every consuming describe owns its setup. Hooks run even with -t and are not

@@ -3,7 +3,7 @@ import {ROUND_CATALOG} from '../src/simulation/content/round-catalog';
 import {roundRouteCache} from './fixtures/round-route-cache';
 import type {MatchState} from '../src/simulation/match';
 import {equipItem,startMatchCombat,stepMatch,serializeMatch,restoreMatch} from '../src/server-entry';
-import anchor from './fixtures/v25-online-rules-transfer-route.json';
+import anchor from './fixtures/v26-neutrals-1424-transfer-route.json';
 import {accepted,transferPreparation} from './fixtures/t13-loot-public';
 import {validateB8Resources} from '../src/simulation/b8-restore';
 // Pause the same public route at bounded tick boundaries; 4-1's real restore

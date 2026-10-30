@@ -16,6 +16,16 @@ it('pins the current route hash dependency in both v25 source inventories', () =
   expect(sources).not.toContain("'scripts/m4-evidence.cjs'");
 });
 
+it('pins the current route hash dependency in both v26-neutrals-1424 source inventories', () => {
+  const file = 'scripts/m5-route-hash.cjs';
+  const { sourceDigests } = require('../scripts/v26-neutrals-1424-fixture-audit.cjs');
+  expect(sourceDigests()[file]).toBe(createHash('sha256').update(readFileSync(file)).digest('hex'));
+  const recorder = readFileSync('tests/fixtures/record-v26-neutrals-1424-herald.cjs', 'utf8');
+  const sources = recorder.match(/const files = \[([\s\S]*?)\]\.sort\(\)/)![1];
+  expect(sources).toContain("'scripts/m5-route-hash.cjs'");
+  expect(sources).not.toContain("'scripts/m4-evidence.cjs'");
+});
+
 it('keeps the exact canonical SHA-256 for immutable route states, shared branches and reordered keys', () => {
   const routeHash = createRouteHash();
   const leaf = { z: '雪\n"\\', a: -0, missing: undefined, n: null };

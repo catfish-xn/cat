@@ -1,4 +1,4 @@
-import currentFingerprints from './fixtures/v25-online-rules-b8-fingerprints.json';
+import currentFingerprints from './fixtures/v26-neutrals-1424-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { expectWallClockBelow } from './fixtures/wallclock';

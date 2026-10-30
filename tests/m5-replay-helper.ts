@@ -4,7 +4,7 @@ import assert from './fixtures/m5/assert-equal.cjs';
 import * as api from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
 import { run, dispatch } from '../scripts/generate-m5-route.cjs';
-import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
+import { routeOptions } from '../scripts/v26-neutrals-1424-route.cjs';
 
 // A file owns one ordinary, oracle-checked route. Store only compressed chunk
 // boundaries and inputs, never restore/validation results. Each case can run on
