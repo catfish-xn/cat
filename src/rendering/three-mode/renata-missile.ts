@@ -28,7 +28,12 @@ export function createRenataMissile(from: Vector3, to: Vector3, radius: number) 
   let age = 0, disposed = false;
   const point = (t: number, out: Vector3) => out.lerpVectors(start, end, t).addScaledVector(up, Math.sin(Math.PI * t) * radius * .42);
   point(0, object.position);
-  return { object, get finished() { return age >= RENATA_FLIGHT_SECONDS; }, update(seconds: number, camera?: Camera) {
+  const rearm = (nextFrom: Vector3, nextTo: Vector3) => {
+    if (disposed) return;
+    age = 0; start.copy(nextFrom); end.copy(nextTo); object.removeFromParent();
+    material.uniforms.alpha!.value = 0; point(0, object.position);
+  };
+  return { object, radius, rearm, get finished() { return age >= RENATA_FLIGHT_SECONDS; }, update(seconds: number, camera?: Camera) {
     age += Math.max(0, seconds);
     const t = Math.min(1, age / RENATA_FLIGHT_SECONDS);
     point(Math.max(0, t - .025), previous); point(t, object.position);

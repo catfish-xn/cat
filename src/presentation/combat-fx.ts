@@ -41,6 +41,7 @@ export class CombatFx {
   private liveShapes = 0;
   private readonly spareGraphics: Phaser.GameObjects.Graphics[] = [];
   private readonly spareCircles: Phaser.GameObjects.Arc[] = [];
+  private readonly spareTexts: Phaser.GameObjects.Text[] = [];
   private readonly activeShapes = new Set<Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc>();
   constructor(private readonly host: CombatFxHost) {}
 
@@ -52,6 +53,10 @@ export class CombatFx {
     for (const shape of this.spareGraphics) shape.destroy();
     for (const shape of this.spareCircles) shape.destroy();
     this.spareGraphics.length = 0; this.spareCircles.length = 0;
+    for (const label of this.labels) if (label.text.scene) label.text.destroy();
+    this.labels = [];
+    for (const text of this.spareTexts) text.destroy();
+    this.spareTexts.length = 0;
   }
 
   private takeGraphics(): Phaser.GameObjects.Graphics | null {
@@ -91,12 +96,29 @@ export class CombatFx {
     return this.labels.map(label => label.rect);
   }
 
-  /** Places a created label in a free slot near `anchor`, or destroys it when the area is full. */
+  /** A short label from the spare list, or a new text when the list is empty. */
+  private takeText(x: number, y: number, content: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
+    while (this.spareTexts.length > 0 && !this.spareTexts[this.spareTexts.length - 1]?.scene) this.spareTexts.pop();
+    const pooled = this.spareTexts.pop();
+    if (pooled) return pooled.setText(content).setStyle(style).setPosition(x, y).setOrigin(0.5).setAlpha(1).setVisible(true).setActive(true).setDepth(21);
+    return this.host.scene.add.text(x, y, content, style).setOrigin(0.5).setDepth(21);
+  }
+  /** Returns a label to the spare list. A destroyed scene (combat cleanup) drops it. */
+  private recycleText(text: Phaser.GameObjects.Text): void {
+    if (!text.scene) return;
+    text.setVisible(false).setActive(false);
+    this.spareTexts.push(text);
+  }
+  /** Places a label in a free slot near `anchor`, or returns it to the pool when the area is full. */
   private place(text: Phaser.GameObjects.Text, anchor: Point, dy: number, duration: number): void {
     const { width, height } = this.host.scene.scale;
     const rect = placeLabel(anchor, text.width, text.height, dy, this.labelRects(), { width, height });
-    if (!rect) { text.destroy(); return; }
-    text.setPosition(rect.x, rect.y); this.labels.push({ rect, text }); this.host.fade(text, duration);
+    if (!rect) { this.recycleText(text); return; }
+    text.setPosition(rect.x, rect.y); this.labels.push({ rect, text });
+    this.host.scene.tweens.add({ targets: text, alpha: 0, duration, onComplete: () => {
+      this.labels = this.labels.filter(label => label.text !== text);
+      this.recycleText(text);
+    } });
   }
 
   show(events: readonly SceneCombatEvent[], combat: DisplayCombat): void {
@@ -155,7 +177,7 @@ export class CombatFx {
       } else if (spec.kind === 'label') {
         if (!this.drawn) continue;
         const p = at(spec.at);
-        this.place(add.text(p.x, p.y, spec.text, { fontSize: '12px', color: spec.color, backgroundColor: spec.background, resolution: 2 }).setOrigin(0.5).setDepth(21), p, spec.dy, spec.duration);
+        this.place(this.takeText(p.x, p.y, spec.text, { fontSize: '12px', color: spec.color, backgroundColor: spec.background, resolution: 2 }), p, spec.dy, spec.duration);
       } else if (spec.kind === 'target') {
         this.host.view(spec.unitId)?.setRing('target', spec.team);
       } else if (spec.kind === 'flash') {

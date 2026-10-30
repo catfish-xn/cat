@@ -14,6 +14,9 @@ class Shape {
   y = 0;
   radius = 0;
   fill = 0;
+  width = 48;
+  height = 16;
+  content = '';
   constructor(type: string) { this.type = type; }
   clear() { return this; }
   setActive(value: boolean) { this.active = value; return this; }
@@ -23,6 +26,9 @@ class Shape {
   setPosition(x: number, y: number) { this.x = x; this.y = y; return this; }
   setRadius(value: number) { this.radius = value; return this; }
   setFillStyle(color: number) { this.fill = color; return this; }
+  setText(value: string) { this.content = value; return this; }
+  setStyle() { return this; }
+  setOrigin() { return this; }
   setStrokeStyle() { return this; }
   lineStyle() { return this; }
   beginPath() { return this; }
@@ -35,13 +41,14 @@ class Shape {
 class Host {
   graphics = 0;
   circles = 0;
+  texts = 0;
   attacks = 0;
   tweens: { onComplete?: () => void }[] = [];
   scene = {
     add: {
       graphics: () => { this.graphics++; return new Shape('Graphics'); },
       circle: (x: number, y: number, radius: number, color: number) => { this.circles++; return new Shape('Arc').setPosition(x, y).setRadius(radius).setFillStyle(color); },
-      text: () => new Shape('Text'),
+      text: () => { this.texts++; return new Shape('Text'); },
     },
     tweens: { add: (tween: { onComplete?: () => void }) => { this.tweens.push(tween); } },
     scale: { width: 800, height: 600 },
@@ -72,5 +79,17 @@ describe('late-game board effect pool', () => {
     fx.releaseAll();
     fx.show([slash], combat);
     expect(host.graphics).toBe(MAX_LIVE_BOARD_FX + 1);
+  });
+  it('reuses one revive label after its fade', () => {
+    const host = new Host(), fx = new CombatFx(host as never);
+    const revive = { type: 'unitRevived', unitId: 'a', hp: 12 } as SceneCombatEvent;
+    fx.show([revive], combat);
+    expect(host.texts).toBe(1);
+    expect(host.tweens.at(-1)?.onComplete).toBeTypeOf('function');
+    host.tweens.at(-1)?.onComplete?.();
+    fx.show([revive], combat);
+    host.tweens.at(-1)?.onComplete?.();
+    expect(host.texts).toBe(1);
+    expect(host.scene.add).toBeTruthy();
   });
 });

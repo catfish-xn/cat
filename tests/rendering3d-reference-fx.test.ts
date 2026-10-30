@@ -42,4 +42,17 @@ describe('reference visual plans (no combat mutation)', () => {
     expect(mesh.material.uniforms.alpha!.value).toBe(.3);
     shield.update(.6); expect(shield.finished).toBe(true); shield.dispose(); fx.dispose();
   });
+  it('rearms a finished burst and shield without disposing their geometry', () => {
+    const burst = createReferenceBurst('renata', 40, false), shield = createRenataShield(34, false);
+    const mesh = burst.object.children[0] as Mesh<import('three').PlaneGeometry, ShaderMaterial>;
+    const geometry = vi.spyOn(mesh.geometry, 'dispose'), shieldGeometry = vi.spyOn((shield.object.children[0] as Mesh).geometry, 'dispose');
+    burst.update(1); shield.update(.6);
+    expect(burst.finished).toBe(true); expect(shield.finished).toBe(true);
+    burst.rearm(); shield.rearm();
+    expect(burst.finished).toBe(false); expect(shield.finished).toBe(false);
+    expect(burst.object.parent).toBeNull(); expect(shield.object.parent).toBeNull();
+    burst.update(.25); expect(mesh.material.uniforms.alpha!.value).toBe(1);
+    burst.dispose(); shield.dispose();
+    expect(geometry).toHaveBeenCalledTimes(1); expect(shieldGeometry).toHaveBeenCalledTimes(1);
+  });
 });
