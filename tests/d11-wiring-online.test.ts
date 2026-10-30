@@ -82,7 +82,7 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
     expect(committed.state.m8.loot.queuedOrbClaims).toEqual([]);
     // reachRound seed 7 already holds 6 PvE orb claims before 2-1: 1-2 vest, 2 gold, reforger; 1-3 bow, powder, trundle.
     // The two d11-fill claims are added on that route, so the view length is 8.
-    const claims = toPrivateSeatView(committed.state).orbClaimReceipts;
+    const claims = toPrivateSeatView(committed.state).orbClaimReceipts!;
     expect(claims.filter(r => r.dropId.includes('d11-fill'))).toHaveLength(2);
     expect(claims).toHaveLength(8);
     expect(toPrivateSeatView(committed.state).unclaimedOrbs!.filter(o=>o.source==='mechanic')).toEqual([]);

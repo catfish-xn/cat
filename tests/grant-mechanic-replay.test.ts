@@ -42,12 +42,12 @@ describe('solo history replays a unit granted back after a sale', () => {
     expect(grant).toEqual([{ name: 'grantMechanicUnit', args: [{ receiptId: 'replay:regrant', source: 'anomaly-audit', definitionId }], count: 1 }]);
 
     const saved = JSON.parse(serializeMatch(state)) as MatchState;
-    const forged = structuredClone(saved);
-    const commands = forged.augmentHistory!.proof.kind === 'solo' ? [...forged.augmentHistory.proof.commands] : [];
+    const forged = structuredClone(saved) as { -readonly [K in keyof MatchState]: MatchState[K] };
+    const commands = forged.augmentHistory!.proof.kind === 'solo' ? [...forged.augmentHistory!.proof.commands] : [];
     forged.augmentHistory = { ...forged.augmentHistory!, proof: { kind: 'solo', origin: (forged.augmentHistory!.proof as { origin: MatchState }).origin, commands: [...commands, { name: 'grantMechanicUnit', args: [{ receiptId: 'forged-grant', source: 'anomaly-audit', definitionId: 'jinx' }], count: 1 }] } };
     expect(() => restoreMatch(forged)).toThrow(/Invalid augment history/);
 
-    const wrongUnit = structuredClone(saved);
+    const wrongUnit = structuredClone(saved) as { -readonly [K in keyof MatchState]: MatchState[K] };
     if (wrongUnit.augmentHistory?.proof.kind === 'solo') {
       wrongUnit.augmentHistory = { ...wrongUnit.augmentHistory, proof: { ...wrongUnit.augmentHistory.proof, commands: wrongUnit.augmentHistory.proof.commands.map(command => command.name === 'grantMechanicUnit'
         ? { ...command, args: [{ ...(command.args[0] as { definitionId: string }), definitionId: command.args[0] && (command.args[0] as { definitionId: string }).definitionId === 'jinx' ? 'vi' : 'jinx' }] }
@@ -58,7 +58,7 @@ describe('solo history replays a unit granted back after a sale', () => {
     const wrongCell = structuredClone(saved);
     const placed = wrongCell.preparation.units.find(unit => unit.definitionId === definitionId && unit.location.kind === 'board');
     expect(placed?.location.kind).toBe('board');
-    if (placed?.location.kind === 'board') placed.location = { kind: 'board', cell: { col: placed.location.cell.col === 0 ? 6 : 0, row: placed.location.cell.row } };
+    if (placed?.location.kind === 'board') (placed as { location: typeof placed.location }).location = { kind: 'board', cell: { col: placed.location.cell.col === 0 ? 6 : 0, row: placed.location.cell.row } };
     expect(() => restoreMatch(wrongCell)).toThrow('Invalid augment history: replayed facts/state mismatch');
   });
 });
