@@ -429,7 +429,20 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const earned = evidence.has(slot.dropId), current = slot.roundId === state.roundDefinitionId;
     const finished = !current || state.combat?.status === 'finished';
     const carried = state.m8.loot.carry?.find(row => row.dropId === slot.dropId);
-    if (carried) { check(!earned && invalidCarryReason(state, slot.roundId, slot.dropId) === null && !['planned','forfeited'].includes(status), 'pve carry'); return; }
+    if (carried) {
+      check(!earned && invalidCarryReason(state, slot.roundId, slot.dropId) === null && !['planned','forfeited'].includes(status), 'pve carry');
+      const due = carried.deliverRoundId === state.roundDefinitionId;
+      if (!current && ['pending-capacity','retained-terminal'].includes(status)) check(due && state.combat?.status === 'finished', 'pve carry capacity boundary');
+      if (status === 'carried') {
+        const deliveryRound = getCatalogRoundById(carried.deliverRoundId).ordinal;
+        // A full bench leaves a forge carried without blocking Continue.
+        const deferredForge = 'payload' in slot && slot.payload.kind === 'forge'
+          && (deliveryRound < state.round || due && state.combat?.status === 'finished');
+        check(deliveryRound > state.round || due && state.combat?.status !== 'finished'
+          || deferredForge, 'pve carry delivery boundary');
+      }
+      return;
+    }
     check(earned === !['planned','forfeited'].includes(status), 'qualification evidence');
     if (current) {
       const death = state.combat?.neutralReceipts?.deaths.find(value => value.unitId === openingCrabCarrier(state,slot.roundId,slot.sourceUnitId));
@@ -444,7 +457,8 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     validateEligibility(slot,progress.status);
     check(progress.status === 'granted' ? receipt && progress.receiptId === receipt.receiptId : !receipt && progress.receiptId === null, 'direct receipt');
     if (slot.roundId !== state.roundDefinitionId) check(['granted','forfeited'].includes(progress.status)||slot.payload.kind==='forge'&&progress.status==='revealed'
-      || !!state.m8.loot.carry?.some(row => row.dropId === slot.dropId) && ['carried','revealed','pending-capacity','retained-terminal','granted'].includes(progress.status), 'unresolved historical direct');
+      || !!state.m8.loot.carry?.some(row => row.dropId === slot.dropId && (['carried','revealed'].includes(progress.status)
+        || ['pending-capacity','retained-terminal'].includes(progress.status) && row.deliverRoundId === state.roundDefinitionId && state.combat?.status === 'finished')), 'unresolved historical direct');
     if (state.combat?.status === 'finished' && slot.roundId === state.roundDefinitionId) {
       check(progress.status !== 'revealed'||slot.payload.kind==='forge', 'unprocessed direct');
       if (progress.status === 'pending-capacity' || progress.status === 'retained-terminal') check(slot.payload.kind === 'unit'
@@ -560,6 +574,11 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const frozen = loot.frozen.rounds.find(round => round.encounterPlan.roundId === state.roundDefinitionId);
   const carriedChoiceIds = new Set((loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
   const direct = frozen?.encounterPlan.drops ?? [];
+  const carriedDirect = loot.frozen.rounds.flatMap(round => round.encounterPlan.drops)
+    .filter(slot => carriedChoiceIds.has(slot.dropId) && slot.roundId !== state.roundDefinitionId).sort(compareLootFreezeSlots);
+  const retryDirect = loot.frozen.rounds.flatMap(round => [...round.encounterPlan.drops]
+    .filter(slot => direct.some(current => current.dropId === slot.dropId) || carriedDirect.some(carried => carried.dropId === slot.dropId))
+    .sort(compareLootFreezeSlots));
   const choices = [...(frozen?.choices ?? []), ...loot.frozen.rounds.flatMap(round => round.choices).filter(choice => carriedChoiceIds.has(choice.dropId) && choice.roundId !== state.roundDefinitionId)].sort(compareLootChoices);
   const earned = new Set(loot.earnedEvidence.map(entry => entry.dropId)), receipts = new Map(loot.receipts.map(receipt => [receipt.dropId,receipt]));
   const actualReceiptOrder: string[] = [], expectedProgress = new Map<string,string>();
@@ -598,7 +617,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       items = plan.items; nextItem = plan.nextItemSerial;
     }
   };
-  const grant = (slot: FrozenDirectDrop | LootChoiceDescriptor, definitionId?: string, track = true): boolean => {
+  const grant = (slot: FrozenDirectDrop | LootChoiceDescriptor, definitionId?: string): boolean => {
     const payload = 'payload' in slot ? slot.payload : {kind:'item' as const,definitionId:definitionId!,quantity:1};
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
@@ -620,17 +639,17 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(receipt,{receiptId:lootReceiptId(slot.dropId),dropId:slot.dropId,payload,grantedItemIds:itemIds,grantedUnitIds:unitIds,
       ...(payload.kind==='consumable'?{grantedConsumableIds:receipt?.grantedConsumableIds}:{}),
       ...(cross?{resolution:'held' as const,gold:payload.kind==='gold'?payload.quantity:0,claimedRoundId:state.roundDefinitionId}:{})}), 'actual grant receipt');
-    if (track) actualReceiptOrder.push(slot.dropId); return true;
+    actualReceiptOrder.push(slot.dropId); return true;
   };
   combinations(); // Commands during combat precede the atomic terminal grants/commit.
   for (const slot of direct) {
     if (!earned.has(slot.dropId)) { expectedProgress.set(slot.dropId, loot.carry?.some(row => row.dropId === slot.dropId) ? 'carried' : 'forfeited'); continue; }
     expectedProgress.set(slot.dropId, grant(slot) ? 'granted' : slot.payload.kind==='forge'?'revealed':state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
   }
-  for (const slot of loot.frozen.rounds.flatMap(round => round.encounterPlan.drops).filter(slot => loot.carry?.some(row => row.dropId === slot.dropId && row.deliverRoundId === state.roundDefinitionId) && !direct.some(current => current.dropId === slot.dropId)).sort(compareLootFreezeSlots)) {
-    const progress = loot.direct.find(entry => entry.dropId === slot.dropId);
-    if (progress?.status === 'granted') check(grant(slot, undefined, false), 'carried direct grant');
-    else check(progress?.status === 'carried' || progress?.status === 'pending-capacity' || progress?.status === 'retained-terminal', 'carried direct progress');
+  for (const slot of carriedDirect) {
+    // Reconstruct the first attempt from the combat holdings. A final receipt
+    // may belong to a later sale; it cannot prove a pre-settlement grant.
+    expectedProgress.set(slot.dropId, grant(slot) ? 'granted' : slot.payload.kind==='forge'?'carried':state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
   }
   const earnedChoices = choices.filter(choice => earned.has(choice.dropId) || carriedChoiceIds.has(choice.dropId));
   const resolve = (choice: LootChoiceDescriptor) => {
@@ -750,14 +769,14 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     items = items.map(item => item.location.kind === 'unit' && item.location.unitId === sale.unitId ? {...item,location:{kind:'inventory'}} : item);
     combinations();
     if (binding?.unitId === sale.unitId) binding = null;
-    for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
+    for (const slot of retryDirect) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
   check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
   items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
   check(equal({ ...preparation, units: sorted(preparation.units) }, { ...state.preparation, units: sorted(state.preparation.units) }) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
-  check(equal(actualReceiptOrder,loot.receipts.filter(receipt => direct.some(slot => slot.dropId === receipt.dropId)
+  check(equal(actualReceiptOrder,loot.receipts.filter(receipt => retryDirect.some(slot => slot.dropId === receipt.dropId)
     || choices.some(slot => slot.dropId === receipt.dropId)).map(receipt => receipt.dropId)), 'current grant order');
   for (const progress of loot.direct.filter(entry => expectedProgress.has(entry.dropId))) check(progress.status === expectedProgress.get(progress.dropId), 'capacity retry projection');
   return saleGold;
