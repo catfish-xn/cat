@@ -57,10 +57,14 @@ describe('B8 public equipment fixture provenance', () => {
     expect(state.roundDefinitionId).toBe('3-5');
     // Keep the original opening drops and supply choices; Pumping Up III and
     // Bronze For Life II add no items or isolated-holder maximum health.
-    expect(state.scheduleReceipts.filter(r=>r.kind==='component').map(r=>[r.definitionId,r.itemIds])).toEqual([["cloak",["item-4"]],["sword",["item-8"]]]);
-    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"],["2-7","item-5","loot"],["2-7","item-6","loot"],["2-7","item-7","loot"],["3-4","item-8","schedule"]]);
-    expect(state.items.map(i=>[i.id,i.definitionId])).toEqual([["item-10","bloodthirster"],["item-3","sword"],["item-5","gloves"],["item-6","bow"],["item-7","sword"],["item-9","bloodthirster"]]);
-    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-9","definitionId":"bloodthirster"},{"type":"itemCombined","consumedIds":["item-4","item-8"],"itemId":"item-10","definitionId":"bloodthirster"}]);
+    // v26 14.24 neutrals (568eeea4, stronger PvE) with targeting/pathing: the 2-7 PvE round is now lost; PvE loot carryover (8f794062)
+    // keeps only the one killed source's bow (was 2-7 win with gloves/bow/sword item-5..7). The
+    // 3-4 sword is therefore item-6 (was item-8) and the Bloodthirsters item-7/item-8 (was item-9/item-10).
+    expect(state.roundResults.find(r=>r.roundId==='2-7')?.result).toBe('enemyWin');
+    expect(state.scheduleReceipts.filter(r=>r.kind==='component').map(r=>[r.definitionId,r.itemIds])).toEqual([["cloak",["item-4"]],["sword",["item-6"]]]);
+    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"],["2-7","item-5","loot"],["3-4","item-6","schedule"]]);
+    expect(state.items.map(i=>[i.id,i.definitionId])).toEqual([["item-3","sword"],["item-5","bow"],["item-7","bloodthirster"],["item-8","bloodthirster"]]);
+    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-7","definitionId":"bloodthirster"},{"type":"itemCombined","consumedIds":["item-4","item-6"],"itemId":"item-8","definitionId":"bloodthirster"}]);
     expect(state.augments.map(augment => augment.definitionId)).toEqual(['pumping-up-iii','bronze-for-life-ii']);
     expect(state.augmentProgress.investmentHp).toBe(0);
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 700]]);

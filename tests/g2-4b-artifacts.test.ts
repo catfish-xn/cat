@@ -164,7 +164,9 @@ it('Rapid Firecannon adds one range, then one more per killing blow by the holde
  validate(state);
 });
 it('Seeker\'s Armguard grows 15 resists/AP per assist and 20 per killing blow',()=>{
- const initial=arena('TFT_Item_Artifact_SeekersArmguard',[...KILL_FIGHT[0]],[...KILL_FIGHT[1]]);
+ // v26 targeting p0/p1 + melee pathing (28fd974a, 8106acee, 34cfbfbb): in KILL_FIGHT the ally Garen at (3,4) now kills e2 before Lux has hit it,
+ // so no assist exists (2 kills, 0 assists). The ally starts at (0,5) instead (was (3,4)): it takes e4 after Lux's damage.
+ const initial=arena('TFT_Item_Artifact_SeekersArmguard',[KILL_FIGHT[0][0],{...KILL_FIGHT[0][1],cell:{col:0,row:5}}],[...KILL_FIGHT[1]]);
  const before=readCombatStats(unit(initial,'p'),initial);
  const {state,events}=runLive(initial),{kills,assists}=takedowns(events),after=readCombatStats(unit(state,'p'),state),gain=kills*20+assists*15;
  expect(kills).toBeGreaterThan(0);expect(assists).toBeGreaterThan(0);

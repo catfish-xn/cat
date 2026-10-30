@@ -24,14 +24,20 @@ function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.par
 // on that route; two ordinary rod recipes and public equipment commands give
 // the same two-carrier terminal control without killing the anvil carrier.
 let terminalHero:MatchState;
+// v26 D5 pool (7953c99a) + 14.24 razorbeaks (568eeea4): seed 2146 now takes built-different / immovable-object /
+// teaming-up-ii (was patient-study / wand-overflow / bulky-buddies-ii), so the default supplies leave three rods
+// ("Missing earned rods"), and the tougher 4-7 razorbeaks survive Maddie with Warmog/two Deathcaps/Statikk on
+// every cell. The route now takes rods at 2-4 and 3-4 (was bow, rod) for the two Deathcaps, and the 2-star Loris
+// (was Maddie) carries Warmog + both Deathcaps at (0,4) (was Maddie at (0,7) with Warmog/Deathcap/Statikk):
+// it kills one component carrier and one hero carrier, then the player falls at 3 HP.
 async function prepareTerminalHero(){
  // The new loss formula makes the terminal route win 3-7; its earned glove can
  // otherwise consume the first belt as Guardbreaker before the second arrives.
  // Reserve real belts and rods for the original Warmog/two-Deathcap boundary.
- let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',
+ let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',supplyChoices:['rod','rod','belt'],
   reservedComponents:['belt','rod'],equipmentTargets:{warmog:{definitionId:'garen'}},
   emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[]}),[]);
- const holder=players(s).find(u=>u.definitionId==='maddie');if(!holder)throw Error('Missing earned Maddie');
+ const holder=players(s).find(u=>u.definitionId==='loris');if(!holder)throw Error('Missing earned Loris');
  for(const unit of players(s).filter(u=>s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))){
   const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover');if(!remover)throw Error('Missing earned remover');
   s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:unit.id}));
@@ -40,11 +46,11 @@ async function prepareTerminalHero(){
   const rods=s.items.filter(i=>i.location.kind==='inventory'&&i.definitionId==='rod');
   if(rods.length<2)throw Error('Missing earned rods');s=accepted(api.combineItems(s,rods[0].id,rods[1].id));
  }
- for(const [slot,definitionId]of ['warmog','deathcap','statikk-shiv'].entries()){
+ for(const [slot,definitionId]of ['warmog','deathcap','deathcap'].entries()){
   const item=s.items.find(i=>i.location.kind==='inventory'&&i.definitionId===definitionId);if(!item)throw Error(`Missing earned ${definitionId}`);
   s=accepted(api.equipItem(s,item.id,holder.id,slot));
  }
- s=accepted(api.deployMatchUnit(s,holder.id,{kind:'board',cell:{col:0,row:7}}));
+ s=accepted(api.deployMatchUnit(s,holder.id,{kind:'board',cell:{col:0,row:4}}));
  return fillBench(s,['ezreal']);
 }
 // Warm shared prefixes once; report each original 10 s callback separately.
@@ -95,7 +101,10 @@ describe('B8 readLootView over real randomized public routes',()=>{
  // (0,7) kills r01/r03 and leaves the first-orb anvil unearned.
 // Tool carrier: Leona (was Loris) at (0,7). After the xp/batch-3 merge seed 2253's augments let a lone Loris there
 // clear all six razorbeaks; Leona kills the same r01 rod and r02 reforger carriers and dies.
- it.each([{name:'two source deaths including a hero',keep:'maddie',col:0,row:7,deaths:2,seed:2146},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'leona',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
+ // v26 14.24 razorbeaks (568eeea4) with targeting/pathing: on seed 2253 a lone Urgot at (0,4) and a lone Leona at
+// (0,7) now kill no razorbeak. The 2-star Loris at (0,7) kills only the r01 rod carrier (was Urgot at (0,4)), and at
+// (0,4) kills the same r01 rod and r02 gold/reforger carriers the Leona case did (was Leona at (0,7)).
+ it.each([{name:'two source deaths including a hero',keep:'loris',col:0,row:4,deaths:2,seed:2146},{name:'only component carrier',keep:'loris',col:0,row:7,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:4,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
   const prep=seed===2146?terminalHero:await terminalPreparation(keep,col,row,seed);
   if(seed===2146){expect(prep.playerHp).toBe(3);expect(bench(prep)).toHaveLength(9);expect(players(prep).find(u=>u.definitionId===keep)!.location).toEqual({kind:'board',cell:{col,row}});}
   const terminal=battle(prep),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');

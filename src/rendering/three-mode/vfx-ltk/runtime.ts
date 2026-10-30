@@ -46,7 +46,7 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
-interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
@@ -173,7 +173,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if ((needsLivingSource(row.spawn) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
-        run.fx.stop();
+        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park.
+        run.fx.stop(); run.stopped = true;
         if (run.group) run.until = Math.min(run.until, clock + .5);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
@@ -187,7 +188,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
         run.fx.update(seconds, camera);
-        if (run.fx.finished || clock + 1e-9 >= run.until) { release(run); running.delete(run); }
+        if (run.fx.finished || clock + 1e-9 >= run.until) { release(run, run.stopped); running.delete(run); }
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
