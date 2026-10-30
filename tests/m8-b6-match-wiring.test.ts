@@ -7,7 +7,7 @@ import { getRoundKind, getRoundSchedule, getStageRound } from '../src/simulation
 import { planCatalogRoundEconomy, OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../src/simulation/opening-economy';
 import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import * as enemies from '../src/simulation/round-enemies';
-import * as augmentHistoryRestore from '../src/simulation/augment-history-restore';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -167,24 +167,14 @@ describe('B6 installed round, opening and restore transactions',()=>{
       if(restore) {roundTrip(state);lateRestoreCount++;}
       state=accepted(startMatchCombat(state));
       if(restore) {
-        // v26: the seed-65 route's 2-1 offer drifted after the D5 pool registration (3ce71065) and now picks
-        // history-dependent rebel-resurgence (AUGMENT_HISTORY_OWNERS 'deaths'), so the save carries a solo
-        // augment-history-v1 proof. Restore authenticates it by replaying the proof commands from proof.origin
-        // (validateAugmentHistory, unchanged since v25), whose nextRound prepares enemies on a private replay
-        // graph and must canonically equal the candidate. The restored state is never regenerated:
-        // no enemy generation may happen outside that proof replay, and roundTrip asserts full equality.
-        expect(state.augments.map(a=>a.definitionId)).toContain('rebel-resurgence');
-        expect(state.augmentHistory?.proof.kind).toBe('solo');
-        const validate=augmentHistoryRestore.validateAugmentHistory;let replaying=0;
-        const replay=vi.spyOn(augmentHistoryRestore,'validateAugmentHistory').mockImplementation((...args)=>{replaying++;try{return validate(...args);}finally{replaying--;}});
-        const outside:string[]=[],inside:number[]=[];
-        const generate=enemies.createRoundEnemies,itemize=enemies.getRoundEnemyItems;
-        const generation=vi.spyOn(enemies,'createRoundEnemies').mockImplementation((round:number)=>{if(replaying)inside.push(round);else outside.push(`createRoundEnemies(${round})`);return generate(round);});
-        const items=vi.spyOn(enemies,'getRoundEnemyItems').mockImplementation((round:number)=>{if(!replaying)outside.push(`getRoundEnemyItems(${round})`);return itemize(round);});
-        try {roundTrip(state);lateRestoreCount++;
-          expect(replay).toHaveBeenCalled();expect(outside).toEqual([]);
-          expect(inside.length).toBeGreaterThan(0);expect(inside.every(round=>Number.isSafeInteger(round)&&round>=2&&round<=state.round)).toBe(true);}
-        finally {generation.mockRestore();items.mockRestore();replay.mockRestore();}
+        // v26: D5 (3ce71065) moved the seed-65 route's 2-1 offer to history-dependent rebel-resurgence;
+        // the route's public 2-1 reroll (scripts/v26-neutrals-1424-route.cjs) keeps it history-free again.
+        // Without an augment-history proof, restore must not generate enemies at all.
+        expect(state.augments.map(a=>a.definitionId).filter(augmentNeedsHistory)).toEqual([]);
+        expect(state.augmentHistory).toBeUndefined();
+        const generation=vi.spyOn(enemies,'createRoundEnemies'),items=vi.spyOn(enemies,'getRoundEnemyItems');
+        try {roundTrip(state);lateRestoreCount++;expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
+        finally {generation.mockRestore();items.mockRestore();}
       }
       while(state.phase==='combat') state=stepMatch(state).state;
       if(restore) {roundTrip(state);lateRestoreCount++;}

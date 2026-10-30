@@ -93,6 +93,7 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    // the unchanged mage route (enemyWin, two krugs surviving), which this case pinned as forfeited k01/k03 drops;
    // targeting P0 (d6a75a4e: keep the current target, one-step chase) now lets the mage clear 2-7
    // (playerWin at tick 585; still so at 75670785). So no build loses a PvE round or forfeits a drop.
+   // The v26 seed-42 public 2-1 rerolls (scripts/v26-neutrals-1424-route.cjs) keep every build winning 2-7 too.
    const independent=independentLootPlan(42).rounds.flatMap(r=>r.encounterPlan.drops);
    const lost:typeof independent=[];
    expect(route.final.m8.loot.direct.filter(d=>d.status==='forfeited').map(d=>d.dropId).sort()).toEqual(lost.map(d=>d.dropId).sort());

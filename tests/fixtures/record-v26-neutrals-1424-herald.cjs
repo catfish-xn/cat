@@ -42,7 +42,7 @@ async function main() {
     let rawPrefix, prefixLedger;
     // Use the unchanged driver, including its independent economy/shop oracle.
     // No restored fixture or saved state is an input to this generation.
-    const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: HERALD_SEED, reservedComponents:['cloak'],
+    const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: HERALD_SEED, ...require('../../scripts/v26-neutrals-1424-route.cjs').routeOptions('sniper', HERALD_SEED), reservedComponents:['cloak'],
       onStep(before,result,command) {
         if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {observedLedger.audit(before);rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
         observedLedger.apply(before,result.state,command,result.events);
@@ -51,6 +51,7 @@ async function main() {
     assert(rawPrefix && route.final.phase === 'gameOver' && route.final.roundDefinitionId === '6-7'
       && route.final.outcome === 'victory', 'Complete real public acquisition route');
     assert.equal(route.rounds.length, 33, 'Unchanged complete acquisition route battle count');
+    assert(!route.final.augmentHistory, 'Herald route owns no augment history');
     const prefixHash = canonicalHash(rawPrefix);
     const prefixTrace = {
       rawPrefixSha256: prefixHash,

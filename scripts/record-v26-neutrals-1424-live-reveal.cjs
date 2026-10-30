@@ -58,7 +58,7 @@ async function main(){
  // Same command-only seed-65 sniper route and capture rule as tests/fixtures/m8-neutral-public-route.ts
  // (publicNeutralPreparation), run here directly because that module also imports the Herald raw files.
  const ser=await server.ssrLoadModule('/src/simulation/serialization.ts'),preparations=new Map();
- const neutralRoute=await require('./generate-m5-route.cjs').run(api,{build:'sniper',seed:65,onStep(before,result,command){
+ const neutralRoute=await require('./generate-m5-route.cjs').run(api,{build:'sniper',seed:65,...require('./v26-neutrals-1424-route.cjs').routeOptions('sniper',65),onStep(before,result,command){
   if(command?.type==='start'||command?.type==='continue'&&before.m8.round.kind==='supply')preparations.set(before.roundDefinitionId,before);
   if(result.state.phase==='preparation')preparations.set(result.state.roundDefinitionId,result.state);}});
  assert(neutralRoute.final.phase==='gameOver'&&neutralRoute.final.roundDefinitionId==='6-7'&&neutralRoute.final.outcome==='victory','Public neutral route completes');
