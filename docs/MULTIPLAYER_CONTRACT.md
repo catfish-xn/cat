@@ -1,3 +1,11 @@
+## 2026-10-30 placeholder PvP 历史与异常诊断修复
+
+2026-10-30 placeholder 历史修复：PvP 的 `pvp-roster`、`combat-binding`、`deaths`、`player-damage` 使用房间 `result.battleId`；死亡样本内部 `combatId` 保留真实执行身份。placeholder 结果若含 `mapping/a/b/terminal/events`，与 two-sided 共用真实死亡观察、R2 portable、H7/H8/H9 结算；`mirrorOfSeatId != null` 才表示镜像。生产单席模拟仍由 Match 记录死亡，生成对手没有玩家 HP 账户，伤害事实的 `opponentSeatId/hpBefore/hpAfterDamage/actualDamage` 均为 null；Golden Find 使用该场 `combat-roster` 对应的原始单位 ID 归属，真正双边战斗仍使用 T2 ID。
+
+诊断扩展：规则导出 `runSharedMatchCommand(pool: SharedPoolState, state: MatchState, command: SharedMatchCommand, onUnexpectedError?: (error: unknown) => void): SharedPoolResult`，三参数调用兼容。非 `PoolError` 失败先向此回调交付原始异常，仍返回 `invalid-pool`、原 pool/state、无事件；`PoolError` 沿用原失败枚举。服务器 `room/logged-shared-pool.ts` 包装调用并用现有 `Logger/textLogger` 写 `shared-pool.unexpected-error`（房间、席位、回合、命令、原错误和堆栈）；日志不进入领域状态或网络回执；诊断回调自身抛错也不影响原子失败返回。
+
+正向发金恢复回归发现：Batch 3 自动给自有假人绑定赠品的历史不能按普通手动穿装重放。历史恢复现按确定性 `emblemGifts/ownDummyId`、`augment-pool-batch3-dummy` 收据及紧邻的出生事实核对单位、物品、槽位和回合，再恢复这次自动绑定；普通手动穿装仍走原校验，伪造目标/槽位/来源及重复绑定均拒绝。此项只修复真实状态的恢复，不改赠品、手动装备规则、版本或 digest。
+
 ## 2026-10-29 v26 anomA：异变准备、资格和初始 12 项报价
 
 本节覆盖下文旧异变“30 秒独立选择再准备”及“仅排上一项”的描述。4-6 从入场共用一次 75 秒 preparation 截止点，提前确认不重置；待选可执行准备期合法部署/上下场/移动及其他经济操作，**所有棋子禁止出售**（含锁定目标，`wrong-phase`，无 state/卡池/事件变化），确认后可卖，单人及本地房间同步。用户 11:38/12:02 补充决定覆盖此前待选出售权限。前端打开异变界面时锁盘、隐藏后允许调阵，由另一单接线；隐藏不解除服务器禁售。本人私有投影新增 `anomalyTargetIds: readonly string[]`；公共资格查询、失败语义、召唤物已知/待证分类、报价事实及所有生产调用链见 [v26 anomA 完整合同](V26_ANOMALY_R1_R3_R4A.md)。

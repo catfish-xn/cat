@@ -212,6 +212,10 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   if (after === before) return after;
   let next = recordAugmentAcquisition(before, after);
   if (!next.augmentHistory) return next;
+  // Placeholder PvP is executed by Match, but its binding/roster belong to the room battle.
+  const roomBattle = after.multiplayer && after.m8.round.kind === 'pvp'
+    ? next.augmentHistory.facts.find(f => f.kind === 'pvp-roster' && f.round === after.round) : undefined;
+  const roomBattleId = roomBattle?.kind === 'pvp-roster' ? roomBattle.battleId : undefined;
   // Identical preparation/item containers have the same roster. Combat ticks usually keep
   // both references, so avoid cloning/canonicalizing that unchanged roster on every tick.
   if ((before.preparation !== after.preparation || before.items !== after.items)
@@ -220,7 +224,7 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   // The frozen input basis, not a later editable board, is the authoritative opening roster.
   if (!before.combatInputBasis && after.combatInputBasis) {
     const basis = after.combatInputBasis.inputs;
-    const battleId = after.combat?.combatId ?? after.pendingCombatTerminal?.combatId ?? `round-${after.round}`;
+    const battleId = roomBattleId ?? after.combat?.combatId ?? after.pendingCombatTerminal?.combatId ?? `round-${after.round}`;
     if (!next.augmentHistory?.facts.some(f=>f.kind==='combat-roster'&&f.battleId===battleId))
       next = appendAugmentFact(next, {kind:'combat-roster',battleId,roster:historyRoster({...after,preparation:basis.preparation,items:basis.items})});
     if (next.augments.some(a => a.definitionId === 'a-golden-find') && (!after.multiplayer || after.m8.round.kind !== 'pvp') && !next.augmentHistory?.facts.some(f=>f.kind==='combat-binding'&&f.battleId===battleId))
@@ -231,13 +235,14 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
   const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
   const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
-  const recorded = after.combat?.status === 'finished' ? augmentRecordedDeathEvents(next.augmentHistory!, after.combat.combatId!) : new Set<number>();
+  const battleId = roomBattleId ?? after.combat?.combatId;
+  const recorded = after.combat?.status === 'finished' ? augmentRecordedDeathEvents(next.augmentHistory!, battleId!) : new Set<number>();
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
-  const boundaryRecorded = augmentDeathBoundary(next.augmentHistory!, after.combat?.combatId, after.combat?.tick);
+  const boundaryRecorded = augmentDeathBoundary(next.augmentHistory!, battleId, after.combat?.tick);
   // Settlement may already hold the finished CombatState (including tick 0).
   // Its explicit terminal boundary must exist before rewards, even without any deaths.
   if (after.combat && (deaths.length || !boundaryRecorded && (before.combat?.tick !== after.combat.tick || !before.combat || after.combat.status === 'finished')))
-    next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
+    next = appendAugmentFact(next, { kind: 'deaths', battleId: battleId!, completeThroughTick: after.combat.tick,
       deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null,
         ...(d.lootExplosion?{lootExplosion:{...d.lootExplosion,killerSeatId:d.team==='enemy'?historySeatId(after):null}}:{}) })) });
   if(after.roundResults.length>before.roundResults.length&&after.combat?.status==='finished')next=recordR2PortableBattle(next,after.combat,'player');

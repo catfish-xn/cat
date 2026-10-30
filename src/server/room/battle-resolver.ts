@@ -10,7 +10,8 @@
  */
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
-import { createCombatReplayRecorder, runSharedMatchCommand, type CombatReplayRecorder, type SharedPoolState } from '../../server-entry';
+import { createCombatReplayRecorder, type CombatReplayRecorder, type SharedPoolState } from '../../server-entry';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import { primeCombatReplay } from './projection';
 import type { BattleInput, BattleResult, BattleSeatOutcome, PlaceholderBattleResult } from './types';
 

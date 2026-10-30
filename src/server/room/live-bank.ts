@@ -11,11 +11,12 @@
  * live combat is stepped by the rules' shared `step` (which reads Match.gold itself). The room only picks the tick.
  */
 import {
-  createCombatReplayRecorder, readBattleLiveGoldReaders, runSharedMatchCommand,
+  createCombatReplayRecorder, readBattleLiveGoldReaders,
   type BattleReplayTask, type CombatReplay, type CombatReplayRecorder, type CombatReplayTick, type SharedPoolState,
 } from '../../server-entry';
 import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import { BattleResolveError } from './battle-resolver';
 import { primeCombatReplay } from './projection';
 import { guardedBattle, startLiveTask, twoSidedResult } from './two-sided-resolver';

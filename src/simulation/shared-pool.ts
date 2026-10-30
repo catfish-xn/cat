@@ -132,7 +132,11 @@ export function createSharedPool(poolId:string,seed:number,options:{readonly sea
   assertSharedPoolConservation(pool);return pool;
 }
 const failure=(pool:SharedPoolState,state:MatchState,reason:SharedPoolFailure):SharedPoolResult=>({ok:false,pool,state,reason});
-const reasonOf=(error:unknown):SharedPoolFailure=>error instanceof PoolError?error.reason:'invalid-pool';
+const reasonOf=(error:unknown,onUnexpectedError?:(error:unknown)=>void):SharedPoolFailure=>{
+  if(error instanceof PoolError)return error.reason;
+  try { onUnexpectedError?.(error); } catch { /* Diagnostics must not interrupt atomic failure. */ }
+  return 'invalid-pool';
+};
 const stamp=(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}=>({state,events:[]});
 function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   const seatId=state.sharedPool!.seatId,seat=pool.seats.find(s=>s.seatId===seatId)!;
@@ -147,7 +151,7 @@ function active(pool:SharedPoolState,state:MatchState):void {
   requirePool(!pool.seats.find(s=>s.seatId===state.sharedPool!.seatId)!.released&&state.multiplayer?.status==='active','seat-eliminated');
 }
 function transact(pool:SharedPoolState,state:MatchState,
-  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string):SharedPoolResult {
+  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string,onUnexpectedError?:(error:unknown)=>void):SharedPoolResult {
   try {
     active(pool,state);
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[];
@@ -158,7 +162,7 @@ function transact(pool:SharedPoolState,state:MatchState,
     if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) return {ok:true,pool,state,events:result.events,poolEvents};
     const next=finish(draft,result.state);assertSharedPoolConservation(draft,[next]);
     return {ok:true,pool:draft,state:next,events:result.events,poolEvents};
-  } catch(error) {return failure(pool,state,reasonOf(error));}
+  } catch(error) {return failure(pool,state,reasonOf(error,onUnexpectedError));}
 }
 
 /** Import only the untouched public opening, before any shared shop is generated. */
@@ -316,14 +320,14 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 }
 
 /** All original Match paths that may award a unit use this transaction-local pool policy. */
-export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
+export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand,onUnexpectedError?:(error:unknown)=>void):SharedPoolResult {
   return transact(pool,state,(_draft,policy,poolEvents)=>{
     const result=matchCommand(_draft,policy,poolEvents);
     // Subscription Service opens its shop the moment it is acquired (a pick or a timed-out pick).
     if(!result.ok||!subscriptionAcquired(state,result.state))return result;
     releaseShop(_draft,state.sharedPool!.seatId);
     return {...result,state:drawSubscriptionShop(_draft,result.state,poolEvents)};
-  });
+  },undefined,onUnexpectedError);
   function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy,poolEvents:SharedPoolEvent[]):MultiplayerCommandResult {
     switch(command.type) {
       case 'buyXp': return buyXpWithShopRefresh(state,policy,leveled=>{releaseShop(_draft,state.sharedPool!.seatId);return drawShop(_draft,leveled,poolEvents,'dual-purpose');});
