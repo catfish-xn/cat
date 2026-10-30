@@ -178,7 +178,9 @@ describe('D3 full-bench carried forge remains restorable after delivery, seed 24
   });
 });
 
-describe.each([{ seed: 6133, pending: 4, firstGranted: 4 }, { seed: 6389, pending: 3, firstGranted: 2 }])('D3 historical capacity queue, seed $seed', ({ seed, pending, firstGranted }) => {
+// Integrated melee pathing leaves both k01 and k02 alive for seed 6389 at 2-7:
+// their six frozen heroes carry to 3-7, where the first sale grants five, then fills the bench.
+describe.each([{ seed: 6133, pending: 4, firstGranted: 4 }, { seed: 6389, pending: 6, firstGranted: 5 }])('D3 historical capacity queue, seed $seed', ({ seed, pending, firstGranted }) => {
   let state: MatchState, deliveryPreparation: MatchState, sold: MatchState, sale: ReturnType<typeof sellUnit>, soldUnitId: string;
   let pendingIds: string[];
   beforeAll(() => {
@@ -225,6 +227,14 @@ describe.each([{ seed: 6133, pending: 4, firstGranted: 4 }, { seed: 6389, pendin
     expect(pendingIds).toHaveLength(pending);
     const frozen = state.m8.loot.frozen.rounds.find(r => r.encounterPlan.roundId === '2-7')!;
     expect(frozen.encounterPlan.drops.filter(d => pendingIds.includes(d.dropId)).map(d => d.dropId)).toEqual(pendingIds);
+    if (seed === 6389) {
+      const queued = frozen.encounterPlan.drops.filter(d => pendingIds.includes(d.dropId));
+      expect(queued.map(d => d.payload)).toEqual(['renata', 'tristana', 'renata', 'sett', 'camille', 'vander']
+        .map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
+      expect([...new Set(queued.map(d => d.sourceUnitId))]).toEqual(['k01', 'k02']
+        .map(id => JSON.stringify(['pve', '2-7', 'krugs-v1', id])));
+      expect(state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench')).toHaveLength(5);
+    }
     for (const dropId of pendingIds) {
       expect(state.m8.loot.carry).toContainEqual({ dropId, deliverRoundId: '3-7' });
       expect(state.m8.loot.receipts.some(r => r.dropId === dropId)).toBe(false);
@@ -278,7 +288,7 @@ describe.each([{ seed: 6133, pending: 4, firstGranted: 4 }, { seed: 6389, pendin
     roundTrip(sold, form);
   });
   it('drains the remaining FIFO after another sale if the bench filled again', () => {
-    // Seed 6389 has room for two drops after its first sale. The third must
+    // Seed 6389 has room for five drops after its first sale. The sixth must
     // remain pending, then follow them exactly once when another slot is freed.
     if (firstGranted < pending) {
       const unitId = sold.preparation.units.find(u => u.team === 'player' && u.location.kind === 'bench')!.id;

@@ -93,7 +93,8 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
   const answer = () => answerOpenChoices(room, [seatId]);
 
   // Seed 42: public orb/shop/XP/equipment commands produce a two-star Darius and
-  // three-star Urgot. Darius gets one real PvP kill at 4-6 and two PvE kills at 4-7.
+  // three-star Urgot. With Darius at (1, 5), integrated melee pathing gives him
+  // one real PvP kill at 4-6 and two PvE kills at 4-7.
   // That first kill must carry into the 3-kill threshold; the old T2-only logic pays nothing.
   function prepareArmy(): void {
     for (const orb of matchRules.readLootView(mine()).unclaimedOrbs ?? []) {
@@ -164,6 +165,7 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     const choice = mine().pendingChoice!;
     command({ type: 'anomalyTarget', choiceId: choice.choiceId, generation: choice.generation, unitId: target });
     answer();
+    command({ type: 'deploy', unitId: target, target: { kind: 'board', cell: { col: 1, row: 5 } } });
     runUntil(room, clock, s => s.round === 23 && s.phase === 'settlement');
     expect(room.state.fault).toBeNull();
     const [binding] = requireAugmentFacts(mine(), 'combat-binding', 23);
