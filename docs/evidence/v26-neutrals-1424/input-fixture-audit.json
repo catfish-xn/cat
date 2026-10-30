@@ -14,7 +14,7 @@
     "scripts/record-v26-neutrals-1424-release.cjs": "9290000134cafe9c356aec6220495313464512d6070fa3a8689a7c9985bc5dc3",
     "scripts/record-v26-neutrals-1424-transfer.cjs": "62948d5cb84d2209d89087fe19b510ff316fd39f3b74f4a14c1f341fcf758ca9",
     "scripts/v26-neutrals-1424-fixture-audit.cjs": "72c6468d2315799a6944b813ca69f768ae301394fe04fbe008eb5137042c90ab",
-    "scripts/v26-neutrals-1424-route.cjs": "c6d0ac0cb7bb06d00648d511b914ba046cad78d79b71986a33e53cd85d0c12c6",
+    "scripts/v26-neutrals-1424-route.cjs": "ee248096cf047c137975c78e376b2f75d0cc53f64bf3c4e7e4ee47d7539c6f6f",
     "scripts/verify-m8-herald-fixtures.cjs": "7443428a08538ebbb72c1c2b019962b9b357b569d85b9dc070110de3c3b021fa",
     "scripts/verify-v26-neutrals-1424-epoch.cjs": "d49dd679d9bdc213819617c345a338f96f7e3cc870ac39a8e4e118908f797087",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
@@ -57,7 +57,7 @@
     "src/simulation/augment-gift-plan.ts": "10d0aeaf84227fc0372d707d075ab05614eb72f2b8c76efc4ea54ca0334072e0",
     "src/simulation/augment-history-log.ts": "bfd7ca2f7b9ccd5cfebfb51c292a3607b7529c62b01c0b2790d5f9c165492d38",
     "src/simulation/augment-history-owners.ts": "de3c86a037fe76195789fbf218c47d6d4d7e19fa60b1c3446b1faf54748ce1d6",
-    "src/simulation/augment-history-restore.ts": "58899c4c8811a9afc04b7eedaf3716b66223e92316ed1faa334ec9b8538a664e",
+    "src/simulation/augment-history-restore.ts": "e71f14df775349359db0035a90ccea5f8d1539a30a2ff627d1cf57b866a267d3",
     "src/simulation/augment-history-types.ts": "024af209b2ac14a0d06e0d0b0f757344697b870bf8f9e5b48ca842d4c80e3d4a",
     "src/simulation/augment-history.ts": "ae27f8a8562a880a1b0b159b0744a3a9257c11168c9d9fa890d24faa05f43e3b",
     "src/simulation/augment-income.ts": "7725de829f93c380a81738a0ae528bf54039748b975be04c2addc9916a116ef0",
@@ -708,7 +708,7 @@
       "previousBytes": 66919,
       "currentBytes": 69077,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "b521be6d63c022cd04c1a5391fc28f503c9f0dda2a1c9aaf8c665bf5d970cd22",
+      "currentSha256": "1c97c01bacf016a0362dd140b1a03e493b1b26ccd4355b5892631ff4a8ea1d98",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {

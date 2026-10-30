@@ -87,17 +87,16 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    const supply=route.final.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0);
    const loot=route.final.m8.loot.receipts.filter(r=>r.payload.kind==='item');
    expect(supply).toBe(5);
-   // Restored krugs now beat the unchanged mage route after only k02 dies.
    // Keep the full reward chain exact: every independently planned entry is
-   // either earned once or explicitly forfeited for those two surviving sources.
+   // earned once. v26 seed-42 routes (2-1 public rerolls) win every PvE round,
+   // including the restored 14.24 krugs at 2-7, so nothing is forfeited.
    const independent=independentLootPlan(42).rounds.flatMap(r=>r.encounterPlan.drops);
-   const lost=build==='mage'?independent.filter(d=>d.roundId==='2-7'&&['k01','k03'].includes(JSON.parse(d.sourceUnitId!)[3])):[];
+   const lost:typeof independent=[];
    expect(route.final.m8.loot.direct.filter(d=>d.status==='forfeited').map(d=>d.dropId).sort()).toEqual(lost.map(d=>d.dropId).sort());
-   expect(route.final.roundResults.filter(r=>r.roundKind==='pve'&&r.result!=='playerWin').map(r=>[r.roundId,r.result,r.survivingEnemyCount,r.playerDamage])).toEqual(build==='mage'?[['2-7','enemyWin',2,3]]:[]);
+   expect(route.final.roundResults.filter(r=>r.roundKind==='pve'&&r.result!=='playerWin').map(r=>[r.roundId,r.result,r.survivingEnemyCount,r.playerDamage])).toEqual([]);
    const planned=independent.filter(d=>d.payload.kind==='item'&&!lost.includes(d));
    expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
-   const lostValue=build==='mage'?2:0;
-   expect(lost.filter(d=>d.payload.kind==='item')).toHaveLength(lostValue);
+   const lostValue=0;
    expect(loot.every(r=>r.grantedItemIds.length===1&&r.payload.quantity===1)).toBe(true);
    const value=loot.reduce((n,r)=>n+(r.payload.kind==='item'&&ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1),0);
    // v22: loot forges are bench anvils (opened by selling, 4 picks); the 4-7 component anvil is extra.
@@ -106,8 +105,7 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    const forges=anvils.filter(a=>a.definitionId==='TFT_ArmoryKeyCompleted'),componentAnvils=anvils.filter(a=>a.definitionId==='TFT_ArmoryKeyComponent');
    const isOpened=(a:{id:string})=>opened.has(JSON.stringify(['anvil',a.id]));
    // Independent #265 reward oracle: seed42 has two standard epic variants,
-   // eleven planned item value + five supply components + two completed forges;
-   // the restored mage route forfeits exactly two component value at 2-7.
+   // eleven planned item value + five supply components + two completed forges.
    expect(forges).toHaveLength(2);expect(componentAnvils).toHaveLength(1);expect(supply+value+forges.length*2).toBe(20-lostValue);
    // The 6-7 forge lands with the final settlement, so it stays an unopened anvil.
    expect(forges.map(isOpened)).toEqual([true,false]);expect(componentAnvils.every(isOpened)).toBe(true);

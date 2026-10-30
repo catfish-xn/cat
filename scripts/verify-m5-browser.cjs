@@ -4,7 +4,7 @@ const {prepareB6Opening}=require('./b6-public-preparation.cjs');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {spawn,execFileSync}=require('node:child_process');const {chromium}=require('playwright');
 const generateRoute=require('./generate-m5-route.cjs'),{hash}=require('./m4-evidence.cjs');
-const {routeOptions}=require('./v25-online-rules-route.cjs');
+const {routeOptions}=require('./v26-neutrals-1424-route.cjs');
 const preview=process.argv.includes('--preview'),touch=process.argv.includes('--touch'),build=(process.argv.find(a=>a.startsWith('--build='))??'--build=cannon').split('=')[1];
 const m6Journey=process.argv.includes('--m6-journey'),m6F2=process.argv.includes('--m6-f2')||m6Journey;
 const mode=preview?'preview':'dev',port=Number(process.env.M5_PORT??(preview?4176:5176)),url=`http://127.0.0.1:${port}`,output=process.env.M5_EVIDENCE_DIR??`artifacts/m5-${mode}-${build}${touch?'-touch':''}`;
@@ -20,7 +20,7 @@ function writeJsonFile(file,value){const fd=fs.openSync(file,'w');try{const writ
   write(JSON.stringify(v));};
  walk(value,0);}finally{fs.closeSync(fd);}}
 (async()=>{fs.mkdirSync(output,{recursive:true});let server,browser,context,page;const started=Date.now(),report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),status:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),diffHash:hash(execFileSync('git',['diff','HEAD'],{encoding:'utf8'})),node:process.version,platform:process.platform,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),runnerHash:hash(fs.readFileSync(__filename,'utf8')),sourceFingerprint:sourceFingerprint(),mode,build,touch,checkpoints:[],errors:[],passed:false,acceptanceScope:'full application route at the catalog capacity (B9)',fullApplicationRoutePassed:false};try{
- // Same seed-42 public rerolls as the v25 golden recorder. The default policy selects batch-5 history augments (cannon 4-2 scavenger, mage 3-2 trait-tracker).
+ // Same seed-42 public rerolls as the v26 golden recorder. The default policy selects history augments (v25: cannon 4-2 scavenger, mage 3-2 trait-tracker; v26: snipers-nest at 2-1 for every build, sniper 4-2 rebel-resurgence).
  const route=await generateRoute({build,seed:42,...routeOptions(build,42),retainStates:true});require('../tests/fixtures/m5/assert-golden.cjs')(route);report.versions=Object.fromEntries(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','rngAlgorithm','tickMs'].map(k=>[k,route.initial[k]]));
  writeJsonFile(path.join(output,'route.json'),route);fs.writeFileSync(path.join(output,'round-ledger.json'),JSON.stringify(route.ledger));
  server=spawn(process.execPath,[path.join(path.dirname(require.resolve('vite/package.json')),'bin/vite.js'),...(preview?['preview']:[]),'--host','127.0.0.1','--port',String(port),'--strictPort'],{stdio:['ignore','pipe','pipe']});for(const stream of[server.stdout,server.stderr])stream.on('data',data=>fs.appendFileSync(path.join(output,'server.log'),data));

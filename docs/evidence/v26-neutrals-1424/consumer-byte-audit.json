@@ -254,9 +254,9 @@
     "tests/combat-fx-pool.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3381,
+      "currentBytes": 5156,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ee084dd1ab2ef2eb7e8d4c01b4fcd54759805b5e3c102ba4e6c5f012206ed515",
+      "currentSha256": "e55fae36ea4756952f4fa03e1a00504d42227a0e6cf7e7cd63bec64c66eff487",
       "firstDifferentByte": 0
     },
     "tests/d01-damage-dealt.test.ts": {
@@ -370,9 +370,9 @@
     "tests/fixtures/m5/full-match-golden.v26-neutrals-1424.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 106863,
+      "currentBytes": 107972,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "735b80ce400ce5e3edef5a48f9cba2910ca218341924dd96afe541dcb4be474e",
+      "currentSha256": "0bf69e7363ec83a972fde34351d92ff54bf574b9bcb2b536f1a2b0b3bc5a82cb",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m5/oracle.cjs": {
@@ -518,7 +518,7 @@
       "previousBytes": 0,
       "currentBytes": 69077,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b521be6d63c022cd04c1a5391fc28f503c9f0dda2a1c9aaf8c665bf5d970cd22",
+      "currentSha256": "1c97c01bacf016a0362dd140b1a03e493b1b26ccd4355b5892631ff4a8ea1d98",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -548,17 +548,17 @@
     "tests/fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3647356,
+      "currentBytes": 1159748,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8bf390f5e133e9486d039e24161a97746fd0f68fa2ba56956811678a40d54140",
+      "currentSha256": "98b3eea7af2cd69c6396d3d2c32d56d9fe31568af44edf902294272d645afe54",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-recorded-states/sniper.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4636209,
+      "currentBytes": 1219871,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "479e260466eb7236f7c1048badfe6ab69efe9a140f231ca9c14c33f0b734b4d5",
+      "currentSha256": "3dee2911b1ae321e9dcd520ec4624f6197852d2df56617a50ebfc0d21495eda1",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-transfer-route.json": {
@@ -611,6 +611,14 @@
       "currentBytes": 460,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "da18380221308581ac872eff4bbf2bd20e608410e9b9c7d7e5cae2ce62c5fdb2",
+      "firstDifferentByte": 0
+    },
+    "tests/late-lag-effects.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 9614,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "5f4a2e9c5b40c5124957eca904a00a76755170a93d32ecede7a51fb1c10ee9ff",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
@@ -671,9 +679,9 @@
     },
     "tests/m5-replay-helper.ts": {
       "previousBytes": 5743,
-      "currentBytes": 5744,
+      "currentBytes": 5746,
       "previousSha256": "dd1cbf7be8f56130428de4aa1e5f2705b4e21255b623c6654e09926ba4a593b2",
-      "currentSha256": "8af1e0ec35c21b1fe2aeb66cfeec3e41f9cffaa20bb37f8cadd2c9268596f44b",
+      "currentSha256": "17b1daa80794a8935f5113e043943eecea838350f256b100ac1e12583ac3f92c",
       "firstDifferentByte": 353
     },
     "tests/m5-route-hash.test.ts": {
@@ -685,9 +693,9 @@
     },
     "tests/m5-route.test.ts": {
       "previousBytes": 8129,
-      "currentBytes": 9183,
+      "currentBytes": 8878,
       "previousSha256": "03f26283ae3278f1f29e2b9eab445d64f58b32e5e8d1ed19c62b893b1bd711e4",
-      "currentSha256": "e66a7de4a9d76f142fa848f5f713d5204a92a76e2eaea1ab364adfd0a223d3b3",
+      "currentSha256": "f4145bfa21387b7bcb7abbd12686d6547d8efc13dab626c884b3b671af811a7a",
       "firstDifferentByte": 9
     },
     "tests/m6-integration-helper.ts": {
@@ -1156,9 +1164,9 @@
     "tests/rendering3d-foot-support.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12238,
+      "currentBytes": 13448,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2a20210a30341618cec564f00890ea7cdd3010d1e9dfe3472b11b9eaa45d2b8d",
+      "currentSha256": "ca4858e3f3033a27add7541cf59a7869722d5ab65708518c53c5adad5392a5e5",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-isolation.test.ts": {
@@ -1251,6 +1259,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e2d880a98c1ac19eac47cfb86a1e0fcdfdc454a4de89798f51d1f258cc14263d",
       "firstDifferentByte": 0
+    },
+    "tests/rendering3d-reference-fx.test.ts": {
+      "previousBytes": 3372,
+      "currentBytes": 4325,
+      "previousSha256": "4ad9fc9351cbc16fd11264a3e40e995ba1a629d1efcb6453666961a4ab2656db",
+      "currentSha256": "56a02f7f0e24f85113f67c82bbee3c3e7c3aa5ccceefce2261695356c79433d0",
+      "firstDifferentByte": 3368
     },
     "tests/rendering3d-scout-input.test.ts": {
       "previousBytes": 14336,
@@ -1714,6 +1729,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67adb9f4dc370258d7abc786d377da0982ac138849d6bf1fb28119ddee939366",
       "firstDifferentByte": 0
+    },
+    "tests/stage5-feedback.test.ts": {
+      "previousBytes": 10181,
+      "currentBytes": 10338,
+      "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
+      "currentSha256": "8c4848f31d29e6385c5e0bb605e67a8345c5c1223696dd82fc0f77c1c45bfcae",
+      "firstDifferentByte": 6912
     },
     "tests/t10-combat-ops.test.ts": {
       "previousBytes": 8062,
