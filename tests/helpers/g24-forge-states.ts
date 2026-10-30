@@ -1,4 +1,6 @@
-import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,sellUnit,type MatchState} from '../../src/simulation/match';
+import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,sellUnit,rerollAugment,selectChoice,type MatchState} from '../../src/simulation/match';
+import {augmentNeedsHistory} from '../../src/simulation/augment-history-owners';
+import {h12SelectionAllowed} from '../../src/simulation/augment-pool-batch5-h12-progression';
 import {readLootView} from '../../src/simulation/loot-view';
 import {isAnvil} from '../../src/simulation/content/anvils';
 import { validateAnvils } from '../../src/simulation/restore-checks/anvils-check';
@@ -39,6 +41,28 @@ export function forgeStates():Map<number,MatchState>{
   if(state.phase==='choice'){
    const c=state.pendingChoice!;
    if(states.has(14)){cached=states;cachedAnvils=anvils;return states;}
+   // D5 registration (catalog 310) makes seed 5's forfeited 2-1 card scoreboard-scrapper.
+   // This harness is one multiplayer-flagged seat, not a room, so nobody publishes the
+   // entry table. The next PvE (2-7, ordinal 10) then rejects startMatchCombat. Forfeit
+   // still takes the first legal card when that card does not need augment history;
+   // otherwise take the first history-free offer after the existing per-slot rerolls.
+   if(c.kind==='augment'){
+    const quiet=(offers:readonly string[])=>offers.find(id=>h12SelectionAllowed(state,id)&&!augmentNeedsHistory(id));
+    const forfeited=c.offers.find(id=>h12SelectionAllowed(state,id));
+    if(forfeited&&augmentNeedsHistory(forfeited)){
+     let choice=c;
+     for(let slot=0;slot<3&&!quiet(choice.offers);slot++){
+      if(choice.rerolledSlots?.[slot])continue;
+      const rolled=rerollAugment(state,choice.choiceId,choice.generation,slot);
+      if(!rolled.ok)break;
+      state=rolled.state;choice=state.pendingChoice!;
+     }
+     const id=quiet(choice.offers);
+     if(!id)throw Error('Forge fixture has no history-free augment at '+state.roundDefinitionId+': '+choice.offers.join(','));
+     state=accepted(selectChoice(state,choice.choiceId,choice.generation,id));
+     continue;
+    }
+   }
    state=accepted(forfeitPendingChoice(state,state.round,c.choiceId,c.generation));continue;
   }
   if(state.phase==='combat'){state=stepMatch(state).state;continue;}

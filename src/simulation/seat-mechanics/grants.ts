@@ -60,7 +60,7 @@ export function grantMechanicItem(state: MatchState, request: MechanicGrantReque
 
 /** Online heroes enqueue an exactly-once reward orb without inventory or pool allocation.
  * Shop gifts also use this envelope for solo capacity retries. Other offline grants retain their original retry/policy behavior; summons remain direct births. */
-export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean; readonly deferToOrb?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
+function grantMechanicUnitNow(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean; readonly deferToOrb?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
   const bad = badRequest(state, request); if (bad) return bad;
   // Pooled shop heroes, or summons (UnitDefinition.summon), which never touch the shared pool.
   const summon = !!UNIT_DEFINITIONS[request.definitionId]?.summon;
@@ -86,6 +86,20 @@ export function grantMechanicUnit(state: MatchState, request: MechanicGrantReque
   const events: MatchEvent[] = [...plan.events];
   return commit(reconcileD14(born, events), { ...identity(state, request), kind: 'unit', definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'held', unitId: plan.unitId, gold: 0 },
     events, plan.upgradeEvents);
+}
+
+type GrantJournal = <T>(name: string, args: readonly unknown[], run: () => T) => T;
+let grantJournal: GrantJournal | undefined;
+/** Registered by augment history after that module finishes initializing. */
+export function bindMechanicGrantJournal(fn: GrantJournal): void { grantJournal = fn; }
+
+/** Solo augment history can only replay public commands. An external unit grant has to be one of them,
+ * or a later save of the granted holder (anomaly reacquisition included) cannot round-trip.
+ * Grants inside an already-traced command stay nested: the journal sees the open trace and does not append twice. */
+export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean; readonly deferToOrb?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
+  if (!grantJournal || !state.augmentHistory || state.multiplayer || state.openingEncounter?.mode === 'shared-deferred' || unitLootPolicy)
+    return grantMechanicUnitNow(state, request, unitLootPolicy);
+  return grantJournal('grantMechanicUnit', [state, request], () => grantMechanicUnitNow(state, request));
 }
 
 /** Generic exactly-once consumable grant, including both champion duplicators. */

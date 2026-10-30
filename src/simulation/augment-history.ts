@@ -1,4 +1,5 @@
 import { traceAnomalyCommand } from './anomaly-history';
+import { bindMechanicGrantJournal } from './seat-mechanics/grants';
 import { combatBenchProjection } from './bench-capacity';
 import { completeOverEncumbered } from './over-encumbered';
 import { recordR2PortableBattle } from './augment-pool-batch5-r2-history';
@@ -254,7 +255,10 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   return next;
 }
 /** Wrap only outer public commands. Failed/no-op commands keep their exact original identity and no evidence. */
+let mechanicGrantJournalBound = false;
 export function traceHistoryCommand<T>(name: string, args: readonly unknown[], run: () => T): T {
+  // Bind after every module has finished initializing. A top-level call runs while grants.ts is still in TDZ.
+  if (!mechanicGrantJournalBound) { mechanicGrantJournalBound = true; bindMechanicGrantJournal(traceHistoryCommand); }
   if (depth) return run();
   const before = args[0] as MatchState;
   depth++; let result: T; try { result = run(); } finally { depth--; }
