@@ -79,8 +79,17 @@ describe('UR-I3-01 current combat status kinds', () => {
     // Captured on HEAD 58dd202 before changing combat-replay-view.ts; these are
     // authoritative state/ledger hashes, not view goldens to re-record for v15.
     // Release identity separately follows the freshly recorded current epoch.
-    expect(sha(control.terminal)).toBe('432c237bd3225a4b75ac5436bb370194689cab64f4be002007bbd703b65afdd9');
-    expect(sha(control.ledger)).toBe('c5762f92e94df75176eab0b23de25dcd5636f0f80f9d5da1d41ffae794d4583d');
+    // v26 re-pin (75670785), bisected from e9384c02; tick 45, draw, rngState 42 and rngDraws 0 are unchanged.
+    // Terminal: the only differences are two new authenticated per-unit combat facts on both units,
+    // `targetEngaged: true` (targeting P0, d6a75a4e) and `meleeApproach` (melee pathing, c64a756a; held
+    // attack hexes p->e (2,3), e->p (1,3)). Was 432c237bd3225a4b75ac5436bb370194689cab64f4be002007bbd703b65afdd9.
+    // Ledger: targeting P1 (8106acee) holds a hard-controlled unit's target until release, so stunned `e`
+    // now emits its targetChanged(null->p) at tick 5 (stun ends after tick 4) instead of tick 1; every
+    // other event is identical apart from eventSeq renumbering. Was c5762f92e94df75176eab0b23de25dcd5636f0f80f9d5da1d41ffae794d4583d.
+    expect(sha(control.terminal)).toBe('fe62d6308eb3e57308b4e28e1458d182c992ae69a74f4aefc71e2158ff5bf37c');
+    expect(sha(control.ledger)).toBe('1e1bbd1178fab9e3570469e2d407776eef0cacd7549ffd54c18045b03dcf72f5');
+    expect(control.ledger.filter(event => event.type === 'targetChanged').map(event => [event.tick, event.unitId]))
+      .toEqual([[1, 'p'], [5, 'e']]);
     expect(CONTENT_DIGEST).toBe(currentIdentity.contentDigest);
     expect(LOOT_REPLAY_DIGEST).toBe(currentIdentity.lootReplayDigest);
     expect(observed.all).toEqual(control.all); expect(observed.ledger).toEqual(control.ledger);
