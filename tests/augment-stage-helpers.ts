@@ -65,7 +65,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'trait-tracker':{node:'3-2',seed:20,rerolls:[0,1]},
   'sponging':{node:'3-2',seed:16,rerolls:[0,1,2]},
   'artifactory':{node:'3-2',seed:13,rerolls:[0,1,2]},
-  'salvage-bin-plus':{node:'3-2',seed:3,rerolls:[0,1,2]},
+  // D5 310-card pool: seed 3 after rerolls 0/1/2 offered clockwork-accelerator, contested, bad-luck-protection.
+  // First seed in 0..120 whose reachRound('3-2') offer contains salvage-bin-plus within those slot rerolls is 27, after rerolling slot 0.
+  'salvage-bin-plus':{node:'3-2',seed:27,rerolls:[0]},
   'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},

@@ -61,63 +61,69 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string,fightWolves=false)
  }
  return state;
 }
-/** Public offer seeds, re-pinned on the v24 merged 235-card pool from the original search (repeating it cost up to 24 s per card):
- * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw offers the card;
- * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed node and
- *   offers it there.
- * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
- * re-run the search above if the pool, the openings or the route change.
- * Re-pinned after v25 batch-5 pool expansion (285 admitted cards), same first-seed rule and route validators,
- * with two documented exceptions: savage-revenge skips 43 (its route fills the bench, so the two Renni gifts are
- * held in escrow by design, augment-pool-grants.ts drainBatch1Gifts) and dark-alley-dealings skips 91 (its route
- * picks slammin at 2-1, whose saves need battle replays to restore, crown-history.ts).
- * 2026-10-29 PvE damage: Golden Egg keeps seed 28, fields its 3-7 army and fights the wolves instead of
- * conceding that PvE; pick() still re-proves reachability and the natural empty-board 4-2 offer. */
+/** Public offer seeds. Re-pinned 2026-10-30 after D5 added brb, over-encumbered, restart-mission and
+ * what-you-really-are (catalog 306 → 310). Same first-seed rule as the v25 pin (repeating the search
+ * cost up to 24 s per card, so the results stay pinned and pick() re-proves each one):
+ * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw
+ *   offers the card, confirmed with reachRound('2-1', false, seed). The cheap draw matched that route on
+ *   every sampled seed, including the pins below.
+ * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed
+ *   node and offers it there.
+ * Seeds that still met the check were not moved: all-out 12, blood-pact 13, eye-for-an-eye 78,
+ * worth-the-wait 15, blazing-soul-ii 89, noble-sacrifice 45, savage-revenge 62.
+ * savage-revenge still skips 43 (its route fills the bench, so the two Renni gifts are held in escrow by
+ * design, augment-pool-grants.ts drainBatch1Gifts). dark-alley-dealings' previous skip of 91 does not apply
+ * to the new first seed. Three offer-hits were skipped because the route no longer saves: blazing-soul-i
+ * 11 (2-1 auto-pick needs crown history; 62 is the first acquisition that serializes), latent-forge 8
+ * (crown history before the 8th PvP receipt; 46 completes that route), support-mining 86 (3-2 auto-pick
+ * dhampyr makes the retirement continuation diverge; 140's 3-2 pick is spirit-link).
+ * the-golden-egg: seed 28 dies at 4-1 (hp 0). 662 is the first seed in 0..2500 with a prismatic 4-2 tier
+ * whose wolf-fight route still reaches 4-2 and offers the egg (arrival hp 4; 744 is next). */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
  'all-out':12,
- 'an-exalted-adventure':38,
- 'bad-luck-protection':82,
- 'blade-dance':61,
- 'blazing-soul-i':82,
+ 'an-exalted-adventure':92,
+ 'bad-luck-protection':175,
+ 'blade-dance':131,
+ 'blazing-soul-i':62,
  'blazing-soul-ii':89,
  'blood-pact':13,
- 'building-a-collection-iii':0,
- 'corrosion':48,
- 'dark-alley-dealings':99,
+ 'building-a-collection-iii':47,
+ 'corrosion':69,
+ 'dark-alley-dealings':60,
  'eye-for-an-eye':78,
- 'eye-for-an-eye-plus':32,
- 'field-medic':116,
- 'flexible':7,
- 'gold-for-dummies':211,
- 'latent-forge':31,
- 'living-forge':0,
+ 'eye-for-an-eye-plus':46,
+ 'field-medic':404,
+ 'flexible':14,
+ 'gold-for-dummies':18,
+ 'latent-forge':46,
+ 'living-forge':10,
  'noble-sacrifice':45,
- 'phreaky-friday':104,
- 'phreaky-friday-plus':7,
- 'prizefighter':27,
- 'rolling-for-days-i':351,
+ 'phreaky-friday':185,
+ 'phreaky-friday-plus':28,
+ 'prizefighter':18,
+ 'rolling-for-days-i':17,
  'savage-revenge':62,
- 'scapegoat':24,
- 'shimmerscale-essence':28,
- 'shocking-troll':349,
- 'spoils-of-war-i':55,
- 'spoils-of-war-ii':141,
- 'spoils-of-war-iii':38,
- 'superstars-i':100,
- 'superstars-ii':1,
- 'support-mining':132,
- 'support-mining-plus':76,
- 'team-building':101,
- 'the-golden-egg':28,
- 'tower-defense':60,
- 'trade-sector':117,
- 'wandering-trainer-i':23,
- 'wandering-trainer-ii':14,
- 'wealthy-rehab-i':95,
- 'wealthy-rehab-ii':124,
- 'what-doesnt-kill-you':29,
+ 'scapegoat':52,
+ 'shimmerscale-essence':0,
+ 'shocking-troll':46,
+ 'spoils-of-war-i':70,
+ 'spoils-of-war-ii':176,
+ 'spoils-of-war-iii':68,
+ 'superstars-i':61,
+ 'superstars-ii':82,
+ 'support-mining':140,
+ 'support-mining-plus':46,
+ 'team-building':78,
+ 'the-golden-egg':662,
+ 'tower-defense':117,
+ 'trade-sector':21,
+ 'wandering-trainer-i':88,
+ 'wandering-trainer-ii':53,
+ 'wealthy-rehab-i':24,
+ 'wealthy-rehab-ii':41,
+ 'what-doesnt-kill-you':27,
  'worth-the-wait':15,
- 'worth-the-wait-ii':6,
+ 'worth-the-wait-ii':7,
 
 };
 function pick(id:string) {
