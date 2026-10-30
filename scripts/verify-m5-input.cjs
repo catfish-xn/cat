@@ -142,14 +142,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       return prepared;
     }
     async function itemReset() {
-      // v24 seed 18 offers Guardbreaker Spirit and no opening items. Select it explicitly:
-      // its real gloves are item-1. The real 2-4
-      // supply component is item-2, the item used by the native item-input tests.
-      await reset(18); const prepared = await prepareB6Opening(page, '2-5', { augment: 'guardbreaker-spirit' });
+      // v26 seed 12 offers Guardbreaker Spirit (seed 18 drifted with the D5 pool, 3ce71065). The empty-board
+      // opening losses carry their drops to the next PvE (8f794062): rod item-1 and tear item-2 arrive at 1-3/1-4,
+      // item-2 being the inventory item used by the native item-input tests. The augment's gloves are item-3 and
+      // the real 2-4 supply sword is item-4.
+      await reset(12); const prepared = await prepareB6Opening(page, '2-5', { augment: 'guardbreaker-spirit' });
       assert.deepEqual(prepared.augments.map(augment => augment.definitionId), ['guardbreaker-spirit']);
-      assert.deepEqual(prepared.items.map(item => [item.id, item.location.kind]), [['item-1', 'inventory'], ['item-2', 'inventory']]);
-      assert.equal(prepared.items[0].definitionId, 'gloves', 'the 2-1 Guardbreaker Spirit augment grants item-1');
-      assert.equal(prepared.items[1].definitionId, 'sword', 'real 2-4 supply grants the item used by native item-input tests');
+      assert.deepEqual(prepared.items.map(item => [item.id, item.definitionId, item.location.kind]),
+        [['item-1', 'rod', 'inventory'], ['item-2', 'tear', 'inventory'], ['item-3', 'gloves', 'inventory'], ['item-4', 'sword', 'inventory']]);
+      assert.deepEqual(prepared.m8.loot.receipts.flatMap(receipt => receipt.grantedItemIds), ['item-1', 'item-2'], 'carried opening loot grants item-1/item-2');
       return prepared;
     }
     if (!metricsOnly) {
