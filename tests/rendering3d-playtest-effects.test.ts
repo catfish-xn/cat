@@ -267,8 +267,10 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     const a = piece({ id: 'a', definitionId: 'renata', x: 200, y: 200 });
     await publish([a, piece({ id: 'b', definitionId: 'renata', x: 0, y: 200 }), piece({ id: 'c', definitionId: 'renata', x: 100, y: 200 })]);
     const scene = bodies.get('renata')!.parent!.parent!;
-    const row = scene.children.find(object => object.position.x === 200 && object.children.length === 1
-      && object.children[0] instanceof three.Mesh && object.children[0].geometry instanceof three.ShapeGeometry)!;
+    const isRow = (object: import('three').Object3D) => object.children.length === 1
+      && object.children[0] instanceof three.Mesh && object.children[0].geometry instanceof three.ShapeGeometry;
+    const row = scene.children.filter(object => object.position.x === 200)
+      .map(o => [o, ...o.children].find(isRow)).find(Boolean)!;
     expect(row.children).toHaveLength(1);
     listener.merges!([{ definitionId: 'renata', fromStar: 1, toStar: 2, to: { id: 'a', x: 200, y: 200 },
       from: [{ id: 'b', x: 0, y: 200 }, { id: 'c', x: 100, y: 200 }] }]);
