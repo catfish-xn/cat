@@ -29,6 +29,13 @@ describe('seed 1558: Over-Encumbered and Diversified Portfolio+ survive round en
         state = finish(accepted(startMatchCombat(fieldBench(state))));
       }
       state = accepted(nextRound(resolveM5Choices(state), state.round));
+      // Authenticate each growing public-command prefix, as in the standalone
+      // D3 settlement suite. Otherwise the first 3-1 serialization cold-replays
+      // every 1-x/2-x combat, including the merged melee pathfinding work.
+      // These real round trips retain the same commands and full validation.
+      const restored = restoreMatch(serializeMatch(state));
+      expect(restored).toEqual(state);
+      state = restored;
     });
   }
 

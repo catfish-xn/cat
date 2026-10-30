@@ -88,8 +88,10 @@ describe('equal-distance tie break', () => {
     expect(get(state)).toMatchObject({ alive: false, hp: 0, targetId: null });
 
     // Only the corpse's cell changes: live target pools and occupancy stay identical.
-    const withoutTie = structuredClone(state);
-    get(withoutTie).cell = { col: 0, row: 7 };
+    const withoutTie: CombatState = structuredClone({
+      ...state,
+      units: state.units.map(u => u.id === 'p' ? { ...u, cell: { col: 0, row: 7 } } : u),
+    });
     let control = withoutTie;
     const drawsAtDeath = state.rngDraws;
     for (let tick = 3; tick <= 6; tick++) {

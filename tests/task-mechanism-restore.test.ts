@@ -207,8 +207,10 @@ it('restores the legal target reave and retains Irelia shielding at tick 104', (
 
 async function blackRoseSave(): Promise<MatchState> {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  // v23 batch 3: an economy augment now completes the rod sooner; keep the fixture at its original round 8.
-  let state = prepare(['rod'], { seed: 42, earliestRound: 8 });
+  // D5 registration (3ce71065) makes seed 42 select Sniper's Nest, whose solo
+  // proof cannot replay these test-only grants. Seed 43 reaches the same round
+  // without a history-owned augment; keep the real cast/Sion ticks unchanged.
+  let state = prepare(['rod'], { seed: 43, earliestRound: 8 });
   expect(state.round).toBe(8);
   for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,u.id));
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
