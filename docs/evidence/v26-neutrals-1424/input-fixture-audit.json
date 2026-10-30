@@ -708,7 +708,7 @@
       "previousBytes": 66919,
       "currentBytes": 69077,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "b521be6d63c022cd04c1a5391fc28f503c9f0dda2a1c9aaf8c665bf5d970cd22",
+      "currentSha256": "65183e686f454565b0dab91b748d89e6c0bc17911216e221de95fffa324a8b42",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
