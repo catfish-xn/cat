@@ -1,0 +1,14 @@
+{"contentDigest":"fnv1a32-utf16:9dc693dd","lootReplayDigest":"fnv1a32-utf16:a56b2c4a","mode":"--write"}
+{"phase":"start","name":"check-identities","args":["scripts/update-content-identities.cjs","--check"]}
+{"phase":"start","name":"record-battle-start","args":["scripts/record-v25-online-rules-battle-start.cjs"]}
+{"phase":"start","name":"record-release","args":["scripts/record-v25-online-rules-release.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"]}
+{"phase":"start","name":"record-herald","args":["tests/fixtures/record-v25-online-rules-herald.cjs","--write"]}
+{"phase":"start","name":"record-live-reveal","args":["scripts/record-v25-online-rules-live-reveal.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"]}
+{"phase":"start","name":"record-transfer","args":["scripts/record-v25-online-rules-transfer.cjs"]}
+{"name":"check-identities","args":["scripts/update-content-identities.cjs","--check"],"exitCode":0,"signal":null,"elapsedMs":4773,"log":"artifacts/v25-online-rules-recording/check-identities.log"}
+{"phase":"start","name":"check-history","args":["scripts/v25-online-rules-fixture-audit.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"]}
+{"name":"record-release","args":["scripts/record-v25-online-rules-release.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"],"exitCode":1,"signal":null,"elapsedMs":6174,"log":"artifacts/v25-online-rules-recording/record-release.log"}
+{"name":"check-history","args":["scripts/v25-online-rules-fixture-audit.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"],"exitCode":0,"signal":null,"elapsedMs":5064,"log":"artifacts/v25-online-rules-recording/check-history.log"}
+{"name":"record-transfer","args":["scripts/record-v25-online-rules-transfer.cjs"],"exitCode":0,"signal":null,"elapsedMs":20134,"log":"artifacts/v25-online-rules-recording/record-transfer.log"}
+{"name":"record-battle-start","args":["scripts/record-v25-online-rules-battle-start.cjs"],"exitCode":0,"signal":null,"elapsedMs":52630,"log":"artifacts/v25-online-rules-recording/record-battle-start.log"}
+{"name":"record-live-reveal","args":["scripts/record-v25-online-rules-live-reveal.cjs","--baseline-commit=100589ca41d78a4671c8675ec30057a9ea5ea684"],"exitCode":1,"signal":null,"elapsedMs":71134,"log":"artifacts/v25-online-rules-recording/record-live-reveal.log"}
