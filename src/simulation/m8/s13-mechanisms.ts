@@ -75,6 +75,7 @@ function clearMechanismTarget(ctx: AbilityContext, unit: S13Unit, actionSeq: num
   const before = unit.targetId; if (before === null) return;
   unit.targetId = null;
   delete unit.targetEngaged;
+  delete unit.meleeApproach;
   ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: unit.id, before, after: null });
   emitMechanismSignal(ctx, { event: 'target-changed', tick: ctx.tick, actionSeq, actorId: unit.id, targetId: null, cast: null });
 }

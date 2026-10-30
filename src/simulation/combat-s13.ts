@@ -13,7 +13,7 @@ import { batch2Values } from './content/augment-pool-batch2';
 import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
 import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
-import { canMove, isControlled } from './combat-movement';
+import { canMove, isControlled, planMeleeApproach, type MeleeApproachClaim } from './combat-movement';
 import { settleAmbessaRetreats } from './combat-ambessa-dash';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
@@ -323,13 +323,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>(), ordinaryMoved = new Set<string>();
   ctx.movementReservations = reserved;
-  // Keep the old controlled-tick rescans and release boundary. P0 does not add
-  // a controlled pause/latch or change cancellation/action eligibility.
-  const reselect = new Set(state.units.filter(u => isControlled(u as S13Unit, state.tick)).map(u => u.id));
-  for (const unit of units) if (isControlled(unit, tick)) reselect.add(unit.id);
+  // Stun and knock-up freeze ordinary target choice. Permanent frenzy still
+  // selects. The first tick after release is an ordinary decision again.
+  const hardControlled = (unit: S13Unit) => isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy;
   const targets = new Map<string, CombatTargetDecision>();
+  // Dead units keep deterministic decisions without consuming the combat stream.
   for (const unit of units) if (!isAttackProxy(unit) && !isMadChemist(unit))
-    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, reselect.has(unit.id)));
+    targets.set(unit.id, decideCombatTarget(state.board, unit, units, tick, occupied, false, undefined, hardControlled(unit),
+      unit.alive && unit.hp > 0 ? ctx.draw : undefined));
   const chemistPaths = new Map<string, readonly HexCell[]>();
   const intents = units.map(unit => {
     if (isMadChemist(unit) && unit.alive && unit.hp > 0) leaveMadChemistCloud(unit, [unit.cell], tick);
@@ -343,10 +344,38 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) return undefined;
     const decision = targets.get(unit.id)!, target = decision.target;
     if (!target || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
+    // Range 1 claims an attack hex in the commit loop. Ranged units keep this BFS.
+    if (!decision.engaged && range(unit) === 1) return undefined;
     return decision.engaged ? chaseStep(state.board, unit, target, occupied) : move(state, unit, target, occupied);
   });
+  const moveReady = (unit: S13Unit) => canMove(unit, tick) && (unit.mechanics?.some(m => m.mechanic === 'quickstriker')
+    ? unit.moveCooldownTicks <= 5 && (unit.v20Traits?.moveTenths ?? 0) >= 10 : unit.moveCooldownTicks <= 0);
+  const goalOwner = new Map<string, string>();
+  for (const unit of units) {
+    const claim = unit.meleeApproach, target = targets.get(unit.id)?.target;
+    if (!claim || !target || claim.targetId !== target.id) continue;
+    if (!getNeighbors(state.board, target.cell).some(cell => cell.col === claim.cell.col && cell.row === claim.cell.row)) continue;
+    if (!goalOwner.has(key(claim.cell))) goalOwner.set(key(claim.cell), unit.id);
+  }
+  const assignClaim = (unit: S13Unit, claim: MeleeApproachClaim | undefined) => {
+    if (unit.meleeApproach && goalOwner.get(key(unit.meleeApproach.cell)) === unit.id) goalOwner.delete(key(unit.meleeApproach.cell));
+    if (!claim) { delete unit.meleeApproach; return; }
+    const cell = { col: claim.cell.col, row: claim.cell.row };
+    unit.meleeApproach = { targetId: claim.targetId, cell };
+    goalOwner.set(key(cell), unit.id);
+  };
   units.forEach((unit, n) => {
-    const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
+    let destination = intents[n];
+    const decision = targets.get(unit.id), target = decision?.target;
+    const melee = !!target && range(unit) === 1 && !isMadChemist(unit) && !isOpeningCrab(unit) && !isAttackProxy(unit);
+    if (melee && moveReady(unit) && !decision!.engaged && hexDistance(unit.cell, target.cell) > range(unit)) {
+      const blockedGoals = new Set([...goalOwner].filter(([, id]) => id !== unit.id).map(([cell]) => cell));
+      const plan = planMeleeApproach(state.board, unit, target, units, tick, occupied, reserved, blockedGoals, ctx.draw);
+      assignClaim(unit, plan.claim);
+      destination = plan.step;
+    } else if (melee && hexDistance(unit.cell, target.cell) <= range(unit)) assignClaim(unit, { targetId: target.id, cell: unit.cell });
+    else if (unit.meleeApproach && unit.meleeApproach.targetId !== (target?.id ?? null)) assignClaim(unit, undefined);
+    if (!destination || reserved.has(key(destination))) return;
     reserved.add(key(destination)); ordinaryMoved.add(unit.id); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination }); recordAerialMovement(ctx, unit, destination);
     if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
     if (isMadChemist(unit)) leaveMadChemistCloud(unit, chemistPaths.get(unit.id)!, tick);
@@ -382,11 +411,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const mover = units.find(u => u.id === id); if (mover) actionOccupied.delete(key(mover.cell));
       }
       const decision = unit.hp > 0 && !isMadChemist(unit)
-        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, reselect.has(unit.id), prior) : undefined;
+        ? decideCombatTarget(state.board, unit, units, tick, actionOccupied, false, prior, hardControlled(unit),
+          unit.alive && unit.hp > 0 ? ctx.draw : undefined) : undefined;
       const target = unit.hp>0?(isMadChemist(unit)?byDistance(unit,enemies(unit,units))[0]:decision?.target):undefined;
       if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
       const previousTarget = unit.targetId;
       unit.targetId = unit.alive ? target?.id ?? null : null;
+      if (unit.meleeApproach && unit.meleeApproach.targetId !== unit.targetId) delete unit.meleeApproach;
       if (unit.alive && decision?.engaged) unit.targetEngaged = true;
       else delete unit.targetEngaged;
       if (unit.alive && previousTarget !== unit.targetId) emitMechanismSignal(ctx, { event: 'target-changed', tick, actionSeq, actorId: unit.id, targetId: unit.targetId, cast: null });
@@ -436,6 +467,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           if (unit.targetId !== attackTarget.id) {
             events.push({type:'targetChanged',tick,unitId:unit.id,before:unit.targetId,after:attackTarget.id});
             unit.targetId = attackTarget.id;
+            if (unit.meleeApproach && unit.meleeApproach.targetId !== unit.targetId) delete unit.meleeApproach;
             unit.targetEngaged = true;
             emitMechanismSignal(ctx, {event:'target-changed',tick,actionSeq:seq,actorId:unit.id,targetId:attackTarget.id,cast:null});
           }
@@ -810,7 +842,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {
-      unit.alive = false; unit.targetId = null; delete unit.targetEngaged; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
+      unit.alive = false; unit.targetId = null; delete unit.targetEngaged; delete unit.meleeApproach; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce'));

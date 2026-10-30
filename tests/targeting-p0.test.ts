@@ -94,16 +94,25 @@ describe('P0 target retention', () => {
     expect(decide(p, [old, low, forced, ambessa], 60).target?.id).toBe(old.id);
   });
 
-  it('keeps existing controlled-tick rescans and reselects on control release', () => {
+  it('holds the ordinary target through stun and keeps an in-range target on release', () => {
     const p = actor('p', { attackRange: 4, targetId: 'old', targetEngaged: true, moveCooldownTicks: 100 });
     const old = enemy('old', 3, 1), near = enemy('near', 3, 3);
     applyStatus(p, origin(old), 'stun', 0, 2, 0, []); // active ticks 1,2, released at 3
-    const controlled = run([p, old, near]);
-    expect(get(controlled.state).targetId).toBe(near.id);
-    expect(controlled.events.some(e => e.type === 'attack')).toBe(false);
-    const release = run([{ ...get(controlled.state), targetId: old.id }, old, near], 2);
-    expect(get(release.state).targetId).toBe(near.id);
-    expect(release.events.some(e => e.type === 'attack' && e.attackerId === p.id)).toBe(true);
+    const stunned = run([p, old, near]);
+    expect(get(stunned.state).targetId).toBe(old.id);
+    expect(get(stunned.state).targetEngaged).toBe(true);
+    expect(stunned.events.filter(e => e.type === 'targetChanged' && e.unitId === p.id)).toEqual([]);
+    expect(stunned.events.filter(e => e.type === 'attack' && e.attackerId === p.id)).toEqual([]);
+    expect(stunned.state.rngDraws).toBe(0);
+    const still = stepCombat(stunned.state);
+    expect(get(still.state).targetId).toBe(old.id);
+    expect(still.events.filter(e => e.type === 'attack')).toEqual([]);
+    const release = stepCombat(still.state);
+    expect(get(release.state).targetId).toBe(old.id);
+    expect(release.events.filter(e => e.type === 'attack')).toEqual([
+      { type: 'attack', tick: 3, attackerId: p.id, targetId: old.id },
+    ]);
+    expect(release.state.rngDraws).toBe(1);
   });
 
   it('keeps ordinary retention separate from Maddie’s farthest-target cast and bound multishot tasks', () => {
@@ -180,7 +189,10 @@ describe('P0 engaged-target chase', () => {
     expect(get(result.state).targetEngaged).toBe(true);
     expect(result.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([]);
     expect(result.events.filter(e => e.type === 'targetChanged' && e.unitId === 'p')).toEqual([]);
-    expect(result.state.rngDraws).toBe(0);
+    // At movement time old is equidistant from a and p, so one combat draw is spent.
+    // a then steps to (2,3) and is strictly closer, so the action recheck keeps a.
+    expect(get(result.state, 'old').targetId).toBe('a');
+    expect(result.state.rngDraws).toBe(1);
     const reversed = stepCombat(freeze(battle([...units].reverse(), { tick: 0, rngState: 42, rngDraws: 0 })));
     expect(reversed.state.units.map(u => ({ id: u.id, cell: u.cell, targetId: u.targetId, targetEngaged: u.targetEngaged }))).toEqual(
       result.state.units.map(u => ({ id: u.id, cell: u.cell, targetId: u.targetId, targetEngaged: u.targetEngaged })));
@@ -240,13 +252,14 @@ describe('research report reproductions', () => {
     expect(reportBattle(42, true)).toEqual(frames);
   });
 
-  it('seed 104729: records Vander’s initial-approach backtrack as a remaining P1 occupancy case', () => {
+  it('seed 104729: Vander keeps the attack hex instead of folding back on tick 11', () => {
     const frames = reportBattle(104729);
     const moves = frames.slice(0, 11).flatMap(f => f.events).filter(e => e.type === 'movement' && e.unitId === 'e3');
+    // The P0/P1 lock recorded (3,1)->(2,1). That was the uncommitted detour; the approved rule holds (3,3).
     expect(moves).toEqual([
       { type: 'movement', tick: 1, unitId: 'e3', from: { col: 2, row: 0 }, to: { col: 2, row: 1 } },
-      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 1 } },
-      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 1 }, to: { col: 2, row: 1 } },
+      { type: 'movement', tick: 6, unitId: 'e3', from: { col: 2, row: 1 }, to: { col: 3, row: 2 } },
+      { type: 'movement', tick: 11, unitId: 'e3', from: { col: 3, row: 2 }, to: { col: 3, row: 3 } },
     ]);
     expect([0, 5, 10].map(i => get(frames[i].state, 'e3').targetId)).toEqual(['p6', 'p6', 'p6']);
     expect(reportBattle(104729, true)).toEqual(frames);
