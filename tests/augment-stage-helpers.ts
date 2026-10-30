@@ -9,8 +9,17 @@ import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { needsCrownHistory } from '../src/simulation/crown-history';
 import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 
-/** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
-export const H12_MAX_CAP_SEED = 16;
+/** H12's public fielded 4-2 route, with a validated checkpoint at 4-1.
+ * Seed 16's opening is prismatic-party and it picks im-the-carry-now. That golem cannot be
+ * benched or sold, so the empty-board concession throws invalid-location. Seed 1 reaches 4-2
+ * as gold, and Max Cap is prismatic and node-banned off 2-1/3-2, so it is not a candidate.
+ * Seed 4 is prismatic with no golem, but the fielded route arrives at 13 HP and an empty
+ * stage-4 loss is 14, so the concession ends the match and nextRound is wrong-phase.
+ * Seed 8 (opening wind-up-monkey) is prismatic on the same worth-the-wait-ii /
+ * clockwork-accelerator priorities: level 5, 167 gold, 16 HP (4-1 has 154 gold and 14 XP),
+ * six benchable units and no golem. The same empty loss leaves 2 HP. 5→8 is 90 XP
+ * (23 purchases, 92 gold). */
+export const H12_MAX_CAP_SEED = 8;
 
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {

@@ -40,7 +40,11 @@ describe('B2 A06/A07/R1 programs on the production tick pipeline', () => {
   });
   it('source death cancels Redemption future pulses while ally contribution continues to201', () => {
     const p = { ...dummy('p','player',1,100), mechanismDefinitions: definitions([redemption()]) };
-    const first = advance(battle([p,dummy('A','player',2,500),dummy('e','enemy',6)]),100);
+    // From the enemy's start (6,3), A at (2,3) is distance 4 and p at (1,3) is 5, so P1 retains A
+    // after the teleport (A stays inside range 6) and the 1000 AD never reaches p.
+    // A at (1,2) is distance 6 from that start, so the unique nearest is p; (1,2) is still radius 1
+    // from p, and the teleport to (0,3) keeps the retained target on p.
+    const first = advance(battle([p,{ ...dummy('A','player',2,500), cell: { col: 1, row: 2 } },dummy('e','enemy',6)]),100);
     const death = stepCombat({ ...first.state, units: first.state.units.map(u => u.id === 'e' ? { ...u, cell: { col: 0, row: 3 }, cooldownTicks: 0, attackDamage: 1000 } : u) });
     expect(death.state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks).toEqual([]);
     expect(death.state.units.find(u => u.id === 'A')!.mechanismState!.statuses[0].contributions[0].expiresAtTick).toBe(201);
