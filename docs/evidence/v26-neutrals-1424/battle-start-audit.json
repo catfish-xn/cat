@@ -73,7 +73,7 @@
     "src/simulation/augment-gift-plan.ts": "10d0aeaf84227fc0372d707d075ab05614eb72f2b8c76efc4ea54ca0334072e0",
     "src/simulation/augment-history-log.ts": "bfd7ca2f7b9ccd5cfebfb51c292a3607b7529c62b01c0b2790d5f9c165492d38",
     "src/simulation/augment-history-owners.ts": "de3c86a037fe76195789fbf218c47d6d4d7e19fa60b1c3446b1faf54748ce1d6",
-    "src/simulation/augment-history-restore.ts": "58899c4c8811a9afc04b7eedaf3716b66223e92316ed1faa334ec9b8538a664e",
+    "src/simulation/augment-history-restore.ts": "e71f14df775349359db0035a90ccea5f8d1539a30a2ff627d1cf57b866a267d3",
     "src/simulation/augment-history-types.ts": "024af209b2ac14a0d06e0d0b0f757344697b870bf8f9e5b48ca842d4c80e3d4a",
     "src/simulation/augment-history.ts": "ae27f8a8562a880a1b0b159b0744a3a9257c11168c9d9fa890d24faa05f43e3b",
     "src/simulation/augment-income.ts": "7725de829f93c380a81738a0ae528bf54039748b975be04c2addc9916a116ef0",
