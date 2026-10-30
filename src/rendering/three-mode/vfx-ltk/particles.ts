@@ -73,15 +73,18 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
-  const driver = createDriver(options.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
-  const from = options.anchor.originAt(0), to = options.target?.originAt(0) ?? from;
-  const distance = Math.hypot(...from.map((value, index) => value - to[index]));
-  let rig: RigModel = { life: 'once', height: 0, joints: options.joints, stopAt: options.stopAfter,
-    motion: options.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-      flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / options.projectileSeconds } } }
-      : { kind: 'bone', anchor: options.anchor, target: options.target },
+  const spec = { ...options };
+  const rigFor = (): RigModel => {
+    const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
+    const distance = Math.hypot(...from.map((value, index) => value - to[index]));
+    return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.stopAfter,
+      motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
+        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
+  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
+  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  let rig = rigFor();
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer(rig);
@@ -101,7 +104,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       const props = { emitter, sources, samplers, rank: definition.rank, hidden: false, room: ROOT_PARTICLES };
       let draw: ParticleDraw | undefined;
       if (drawsTheAttachment(emitter)) {
-        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, options.attachment);
+        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
           draws.push(held); object.add(held.object);
@@ -132,7 +135,14 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
-    get finished() { return closed || elapsed >= options.duration; },
+    /** Play the same prepared system again. The caller only does this for the same attachment. */
+    reuse(next: typeof options) {
+      if (closed) return;
+      spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
+      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed;
+      elapsed = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+    },
+    get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;

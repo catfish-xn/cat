@@ -71,6 +71,7 @@ import { registerGolemModels } from './summon-models';
 import { createPvpPortal } from './pvp-portal';
 import { createPresentationLighting, readQuality3d } from './presentation-lighting';
 import { AttackCadence } from './attack-cadence';
+import { admitEffect, effectImportance, type EffectImportance } from './effect-budget';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -744,11 +745,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) view.body.position.y += y - view.liftOffset;
     view.liftOffset = y;
   };
+  /** Parked stun rings. Control feedback is never counted against the effect cap. */
+  const spareHalos: StunHalo[] = [];
+  const SPARE_HALOS = 16;
+  const giveHalo = (halo: StunHalo) => {
+    halo.object.removeFromParent();
+    if (!closed && spareHalos.length < SPARE_HALOS) spareHalos.push(halo);
+    else halo.dispose();
+  };
+  const takeHalo = (): StunHalo => {
+    const halo = spareHalos.pop() ?? createStunHalo();
+    halo.reset();
+    halo.object.visible = true;
+    return halo;
+  };
   /** Shows or ends a piece's control; a new one stops its action at once (no swing finishes while it is stunned). */
   const setControl = (view: PieceView, kind: BoardPiece['control'] | null) => {
     if (view.control.set(kind ?? null)) { view.attackCadence.pause(); view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
-    if (kind && !view.halo) { view.halo = createStunHalo(); scene.add(view.halo.object); }
-    else if (!kind && view.halo) { view.halo.dispose(); view.halo = null; }
+    if (kind && !view.halo) { view.halo = takeHalo(); scene.add(view.halo.object); }
+    else if (!kind && view.halo) { const halo = view.halo; view.halo = null; giveHalo(halo); }
   };
   const startLunge = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId), spec = source && castLungeFor(source.definitionId);
@@ -900,7 +915,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const removePiece = (view: PieceView) => {
     lighting.remove(view.root);
-    cancelLunge(view); view.disposed = true; held.delete(view); holds.delete(view); view.halo?.dispose(); view.halo = null;
+    cancelLunge(view); view.disposed = true; held.delete(view); holds.delete(view);
+    if (view.halo) { const halo = view.halo; view.halo = null; giveHalo(halo); }
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -912,7 +928,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     take: id => {
       const view = pieces.get(id);
       if (!view) return;
-      loadReport.dropped(id); pieces.delete(id); ltk?.stopUnit(id); cancelLunge(view);
+      loadReport.dropped(id); ltk?.stopUnit(id); pieces.delete(id); cancelLunge(view);
       view.stars && (view.stars.object.visible = false); view.overhead.object.visible = false;
       view.halo && (view.halo.object.visible = false);
       return { object: view.root, release: () => removePiece(view) };
@@ -921,16 +937,75 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Action effects (attack/cast): staged by render time, owned by a phase generation so a new combat, preparation or
   // dispose drops everything still queued, loading or playing.
-  interface LiveEffect { fx: ParticleEffect; left: number; from?: Vector3; to?: Vector3; travel?: number; elapsed: number }
+  interface LiveEffect { fx: ParticleEffect; left: number; from?: Vector3; to?: Vector3; travel?: number; elapsed: number; importance: EffectImportance }
   let clock = 0, generation = 0;
   const queued: { at: number; generation: number; run: () => void }[] = [];
   const live = new Set<LiveEffect>();
-  type ReferenceEffect = ReturnType<typeof createReferenceBurst> | ReturnType<typeof createRenataShield> | ReturnType<typeof createRenataMissile>;
-  const referenceEffects = new Set<ReferenceEffect>();
-  let saveBurst: ReturnType<typeof createReferenceBurst> | null = null, saveExpires = 0, saveGoldLeft: number | null = null;
-  const addReference = (fx: ReferenceEffect) => {
-    if (referenceEffects.size >= MAX_EFFECTS) { fx.dispose(); return; }
-    referenceEffects.add(fx);
+  type BurstFx = ReturnType<typeof createReferenceBurst>;
+  type ShieldFx = ReturnType<typeof createRenataShield>;
+  type MissileFx = ReturnType<typeof createRenataMissile>;
+  type ReferenceEffect = BurstFx | ShieldFx | MissileFx;
+  const referenceEffects = new Set<{ fx: ReferenceEffect; importance: EffectImportance }>();
+  const SPARE_REFERENCE = 4;
+  const burstSpare: BurstFx[] = [], shieldSpare: ShieldFx[] = [], missileSpare: MissileFx[] = [];
+  let saveBurst: BurstFx | null = null, saveExpires = 0, saveGoldLeft: number | null = null;
+  const recycleReference = (fx: ReferenceEffect) => {
+    const name = fx.object.name;
+    if (name.endsWith('-reference-burst')) {
+      const burst = fx as BurstFx;
+      if (burstSpare.length < SPARE_REFERENCE) { burst.rearm(); burstSpare.push(burst); } else burst.dispose();
+    } else if (name === 'renata-receipt-shield') {
+      const shield = fx as ShieldFx;
+      if (shieldSpare.length < SPARE_REFERENCE) { shield.rearm(); shieldSpare.push(shield); } else shield.dispose();
+    } else {
+      const missile = fx as MissileFx;
+      if (missileSpare.length < SPARE_REFERENCE) { missile.object.removeFromParent(); missileSpare.push(missile); } else missile.dispose();
+    }
+  };
+  const drainReferenceSpare = () => {
+    for (const fx of burstSpare) fx.dispose();
+    for (const fx of shieldSpare) fx.dispose();
+    for (const fx of missileSpare) fx.dispose();
+    burstSpare.length = 0; shieldSpare.length = 0; missileSpare.length = 0;
+  };
+  const drainHaloSpare = () => { for (const halo of spareHalos) halo.dispose(); spareHalos.length = 0; };
+  const takeBurst = (kind: 'renata' | 'mel', radius: number, reduced: boolean): BurstFx => {
+    const index = burstSpare.findIndex(fx => fx.kind === kind && fx.radius === radius && fx.reduced === reduced);
+    if (index < 0) return createReferenceBurst(kind, radius, reduced);
+    const fx = burstSpare.splice(index, 1)[0]!; fx.rearm(); return fx;
+  };
+  const takeShield = (radius: number, reduced: boolean): ShieldFx => {
+    const index = shieldSpare.findIndex(fx => fx.radius === radius && fx.reduced === reduced);
+    if (index < 0) return createRenataShield(radius, reduced);
+    const fx = shieldSpare.splice(index, 1)[0]!; fx.rearm(); return fx;
+  };
+  const takeMissile = (from: Vector3, to: Vector3, radius: number): MissileFx => {
+    const index = missileSpare.findIndex(fx => fx.radius === radius);
+    if (index < 0) return createRenataMissile(from, to, radius);
+    const fx = missileSpare.splice(index, 1)[0]!; fx.rearm(from, to); return fx;
+  };
+  /** Full reference slots keep impacts and shields by retiring a decorative one. A decorative newcomer is returned to the pool. */
+  const addReference = (fx: ReferenceEffect, importance: EffectImportance) => {
+    if (referenceEffects.size >= MAX_EFFECTS) {
+      const ordered = [...referenceEffects];
+      const decision = admitEffect(ordered.map(item => item.importance), importance, true);
+      if (!decision.admit) { recycleReference(fx); return; }
+      const victim = ordered[decision.evict];
+      if (!victim) { recycleReference(fx); return; }
+      referenceEffects.delete(victim); recycleReference(victim.fx);
+    }
+    referenceEffects.add({ fx, importance });
+  };
+  /** Drops a decorative particle effect so a hit or projectile can start. Refuses when nothing decorative is live. */
+  const makeRoom = (importance: EffectImportance): boolean => {
+    if (live.size < MAX_EFFECTS) return true;
+    const ordered = [...live];
+    const decision = admitEffect(ordered.map(effect => effect.importance), importance, true);
+    if (!decision.admit) return false;
+    const victim = ordered[decision.evict];
+    if (!victim) return false;
+    victim.fx.dispose(); live.delete(victim);
+    return live.size < MAX_EFFECTS;
   };
   // Skill feel sample (skill-feel.ts): pooled attack tracers and cast charges, the impact hold and camera kick.
   const feel = createSkillFeel(); scene.add(feel.object);
@@ -942,8 +1017,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); ltkCastCounts.clear(); ltkEvents.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
-    for (const fx of referenceEffects) fx.dispose();
-    referenceEffects.clear();
+    for (const item of referenceEffects) item.fx.dispose();
+    referenceEffects.clear(); drainReferenceSpare(); drainHaloSpare();
   };
   const worldPoint = (view: PieceView, bone: string | undefined, out: Vector3): boolean => {
     const node = bone ? view.body?.getObjectByName(bone) : undefined;
@@ -959,20 +1034,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
     tuning?: { scale: number; particles: number }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
-    if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
+    if (!source?.body || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
+    const importance = effectImportance({ anchor: spec.anchor });
+    if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
     void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
-      const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
-      if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
+      const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0, importance };
+      if (owner !== generation || source.disposed || !source.body || (target && target.disposed)) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
+        if (!makeRoom(importance)) { fx.dispose(); return; }
         fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE) * (tuning?.scale ?? 1));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
         else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
+        if (!makeRoom(importance)) { fx.dispose(); return; }
         // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
         fx.object.scale.setScalar((spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE) * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
@@ -1040,12 +1119,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (source.disposed || !source.alive || reducedMotion()) return;
         const from = new Vector3();
         if (!worldPoint(source, 'C_Canister', from)) worldPoint(source, undefined, from);
-        const fx = createRenataMissile(from, point.clone().setY(IMPACT_HEIGHT), grid?.radius ?? 34);
-        scene.add(fx.object); addReference(fx);
+        const fx = takeMissile(from, point.clone().setY(IMPACT_HEIGHT), grid?.radius ?? 34);
+        scene.add(fx.object); addReference(fx, 'critical');
       } });
       queued.push({ at: clock + RENATA_IMPACT_DELAY, generation: owner, run: () => {
-        const fx = createReferenceBurst('renata', renataRadius(grid?.radius ?? 34), reducedMotion());
-        fx.object.position.copy(point); scene.add(fx.object); addReference(fx);
+        const fx = takeBurst('renata', renataRadius(grid?.radius ?? 34), reducedMotion());
+        fx.object.position.copy(point); scene.add(fx.object); addReference(fx, 'critical');
       } });
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
@@ -1087,7 +1166,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const updateEffects = (seconds: number) => {
     clock += seconds;
     feel.update(seconds); batch3?.update(seconds); ltk?.update(seconds, camera);
-    for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
+    for (const item of referenceEffects) { item.fx.update(seconds, camera); if (item.fx.finished) { referenceEffects.delete(item); recycleReference(item.fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
       if (saveBurst.finished || performance.now() >= saveExpires) { saveBurst.dispose(); saveBurst = null; }
@@ -1229,8 +1308,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       if (recipient?.alive && recipient.root.visible) {
-        const fx = createRenataShield(grid?.radius ?? 34, reducedMotion());
-        recipient.root.add(fx.object); addReference(fx);
+        const fx = takeShield(grid?.radius ?? 34, reducedMotion());
+        recipient.root.add(fx.object); addReference(fx, 'critical');
       }
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);

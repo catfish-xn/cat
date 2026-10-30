@@ -186,6 +186,11 @@ export class BoardScene extends Phaser.Scene {
   private count!: Phaser.GameObjects.Text;
   private recentCombatEvents: SceneCombatEvent[] = [];
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
+  /** Canvas and feedback-host rectangles. Re-read on resize/scroll, otherwise at most every 45 frames, so combat frames do not call getBoundingClientRect. */
+  private screenSample: { canvas: DOMRect; host: DOMRect; width: number; frame: number } | null = null;
+  private screenFrame = 0;
+  private screenDirty = true;
+  private screenWatching = false;
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
   /** Last drawn origins, retained through repeated reconciles until the receipt is presented. */
@@ -1223,6 +1228,37 @@ export class BoardScene extends Phaser.Scene {
     }
     this.lastStatsRender = performance.now();
   }
+  /** Install one resize/scroll watch. Returns false when the environment cannot observe layout, and then every frame reads. */
+  private watchScreen(): boolean {
+    if (this.screenWatching) return true;
+    if (typeof ResizeObserver === 'undefined') return false;
+    this.screenWatching = true;
+    const mark = () => { this.screenDirty = true; };
+    const observer = new ResizeObserver(mark);
+    observer.observe(this.game.canvas);
+    const host = document.getElementById('feedback-root');
+    if (host) observer.observe(host);
+    window.addEventListener('resize', mark);
+    window.addEventListener('scroll', mark, true);
+    this.events?.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      observer.disconnect();
+      window.removeEventListener('resize', mark);
+      window.removeEventListener('scroll', mark, true);
+    });
+    return true;
+  }
+  /** One paired read of the board canvas and the float host. Both rectangles are sampled together, before any float writes. */
+  private boardScreen(): { canvas: DOMRect; host: DOMRect; width: number; frame: number } {
+    const width = this.scale.gameSize.width;
+    this.screenFrame++;
+    const cacheable = this.watchScreen();
+    const stale = !this.screenSample || this.screenDirty || this.screenSample.width !== width || this.screenFrame - this.screenSample.frame >= 45;
+    if (cacheable && this.screenSample && !stale) return this.screenSample;
+    const canvas = this.game.canvas.getBoundingClientRect();
+    const host = document.getElementById('feedback-root')!.getBoundingClientRect();
+    this.screenDirty = false;
+    return this.screenSample = { canvas, host, width, frame: this.screenFrame };
+  }
   /** Replay floats anchor to the replay canvas, which shares the board's 480×520 geometry. */
   private renderReplayFeedback() {
     const combat = this.replayCombat, overlay = document.querySelector<HTMLCanvasElement>('#board-root .replay-canvas');
@@ -1245,7 +1281,7 @@ export class BoardScene extends Phaser.Scene {
   }
   private renderFeedback() {
     if (this.quietBoard()) return;
-    const host = document.getElementById('feedback-root')!.getBoundingClientRect();
+    const { canvas, host, width } = this.boardScreen();
     if (boardFeedActive()) {
       // ?render=3d: anchor floats to each model as the 3D layer projects it; the 2D canvas and its fx labels are covered.
       const anchors = new Map<string, { x: number; y: number; radius: number }>();
@@ -1259,7 +1295,7 @@ export class BoardScene extends Phaser.Scene {
       this.feedback?.render(performance.now(), anchors);
       return;
     }
-    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width;
+    const scale = canvas.width / width;
     this.feedback?.render(performance.now(), new Map([...this.tokens].filter(([, token]) => token.visible).map(([id,token]) => [id,
       { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])),
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
@@ -1371,7 +1407,7 @@ export class BoardScene extends Phaser.Scene {
   private tokenScreenBox(id: string, token: Phaser.GameObjects.Container): HoverBox | undefined {
     const projected = boardFeedScreenBox(id);
     if (projected !== null) return projected;
-    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width, half = 29 * scale;
+    const { canvas, width } = this.boardScreen(), scale = canvas.width / width, half = 29 * scale;
     const x = canvas.left + token.x * scale, y = canvas.top + token.y * scale;
     return { left: x - half, top: y - half, right: x + half, bottom: y + half };
   }

@@ -7,6 +7,7 @@ import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVar
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
+import { admitEffect, effectImportance, type EffectImportance } from '../effect-budget';
 
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
@@ -45,7 +46,7 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
-interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string }
+interface Running { source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
@@ -53,10 +54,22 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
-  const release = (run: Running) => { run.fx.dispose(); if (options.budget) options.budget.live -= slots; };
+  /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
+  const spareFx: LtkParticles[] = [];
+  const SPARE_FX = 8;
+  const release = (run: Running, retire = false) => {
+    run.fx.object.removeFromParent();
+    if (options.budget) options.budget.live -= slots;
+    if (retire) { run.fx.dispose(); return; }
+    // Least recently parked goes first: a full pool keeps the newest finished systems.
+    while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
+    spareFx.push(run.fx);
+  };
+  const drainSpare = () => { for (const fx of spareFx) fx.dispose(); spareFx.length = 0; };
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
-    for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run); running.delete(run); }
+    for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
+    if (!preserveWorldEffects) drainSpare();
   };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
@@ -152,7 +165,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
-      for (const run of running) if (run.source === sourceId && run.action === action) { release(run); running.delete(run); }
+      for (const run of running) if (run.source === sourceId && run.action === action) { release(run, true); running.delete(run); }
     },
     stopUnit(id: string) {
       for (let at = waiting.length - 1; at >= 0; at--) {
@@ -162,6 +175,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
         run.fx.stop();
         if (run.group) run.until = Math.min(run.until, clock + .5);
+      }
+      // By unit id, not a lookup: the host may already have dropped the unit from its map.
+      for (let index = spareFx.length - 1; index >= 0; index--) {
+        if (spareFx[index]!.object.userData.poolUnit === id) spareFx.splice(index, 1)[0]!.dispose();
       }
     },
     update(seconds: number, camera: Camera) {
@@ -182,27 +199,45 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // the controller still has registered; catch-up must start it while its
         // display duration remains. The 0.3s window and the six-start cap stay.
         const overdue = clock - when > 0.3 && !(group && clock < when + spawn.duration);
-        if (overdue || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
+        if (overdue) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
+        // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
+        // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
+        const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
+        const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget && options.budget.live + slots > options.budget.max);
+        while (blocked()) {
+          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true);
+          if (!decision.admit) break;
+          const victim = [...running][decision.evict];
+          if (!victim) break;
+          release(victim); running.delete(victim);
+        }
+        if (blocked()) continue;
         const host = spawn.event === 'hit' ? target : source;
         const fixed = snapshot ?? spawn.point;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone);
-        let fx: LtkParticles | undefined;
+        const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
+        const nextOptions = { anchor, attachment,
+          target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
+          duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
+          stopAfter: spawn.stopAfter, seed: seed++ };
+        // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
+        const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}`;
+        const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
+        let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
-          fx = createLtkParticles(prepared, { anchor,
-            attachment: fixed && spawn.event !== 'projectile' ? undefined : host,
-            target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
-            joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
-            duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
-            stopAfter: spawn.stopAfter, seed: seed++ });
+          if (fx) fx.reuse(nextOptions);
+          else { fx = createLtkParticles(prepared, nextOptions); fx.object.userData.poolKey = poolKey; }
           // Scheduling is frame-quantized; the visual still expires at its planned
           // timeline end, so a late flight start cannot displace its landing cue.
           fx.object.userData.ltkSystem = spawn.system;
+          fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += slots;
-          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group }); starts++;
+          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       claimBuf.length = 0;
