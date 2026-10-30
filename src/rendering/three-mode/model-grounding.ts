@@ -12,6 +12,14 @@ export interface ModelSupport {
   /** Each individual sole must agree with the pooled plane; staggered/tiptoe feet cannot prove a rigid tilt. */
   readonly soleDeviation: number;
   readonly stableFeet: number;
+  /** Angle between the two sole normals. Infinity unless every idle sample has exactly two feet. */
+  readonly soleSpread: number;
+  /** Difference between those two soles' angles to up. Infinity unless every sample has exactly two feet. */
+  readonly soleTiltDelta: number;
+  /** Smaller of the per-frame average sole-to-up angles. 0 when the pair is not stable. */
+  readonly soleTilt: number;
+  /** Average of the two sole normals (not the pooled point cloud). */
+  readonly soleMean: Point;
   readonly contacts: readonly Contact[];
   readonly meshContacts: readonly Contact[];
   readonly meshFloor: number;
@@ -20,8 +28,9 @@ export interface ModelSupport {
 }
 
 const up = new Vector3(0, 1, 0);
-const footName = /foot|toe|ankle|paw|hoof/i;
-const propName = /weapon|sword|blade|axe|shield|buffbone|overhead|(?:^|_)fx(?:_|$)/i;
+// Segment boundaries: `paw` must not match the `Spawn` inside Kunai_Spawn / Hand_Spawn.
+const footName = /(?:^|_)(?:foot|toe|toes|ankle|paw|hoof|hooves)(?:_|$|\d)/i;
+const propName = /weapon|sword|blade|axe|shield|kama|kunai|dagger|hook|sickle|shuriken|buffbone|overhead|(?:^|_)fx(?:_|$)/i;
 const CHUNK = 512;
 const renderedVertices = new WeakMap<BufferGeometry, Uint8Array>();
 export const GROUNDING_BLEND_SECONDS = 0.12;
@@ -93,6 +102,8 @@ export function createSupportSampler(meshes: readonly SkinnedMesh[], height: num
   const samples: Sample[][] = meshes.map(() => []), frames: { center: Vector3; floor: number; normal: Vector3 }[] = [];
   const contacts = new Map<string, Contact>(), meshContacts = new Map<string, Contact>();
   let method: ModelSupport['method'] = 'body', meshFloor = Infinity, soleDeviation = 0, stableFeet = Infinity, idleHeight = height;
+  let soleSpread = 0, soleTiltDelta = 0, soleTilt = Infinity, paired = 0, unpaired = false;
+  const soleMean = new Vector3();
   function* frameSteps(): Generator<void> {
     const groups = new Map<string, Sample[]>(); let low = Infinity, work = 0, fullMin = Infinity, fullMax = -Infinity;
     for (let mesh = 0; mesh < samples.length; mesh++) {
@@ -139,6 +150,14 @@ export function createSupportSampler(meshes: readonly SkinnedMesh[], height: num
     }
     const normal = supportNormal(soles);
     for (const n of normals) soleDeviation = Math.max(soleDeviation, angle(n, normal));
+    if (feet.length === 2 && normals.length === 2) {
+      paired++;
+      soleSpread = Math.max(soleSpread, angle(normals[0]!, normals[1]!));
+      const leftTilt = angle(normals[0]!, up), rightTilt = angle(normals[1]!, up);
+      soleTiltDelta = Math.max(soleTiltDelta, Math.abs(leftTilt - rightTilt));
+      soleTilt = Math.min(soleTilt, (leftTilt + rightTilt) / 2);
+      soleMean.add(normals[0]!).add(normals[1]!);
+    } else if (feet.length) unpaired = true;
     stableFeet = Math.min(stableFeet, feet.length);
     frames.push({ center: center.divideScalar(selected.length), floor, normal });
   }
@@ -155,18 +174,30 @@ export function createSupportSampler(meshes: readonly SkinnedMesh[], height: num
       if (!frames.length) return undefined;
       const center = frames.reduce((sum, frame) => sum.add(frame.center), new Vector3()).divideScalar(frames.length);
       const normal = frames.reduce((sum, frame) => sum.add(frame.normal), new Vector3()).normalize();
+      const pairedSoles = paired > 0 && !unpaired && soleMean.lengthSq() > 0;
       return { center: center.toArray(), floor: Math.min(...frames.map(frame => frame.floor)), normal: normal.toArray(),
         tiltDegrees: angle(normal, up), tiltDeviation: Math.max(...frames.map(frame => angle(frame.normal, normal))),
-        soleDeviation, stableFeet, meshFloor, height: idleHeight, meshContacts: [...meshContacts.values()], contacts: [...contacts.values()], method };
+        soleDeviation, stableFeet, soleSpread: pairedSoles ? soleSpread : Infinity, soleTiltDelta: pairedSoles ? soleTiltDelta : Infinity,
+        soleTilt: pairedSoles ? soleTilt : 0,
+        soleMean: (pairedSoles ? soleMean.normalize() : up).toArray(),
+        meshFloor, height: idleHeight, meshContacts: [...meshContacts.values()], contacts: [...contacts.values()], method };
     },
   };
 }
 
 /** Pooled slant alone is insufficient: both individual soles must corroborate it throughout idle. */
 export function supportRotation(support: ModelSupport): Quaternion {
-  return support.method === 'feet' && support.stableFeet >= 2 && support.soleDeviation <= 0.5
-    && support.tiltDegrees >= 1.5 && support.tiltDegrees <= 8 && support.tiltDeviation <= 0.25
-    ? new Quaternion().setFromUnitVectors(new Vector3(...support.normal), up) : new Quaternion();
+  const ranged = (degrees: number) => support.tiltDeviation <= 0.25 && degrees >= 1.5 && degrees <= 8;
+  if (support.method === 'feet' && support.stableFeet >= 2 && support.soleDeviation <= 0.5 && ranged(support.tiltDegrees))
+    return new Quaternion().setFromUnitVectors(new Vector3(...support.normal), up);
+  // Two soles that each lean by the same amount. The pooled point cloud picks up the gap between
+  // the patches, so soleDeviation can exceed 0.5° while the soles themselves agree. A staggered
+  // step keeps each sole horizontal, so soleTilt stays under 1.5° and this branch does not fire.
+  const mean = new Vector3(...(support.soleMean ?? [0, 1, 0]));
+  if (support.method === 'feet' && support.stableFeet >= 2 && support.soleSpread <= 2 && support.soleTiltDelta <= 0.25
+      && support.tiltDeviation <= 0.25 && support.soleTilt >= 1.5 && support.soleTilt <= 8)
+    return new Quaternion().setFromUnitVectors(mean, up);
+  return new Quaternion();
 }
 
 interface GroundedModel {
