@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AnimationClip, AnimationMixer, Bone, BoxGeometry, Float32BufferAttribute, Group, MeshBasicMaterial,
-  NumberKeyframeTrack, Skeleton, SkinnedMesh, Uint16BufferAttribute, Vector3 } from 'three';
+  NumberKeyframeTrack, Quaternion, Skeleton, SkinnedMesh, Uint16BufferAttribute, Vector3 } from 'three';
 import { animationEnvelope, animationEnvelopeSliced, fitModel, standingSupport } from '../src/rendering/three-mode/model-fit';
 import { createSupportSampler, supportRotation, supportVertices, updateModelGrounding, GROUNDING_BLEND_SECONDS, MESH_PENETRATION_RATIO } from '../src/rendering/three-mode/model-grounding';
 
@@ -93,6 +93,23 @@ describe('animated foot support calibration', () => {
         updateModelGrounding(toy.body, false, 1);
         expect(toy.body.position.y).toBeCloseTo(fitted);
       } finally { mixer.stopAllAction(); mixer.uncacheRoot(toy.body); }
+    } finally { toy.dispose(); }
+  });
+
+  it('does not treat a Spawn locator as a foot', () => {
+    const toy = model();
+    try {
+      toy.meshes[2]!.skeleton.bones[3]!.name = 'R_Hand_Spawn';
+      expect(supportVertices(toy.meshes[2]!).some(kind => kind === 'R_Hand_Spawn')).toBe(false);
+      expect(supportVertices(toy.meshes[0]!).some(kind => kind === 'L_Foot')).toBe(true);
+      const tilt = 1.6 * Math.PI / 180, soleMean = [Math.sin(tilt), Math.cos(tilt), 0] as const;
+      const agreeing = { method: 'feet' as const, stableFeet: 2, soleDeviation: 1.12, tiltDegrees: 1.79, tiltDeviation: 0.004,
+        soleSpread: 1.77, soleTiltDelta: 0.01, soleTilt: 1.6, soleMean, normal: [0, 1, 0] as const, center: [0, 0, 0] as const, floor: 0,
+        contacts: [], meshContacts: [], meshFloor: 0, height: 1 };
+      expect(supportRotation(agreeing).angleTo(new Quaternion())).toBeCloseTo(tilt, 5);
+      expect(supportRotation({ ...agreeing, soleSpread: 2.1 }).angleTo(new Quaternion())).toBe(0);
+      expect(supportRotation({ ...agreeing, soleTiltDelta: 0.26 }).angleTo(new Quaternion())).toBe(0);
+      expect(supportRotation({ ...agreeing, soleTilt: 1.4 }).angleTo(new Quaternion())).toBe(0);
     } finally { toy.dispose(); }
   });
 
