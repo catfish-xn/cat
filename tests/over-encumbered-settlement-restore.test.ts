@@ -6,7 +6,6 @@ import { buyUnit, createMatch, nextRound, openAnvil, resolveAugmentTier, selectC
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { combatBenchProjection } from '../src/simulation/bench-capacity';
 import { accepted, fieldBench, finish, reachRoundFielded, resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
 import { createOpeningEncounter } from '../src/simulation/opening-encounter';
 import { isAnvil } from '../src/simulation/content/anvils';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
@@ -25,7 +24,8 @@ function roundTrip(state: MatchState, form: typeof forms[number]): MatchState {
 describe('D3 solo public-command settlement saves throughout the restricted stage', () => {
   let state: MatchState, started: MatchState;
   beforeAll(() => {
-    state = reachRoundFielded('2-1', firstNodeSeed('over-encumbered'));
+    // Natural offer and a 3-7 win with three capacity-blocked drops.
+    state = reachRoundFielded('2-1', 6883);
     const c = state.pendingChoice!;
     state = accepted(selectChoice(state, c.choiceId, c.generation, 'over-encumbered'));
   });
