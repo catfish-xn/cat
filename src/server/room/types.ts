@@ -111,7 +111,7 @@ export interface BattleInput {
  * One seat's own rules combat as the replay projection needs it (contract §14.2, PvE): the CombatState right
  * after start, the finished CombatState and the complete ledger including tick 0. No per-tick states are kept.
  */
-export type SeatCombat = CombatReplayInput;
+export type SeatCombat = CombatReplayInput & Partial<Pick<RulesBattleResult, 'mapping' | 'a' | 'b'>>;
 export interface BattleSeatOutcome {
   readonly seatId: string;
   /** Seat state after its battle, as produced by the rules; the room stores it verbatim. */

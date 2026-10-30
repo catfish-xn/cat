@@ -27,9 +27,10 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders, pvpSettlementHpLost,
-  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
+  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { readOpeningEncounterView } from '../../server-entry';

@@ -19,7 +19,7 @@ import { academicItems, academicCraft } from './augment-pool-batch5-s3b';
 import { readSniperOpening } from './augment-pool-batch5-h10-sniper';
 import { readCabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { soloPveLoot } from './shop-orbs';
-import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
+import { DUMMY_SOURCE, emblemGifts, ownDummyId, formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
 import { openingRewardOrbs } from './opening-batch-rewards';
 import { openingCrabCarrier } from './opening-crabs';
@@ -103,7 +103,28 @@ function equipmentContinuation(expected: readonly ItemInstance[], actual: readon
 }
 
 function replayEquipment(items: readonly ItemInstance[], preparation: GameState, serial: number,
-  fact: Extract<ResourceFact, {kind:'item-equipped'}>) {
+  fact: Extract<ResourceFact, {kind:'item-equipped'}> & {readonly sequence:number;readonly roundId:string}, state?:MatchState) {
+  const acquired = state?.resourceProvenance.entries[fact.sequence - 1];
+  const receiptId = acquired?.kind === 'item-acquired' && acquired.source.kind === 'mechanic' ? acquired.source.receiptId : null;
+  const receipt = receiptId ? state?.seatMechanics?.receipts.find(r => r.receiptId === receiptId) : undefined;
+  if (state && receipt?.source === DUMMY_SOURCE) {
+    // Batch 3 attaches its own deterministic gift directly to its dummy. Manual
+    // equip intentionally forbids these units, so authenticate that grant instead.
+    const expected = receipt.kind === 'item' && state.augments.some(augment => {
+      const gift = emblemGifts(state, augment)[fact.slot];
+      return ownDummyId(state, augment) === fact.unitId && gift?.receiptId === receipt.receiptId
+        && gift.definitionId === receipt.definitionId;
+    });
+    const item = items.find(i => i.id === fact.itemId);
+    check(expected && receipt.kind === 'item' && acquired?.kind === 'item-acquired'
+      && acquired.itemId === fact.itemId && receipt.itemId === fact.itemId
+      && acquired.roundId === fact.roundId && receipt.roundId === fact.roundId && fact.tick === undefined
+      && item?.location.kind === 'inventory' && item.definitionId === receipt.definitionId
+      && preparation.units.some(u => u.id === fact.unitId && u.team === 'player')
+      && !items.some(i => i.location.kind === 'unit' && i.location.unitId === fact.unitId && i.location.slot === fact.slot),
+    'dummy gift equipment transaction');
+    return {items:items.map(i => i.id === fact.itemId ? {...i,location:{kind:'unit' as const,unitId:fact.unitId,slot:fact.slot}} : i),nextItemSerial:serial};
+  }
   const plan = planEquip(items, preparation, fact.itemId, fact.unitId, fact.slot, serial);
   check(plan.ok && plan.nextItemSerial === serial && equal(plan.events,
     [{type:'itemEquipped',itemId:fact.itemId,unitId:fact.unitId,slot:fact.slot}]), 'equipment transaction');
@@ -233,7 +254,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
       }
       case 'item-equipped': {
         check(!items.some(i=>i.id===fact.itemId&&portableAnomalyId(i.definitionId)!==null)||historicalBinding?.unitId!==fact.unitId,'portable anomaly original equipment');
-        items = replayEquipment(items, preparation, serial, fact).items;
+        items = replayEquipment(items, preparation, serial, fact, next).items;
         break;
       }
       case 'item-combined': {
