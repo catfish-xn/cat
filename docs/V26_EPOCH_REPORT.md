@@ -26,3 +26,12 @@
 【其他种子】宝箱试验按原规则搜索到种子 22496（v25 为 585）；转移路线仍为种子 4；Herald 仍为种子 65；房间开场仍为 20261013，round 23 棋盘数为 [8,7,8,7,8,8,7]。
 
 【录制】`node scripts/verify-v26-epoch-parallel.cjs --write --jobs=6` 与不带 `--write` 的 check 运行结果见 `docs/evidence/v26-neutrals-1424/epoch-verification.json`。Herald 单步约 113 分钟（v25 约 5 分钟），原因是 v26 的 `serializeMatch` 在后期状态上约 10 秒（e9384c02 上约 85 毫秒），剖析显示时间都花在序列化时的战斗重放上。这是 v26 源码的性能回归，不属于纪元录制本身，见下方消费者超时。
+
+【结果】基线 e9384c02。完整 `--write --jobs=6`：15/15 步 exitCode 0，complete=true，用时 3 小时 55 分（record-herald 7052 秒，check-herald 7065 秒）。随后不带 `--write` 的 check：15/15 步 exitCode 0，complete=true，trackedFilesUnchanged=true，用时 1 小时 56 分。check 中的 check-identities（`update-content-identities.cjs --check`）、consumer-byte-audit（`audit-v26-neutrals-1424-adaptations.cjs --check`）和 check-herald（`verify-m8-herald-fixtures.cjs`）均通过。`npm run typecheck` 通过，src/server 无改动。
+
+【消费者】已改读 v26 固件或身份并通过：match-contract 以外的身份消费者（v19-part2、d11、d14、m8-content-equivalence、m6-persistence、live-combat-inputs、t12-offline-transfer、m8-b10-temporary-replay、m7-fx-plan、server/battle-start-slices）、c19-missed-pulse、m5-route-hash、m8-b8-live-reveal、scripts/tests/v26-epoch-report，以及 opening-random-identity 的 v26 绑定与 v25 保全用例。
+
+以下失败在 bb9c02a0 上已经存在，或由 v26 源码变化引起，重录不能修复，也未放宽任何断言或超时：
+- 性能（v26 `serializeMatch`/恢复重放变慢约 100 倍）：epic-loot-reforger 的 5-7/6-7 路线、opening-random-identity 中 sniper 第 55/57/66 个检查点、m5-route sniper、m8-b10 的 6-7、m8-u5-preview 和 restore-audit/bounds-preflight 均超时。
+- 战斗或路线漂移，需要测试所有者更换路线或种子：m8-b8-live-transfer（corruption 路线现在抽到 Hunger For Power，不再是 slime-time）、m5-route 四条构筑的 B8 组件链、m8-b7-match-wiring（种子 65 公开路线未拿到 evenshroud 的 cloak）、ur-i3（固定的终局哈希）、augment-history 与 v26-anomaly-identity-audit（首战 274 tick，原为 164）。
+- v26 规则或语义变化后测试未跟进：match-contract 与 m8-b10 零击杀（pve-loot-carryover 把 lootForfeited 改为 lootCarried）、m8-b6（恢复时调用 createRoundEnemies，开局让分数值变化）、chest-bracer 篡改用例（恢复时先报 “Invalid authoritative Mirror forge replay”）、b8-resumable 的 legacy 治疗 shares 新增了字段、v26-anomaly-identity-audit 仍期望标签 `v26-online-rules`（实际为 `v26-neutrals-1424`，需确认纪元命名）。
