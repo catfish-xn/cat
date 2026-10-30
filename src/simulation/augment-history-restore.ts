@@ -29,6 +29,13 @@ interface ReplayEvidence {
 // grow, but a changed argument, branch or shortened run cannot reuse that suffix.
 const replays: ReplayEvidence[] = [];
 const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
+// A late-game solo save (one deaths fact per combat tick) alone exceeds the
+// shared budget above. Without a slot, every restore/serialize of such a save
+// replayed the whole match again. Keep only the most recent over-budget prefix,
+// outside the shared budget; it is bounded by the validated history payload
+// limit, and the same exact-prefix and full-state comparisons apply to it.
+let oversizedReplay: ReplayEvidence | undefined;
+const MAX_OVERSIZED_REPLAY_BYTES = 2 * LIMIT.bytes;
 function containsNegativeZero(values: readonly unknown[]): boolean {
   const stack = [...values];
   while (stack.length) {
@@ -40,7 +47,7 @@ function containsNegativeZero(values: readonly unknown[]): boolean {
 }
 function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
   let best: ReplayEvidence | undefined, bestSteps = -1;
-  for (const entry of replays) {
+  for (const entry of oversizedReplay ? [...replays, oversizedReplay] : replays) {
     if (entry.origin !== origin || entry.commands.length > commands.length) continue;
     let steps = 0;
     const matches = entry.commands.every((c, i) => {
@@ -132,7 +139,10 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
   // Both are UTF-16. Short node texts are charged separately, once per origin.
   const frozenBytes = frozenTextUnits(stateText);
   const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
-  if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
+  if (bytes + frozenBytes > MAX_REPLAY_BYTES) {
+    if (bytes + frozenBytes <= MAX_OVERSIZED_REPLAY_BYTES) oversizedReplay = {origin,commands,state:freezeContent(state),bytes,frozenBytes};
+    return;
+  }
   const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
   if (previous >= 0) replays.splice(previous, 1);
   const candidate = { origin, bytes, frozenBytes };
