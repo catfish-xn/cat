@@ -19,17 +19,23 @@ describe('M5 public contract (M4 command invariants retained)', () => {
   it('concedes an empty deployment at tick zero once, with stage-one base income and survivor-based PvE failure damage', () => {
     const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-    // B8 forfeits unearned loot; v20-black-market still grants the fixed remover to a surviving loser.
+    // pve-loot-carryover (8f794062, docs/CURSOR_pve-loot-carryover.md, M8B_POLICY D4, user-approved 2026-10-29):
+    // a surviving 1-2 loser carries every unearned drop to the next PvE (1-3) instead of forfeiting it;
+    // v20-black-market still grants the fixed remover to a surviving loser.
     const ids=state.m8.loot.frozen.rounds[0].encounterPlan.drops.map(d=>d.dropId);
+    expect(ids.length).toBeGreaterThan(0);
     expect(result.events).toEqual([
       {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},
-      ...ids.map((dropId,index)=>({type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq+index})),
+      ...ids.map((dropId,index)=>({type:'lootCarried',dropId,deliverRoundId:'1-3',domain:'match',eventSeq:state.nextMatchEventSeq+index})),
       {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',
         round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},
         domain:'match',eventSeq:state.nextMatchEventSeq+ids.length},
       {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+ids.length+1},
     ]);
-    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
+    expect(state.m8.loot.carry).toBeUndefined();
+    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'carried',receiptId:null})),
+      carry:ids.map(dropId=>({dropId,deliverRoundId:'1-3'}))});
+    expect(result.events.some(e=>e.type==='lootForfeited'||e.type==='lootGranted')).toBe(false);
     expect(result.state.preparation).toEqual(state.preparation);
     expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
     expect(result.state).toMatchObject({phase:'settlement',playerHp:98,gold:0,level:2,xp:0});

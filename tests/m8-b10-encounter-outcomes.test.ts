@@ -24,10 +24,13 @@ vi.setConfig({ testTimeout: 20_000 });
 const rounds = ['1-2', '1-3', '1-4', '2-7', '3-7', '4-7', '5-7', '6-7'];
 const plan = (s: api.MatchState) => s.m8.loot.frozen.rounds.find(p => p.encounterPlan.roundId === s.roundDefinitionId)!;
 const currentIds = (s: api.MatchState) => new Set([...plan(s).encounterPlan.drops, ...plan(s).choices].map(d => d.dropId));
+// pve-loot-carryover (8f794062, docs/CURSOR_pve-loot-carryover.md, M8B_POLICY D4/P-P04, user-approved 2026-10-29):
+// unearned loot from a surviving PvE loss or draw is carried to the next catalog PvE; 6-7 has none and forfeits.
+const NEXT_PVE: Record<string, string | null> = { '1-2': '1-3', '1-3': '1-4', '1-4': '2-7', '2-7': '3-7', '3-7': '4-7', '4-7': '5-7', '5-7': '6-7', '6-7': null };
 const restore = (s: api.MatchState) => { const restored = restoreMatch(serializeMatch(s)); expect(restored).toEqual(s); return restored; };
 
 describe('B10 eight encounters: actual public Match outcomes', () => {
-  it.each(rounds)('%s: zero kills forfeits every current reward and survives save/restore without regrant', roundId => {
+  it.each(rounds)('%s: zero kills carries every current reward to the next PvE (6-7 forfeits) and survives save/restore without regrant', roundId => {
     let state = publicNeutralPreparation(roundId);
     // Ordinary sell commands deliberately field an empty army. No HP/death/result injection.
     for (const u of state.preparation.units.filter(u => u.team === 'player')) state = accepted(api.sellUnit(state, u.id));
@@ -39,8 +42,14 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(state.combat!.result).toBe('enemyWin');
     expect(state.combat!.neutralReceipts!.deaths).toEqual([]);
     expect(state.m8.loot.receipts).toHaveLength(receiptCount);
-    expect(state.m8.loot.direct.filter(d => ids.has(d.dropId)).every(d => d.status === 'forfeited')).toBe(true);
-    expect(state.m8.loot.choiceEligibility.filter(d => ids.has(d.dropId)).every(d => d.status === 'forfeited')).toBe(true);
+    const deliver = NEXT_PVE[roundId];
+    const lostStatus = deliver ? 'carried' : 'forfeited';
+    if (deliver) expect(state.playerHp).toBeGreaterThan(0);
+    expect(state.m8.loot.direct.filter(d => ids.has(d.dropId)).every(d => d.status === lostStatus)).toBe(true);
+    expect(state.m8.loot.choiceEligibility.filter(d => ids.has(d.dropId)).every(d => d.status === lostStatus)).toBe(true);
+    const carriedRows = (state.m8.loot.carry ?? []).filter(row => ids.has(row.dropId));
+    expect(carriedRows.map(row => row.dropId).sort()).toEqual(deliver ? [...ids].sort() : []);
+    expect(carriedRows.every(row => row.deliverRoundId === deliver)).toBe(true);
     expect(state.pendingChoice).toBeNull();
     expect(state.playerHp).toBeLessThan(previous.playerHp);
     const resumed = restore(state);
@@ -130,11 +139,15 @@ describe('B10 eight encounters: explicitly isolated engine result boundaries', (
     const slots = [...plan(fixture.state).encounterPlan.drops, ...plan(fixture.state).choices];
     const earned = slots.filter(s => killed.has(s.sourceUnitId!)).map(s => s.dropId).sort();
     const lost = slots.filter(s => !killed.has(s.sourceUnitId!)).map(s => s.dropId).sort();
+    const current = currentIds(fixture.state);
     const revealed = revealMatchLoot(fixture.state, combat);
     expect(revealed.events.flatMap(e => e.type === 'lootRevealed' ? [e.dropId] : []).sort()).toEqual(earned);
-    expect(revealed.events.flatMap(e => e.type === 'lootForfeited' ? [e.dropId] : []).sort()).toEqual(lost);
+    // Surviving defeat before 6-7: unearned slots are carried to the next PvE, none forfeited (8f794062).
+    expect(revealed.events.flatMap(e => e.type === 'lootForfeited' ? [e.dropId] : [])).toEqual([]);
+    expect(revealed.events.flatMap(e => e.type === 'lootCarried' ? [e.dropId] : []).sort()).toEqual(lost);
+    expect(revealed.events.every(e => e.type !== 'lootCarried' || e.deliverRoundId === NEXT_PVE[roundId])).toBe(true);
+    expect((revealed.state.m8.loot.carry ?? []).filter(row => current.has(row.dropId)).map(row => row.dropId).sort()).toEqual(lost);
     const granted = grantDirectLoot({ ...revealed.state, phase: 'settlement', combat: { ...combat, status: 'finished', result: 'enemyWin' } }, false);
-    const current = currentIds(fixture.state);
     expect(granted.state.m8.loot.receipts.filter(r => current.has(r.dropId)).every(r => earned.includes(r.dropId))).toBe(true);
     expect(grantDirectLoot(granted.state, false).events).toEqual([]);
   });
@@ -146,7 +159,13 @@ describe('B10 eight encounters: explicitly isolated engine result boundaries', (
     expect(combat.neutralReceipts!.deaths).toEqual([]);
     const result = revealMatchLoot(fixture.state, combat);
     expect(result.events.filter(e => e.type === 'lootRevealed')).toEqual([]);
-    expect(result.events.filter(e => e.type === 'lootForfeited')).toHaveLength(currentIds(fixture.state).size);
+    // A timeout draw counts as a loss: before 6-7 every unearned slot is carried to the next PvE; 6-7 forfeits (8f794062).
+    const deliver = NEXT_PVE[roundId], current = currentIds(fixture.state);
+    const lostType = deliver ? 'lootCarried' : 'lootForfeited';
+    expect(result.events.filter(e => e.type === lostType).map(e => (e as { dropId: string }).dropId).sort()).toEqual([...current].sort());
+    expect(result.events.filter(e => e.type === (deliver ? 'lootForfeited' : 'lootCarried'))).toEqual([]);
+    expect(result.events.every(e => e.type !== 'lootCarried' || e.deliverRoundId === deliver)).toBe(true);
+    expect((result.state.m8.loot.carry ?? []).filter(row => current.has(row.dropId)).map(row => row.dropId).sort()).toEqual(deliver ? [...current].sort() : []);
     expect(grantDirectLoot({ ...result.state, phase: 'settlement', combat: { ...combat, status: 'finished', result: 'draw' } }, false).events).toEqual([]);
     expect(revealMatchLoot(result.state, combat)).toEqual({ state: result.state, events: [] });
   });

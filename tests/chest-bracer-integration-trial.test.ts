@@ -85,8 +85,13 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
     (grants[0] as { definitionId: string }).definitionId = 'shojin';
     expect(receiverOf(candidate).combatItemGrants).toBe(grants);
-    expect(() => restoreMatch(candidate)).toThrow('uncompiled mechanism definitions');
-    expect(() => serializeMatch(candidate)).toThrow('uncompiled mechanism definitions');
+    // v26 trial seed 22496 takes Support Mining (v25 seed 585 took Placebo), whose training dummy sits in the
+    // frozen combat preparation. Dummy combats are authenticated by full cold replay (validateDynamicCombat,
+    // g2-4b-gold-restore.ts), which runs before and replaces the bounds preflight ('uncompiled mechanism
+    // definitions'); the edited grant diverges from that replay. Its fallback label is "Mirror forge".
+    expect(candidate.combatInputBasis!.inputs.preparation.units.some(u => u.definitionId === 'training-dummy')).toBe(true);
+    expect(() => restoreMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
+    expect(() => serializeMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
   });
 
   it.each(checkpointCases.flatMap(([label,tick]) => (['JSON','object'] as const).map(entry => ({label,tick,entry}))))('$label @$tick: $entry restore preserves the entire state and uninterrupted continuation', ({tick,entry}) => {

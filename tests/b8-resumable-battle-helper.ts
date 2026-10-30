@@ -68,10 +68,17 @@ describe('SR-B8-02 resumable pure tasks', () => {
         const { shares: _shares, ...legacy } = event; return legacy;
       }) })) };
     deepStrictEqual([sha(battle), sha(legacyReplay)], fingerprints[count]);
+    // v26 vfx-batch3 (03e5ae78, docs/MULTIPLAYER_CONTRACT.md): each heal share also projects its display
+    // provenance (sourceKind, definitionId) and a PacketOrigin delivery derived only from sourceKind.
+    const healDelivery: Record<string, string> = { ability: 'ability-direct', item: 'equipment-proc', attack: 'basic-attack' };
     deepStrictEqual(replay.ticks.flatMap(frame => frame.events).filter(event => event.type === 'heal')
       .map(event => ({ eventSeq: event.eventSeq, shares: event.shares })),
     battle.events.filter(event => event.type === 'heal').map(event => ({ eventSeq: event.eventSeq,
-      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) })));
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, sourceKind: share.source.sourceKind,
+        definitionId: share.source.definitionId, delivery: healDelivery[share.source.sourceKind] ?? 'attack-extra', actual: share.actual })) })));
+    if (count === 9) deepStrictEqual(replay.ticks.flatMap(frame => frame.events).flatMap(event => event.type === 'heal' ? event.shares : [])
+      .map(share => [share.sourceKind, share.definitionId, share.delivery, share.actual]),
+    [['ability', 'darius-ability', 'ability-direct', 150], ['ability', 'darius-ability', 'ability-direct', 150], ['ability', 'darius-ability', 'ability-direct', 150]]);
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {
