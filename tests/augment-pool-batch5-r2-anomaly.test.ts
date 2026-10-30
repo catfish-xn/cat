@@ -35,8 +35,11 @@ it('B5-81 is gold and offered only at 4-2; all six excluded definitions are abse
 });
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),{
- roomId:'test-room',seed:21,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
+ roomId:'test-room',seed:112,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
+// v26 D5 pool (7953c99a): room seed 112 (was 21, whose s4 4-2 offer no longer has another-anomaly).
+// s4 is offered it at 4-2 for seeds 18, 32, 48, 97 and 112 in 0..159; 112 has the lightest per-round
+// load (14.24 neutrals made the 2-7 PvE round the heaviest), keeping each round within the default timeout.
 const mine=()=>room.state.seats.find(s=>s.seatId==='s4')!.match;
 function arrive(roundId:string):void {
  for(let n=0;n<2000;n++){

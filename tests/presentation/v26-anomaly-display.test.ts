@@ -27,7 +27,9 @@ describe('P4 obtained anomaly descriptions', () => {
       `异常：${anomalyDisplayName('the-finisher')}`, anomalyPlayerDescription('the-finisher'),
       `便携异常（装备复制）：${anomalyDisplayName('the-finisher')}`, anomalyPlayerDescription('the-finisher'),
     ]);
-    expect(itemDescriptions(portable)).toContain(`复制异变：${anomalyDisplayName('the-finisher')}`);
+    // Merge 5f28fdbb kept 515e1416's portable header (also asserted by anomaly-items.test.ts) over this
+    // branch's `复制异变：<name>` line; the header still names the copied anomaly.
+    expect(itemDescriptions(portable)).toContain(`携带者获得【${anomalyDisplayName('the-finisher')}】的异常突变进化效果。`);
     expect(itemDescriptions(portable)).toContain(anomalyPlayerDescription('the-finisher'));
     expect(itemDescriptions(portable)).toContain('复制效果定义，不携带原英雄累计状态；卸下即失效，原异常英雄不能装备。');
   });
