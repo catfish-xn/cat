@@ -6,7 +6,7 @@ import {join,resolve,dirname,isAbsolute} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {build} from 'esbuild';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
+import {createMatch,rerollAugment,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
@@ -36,8 +36,13 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;
-   // The current pool offers Pumping Up III without reserve-filling unit gifts.
-   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'pumping-up-iii':c.offers[0];
+   // A card without reserve-filling unit gifts or history-evidence needs.
+   // v26 D5 pool (7953c99a): seed 27566's 2-1 offers no Pumping Up III, even after all three rerolls
+   // (spoils-of-war-iii / family-crown / ghost-of-friends-past all need battle-history evidence for restore).
+   // Rerolling slots 0 and 1 reaches Dual Purpose (was pumping-up-iii): XP-purchase gold, no units, no history.
+   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'dual-purpose':c.offers[0];
+   const slot=c.kind==='augment'?(c.rerolledSlots??[]).findIndex(used=>!used):-1;
+   if(pick==='dual-purpose'&&!c.offers.includes(pick)&&slot>=0){state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));continue;}
    expect(c.offers).toContain(pick);state=accepted(selectChoice(state,c.choiceId,c.generation,pick));
   }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
@@ -271,8 +276,10 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
- // The seed 24 route births the crown as item-26.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-26',definitionId:'TFT_Item_ForceOfNature'});
+ // The seed 24 route births the crown as item-25.
+ // v26 D5 pool (7953c99a): seed 24's 3-2 card is now mentorship-i instead of item-grab-bag-i, so the route
+ // mints one item fewer before 5-5 (was item-26).
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-25',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   // Seed 24's tier-14 radiant roll is Hand of Justice.

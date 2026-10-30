@@ -17,7 +17,8 @@ import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 let acquired:MatchState,ready:MatchState,advanced:MatchState;
 beforeAll(()=>{
  // Seed 57 (0..100): public 3-2 route with rerolls 0/1/2 offers artifactory after batch-5 pool expansion.
- let open=reachRound('3-2',false,57);
+ // v26 D5 pool (7953c99a): first such seed is now 0 (was 57).
+ let open=reachRound('3-2',false,0);
  for (const slot of [0,1,2]) {
   const c=open.pendingChoice!; if (c.offers.includes('artifactory')) break;
   open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));

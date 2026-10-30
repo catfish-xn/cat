@@ -13,7 +13,11 @@ import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from './fixtures/m5/oracle.g2.cjs';
 
 // The combined v25 pool offers Fate directly at seed 4, retaining enough HP for the loss-first case.
-let route=createMatch(4),afterFinalBattle:MatchState;const battles:BattleRecord[]=[];
+// v26 D5 pool (7953c99a): seed 247 (was 4); seed 4's 4-2 offer no longer holds Fate after three rerolls.
+// Fielded-route scan 0..329: Fate within the rerolls at 4-2 with HP > 8 only at 12, 188, 247, 290; seed 12 opens
+// with Warwick's Hunger, whose PvP receipts require opening-death facts the synthetic settlement receipt lacks.
+// Seed 247 offers Fate directly at 4-2 with 13 HP.
+let route=createMatch(247),afterFinalBattle:MatchState;const battles:BattleRecord[]=[];
 function fight(context:MatchState,archive:BattleRecord[]=battles):MatchState {
  const started=startMatchCombat(context);let s=accepted(started);const initial=s.combat!,events:MatchEvent[]=[...(started.ok?started.events:[])];
  while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}

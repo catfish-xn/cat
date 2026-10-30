@@ -2,7 +2,7 @@ import {battle,unit} from './combat-helpers';
 import {createItemRandomStreams} from '../src/simulation/g2-4b-item-kernel';
 import {recordItemGold} from '../src/simulation/g2-4b-item-gold';
 import {g23BattleFacts,commitG23Settlement} from '../src/simulation/g2-3-settlement';
-import {reachRound} from './match-helpers';
+import {quietAugmentRound} from './match-helpers';
 import {expect,it} from 'vitest';
 import {createMatch,deployMatchUnit,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
@@ -25,7 +25,10 @@ function equipped(base=createMatch(42)){
  const deploy=deployMatchUnit(equip.state,owner.id,{kind:'board',cell:{col:3,row:4}});if(!deploy.ok)throw Error(deploy.reason);return deploy.state;
 }
 it('authenticates the entire Trench checkpoint before and after dynamic roster replacement',()=>{
- const start=startMatchCombat(equipped(reachRound('2-1')));if(!start.ok)throw Error(start.reason);
+ // v26 D5 pool (7953c99a): reachRound('2-1') on seed 42 now takes snipers-nest (an AUGMENT_HISTORY_OWNERS card), so
+ // restore replays every public command and cannot re-create this fixture's direct grantMechanicItem coat.
+ // Take the quiet 2-1 card instead (visionary-crest; was sorcerer-crest via reachRound).
+ const start=startMatchCombat(equipped(quietAugmentRound(42)));if(!start.ok)throw Error(start.reason);
  let current=start.state;
  expect(restoreMatch(serializeMatch(current))).toEqual(current);
  while(current.phase==='combat'&&!current.combat!.trenchSplits?.length)current=stepMatch(current).state;
