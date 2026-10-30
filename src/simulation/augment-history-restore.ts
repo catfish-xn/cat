@@ -4,7 +4,8 @@ import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
 import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
-import { canonicalContent } from './content';
+import { assertParsedContent, canonicalContent, equalValidatedContent, withSynchronousRestoreEncoding } from './content';
+import { packReplayFacts, unpackReplayFacts } from './augment-replay-facts';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { historyCheck, needsAugmentHistory, historySeatId, validateAugmentAuthority, initializeAugmentTrace,
   advanceAugmentPreparationTime, carryRestoredAugmentTrace, type AugmentHistoryAuthority } from './augment-history';
@@ -16,7 +17,9 @@ const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalConten
 interface ReplayEvidence {
   readonly origin: string;
   readonly commands: readonly { readonly name: string; readonly args: string; readonly count: number }[];
-  readonly state: MatchState;
+  // The body omits facts; reconstruct them before executing any Match command.
+  readonly body: MatchState;
+  readonly facts: ReturnType<typeof packReplayFacts>;
   // Retained graph, commands and the trace roster, in UTF-16 bytes. Short node
   // texts are not included; those are charged once per origin.
   readonly bytes: number;
@@ -28,6 +31,15 @@ interface ReplayEvidence {
 // grow, but a changed argument, branch or shortened run cannot reuse that suffix.
 const replays: ReplayEvidence[] = [];
 const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
+let parsedPreflights: WeakSet<MatchState> | undefined;
+/** Only one restore's private JSON.parse graph can reuse its completed
+ * preflight. It cannot run accessors between the early bounds check and the
+ * history check. Object entrances and nested origin restores retain all reads. */
+export function withAugmentHistoryPreflightReuse<T>(parsed: boolean, run: () => T): T {
+  const outer = parsedPreflights;
+  parsedPreflights = parsed ? new WeakSet() : undefined;
+  try { return run(); } finally { parsedPreflights = outer; }
+}
 function containsNegativeZero(values: readonly unknown[]): boolean {
   const stack = [...values];
   while (stack.length) {
@@ -37,7 +49,7 @@ function containsNegativeZero(values: readonly unknown[]): boolean {
   }
   return false;
 }
-function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
+function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[], parsedJsonInput: boolean): ReplayEvidence | undefined {
   let best: ReplayEvidence | undefined, bestSteps = -1;
   for (const entry of replays) {
     if (entry.origin !== origin || entry.commands.length > commands.length) continue;
@@ -49,12 +61,12 @@ function replayPrefix(origin: string, commands: ReplayEvidence['commands'], fact
         ? c.count <= next.count : c.count === next.count);
     });
     if (!matches) continue;
-    const priorFacts = entry.state.augmentHistory?.facts ?? [];
+    const priorFacts = unpackReplayFacts(entry.facts);
     // A candidate may only extend the independently generated fact prefix. At
     // an identical command boundary all facts must match, including absence.
     // A miss always reconstructs from an earlier prefix or the validated origin.
     const exact = entry.commands.length === commands.length && entry.commands.at(-1)?.count === commands.at(-1)?.count;
-    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) continue;
+    if ((exact && priorFacts.length !== facts.length) || !(parsedJsonInput ? equalValidatedContent : same)(priorFacts, facts.slice(0, priorFacts.length))) continue;
     if (steps > bestSteps) { best = entry; bestSteps = steps; }
   }
   return best;
@@ -126,11 +138,15 @@ function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'b
   for (const value of frozen.values()) graph += value;
   return graph;
 }
-function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
-  // stateText proxies the retained graph. The trace roster sits outside it.
-  // Both are UTF-16. Short node texts are charged separately, once per origin.
-  const frozenBytes = frozenTextUnits(stateText);
-  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
+function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState): void {
+  const facts = packReplayFacts(state.augmentHistory?.facts ?? []);
+  const body = { ...state, ...(state.augmentHistory ? { augmentHistory: { ...state.augmentHistory, facts: [] } } : {}) };
+  carryRestoredAugmentTrace(state, body);
+  // Charge the actual compressed retained graph and its short-node texts, with
+  // the same conservative UTF-16 accounting and the unchanged 8 MiB limit.
+  const bodyText = canonicalContent(body), factsText = canonicalContent(facts);
+  const frozenBytes = frozenTextUnits(bodyText) + frozenTextUnits(factsText);
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + bodyText.length + factsText.length + traceRosterChars(state));
   if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
   const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
   if (previous >= 0) replays.splice(previous, 1);
@@ -138,10 +154,17 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
   while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
   // No private expected state or trace payload can be mutated through a later
   // restored command's proof. Pure commands can resume these frozen prefixes.
-  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
+  replays.push({origin,commands,body:freezeContent(body),facts:freezeContent(facts),bytes,frozenBytes});
+}
+
+function resumeReplay(entry: ReplayEvidence): MatchState {
+  const body = entry.body;
+  const state = { ...body, ...(body.augmentHistory ? { augmentHistory: { ...body.augmentHistory, facts: unpackReplayFacts(entry.facts) } } : {}) };
+  return carryRestoredAugmentTrace(body, state);
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
+  if (parsedPreflights?.has(s)) return;
   validateOverEncumbered(s);
   validateBatch5R6Transforms(s);
   const h = s.augmentHistory;
@@ -202,8 +225,28 @@ export function preflightAugmentHistory(s: MatchState): void {
   }
   historyCheck(h.facts[0]?.kind === 'acquire' || h.facts[0]?.kind === 'offer-level', 'acquisition boundary');
   historyCheck(h.proof && (h.proof.kind === 'solo' || h.proof.kind === 'server'), 'proof kind');
+  parsedPreflights?.add(s);
 }
-export function validateAugmentHistory(s: MatchState, authority?: AugmentHistoryAuthority): void {
+export function validateAugmentHistory(s: MatchState, authority?: AugmentHistoryAuthority, parsedJsonInput = false): void {
+  for (const _ of validateAugmentHistoryWork(s, authority, parsedJsonInput)) { /* synchronous admission */ }
+}
+
+/** Cooperative preparation of independent replay evidence, never save admission.
+ * Own the complete candidate before exposing any scheduling boundary. The
+ * ordinary restore still validates every field, even after this finishes.
+ * Cancelled/failed preparation cannot install an unverified final checkpoint. */
+export function prepareAugmentHistoryReplay(input: MatchState): Generator<void, void, void> {
+  const work = validateAugmentHistoryWork(structuredClone(input), undefined, false, 256);
+  return (function* () {
+    for (;;) {
+      const next = withSynchronousRestoreEncoding(true, () => work.next());
+      if (next.done) return;
+      yield;
+    }
+  })();
+}
+
+function* validateAugmentHistoryWork(s: MatchState, authority?: AugmentHistoryAuthority, parsedJsonInput = false, slice?: number): Generator<void, void, void> {
   preflightAugmentHistory(s); const h = s.augmentHistory;
   validateAugmentAuthority(s,authority,false);
   if (!h) return;
@@ -224,11 +267,12 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   const encoded = proof.commands.map(c => ({name:c.name,args:canonicalContent(c.args),count:c.count}));
   // Canonical JSON collapses -0 to 0, so such proofs must use cold replay.
   const cacheable = !containsNegativeZero([proof.origin, ...proof.commands.map(c => c.args)]);
-  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts) : undefined;
+  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts, parsedJsonInput) : undefined;
   // A hit skips validateMatchStructure(proof.origin) and resumes commands from
   // frozen evidence. This is correct only while all SOLO_COMMANDS are pure
   // functions that never mutate their inputs in place.
-  let replay = prefix?.state ?? initializeAugmentTrace(validateMatchStructure(proof.origin));
+  let replay = prefix ? resumeReplay(prefix) : initializeAugmentTrace(validateMatchStructure(proof.origin));
+  let performed = 0;
   for (const [index,c] of proof.commands.entries()) {
     const skipped = prefix?.commands[index]?.count ?? 0;
     if (skipped === c.count) continue;
@@ -241,11 +285,18 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
       historyCheck(result && result.ok !== false, `replay command ${c.name}`);
       const next = result.state ?? result as unknown as MatchState;
       historyCheck(next !== replay, 'replay no-op'); replay = next;
+      if (slice !== undefined && ++performed % slice === 0) yield;
     }
   }
-  const replayText = canonicalContent(replay);
-  historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
-  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
+  // Parsed candidates and their privately reconstructed plain-JSON outputs
+  // still undergo the complete finite-data check and every-field comparison.
+  // Avoid allocating two multi-megabyte sorted-key encodings just to discard
+  // them. External object inputs retain their original canonical read path.
+  if (parsedJsonInput) {
+    assertParsedContent(replay);
+    historyCheck(equalValidatedContent(replay, s), 'replayed facts/state mismatch');
+  } else historyCheck(canonicalContent(replay) === canonicalContent(s), 'replayed facts/state mismatch');
+  if (cacheable) rememberReplay(origin, encoded, replay);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);

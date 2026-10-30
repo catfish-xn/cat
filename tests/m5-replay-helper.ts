@@ -1,8 +1,9 @@
 import { gzipSync, gunzipSync } from 'node:zlib';
-import { it } from 'vitest';
+import { beforeAll, describe, it } from 'vitest';
 import assert from './fixtures/m5/assert-equal.cjs';
 import * as api from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
+import { prepareAugmentHistoryReplay } from '../src/simulation/augment-history-restore';
 import { run, dispatch } from '../scripts/generate-m5-route.cjs';
 import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
 
@@ -68,46 +69,58 @@ export async function defineReplayTests(build: string) {
     checkpointSeconds: (checkpointMilliseconds - previousCheckpointMilliseconds) / 1000 }));
 
   for (const entry of chunks) {
-    it(`M5 ${build} steps ${entry.first + 1}-${entry.first + entry.inputs.length}: restore and rejected insertions preserve every field`, () => {
-      // The reference advances through ordinary commands from the exact cached
-      // route boundary. The restored path advances separately through restoreMatch.
-      const first = entry.first === 0, last = entry === chunks.at(-1);
-      let before = unpack(entry.before);
-      // Assign the preceding segment's final restore to this case. This keeps
-      // every rejected insertion on a real restored state (including frozen
-      // metadata), with exactly one restore per original command/tick overall.
-      let restored = first ? api.createMatch(42) : restoreMatch(JSON.stringify(before));
-      for (const [index, command] of entry.inputs.entries()) {
-        const result = command ? dispatch(api, before, command) : api.stepMatch(before);
-        assert.deepEqual(restored, before);
-        const frozen = JSON.stringify(restored);
-        const failures = [api.buyUnit(restored, -1, restored.shop.generation), api.sellUnit(restored, 'absent'),
-          api.selectChoice(restored, 'stale', -1, 'absent'), api.nextRound(restored, -1)];
-        for (const failed of failures) {
-          assert.equal(failed.ok, false); assert.equal(failed.state, restored); assert.equal('events' in failed, false);
+    describe(`independent replay fixture at ${entry.first + 1}`, () => {
+      let preparation: ReturnType<typeof prepareAugmentHistoryReplay> | undefined, ready = false;
+      beforeAll(() => { preparation = prepareAugmentHistoryReplay(unpack(entry.before)); });
+      // A filtered late case still needs its cold historical fixture. Resume
+      // the real validator in bounded setup slices; do not replay the whole
+      // match synchronously inside a 5 s assertion case. No live route result
+      // or candidate admission seeds the production evidence cache.
+      for (let part = 0; part <= Math.ceil(entry.first / 256); part++) beforeAll(() => {
+        if (!ready) ready = preparation!.next().done === true;
+      });
+      beforeAll(() => { assert(ready, 'independent historical fixture completed'); preparation = undefined; });
+      it(`M5 ${build} steps ${entry.first + 1}-${entry.first + entry.inputs.length}: restore and rejected insertions preserve every field`, () => {
+        // The reference advances through ordinary commands from the exact cached
+        // route boundary. The restored path advances separately through restoreMatch.
+        const first = entry.first === 0, last = entry === chunks.at(-1);
+        let before = unpack(entry.before);
+        // Assign the preceding segment's final restore to this case. This keeps
+        // every rejected insertion on a real restored state (including frozen
+        // metadata), with exactly one restore per original command/tick overall.
+        let restored = first ? api.createMatch(42) : restoreMatch(JSON.stringify(before));
+        for (const [index, command] of entry.inputs.entries()) {
+          const result = command ? dispatch(api, before, command) : api.stepMatch(before);
+          assert.deepEqual(restored, before);
+          const frozen = JSON.stringify(restored);
+          const failures = [api.buyUnit(restored, -1, restored.shop.generation), api.sellUnit(restored, 'absent'),
+            api.selectChoice(restored, 'stale', -1, 'absent'), api.nextRound(restored, -1)];
+          for (const failed of failures) {
+            assert.equal(failed.ok, false); assert.equal(failed.state, restored); assert.equal('events' in failed, false);
+          }
+          assert.equal(JSON.stringify(restored), frozen);
+          const second = command ? dispatch(api, restored, command) : api.stepMatch(restored);
+          assert.deepEqual(second, result);
+          if (index === entry.inputs.length - 1 && !last) {
+            // The next case restores these exact bytes, independently of this
+            // case passing. Bind its cached candidate to the dispatched result.
+            assert.equal(JSON.stringify(second.state), gunzipSync(entry.after).toString());
+            restored = second.state;
+          } else {
+            restored = restoreMatch(JSON.stringify(second.state));
+            assert.deepEqual(restored, second.state);
+          }
+          before = result.state;
         }
-        assert.equal(JSON.stringify(restored), frozen);
-        const second = command ? dispatch(api, restored, command) : api.stepMatch(restored);
-        assert.deepEqual(second, result);
-        if (index === entry.inputs.length - 1 && !last) {
-          // The next case restores these exact bytes, independently of this
-          // case passing. Bind its cached candidate to the dispatched result.
-          assert.equal(JSON.stringify(second.state), gunzipSync(entry.after).toString());
-          restored = second.state;
-        } else {
-          restored = restoreMatch(JSON.stringify(second.state));
-          assert.deepEqual(restored, second.state);
+        // Bind the independently replayed chunk back to the original oracle route.
+        assert.deepEqual(before, unpack(entry.after));
+        assert.deepEqual(restored, unpack(entry.after));
+        if (last) {
+          assert.equal(restored.phase, 'gameOver'); assert(commands > 100); assert(ticks > 1000);
+          console.log(JSON.stringify({ replay: build, commands, ticks,
+            durationSeconds: (performance.now() - started) / 1000, passed: true }));
         }
-        before = result.state;
-      }
-      // Bind the independently replayed chunk back to the original oracle route.
-      assert.deepEqual(before, unpack(entry.after));
-      assert.deepEqual(restored, unpack(entry.after));
-      if (last) {
-        assert.equal(restored.phase, 'gameOver'); assert(commands > 100); assert(ticks > 1000);
-        console.log(JSON.stringify({ replay: build, commands, ticks,
-          durationSeconds: (performance.now() - started) / 1000, passed: true }));
-      }
+      });
     });
   }
 }

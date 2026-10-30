@@ -3,7 +3,7 @@ import { validateOverEncumbered } from './over-encumbered';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
-import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
+import { validateAugmentHistory, preflightAugmentHistory, withAugmentHistoryPreflightReuse } from './augment-history-restore';
 import { carryRestoredAugmentTrace } from './augment-history';
 import { atWhatCostHistoricalXp, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { validateShopHistory } from './restore-checks/shop-history-check';
@@ -151,8 +151,8 @@ function preparationExperience(state:MatchState,after:number,round:number):numbe
  */
 export function validateMatchStructure(input: unknown): MatchState {
   const parsed = typeof input === 'string', shareDeclarations = typeof input === 'string' && !input.includes('-0');
-  return withG23RestoreReuse(shareDeclarations, () => withSynchronousRestoreEncoding(parsed, () =>
-    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations)))));
+  return withAugmentHistoryPreflightReuse(parsed, () => withG23RestoreReuse(shareDeclarations, () => withSynchronousRestoreEncoding(parsed, () =>
+    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations))))));
 }
 function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
   const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
@@ -337,7 +337,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
   validateShopHistory(state);
-  validateAugmentHistory(state);
+  validateAugmentHistory(state, undefined, typeof input === 'string');
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
