@@ -12,14 +12,12 @@ import { run } from '../../scripts/generate-m5-route.cjs';
 // reaches the authored Rift Herald, and supports all five raw equipment cases.
 const HERALD_ROUTE_SEED = 65;
 const preparations = new Map<string, api.MatchState>();
-let equipmentFork: api.MatchState | undefined;
 // Execute the command-only driver once, retaining only the actual preparation
 // prefixes. No golden, injected result, resource, birth, star or receipt is used.
 // Generate once per test module; consumers restore independent graphs before use.
 const route = await run(api, { build: 'sniper', seed: HERALD_ROUTE_SEED, onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     preparations.set(before.roundDefinitionId, before);
-  if (before.roundDefinitionId === '4-4' && before.phase === 'choice') equipmentFork ??= before;
   if (result.state.phase === 'preparation') preparations.set(result.state.roundDefinitionId, result.state);
 } });
 if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
@@ -53,9 +51,29 @@ export function publicNeutralPreparation(roundId: string): api.MatchState {
   return restoreMatch(serializeMatch(state));
 }
 
+// v26-neutrals-1424 drift: the unreserved seed-65 route above now reaches its 4-4 supply fork holding
+// only [tear] (v25: [tear, rod]), so the later public supply picks no longer cover both cloaks of
+// ionic-spark+evenshroud ("Public route did not acquire cloak for evenshroud"). The five approved raw
+// cases are recorded by tests/fixtures/record-v26-neutrals-1424-herald.cjs from this same seed with
+// reservedComponents:['cloak'] (as in v25); that route's fork holds [cloak, tear, cloak] and builds all
+// five branches. Take the equipment fork from that exact recorder route. Every other preparation above
+// stays on the unchanged unreserved route. Generated lazily: only Herald equipment consumers pay for it.
+let equipmentFork: api.MatchState | undefined;
+export async function preparePublicHeraldEquipmentRoute(): Promise<void> {
+  if (equipmentFork) return;
+  const reached = new Error('reached the 4-4 equipment fork');
+  try {
+    await run(api, { build: 'sniper', seed: HERALD_ROUTE_SEED, reservedComponents: ['cloak'], onStep(before) {
+      // The recorder's rawPrefix: first 4-4 choice. Later commands cannot change this prefix.
+      if (before.roundDefinitionId === '4-4' && before.phase === 'choice') { equipmentFork = before; throw reached; }
+    } });
+  } catch (error) { if (error !== reached) throw error; }
+  if (!equipmentFork) throw new Error('Public cloak-reserved route did not reach the 4-4 equipment fork');
+}
+
 /** A genuine unresolved 4-4 supply choice, before reserving any late items. */
 export function publicNeutralEquipmentChoice(): api.MatchState {
-  if (!equipmentFork) throw new Error('Missing public 4-4 equipment prefix');
+  if (!equipmentFork) throw new Error('Missing public 4-4 equipment prefix: await preparePublicHeraldEquipmentRoute()');
   return restoreMatch(serializeMatch(equipmentFork));
 }
 
