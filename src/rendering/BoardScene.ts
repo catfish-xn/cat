@@ -366,7 +366,7 @@ export class BoardScene extends Phaser.Scene {
     });
     // Portraits load once the page is idle so they never delay the first usable controls.
     // The asset root's side manifest (v19 six-cost portraits) is read first, so its portraits load in the same pass.
-    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); });
+    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { if (this.sys.isActive()) { this.strategyPanel?.refreshAugmentIcons(); loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); } });
     const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });

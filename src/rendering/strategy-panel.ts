@@ -38,7 +38,7 @@ import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription, syncOwnedAugmentIcon } from '../presentation/augment-display';
 import type { AugmentDynamicValues } from '../simulation/augment-dynamic-values';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
@@ -224,7 +224,7 @@ export class StrategyPanel {
   private plannerButton?: HTMLButtonElement;
   /** G2: always-visible trait column above the panel (its own mount, so render() replacing the panel keeps it). */
   private readonly traitColumn: TraitColumn;
-  /** TFT HUD: the owned augments as a row of icons over the trait column (hover for the text). */
+  /** Owned augments sit in the left rail above traits (44px targets, 4px gap). */
   private readonly augmentStrip = element('div', '', 'augment-strip');
   private augmentKey: string | null = null;
   private selectedItems: string[] = [];
@@ -294,11 +294,17 @@ export class StrategyPanel {
       if (state.augments.length || state.pendingChoice?.kind === 'augment') this.render();
     }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
-    this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
+    this.augmentStrip.dataset.debug = 'augment-strip';
+    // Keep the row in the rail above traits. document.body + position:fixed used a size below
+    // 44px; min-width then made the real row cross the board. Descriptions attach before
+    // data-online exists, because BoardScene constructs this panel first. One listener only.
+    this.traitColumn.root.before(this.augmentStrip);
     this.augmentStrip.setAttribute('role', 'group'); this.augmentStrip.setAttribute('aria-label', '已选强化与异常');
-    // BoardScene creates this panel before OnlineApplication sets data-online. The strip's delegated
-    // descriptions must already be attached when that first online inventory arrives.
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root), attachTextCards(this.augmentStrip));
+    void import('../presentation/augment-hud').then(mod => {
+      if (!this.augmentStrip.isConnected) return;
+      this.disposers.push(mod.bindAugmentStrip(this.augmentStrip));
+    }).catch(() => undefined);
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     if (isOnline()) {
       for (const scope of [this.root, this.modal, this.shopDock, this.itemDock]) if (scope) {
@@ -422,10 +428,10 @@ export class StrategyPanel {
       if (this.dismissalTimer !== null) this.shieldChoiceDismissal();
     });
     // Phaser also consumes native mouse/touch events bubbling to window.
-    // Isolate both the dialog and its dismissal shield at those entry points,
+    // Isolate the dialog, dismissal shield and floating augment icons at those entry points,
     // while leaving DOM click activation and keyboard commands intact.
     for (const type of ['click', 'mousedown', 'mouseup', 'mousemove', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
-      this.modal.addEventListener(type, event => event.stopPropagation());
+      for (const scope of [this.modal, this.augmentStrip]) scope.addEventListener(type, event => event.stopPropagation());
   }
 
   get blocksSell(): boolean {
@@ -465,6 +471,14 @@ export class StrategyPanel {
     if (this.statusText) this.statusText.textContent = message;
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
     this.root.dispatchEvent(new CustomEvent<string>(PANEL_STATUS_EVENT, { detail: message, bubbles: true }));
+  }
+  /** Late asset-root icons: replace the chip's badge or src only. Does not rebuild the panel, shop or drag. */
+  refreshAugmentIcons(): void {
+    for (const chip of Array.from(this.augmentStrip.querySelectorAll<HTMLElement>('[data-augment]'))) {
+      if (chip.parentElement !== this.augmentStrip) continue;
+      const id = chip.dataset.augment;
+      if (id) syncOwnedAugmentIcon(chip, id);
+    }
   }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string, values: AugmentDynamicValues): HTMLElement {
