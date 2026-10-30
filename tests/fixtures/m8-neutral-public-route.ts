@@ -11,7 +11,8 @@ import { routeOptions } from '../../scripts/v26-neutrals-1424-route.cjs';
 
 // v25 (kept for v26-neutrals-1424): seed 65 has no opening encounter; its sniper route wins all 33 battles,
 // reaches the authored Rift Herald, and supports all five raw equipment cases.
-// v26: the same public 2-1 reroll as the Herald recorder keeps it free of history-only augments.
+// v26: the same public 2-1 pick as the Herald recorder (family-crest, scripts/v26-neutrals-1424-route.cjs)
+// keeps it free of history-only augments.
 const HERALD_ROUTE_SEED = 65;
 const preparations = new Map<string, api.MatchState>();
 // Execute the command-only driver once, retaining only the actual preparation
@@ -54,14 +55,14 @@ export function publicNeutralPreparation(roundId: string): api.MatchState {
   return restoreMatch(serializeMatch(state));
 }
 
-// v26-neutrals-1424 drift: before the public 2-1 reroll the unreserved seed-65 route reached its 4-4
-// supply fork holding only [tear] (v25: [tear, rod]), so the later public supply picks no longer covered
-// both cloaks of ionic-spark+evenshroud ("Public route did not acquire cloak for evenshroud"). The five
-// approved raw cases are recorded by tests/fixtures/record-v26-neutrals-1424-herald.cjs from this same
-// seed and reroll with reservedComponents:['cloak'] (as in v25); with the reroll that route's fork holds
-// [rod, cloak, tear, Randuin's Sanctum, cloak] (unreserved: [cloak, tear, Randuin's Sanctum]). Take the
-// equipment fork from that exact recorder route. Every other preparation above stays on the unreserved
-// route. Generated lazily: only Herald equipment consumers pay for it.
+// v26-neutrals-1424 drift: the unreserved seed-65 route above reaches its 4-4 supply fork holding
+// only [tear] plus the 2-1 family-crest emblem (v25: [tear, rod]), so the later public supply picks no
+// longer cover both cloaks of ionic-spark+evenshroud ("Public route did not acquire cloak for evenshroud").
+// The five approved raw cases are recorded by tests/fixtures/record-v26-neutrals-1424-herald.cjs from
+// this same seed and 2-1 pick with reservedComponents:['cloak'] (as in v25); that route's fork holds
+// [cloak, tear, emblem, cloak] and builds all five branches. Take the equipment fork from that exact
+// recorder route. Every other preparation above stays on the unreserved route. Generated lazily: only
+// Herald equipment consumers pay for it.
 let equipmentFork: api.MatchState | undefined;
 export async function preparePublicHeraldEquipmentRoute(): Promise<void> {
   if (equipmentFork) return;

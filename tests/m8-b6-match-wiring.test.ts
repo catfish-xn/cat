@@ -168,7 +168,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
       state=accepted(startMatchCombat(state));
       if(restore) {
         // v26: D5 (3ce71065) moved the seed-65 route's 2-1 offer to history-dependent rebel-resurgence;
-        // the route's public 2-1 reroll (scripts/v26-neutrals-1424-route.cjs) keeps it history-free again.
+        // the route's public 2-1 pick (family-crest, scripts/v26-neutrals-1424-route.cjs) keeps it history-free again.
         // Without an augment-history proof, restore must not generate enemies at all.
         expect(state.augments.map(a=>a.definitionId).filter(augmentNeedsHistory)).toEqual([]);
         expect(state.augmentHistory).toBeUndefined();
