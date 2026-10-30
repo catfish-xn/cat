@@ -12,7 +12,7 @@ import type { CombatState, LedgerCombatEvent } from '../src/simulation/combat-ty
 // The visual mapping needs all combat events, not another expensive economic-route acquisition/hash pass.
 let battles: { initial: CombatState; events: LedgerCombatEvent[] }[] = [];
 beforeAll(async () => {
-  const { states } = JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v25-online-rules-recorded-states/cannon.json.gz', import.meta.url))).toString()) as { states: api.MatchState[] };
+  const { states } = JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz', import.meta.url))).toString()) as { states: api.MatchState[] };
   for (const before of states.filter(state => state.phase === 'preparation')) {
     const start = api.startMatchCombat(before); if (!start.ok) throw Error(start.reason);
     const initial = start.state.combat!, events = start.events.filter(event => 'domain' in event && event.domain === 'combat') as LedgerCombatEvent[];

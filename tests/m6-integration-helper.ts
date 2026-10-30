@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { trajectoryHash } from './m6-integration-oracle.cjs';
 import * as api from '../src/simulation/match';
 import { run, type Route } from '../scripts/generate-m5-route.cjs';
-import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
+import { routeOptions } from '../scripts/v26-neutrals-1424-route.cjs';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
 import { MatchSession } from '../src/rendering/match-session';

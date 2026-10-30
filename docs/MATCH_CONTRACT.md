@@ -1,3 +1,7 @@
+## 2026-10-30 v26 纪元身份（v26-neutrals-1424）
+
+当前 rules/content 为 `s13-g2-3-v26-neutrals-1424` / `s13-14.24b-g2-3-v26-neutrals-1424`，schema/save/replay/command 仍为 **12/8/8/7**，WebSocket 封套 6；CONTENT=`fnv1a32-utf16:9dc693dd`，LOOT=`fnv1a32-utf16:a56b2c4a`。旧身份（含 v25-online-rules）不迁移，直接拒绝。本节覆盖下文各节（含 R5 节中 `v26-online-rules` 的标签）关于当前身份的说法。录制、基线 e9384c02 及漂移证据见 [V26 纪元报告](V26_EPOCH_REPORT.md)。
+
 ## 2026-10-29 D5：正式注册四张强化（v26）
 
 四张卡的生产定义、品级、API 名和研究阶段标签统一注册；五处 backlog 禁令逐一核对，补变形者与本可发生之事两处（另三处已存在）。摸鱼取得时自动解锁；D0 缺失的本地占位结算不累计真心本色；重启任务暂存、D14 退场身份、黑玫空成员显式失败、单人法球领取已补齐。公开函数、失败原因、全部调用入口、夹具替换和重录影响见 [D5 合同](D5_REGISTERED_AUGMENTS.md)。以下 D1–D4 的“未注册”表述为当时交付范围，现由 D5 正式注册取代。

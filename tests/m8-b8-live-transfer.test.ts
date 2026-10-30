@@ -11,7 +11,7 @@ import { accepted, battle, configuredPrefix, transferPreparation, players, plan 
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-import anchor from './fixtures/v25-online-rules-transfer-route.json';
+import anchor from './fixtures/v26-neutrals-1424-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
 let prepared: MatchState;
 let replayCache: ReturnType<typeof installAugmentReplayCommandCache>;
