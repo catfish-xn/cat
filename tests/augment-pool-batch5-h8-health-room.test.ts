@@ -12,7 +12,7 @@ import { batch2HpAfterSettlement } from '../src/simulation/augment-pool-batch2-h
 import { recordRoomBattleFacts } from '../src/server/room/augment-history';
 import type { SettledSeat, TwoSidedBattleResult } from '../src/server/room/types';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
-// Fixed-composition carousel: seed 10 offers Dhampyr to an injured 3-2 winner (v25 used seed 15).
+// Fixed-composition carousel: seed 10 offers Dhampyr to injured s3 at 3-2 (v25 used seed 15).
 const clock=new ManualClock();
 const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:10,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 beforeAll(()=>{room.start();});
@@ -31,6 +31,20 @@ it('selects Vampiric Vitality through the room',()=>{
  expect(ids.length).toBeGreaterThan(0);
 });
 it('heals from actual opponent damage after settlement and synchronizes the room HP',()=>{
+ // The idle one-star Darius/Akali board now loses to s5. Buy the two publicly
+ // offered Darius copies to upgrade the holder's frontline before the real PvP.
+ for(const id of ids){
+  for(const slot of [1,2]){
+   const match=room.state.seats.find(s=>s.seatId===id)!.match;
+   expect(match.shop.slots[slot]).toMatchObject({status:'available',definitionId:'darius'});
+   expect(room.handle(id,{type:'buy',slot,generation:match.shop.generation})).toMatchObject({ok:true});
+  }
+  const match=room.state.seats.find(s=>s.seatId===id)!.match;
+  expect(match.playerHp).toBeLessThan(100);
+  expect(match.preparation.units).toEqual(expect.arrayContaining([expect.objectContaining({
+   definitionId:'darius',starLevel:2,location:{kind:'board',cell:{col:1,row:4}},
+  })]));
+ }
  runUntil(room,clock,s=>s.round===12&&s.phase==='settlement');
  const seats=ids.map(id=>room.state.seats.find(s=>s.seatId===id)!);
  const healed=seats.find(s=>s.match.augmentHistory?.facts.some(f=>f.kind==='player-health'&&f.round===12));
