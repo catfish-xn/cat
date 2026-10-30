@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Room } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import { BotDriver, type BotStepRecord } from '../../src/server/room/bot-driver';
+import { BotDriver, deriveBotRng, type BotStepRecord } from '../../src/server/room/bot-driver';
 import { LocalRoomClient } from '../../src/rendering/online/local-room-client';
 import { createMatch, resolveAugmentTier } from '../../src/simulation/match';
 import { createOpeningEncounter } from '../../src/simulation/opening-encounter';
@@ -14,6 +14,7 @@ import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { RouteClock } from './route-clock';
 import { runUntil, TIMINGS } from './helpers';
 import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from '../../src/simulation/multiplayer-round';
+import { BOT_MAX_STEPS, decideBotAction } from '../../src/simulation/bot';
 
 // Script only the draw inside the production candidate pool. Stage/tier, bot policy,
 // all commands, battles, rewards, projection and history authentication remain real.
@@ -43,9 +44,14 @@ if (mode === 'bots') for (const [id, node, tier, through] of cases) describe(`re
   });
   afterAll(() => { bots?.dispose(); room?.dispose(); restoreOffers?.(); });
   for (let round = 1; round <= getMultiplayerRoundById(through).ordinal; round++) {
-    it(`reaches ${getMultiplayerRoundByOrdinal(round).roundId} on normal deadlines`, () => {
-      runUntil(room, clock, s => s.round === round && (s.phase === 'preparation' || s.phase === 'carousel'));
-      expect(room.state.fault).toBeNull();
+    describe(`round ${getMultiplayerRoundByOrdinal(round).roundId}`, () => {
+      // Deterministic route setup belongs to the hook, not the assertion's 5 s budget.
+      beforeAll(() => {
+        runUntil(room, clock, s => s.round === round && (s.phase === 'preparation' || s.phase === 'carousel'));
+      });
+      it(`reaches ${getMultiplayerRoundByOrdinal(round).roundId} on normal deadlines`, () => {
+        expect(room.state.fault).toBeNull();
+      });
     });
   }
   it('selected the registered card through bot policy, without a refused intention or pool drift', () => {
@@ -70,21 +76,40 @@ if (mode === 'bots') for (const [id, node, tier, through] of cases) describe(`re
 for (const [id, node, tier] of cases) for (const pvpMode of mode === 'bots' ? [] : [mode])
   describe(`local ${pvpMode} route: ${id}`, () => {
     let restoreOffers: () => void, clock: RouteClock, client: LocalRoomClient;
-    let mySeatId: string | null = null, chosenRound = 0;
+    let mySeatId: string | null = null, chosenRound = 0, operatedRound = 0, policyRng = 0;
+    function operatePreparation(): void {
+      const room = client.currentRoom!, seat = room.state.seats.find(s => s.seatId === mySeatId)!;
+      if (room.state.phase !== 'preparation' || !seat.alive || seat.match.phase !== 'preparation' || operatedRound === seat.match.round) return;
+      operatedRound = seat.match.round;
+      // Play the human through the same public commands as a basic bot. Leave choices
+      // to their normal deadlines (and the target augment to the explicit test below).
+      for (let stepsTaken = 0; stepsTaken < BOT_MAX_STEPS; stepsTaken++) {
+        const current = room.state.seats.find(s => s.seatId === mySeatId)!;
+        if (current.match.phase !== 'preparation') return;
+        const decision = decideBotAction(current.match, { difficulty: 'basic', stepsTaken, maxSteps: BOT_MAX_STEPS,
+          self: { seatId: current.seatId, hp: current.hp, round: current.match.round } }, policyRng);
+        policyRng = decision.rng;
+        if (decision.action === 'done') return;
+        expect(client.send(decision.action).ok).toBe(true);
+      }
+    }
     async function until(predicate: () => boolean) {
       for (let i = 0; i < 20000; i++) {
         await Promise.resolve(); if (predicate()) return;
+        operatePreparation();
         if (!(pvpMode === 'placeholder' ? clock.fireNext() : clock.runNext())) break;
       }
       throw new Error(`Local route did not reach ${id}; last round ${client.currentRoom?.state.roundId}, fault ${JSON.stringify(client.currentRoom?.state.fault)}`);
     }
     beforeAll(() => {
-      restoreOffers = installB1Offers([id]); clock = new RouteClock();
+      restoreOffers = installB1Offers([id]); clock = new RouteClock(); const seed = seedFor(node, tier);
 
-      client = new LocalRoomClient({ seed: seedFor(node, tier), clock, myName: 'D5', pvpMode,
+      client = new LocalRoomClient({ seed, clock, myName: 'D5', pvpMode,
         preparationMs: 1000, choiceMs: 500, settlementMs: 200, faultAtRound: null, carousel: true });
       client.listen({ lobby: () => {}, view: view => { mySeatId = view.mySeatId; }, state: () => {}, replay: () => {}, legend: () => {} });
       client.joinQueue('D5'); client.startMatch();
+      const seat = client.currentRoom!.state.seats.find(s => s.seatId === mySeatId)!;
+      policyRng = deriveBotRng(seed, seat.index);
       // Scheduling seam only: bound each resolver callback, keeping every combat tick and rule.
       if (pvpMode === 'placeholder') (client.currentRoom as unknown as { options: { sliceTicks: number } }).options.sliceTicks = 25;
     });
@@ -105,13 +130,18 @@ for (const [id, node, tier] of cases) for (const pvpMode of mode === 'bots' ? []
     }
     for (let round = 1; round <= getMultiplayerRoundById(node).ordinal; round++) {
       resolverCheckpoints(() => round, `before ${getMultiplayerRoundByOrdinal(round).roundId}`);
-      it(`reaches ${getMultiplayerRoundByOrdinal(round).roundId}`, async () => {
-        await until(() => client.currentRoom?.state.round === round && ['preparation', 'carousel'].includes(client.currentRoom.state.phase));
-        expect(client.currentRoom!.state.fault).toBeNull();
+      describe(`round ${getMultiplayerRoundByOrdinal(round).roundId}`, () => {
+        beforeAll(async () => {
+          await until(() => client.currentRoom?.state.round === round && ['preparation', 'carousel'].includes(client.currentRoom.state.phase));
+        });
+        it(`reaches ${getMultiplayerRoundByOrdinal(round).roundId}`, () => {
+          expect(client.currentRoom!.state.fault).toBeNull();
+        });
       });
     }
     it('selects through the normal client command and projects its acquisition', () => {
       const room = client.currentRoom!, seat = room.state.seats.find(s => s.seatId === mySeatId)!;
+      expect(seat.alive).toBe(true);
       const choice = seat.match.pendingChoice!; expect(choice.offers).toContain(id);
       if (id === 'brb') expect(client.send({ type: 'shopLock', locked: true, generation: seat.match.shop.generation }).ok).toBe(true);
       expect(client.send({ type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: id }).ok).toBe(true);
@@ -120,10 +150,15 @@ for (const [id, node, tier] of cases) for (const pvpMode of mode === 'bots' ? []
       if (id === 'brb') expect(chosen.shop.locked).toBe(false);
     });
     resolverCheckpoints(() => chosenRound + 1, 'after acquisition');
-    it('commits the next round without a room fault', async () => {
-      const room = client.currentRoom!;
-      await until(() => room.state.round > chosenRound && room.state.phase === 'preparation');
-      expect(room.state.fault).toBeNull();
+    describe('next round', () => {
+      beforeAll(async () => {
+        const room = client.currentRoom!;
+        await until(() => room.state.round > chosenRound && room.state.phase === 'preparation');
+      });
+      it('commits the next round without a room fault', () => {
+        const room = client.currentRoom!;
+        expect(room.state.fault).toBeNull();
+      });
     });
     it('authenticates the resulting snapshot and placeholder counter', () => {
       const room = client.currentRoom!;
