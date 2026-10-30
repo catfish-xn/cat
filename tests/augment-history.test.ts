@@ -32,6 +32,8 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
 const baselineBytes=(text:string)=>canonicalContent(JSON.parse(text, (key, value) => {
   if (key === 'replayDigest') { expect(value).toBe(LOOT_REPLAY_DIGEST); return 'fnv1a32-utf16:18c876b2'; }
   if (key === 'contentDigest') { expect(value).toBe(CONTENT_DIGEST); return 'fnv1a32-utf16:db662e0b'; }
+  // v26 R5 adds a seat-level null entitlement field; only its null form is dropped (as in v26-anomaly-identity-audit).
+  if (key === 'anomalySelection') { expect(value).toBeNull(); return undefined; }
   return value;
 }));
 let acquired: MatchState, advanced: MatchState;
@@ -57,7 +59,9 @@ function starryNightOffer(initial = reachRound('2-1', false, starryNightSeed)): 
   }
   return open;
 }
-const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
+const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v26-neutrals-1424','s13-g2-3-v24-online-rules')
+  .replaceAll('s13-14.24b-g2-3-v26-neutrals-1424','s13-14.24b-g2-3-v24-online-rules')
+  .replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
   .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
   .replaceAll('fnv1a32-utf16:5e8ea7cd','fnv1a32-utf16:db662e0b')
   .replaceAll('fnv1a32-utf16:6546f4ff','fnv1a32-utf16:18c876b2');
@@ -88,7 +92,12 @@ it('keeps four no-owner saves identical to HEAD ee2b019c after identity normaliz
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
   s = accepted(nextRound(s, s.round)); check();
-  expect(hashes).toEqual(['b2241cbf3f5f15734341fbf8ed2f1de589ab77a8ff4b53cffd8b194ad0510e31','318c884b3bc964bb0c225eabc73ed58b665078266ca5f7b3519f714deb7a814f','39c02c0190fa9395576008c55fea45ad3b514407363b0c335376174d3b497f2d','2c29384cb16d144c3036b460ed03093634c8ac0fc4ff5a2b29d56915ea350692']);
+  // The two pre-battle saves still recover the ee2b019c hashes. The last two are v26 re-pins (bisected from
+  // e9384c02): the 14.24 neutrals restore (795ca7f9) changes the 1-2 minion stats and this empty-board loss
+  // from 3 to 2 HP; pve-loot-carryover (c684c3ec) marks the two unearned 1-2 drops `carried` instead of
+  // `forfeited`. Same values as tests/v26-anomaly-identity-audit.test.ts. Were
+  // 39c02c0190fa9395576008c55fea45ad3b514407363b0c335376174d3b497f2d and 2c29384cb16d144c3036b460ed03093634c8ac0fc4ff5a2b29d56915ea350692.
+  expect(hashes).toEqual(['b2241cbf3f5f15734341fbf8ed2f1de589ab77a8ff4b53cffd8b194ad0510e31','318c884b3bc964bb0c225eabc73ed58b665078266ca5f7b3519f714deb7a814f','5ca5b2a467d8437dd6712b6f51e7d4fc0d6485f4a1a1bac9a47ecc0bdbca5456','cbf23d17bd2ae3bb6de517ff9cf5996a2ecf47f7f9529073c54ce98d5a55b01c']);
 });
 const entries = ['object','JSON','serialized'] as const;
 const onlineAttacks: readonly [string, (s: any) => void][] = [
@@ -455,9 +464,13 @@ import { battle, unit } from './combat-helpers';
 it('keeps the real battle ledger and terminal save identical to the independent baseline after identity normalization',()=>{
   const started=startMatchCombat(createMatch(42));if(!started.ok)throw new Error(started.reason);let s=started.state;const events=[...started.events];
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
-  expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
-  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  // v26 re-pin of the approved seed-42 1-2 drift (bisected from e9384c02): 164 ticks/113 events ->
+  // 274/155 after the 14.24 neutrals restore (795ca7f9; m01@156, m02@274) -> 274/153 after melee
+  // pathing (c64a756a; m01@155). Same values as tests/v26-anomaly-identity-audit.test.ts. Were
+  // 0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324 and 99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431.
+  expect(s.combat!.tick).toBe(274);expect(events).toHaveLength(153);
+  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('536cc14b0a3d4245d616eef7a92bb33769fca3e5ea2228c56bdb17cb508ddb83');
+  expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('fc3de4605395549c665e4cbbb9a2f50fee4d9bd97806f8f6320bbe2c87ac6c8f');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{
