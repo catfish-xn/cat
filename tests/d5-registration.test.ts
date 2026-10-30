@@ -100,6 +100,19 @@ it('explicitly rejects an active Black Rose trait without any fielded member', (
   ])).toThrow('Black Rose summon requires a fielded member');
 });
 
+it.each(['player', 'enemy'] as const)('requires an actual %s board member at every active Black Rose tier', team => {
+  const state = createMatch(42);
+  const preparation = { ...state.preparation, units: [
+    { id: 'bench-rose', definitionId: 'morgana', team, starLevel: 1 as const, location: { kind: 'bench' as const, slot: 0 } },
+  ] };
+  for (const tier of [3, 4, 5, 7]) {
+    const trait = { team, traitId: 'black-rose', count: tier, tier, memberDefinitionIds: ['morgana'], memberUnitIds: ['bench-rose'], targetUnitIds: [] };
+    expect(() => projectG23Summons(preparation, [trait])).toThrow(RangeError);
+    expect(() => projectG23Summons(preparation, [trait])).toThrow('Black Rose summon requires a fielded member');
+  }
+  expect(projectG23Summons(preparation, [])).toBe(preparation);
+});
+
 it('supplies shared 2D/3D Chinese card text and the existing missing-icon fallback', async () => {
   await loadAugmentText();
   for (const [id, name] of cases) {

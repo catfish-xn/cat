@@ -105,6 +105,8 @@ it('clears board, bench and summons without sale gold; keeps anvils, pending car
     anomalyBinding:{definitionId:'bulwark',unitId:hero.id,choiceId:'anomaly',boundRound:4},
     persistentGrowth:[{unitId:hero.id,attackDamageBps:500}],
   } as MatchState;
+  // Real staged carousel units have no board/bench body; only their escrow ID exists.
+  expect(s.preparation.units.some(u=>u.id===pending.unitId)).toBe(false);
   expect(()=>validateCarouselMetadata(s)).not.toThrow();
   const withOwner=recordAugmentAcquisition(s,{...s,augments:[{definitionId:id,choiceId,acquiredRound:4}]}),r=applyRestartMission(withOwner);
   expect(r.state.gold).toBe(s.gold);expect(r.state.preparation.units).toEqual([anvil]);
@@ -112,6 +114,7 @@ it('clears board, bench and summons without sale gold; keeps anvils, pending car
   expect(r.state.items[2]).toEqual(s.items[2]);expect(r.state.anomalyBinding).toBeNull();expect(r.state.persistentGrowth).toEqual([]);
   expect(r.events.filter(e=>e.type==='itemsReturned')).toHaveLength(2);
   expect(r.state.resourceProvenance.entries.filter(e=>e.kind==='unit-sold')).toEqual([]);
+  expect(r.state.resourceProvenance.entries.filter(e=>e.kind==='unit-removed').map(e=>e.unitId)).toEqual([hero.id,'unit-2','unit-3']);
   expect(applyRestartMission(r.state)).toEqual({state:r.state,events:[]});
 });
 

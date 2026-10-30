@@ -6,7 +6,13 @@ import { augmentCandidates } from '../src/simulation/augment-offers';
 import { whatYouReallyAreGiftPlan, whatYouReallyAreProgress } from '../src/simulation/augment-d1';
 import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { applyRoundSettlement } from '../src/simulation/round-settlement';
-import { createMatch } from '../src/simulation/match';
+import { createMatch, startPlaceholderMatchCombat, stepPlaceholderMatchCombat } from '../src/simulation/match';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
+import { needsAugmentHistory, recordAugmentAcquisition } from '../src/simulation/augment-history';
+import { createSharedPool, initializeSharedSeat } from '../src/simulation/shared-pool';
+import { freezeOrbLayoutThroughRound } from '../src/simulation/orb-layout';
+import { prepareMatchLoot } from '../src/simulation/loot-runtime';
+import { PlaceholderBattleResolver } from '../src/server/room/battle-resolver';
 import { toSeatPrivateView, toPublicBoard } from '../src/server/room/projection';
 import type { MatchState } from '../src/simulation/match-types';
 import { opening, atRound, receipt, settle } from './d01-helpers';
@@ -21,6 +27,69 @@ beforeAll(() => { base = opening(); });
 const acquire = (s = base) => drainBatch1Gifts({ ...s, augments: [owner] });
 
 describe('D1 What You Really Are with D5 production offers', () => {
+  it('acquires, counts D0 damage and rewards without any augment history', () => {
+    const { augmentHistory: _, ...withoutHistory } = base;
+    const before: MatchState = withoutHistory;
+    const selected = recordAugmentAcquisition(before, { ...before, augments: [owner] });
+    expect(augmentNeedsHistory(ID)).toBe(false);
+    expect(needsAugmentHistory(selected)).toBe(false);
+    expect(selected.augmentHistory).toBeUndefined();
+    const granted = drainBatch1Gifts(selected), completed = settle(granted, { damageDealt: 35 });
+    expect(completed.augmentHistory).toBeUndefined();
+    expect(whatYouReallyAreProgress(completed)).toEqual({ count: 35, completedRound: 4 });
+    expect(receipts(completed)).toMatchObject([
+      { kind: 'item', definitionId: 'bloodthirster' },
+      { kind: 'unit', definitionId: 'warwick', resolution: 'orb' },
+      { kind: 'item', definitionId: 'steraks-gage' },
+    ]);
+    expect(drainBatch1Gifts(JSON.parse(JSON.stringify(completed)))).toEqual(completed);
+  });
+
+  it.each(['local', 'server'] as const)('treats real %s placeholder combat as unknown outgoing damage without a D0 receipt', mode => {
+    const initialized = initializeSharedSeat(createSharedPool('d1-placeholder', 5, { seatCount: 1 }),
+      createMatch(5, { mode: 'shared-deferred' }), 's0', 0);
+    if (!initialized.ok) throw new Error(initialized.reason);
+    const layout = freezeOrbLayoutThroughRound(initialized.pool.orbLayout, 19);
+    if (!layout.ok) throw new Error(layout.reason);
+    const pool = { ...initialized.pool, orbLayout: layout.layout };
+    const round = atRound(mode === 'server' ? initialized.state : base, '4-2');
+    let benchSlot = 0;
+    const state = drainBatch1Gifts({ ...round, augments: [{ ...owner, acquiredRound: 19 }], preparation: { ...round.preparation,
+      units: round.preparation.units.map(u => u.team === 'player' ? { ...u, location: { kind: 'bench' as const, slot: benchSlot++ } } : u) },
+      ...(mode === 'server' ? { m8: { ...round.m8, loot: prepareMatchLoot(round.seed, 19, initialized.state.m8.loot, pool.orbLayout) } } : {}),
+    });
+    let settled: MatchState;
+    if (mode === 'local') {
+      const start = startPlaceholderMatchCombat(state);
+      expect(start.ok).toBe(true);
+      settled = start.state;
+      for (let ticks = 0; settled.phase === 'combat' && ticks < 1201; ticks++) {
+        const step = stepPlaceholderMatchCombat(settled);
+        expect(step.ok).toBe(true); settled = step.state;
+      }
+    } else {
+      const result = new PlaceholderBattleResolver().resolveBattle({ battleId: 'd1-placeholder:19', roomId: 'd1-placeholder',
+        round: 19, roundId: '4-2', roundKind: 'pvp', roomRevision: 0, battleSeed: 5, maxSteps: 1201,
+        seats: [{ seatId: 's0', state }], mirrorOf: null }, pool);
+      expect(result.kind).toBe('placeholder');
+      if (result.kind !== 'placeholder') throw new Error('Expected placeholder result');
+      settled = result.outcomes[0].state;
+    }
+    expect(settled.phase).toBe('settlement');
+    const record = settled.roundResults.at(-1)!;
+    expect(record).toMatchObject({ round: 19, roundKind: 'pvp', settlementId: 'round-19-settled' });
+    expect(Object.hasOwn(record, 'damageDealt')).toBe(false);
+    expect(settled.multiplayer!.receipts).toEqual(state.multiplayer!.receipts);
+    expect(whatYouReallyAreProgress(settled)).toEqual({ count: 0 });
+    expect(toSeatPrivateView(settled).augmentDynamicValues[ID]).toEqual({ values: [0] });
+    expect(receipts(drainBatch1Gifts(settled))).toHaveLength(1);
+    // Even the placeholder identity cannot disguise malformed D0 data.
+    for (const damageDealt of [undefined, null, -1, 35]) {
+      const bad = { ...settled, roundResults: [...settled.roundResults.slice(0, -1), { ...record, damageDealt }] } as MatchState;
+      expect(() => whatYouReallyAreProgress(bad)).toThrow('Invalid D1 damageDealt authority');
+    }
+  });
+
   it('grants one Bloodthirster at acquisition and appears only at 4-2', () => {
     const s = acquire();
     expect(itemCount(s, 'bloodthirster') - itemCount(base, 'bloodthirster')).toBe(1);
