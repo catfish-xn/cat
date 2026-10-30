@@ -26,6 +26,8 @@
 
 受限回合的 `CombatInputBasis.resourcePreparation?:GameState` 保存实际开战持有状态（容量覆盖、暂留 ID 和棋盘位置）；`inputs.preparation` 仍是九格战斗投影。恢复同时认证两份数据、投影相等与公开命令历史；B8 从实际持有状态重放掉落，在结算边界重放容量解除，再认证容量出售／掉落重试及完整最终阵容。阶段 x-7 解除容量不自动重试已延期的直接掉落；原 `pending-capacity` 与出售重试语义不变。开战时无容量覆盖则不增加字段，格式号与历史纪元不变。暂留棋子不能作为异变目标。
 
+2026-10-30 待发重试修复：单人合法容量出售后，`grantDirectLoot(initial:MatchState,terminal:boolean,unitLootPolicy?:UnitLootPolicy,claimedDrops?:readonly FrozenDirectDrop[])` 在未指定 `claimedDrops` 时，先按冻结回合顺序、回合内 `sourceUnitId → slotOrdinal → entryOrdinal` 顺序重试交付轮为当轮的历史 `pending-capacity`，再处理当前计划；返回 `{state,events,upgradeEvents}`，容量仍不足则继续待发、不分配身份或收据。显式领取列表与联机语义保持。B8 恢复重演顺延奖励在战后第一次尝试、出售后再次尝试及实际收据顺序；旧收据不能倒推为结算前已发。历史容量状态恢复必须满足 carry 交付轮等于当轮且战斗已结束；`carried` 的英雄与自选仅允许交付轮在未来或当轮战斗尚未结束；forge 直接掉落满席失败保持 `carried` 且不阻止 Continue，因此也允许交付轮已过或当轮交付战斗已结束，仍须通过冻结 payload、合法顺延来源及资源重演认证。结算首发仍是当轮先于顺延，出售重试仍是旧回合先于当轮。见 [D3 调查与验证](D3_OVER_ENCUMBERED.md#2026-10-30-历史-pending-capacity-出售重试修复)。
+
 ## 2026-10-27 v25-h8：三项历史依赖强化
 
 ## 2026-10-29 PvE 失败扣血（用户 10:55 批准，待统一纪元）

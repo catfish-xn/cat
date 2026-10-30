@@ -125,7 +125,18 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
   let state = initial;
   const events: MatchEvent[] = [], upgradeEvents: UnitUpgradedEvent[] = [];
   if (state.multiplayer && !claimedDrops) return {state, events, upgradeEvents};
-  for (const drop of [...claimedDrops ?? currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
+  // A carried drop can become capacity-pending on a later PvE. It remains in
+  // the same FIFO after that first attempt; its source round must not hide it
+  // from subsequent capacity retries. Only carries due this round may retry.
+  // Preserve round order before slot order.
+  const due = new Set((state.m8.loot.carry ?? []).filter(row => row.deliverRoundId === state.roundDefinitionId).map(row => row.dropId));
+  const pending = new Set(state.m8.loot.direct.filter(value => value.status === 'pending-capacity' && due.has(value.dropId)).map(value => value.dropId));
+  const drops = claimedDrops ? [...claimedDrops].sort(compareLootFreezeSlots) : [
+    ...state.m8.loot.frozen.rounds.filter(round => round.encounterPlan.roundId !== state.roundDefinitionId)
+      .flatMap(round => [...round.encounterPlan.drops].filter(drop => pending.has(drop.dropId)).sort(compareLootFreezeSlots)),
+    ...[...currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots),
+  ];
+  for (const drop of drops) {
     const progress = state.m8.loot.direct.find(value => value.dropId === drop.dropId);
     if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity' && !(claimedDrops && progress?.status === 'carried')) continue;
     if (!claimedDrops && state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');

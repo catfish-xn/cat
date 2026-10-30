@@ -98,3 +98,62 @@
 - 无浏览器连接，未做 2D/3D 实机目视和交互验收。
 
 D5 注册时还须一并纳入内容归档/摘要、内容总数校验与研究阶段标签/禁令生成；本任务不预先开放任何候选。
+
+## 2026-10-30 历史 pending-capacity 出售重试修复
+
+结论：真 bug。没有“旧回合待发改在运力不足结束时统一发放”的规则依据。§权威行为要求先回席、再重试奖励；`M8B_CONTRACT_ADDENDUM.md:130` 要求完成自选后在 settlement 出售释放空间，由领域自动重试；阶段解除本身不触发直接掉落重试的约定仍保留。
+
+原因与定位（以下为修复后的行号）：
+
+- `pve-loot-carry.ts:22` 将非致命败局未击杀载体的奖励顺延至下一 PvE；因此案例中的 2-7 奖励在 3-7 才首次尝试，不是从 2-7 起每轮一直处于容量待发。
+- `match.ts:584` 先发当轮奖励，`:585` 再以显式列表发到期的顺延奖励。`loot-runtime.ts:155` 在容量不足时把英雄变为 `pending-capacity`；`loot-runtime.ts:209` 的到期查询只筛 `carried`，故首次失败后不会再次从该查询出队。
+- `match.ts:424` 检测全部待发、允许合法容量出售，`:437` 调 `grantDirectLoot` 重试。但旧实现 `loot-runtime.ts:128` 只取 `currentPlan(state).encounterPlan.drops`，遗漏来源仍为 2-7 的条目；3-7 本轮条目在该计划内，所以出售后能发放。全局待发守卫仍拦 Continue，旧条目既不丢弃也不发放，实际卡住对局。
+- 原 `b8-restore.ts` 的 `replayCurrentSuffix` 只为当轮 direct 建立待发预期，顺延条目按最终 `granted` 状态倒推为结算前授予；出售重试也只遍历当轮 direct。故原实现中“只有旧待发”的出售结果还会被 `capacity sale boundary` 拒绝恢复。
+
+修复：`loot-runtime.ts:131` 默认按冻结回合顺序收集交付轮为当轮的历史容量待发，再按当前计划处理；每轮内部保持 `sourceUnitId → slotOrdinal → entryOrdinal` 的原顺序。容量再次用尽的条目保留、后续出售继续重试；已授予条目沿原状态和唯一收据跳过。显式 `claimedDrops` 与联机领取仍仅处理指定列表，不提前领取其他奖励。`b8-restore.ts` 独立重演顺延奖励的首次尝试、出售后的 FIFO 重试、完整收据顺序与最终状态，不以最终收据自证更早的发放时机。`content/loot.ts:15` 将运行时修订标识改为 `orb-combo-v17-capacity-fifo-v1`；输入输出、失败原因、存档形状、冻结抽样和 RNG 不变。
+
+两个顺序分别保留：**结算首发是当轮先于顺延**（`match.ts:584-585`，原有行为）；**出售重试按 dropId 排队，即旧回合先于当轮**（`M8_RULES.md:185`）。本修复不改变这两个顺序，恢复重演分别按首发顺序和出售重试顺序验证。
+
+新增 `tests/over-encumbered-pending-capacity.test.ts`：
+
+- `:18` 两个自然种子用公开命令选卡、购买储备并走完阶段；每回合独立验证序列化前缀，沿用原 5 秒限制。
+- `:56` seed 6133 在 3-7 有 4 条旧 2-7 容量待发，首次出售全部发放；seed 6389 有 3 条，第一次按序发 2 条后满席，`:96` 再出售发最后 1 条。出售不重算既有经济、XP、成长、战斗输入或 RNG。
+- `:90` 对象、JSON 对象、规范序列化文本三入口恢复，恢复后的出售结果完全一致；`:110` 拒绝重复/乱序旧收据；`:121` 恢复后继续 4-1 不重发。
+- `:148` 独立纯授予向量用真实冻结 payload，让旧/当轮奖励竞争单个空位，验证逐次 FIFO、重复重试无事件，以及显式领取范围不扩散。
+
+摘要影响（只读重算，未重录任何生成常量、纪元或 golden）：基线 `recomputeContentDigest()` 已为 `fnv1a32-utf16:8f298696`，与保存常量 `1d3bc95f` 不同；本次运行时修订使重算值变为 `fnv1a32-utf16:5b7b22ac`。`recomputeLootReplayDigest()` 前后均为 `fnv1a32-utf16:a56b2c4a`，与保存常量 `73d95fed` 的差异属于基线已有漂移。历史源码 SHA 与修复路线的命令/奖励轨迹也会变化，交由统一重录处理；不宣称纪元门禁已通过。
+
+验证命令均使用 `--maxWorkers=2 --configLoader runner`。本工作区没有浏览器连接，纯领域测试使用忽略目录内的 `artifacts/a4-vitest.config.ts`，只省去原 globalSetup 的浏览器启动，保留原项目筛选、worker setup、断言和超时，并把 Vite 缓存放到可写 `/tmp`。
+
+- 新增专项加 `pve-loot-carryover.test.ts`、`m8-b8-loot-runtime.test.ts`：**103 项通过**，其中新增专项 **82 项通过**。
+- 额外运行的 `m8-b8-live-capacity.test.ts` 在收集期被独立 oracle 的强化候选前提阻塞（期望 `pandoras-items-ii/academic-research/replication`，实际 `noxian-guillotine/academic-research/rebel-resurgence`）；`b8-late-claim-receipt-order.test.ts` 的 **24 项**停在 seed 21 的 2-1 报价不含 `inspiring-epitaph`。两份文件以只读 HEAD 源码替换本次三个生产改动文件重跑，得到相同失败，故保留原测试与 fixture，不重录。
+- `over-encumbered-settlement-restore.test.ts:81` 原路线在 3-7 实际为 **0** 条待发，原断言要求 **3** 条；后续容量出售因此 `wrong-phase`，共 **6 项失败**。同样以只读 HEAD 源码运行完整文件得到 **70 通过／6 失败**，与修复版一致。没有修改该文件的输入或任何断言。
+- 最终指定命令 `npm test -- tests/over-encumbered*.test.ts --maxWorkers=2 --configLoader runner --config artifacts/a4-vitest.config.ts`：**4 文件，331 通过／6 失败**，失败均为上述基线问题；新增专项 **82/82 通过**。日志为忽略目录内 `artifacts/a4-final-d3.log`。`npm run typecheck`、`git diff --check` 均通过。
+
+剩余事项：原路线测试的强化候选/掉落前提与摘要纪元由集成任务统一处理；本修复留在工作区供 Claude 审查提交。未运行全套、Vite build、浏览器或任何 `--write`，未编辑服务器、界面、本地素材、历史 fixture/evidence，也未写入 git。
+
+## 第二轮审核：顺延交付轮防篡改
+
+seed 23 的自然对局在 3-3 settlement 有一条来源 2-7、交付轮 3-7 的英雄处于 `carried`。上一轮实现允许将其篡改为 `pending-capacity` 后恢复，并在出售时提前发放；`retained-terminal` 也缺少交付边界验证。
+
+- `b8-restore.ts` 的 `validateEligibility` 与历史 direct 校验均要求：非当轮来源的 `pending-capacity`／`retained-terminal` 必须有交付轮等于当轮的 carry，且当轮战斗已经 `finished`。`carried` 只允许交付轮晚于当轮，或等于当轮而战斗尚未结束；不允许已到期条目伪装为仍在顺延。
+- `loot-runtime.ts` 的历史 pending 集合只包含 `carry.deliverRoundId === state.roundDefinitionId` 的条目，与恢复重演的 `carriedDirect` 范围一致。即便内存状态被直接篡改，出售也不会提前发放未来交付条目。
+- `tests/over-encumbered-pending-capacity.test.ts` 新增 seed 23 的逐轮公开命令路线，覆盖提前篡改的三入口拒绝（`serializeMatch`、`restoreMatch(obj)`、`restoreMatch(JSON)`）、合法存档三种恢复及续跑一致、出售的实时防御；另用原 seed 6133／6389 路线覆盖交付轮战斗未结束时拒绝容量状态、合法 `carried` 可恢复、战斗结束后拒绝 `carried`。纯授予向量补齐真实到期 carry 前提，原 FIFO 与显式领取断言保留。
+
+本轮新增 **32 项**，专项共 **114 项全部通过**；修复前 seed 23 的两个提前容量状态与出售防御用例均失败，证明回归命中了原漏洞。最终运行：
+
+```sh
+npx vitest run --configLoader=runner --maxWorkers=2 --config artifacts/a4-vitest.config.ts tests/over-encumbered-pending-capacity.test.ts tests/pve-loot-carryover.test.ts tests/m8-b8-loot-runtime.test.ts tests/over-encumbered-settlement-restore.test.ts
+npm run typecheck
+```
+
+四文件 **205 通过／6 失败（211 项，无跳过）**。沿用上轮纯领域配置，未改变任何断言、检查或超时。失败仍是原 settlement 路线 3-7 预期 3 条待发、实际 0 条及其后续 `wrong-phase`。使用 `artifacts/a4-baseline-vitest.config.ts` 只读加载 HEAD 的 `b8-restore.ts`、`loot-runtime.ts`、`content/loot.ts`，复跑后两个文件得 **88 通过／同样 6 失败**，失败用例名称逐项一致，没有新增失败。日志分别为 `artifacts/a4-round2-tests.log`、`artifacts/a4-round2-baseline.log`。`npm run typecheck` 与 `git diff --check` 均通过；未重录纪元、摘要或 golden，未运行全套或 build，改动留在工作区供 Claude 提交。
+
+
+## 第三轮审核：顺延 forge 满席失败的恢复豁免
+
+第二轮的 `pve carry delivery boundary` 误拒合法锻造器：`grantDirectLoot` 的 forge 分支满席时不改状态，交付轮结束后仍为 `carried`，且不阻止 Continue。`b8-restore.ts` 仅为冻结 payload 为 forge、交付轮已过或当轮交付战斗已结束的条目豁免此时间限制；英雄与自选的严格边界、顺延来源认证、收据和资源重演保持。
+
+`tests/over-encumbered-pending-capacity.test.ts` 新增 seed 249 的真实公开命令路线：2-7 的自然金色法球包含完成装锻造器与两个英雄，出售棋盘英雄输掉该轮后顺延到 3-7；九格满席让锻造器保持 `carried`、两个英雄进入 `pending-capacity`。用较早的自然 forge 掉落覆盖与巨蟹铁砧相同的直接授予分支，不改写合法状态、冻结计划或收据。三种恢复形式覆盖交付前后、出售结果一致、Continue 到 4-1、战中逐步续跑一致、4-1 战后及 4-2；每项沿用原超时。负向检查在同一真实状态把英雄进度改回 `carried`，三入口必须明确报交付边界错误，另验证把 forge 冻结 payload 换成 unit 时三入口仍拒绝。
+
+本轮新增 **28 项**，指定两文件共 **145 项全部通过，无跳过**；直接使用仓库配置执行 `npx vitest run --configLoader=runner --maxWorkers=2 tests/over-encumbered-pending-capacity.test.ts tests/pve-loot-carryover.test.ts`，未加临时配置。`npm run typecheck` 与 `git diff --check` 通过。未修改既有断言、超时或阈值，未运行全套、Vite build 或重录，改动留在工作区由 Claude 提交。
