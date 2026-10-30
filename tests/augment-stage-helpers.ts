@@ -220,5 +220,7 @@ export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,10000);
 /** Fixed real-room routes for history augments; no seed scan in regression tests. */
 export const HISTORY_AUGMENT_ROOM_ROUTES = {
   'a-golden-find': { seed: 3, seatId: 's0', node: '4-2' },
-  'forbidden-magic': { seed: 3, seatId: 's1', node: '3-2' },
+  // v26 D5 pool (7953c99a): seed 3 s1 now auto-takes the history augment scoreboard-scrapper at 2-1, so its
+  // history (and restore replay) starts before Cabal; s2 auto-takes clear-mind (no history). Was seatId 's1'.
+  'forbidden-magic': { seed: 3, seatId: 's2', node: '3-2' },
 } as const;

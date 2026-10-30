@@ -6,8 +6,9 @@ import { canonicalContent } from '../../src/simulation/content';
 import { requireAugmentFacts } from '../../src/simulation/augment-history';
 import { voidSwarmPortals } from '../fixtures/m5/oracle.g2.cjs';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:7});
-const seatId='s3',mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+// v26 D5 pool (7953c99a): real 2-1 draw with Void Swarm on a human seat is now seed 76 seat s1 (was seed 7 seat s3).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:76});
+const seatId='s1',mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 const portals=()=>mine().seatMechanics?.receipts.filter(r=>r.kind==='item'&&r.definitionId==='TFT5_Item_ZzRotPortalRadiant')??[];
 afterAll(()=>room.dispose());
 it('B5-73 starts a real room',()=>{room.start();});
