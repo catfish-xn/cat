@@ -93,6 +93,8 @@ export interface StunHalo {
   /** Scene child: the host moves it over the piece's head each frame. */
   readonly object: Group;
   update(seconds: number): void;
+  /** Back to the starting angle, so a pooled ring starts like a new one. */
+  reset(): void;
   dispose(): void;
 }
 
@@ -116,6 +118,7 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
   return {
     object,
     update(seconds) { angle = (angle + seconds * spec.turnsPerSecond * Math.PI * 2) % (Math.PI * 2); place(); },
+    reset() { angle = 0; place(); },
     dispose() { object.removeFromParent(); object.clear(); material.dispose(); },
   };
 }

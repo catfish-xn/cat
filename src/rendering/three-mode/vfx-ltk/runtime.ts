@@ -60,8 +60,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const release = (run: Running, retire = false) => {
     run.fx.object.removeFromParent();
     if (options.budget) options.budget.live -= slots;
-    if (!retire && spareFx.length < SPARE_FX) { spareFx.push(run.fx); return; }
-    run.fx.dispose();
+    if (retire) { run.fx.dispose(); return; }
+    // Least recently parked goes first: a full pool keeps the newest finished systems.
+    while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
+    spareFx.push(run.fx);
   };
   const drainSpare = () => { for (const fx of spareFx) fx.dispose(); spareFx.length = 0; };
   const clear = (preserveWorldEffects = false) => {
@@ -174,10 +176,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop();
         if (run.group) run.until = Math.min(run.until, clock + .5);
       }
-      const uuid = findUnit(id)?.root.uuid;
-      if (uuid) for (let index = spareFx.length - 1; index >= 0; index--) {
-        const key = spareFx[index]!.object.userData.poolKey;
-        if (typeof key === 'string' && key.endsWith(`\n${uuid}`)) spareFx.splice(index, 1)[0]!.dispose();
+      // By unit id, not a lookup: the host may already have dropped the unit from its map.
+      for (let index = spareFx.length - 1; index >= 0; index--) {
+        if (spareFx[index]!.object.userData.poolUnit === id) spareFx.splice(index, 1)[0]!.dispose();
       }
     },
     update(seconds: number, camera: Camera) {
@@ -203,10 +204,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
         // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
-        const importance = effectImportance(spawn);
+        // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
+        const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget && options.budget.live + slots > options.budget.max);
         while (blocked()) {
-          const decision = admitEffect([...running].map(run => run.importance), importance, true);
+          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true);
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
@@ -222,7 +224,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
           duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
           stopAfter: spawn.stopAfter, seed: seed++ };
-        const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}`;
+        // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
+        const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -231,6 +234,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Scheduling is frame-quantized; the visual still expires at its planned
           // timeline end, so a late flight start cannot displace its landing cue.
           fx.object.userData.ltkSystem = spawn.system;
+          fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += slots;
           running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;

@@ -2,12 +2,14 @@
 export type EffectImportance = 'critical' | 'decorative';
 
 /**
- * Damage, projectiles, beams and impacts stay. A caster flourish (cast windup on the source)
- * is decorative and is the first thing removed to make room.
+ * Damage, projectiles, beams, impacts and ground areas stay. A caster flourish (cast windup
+ * on the source) is decorative and is the first thing removed to make room.
  */
-export function effectImportance(cue: { event?: string; anchor?: string }): EffectImportance {
+export function effectImportance(cue: { event?: string; anchor?: string; location?: string }): EffectImportance {
   if (cue.event === 'hit' || cue.event === 'projectile' || cue.event === 'link') return 'critical';
   if (cue.anchor === 'target' || cue.anchor === 'projectile') return 'critical';
+  // A board-located cue is the skill's area on the ground (slam, settlement), not a flourish.
+  if (cue.location === 'board') return 'critical';
   return 'decorative';
 }
 

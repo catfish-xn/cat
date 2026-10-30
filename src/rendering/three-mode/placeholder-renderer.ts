@@ -755,6 +755,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const takeHalo = (): StunHalo => {
     const halo = spareHalos.pop() ?? createStunHalo();
+    halo.reset();
     halo.object.visible = true;
     return halo;
   };
@@ -927,7 +928,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     take: id => {
       const view = pieces.get(id);
       if (!view) return;
-      loadReport.dropped(id); pieces.delete(id); ltk?.stopUnit(id); cancelLunge(view);
+      loadReport.dropped(id); ltk?.stopUnit(id); pieces.delete(id); cancelLunge(view);
       view.stars && (view.stars.object.visible = false); view.overhead.object.visible = false;
       view.halo && (view.halo.object.visible = false);
       return { object: view.root, release: () => removePiece(view) };
