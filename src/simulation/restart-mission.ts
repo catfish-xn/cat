@@ -36,6 +36,8 @@ export function restartMissionRemovedUnit(state: MatchState, unitId: string) {
  * Anvils and carousel escrow are retained; all other board/bench bodies, including summons, leave. */
 export function applyRestartMission(state: MatchState): { state: MatchState; events: readonly MatchEvent[] } {
   const owner = state.augments.find(a => a.definitionId === 'restart-mission');
+  // Public selection calls this only from an augment choice, before combat starts.
+  // A combat roster here is an integration fault, never a second removal path.
   if (state.phase === 'combat') throw new RangeError('Restart mission cannot clear a combat roster');
   if (!owner || owner.acquiredRound !== state.round
     || state.resourceProvenance.entries.some(e => e.kind === 'restart-mission-completed' && e.choiceId === owner.choiceId)) return { state, events: [] };

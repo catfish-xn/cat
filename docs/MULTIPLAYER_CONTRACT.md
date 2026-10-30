@@ -2195,7 +2195,7 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 本节扩展§26的线指令和显示结构；覆盖旧文“只开战召唤赛恩”的描述。新增 `ItemSummonView.kind='sion'`，`itemInstanceId='g23-sion'` 为席位专属位置键，不是物品。仍使用 `moveItemSummon` 的完整字段校验、房间阶段门、服务器规则分派、席位回执和重连状态推送，无新命令、定时器或客户端规则。
 
-`isSummonPreparation(state)` 由 `src/server-entry` 导出；准备期及其 `returnPhase:'preparation'` 的强化选择窗口可显示、移动，包括本地房间与单人。本分支保证强化窗口可拖赛恩；普通英雄在此窗口上下棋盘由 D2 `claude/v26-d2-brb` 解锁，合并后统一窗口语义，不在本分支重复修改。服务器发空数组表示其他阶段没有备战投影；RemoteSession以收到的数组为准，不从被白名单省略的私有相位字段推算。
+`isSummonPreparation(state)` 由 `src/server-entry` 导出；准备期及其 `returnPhase:'preparation'` 的强化选择窗口可显示、移动，包括本地房间与单人。全部召唤物（含赛恩、锻炉及 `itemSummons`）强化窗口可拖；普通英雄在此窗口上下棋盘沿用 D2 的公共部署命令。服务器发空数组表示其他阶段没有备战投影；RemoteSession以收到的数组为准，不从被白名单省略的私有相位字段推算。
 
 项目约定：赛恩默认 `(3,4)`、不占人口/备战席、不可出售/装备，`g23-sion` 位置键整局保留。公开棋盘显示与虚空生物/熔炉一致，带 `{definitionId:'g23-sion',starLevel:1,cell,items:[],summon:true}`，不带命名成员id/保存键；不计普通英雄人口或羁绊，不选作玩家头像。准备期计数与战斗编译共用成员投影，包含纹章、R3复制体及镜厅；服务器只读取投影，不另算阈值。PvP两侧始终传编译羁绊预占格，再镜像坐标，保持赛恩与熔炉准备/开战位置一致。
 

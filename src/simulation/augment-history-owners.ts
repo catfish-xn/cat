@@ -1,7 +1,8 @@
 /** Reserved integration IDs only. This registry does NOT enable offers or implement effects.
  * Future jobs must use these IDs (or update this registry in the same change). */
 export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>> = {
-  // True Colors reads authenticated D0 results/receipts, not incoming player-damage history.
+  // what-you-really-are (True Colors) needs no owner here: progress and rewards read
+  // authenticated D0 roundResults/receipts, not incoming player-damage history.
   'trait-tracker': ['trait-activation'],
   'snipers-nest': ['positions', 'combat-roster', 'pvp-roster'],
   'sponging': ['combat-roster', 'pvp-roster'],
