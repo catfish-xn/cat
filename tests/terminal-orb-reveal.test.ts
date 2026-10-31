@@ -55,7 +55,13 @@ describe('terminal orb rule boundary', () => {
     expect(opened.state.pendingCombatTerminal).toBe(opened.streamInitial);
     expect(opened.state.phase).toBe('preparation');
     expect(opened.state.combat).toBeNull();
-    expect(opened.events.some(e => e.type === 'lootForfeited')).toBe(true);
+    // pve-loot-carryover (8f794062, merged c684c3ec, user-approved 2026-10-29): a surviving 1-2 loss now carries
+    // every unearned planned drop to 1-3 instead of emitting lootForfeited (v25).
+    expect(opened.events.some(e => e.type === 'lootForfeited')).toBe(false);
+    const carried = opened.events.flatMap(e => e.type === 'lootCarried' ? [e] : []);
+    expect(carried.map(e => e.dropId).sort()).toEqual(source.m8.loot.direct.filter(d => d.status === 'planned').map(d => d.dropId).sort());
+    expect(carried.length).toBeGreaterThan(0);
+    expect(carried.every(e => e.deliverRoundId === '1-3')).toBe(true);
     expect(opened.events.some(e => e.type === 'lootRevealed')).toBe(false);
     for (const field of ['gold', 'items', 'playerHp', 'roundResults', 'preparation', 'rngState',
       'rewardRngState', 'choiceRngState', 'sharedPool'] as const) expect(opened.state[field]).toEqual(source[field]);

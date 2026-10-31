@@ -65,7 +65,9 @@ it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restor
   // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
   // Calculated Enhancement uses the first offering empty-board seed whose
   // unchanged opening forgery reaches the P2 validator rather than full replay.
-  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,5):id==='pair-of-fours'?pairOfFoursOffer():offerFor(id);
+  // v26: D5 (7953c99a, merge 3ce71065) makes seed 5 take scoreboard-scrapper (a history owner) before 3-2, so its
+  // forgery fails full replay first; 13 is the first such seed again (v25: 5).
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,13):id==='pair-of-fours'?pairOfFoursOffer():offerFor(id);
   const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
   // Release one real reserve slot after selection to exercise the same escrowed Pair of Fours gift.
@@ -99,7 +101,10 @@ it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restor
 it('full bench escrows all hero gifts, selling retries the same plan and never duplicates a receipt',()=>{
   let s=reachRound('2-1',false,seedFor('all-for-one-ii'));const c=s.pendingChoice!;
   const heroes=Object.keys(UNIT_DEFINITIONS).filter(id=>!UNIT_DEFINITIONS[id].summon).slice(0,9);
-  s={...s,preparation:{...s.preparation,units:[...s.preparation.units.map(u=>u.team==='player'?{...u,location:{kind:'board' as const,cell:{col:0,row:4}}}:u),...heroes.map((definitionId,i)=>({id:`unit-${i+100}`,definitionId,starLevel:3 as const,team:'player' as const,location:{kind:'bench' as const,slot:i}}))]},nextUnitSerial:200};
+  // v26 PvE loot carryover (8f794062, merge c684c3ec) leaves several loot units on this 2-1 roster (v25: only the opening
+  // unit), so each existing player unit moves to its own board cell; the nine-hero full bench is unchanged.
+  const playerIds=s.preparation.units.filter(u=>u.team==='player').map(u=>u.id);
+  s={...s,preparation:{...s.preparation,units:[...s.preparation.units.map(u=>u.team==='player'?{...u,location:{kind:'board' as const,cell:{col:playerIds.indexOf(u.id)%7,row:4+Math.floor(playerIds.indexOf(u.id)/7)}}}:u),...heroes.map((definitionId,i)=>({id:`unit-${i+100}`,definitionId,starLevel:3 as const,team:'player' as const,location:{kind:'bench' as const,slot:i}}))]},nextUnitSerial:200};
   s=accepted(selectChoice(s,c.choiceId,c.generation,'all-for-one-ii'));
   expect(s.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2')).toHaveLength(0);
   const planned=p2GiftPlan(s);s=accepted(sellUnit(s,'unit-100'));

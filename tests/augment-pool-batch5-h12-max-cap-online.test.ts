@@ -8,9 +8,11 @@ import { augmentLevelCap } from '../src/simulation/augment-pool-batch5-h12-progr
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 import { assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
-// Fixed-composition carousel: seed 6 retains the real 4-2 Max Cap offer (v25 used seed 4).
+// Fixed-composition carousel: seed 38 retains the real 4-2 Max Cap offer (v25 used seed 4, v26 drift moved it from 6:
+// D5 3ce71065 and PvE loot carryover c684c3ec change the room's 4-2 offers; 38 is the first seed from 1 with a
+// history-free human seat offering Max Cap within three rerolls).
 describe('B5-84 actual Room',()=>{
- const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:6,carousel:CAROUSEL_RULES_BINDING});
+ const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:38,carousel:CAROUSEL_RULES_BINDING});
  let seatId:string;
  const get=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
  beforeAll(()=>{room.start();});
@@ -25,7 +27,7 @@ describe('B5-84 actual Room',()=>{
    }
    if(get().pendingChoice?.offers.includes('max-cap'))return;
   }
-  throw new Error('seed 6 real room has no Max Cap after three rerolls per human');
+  throw new Error('seed 38 real room has no Max Cap after three rerolls per human');
  });
  afterAll(()=>room.dispose());
  it('XP bought while the offered choice is pending remains legal before acquisition',()=>{

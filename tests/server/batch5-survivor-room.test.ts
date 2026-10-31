@@ -9,6 +9,7 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import type { RoundSettlement, SeatCommand, SeatState } from '../../src/server/room/types';
 import type { MatchEvent, MatchState } from '../../src/simulation/match-types';
 import { runUntil, SEATS, TIMINGS } from './helpers';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { validateRewards } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/oracle.g2.cjs';
 
@@ -72,7 +73,9 @@ describe.each([
           // In the dying-holder vector, one opening win keeps s0 in the same final elimination batch.
           // The surviving-holder route lets s2 win 1-2 so it joins s0/s1's 4-6 elimination batch.
           const sell = [...(holderDies || round >= 2 ? ['s2'] : []), ...(!holderDies || round >= 2 ? ['s0'] : []), ...(round >= 2 ? ['s1'] : []), ...(holderDies && round >= 3 ? ['s7'] : [])].includes(seat.seatId);
-          if (sell) for (const unit of seat.match.preparation.units.filter(u => u.team === 'player'))
+          // pve-loot-carryover (8f794062, merged c684c3ec): a conceding seat now receives its carried PvE loot,
+          // including Armory Key anvils, which cannot be sold (wrong-phase) and never fight; v25 forfeited them.
+          if (sell) for (const unit of seat.match.preparation.units.filter(u => u.team === 'player' && !isAnvil(u.definitionId)))
             command(seat, { type: 'sell', unitId: unit.id });
         }
         if (round === 4 && !holder().match.augments.some(a => a.definitionId === 'survivor')) {
