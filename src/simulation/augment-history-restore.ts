@@ -134,6 +134,26 @@ function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'b
   for (const value of frozen.values()) graph += value;
   return graph;
 }
+function commandsExtend(prefix: ReplayEvidence['commands'], full: ReplayEvidence['commands']): boolean {
+  if (prefix.length === 0 || prefix.length > full.length) return false;
+  return prefix.every((command, index) => {
+    const next = full[index];
+    return next !== undefined && command.name === next.name && command.args === next.args
+      && (index === prefix.length - 1 && command.name === 'stepMatch' ? command.count <= next.count : command.count === next.count);
+  });
+}
+/** Same command list, with only the trailing repeated stepMatch count increased. */
+function stepCountExtended(prev: ReplayEvidence['commands'], next: ReplayEvidence['commands']): boolean {
+  if (prev.length !== next.length || prev.length === 0) return false;
+  for (let i = 0; i < prev.length; i++) {
+    const before = prev[i], after = next[i];
+    if (before.name !== after.name || before.args !== after.args) return false;
+    if (i === prev.length - 1) {
+      if (before.name !== 'stepMatch' || before.count >= after.count) return false;
+    } else if (before.count !== after.count) return false;
+  }
+  return true;
+}
 function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
   // stateText proxies the retained graph. The trace roster sits outside it.
   // Both are UTF-16. Short node texts are charged separately, once per origin.
@@ -143,13 +163,44 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
     if (bytes + frozenBytes <= MAX_OVERSIZED_REPLAY_BYTES) oversizedReplay = {origin,commands,state:freezeContent(state),bytes,frozenBytes};
     return;
   }
-  const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
-  if (previous >= 0) replays.splice(previous, 1);
+  const stored = { origin, commands, state: freezeContent(state), bytes, frozenBytes };
   const candidate = { origin, bytes, frozenBytes };
+  const exact = replays.findIndex(entry => entry.origin === origin && same(entry.commands, commands));
+  if (exact >= 0) {
+    const without = replays.filter((_, index) => index !== exact);
+    replays.splice(exact, 1);
+    if (chargedReplayBytes([...without, candidate]) > MAX_REPLAY_BYTES) oversizedReplay = stored;
+    else replays.push(stored);
+    return;
+  }
+  // Per-tick saves share one slot. Replacing the previous tick keeps the next
+  // step O(1) without stacking every tick until another route is evicted.
+  const stepped = replays.findIndex(entry => entry.origin === origin && stepCountExtended(entry.commands, commands));
+  if (stepped >= 0) {
+    const without = replays.filter((_, index) => index !== stepped);
+    if (chargedReplayBytes([...without, candidate]) <= MAX_REPLAY_BYTES) {
+      replays.splice(stepped, 1);
+      replays.push(stored);
+    } else oversizedReplay = stored;
+    return;
+  }
+  if (replays.length < MAX_REPLAYS && chargedReplayBytes([...replays, candidate]) <= MAX_REPLAY_BYTES) {
+    replays.push(stored);
+    return;
+  }
+  // A 4-7 prefix is ~4.4MB and a tick-126 checkpoint ~5.4MB. Pushing the checkpoint
+  // used to shift the other route's ~2.1MB prefix, so its next serialize replayed
+  // ~10k commands (~11s) and missed the 20s case. Keep every shorter proof in the
+  // shared budget. The checkpoint stays resumable in the single oversized slot,
+  // including for a divergent branch that still needs the shared prefix.
+  if (replays.some(entry => entry.origin === origin && commandsExtend(entry.commands, commands))) {
+    oversizedReplay = stored;
+    return;
+  }
   while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
   // No private expected state or trace payload can be mutated through a later
   // restored command's proof. Pure commands can resume these frozen prefixes.
-  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
+  replays.push(stored);
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
