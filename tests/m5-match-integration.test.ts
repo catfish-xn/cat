@@ -1,7 +1,7 @@
 import { reachRound } from './match-helpers';
 import { boundedFirstNodeOffer } from './augment-stage-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createMatch, selectChoice, setShopLock, rerollShop, buyXp, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
@@ -19,6 +19,39 @@ function fight(state: MatchState) {
   state = start.state;
   while (state.phase === 'combat') state = stepMatch(state).state;
   return choices(state);
+}
+// Same seed-42 commands as the checked walk, without per-tick restore. Callers only use this
+// to reach a later round whose ticks are asserted below; earlier rounds are asserted by their own case.
+function fastForwardRestoreRounds(untilRound: number): MatchState {
+  let state = choices(createMatch(42));
+  for (let round = 1; round < untilRound; round += 1) state = advanceRestoreRound(state, round, false);
+  return state;
+}
+function advanceRestoreRound(state: MatchState, round: number, check: boolean): MatchState {
+  const started = startMatchCombat(state); if (!started.ok) throw new Error(started.reason);
+  state = started.state;
+  while (state.phase === 'combat') {
+    if (check) {
+      const restored = restoreMatch(serializeMatch(state));
+      const live = stepMatch(state);
+      expect(stepMatch(restored)).toEqual(live);
+      state = live.state;
+    } else state = stepMatch(state).state;
+  }
+  state = choices(state);
+  if (check) {
+    expect(state.roundResults).toHaveLength(round);
+    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  }
+  const next = nextRound(state, round); if (!next.ok) throw new Error(next.reason);
+  state = next.state;
+  if (state.pendingChoice?.kind === 'augment') state = choices(state);
+  return state;
+}
+function restoreRounds(fromRound: number, untilRound: number): MatchState {
+  let state = fromRound === 1 ? choices(createMatch(42)) : fastForwardRestoreRounds(fromRound);
+  for (let round = fromRound; round < untilRound; round += 1) state = advanceRestoreRound(state, round, true);
+  return state;
 }
 describe('M5 Match atomic integration', () => {
   it('starts with the approved single hero, then restores the first real augment without an old component package', () => {
@@ -60,44 +93,24 @@ describe('M5 Match atomic integration', () => {
     expect(nextRound(next.state,before.round).state).toBe(next.state);
   });
   describe('per-tick restore through the 2-4 supply', () => {
-    // Serializing every combat tick through 2-3 is ~45s locally (0c676fac) and was killed at 60s
-    // on the loaded CI shard. Hooks share that walk; each stays under the 10s hook limit.
+    // Serializing every combat tick through 2-3 is ~38s here (~45s at 0c676fac) and was killed at 60s
+    // on the loaded CI shard. Each case below does its own rounds inside the approved 60s limit:
+    // 1-2..1-4, then 2-1..2-2, then 2-3 plus the supply assertions. No hook runs the walk.
+    // Earlier rounds are only fast-forwarded with the same seed-42 commands; their ticks stay asserted
+    // in the earlier case. The 60s cap is unchanged.
     const supplyOrdinal = getCatalogRoundById('2-4').ordinal;
-    let walked: MatchState | undefined;
-    let walkedRound = 1;
-    let fighting = false;
-    function advanceRestoreWalk(): void {
-      if (walkedRound >= supplyOrdinal) return;
-      const deadline = performance.now() + 3_500;
-      walked ??= choices(createMatch(42));
-      while (walkedRound < supplyOrdinal && performance.now() < deadline) {
-        if (!fighting) {
-          const started = startMatchCombat(walked);
-          if (!started.ok) throw new Error(started.reason);
-          walked = started.state;
-          fighting = true;
-        }
-        if (walked.phase === 'combat') {
-          const restored = restoreMatch(serializeMatch(walked));
-          const live = stepMatch(walked);
-          expect(stepMatch(restored)).toEqual(live);
-          walked = live.state;
-          continue;
-        }
-        walked = choices(walked);
-        expect(walked.roundResults).toHaveLength(walkedRound);
-        expect(restoreMatch(serializeMatch(walked))).toEqual(walked);
-        const next = nextRound(walked, walkedRound);
-        if (!next.ok) throw new Error(next.reason);
-        walked = next.state;
-        if (walked.pendingChoice?.kind === 'augment') walked = choices(walked);
-        walkedRound += 1;
-        fighting = false;
-      }
-    }
-    for (let hook = 0; hook < 48; hook += 1) beforeAll(advanceRestoreWalk);
-    it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
-      let state = walked!;
+    it('restores each real tick from 1-2 through 1-4', () => {
+      const state = restoreRounds(1, 4);
+      expect(state.roundDefinitionId).toBe('2-1');
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
+    }, 60000);
+    it('restores each real tick from 2-1 through 2-2', () => {
+      const state = restoreRounds(4, 6);
+      expect(state.roundDefinitionId).toBe('2-3');
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
+    }, 60000);
+    it('restores each real tick through 2-3, then supply without creating combat or consuming battle RNG', () => {
+      let state = restoreRounds(6, supplyOrdinal);
       expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
       const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
       const selected=selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!selected.ok)throw new Error(selected.reason);state=selected.state;
@@ -106,7 +119,7 @@ describe('M5 Match atomic integration', () => {
       const paid=nextRound(state,state.round);expect(paid.ok).toBe(true);
       expect(paid.state.gold).toBe(state.roundResults.at(-1)!.goldAfter);expect(paid.state.gold).toBeGreaterThan(gold);
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。逐 tick 推进已挪到上面的 beforeAll，此时限不再覆盖那段走子。
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
     }, 60000);
   });
 });
