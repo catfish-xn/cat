@@ -40,6 +40,13 @@ let oversizedReplay: ReplayEvidence | undefined;
 // save takes the single oversized slot. Bounded so a tick stream cannot fill it.
 const forkReplays: ReplayEvidence[] = [];
 const MAX_FORKS = 2;
+// Displaced oversized checkpoints, outside the shared 8MB budget. The two fork
+// slots keep only the newest linear extensions, so a sibling that diverges at
+// an earlier save (the 4-5 cannon branch) used to miss it and replay the match.
+// Validation is unchanged: a hit still requires this command prefix, a fact
+// prefix, and final canonical equality. A miss still replays from the origin.
+const branchAnchors: ReplayEvidence[] = [];
+const MAX_ANCHORS = 8;
 const MAX_OVERSIZED_REPLAY_BYTES = 2 * LIMIT.bytes;
 function containsNegativeZero(values: readonly unknown[]): boolean {
   const stack = [...values];
@@ -52,7 +59,7 @@ function containsNegativeZero(values: readonly unknown[]): boolean {
 }
 function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
   let best: ReplayEvidence | undefined, bestSteps = -1;
-  for (const entry of [...replays, ...forkReplays, ...(oversizedReplay ? [oversizedReplay] : [])]) {
+  for (const entry of [...replays, ...forkReplays, ...branchAnchors, ...(oversizedReplay ? [oversizedReplay] : [])]) {
     if (entry.origin !== origin || entry.commands.length > commands.length) continue;
     let steps = 0;
     const matches = entry.commands.every((c, i) => {
@@ -211,10 +218,24 @@ function retainDisplacedPrefix(origin: string, commands: ReplayEvidence['command
   if (!fits(entries)) return;
   replays.splice(0, replays.length, ...entries, displaced);
 }
+function rememberAnchor(previous: ReplayEvidence): void {
+  const held = branchAnchors.findIndex(entry => entry.origin === previous.origin && same(entry.commands, previous.commands));
+  if (held >= 0) {
+    const [kept] = branchAnchors.splice(held, 1);
+    branchAnchors.push(kept);
+    return;
+  }
+  branchAnchors.push(previous);
+  while (branchAnchors.length > MAX_ANCHORS) branchAnchors.shift();
+}
 function rememberFork(stored: ReplayEvidence): void {
   const previous = oversizedReplay;
   if (!previous || previous.origin !== stored.origin || same(previous.commands, stored.commands)) return;
   if (!commandsExtend(previous.commands, stored.commands) || stepCountExtended(previous.commands, stored.commands)) return;
+  // The newest extensions stay in the fork slots below. This list keeps the
+  // branch that was just displaced, including when later saves walk down only
+  // one side of it.
+  rememberAnchor(previous);
   const mine = forkReplays.filter(entry => entry.origin === stored.origin && commandsExtend(entry.commands, stored.commands) && !same(entry.commands, previous.commands));
   mine.push(previous);
   while (mine.length > MAX_FORKS) mine.shift();
