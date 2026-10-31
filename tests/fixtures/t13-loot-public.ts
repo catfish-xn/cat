@@ -137,6 +137,11 @@ export async function advanceTerminalRoute(round:number,seed=TERMINAL_SEED) {
   }
   await through(round);
 }
+/** Remember a terminal prefix already produced by replaying a real route save. */
+export function pinTerminalPrefix(state: MatchState, seed = TERMINAL_SEED) {
+  prefixes.set(`terminal${seed}`, state);
+  terminalRoutes.delete(seed);
+}
 export async function terminalPreparation(keep:string|null,col=1,row=7,seed=TERMINAL_SEED) {
   const key=`terminal${seed}`;
   if(!prefixes.has(key)) {
