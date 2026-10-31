@@ -222,10 +222,16 @@ function evictOldestBranches(): void {
  * resumed from a much older shared prefix and replayed the whole stage.
  * Keep that displaced prefix in the shared budget when it still fits. Per-tick
  * growth stays in the one oversized slot. Each other route keeps its longest
- * proof, so a 4-7 checkpoint cannot push out the only Loris prefix. */
+ * proof, so a 4-7 checkpoint cannot push out the only Loris prefix.
+ * Saving the checkpoint that already occupies the slot is not a displacement:
+ * an equal-length command list is that same proof, or more ticks of its trailing
+ * stepMatch. Copying it into the shared budget charges frozen text once per
+ * origin, so the duplicate fits by dropping the shorter board prefix a sibling
+ * deploy still needs. */
 function retainDisplacedPrefix(origin: string, commands: ReplayEvidence['commands']): void {
   const displaced = oversizedReplay;
-  if (!displaced || displaced.origin !== origin || !commandsExtend(displaced.commands, commands) || stepCountExtended(displaced.commands, commands)) return;
+  if (!displaced || displaced.origin !== origin || displaced.commands.length >= commands.length
+    || !commandsExtend(displaced.commands, commands) || stepCountExtended(displaced.commands, commands)) return;
   if (replays.some(entry => entry.origin === origin && same(entry.commands, displaced.commands))) return;
   const entries = [...replays];
   const fits = (list: readonly ReplayEvidence[]) => list.length + 1 <= MAX_REPLAYS && chargedReplayBytes([...list, displaced]) <= MAX_REPLAY_BYTES;

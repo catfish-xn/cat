@@ -62,6 +62,41 @@ const clone = (state: api.MatchState): api.MatchState => {
 };
 
 describe('B8 real simultaneous loot-source deaths', () => {
+  it('resumes the other Loris deploy from the board prefix after one combat checkpoint is saved twice', () => {
+    // The module warmup leaves both 4-7 proofs in the shared budget. Re-admit them
+    // here so this case does not depend on which sibling ran first. Saving one
+    // equipped combat checkpoint twice used to copy that same checkpoint into the
+    // budget: frozen text is charged once per origin, so the duplicate fit by
+    // dropping the shorter board prefix. The other deploy then replayed every
+    // earlier stepMatch. Equip and deploy are not stepMatch, so a prefix hit is zero.
+    serializeMatch(prefix);
+    serializeMatch(lorisPrefix);
+    const equip = (cell: { col: number; row: number }) => {
+      let prepared = partialB8Preparation(lorisPrefix, 'loris');
+      const holder = prepared.preparation.units.find(u => u.team === 'player' && u.definitionId === 'loris')!;
+      for (const [slot, definitionId] of ['shojin', 'gargoyle', 'crownguard'].entries()) {
+        const item = prepared.items.find(i => i.location.kind === 'inventory' && i.definitionId === definitionId)!;
+        prepared = accepted(api.equipItem(prepared, item.id, holder.id, slot));
+      }
+      return accepted(api.deployMatchUnit(prepared, holder.id, { kind: 'board', cell }));
+    };
+    const parked = equip({ col: 6, row: 7 });
+    serializeMatch(parked);
+    let combat = accepted(api.startMatchCombat(parked));
+    while (combat.phase === 'combat' && combat.combat!.tick < 5) combat = api.stepMatch(combat).state;
+    serializeMatch(combat);
+    serializeMatch(combat);
+    const spy = vi.spyOn(api, 'stepMatch');
+    const before = spy.mock.calls.length;
+    try {
+      expect(restoreMatch(serializeMatch(combat))).toEqual(combat);
+      expect(spy.mock.calls.length - before).toBe(0);
+      const sibling = equip({ col: 0, row: 6 });
+      const atSibling = spy.mock.calls.length;
+      expect(restoreMatch(serializeMatch(sibling))).toEqual(sibling);
+      expect(spy.mock.calls.length - atSibling).toBe(0);
+    } finally { spy.mockRestore(); }
+  });
   it('reveals both carrier entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
     while (state.phase === 'combat' && state.combat.tick < 126) state = api.stepMatch(state).state;
