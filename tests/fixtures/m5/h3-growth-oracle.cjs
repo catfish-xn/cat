@@ -6,7 +6,7 @@
  */
 const assert = require('node:assert/strict');
 const {isDeepStrictEqual} = require('node:util');
-const {observedEqual,observedArray,extendObservedArray,identicalPrefix,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
+const {observedEqual,observedArray,extendObservedArray,identicalPrefix,reuseGrowthFacts,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
 const IDS = ['no-scout-no-pivot', 'cooking-pot'];
 const owners = s => s.augments.filter(a => IDS.includes(a.definitionId));
 const roster = s => ({units:s.preparation.units.filter(u=>u.team==='player'),items:s.items});
@@ -43,9 +43,9 @@ function retained(old,refs,next,full,message,exact=false) {
 }
 // Not part of the ledger value compared with the v25 baseline.
 const journalStable=new WeakMap();
-// Growth receipts are sparse. Remember the fact objects already classified so a
-// deaths-only suffix is not filtered again. receipt() still reads the live
-// objects, so an in-place delta edit fails the same assertion.
+// Growth receipts are sparse. reuseGrowthFacts keeps a private prefix and still
+// compares every cached slot; receipt() reads the live objects, so an in-place
+// delta edit fails the same assertion. The cache is not the caller's array.
 const growthFactsCache=new WeakMap();
 function prefix(memory,c,key,full) {
   const kept=retained(memory.observed[key],memory.references?.[key],c[key],full,`H3 retained ${histories[key]}`);
@@ -251,14 +251,9 @@ function checkH3Growth(memory,before,after,command) {
     }
     add(scout,['no-scout-no-pivot',scout.choiceId,b.battleId],[...counts].sort(([a],[b])=>order(a,b)).map(([id,n])=>({...zero(id),healthFlat:20*n,attackDamageBps:150*n,abilityPowerCenti:150*n})));
   }
-  const liveFacts=facts(after),cachedGrowth=growthFactsCache.get(memory);
-  let growthFacts;
-  if(cachedGrowth&&identicalPrefix(liveFacts,cachedGrowth.facts)){
-    growthFacts=cachedGrowth.rows;
-    for(let i=cachedGrowth.facts.length;i<liveFacts.length;i++)if(liveFacts[i].kind==='growth')growthFacts=growthFacts.concat(liveFacts[i]);
-  }else growthFacts=liveFacts.filter(f=>f.kind==='growth');
-  assert.deepEqual(growthFacts.map(receipt),next.expected,'H3 independent complete growth receipts');
-  growthFactsCache.set(next,{facts:liveFacts,rows:growthFacts});
+  const found=reuseGrowthFacts(facts(after),growthFactsCache.get(memory));
+  assert.deepEqual(found.rows.map(receipt),next.expected,'H3 independent complete growth receipts');
+  growthFactsCache.set(next,found.cache);
   next.merges.push(...merges.map(m=>m.event));next.observed=saveObserved(memory,beforeCheckpoint,afterCheckpoint);
   next.references=references(afterCheckpoint);return next;
 }

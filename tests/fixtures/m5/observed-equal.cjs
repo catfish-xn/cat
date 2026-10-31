@@ -167,6 +167,47 @@ function identicalPrefix(next, prior) {
   return true;
 }
 
+// Sparse growth rows. The owned prefix is a private copy of the references and
+// kinds seen at classification time — never the caller's array. Every cached
+// index is compared again (same object and same kind) before any row is reused.
+// A longer caller array whose prefix still matches classifies only its suffix,
+// so a push is still checked. A pop or a replaced slot fails that compare and
+// is rebuilt. Returned rows are the live fact objects, so receipt() still sees
+// an in-place delta edit. A sibling fork that already extended the shared
+// buffer copies its own prefix instead of inheriting that tail.
+function reuseGrowthFacts(facts, cache) {
+  const length = cache ? cache.length : 0;
+  let matched = !!cache && facts.length >= length;
+  if (matched) {
+    const refs = cache.refs, kinds = cache.kinds;
+    for (let i = 0; i < length; i++) if (facts[i] !== refs[i] || facts[i].kind !== kinds[i]) { matched = false; break; }
+  }
+  if (!matched) {
+    const refs = facts.slice(), kinds = [], rows = [];
+    for (let i = 0; i < refs.length; i++) {
+      const fact = refs[i];
+      kinds.push(fact.kind);
+      if (fact.kind === 'growth') rows.push(fact);
+    }
+    return { rows, cache: { refs, kinds, length: refs.length, rows } };
+  }
+  if (facts.length === length) return { rows: cache.rows, cache };
+  const extend = cache.refs.length === length && cache.kinds.length === length;
+  const refs = extend ? cache.refs : cache.refs.slice(0, length);
+  const kinds = extend ? cache.kinds : cache.kinds.slice(0, length);
+  let rows = cache.rows;
+  for (let i = length; i < facts.length; i++) {
+    const fact = facts[i];
+    refs.push(fact);
+    kinds.push(fact.kind);
+    if (fact.kind === 'growth') {
+      if (rows === cache.rows) rows = rows.slice();
+      rows.push(fact);
+    }
+  }
+  return { rows, cache: { refs, kinds, length: refs.length, rows } };
+}
+
 function observedPrefixEqual(next, expected, message) {
   let safe = dense.get(expected);
   if (safe === undefined && Array.isArray(expected) && Object.getPrototypeOf(expected) === Array.prototype
@@ -188,4 +229,4 @@ function observedPrefixEqual(next, expected, message) {
   }
   observedEqual(next.slice(0, expected.length), expected, message);
 }
-module.exports = { observedEqual, observedPrefixEqual, identicalPrefix, observedArray, extendObservedArray, freezeObservedNode, freezeObservation };
+module.exports = { observedEqual, observedPrefixEqual, identicalPrefix, reuseGrowthFacts, observedArray, extendObservedArray, freezeObservedNode, freezeObservation };
