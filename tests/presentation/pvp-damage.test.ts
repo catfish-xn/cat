@@ -109,6 +109,11 @@ describe('authoritative PvP damage presentation', () => {
       [{ col: 1, row: 3 }], [{ col: 1, row: 1 }],
     ]);
   });
+  it('reset and dispose tolerate a root that is not an element', () => {
+    const root = { querySelector: () => null } as unknown as HTMLElement;
+    const fx = createPvpDamageFeedback(root, () => {});
+    expect(() => { fx.reset(); fx.dispose(); }).not.toThrow();
+  });
   it('paints and publishes both sides of a draw exactly once', () => {
     const { fx, root, publish } = setup();
     fx.state(state(), null); fx.view(view());

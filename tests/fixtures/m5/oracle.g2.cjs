@@ -401,7 +401,7 @@ function carryRow(loot,dropId){return (loot.carry??[]).find(row=>row.dropId===dr
 // approved independent plan plus formal source deaths, never from production income.
 function ungrantedLootGold(before,combat){
  if(before.seed===undefined||!combat)return 0;
- const drops=lootPlan(before.seed,before.round).rounds.find(r=>r.encounterPlan.roundId===ROUNDS[before.round-1].roundId)?.encounterPlan.drops??[];
+ const drops=cachedLootPlan(before.seed,before.round).rounds.find(r=>r.encounterPlan.roundId===ROUNDS[before.round-1].roundId)?.encounterPlan.drops??[];
  return drops.filter(d=>d.payload.kind==='gold'&&!before.m8?.loot.receipts.some(r=>r.dropId===d.dropId)
   &&combat.neutralReceipts?.deaths.some(e=>e.unitId===lootCarrier(combat,d.sourceUnitId))
   &&combat.units.some(u=>u.id===lootCarrier(combat,d.sourceUnitId)&&u.team==='enemy'&&!u.alive)).reduce((sum,d)=>sum+d.payload.quantity,0);
@@ -437,11 +437,15 @@ const choiceId=id=>JSON.stringify(['m8b-loot-choice',id]);
 function lootIndex(rng,n){const limit=4294967296n/BigInt(n)*BigInt(n);let state=rng.state,draws=rng.draws;do{state=word(state);draws++;}while(BigInt(state)>=limit);return {index:state%n,rng:{state,draws}};}
 // v17 independent literal/BigInt oracle; no production planner imports.
 function lootPlan(seed,ordinal){return require('../orb-combo-oracle.cjs').lootPlan(seed,ordinal);}
+// Pure in seed and ordinal. Combat ticks re-check the same frozen plan; reuse the
+// object and still deep-equal it against the live freeze below.
+const lootPlanCache=new Map();
+function cachedLootPlan(seed,ordinal){const key=`${seed}:${ordinal}`;let plan=lootPlanCache.get(key);if(!plan){plan=lootPlan(seed,ordinal);lootPlanCache.set(key,plan);}return plan;}
 
 function appended(before,after,key,label){assert.deepEqual(after.slice(0,before.length),before,`${label} append-only`);assert.equal(new Set(after.map(x=>x[key])).size,after.length,`${label} unique identity`);return after.slice(before.length);}
 function bare(event){const {domain,eventSeq,...value}=event;return value;}
 function validateLoot(state){
- const loot=state.m8.loot,expected=lootPlan(state.seed,state.round),frozen=loot.frozen;
+ const loot=state.m8.loot,expected=cachedLootPlan(state.seed,state.round),frozen=loot.frozen;
  assert.equal(frozen.version,'s13-orb-freeze-v17');assert.equal(frozen.seed,state.seed);assert.equal(frozen.throughRoundOrdinal,state.round);
  assert.deepEqual(frozen.rounds,expected.rounds,'independent frozen loot source/payload/fallback');assert.deepEqual(frozen.rng,expected.rng,'independent loot RNG conservation');
  const direct=expected.rounds.flatMap(r=>r.encounterPlan.drops),choices=expected.rounds.flatMap(r=>r.choices);

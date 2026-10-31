@@ -45,7 +45,12 @@ export function createPvpDamageFeedback(root: HTMLElement, publish: (hit: PvpDam
   const pending = new Map<string, { hit: PvpDamage; round: number }>();
   const hits = new Map<string, { damage: number; at: number }>();
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const rowFor = (id: string) => Array.from(root.querySelectorAll<HTMLElement>('.online-seat')).find(row => row.dataset.debug === `online:seat:${id}`);
+  // Callers (and disposed test doubles) may hand a root that is not an element.
+  // querySelectorAll throwing here becomes an unhandled rejection: reset/dispose
+  // run from an uncaught dynamic-import continuation.
+  const seats = () => typeof root?.querySelectorAll === 'function' ? root.querySelectorAll<HTMLElement>('.online-seat') : [];
+  const damageNodes = () => typeof root?.querySelectorAll === 'function' ? root.querySelectorAll('[data-pvp-damage]') : [];
+  const rowFor = (id: string) => Array.from(seats()).find(row => row.dataset.debug === `online:seat:${id}`);
   const paint = () => {
     const now = performance.now();
     for (const [id, hit] of hits) {
@@ -76,14 +81,14 @@ export function createPvpDamageFeedback(root: HTMLElement, publish: (hit: PvpDam
     paint();
     clearTimeout(timer);
     if (hits.size) timer = setTimeout(() => {
-      for (const node of Array.from(root.querySelectorAll('[data-pvp-damage]'))) node.remove();
+      for (const node of Array.from(damageNodes())) node.remove();
       hits.clear(); timer = undefined;
     }, HIT_MS);
   };
   const reset = () => {
     matchId = nextMatchId++;
     seeded = false; latestRound = -1; view = null; opponents.clear(); pending.clear(); hits.clear(); clearTimeout(timer);
-    for (const node of Array.from(root.querySelectorAll('[data-pvp-damage]'))) node.remove();
+    for (const node of Array.from(damageNodes())) node.remove();
   };
   return {
     view(next: PlayerView) {
