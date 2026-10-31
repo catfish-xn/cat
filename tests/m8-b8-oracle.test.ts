@@ -75,9 +75,13 @@ describe('independent B8 oracle arithmetic and frozen reference', () => {
 
 describe('independent B8 oracle checks authentic command transitions', () => {
   it('counts Into the Unknown held ownership through real departure and return, rejecting missing or duplicated resources', async () => {
-    const ledger=new Ledger(api.createMatch(4096));let departures=0,returns=0;
+    // v26 re-pin: D5 (7953c99a) and the 14.24 neutrals (568eeea4) change seed 4096's cannon route; its 4-6
+    // anomaly draws no longer reach Into the Unknown (even rerolling with all its gold). Seed 4114's cannon
+    // route offers it within its first public anomaly reroll; the route option takes it there (instead of
+    // the route's default second draw) and holds a 2-item unit (was seed 4096 without the option).
+    const ledger=new Ledger(api.createMatch(4114));let departures=0,returns=0;
     const stop=new Error('verified D14 return');
-    try {await run(api,{seed:4096,build:'cannon',onStep(before,result,command){
+    try {await run(api,{seed:4114,build:'cannon',anomalyDefinitionId:'into-the-unknown',onStep(before,result,command){
       if(!('events' in result))throw Error(result.reason);
       const after=result.state;
       const departed=before.d14?.phase!=='absent'&&after.d14?.phase==='absent';

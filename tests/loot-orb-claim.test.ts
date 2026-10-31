@@ -18,6 +18,7 @@ import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {createCombat} from '../src/simulation/combat';
 import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
+import {augmentNeedsHistory} from '../src/simulation/augment-history-owners';
 import { foldResourceProvenance } from '../src/simulation/restore-checks/fold-provenance';
 import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
@@ -75,9 +76,15 @@ function pvpSeat() {
     const next=batch(nextSharedRound(pool,[state],round));pool=next.pool;state=next.states[0];
   }
   while(state.phase==='choice') {
-    const c=state.pendingChoice!,r=accept(runSharedMatchCommand(pool,state,{type:'timeoutChoice',round:4,choiceId:c.choiceId,generation:c.generation}));
+    // v26 D5 (7953c99a) changed this seat's 2-1 offers: the timeout default is now Scoreboard Scrapper, an
+    // AUGMENT_HISTORY_OWNERS augment whose online save needs an independent server authority to restore.
+    // These fixtures restore server-free snapshots (as in v25), so choose the first offer without history.
+    const c=state.pendingChoice!,pick=c.kind==='augment'?c.offers.find(id=>!augmentNeedsHistory(id)):undefined;
+    const r=accept(runSharedMatchCommand(pool,state,pick?{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:pick}
+      :{type:'timeoutChoice',round:4,choiceId:c.choiceId,generation:c.generation}));
     pool=r.pool;state=r.state;
   }
+  expect(state.augmentHistory).toBeUndefined();
   return {pool,state};
 }
 function pvpReceipt(state:MatchState,loss=false):RoundSettlementReceipt {

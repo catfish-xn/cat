@@ -22,8 +22,12 @@ it('Cooking Pot is a gold offer at 2-1 only',()=>{
  for(const node of ['2-1','3-2','4-2']){expect(augmentOfferAllowed('cooking-pot',[],{node,fieldedTraits:[],blocked:[]})).toBe(node==='2-1');expect(augmentPool('gold',[],[],`round:${node}:augment`,[]).includes('cooking-pot')).toBe(node==='2-1');}
 });
 it('real commands grant one pan and 50 permanent HP at the next entry, with authenticated restores',()=>{
+ // v26 re-pin (D5 pool +4 cards, 7953c99a): the old first-seed scan over 0..100 (v25: seed 41, 3 rerolls, 313-tick
+ // 2-1 fight) now lands on seed 39 (0 rerolls) whose 3v3 2-1 fight runs 778 ticks; every forged-history restore
+ // replays it, so the case exceeded 5000ms. Seed 2185 is the shortest public 2-1 Cooking Pot route in 0..5000
+ // (no reroll, 184-tick fight); the same cheap draw below still has to prove the public offer.
  let found:{seed:number;rerolls:number}|undefined;
- for(let seed=0;seed<=100&&!found;seed++){
+ for(const seed of [2185]){
   const m=createMatch(seed),tier=resolveAugmentTier(m,'round:2-1:augment'),filter={node:'2-1',fieldedTraits:[],blocked:[]};
   const initial=generateChoices(augmentCandidates(tier,[],[],openingEncounterId(m),filter),m.choiceRngState);
   let offers=initial.offers,removed=[...offers],rng=initial.choiceRngState;

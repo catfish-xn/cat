@@ -44,9 +44,12 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // Hash of this same public command sequence after the D5 re-pin (seed 57). Computed from
   // serializeMatch of that route; not a content-identity or ur-i3 re-record.
   // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
+  // v26 identity-only refresh (ec1ce026, v26-neutrals-1424 epoch): the save bytes differ from the D5 pin
+  // 14cc123e20bea6891bfefb28e78d78c8fbae55b9d2328d391acb837964cc00dc only in contentDigest
+  // bbfbe0dd->9dc693dd and the frozen loot replayDigest 10ece6a9->a56b2c4a; history order and all other bytes unchanged.
   const save=serializeMatch(started);
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('14cc123e20bea6891bfefb28e78d78c8fbae55b9d2328d391acb837964cc00dc');
+    .toBe('a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a');
   expect(restoreMatch(save)).toEqual(started);
 });
 

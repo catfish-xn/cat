@@ -25,6 +25,7 @@ import { accepted, reachRound, resolveM5Choices, emptyBoard, freeze } from './ma
 import { BattleHistory } from '../src/replay/history';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import { captureAugmentHistoryAuthority } from '../src/simulation/augment-history';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 
 const melSeeds=new Map<number,number>(),goldSeeds=new Map<number,number>(),lootSeeds=new Map<number,number>();
 let viktorSeed=0;
@@ -158,7 +159,8 @@ it('tampered or missing prior subscription receipts and rewards are rejected, ne
 });
 
 /** Real admission, three real PvE command paths, then trusted PvP settlement receipts. */
-function sharedThrough(seed:number,target:number,count=2,capacities?:Readonly<Record<string,number>>){
+/** `avoid`: augment ids the route never picks while another offer exists (default none, so other routes are unchanged). */
+function sharedThrough(seed:number,target:number,count=2,capacities?:Readonly<Record<string,number>>,avoid:readonly string[]=[]){
   let pool=createSharedPool(`batch-${seed}`,seed,{seatCount:count,...(capacities?{capacities}:{})}),states:MatchState[]=[];
   for(let i=0;i<count;i++){const r=initializeSharedSeat(pool,createMatch(100+i,{mode:'shared-deferred'}),i===0?'solo':`seat-${i}`,i);if(!r.ok)throw Error(r.reason);pool=r.pool;states.push(r.state);}
   const first=refreshSharedShops(pool,states,1);if(!first.ok)throw Error(first.reason);pool=first.pool;states=[...first.states];
@@ -166,14 +168,14 @@ function sharedThrough(seed:number,target:number,count=2,capacities?:Readonly<Re
     for(let i=0;i<count;i++){
       let state=states[i];
       const command=(c:import('../src/simulation/shared-pool-types').SharedMatchCommand)=>{const r=runSharedMatchCommand(pool,state,c);if(!r.ok)throw Error(`${round}/${i}/${c.type}:${r.reason}`);pool=r.pool;state=r.state;};
-      while(state.phase==='choice'){const c=state.pendingChoice!;if(c.step==='target'){state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));continue;}command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:c.offers.find(x=>x!=='placebo')??c.offers[0]});}
+      while(state.phase==='choice'){const c=state.pendingChoice!;if(c.step==='target'){state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));continue;}command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:c.offers.find(x=>x!=='placebo'&&!avoid.includes(x))??c.offers.find(x=>!avoid.includes(x))??c.offers[0]});}
       if(state.phase==='preparation'){
         if(state.m8.round.kind==='pvp'){
           const e=resolveRoundEconomy({roundId:state.roundDefinitionId,result:'playerWin',gold:state.gold,hp:state.playerHp,level:state.level,xp:state.xp,streak:state.streak,enemySurvivors:0,augments:state.augments});
           command({type:'settleRound',receipt:{version:'multiplayer-settlement-v1',settlementId:`b-${round}-${i}`,battleId:`battle-${round}-${i}`,seatId:state.multiplayer!.seatId,round,roundId:state.roundDefinitionId,settlementEligible:true,result:'win',damage:0,baseDamage:e.baseDamage,opposingSurvivors:0,growth:[],combatTicks:0,combatEventCount:1}});
         }else{state=emptyBoard(state);command({type:'startCombat'});}
       }
-      while(state.phase==='choice'){const c=state.pendingChoice!;if(c.step==='target'){state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));continue;}command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:c.offers[0]});}
+      while(state.phase==='choice'){const c=state.pendingChoice!;if(c.step==='target'){state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));continue;}command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:c.offers.find(x=>!avoid.includes(x))??c.offers[0]});}
       states[i]=state;
     }
     const r=nextSharedRound(pool,states,round);if(!r.ok)throw Error(`advance ${round}: ${r.reason}`);pool=r.pool;states=[...r.states];
@@ -284,7 +286,13 @@ it('boot is only a resolved presentation event: no resources, no pity, no legacy
   expect([r.state.gold,r.state.items,r.state.consumables,r.state.preparation,streams(r.state)]).toEqual([base.gold,base.items,base.consumables,base.preparation,streams(base)]);
 });
 it('real shared lifecycle continues gold subscriptions through 6-7 into overtime 8 and restores',()=>{
-  const {pool,states}=sharedThrough(goldSeeds.get(0)!,46);
+  // v26 D5 offers/stage bans (7953c99a) moved this route onto server-history augments (tomb-raider, then
+  // mirrored-monetization): a shared seat holding one needs facts only the room attaches (acquisition table, PvP
+  // deaths), which this pool-only route with synthetic PvP receipts never has, so restore/startCombat rightly reject
+  // it ('Invalid tomb raider acquisition table', 'missing deaths'). Keep the route off AUGMENT_HISTORY_OWNERS.
+  const historyOwners=Object.keys(AUGMENT_HISTORY_OWNERS);
+  const {pool,states}=sharedThrough(goldSeeds.get(0)!,46,2,undefined,historyOwners);
+  expect(states.flatMap(s=>s.augments.map(a=>a.definitionId)).filter(id=>historyOwners.includes(id))).toEqual([]);
   for(const s of states){
     // Capture the trusted command result before serializing the candidate; online history requires a separate server checkpoint.
     const authority=captureAugmentHistoryAuthority(s);
@@ -347,11 +355,16 @@ it('item subscription survives strict save before/after pickup and refuses repea
   let open=reachRound('2-1',false,lootSeeds.get(8)!),before:MatchState|undefined;
   for(let slot=0;!before;slot++){
    const c=open.pendingChoice!;
-   before=c.offers.map(id=>resolveM5Choices(accepted(selectChoice(open,c.choiceId,c.generation,id)))).find(s=>s.items.length===0);
+   // v26 PvE loot carryover (c684c3ec): the empty-board 1-2/1-3 losses now pay their loot at 1-3/1-4, so the
+   // 2-1 inventory is no longer empty (was items.length===0). The augment must still add no item of its own.
+   before=c.offers.map(id=>resolveM5Choices(accepted(selectChoice(open,c.choiceId,c.generation,id)))).find(s=>JSON.stringify(s.items)===JSON.stringify(open.items));
    if(!before){expect(slot).toBeLessThan(3);open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
   }
   const restored=restoreMatch(serializeMatch(before)),orb=openingRewardOrbs(restored)[0];
-  expect(restored.items).toHaveLength(0);expect(crownTeamSizeBonus(readG23Progress(restored))).toBe(0);
+  // Every held item is a carried PvE loot receipt (was toHaveLength(0) before c684c3ec); none comes from the subscription.
+  expect(restored.items).toEqual(open.items);
+  expect(restored.items.map(i=>i.id).sort()).toEqual(restored.m8.loot.receipts.flatMap(r=>r.grantedItemIds).sort());
+  expect(crownTeamSizeBonus(readG23Progress(restored))).toBe(0);
   const result=claimOrb(restored,orb.orbId,restored.round);expect(result.ok).toBe(true);if(!result.ok)return;
   expect(crownTeamSizeBonus(readG23Progress(result.state))).toBe(1);
   expect(restoreMatch(serializeMatch(result.state))).toEqual(result.state);

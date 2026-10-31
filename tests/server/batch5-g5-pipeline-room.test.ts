@@ -100,7 +100,9 @@ it('the common real claim command also bonuses a later natural prismatic orb, an
   expect(pipelineBonusPlan(extraFact)).toHaveLength(2); expect(pipelineExtraOrbs(extraFact)).toEqual(pipelineExtraOrbs(s));
 });
 describe('2-7 orb queued in the next 3-1 battle', () => {
-  const reviewRoute = findG5RoomOffer('prismatic-pipeline', s => s.augmentTierSeed === 16 && s.multiplayer?.seatId === 's2');
+  // 14.24 neutrals (568eeea4) + PvE loot carryover (8f794062): on the old route (seed 16, s2) the 2-7 source survives, so the
+  // pipeline orb is carried to 3-7 instead of being claimable at 3-1. Seed 38, s0 still kills it at 2-7.
+  const reviewRoute = findG5RoomOffer('prismatic-pipeline', s => s.augmentTierSeed === 38 && s.multiplayer?.seatId === 's0');
   const session = makeRoom(new TwoSidedBattleResolver(), { seed: reviewRoute.seed });
   const current = () => session.room.state.seats.find(s => s.seatId === reviewRoute.seatId)!.match;
   afterAll(() => session.room.dispose());

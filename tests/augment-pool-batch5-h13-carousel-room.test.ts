@@ -9,8 +9,10 @@ import { requireAugmentFacts } from '../src/simulation/augment-history';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 
 // Integrated-pool public routes: Salvage Bin+ at seed 11, Pandora III at seed 6; no runtime seed scan.
+// v26 re-pin (D5 pool +4 cards 7953c99a, 14.24 neutrals 568eeea4): seed 11 no longer offers Salvage Bin+ by round 12
+// to any seat within three slot rerolls; seed 8 is the first carousel-binding seed from 0 that does (s1, one reroll; seed 3's s7 draw is blocked by another seat's copy).
 for (const [id, seed, at, supply] of [
-  ['salvage-bin-plus', 11, 12, 14], ['artifactory', 0, 12, 14], ['pandoras-items-iii', 6, 4, 7],
+  ['salvage-bin-plus', 8, 12, 14], ['artifactory', 0, 12, 14], ['pandoras-items-iii', 6, 4, 7],
 ] as const) describe(`${id} with the production carousel binding`, () => {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed, carousel: CAROUSEL_RULES_BINDING });
   let seatId: string;

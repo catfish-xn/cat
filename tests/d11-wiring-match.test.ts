@@ -16,12 +16,24 @@ import { toCombatViewState } from '../src/simulation/combat-replay-view';
 import { openingEncounterId } from '../src/simulation/opening-encounter';
 import type { MatchState, MatchCommandResult } from '../src/simulation/match';
 
+// The test fields the level-many most expensive heroes; All For One I only shows its bonus
+// when one of them is a 1-cost (the n>0 obligation below).
+const fieldsOneCost=(s:MatchState)=>{
+  const units=s.preparation.units.filter(u=>u.team==='player'&&!isAnvil(u.definitionId));
+  return [...units].sort((a,b)=>UNIT_DEFINITIONS[b.definitionId].cost-UNIT_DEFINITIONS[a.definitionId].cost).slice(0,s.level).some(u=>UNIT_DEFINITIONS[u.definitionId].cost===1);
+};
 function seedFor(id:string){
   // Draw cheap 2-1 candidates first, then verify each candidate through the real public opening.
   // Replaying every non-offering seed inside a case exceeds the default timeout with 224 augments.
+  // v26 D5 (7953c99a) moved All For One I's first 2-1 seed to 8, whose three fielded heroes are all
+  // 2-costs (vander/ziggs/leona), so its 1-cost bonus would be vacuous; require a fielded 1-cost (seed 100).
   for(let from=0;from<1000;){
     const seed=firstNodeSeed(id,1000-from,from);from=seed+1;
-    if(openingEncounterId(api.createMatch(seed))!=='trainer-golems'&&reachRound('2-1',false,seed).pendingChoice?.offers.includes(id))return seed;
+    if(openingEncounterId(api.createMatch(seed))==='trainer-golems')continue;
+    const open=reachRound('2-1',false,seed),c=open.pendingChoice;
+    if(!c?.offers.includes(id))continue;
+    if(id==='all-for-one-i'&&!fieldsOneCost(accepted(api.selectChoice(open,c.choiceId,c.generation,id))))continue;
+    return seed;
   }
   throw Error('D11 offer seed budget');
 }

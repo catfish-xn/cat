@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Camera, Group, Scene, Texture, Vector3 } from 'three';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { drawBufferPoolStats, flushDrawBufferPool, resetDrawBufferPoolStats } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/drawBufferPool';
 import { createSkillFeel } from '../src/rendering/three-mode/skill-feel';
 import { createScoutStage } from '../src/rendering/three-mode/scout-stage';
 import { DEFAULT_METER_COLORS } from '../src/rendering/three-mode/unit-overhead';
@@ -9,11 +10,18 @@ import { syntheticIndex, syntheticSystem, num } from './vfx-ltk-synthetic';
 import type { BoardFrame } from '../src/rendering/board-feed';
 
 describe('late-game visual resource counts (synthetic CPU-only)', () => {
-  it('releases all 240 LTK draw geometries/materials over 40 rounds, retaining only the shared texture until library disposal', async () => {
+  // ltk-buffer-pool (70b33ba9, docs/CURSOR_ltk-buffer-pool.md) intentionally returns a finished effect's draw
+  // geometry to a bounded size pool instead of disposing it; the runtime flushes the pool on shutdown. The old
+  // check (every geometry disposed at the end of each round) is replaced by a stronger bound: the 240 draws reuse
+  // exactly the 6 geometries of round 0, no geometry is ever disposed while pooled, and the runtime flush then
+  // disposes all 6. Materials stay per-draw and are still all released every round.
+  it('reuses 6 pooled LTK draw geometries for 240 draws over 40 rounds, releases every material per round, and flushes the pool and shared texture on disposal', async () => {
     const texture = new Texture(), releaseTexture = vi.spyOn(texture, 'dispose');
     const library = createVfxLibrary('/synthetic/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem({ lifetime: num(5) }), readTexture: async () => texture });
     const prepared = await library.load('sample'), root = new Group(), camera = new Camera(), scene = new Scene();
-    let geometries = 0, materials = 0, created = 0;
+    flushDrawBufferPool(); resetDrawBufferPoolStats();
+    let materials = 0, created = 0;
+    const seen = new Set<object>(), disposed = new Set<object>();
     try {
       for (let round = 0; round < 40; round++) {
         const effects = Array.from({ length: 6 }, (_, seed) => createLtkParticles(prepared, {
@@ -22,18 +30,23 @@ describe('late-game visual resource counts (synthetic CPU-only)', () => {
         for (const fx of effects) {
           scene.add(fx.object);
           for (const draw of fx.draws) {
-            created++; geometries++; materials++;
-            draw.object.geometry.addEventListener('dispose', () => geometries--);
+            created++; materials++;
+            const geometry = draw.object.geometry;
+            if (!seen.has(geometry)) { seen.add(geometry); geometry.addEventListener('dispose', () => disposed.add(geometry)); }
             draw.material.addEventListener('dispose', () => materials--);
           }
         }
         for (let frame = 0; frame < 32; frame++) for (const fx of effects) fx.update(1 / 60, camera);
         for (const fx of effects) { expect(fx.finished).toBe(true); fx.dispose(); fx.dispose(); }
-        expect({ round, geometries, materials, sceneNodes: scene.children.length }).toEqual({ round, geometries: 0, materials: 0, sceneNodes: 0 });
+        expect({ round, geometries: seen.size, disposedGeometries: disposed.size, materials, sceneNodes: scene.children.length })
+          .toEqual({ round, geometries: 6, disposedGeometries: 0, materials: 0, sceneNodes: 0 });
         expect(releaseTexture).not.toHaveBeenCalled();
       }
       expect(created).toBe(240);
-    } finally { library.dispose(); }
+      expect(drawBufferPoolStats.quadAlloc + drawBufferPoolStats.projectionAlloc + drawBufferPoolStats.ribbonAlloc + drawBufferPoolStats.meshAlloc).toBe(6);
+      expect(drawBufferPoolStats.quadReuse + drawBufferPoolStats.projectionReuse + drawBufferPoolStats.ribbonReuse + drawBufferPoolStats.meshReuse).toBe(234);
+    } finally { flushDrawBufferPool(); library.dispose(); }
+    expect(disposed.size).toBe(seen.size);
     expect(releaseTexture).toHaveBeenCalledTimes(1);
   });
 
