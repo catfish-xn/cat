@@ -169,19 +169,27 @@ function preparationElapsed(s:MatchState):number {
   return s.augmentHistory ? augmentPreparationElapsed(s.augmentHistory,s.round) ?? 0 : 0;
 }
 interface Trace { readonly origin: MatchState; readonly commands: AppendLog<HistoryCommand>; readonly tail?: HistoryCommand; readonly previousBattle: PreviousAugmentBattle }
+/** The previous battle restore's replay derives for a solo origin (initializeAugmentTrace). */
+function originPreviousBattle(s: MatchState): PreviousAugmentBattle {
+  const basis=s.combatInputBasis;
+  return s.combat&&basis ? {status:'recorded',round:s.round,roundId:s.roundDefinitionId,battleId:s.combat.combatId!,roster:historyRoster({...s,preparation:basis.inputs.preparation,items:basis.inputs.items})} : {status:s.round===1?'none':'unavailable'};
+}
 function traceFromProof(s: MatchState): Trace {
   const proof = s.augmentHistory?.proof;
-  const commands = proof?.kind === 'solo' ? proof.commands : [];
-  return { origin: proof?.kind === 'solo' ? proof.origin : s,
-    commands: createAppendLog(commands.slice(0,-1)), tail: commands.at(-1), previousBattle: {status:'unavailable'} };
+  if (proof?.kind !== 'solo') {
+    // An untraced state (one the engine did not hand out, e.g. a structured clone) becomes the proof origin itself, so
+    // its previous battle must be the one restore's replay of that origin derives; otherwise the live acquire fact and
+    // the replay disagree and the legal save is rejected.
+    return { origin: s, commands: createAppendLog(), previousBattle: !s.multiplayer && !s.augmentHistory ? originPreviousBattle(s) : {status:'unavailable'} };
+  }
+  const commands = proof.commands;
+  return { origin: proof.origin, commands: createAppendLog(commands.slice(0,-1)), tail: commands.at(-1), previousBattle: {status:'unavailable'} };
 }
 const traces = new WeakMap<MatchState, Trace>();
 let depth = 0;
 export function initializeAugmentTrace(s: MatchState): MatchState {
   if (!s.multiplayer && s.openingEncounter.mode !== 'shared-deferred' && !needsAugmentHistory(s)) {
-    const basis=s.combatInputBasis;
-    const previousBattle:PreviousAugmentBattle=s.combat&&basis ? {status:'recorded',round:s.round,roundId:s.roundDefinitionId,battleId:s.combat.combatId!,roster:historyRoster({...s,preparation:basis.inputs.preparation,items:basis.inputs.items})} : {status:s.round===1?'none':'unavailable'};
-    traces.set(s, { origin: s, commands: createAppendLog(), previousBattle });
+    traces.set(s, { origin: s, commands: createAppendLog(), previousBattle: originPreviousBattle(s) });
   }
   return s;
 }

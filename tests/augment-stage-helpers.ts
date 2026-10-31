@@ -58,7 +58,8 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
 export const TRIFECTA_NAMI_REVIEW_SEED = 257 as const;
 
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
-  'all-that-shimmers-plus':{node:'3-2',seed:3},
+  // v26 D5 (7953c99a) pool: seed 3 (old value) now offers mentorship-ii/big-grab-bag/two-much-value; 4 is the first seed with it unrerolled.
+  'all-that-shimmers-plus':{node:'3-2',seed:4},
   'roll-the-dice':{node:'3-2',seed:7,rerolls:[0]},
   'diversified-portfolio-plus':{node:'3-2',seed:6},
   'contested':{node:'3-2',seed:12},
@@ -102,7 +103,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'epoch-plus':{node:'3-2',seed:11},
   'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
   'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
-  'geniuses':{node:'4-2',seed:16,fielded:true,rerolls:3},
+  // v26 D5 (7953c99a) pool: fielded seed 16 (old value) ends with sword-overflow/...; 20 is the first fielded seed from 0
+  // offering Geniuses after the same three slot rerolls.
+  'geniuses':{node:'4-2',seed:20,fielded:true,rerolls:3},
   'golemify':{node:'3-2',seed:18,rerolls:[0]},
   'item-collector-i':{node:'3-2',seed:40},
   'item-collector-ii':{node:'3-2',seed:4},

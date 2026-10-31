@@ -16,6 +16,7 @@ import type {G23RewardBundle} from '../src/simulation/g2-3-economy';
 import {advanceG23Economy,decideG23Market,type G23BattleFacts} from '../src/simulation/g2-3-economy';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {augmentAcquisition} from '../src/simulation/augment-acquisition';
+import {augmentNeedsHistory} from '../src/simulation/augment-history-owners';
 import {P2_ITEM_GRANTS} from '../src/simulation/content/s13-augments-p2';
 
 /**
@@ -30,7 +31,9 @@ function choose(state:MatchState):MatchState{
  const c=state.pendingChoice!;
  const grants=(definitionId:string)=>{const a=augmentAcquisition({definitionId,choiceId:c.choiceId,acquiredRound:state.round});
   return definitionId in P2_ITEM_GRANTS||a.items.length>0||a.forge!==null||a.remover;};
- const id=c.kind==='augment'?c.offers.find(id=>!grants(id))??c.offers[0]:c.offers[0];
+ // v26 D5 (7953c99a) moved the routes' offers onto history-proof augments (AUGMENT_HISTORY_OWNERS), whose restore replays
+ // every public command and cannot replay this file's fixture grants; prefer a quiet card that is not one of them.
+ const id=c.kind==='augment'?c.offers.find(id=>!grants(id)&&!augmentNeedsHistory(id))??c.offers.find(id=>!grants(id))??c.offers[0]:c.offers[0];
  return ok(selectChoice(state,c.choiceId,c.generation,id));
 }
 function preparation(input:MatchState):MatchState{

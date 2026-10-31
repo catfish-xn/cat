@@ -61,7 +61,12 @@ describe('B8 default Match own restore', () => {
     const state = accepted(startMatchCombat(emptyBoard(createMatch(42))));
     expect(state.combat?.tick).toBe(0); expect(state.combatInputBasis).not.toBeNull();
     expect(state.resourceProvenance.entries.at(-1)).toMatchObject({kind:'combat-growth-committed',sourceDeltas:[]});
-    expect(state.m8.loot.direct[0].status).toBe('forfeited'); roundTrip(state);
+    // pve-loot-carryover (8f794062, docs/CURSOR_pve-loot-carryover.md, user-approved 2026-10-29): the surviving
+    // 1-2 loser now carries every unearned drop to 1-3 instead of forfeiting it (was: direct[0].status 'forfeited').
+    const ids = state.m8.loot.frozen.rounds[0].encounterPlan.drops.map(d => d.dropId);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(state.m8.loot.direct).toEqual(ids.map(dropId => ({ dropId, status: 'carried', receiptId: null })));
+    expect(state.m8.loot.carry).toEqual(ids.map(dropId => ({ dropId, deliverRoundId: '1-3' }))); roundTrip(state);
   });
   it('rejects missing, forged or changed basis and running resources', () => {
     const state = accepted(startMatchCombat(createMatch(42)));
