@@ -64,10 +64,16 @@ function replayPrefix(origin: string, commands: ReplayEvidence['commands'], fact
     if (!matches) continue;
     const priorFacts = entry.state.augmentHistory?.facts ?? [];
     // A candidate may only extend the independently generated fact prefix. At
-    // an identical command boundary all facts must match, including absence.
-    // A miss always reconstructs from an earlier prefix or the validated origin.
+    // an identical command boundary a same-length fact list was already replayed
+    // into this cache entry, so a different list cannot be produced by replaying
+    // those commands and is rejected here instead of repeating the combat.
+    // A different fact count still replays: a command can record an extra fact
+    // on a later call. A shorter command prefix still reconstructs.
     const exact = entry.commands.length === commands.length && entry.commands.at(-1)?.count === commands.at(-1)?.count;
-    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) continue;
+    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) {
+      if (exact && priorFacts.length === facts.length) historyCheck(false, 'replayed facts/state mismatch');
+      continue;
+    }
     if (steps > bestSteps) { best = entry; bestSteps = steps; }
   }
   return best;
