@@ -73,3 +73,46 @@ describe('shared loot validation cache boundaries', () => {
     expect(() => assertSharedPoolConservation(source.pool, [changedSeed])).toThrow('invalid-seat-state');
   });
 });
+
+function carriedCombat() {
+  const { pool, states: [state] } = room(undefined, 1);
+  const started = accept(runSharedMatchCommand(pool, state, { type: 'startCombat' }));
+  const stepped = accept(runSharedMatchCommand(started.pool, started.state, { type: 'step' }, undefined, true));
+  if (stepped.state.phase !== 'combat' || !stepped.state.combat) throw new Error('combat did not start');
+  return stepped;
+}
+
+describe('carried combat ticks', () => {
+  it('rejects a pool or roster edited between two ticks', () => {
+    const clean = carriedCombat();
+    const next = accept(runSharedMatchCommand(clean.pool, clean.state, { type: 'step' }, undefined, true));
+    expect(next.state.combat?.tick).toBe(clean.state.combat!.tick + 1);
+    assertSharedPoolConservation(next.pool, [next.state]);
+
+    const stock = carriedCombat();
+    const definitionId = Object.keys(stock.pool.available)[0]!;
+    // The published records are readonly to callers, but the objects are still mutable.
+    // An in-place edit is the case the carried-tick seal has to notice.
+    (stock.pool.available as { [id: string]: number })[definitionId] += 1;
+    expect(runSharedMatchCommand(stock.pool, stock.state, { type: 'step' }, undefined, true))
+      .toEqual({ ok: false, pool: stock.pool, state: stock.state, reason: 'invalid-pool' });
+
+    const roster = carriedCombat();
+    const unit = roster.state.preparation.units.find(entry => entry.team === 'player');
+    if (!unit) throw new Error('missing unit');
+    const alternate = Object.keys(roster.pool.available).find(id => id !== unit.definitionId);
+    if (!alternate) throw new Error('missing alternate');
+    Object.assign(unit, { definitionId: alternate });
+    expect(runSharedMatchCommand(roster.pool, roster.state, { type: 'step' }, undefined, true))
+      .toEqual({ ok: false, pool: roster.pool, state: roster.state, reason: 'invalid-seat-state' });
+
+    const external = carriedCombat();
+    const externalId = Object.keys(external.pool.available)[0]!;
+    const substituted = {
+      ...external.pool,
+      available: { ...external.pool.available, [externalId]: external.pool.available[externalId] + 1 },
+    };
+    expect(runSharedMatchCommand(substituted, external.state, { type: 'step' }, undefined, true))
+      .toEqual({ ok: false, pool: substituted, state: external.state, reason: 'invalid-pool' });
+  });
+});

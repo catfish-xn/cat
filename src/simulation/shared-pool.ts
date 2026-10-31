@@ -145,12 +145,39 @@ function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   pool.seats=pool.seats.map(s=>s===seat?{...seat,revision,shop}:s);if(bumpPool) pool.revision++;
   return {...state,shop,sharedPool:{poolId:pool.poolId,seatId,revision}};
 }
+// A carried tick may skip the input walk only for the exact pair this process just checked.
+// The boolean is not that proof: an in-place stock edit keeps the same objects, and a caller
+// can pass a different pair. The seal is a value snapshot, so either change runs the full walk.
+const provenPairs = new WeakMap<SharedPoolState, { readonly state: MatchState; readonly stock: string; readonly roster: string }>();
+function stockSeal(pool: SharedPoolState): string {
+  const parts: Array<string | number | boolean> = [pool.version, pool.poolId, pool.seed, pool.revision, pool.naturalRound, pool.seatCount, pool.order.join(',')];
+  for (const id of SHOP_CATALOG) parts.push(pool.initial[id], pool.available[id]);
+  for (const seat of pool.seats) parts.push(seat.seatId, seat.seatIndex, seat.released, seat.revision, seat.shop.generation);
+  for (const row of pool.shops) parts.push(row.seatId, row.generation, row.slot, row.definitionId, row.starLevel ?? 0);
+  for (const row of pool.holdings) parts.push(row.seatId, row.unitId, row.definitionId, row.sources.join(','));
+  for (const row of pool.pending) parts.push(row.seatId, row.dropId, row.receiptId, row.definitionId, row.starLevel ?? 1);
+  for (const row of pool.rewards) parts.push(row.seatId, row.receiptId, row.definitionId, row.resolution, row.gold, row.starLevel ?? 1);
+  for (const row of pool.carouselReservations) parts.push(row.reservationId, row.definitionId, row.seatId ?? '');
+  for (const row of pool.carouselReceipts) parts.push(row.id, row.status, row.definitionId, row.unitId ?? '');
+  return parts.join('\0');
+}
+function rosterSeal(state: MatchState): string {
+  const parts: Array<string | number> = [state.seed, state.phase, state.sharedPool?.revision ?? -1, state.multiplayer?.status ?? ''];
+  for (const unit of state.preparation.units) if (unit.team === 'player') parts.push(unit.id, unit.definitionId, unit.starLevel);
+  return parts.join('\0');
+}
+function sealProvenPair(pool: SharedPoolState, state: MatchState): void {
+  provenPairs.set(pool, { state, stock: stockSeal(pool), roster: rosterSeal(state) });
+}
+function pairStillProven(pool: SharedPoolState, state: MatchState): boolean {
+  const proven = provenPairs.get(pool);
+  return !!proven && proven.state === state && proven.stock === stockSeal(pool) && proven.roster === rosterSeal(state);
+}
 function active(pool:SharedPoolState,state:MatchState,inputAlreadyConserved=false):void {
   requirePool(pool.carouselReservations.length===0,'wrong-phase');
-  // The placeholder combat loop passes the pool/state pair just returned by the previous
-  // successful command, and it does not publish or edit that pair before the next tick.
-  // The output is still checked below. Any other caller keeps the full input walk.
-  if(!inputAlreadyConserved)assertSharedPoolConservation(pool,[state]);
+  // Placeholder combat passes the pair returned by the previous successful command. Skip the
+  // input walk only when that same pair is still sealed. Each tick still checks its own output.
+  if(!inputAlreadyConserved || !pairStillProven(pool, state))assertSharedPoolConservation(pool,[state]);
   requirePool(!pool.seats.find(s=>s.seatId===state.sharedPool!.seatId)!.released&&state.multiplayer?.status==='active','seat-eliminated');
 }
 function transact(pool:SharedPoolState,state:MatchState,
@@ -162,10 +189,11 @@ function transact(pool:SharedPoolState,state:MatchState,
     if(!result.ok) return failure(pool,state,result.reason);
     requirePool(safe(result.state.gold)&&safe(result.state.nextMatchEventSeq),'invalid-seat-state');
     reconcileHoldings(draft,state,result.state,poolEvents,preSold);
-    if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) return {ok:true,pool,state,events:result.events,poolEvents};
+    if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) { sealProvenPair(pool, state); return {ok:true,pool,state,events:result.events,poolEvents}; }
     const next=finish(draft,result.state);
     if(inputAlreadyConserved)assertCarriedPoolConservation(draft,[next],pool);
     else assertSharedPoolConservation(draft,[next]);
+    sealProvenPair(draft, next);
     return {ok:true,pool:draft,state:next,events:result.events,poolEvents};
   } catch(error) {return failure(pool,state,reasonOf(error,onUnexpectedError));}
 }
