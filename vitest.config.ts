@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { BaseSequencer, type TestSpecification } from 'vitest/node';
 import { configDefaults, defineConfig } from 'vitest/config';
@@ -32,7 +32,7 @@ class RouteFirstSequencer extends BaseSequencer {
     };
     return sorted.sort((a, b) => weight(b) - weight(a));
   }
-  // CI runs the fast project as eight `--shard` machines. Vitest's own shard cuts the
+  // CI runs the fast project as twelve `--shard` machines. Vitest's own shard cuts the
   // hash-sorted file list into equal counts, which left one shard with over twice the
   // work of another. Assign files greedily by measured duration instead (longest first,
   // to the least-loaded shard), so every file still lands in exactly one shard.
@@ -66,11 +66,13 @@ const SHARD_ONE_SOLO = [
   // "opens the independently sampled late PvE orb…": ~3.4 s alone, 5.5 s on a shared shard.
   'tests/server/batch5-g5-pipeline-late-room.test.ts',
 ];
+// A renamed or deleted entry would leave shard 1 silently empty; fail loudly instead.
+for (const file of SHARD_ONE_SOLO) if (!existsSync(new URL(`./${file}`, import.meta.url))) throw new Error(`SHARD_ONE_SOLO lists missing ${file}`);
 export default defineConfig({
   test: {
     sequence: { sequencer: RouteFirstSequencer },
     projects: [
-      { test: { name: 'fast', pool: 'threads', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
+      { test: { name: 'fast', pool: 'threads', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: process.env.FAST_MAX_WORKERS ? Number(process.env.FAST_MAX_WORKERS) : '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
       // Keep long-route heap/module state out of later wall-clock measurements.
       { test: { name: 'timing', isolate: true, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
