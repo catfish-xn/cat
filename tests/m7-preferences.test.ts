@@ -1,8 +1,19 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reducedMotion, resetPreferenceCache, setReducedMotion } from '../src/presentation/preferences';
 
 const g = globalThis as Record<string, unknown>;
-afterEach(() => { delete g.localStorage; delete g.matchMedia; resetPreferenceCache(); });
+// The fast project runs with isolate:false, so another file in this worker can call
+// reducedMotion() or leave matchMedia/localStorage behind. Clear that before every
+// case; the assertions below still require the system preference, a storage failure,
+// and a real persisted value.
+function isolatePreferences(): void {
+  vi.unstubAllGlobals();
+  delete g.localStorage;
+  delete g.matchMedia;
+  resetPreferenceCache();
+}
+beforeEach(isolatePreferences);
+afterEach(isolatePreferences);
 
 describe('M7 presentation preferences', () => {
   it('defaults to the system preference and survives missing storage', () => {

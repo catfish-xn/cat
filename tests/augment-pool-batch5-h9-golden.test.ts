@@ -1,5 +1,5 @@
-import { beforeAll, expect, it } from 'vitest';
-import { buyXp, deployMatchUnit, equipItem, nextRound, rerollShop, selectChoice, selectAnomalyTarget, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { expect, it } from 'vitest';
+import { buyXp, createMatch, deployMatchUnit, equipItem, nextRound, rerollShop, selectChoice, selectAnomalyTarget, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { equipArmyItems } from './fixtures/army-items';
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -7,7 +7,8 @@ import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { goldenFindGoldPlan, GOLDEN_FIND_SOURCE, settleBatch5H9History } from '../src/simulation/augment-pool-batch5-h9';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
-import { accepted, fieldBench, reachRoundFielded, resolveM5Choices } from './match-helpers';
+import { getCatalogRoundByOrdinal } from '../src/simulation/round-selectors';
+import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
 import { rerollAugment } from '../src/simulation/match';
 import { augmentPool, freeRerollCredits } from './fixtures/m5/oracle.g2.cjs';
 
@@ -18,33 +19,50 @@ let deployment: MatchState['preparation']['units'];
 /** v25 pool: first fielded 4-2 seed in 0..100 after rerolls 0/1/2 (seed 17); draw scripted when the slot drifts.
  * v26 D5 (7953c99a) and the 14.24 neutral fights moved the route: seed 17 no longer shows a-golden-find after those rerolls.
  * Re-searched 0..149 on the same route: hits 5, 30, 79. Seeds 5 and 30 already own a history augment before 4-2
- * (lucky-gloves-plus / forward-thinking), so the legacy checkpoint below would replay the whole game and its hook exceeds
- * the default limit; seed 79 keeps the v25 shape (no augmentHistory before the pick). */
+ * (lucky-gloves-plus / forward-thinking), so the legacy checkpoint below would replay the whole game.
+ * Seed 79 keeps the v25 shape (no augmentHistory before the pick: sentinel-slam and item-grab-bag-i).
+ * Walking 1-2 through 4-2 in one hook is about 7s alone and misses the 10s hook cap when the worker is busy,
+ * so each public round is its own case. */
 const H9_GOLDEN_FIND = { seed: 79, rerolls: [0, 1, 2] as const };
-function goldenFindOffer() {
-  let state = reachRoundFielded('4-2', H9_GOLDEN_FIND.seed);
+const H9_ROUTE = Array.from({ length: getCatalogRoundByOrdinal(19).ordinal }, (_, index) => getCatalogRoundByOrdinal(index + 1).roundId);
+function playOneRound(current: MatchState): MatchState {
+  let next = resolveM5Choices(current);
+  if (next.phase === 'preparation') {
+    next = accepted(startMatchCombat(fieldBench(next)));
+    while (next.phase === 'combat') next = stepMatch(next).state;
+  }
+  next = resolveM5Choices(next);
+  if (next.phase !== 'settlement') throw new Error(`Cannot leave ${next.roundDefinitionId}/${next.phase}`);
+  return accepted(nextRound(next, next.round));
+}
+it('offers Golden Find only at 4-2 in the production and independent pools',()=>{
+  for(const node of ['2-1','3-2','4-2']){
+    expect(augmentOfferAllowed('a-golden-find',[],{node,fieldedTraits:[],blocked:[]})).toBe(node==='4-2');
+    expect(augmentPool('gold',[],[],`round:${node}:augment`,[]).includes('a-golden-find')).toBe(node==='4-2');
+  }
+});
+it('opens the golden-find seed at 1-2', () => {
+  state = createMatch(H9_GOLDEN_FIND.seed);
+  expect(state.roundDefinitionId).toBe(H9_ROUTE[0]);
+});
+for (const roundId of H9_ROUTE.slice(1)) it(`reaches ${roundId} on the public golden-find route`, () => {
+  state = playOneRound(state);
+  expect(state.roundDefinitionId).toBe(roundId);
+});
+it('acquires Golden Find from a legacy checkpoint that owns no earlier history', () => {
+  expect(state.roundDefinitionId).toBe('4-2');
   for (const slot of H9_GOLDEN_FIND.rerolls) {
     const choice = state.pendingChoice!;
     state = accepted(rerollAugment(state, choice.choiceId, choice.generation, slot));
   }
-  return state;
-}
-beforeAll(() => {
-  // A genuine legacy checkpoint bounds the authenticated trace to this acquisition onward.
-  const before = goldenFindOffer();
-  const grant=grantMechanicUnit(before,{receiptId:'h9-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
+  expect(state.augmentHistory).toBeUndefined();
+  const grant=grantMechanicUnit(state,{receiptId:'h9-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
   expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);
   const open = restoreMatch(serializeMatch(grant.state)), c = open.pendingChoice!;
   anomalyTarget=open.preparation.units.find(u=>u.definitionId==='viktor')!.id;
   expect(c.offers).toContain('a-golden-find');
   priorCredits = freeRerollsAvailable(open);
   state = acquired = accepted(selectChoice(open,c.choiceId,c.generation,'a-golden-find'));
-});
-it('offers Golden Find only at 4-2 in the production and independent pools',()=>{
-  for(const node of ['2-1','3-2','4-2']){
-    expect(augmentOfferAllowed('a-golden-find',[],{node,fieldedTraits:[],blocked:[]})).toBe(node==='4-2');
-    expect(augmentPool('gold',[],[],`round:${node}:augment`,[]).includes('a-golden-find')).toBe(node==='4-2');
-  }
 });
 it('grants ten spendable shop rerolls immediately, survives restore and refuses duplicate selection',()=>{
   expect(freeRerollsAvailable(acquired)).toBe(priorCredits+10);expect(freeRerollCredits(acquired)).toBe(priorCredits+10);

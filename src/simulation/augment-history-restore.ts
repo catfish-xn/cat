@@ -35,6 +35,11 @@ const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
 // outside the shared budget; it is bounded by the validated history payload
 // limit, and the same exact-prefix and full-state comparisons apply to it.
 let oversizedReplay: ReplayEvidence | undefined;
+// The two most recent displaced checkpoints of a route. A sibling branch (the
+// parked anvil, the pre-combat carry) resumes from one of them after the latest
+// save takes the single oversized slot. Bounded so a tick stream cannot fill it.
+const forkReplays: ReplayEvidence[] = [];
+const MAX_FORKS = 2;
 const MAX_OVERSIZED_REPLAY_BYTES = 2 * LIMIT.bytes;
 function containsNegativeZero(values: readonly unknown[]): boolean {
   const stack = [...values];
@@ -47,7 +52,7 @@ function containsNegativeZero(values: readonly unknown[]): boolean {
 }
 function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
   let best: ReplayEvidence | undefined, bestSteps = -1;
-  for (const entry of oversizedReplay ? [...replays, oversizedReplay] : replays) {
+  for (const entry of [...replays, ...forkReplays, ...(oversizedReplay ? [oversizedReplay] : [])]) {
     if (entry.origin !== origin || entry.commands.length > commands.length) continue;
     let steps = 0;
     const matches = entry.commands.every((c, i) => {
@@ -154,13 +159,75 @@ function stepCountExtended(prev: ReplayEvidence['commands'], next: ReplayEvidenc
   }
   return true;
 }
+function commandSteps(commands: ReplayEvidence['commands']): number {
+  let steps = 0;
+  for (const command of commands) steps += command.count;
+  return steps;
+}
+/** The oversized slot holds one long checkpoint. Replacing it used to drop the
+ * only copy of the previous checkpoint, so a sibling branch or an earlier save
+ * resumed from a much older shared prefix and replayed the whole stage.
+ * Keep that displaced prefix in the shared budget when it still fits. Per-tick
+ * growth stays in the one oversized slot. Each other route keeps its longest
+ * proof, so a 4-7 checkpoint cannot push out the only Loris prefix. */
+function retainDisplacedPrefix(origin: string, commands: ReplayEvidence['commands']): void {
+  const displaced = oversizedReplay;
+  if (!displaced || displaced.origin !== origin || !commandsExtend(displaced.commands, commands) || stepCountExtended(displaced.commands, commands)) return;
+  if (replays.some(entry => entry.origin === origin && same(entry.commands, displaced.commands))) return;
+  const entries = [...replays];
+  const fits = (list: readonly ReplayEvidence[]) => list.length + 1 <= MAX_REPLAYS && chargedReplayBytes([...list, displaced]) <= MAX_REPLAY_BYTES;
+  const dropShortest = (choose: (entry: ReplayEvidence) => boolean): boolean => {
+    let index = -1, best = Infinity;
+    for (let i = 0; i < entries.length; i++) {
+      if (!choose(entries[i])) continue;
+      const steps = commandSteps(entries[i].commands);
+      if (steps < best) { best = steps; index = i; }
+    }
+    if (index < 0) return false;
+    entries.splice(index, 1);
+    return true;
+  };
+  // Shorter prefixes of this same line are redundant once the displaced checkpoint
+  // is kept. Never drop the longest one: a sibling branch still resumes from it.
+  while (!fits(entries)) {
+    const same = entries.filter(entry => entry.origin === origin && commandsExtend(entry.commands, displaced.commands));
+    const longestSame = same.reduce((max, entry) => Math.max(max, commandSteps(entry.commands)), -1);
+    if (dropShortest(entry => entry.origin === origin && commandsExtend(entry.commands, displaced.commands) && commandSteps(entry.commands) < longestSame)) continue;
+    // Another route keeps its longest proof (the 4-7 / Loris case). Extra older
+    // proofs of that route can make room for this checkpoint.
+    if (!dropShortest(entry => {
+      if (entry.origin === origin) return false;
+      let longest = -1, peers = 0;
+      for (const other of entries) if (other.origin === entry.origin) { peers++; longest = Math.max(longest, commandSteps(other.commands)); }
+      return peers > 1 && commandSteps(entry.commands) < longest;
+    })) break;
+  }
+  if (!fits(entries)) return;
+  replays.splice(0, replays.length, ...entries, displaced);
+}
+function rememberFork(stored: ReplayEvidence): void {
+  const previous = oversizedReplay;
+  if (!previous || previous.origin !== stored.origin || same(previous.commands, stored.commands)) return;
+  if (!commandsExtend(previous.commands, stored.commands) || stepCountExtended(previous.commands, stored.commands)) return;
+  const mine = forkReplays.filter(entry => entry.origin === stored.origin && commandsExtend(entry.commands, stored.commands) && !same(entry.commands, previous.commands));
+  mine.push(previous);
+  while (mine.length > MAX_FORKS) mine.shift();
+  const others = forkReplays.filter(entry => entry.origin !== stored.origin);
+  forkReplays.splice(0, forkReplays.length, ...others, ...mine);
+  while (forkReplays.length > MAX_FORKS * 2) forkReplays.shift();
+}
+function parkOversized(stored: ReplayEvidence): void {
+  rememberFork(stored);
+  retainDisplacedPrefix(stored.origin, stored.commands);
+  oversizedReplay = stored;
+}
 function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
   // stateText proxies the retained graph. The trace roster sits outside it.
   // Both are UTF-16. Short node texts are charged separately, once per origin.
   const frozenBytes = frozenTextUnits(stateText);
   const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
   if (bytes + frozenBytes > MAX_REPLAY_BYTES) {
-    if (bytes + frozenBytes <= MAX_OVERSIZED_REPLAY_BYTES) oversizedReplay = {origin,commands,state:freezeContent(state),bytes,frozenBytes};
+    if (bytes + frozenBytes <= MAX_OVERSIZED_REPLAY_BYTES) parkOversized({origin,commands,state:freezeContent(state),bytes,frozenBytes});
     return;
   }
   const stored = { origin, commands, state: freezeContent(state), bytes, frozenBytes };
@@ -169,7 +236,7 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
   if (exact >= 0) {
     const without = replays.filter((_, index) => index !== exact);
     replays.splice(exact, 1);
-    if (chargedReplayBytes([...without, candidate]) > MAX_REPLAY_BYTES) oversizedReplay = stored;
+    if (chargedReplayBytes([...without, candidate]) > MAX_REPLAY_BYTES) parkOversized(stored);
     else replays.push(stored);
     return;
   }
@@ -181,7 +248,7 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
     if (chargedReplayBytes([...without, candidate]) <= MAX_REPLAY_BYTES) {
       replays.splice(stepped, 1);
       replays.push(stored);
-    } else oversizedReplay = stored;
+    } else parkOversized(stored);
     return;
   }
   if (replays.length < MAX_REPLAYS && chargedReplayBytes([...replays, candidate]) <= MAX_REPLAY_BYTES) {
@@ -194,7 +261,7 @@ function rememberReplay(origin: string, commands: ReplayEvidence['commands'], st
   // shared budget. The checkpoint stays resumable in the single oversized slot,
   // including for a divergent branch that still needs the shared prefix.
   if (replays.some(entry => entry.origin === origin && commandsExtend(entry.commands, commands))) {
-    oversizedReplay = stored;
+    parkOversized(stored);
     return;
   }
   while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
