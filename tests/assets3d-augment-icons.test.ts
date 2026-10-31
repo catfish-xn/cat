@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Offline JavaScript tooling has no declaration file.
-import { augmentSpecs, augmentStageDirectory, collectApiNames, downloadCommands, mergeAugmentManifest, stageAugmentIcons } from '../scripts/assets3d/augment-icons.mjs';
+import { augmentSpecs, collectApiNames, downloadCommands, mergeAugmentManifest, stageAugmentIcons } from '../scripts/assets3d/augment-icons.mjs';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { S13_AUGMENT_ASSETS } from '../src/presentation/s13-augment-asset-manifest';
 
