@@ -122,6 +122,14 @@
       "currentSha256": "129953ccf5690880963de6ccc22b3fada7707c1aa59763e905cb0520031a09ae",
       "firstDifferentByte": 0
     },
+    "tests/augment-history-branch-budget.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5112,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ce56ddf8717bc06cd12385cd659a6e1fada5415e17f0b41a150ac25cd6a152a3",
+      "firstDifferentByte": 0
+    },
     "tests/augment-history-long-restore.test.ts": {
       "previousBytes": 4643,
       "currentBytes": 4975,
@@ -341,10 +349,10 @@
     },
     "tests/augment-pool-batch5-h9-golden.test.ts": {
       "previousBytes": 7435,
-      "currentBytes": 7884,
+      "currentBytes": 12125,
       "previousSha256": "24b59c17121f72958eade50416c83bdd91fda779e15ad3ecd422b2263d2a5395",
-      "currentSha256": "81adc3eb6640e89272316a41d4a112555359273c86959b03fbf8287cae82c256",
-      "firstDifferentByte": 1313
+      "currentSha256": "8be2d41b6d2e6e70b78ea61618995d655d6bfcc1c1c3df01ece0eb5bed782077",
+      "firstDifferentByte": 9
     },
     "tests/augment-pool-batch5-h9-pvp-attribution.test.ts": {
       "previousExists": false,
@@ -885,7 +893,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1556f38743e5cc2a4fbc2b4eeac1541834937fde46d94416a064c3dd528ecc82",
+      "currentSha256": "ca8705b53f1cd691cafcc42b107073d155f2a829df60299d85f5878f49b5b035",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1247,6 +1255,13 @@
       "previousSha256": "a76aa3c94f306e32f10ec0307a81fd389e01142d9bb2714a12d73ded1a3e606f",
       "currentSha256": "9a933c4cc51a35ca88cd063ae2fb36dcd1342deb0148d5156dabdd88a88499f5",
       "firstDifferentByte": 178
+    },
+    "tests/m7-preferences.test.ts": {
+      "previousBytes": 1300,
+      "currentBytes": 1714,
+      "previousSha256": "988a552a7281a82a376d583508e7b646669afb7a1689d39f59b891c5970e34cc",
+      "currentSha256": "408c4f32fbf38209f2531c34764b298e5a64343026aee20c61ed7aa8fb3e9bc4",
+      "firstDifferentByte": 20
     },
     "tests/m8-b10-encounter-outcomes.test.ts": {
       "previousBytes": 12384,
@@ -1611,9 +1626,9 @@
     "tests/over-encumbered-pending-capacity.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 22641,
+      "currentBytes": 23067,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "287d72897d5472228af13f5253651a247fbaa5fc0b491e960678b508197d94d2",
+      "currentSha256": "5524538e430fd2162147891a6253ddecdd1d7a576e29c4e5a73d9ec7241124d7",
       "firstDifferentByte": 0
     },
     "tests/over-encumbered-portfolio-restore.test.ts": {
@@ -1627,9 +1642,9 @@
     "tests/over-encumbered-settlement-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11484,
+      "currentBytes": 12293,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7b28e58a776008338bc06c9aee1dab93ff4316236641b37bf3ff204c57663cc1",
+      "currentSha256": "500c1e38d0e5ccbe3c08073d1e6c7bcf25476cfa33d140be8081a208d6c68222",
       "firstDifferentByte": 0
     },
     "tests/over-encumbered.test.ts": {
@@ -2023,6 +2038,14 @@
       "currentBytes": 4950,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "4af28b57dbd7cbe5b9d44e183aa091c01b88483757a9f3970a9e205be122d9d9",
+      "firstDifferentByte": 0
+    },
+    "tests/replay-cache-branch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3590,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f462dd9eff8b853c7cb632833ed2e67f5b329e4e71ccdfb16059559c3c56e86f",
       "firstDifferentByte": 0
     },
     "tests/resource-provenance-firesale.test.ts": {
