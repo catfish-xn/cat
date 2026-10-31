@@ -137,6 +137,49 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(r.status==='granted'?typeof r.unitId==='string'&&typeof r.itemInstanceId==='string':r.unitId===null&&r.itemInstanceId===null);
   }
   for(const id of SHOP_CATALOG) requirePool(totals.get(id)===pool.initial[id]);
+  assertSharedPoolSeatBindings(pool, states, seats);
+}
+
+function sameList<T>(left: readonly T[], right: readonly T[]): boolean {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index++) if (left[index] !== right[index]) return false;
+  return true;
+}
+
+/** Stock commands replace records and arrays; they do not edit them in place.
+ * Equal element identity (and catalog counts) means `proven` already established
+ * the stock walk. A seat row may be replaced when only its revision advances;
+ * a replaced shop, holding, reward or carousel record fails this and is fully checked.
+ * The same object is never treated as carried: an in-place edit must take the full walk. */
+export function carriedPoolStock(proven: SharedPoolState, pool: SharedPoolState): boolean {
+  if (proven === pool || proven.version !== pool.version || proven.poolId !== pool.poolId || proven.seed !== pool.seed
+    || proven.naturalRound !== pool.naturalRound || proven.seatCount !== pool.seatCount
+    || proven.initial !== pool.initial || proven.openingEncounter !== pool.openingEncounter
+    || proven.orbLayout !== pool.orbLayout || proven.order !== pool.order
+    || proven.carouselParticipants !== pool.carouselParticipants || proven.carouselRounds !== pool.carouselRounds
+    || pool.seats.length !== proven.seats.length
+    || !sameList(pool.shops, proven.shops) || !sameList(pool.holdings, proven.holdings)
+    || !sameList(pool.pending, proven.pending) || !sameList(pool.rewards, proven.rewards)
+    || !sameList(pool.carouselReservations, proven.carouselReservations)
+    || !sameList(pool.carouselReceipts, proven.carouselReceipts)) return false;
+  for (const id of SHOP_CATALOG) if (pool.available[id] !== proven.available[id] || pool.initial[id] !== proven.initial[id]) return false;
+  for (let index = 0; index < pool.seats.length; index++) {
+    const next = pool.seats[index], prev = proven.seats[index];
+    if (next === prev) continue;
+    if (next.seatId !== prev.seatId || next.seatIndex !== prev.seatIndex || next.released !== prev.released
+      || next.shop !== prev.shop || !safe(next.revision) || !safe(next.shop.generation)) return false;
+  }
+  return true;
+}
+
+/** Seat binding only. Caller has already proved stock, either by a full walk or by `carriedPoolStock`. */
+export function assertCarriedPoolConservation(pool: SharedPoolState, states: readonly MatchState[], proven: SharedPoolState): void {
+  if (!carriedPoolStock(proven, pool)) { assertSharedPoolConservation(pool, states); return; }
+  requirePool(pool.version === SHARED_POOL_VERSION && pool.poolId === proven.poolId && safe(pool.revision) && safe(pool.seatCount, 1) && pool.seatCount <= 8);
+  assertSharedPoolSeatBindings(pool, states, new Map(pool.seats.map(seat => [seat.seatId, seat])));
+}
+
+function assertSharedPoolSeatBindings(pool: SharedPoolState, states: readonly MatchState[], seats: ReadonlyMap<string, PoolSeat>): void {
   const provided=new Set<string>();
   for(const state of states) {
     try { validateOpeningEncounterState(state,pool.openingEncounter); } catch { requirePool(false,'invalid-seat-state'); }

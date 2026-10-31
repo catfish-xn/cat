@@ -81,9 +81,12 @@ function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolStat
   // First-pass capture: the opening combat ledger, then each rules step exactly once (one match step is one combat tick).
   const recorder: CombatReplayRecorder | null = capture?.([seatId]) ? createCombatReplayRecorder(initial, events) : null;
   let current = started.state, latest = started.pool;
+  // Start already conserved this pair. Later ticks pass that returned pair through unchanged,
+  // so the input walk is not repeated; each tick still conserves its own output.
+  let inputAlreadyConserved = true;
   while (current.phase === 'combat') {
     yield;
-    const step = runSharedMatchCommand(latest, current, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'stepPlaceholderCombat' : 'step' });
+    const step = runSharedMatchCommand(latest, current, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'stepPlaceholderCombat' : 'step' }, undefined, inputAlreadyConserved);
     if (!step.ok) throw new BattleResolveError(seatId, step.reason);
     const stepEvents = ledger(step.events);
     recorder?.record(combatOf(seatId, current), { state: combatOf(seatId, step.state), events: stepEvents });
