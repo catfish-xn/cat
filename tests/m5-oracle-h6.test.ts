@@ -49,6 +49,24 @@ it('contested pays nonzero from the pre-settlement freeze despite later preparat
     expect(()=>validateRewards(before,bad,null,[{type:'combatFinished'}],env)).toThrow(/history.*append-only/);
   }
 });
+it('accepts independent no-scout growth from the H3 ledger and still rejects a forged label',()=>{
+  // v26 D5 (7953c99a): headless mage seed 0x9e3779b9 takes no-scout-no-pivot at 2-1.
+  // Old H6 expected [] for every non-scoreboard growth fact. The H3 receipt is the
+  // handwritten +20 HP / +150 AD bps / +150 AP grant; omitting it still fails.
+  const before=state('no-scout-no-pivot'),after=structuredClone(before);
+  const deltas=['a','b'].map(unitId=>({unitId,healthFlat:20,healthBps:0,attackDamageBps:150,abilityPowerCenti:150}));
+  const growth=fact(after,{kind:'growth',choiceId:'choice',receiptId:JSON.stringify(['no-scout-no-pivot','choice','round-4']),deltas});
+  after.augmentHistory.facts.push(growth);
+  const peer={kind:'growth',seatId:'s0',round:after.round,roundId:after.roundDefinitionId,choiceId:'choice',receiptId:growth.receiptId,deltas};
+  expect(()=>validateRewards(before,after,null,[],env)).toThrow(/scoreboard/);
+  expect(()=>validateRewards(before,after,null,[],{...env,h3Growth:[peer]})).not.toThrow();
+  const forged=structuredClone(after);
+  forged.augmentHistory.facts.push(fact(forged,{kind:'growth',choiceId:'second-choice',receiptId:'invented',deltas:[delta('a',999999)]}));
+  expect(()=>validateRewards(before,forged,null,[],{...env,h3Growth:[peer]})).toThrow(/scoreboard/);
+  const mislabeled=structuredClone(after);
+  mislabeled.augmentHistory.facts[0].deltas[0].healthFlat=999999;
+  expect(()=>validateRewards(before,mislabeled,null,[],{...env,h3Growth:[peer]})).toThrow(/scoreboard/);
+});
 it('scoreboard rejects fabricated 999999 AD/AP growth without an operation',()=>{
   const before=state('scoreboard-scrapper'),after=structuredClone(before);
   expect(()=>validateRewards(before,after,null,[],env)).not.toThrow();

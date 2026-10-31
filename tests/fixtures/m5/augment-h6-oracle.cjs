@@ -3,6 +3,7 @@
  * are outputs. Never derive the expected amount or recipients from those outputs.
  */
 const assert=require('node:assert/strict');
+const {isDeepStrictEqual}=require('node:util');
 const {observedPrefixEqual}=require('./observed-equal.cjs');
 const ID='scoreboard-scrapper';
 const owner=s=>s.augments.find(a=>a.definitionId===ID);
@@ -40,12 +41,28 @@ function expectedGrowth(s,base){
  }
  return expected;
 }
+const GROWTH_ASSERT='independent scoreboard growth (amount, recipients, owner, unique receipt, round)';
+// v26 D5 (7953c99a) added no-scout-no-pivot to the public 2-1 pool. Headless mage
+// seed 0x9e3779b9 (2654435769) takes it as offers[0] at round:2-1:augment — it is
+// not on the route priority list — and then records +20 HP / +150 AD bps / +150 AP
+// per locked board hero (old H6 expectation was []). Cooking-pot uses the same
+// growth ledger. Those receipts are checked by the independent H3 ledger
+// (tests/fixtures/m5/h3-growth-oracle.cjs); Ledger.apply passes that ledger as
+// base.h3Growth. A label H3 did not explain still fails this assertion, including
+// a second augment disguising scoreboard stats. Callers that omit h3Growth keep
+// the old complete-set check.
+function growthReceipt(f){return {kind:f.kind,seatId:f.seatId,round:f.round,roundId:f.roundId,choiceId:f.choiceId,receiptId:f.receiptId,deltas:f.deltas};}
 function validateScoreboardHistory(s,base){
- // H6 is the only implemented producer of this ledger. Future producers need an
- // independent plan too: accepting another owner's label would hide forged stats.
  const actual=(s.augmentHistory?.facts??[]).filter(f=>f.kind==='growth');
  const expected=expectedGrowth(s,base);
- assert.deepEqual(actual,expected,'independent scoreboard growth (amount, recipients, owner, unique receipt, round)');
+ const remaining=(base.h3Growth??[]).slice();
+ const unexplained=[];
+ for(const fact of actual){
+  const index=remaining.findIndex(peer=>isDeepStrictEqual(peer,growthReceipt(fact)));
+  if(index>=0)remaining.splice(index,1);else unexplained.push(fact);
+ }
+ assert.deepEqual(remaining,[],GROWTH_ASSERT);
+ assert.deepEqual(unexplained,expected,GROWTH_ASSERT);
  return expected;
 }
 function validateScoreboardCombat(s,input,base,provenancePrefixLength=s.resourceProvenance.entries.length){
