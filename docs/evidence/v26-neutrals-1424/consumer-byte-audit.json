@@ -492,9 +492,9 @@
     "tests/battle-replay-content-cache.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3266,
+      "currentBytes": 3898,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7370968e745b68a944225ce31e514f9d8ad1cd2d572dabb8b24510330bd56b10",
+      "currentSha256": "4bfa3e1447c95b73ac39d47b74507791ea935c287787ce9c3b050330de04322e",
       "firstDifferentByte": 0
     },
     "tests/black-rose-7.test.ts": {
@@ -857,7 +857,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d58590cd6d2c95bf26f61f9c9d15ef1c34eb4876dc81d4252b8064cd9483f34c",
+      "currentSha256": "298cb4c4540a98c1de9565bbd58fda21712d94f928315dcacd4138b9a2f5af43",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -2600,6 +2600,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
       "firstDifferentByte": 0
+    },
+    "tests/shared-pool-cache.test.ts": {
+      "previousBytes": 4385,
+      "currentBytes": 6748,
+      "previousSha256": "0391f7146916dfe8aa1eef561c3ae8d0f1ca873c5a69b8a893378516e486ca19",
+      "currentSha256": "e42eb054fbf79a35ec2f717f285a66e930c8bec959cc32aba2e136422630433e",
+      "firstDifferentByte": 4385
     },
     "tests/shop-odds-projection.test.ts": {
       "previousBytes": 2914,
