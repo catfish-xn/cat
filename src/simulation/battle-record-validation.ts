@@ -128,6 +128,42 @@ export function checkRecordCompatibility(record: BattleRecord): void {
 }
 /** Full deterministic validation; never reads an active session. */
 const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
+// v26 combat (14.24 neutrals, targeting, pathing) made a second full-catalog replay miss the
+// existing 60s import wait. Admission still checks every field; identical unowned content
+// (a second run of the same route, a different object after IDB) reuses the verified proof.
+const CONTENT_REPLAY_LIMIT = 48;
+const contentReplays = new Map<string, { readonly record: BattleRecord; readonly verified: VerifiedReplay }>();
+let coldBattleReplays = 0;
+/** Combat reconstructions actually simulated. A matching unowned copy does not increment this. */
+export function coldBattleReplayCount(): number { return coldBattleReplays; }
+function contentReplayKey(record: BattleRecord): string {
+  return `${record.eventHash}\n${record.stateHash}\n${record.combatId}\n${record.endTick}\n${record.result ?? ''}\n${record.roundId}\n${record.nextEventSeq}`;
+}
+function sameBattleContent(record: BattleRecord, stored: BattleRecord): boolean {
+  return record.combatId === stored.combatId && record.roundId === stored.roundId
+    && record.endTick === stored.endTick && record.result === stored.result && record.nextEventSeq === stored.nextEventSeq
+    && record.stateHash === stored.stateHash && record.eventHash === stored.eventHash
+    && equalContent(record.version, stored.version) && equalContent(record.context, stored.context)
+    && equalContent(record.initial, stored.initial) && equalContent(record.events, stored.events)
+    && equalContent(record.equipmentCommands ?? null, stored.equipmentCommands ?? null);
+}
+function takeContentReplay(record: BattleRecord): VerifiedReplay | null {
+  const hit = contentReplays.get(contentReplayKey(record));
+  if (!hit || !sameBattleContent(record, hit.record)) return null;
+  // Detach the proof so a caller cannot rewrite the cached graph.
+  return structuredClone(hit.verified);
+}
+function rememberContentReplay(record: BattleRecord, verified: VerifiedReplay): void {
+  const key = contentReplayKey(record);
+  if (contentReplays.has(key) && !sameBattleContent(record, contentReplays.get(key)!.record)) return;
+  if (contentReplays.size >= CONTENT_REPLAY_LIMIT && !contentReplays.has(key)) {
+    const oldest = contentReplays.keys().next().value;
+    if (oldest !== undefined) contentReplays.delete(oldest);
+  }
+  // Keep a detached copy. The caller's record is often frozen later, and an in-place edit of the
+  // same object would otherwise compare equal to itself and reuse a stale proof. Hits clone again.
+  contentReplays.set(key, { record: structuredClone(record), verified: structuredClone(verified) });
+}
 export function validateBattleRecord(record: BattleRecord, battles?: readonly BattleRecord[]): VerifiedReplay {
   const verified = replayBattleRecord(record);
   if (battles !== undefined) validateMatchHistory(record.context, battles);
@@ -145,7 +181,15 @@ export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
 function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   const cached = verifiedRecords.get(record);
   if (cached) return cached;
+  // Checkpoint playback must walk the ticks. A content hit has no trajectory to fill.
+  // Recorder-owned records keep the identity cache above; admission copies are unowned.
+  if (!checkpoints && !isOwnedBattleRecord(record)) {
+    const reused = takeContentReplay(record);
+    if (reused) return reused;
+  }
+  coldBattleReplays++;
   const verified = validatorFor(record)(record, checkpoints);
+  if (!checkpoints && !isOwnedBattleRecord(record)) rememberContentReplay(record, verified);
   // Only recorder-owned, detached immutable records qualify, after full replay.
   // Reconstruction already owns this detached graph. Freeze it directly;
   // replayBattleRecord copies it at the public boundary, never inside the walk.

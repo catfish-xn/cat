@@ -38,6 +38,32 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const api = await model.ssrLoadModule('/src/simulation/match.ts');
     const { readCombatStats } = await model.ssrLoadModule('/src/simulation/combat-s13.ts');
     const accepted = result => { assert(result.ok, result.reason); return structuredClone(result.state); };
+    // Keep the returned state object. Solo augment proofs live in a WeakMap until the first history
+    // owner is acquired; structuredClone drops that trace and starts a new proof origin.
+    const applied = result => { assert(result.ok, result.reason); return result.state; };
+    // v26 D5 (7953c99a): seed 42's 2-1 offers[0] changed from sorcerer-crest (v25, not a history owner)
+    // to snipers-nest. Selecting it writes augment-history-v1. The live session's origin is createMatch
+    // and previousBattle is the recorded 1-4 roster. selectChoice(structuredClone(choice)) has no trace,
+    // so its origin is the 2-1 choice and previousBattle is 'unavailable'. Replay the same public
+    // empty-board opening on this module and apply the burst to that traced state.
+    function tracedSeed42AugmentChoice() {
+      let state = api.createMatch(42);
+      state = applied(api.deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
+      for (let guard = 0; guard < 40; guard++) {
+        if (state.m8.round.roundId === '2-1' && state.phase === 'choice') return state;
+        if (state.phase === 'choice') {
+          const choice = state.pendingChoice;
+          assert.equal(choice.step, 'offer');
+          const offer = choice.offers.find(id => id !== 'placebo');
+          assert(offer, 'traced opening offer');
+          state = applied(api.selectChoice(state, choice.choiceId, choice.generation, offer));
+        } else if (state.phase === 'preparation') state = applied(api.startMatchCombat(state));
+        else if (state.phase === 'settlement') state = applied(api.nextRound(state, state.round));
+        else if (state.phase === 'combat') while (state.phase === 'combat') state = api.stepMatch(state).state;
+        else throw new Error(`traced opening ended at ${state.phase}`);
+      }
+      throw new Error('traced opening did not reach the 2-1 augment');
+    }
     server = spawn(process.execPath, [path.join(path.dirname(require.resolve('vite/package.json')), 'bin/vite.js'),
       ...(preview ? ['preview'] : []), ...(configLoader ? ['--configLoader', configLoader] : []), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
     for (const stream of [server.stdout, server.stderr]) stream.on('data', data => fs.appendFileSync(path.join(output, 'server.log'), data));
@@ -164,7 +190,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         await quiet(); const before = await state(), choice = before.pendingChoice;
         const node = page.locator(`[data-debug="choice:${choice.offers[0]}"]`); await node.scrollIntoViewIfNeeded();
         const box = await node.boundingBox(), point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }, start = await offset();
-        let expected = accepted(api.selectChoice(before, choice.choiceId, choice.generation, choice.offers[0]));
+        const traced = tracedSeed42AugmentChoice();
+        assert.deepEqual(before, traced, `${method}: browser 2-1 augment choice matches the traced public opening`);
+        let expected = applied(api.selectChoice(traced, choice.choiceId, choice.generation, choice.offers[0]));
         if (method === 'mouse') await page.mouse.dblclick(point.x, point.y, { delay: 40 });
         else {
           for (let tap = 0; tap < 2; tap++) {
@@ -181,7 +209,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'f', code: 'KeyF', windowsVirtualKeyCode: 70 });
           await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'd', code: 'KeyD', windowsVirtualKeyCode: 68 });
           await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'f', code: 'KeyF', windowsVirtualKeyCode: 70 });
-          expected = accepted(api.rerollShop(expected)); expected = accepted(api.buyXp(expected));
+          expected = applied(api.rerollShop(expected)); expected = applied(api.buyXp(expected));
         }
         const result = await record(`${method}-${choice.kind}-burst-single-confirmation${finishedChoices ? '-and-fast-DF' : ''}`, before, expected, start);
         const downs = result.inputs.filter(input => input.type === 'pointerdown');
@@ -447,26 +475,43 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // input whose full resulting state equals the public command's result.
     {
       await click('mobile:new-match'); await startFixed42(ragebladeRoute.SEED);
+      // Same trace rule as the 2-1 burst: seed 1914's first non-placebo card may be a history owner.
+      // Thread one SSR session through the public opening instead of selectChoice(structuredClone(browser)).
+      let traced = api.createMatch(ragebladeRoute.SEED);
       for (let guard = 0; guard < 40; guard++) {
         const current = await state();
         if (current.m8.round.roundId === ragebladeRoute.ROUND && current.phase === 'preparation') break;
         if (current.phase === 'choice') {
+          assert.deepEqual(current, traced, 'rageblade choice matches the traced public route');
           const choice = current.pendingChoice, start = await offset();
           const pick = choice.offers.find(id => id !== 'placebo');
           assert(pick && choice.offers.includes(pick), `B8 opening offers ${pick}`);
           await click(`choice:${pick}`);
-          await record(`b8-opening-${choice.kind}-${pick}`, current, accepted(api.selectChoice(current, choice.choiceId, choice.generation, pick)), start);
+          traced = applied(api.selectChoice(traced, choice.choiceId, choice.generation, pick));
+          await record(`b8-opening-${choice.kind}-${pick}`, current, traced, start);
         } else if (current.phase === 'preparation') {
-          let prepared = current;
-          for (let deployment; deployment = ragebladeRoute.openingDeployment(prepared);) {
+          assert.deepEqual(current, traced, 'rageblade preparation matches the traced public route');
+          for (let deployment; deployment = ragebladeRoute.openingDeployment(traced);) {
             await click('panel:units'); await click(`mobile:unit:${deployment.unitId}`); await click(`deploy:${deployment.cell.col},${deployment.cell.row}`);
-            prepared = accepted(api.deployMatchUnit(prepared, deployment.unitId, { kind: 'board', cell: deployment.cell }));
-            assert.deepEqual(await state(), prepared, 'v17 opening native deployment equals public command');
+            traced = applied(api.deployMatchUnit(traced, deployment.unitId, { kind: 'board', cell: deployment.cell }));
+            assert.deepEqual(await state(), traced, 'v17 opening native deployment equals public command');
           }
           await delay(450); await click('start-combat');
+          traced = applied(api.startMatchCombat(traced));
+          while (traced.phase === 'combat') traced = api.stepMatch(traced).state;
+          if ((await state()).phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+          assert.deepEqual(await state(), traced, 'rageblade combat result matches public steps');
         }
-        else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
-        else if (current.phase === 'settlement') await click('continue');
+        else if (current.phase === 'combat') {
+          await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+          while (traced.phase === 'combat') traced = api.stepMatch(traced).state;
+          assert.deepEqual(await state(), traced, 'rageblade combat result matches public steps');
+        }
+        else if (current.phase === 'settlement') {
+          assert.deepEqual(current, traced, 'rageblade settlement matches the traced public route');
+          await click('continue');
+          traced = applied(api.nextRound(traced, traced.round));
+        }
         else throw new Error(`B8 opening ended at ${current.phase}`);
       }
       let buildBefore = await state();
