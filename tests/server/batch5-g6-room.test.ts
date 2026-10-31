@@ -17,7 +17,10 @@ const oracle = require('../fixtures/m5/augment-pool-batch5-g6-oracle.cjs');
 const id='im-the-carry-now';
 
 describe('B5-83 real online room',()=>{
-  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:0});
+  // v26 D5 (7953c99a) registered four augments and stage bans, drifting the seed-0 (old value) 2-1 draws: no seat sees
+  // I'm the Carry Now within three rerolls. Seed 47 offers it to s3 in the real initial 2-1 draw, and s3's later 3-2/4-2
+  // first offers (Trifecta II, Scrap Crown) need no augment-history replay on restore.
+  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:47});
   let seatId:string;
   let golemId:string, kitIds:readonly string[];
   afterAll(()=>room.dispose());

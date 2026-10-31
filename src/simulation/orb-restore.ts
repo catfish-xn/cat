@@ -59,7 +59,11 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       check(orb.orbId===lootOrbId(orb.roundId,'mechanic',e.sourceUnitId,0)&&e.dropId===lootEntryId(orb.orbId,0),'mechanic identity');
     }
     const statuses=new Set(orb.entries.map(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status));
-    check(statuses.size===1||[...statuses].every(s=>s==='granted'||s==='revealed')&&orb.entries.every(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status!=='revealed'||e.payload.kind==='forge'),'partial anvil orb status');
+    // A claimed orb grants its other entries while a forge waits for bench space: it stays 'revealed', or 'carried'
+    // when a PvE loss parked the orb (8f794062; b8-restore's deferred carried forge). Elimination/terminal
+    // forfeitUnclaimedOrbs later turns either waiting forge into 'forfeited' beside the granted entries.
+    check(statuses.size===1||[...statuses].every(s=>s==='granted'||s==='revealed'||s==='carried'||s==='forfeited')
+      &&orb.entries.every(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status==='granted'||e.payload.kind==='forge'),'partial anvil orb status');
     for(const e of orb.entries) {
       const d=loot.direct.find(d=>d.dropId===e.dropId)!,r=receipts.get(e.dropId),earned=orb.source==='mechanic'||evidence.has(e.dropId);
       const carried=loot.carry?.find(row=>row.dropId===e.dropId);

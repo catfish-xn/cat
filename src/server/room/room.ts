@@ -503,7 +503,7 @@ export class Room {
     return this.apply(seat, command);
   }
 
-  /** Untrusted player entry, shared by WebSocket and the in-browser room. Picks require physical contact. */
+  /** Untrusted player entry, shared by the network session and the in-browser room. Picks require physical contact. */
   handlePlayer(seatId: string, command: SeatCommand): RoomCommandResult {
     if (command.type === 'carousel-pick') {
       const seat = this.current.seats.find(candidate => candidate.seatId === seatId);

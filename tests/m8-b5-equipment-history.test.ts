@@ -19,7 +19,10 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-const AUGMENTS=['fractured-crystals'];
+// v26 D5 (7953c99a) changed this route's natural 3-2/4-2 offers to starry-night-plus / mentorship-ii, so the
+// archive lost its solo augment-history proof (the replay-cache and forged-proof cases below need one).
+// Script Trait Tracker (an AUGMENT_HISTORY_OWNERS card) into the 3-2 draw the same way as the 2-1 card.
+const AUGMENTS=['fractured-crystals','trait-tracker'];
 function start(equipped = true, history?: BattleHistory): MatchState {
   // v25 no longer naturally offers this card on seed 42. The suite scripts the
   // 2-1 draw only: once acquired, eligibility excludes it from all later draws.
@@ -105,7 +108,16 @@ function historicalProgression(equipped = true, history?: BattleHistory): MatchS
   }
   // T11: 6 opening XP + 18 * 2 XP = 42; cumulative level-six cost is 40.
   expect([state.level, state.xp]).toEqual([6, 2]);
-  while (state.level < 7) state = accepted(buyXp(state));
+  // v26 (14.24 neutrals 568eeea4 + PvE loot carryover c684c3ec) leaves this route at 4-5 short of gold
+  // for the nine 4-gold XP purchases to level 7 (v25 had enough; e.g. 35 of 36 without a history card). Fund the shortfall publicly by
+  // selling the lowest bench unit (never the TG holder unit-1); the level-7 XP route is unchanged.
+  while (state.level < 7) {
+    if (state.gold < 4) {
+      const spare=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1').sort((a,b)=>a.starLevel-b.starLevel||a.id.localeCompare(b.id))[0];
+      state = accepted(sellUnit(state, spare.id));
+    }
+    state = accepted(buyXp(state));
+  }
   progressionCache.set(equipped,structuredClone(state));
   return state;
 }

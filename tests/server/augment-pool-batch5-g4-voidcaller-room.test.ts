@@ -4,7 +4,9 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 65 });
+// v26 D5 (7953c99a) drifted the seed-65 2-1 draws (old route: seed 65, s2, now dominator/visionary/watcher crests).
+// Seed 32 offers Voidcaller to s2 in the real initial 2-1 draw.
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 32 });
 const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 it('B5-72 starts a real eight-seat room', () => { room.start(); });
