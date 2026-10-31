@@ -74,7 +74,9 @@ describe('P2 anomaly action refusal routing', () => {
     // Rendering a success is covered by the panel suite; keep this test on receipt routing.
     const renderSuccess = vi.spyOn(scene, 'command').mockImplementation(() => undefined);
     scene.confirmed([1], []);
-    expect(renderSuccess).toHaveBeenCalledExactlyOnceWith({ ok: true, state: session.state, events: [] }, '异变操作', false, false);
+    // Star-up animation (8af7500b) added a fifth argument: confirmed receipts render with animateUpgrades=false,
+    // because the online unitUpgraded event already animated them (v25 call had four arguments).
+    expect(renderSuccess).toHaveBeenCalledExactlyOnceWith({ ok: true, state: session.state, events: [] }, '异变操作', false, false, false);
     expect(scene.pendingChoices.size).toBe(0);
     scene.refused(1, 'invalid-choice', null);
     expect(scene.strategyPanel.choiceRefused).not.toHaveBeenCalled();

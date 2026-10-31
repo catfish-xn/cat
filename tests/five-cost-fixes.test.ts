@@ -114,9 +114,11 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     const opening=stepCombat(battle([hero('malzahar',star),dummy('e',{hp:1,maxHp:1}),
       dummy('a',{cell:{col:2,row:2}}),dummy('b',{cell:{col:2,row:4}})],{rngState:42}));
     const tasks=get(opening.state).tasks!;
-    expect(tasks).toHaveLength(5);expect(tasks.map(t=>[t.targetId,t.executeAtTick])).toEqual(Array(5).fill(['a',21]));
+    // 'a' (2,2) and 'b' (2,4) are equally near the dying host 'e' (2,3). Targeting P1 (8106acee, merged c64a756a)
+    // breaks equal-distance ties with combat RNG, so at rngState 42 all five stacks now move to 'b' (v25: 'a').
+    expect(tasks).toHaveLength(5);expect(tasks.map(t=>[t.targetId,t.executeAtTick])).toEqual(Array(5).fill(['b',21]));
     const r=advance(opening.state,20);
-    const pulses=damage(r.events).filter(d=>d.context.targetId==='a');
+    const pulses=damage(r.events).filter(d=>d.context.targetId==='b');
     expect(pulses.map(d=>d.raw)).toEqual(Array(5).fill([14,21,400][star-1]));
     expect(pulses.every(d=>d.context.rootActionSeq===tasks[0].actionSeq)).toBe(true);
   });

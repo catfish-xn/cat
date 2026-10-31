@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createMatch, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augment-offers';
@@ -227,7 +227,13 @@ it('keeps the solo command path valid and authenticates active poison/mana/movem
   expect(seed).toBeDefined();
   let match=reachRound('2-1',false,seed!),choice=match.pendingChoice!;
   expect(choice.offers).toContain('mad-chemist');
-  match=fieldBench(resolveM5Choices(accepted(selectChoice(match,choice.choiceId,choice.generation,'mad-chemist'))));
+  match=resolveM5Choices(accepted(selectChoice(match,choice.choiceId,choice.generation,'mad-chemist')));
+  // v26 PvE loot carryover (8f794062, merge c684c3ec) keeps the conceded 1-x loot units, so fieldBench filled the
+  // three-unit cap before reaching the gifted Singed (board irelia/sett/urgot, no Mad Chemist at all). Field the
+  // gifted Singed first through the public deploy command, then fill the rest as before.
+  const singed=match.preparation.units.find(u=>u.team==='player'&&u.definitionId==='singed'&&u.location.kind==='bench')!;
+  match=fieldBench(accepted(deployMatchUnit(match,singed.id,{kind:'board',cell:{col:3,row:4}})));
+  expect(match.preparation.units.some(u=>u.definitionId==='singed'&&u.location.kind==='board')).toBe(true);
   match=accepted(startMatchCombat(match));
   for(let tick=0;tick<100&&match.phase==='combat'&&!match.combat!.units.some(u=>u.madChemist?.poisons.length);tick++)match=stepMatch(match).state;
   expect(match.combat!.units.some(u=>u.madChemist?.poisons.length)).toBe(true);

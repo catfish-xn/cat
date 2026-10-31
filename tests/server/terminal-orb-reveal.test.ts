@@ -43,7 +43,13 @@ describe('terminal orb server integration', () => {
       expect(room.combatStreamFor('s0')!.terminal).toMatchObject({ tick: 0, status: 'finished' });
       expect(published.battles).toHaveLength(0);
       expect(published.settlements).toHaveLength(0);
-      expect(own.serverEvents!.events.some(e => e.type === 'lootForfeited')).toBe(true);
+      // pve-loot-carryover (8f794062, merged c684c3ec, user-approved 2026-10-29): the surviving 1-2 loss carries
+      // every unearned planned drop to 1-3 instead of emitting lootForfeited (v25).
+      expect(own.serverEvents!.events.some(e => e.type === 'lootForfeited')).toBe(false);
+      const carried = own.serverEvents!.events.flatMap(e => e.type === 'lootCarried' ? [e] : []);
+      expect(carried.map(e => e.dropId).sort()).toEqual(before.m8.loot.direct.filter(d => d.status === 'planned').map(d => d.dropId).sort());
+      expect(carried.length).toBeGreaterThan(0);
+      expect(carried.every(e => e.deliverRoundId === '1-3')).toBe(true);
       expect(own.serverEvents!.events.some(e => e.type === 'lootRevealed')).toBe(false);
       expect(toSeatPrivateView(own.match).unclaimedOrbs).toEqual(readLootView(before).unclaimedOrbs);
       for (const field of ['gold', 'items', 'playerHp', 'roundResults'] as const) expect(own.match[field]).toEqual(before[field]);

@@ -35,7 +35,15 @@ describe('M5 Match atomic integration', () => {
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
     const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);
     expect(stale.ok).toBe(false);expect(stale.state).toBe(selected.state);
-    expect(selected.state.phase).toBe('preparation');expect(selected.state.items).toHaveLength(0);expect(selected.state.augments).toHaveLength(1);
+    expect(selected.state.phase).toBe('preparation');
+    // v26 PvE loot carryover (8f794062, merged c684c3ec): the conceded 1-x neutral orbs now arrive as carried loot
+    // before 2-1 (v25 forfeited them, so the inventory was empty). Two Trick itself still grants no item: the
+    // inventory is exactly the pre-choice loot inventory, every item has a loot birth, and no augment receipt exists.
+    expect(before.items.length).toBeGreaterThan(0);expect(selected.state.items).toEqual(before.items);
+    expect(selected.state.nextItemSerial).toBe(before.nextItemSerial);
+    expect(selected.state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'&&e.source.kind))
+      .toEqual(before.items.map(()=>'loot'));
+    expect(selected.state.augments).toHaveLength(1);
     expect(restoreMatch(serializeMatch(selected.state))).toEqual(selected.state);
   });
   it('locks natural refresh while allowing paid D and immediate F, rejected commands retain identity', () => {

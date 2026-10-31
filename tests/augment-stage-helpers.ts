@@ -80,7 +80,8 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
-  'belt-overflow':{node:'3-2',seed:29},
+  // v26 (PvE loot carryover c684c3ec / D5 3ce71065): seed 29 now offers pandoras-items-iii at 3-2; 47 is the first history-free reachRound seed offering it (v25: 29).
+  'belt-overflow':{node:'3-2',seed:47},
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
@@ -90,7 +91,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},
   'bulky-buddies-iii':{node:'3-2',seed:21},
   'calculated-enhancement':{node:'3-2',seed:5},
-  "call-to-chaos":{node:'4-2',seed:576,fielded:true},
+  // v26: PvE loss damage (54557be5) and the 14.24 neutrals end seed 576's fielded route at 4-1; 115 is the first seed whose
+  // 4-2 outcome is XP and whose unscripted and scripted fielded routes both reach 4-2 history-free (v25: 576).
+  "call-to-chaos":{node:'4-2',seed:115,fielded:true},
   'climb-the-ladder-i':{node:'3-2',seed:76},
   'climb-the-ladder-ii':{node:'3-2',seed:15,rerolls:[0,1]},
   'coronation':{node:'3-2',seed:5,rerolls:2},
@@ -117,7 +120,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
   'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
   'one-two-five':{node:'4-2',seed:59,fielded:true},
-  'pair-of-fours':{node:'4-2',seed:63,fielded:true},
+  // v26: D5 (3ce71065) makes seed 63's fielded route take loot-explosion/titanic-titan (history owners), so every save
+  // replays the whole game (~5 s serialize); 178 offers it at 4-2 on both the fielded and the cold PvE-only route history-free (v25: 63).
+  'pair-of-fours':{node:'4-2',seed:178,fielded:true},
   'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
   'piercing-lotus-i':{node:'3-2',seed:15},
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
@@ -128,12 +133,14 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
   'sisters':{node:'4-2',seed:3,fielded:true},
   'support-mining-plus':{node:'3-2',seed:1},
-  'sword-overflow':{node:'3-2',seed:16,rerolls:3},
+  // v26: carried PvE loot fills seed 16's bench, so reachRound's empty board fails (invalid-location); first history-free seed is 21 (v25: 16).
+  'sword-overflow':{node:'3-2',seed:21,rerolls:3},
   'teaming-up-i':{node:'3-2',seed:6,rerolls:[0,1,2]},
   'teaming-up-ii':{node:'4-2',seed:60,fielded:true,rerolls:[0,1,2]},
   'the-golden-egg':{node:'4-2',seed:27,fielded:true,rerolls:[0]},
   'trifecta-i':{node:'3-2',seed:39},
-  'trifecta-ii':{node:'3-2',seed:57,rerolls:3},
+  // v26: seed 57 no longer offers it within three rerolls; first history-free seed is 165 after one reroll (v25: 57, rerolls 3).
+  'trifecta-ii':{node:'3-2',seed:165,rerolls:1},
   'unlikely-duo':{node:'4-2',seed:1,fielded:true,rerolls:[0]},
   'wand-overflow':{node:'3-2',seed:0},
   'wealthy-rehab-i':{node:'3-2',seed:6},

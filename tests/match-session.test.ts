@@ -180,7 +180,10 @@ describe('match session commands and fixed clock', () => {
 
   it('preserves the purchased player roster and unique results for five rounds', () => withB1Offers(['starry-night'], () => {
     // v24 seed 7226 route; v25 pool scripts Starry Night at 2-1 (augments.toEqual(['starry-night']) is the fixture self-check).
-    const session = new MatchSession(reachRound('1-3',true,7226));
+    // v26 PvE loot carryover (8f794062, merge c684c3ec): seed 7226's conceded 1-2 loot now delivers Smeech later, so
+    // the roster is no longer purchase-only. 136 is the first seed from 1 on which this exact route acquires no loot hero
+    // through round 7 (v25: 7226).
+    const session = new MatchSession(reachRound('1-3',true,136));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);
