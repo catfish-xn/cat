@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import * as matchCommands from '../src/simulation/match';
 import { buyUnit, createMatch, nextRound, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { createCombat } from '../src/simulation/combat';
 import { grantDirectLoot, prepareMatchLoot } from '../src/simulation/loot-runtime';
@@ -245,7 +246,14 @@ describe.each([{ seed: 6133, pending: 4, firstGranted: 4 }, { seed: 6389, pendin
     expect(deliveryPreparation.roundDefinitionId).toBe('3-7');
     expect(deliveryPreparation.combat?.status).not.toBe('finished');
     expect(deliveryPreparation.m8.loot.direct.find(d => d.dropId === pendingIds[0])?.status).toBe('carried');
-    roundTrip(deliveryPreparation, form);
+    // The finished 3-7 proof used to replace the only copy of this pre-combat prefix.
+    // Seed 6133 then replayed 1202 stepMatch calls inside this case (~4.8s).
+    const spy = vi.spyOn(matchCommands, 'stepMatch');
+    const before = spy.mock.calls.length;
+    try {
+      roundTrip(deliveryPreparation, form);
+      expect(spy.mock.calls.length - before).toBe(0);
+    } finally { spy.mockRestore(); }
   });
   it.each(['pending-capacity', 'retained-terminal'] as const)('rejects %s at delivery before combat finishes', status => {
     const forged = structuredClone(deliveryPreparation);

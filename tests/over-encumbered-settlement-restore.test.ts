@@ -1,7 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // Exercise production registration, natural draws and public commands.
 
+import * as matchCommands from '../src/simulation/match';
 import { buyUnit, createMatch, nextRound, openAnvil, resolveAugmentTier, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { combatBenchProjection } from '../src/simulation/bench-capacity';
@@ -128,8 +129,15 @@ describe('D3 solo public-command settlement saves throughout the restricted stag
     for (const dropId of pendingDrops) expect(sold.m8.loot.receipts.filter(r => r.dropId === dropId)).toHaveLength(1);
   });
   it.each(forms)('resumes the exact x-7 capacity sale from %s and restores its result', form => {
-    expect(sellUnit(roundTrip(state, form), soldUnitId)).toEqual(capacitySale);
-    roundTrip(accepted(capacitySale), form);
+    // Saving the sale used to drop the pre-sale prefix. JSON and serialized then
+    // replayed from a 3385-step anchor to this 5694-step save (~4s, 5s cap).
+    const spy = vi.spyOn(matchCommands, 'stepMatch');
+    const before = spy.mock.calls.length;
+    try {
+      expect(sellUnit(roundTrip(state, form), soldUnitId)).toEqual(capacitySale);
+      roundTrip(accepted(capacitySale), form);
+      expect(spy.mock.calls.length - before).toBe(0);
+    } finally { spy.mockRestore(); }
   });
   it('continues after the restored x-7 sale without granting the drops twice', () => {
     const sold = accepted(capacitySale);
@@ -191,7 +199,16 @@ describe('D3 solo settlement anvil consumption keeps actual capacity and parking
       expect(opened.preparation.overflowUnitIds).toEqual(location === 'bench' ? parked.slice(1) : parked.filter(id => id !== anvil.id));
       if (location === 'bench') expect(opened.preparation.units.find(u => u.id === parked[0])!.location).toEqual({ kind: 'bench', slot: 0 });
     });
-    it.each(forms)(`restores the opened ${location} anvil choice from %s`, form => { roundTrip(opened, form); });
+    it.each(forms)(`restores the opened ${location} anvil choice from %s`, form => {
+      const spy = vi.spyOn(matchCommands, 'stepMatch');
+      const before = spy.mock.calls.length;
+      try {
+        roundTrip(opened, form);
+        // The bench branch used to replace the settlement prefix, so the parked
+        // branch replayed from step 1399 to 4822 (~3.5s).
+        if (location === 'parked') expect(spy.mock.calls.length - before).toBe(0);
+      } finally { spy.mockRestore(); }
+    });
     it(`chooses the ${location} anvil reward at settlement`, () => {
       const c = opened.pendingChoice!;
       chosen = accepted(selectChoice(opened, c.choiceId, c.generation, c.offers[0]));
