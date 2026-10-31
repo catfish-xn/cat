@@ -1,6 +1,7 @@
-import { lstat, mkdtemp, realpath, rm, symlink, unlink } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, realpath, rm, symlink, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error Offline JavaScript tooling has no declaration file.
 import { augmentSpecs, augmentStageDirectory, collectApiNames, downloadCommands, mergeAugmentManifest, stageAugmentIcons } from '../scripts/assets3d/augment-icons.mjs';
@@ -51,30 +52,43 @@ describe('S13 augment icon source contracts', () => {
   });
 
   it('rejects an assets3d-local symlink into the repository or an ancestor before writing', async () => {
-    const link = resolve('assets3d-local');
-    await expect(lstat(link)).rejects.toMatchObject({ code: 'ENOENT' });
-    const absent = async (path: string) => expect(lstat(path)).rejects.toMatchObject({ code: 'ENOENT' });
-    await symlink(resolve('public'), link, 'dir');
-    try {
-      await expect(augmentStageDirectory('probe')).rejects.toThrow('unsafe-output-path');
-      await expect(stageAugmentIcons({ out: 'probe' })).rejects.toThrow('unsafe-output-path');
-      await absent(resolve('public/probe'));
-      await absent(resolve('public/probe/root/ui-assets.json'));
-    } finally { await unlink(link); }
-    await symlink(resolve('..'), link, 'dir');
-    try {
-      await expect(augmentStageDirectory('probe')).rejects.toThrow('unsafe-output-path');
-      await expect(stageAugmentIcons({ out: 'probe' })).rejects.toThrow('unsafe-output-path');
-      await absent(resolve('../probe'));
-    } finally { await unlink(link); }
+    // The bound is the script's own import.meta.url root. CI shard siblings mkdir the
+    // shared assets3d-local before this file runs, so a repo-root lstat is no longer ENOENT.
+    const repo = await mkdtemp(join(tmpdir(), 'aug-icons-repo-'));
+    const scripts = join(repo, 'scripts/assets3d');
+    await mkdir(scripts, { recursive: true });
+    await mkdir(join(repo, 'public'), { recursive: true });
+    await copyFile(resolve('scripts/assets3d/augment-icons.mjs'), join(scripts, 'augment-icons.mjs'));
+    await copyFile(resolve('scripts/assets3d/safe-path.mjs'), join(scripts, 'safe-path.mjs'));
+    const isolated = await import(pathToFileURL(join(scripts, 'augment-icons.mjs')).href + `?isolate=${Date.now()}`);
+    const stageDir = isolated.augmentStageDirectory as (out: string) => Promise<string>;
+    const stageIcons = isolated.stageAugmentIcons as (options: { out: string }) => Promise<unknown>;
+    const link = join(repo, 'assets3d-local');
     const external = await mkdtemp(join(tmpdir(), 'aug-icons-'));
-    await symlink(external, link, 'dir');
+    const absent = async (path: string) => expect(lstat(path)).rejects.toMatchObject({ code: 'ENOENT' });
     try {
-      expect(await augmentStageDirectory('probe')).toBe(join(await realpath(external), 'probe'));
-      await absent(join(external, 'probe'));
+      await expect(lstat(link)).rejects.toMatchObject({ code: 'ENOENT' });
+      await symlink(join(repo, 'public'), link, 'dir');
+      try {
+        await expect(stageDir('probe')).rejects.toThrow('unsafe-output-path');
+        await expect(stageIcons({ out: 'probe' })).rejects.toThrow('unsafe-output-path');
+        await absent(join(repo, 'public/probe'));
+        await absent(join(repo, 'public/probe/root/ui-assets.json'));
+      } finally { await unlink(link); }
+      await symlink(dirname(repo), link, 'dir');
+      try {
+        await expect(stageDir('probe')).rejects.toThrow('unsafe-output-path');
+        await expect(stageIcons({ out: 'probe' })).rejects.toThrow('unsafe-output-path');
+        await absent(join(dirname(repo), 'probe'));
+      } finally { await unlink(link); }
+      await symlink(external, link, 'dir');
+      try {
+        expect(await stageDir('probe')).toBe(join(await realpath(external), 'probe'));
+        await absent(join(external, 'probe'));
+      } finally { await unlink(link); }
     } finally {
-      await unlink(link);
       await rm(external, { recursive: true, force: true });
+      await rm(repo, { recursive: true, force: true });
     }
   });
 });

@@ -30,6 +30,20 @@ for(const state of [lorisPrefix]){
  expect(state.augmentOffers.find(a=>a.choiceId==='round:2-1:augment')?.rerolledIndices).toEqual([]);
 }
 expect(lorisPrefix.augments.map(a=>a.definitionId)).toEqual(['visionary-crest','building-a-collection-iii','enforcer-crown']);
+// First serialize of either 4-7 proof replays ~10k commands (~11s at 0c676fac).
+// CI kills the case at 20s. Warm both proofs once, then prove a tick-126 checkpoint
+// of the simultaneous route does not evict the Loris proof (that miss was ~11s).
+serializeMatch(prefix);
+serializeMatch(lorisPrefix);
+{
+  let checkpoint = accepted(api.startMatchCombat(simultaneousB8Preparation(prefix)));
+  while (checkpoint.phase === 'combat' && checkpoint.combat!.tick < 126) checkpoint = api.stepMatch(checkpoint).state;
+  serializeMatch(checkpoint);
+  const started = performance.now();
+  serializeMatch(lorisPrefix);
+  serializeMatch(prefix);
+  expect(performance.now() - started).toBeLessThan(8_000);
+}
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
@@ -137,7 +151,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
       definitionId: 'loris', starLevel: 2, team: 'player',
     });
-    state = clone(state);
+    // The clone above already checked this equipped board. A second cold restore replayed the same proof again.
     const beforeReceipts = state.m8.loot.receipts.length, beforeItemSerial = state.nextItemSerial;
     const unitSerial = state.nextUnitSerial, frozen = state.m8.loot.frozen;
     state = accepted(api.startMatchCombat(state));

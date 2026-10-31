@@ -1,7 +1,7 @@
 import { reachRound } from './match-helpers';
 import { boundedFirstNodeOffer } from './augment-stage-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, selectChoice, setShopLock, rerollShop, buyXp, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
@@ -59,20 +59,45 @@ describe('M5 Match atomic integration', () => {
     expect(next.state.shop).toBe(before.shop);expect(next.state.rngState).toBe(before.rngState);
     expect(nextRound(next.state,before.round).state).toBe(next.state);
   });
-  it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
-    let state=choices(createMatch(42));
-    for(let round=1;round<getCatalogRoundById('2-4').ordinal;round++) {
-      const started=startMatchCombat(state); if(!started.ok) throw new Error(started.reason);state=started.state;
-      while(state.phase==='combat') {
-        const restored=restoreMatch(serializeMatch(state));
-        const live=stepMatch(state);
-        expect(stepMatch(restored)).toEqual(live);state=live.state;
+  describe('per-tick restore through the 2-4 supply', () => {
+    // Serializing every combat tick through 2-3 is ~45s locally (0c676fac) and was killed at 60s
+    // on the loaded CI shard. Hooks share that walk; each stays under the 10s hook limit.
+    const supplyOrdinal = getCatalogRoundById('2-4').ordinal;
+    let walked: MatchState | undefined;
+    let walkedRound = 1;
+    let fighting = false;
+    function advanceRestoreWalk(): void {
+      if (walkedRound >= supplyOrdinal) return;
+      const deadline = performance.now() + 3_500;
+      walked ??= choices(createMatch(42));
+      while (walkedRound < supplyOrdinal && performance.now() < deadline) {
+        if (!fighting) {
+          const started = startMatchCombat(walked);
+          if (!started.ok) throw new Error(started.reason);
+          walked = started.state;
+          fighting = true;
+        }
+        if (walked.phase === 'combat') {
+          const restored = restoreMatch(serializeMatch(walked));
+          const live = stepMatch(walked);
+          expect(stepMatch(restored)).toEqual(live);
+          walked = live.state;
+          continue;
+        }
+        walked = choices(walked);
+        expect(walked.roundResults).toHaveLength(walkedRound);
+        expect(restoreMatch(serializeMatch(walked))).toEqual(walked);
+        const next = nextRound(walked, walkedRound);
+        if (!next.ok) throw new Error(next.reason);
+        walked = next.state;
+        if (walked.pendingChoice?.kind === 'augment') walked = choices(walked);
+        walkedRound += 1;
+        fighting = false;
       }
-      state=choices(state);expect(state.roundResults).toHaveLength(round);
-      expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      const next=nextRound(state,round);if(!next.ok)throw new Error(next.reason);state=next.state;
-      if(state.pendingChoice?.kind==='augment') state=choices(state);
     }
+    for (let hook = 0; hook < 48; hook += 1) beforeAll(advanceRestoreWalk);
+    it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
+    let state = walked!;
     expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
     const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
     const selected=selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!selected.ok)throw new Error(selected.reason);state=selected.state;
@@ -83,4 +108,5 @@ describe('M5 Match atomic integration', () => {
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     // 临时、用户 10-20 批准：CI 上约 31 秒（原限 30 秒，本机约 17 秒，断言都过），按约 2 倍放宽到 60 秒；断言不变。
   }, 60000);
+  });
 });
