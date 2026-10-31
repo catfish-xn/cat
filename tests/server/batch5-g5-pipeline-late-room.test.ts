@@ -34,7 +34,7 @@ for (const roundId of ['3-3', '3-4', '3-5', '3-6', '3-7']) it(`enters ${roundId}
     expect(room.handle('s0', { type: 'buy', slot, generation: s.shop.generation })).toMatchObject({ ok: true });
   }
 });
-it('opens the independently sampled late PvE orb and grants exactly its weighted bonus', () => {
+it('loses 3-7 and carries the pipeline orb to 4-7', () => {
   const extra = pipelineExtraOrbs(mine()); expect(extra).toHaveLength(1); expect(extra[0].roundId).toBe('3-7');
   expect(extra).toEqual(oracle.pipelineOrbs(mine())); const orbId = extra[0].orbId;
   runUntil(room, clock, s => s.roundId === '3-7' && s.phase === 'settlement');
@@ -45,6 +45,19 @@ it('opens the independently sampled late PvE orb and grants exactly its weighted
   expect(readLootView(mine()).unclaimedOrbs?.some(o => o.orbId === orbId)).toBe(false);
   const carried = (mine().m8.loot.carry ?? []).filter(row => extra[0].entries.some(entry => entry.dropId === row.dropId));
   expect(carried.map(row => row.deliverRoundId)).toEqual(extra[0].entries.map(() => '4-7'));
+});
+// One case used to play 4-1..4-6 inside the claim (local ~3.4s, over the 5s limit once CI shares the machine).
+// Same room and source order as the earlier `enters` cases: each round is its own case, and the claim case only
+// walks 4-6 → 4-7. v26 carryover (8f794062) is why the claim is no longer inside 3-7 settlement.
+for (const roundId of ['4-1', '4-2', '4-3', '4-4', '4-5', '4-6']) it(`enters ${roundId} before the carried pipeline orb can be opened`, () => {
+  runUntil(room, clock, s => s.roundId === roundId && (roundId.endsWith('-4') || s.phase === 'preparation'));
+  const extra = pipelineExtraOrbs(mine()); expect(extra).toHaveLength(1); expect(extra[0].roundId).toBe('3-7');
+  expect(readLootView(mine()).unclaimedOrbs?.some(o => o.orbId === extra[0].orbId)).toBe(false);
+  const carried = (mine().m8.loot.carry ?? []).filter(row => extra[0].entries.some(entry => entry.dropId === row.dropId));
+  expect(carried.map(row => row.deliverRoundId)).toEqual(extra[0].entries.map(() => '4-7'));
+});
+it('opens the independently sampled late PvE orb and grants exactly its weighted bonus', () => {
+  const extra = pipelineExtraOrbs(mine()); expect(extra).toHaveLength(1); const orbId = extra[0].orbId;
   runUntil(room, clock, s => s.roundId === '4-7' && s.phase === 'preparation');
   expect(mine().roundDefinitionId).toBe('4-7');
   expect(readLootView(mine()).unclaimedOrbs?.some(o => o.orbId === orbId)).toBe(true);
