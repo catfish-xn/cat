@@ -5,7 +5,8 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { makeRoom, runUntil } from './helpers';
 
 // Seed 8 naturally offers Called Shot to s2 at 2-1; split the real PvE route at each round.
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 8 });
+// v26 D5 (7953c99a) pool: seed 8's s2 now gets titanic-titan/...; seed 55 is the first seed from 0 offering s2 Called Shot at 2-1.
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 55 });
 const owner = () => room.state.seats.find(seat => seat.seatId === 's2')!;
 let beforeChoice: RoomState;
 beforeAll(() => { room.start(); });

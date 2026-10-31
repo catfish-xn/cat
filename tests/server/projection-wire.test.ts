@@ -67,7 +67,8 @@ describe('V26 public streak over the wire', () => {
   describe('Called Shot acquired between settlements', () => {
     let owner: TestClient, observer: TestClient, room: Room;
     beforeAll(async () => {
-      harness = await startServer({ seed: 8 }, new TwoSidedBattleResolver());
+      // v26 D5 (7953c99a) pool: seed 8's s2 offer no longer holds Called Shot; seed 55 is the first seed from 0 where s2 gets it at 2-1.
+      harness = await startServer({ seed: 55 }, new TwoSidedBattleResolver());
       const first = await harness.connect(); observer = await harness.connect(); owner = await harness.connect();
       for (const [index, client] of [first, observer, owner].entries()) expectOk(await client.join(`玩家 ${index}`));
       expectOk(await first.start());
@@ -379,7 +380,9 @@ describe('B7 compact replay', () => {
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
     // Public seed 4 reaches overtime under the 2026-10-29 PvE damage rule.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 4 });
+    // v26 later rules (targeting P0/P1, D5 offers, loot carryover) end seed 4 at 6-6; seed 20 is the first seed from 0
+    // whose game reaches overtime (overtime-3).
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 20 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();
@@ -408,7 +411,10 @@ describe('B7 overtime (§11.5)', () => {
   it('ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP)', () => {
     // Seed 0 now chooses I'm the Carry Now at 4-2: its unsellable carry-golem breaks the empty-board precondition.
     // Seed 3 keeps all eight PvP boards empty through public sell commands; the zero-unit assertion below stays exact.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3 });
+    // v26 (D5 offer changes 7953c99a / PvE loss damage ef0490c4): seed 3's s2 now takes a 3-2 augment that fields an unsellable
+    // augment-golem, and the 4-6 anomaly target step has no unit to target. Seed 5 (first seed after 3 with zero PvP units
+    // and every open choice answerable) keeps the same public sell-only route.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 5 });
     room.start();
     const hpByRound: { kind: string | null; hp: number }[] = [];
     let lastCleared = -1;

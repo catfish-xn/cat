@@ -6,9 +6,10 @@ import { enableMultiplayerSettlement } from '../src/simulation/round-settlement'
 import { accepted } from './t10-helpers';
 import { catalogPreparation } from './t5r-helpers';
 
-it('keeps 306 augments after batch-5 expansion and the same complete 56-anomaly pool in both modes', () => {
+it('keeps 310 augments after batch-5 expansion and D5 registration and the same complete 56-anomaly pool in both modes', () => {
   const all = Object.keys(ANOMALY_DEFINITIONS).sort();
-  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(306); // Fifth-batch pool expansion; matches the independent full catalog (including carousel-only cards).
+  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(310); // Fifth-batch pool expansion (306) plus v26 D5 (7953c99a: what-you-really-are, brb, over-encumbered, restart-mission); matches the independent full catalog (including carousel-only cards).
+  for (const id of ['what-you-really-are', 'brb', 'over-encumbered', 'restart-mission']) expect(AUGMENT_DEFINITIONS).toHaveProperty([id]);
   expect(all).toHaveLength(56);
   expect(anomalyCandidates(false).sort()).toEqual(all);
   expect(anomalyCandidates(true).sort()).toEqual(all);

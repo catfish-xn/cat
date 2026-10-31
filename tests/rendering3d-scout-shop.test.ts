@@ -240,6 +240,8 @@ describe('3D scouting shop availability', () => {
       blocksSell = false;
       constructor(actions: { selectUnit: (id: string) => void }) { selectUnit = actions.selectUnit; }
       render() {} reset() {} cancel() {} destroy() {} status() {}
+      // bb1990d5: BoardScene refreshes augment icons in place once the idle asset manifest loads.
+      refreshAugmentIcons() {}
     } }));
     vi.doMock('../src/presentation/help-panel', () => ({ HelpPanel: class { open = false; destroy() {} } }));
     vi.doMock('../src/presentation/s13-assets', async importOriginal => ({

@@ -57,7 +57,8 @@ it('Roll the Dice is offered at its 14.24 nodes and grants the existing radiant 
   expect(augmentPool('prismatic',[],[],`round:${node}:augment`,[]).includes(id)).toBe(allowed);
  }
  // v25 pool: first public 3-2 seed in 0..100 without rerolls (seed 44).
- const before=reachRound('3-2',false,44),choice=before.pendingChoice!;expect(choice.offers).toContain(id);
+ // v26 D5 (7953c99a) pool: seed 44 now offers im-the-carry-now first; 99 is the first seed from 0 offering it unrerolled.
+ const before=reachRound('3-2',false,99),choice=before.pendingChoice!;expect(choice.offers).toContain(id);
  let state=accepted(selectChoice(before,choice.choiceId,choice.generation,id));
  const gift=state.items.find(item=>item.definitionId===oracle[id].item)!;expect(gift).toBeDefined();roundTrip(state);
  reject(state,x=>{x.seatMechanics.receipts.find((r:any)=>r.definitionId===oracle[id].item).definitionId='blue-buff';});
