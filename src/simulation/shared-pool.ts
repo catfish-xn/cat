@@ -81,7 +81,7 @@ import type { CostTier } from './unit-types';
 import { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, type SharedPoolState, type SharedPoolResult,
   type SharedPoolBatchResult, type SharedPoolEvent, type SharedPoolFailure, type SharedMatchCommand } from './shared-pool-types';
 import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, returnHolding,
-  assertSharedPoolConservation, reconcileHoldings, rewardPolicy, type PoolDraft } from './shared-pool-ledger';
+  assertSharedPoolConservation, assertCarriedPoolConservation, reconcileHoldings, rewardPolicy, type PoolDraft } from './shared-pool-ledger';
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
 
@@ -145,22 +145,27 @@ function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   pool.seats=pool.seats.map(s=>s===seat?{...seat,revision,shop}:s);if(bumpPool) pool.revision++;
   return {...state,shop,sharedPool:{poolId:pool.poolId,seatId,revision}};
 }
-function active(pool:SharedPoolState,state:MatchState):void {
+function active(pool:SharedPoolState,state:MatchState,inputAlreadyConserved=false):void {
   requirePool(pool.carouselReservations.length===0,'wrong-phase');
-  assertSharedPoolConservation(pool,[state]);
+  // The placeholder combat loop passes the pool/state pair just returned by the previous
+  // successful command, and it does not publish or edit that pair before the next tick.
+  // The output is still checked below. Any other caller keeps the full input walk.
+  if(!inputAlreadyConserved)assertSharedPoolConservation(pool,[state]);
   requirePool(!pool.seats.find(s=>s.seatId===state.sharedPool!.seatId)!.released&&state.multiplayer?.status==='active','seat-eliminated');
 }
 function transact(pool:SharedPoolState,state:MatchState,
-  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string,onUnexpectedError?:(error:unknown)=>void):SharedPoolResult {
+  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string,onUnexpectedError?:(error:unknown)=>void,inputAlreadyConserved=false):SharedPoolResult {
   try {
-    active(pool,state);
+    active(pool,state,inputAlreadyConserved);
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[];
     const result=command(draft,rewardPolicy(draft,state,poolEvents),poolEvents);
     if(!result.ok) return failure(pool,state,result.reason);
     requirePool(safe(result.state.gold)&&safe(result.state.nextMatchEventSeq),'invalid-seat-state');
     reconcileHoldings(draft,state,result.state,poolEvents,preSold);
     if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) return {ok:true,pool,state,events:result.events,poolEvents};
-    const next=finish(draft,result.state);assertSharedPoolConservation(draft,[next]);
+    const next=finish(draft,result.state);
+    if(inputAlreadyConserved)assertCarriedPoolConservation(draft,[next],pool);
+    else assertSharedPoolConservation(draft,[next]);
     return {ok:true,pool:draft,state:next,events:result.events,poolEvents};
   } catch(error) {return failure(pool,state,reasonOf(error,onUnexpectedError));}
 }
@@ -320,14 +325,14 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 }
 
 /** All original Match paths that may award a unit use this transaction-local pool policy. */
-export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand,onUnexpectedError?:(error:unknown)=>void):SharedPoolResult {
+export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand,onUnexpectedError?:(error:unknown)=>void,inputAlreadyConserved=false):SharedPoolResult {
   return transact(pool,state,(_draft,policy,poolEvents)=>{
     const result=matchCommand(_draft,policy,poolEvents);
     // Subscription Service opens its shop the moment it is acquired (a pick or a timed-out pick).
     if(!result.ok||!subscriptionAcquired(state,result.state))return result;
     releaseShop(_draft,state.sharedPool!.seatId);
     return {...result,state:drawSubscriptionShop(_draft,result.state,poolEvents)};
-  },undefined,onUnexpectedError);
+  },undefined,onUnexpectedError,inputAlreadyConserved);
   function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy,poolEvents:SharedPoolEvent[]):MultiplayerCommandResult {
     switch(command.type) {
       case 'buyXp': return buyXpWithShopRefresh(state,policy,leveled=>{releaseShop(_draft,state.sharedPool!.seatId);return drawShop(_draft,leveled,poolEvents,'dual-purpose');});
