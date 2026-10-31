@@ -93,7 +93,10 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(planOpening('b7-vector', DEFAULT_BOARD, [...units].reverse(), [...compiled.openingDefinitions].reverse())).toEqual(planned);
     const first = stepCombat(start('3-7', [], { units }));
     expect(first.events.filter(e => e.type === 'movement')).toHaveLength(4);
-    expect(first.events.filter(e => e.type === 'packetDamage')).toEqual([]); expect(first.state.rngDraws).toBe(0);
+    // targeting-p1 (8106acee): p's opening target is an equal-distance tie among the wolves and now draws one combat word;
+    // the opening plans still consume none (v25: rngDraws 0, when ties took the first candidate without a draw).
+    expect(first.events.filter(e => e.type === 'packetDamage')).toEqual([]); expect(first.state.rngDraws).toBe(1);
+    expect(first.state.units.find(u => u.id === 'p')!.targetId).toBeTruthy();
     expect(first.state.openingState?.plans.every(p => p.consumed)).toBe(true);
     validateOpeningState(first.state.openingState!, 'b7-vector', DEFAULT_BOARD, compiled.openingDefinitions);
     const restored = stepCombat(JSON.parse(JSON.stringify(first.state)));

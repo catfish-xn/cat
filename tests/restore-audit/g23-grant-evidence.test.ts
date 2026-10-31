@@ -9,11 +9,18 @@ import {publicPendingArmory} from '../fixtures/g2-3-armory-public';
 import {publicAcademyGrant} from '../fixtures/g2-3-academy-public';
 import {roundRouteCache} from '../fixtures/round-route-cache';
 import {historyFreeRerollPriorities} from '../fixtures/history-free-augments';
+import {AUGMENT_DEFINITIONS} from '../../src/simulation/content/augments';
+import {augmentNeedsHistory} from '../../src/simulation/augment-history-owners';
 let junker:MatchState,academy:MatchState;
 const armoryRoute=roundRouteCache(onRound=>publicPendingArmory(3,onRound));
 // Seed 42 has prismatic 4-2 offer-level history; seed 25 and public rerolls
 // isolate grant evidence without changing either the corruptions or their errors.
-const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound,historyFreeRerollPriorities,25));
+// v26 D5 (7953c99a): after the three public 4-2 rerolls seed 25 is offered no listed history-free card and the route's
+// fallback took rebel-resurgence, a history owner (v25 took none). At 4-2 only, extend the requested list with every other
+// registered card that owns no history, in catalog order, so the route still takes a history-free card; 2-1/3-2 unchanged.
+const academyRerolls={...historyFreeRerollPriorities,'4-2':[...historyFreeRerollPriorities['4-2'],
+ ...Object.keys(AUGMENT_DEFINITIONS).filter(id=>!augmentNeedsHistory(id)&&!historyFreeRerollPriorities['4-2'].includes(id))]};
+const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound,academyRerolls,25));
 describe('grant evidence at public route endpoints',()=>{
 // Ordered, bounded hooks own the prefix, including filtered and shuffled runs.
 for(const [route,lastRound] of [[armoryRoute,27],[academyRoute,24]] as const){

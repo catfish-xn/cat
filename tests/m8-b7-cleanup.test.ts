@@ -16,15 +16,22 @@ vi.setConfig({ testTimeout: 20_000 });
 // Isolated hypothetical trusted definitions, never changes the production catalog.
 // Delayed execution additionally proves restore derives activation from the task.
 const timing = vi.hoisted(() => ({ duration: 10, executeAtTick: 1, heroManaZero: false }));
+// v26 14.24 neutrals (568eeea4, docs/NEUTRALS_14_24_RESTORATION.md): 6-7 is now the Elder Dragon, so no live encounter has
+// the Rift Herald's path-charge stun. As the other B7 Herald engine regressions do, compile the legacy Herald vector with
+// the production compiler (tests/neutral-helpers.ts) and expose it beside the live catalog only inside this test module.
 vi.mock('../src/simulation/neutral-encounter-compiler', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/neutral-encounter-compiler')>();
+  const legacy = actual.compileNeutralEncounterDefinition({
+    roundId: 'test-legacy', encounterId: 'test-legacy-herald',
+    slots: [{ slotId: 'h01', definitionId: 'pve-rift-herald', cell: { col: 3, row: 1 } }],
+  });
   return { ...actual, get COMPILED_NEUTRAL_ENCOUNTERS() {
-    return actual.COMPILED_NEUTRAL_ENCOUNTERS.map(e => ({ ...e, openingDefinitions: e.openingDefinitions.map(d => d.kind !== 'path-charge' ? d : {
+    return [...actual.COMPILED_NEUTRAL_ENCOUNTERS, legacy].map(e => ({ ...e, openingDefinitions: e.openingDefinitions.map(d => d.kind !== 'path-charge' ? d : {
       ...d, effects: d.effects.map(effect => effect.kind !== 'apply-status' ? effect : {
         ...effect, status: { ...effect.status, duration: { kind: 'ticks', ticks: timing.duration } },
       }),
     }) }));
-  } };
+  }, readNeutralCombatUnit: (id: string) => actual.readNeutralCombatUnit(id) ?? legacy.units.find(u => u.id === id) };
 });
 vi.mock('../src/simulation/m8/opening', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/m8/opening')>();
@@ -47,7 +54,8 @@ vi.mock('../src/simulation/strategy-snapshot', async importOriginal => {
 });
 
 function fixture() {
-  const encounter = COMPILED_NEUTRAL_ENCOUNTERS.find(e => e.roundId === '6-7')!;
+  const encounter = COMPILED_NEUTRAL_ENCOUNTERS.find(e => e.roundId === 'test-legacy')!;
+  expect(encounter.openingDefinitions.map(d => d.kind)).toEqual(['path-charge']);
   const preparation: GameState = { board: DEFAULT_BOARD, benchSize: 9, units: [...encounter.deployment,
     { id: 'p', definitionId: 'garen', team: 'player', starLevel: 3, location: { kind: 'board', cell: { col: 3, row: 4 } } },
   ] };

@@ -26,13 +26,17 @@ function settle(s:MatchState) {
 function validate(s:MatchState){expect(()=>validateBatch5Gold(s)).not.toThrow();}
 function reject(s:MatchState,mutate:(x:any)=>void){const copy=structuredClone(s);mutate(copy);expect(()=>validateBatch5Gold(copy)).toThrow();}
 
-it('real 2-1 pick: settlement XP buys nothing; first settlement buy costs 12→10, repeated buy costs four',()=>{
- let s=selected();expect(batch5XpPurchases(s,s.round)).toBe(0);validate(s);
- s=accepted(settle(s));expect(s.gold).toBe(12);expect(s.roundResults.at(-1)!.xpAwarded).toBe(2);
+// v25: firstNodeSeed('dual-purpose') was seed 6 (11 gold at 2-1, 12 after settlement). The v26 D5 pool (7953c99a) moves
+// the first 2-1 offer to seed 14, whose identical empty three-loss route holds 17 gold at 2-1. The settlement still adds
+// the same +1 and the two buys still cost two then four: 18→16→12 (was 12→10→6).
+it('real 2-1 pick: settlement XP buys nothing; first settlement buy costs 18→16, repeated buy costs four',()=>{
+ expect(firstNodeSeed('dual-purpose')).toBe(14);
+ let s=selected();expect(batch5XpPurchases(s,s.round)).toBe(0);validate(s);expect(s.gold).toBe(17);
+ s=accepted(settle(s));expect(s.gold).toBe(18);expect(s.roundResults.at(-1)!.xpAwarded).toBe(2);
  expect(batch5XpPurchases(s,s.round)).toBe(0);validate(s);
- const settled=s;s=accepted(buyXp(s));expect(s.gold).toBe(10);expect(s.shop.generation).toBe(settled.shop.generation+1);
+ const settled=s;s=accepted(buyXp(s));expect(s.gold).toBe(16);expect(s.shop.generation).toBe(settled.shop.generation+1);
  expect(batch5XpPurchases(s,s.round)).toBe(1);validate(s);
- const first=s;s=accepted(buyXp(s));expect(s.gold).toBe(6);expect(s.shop.generation).toBe(first.shop.generation+1);
+ const first=s;s=accepted(buyXp(s));expect(s.gold).toBe(12);expect(s.shop.generation).toBe(first.shop.generation+1);
  expect(batch5XpPurchases(s,s.round)).toBe(2);validate(s);
  expect(s.roundResults).toBe(settled.roundResults);
  const repeated=settle(s);expect(repeated.ok).toBe(false);expect(repeated.state).toBe(s);
