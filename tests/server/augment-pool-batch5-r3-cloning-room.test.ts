@@ -11,7 +11,10 @@ import { createCombatWithEvents } from '../../src/simulation/combat';
 import type { CombatState } from '../../src/simulation/combat-types';
 import type { MatchState } from '../../src/simulation/match-types';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 9 });
+// v26 D5 (7953c99a) moved the room 2-1 draws; seed 9 no longer shows cloning-facility to any seat within the public rerolls.
+// Re-searched room seeds 0..39: seed 2 is the first whose human seat (s2) is offered it without rerolling (seed 1 offers it
+// only to bot s6, which Room.handle cannot command).
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 2 });
 let holder: string;
 afterAll(() => room.dispose());
 for (const round of ['1-2', '1-3', '1-4', '2-1']) it(`B5-74 room reaches ${round}`, () => {

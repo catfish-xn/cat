@@ -6,7 +6,11 @@ import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 
 // Seed 5: installB1Offers scripts 2-1 heroic-grab-bag and 3-2 sponging; part of the donor gear comes from that grab-bag chain, not pure PvE orbs alone.
-let route = createMatch(5), acquired: MatchState, opening: MatchState, permanent: MatchState['items'];
+// v26 PvE loot carryover/14.24 neutrals (8f794062, 568eeea4): seed 5's lost PvE rounds now carry a drop past 3-2, so it holds
+// five components and item-5/item-6 no longer combine (v25 made archangel/shojin/sunfire-cape). Re-searched seeds 0..79 on
+// the same route: seed 29 is the first whose item-1..6 form three completed items; their definitions are read from the
+// combines and asserted exactly below.
+let route = createMatch(29), acquired: MatchState, opening: MatchState, permanent: MatchState['items'], completed: string[];
 let restoreSpongingOffers: () => void;
 const priorities = ['item-grab-bag-i','big-grab-bag','heroic-grab-bag','iron-assets'];
 beforeAll(() => {
@@ -37,9 +41,13 @@ beforeAll(() => {
   acquired = accepted(selectChoice(route, c.choiceId, c.generation, 'sponging'));
   let s = acquired;
   const donor = s.preparation.units.find(u => u.id === 'unit-1')!;
+  const components = new Set(s.items.map(i => i.id));
   for (const [a,b] of [['item-1','item-2'], ['item-3','item-4'], ['item-5','item-6']]) s = accepted(combineItems(s,a,b));
-  const ids = s.items.filter(i => ['archangel','shojin','sunfire-cape'].includes(i.definitionId));
+  const ids = s.items.filter(i => !components.has(i.id));
   expect(ids).toHaveLength(3);
+  completed = ids.map(i => i.definitionId);
+  expect(new Set(completed).size).toBe(3);
+  expect(completed).not.toContain('warmog');
   for (const [slot, item] of ids.entries()) s = accepted(equipItem(s, item.id, donor.id, slot));
   permanent = s.items;
   opening = accepted(startMatchCombat(s));
@@ -52,7 +60,7 @@ it('B5-79 actual choose/combine/equip/start commands copy from the nearest full 
   expect(recipients).toHaveLength(3);
   for (const u of recipients) {
     expect(u.id).not.toBe('unit-1'); expect(u.combatItemGrants).toHaveLength(1);
-    expect(['archangel','shojin','sunfire-cape']).toContain(u.combatItemGrants![0].definitionId);
+    expect(completed).toContain(u.combatItemGrants![0].definitionId);
   }
   expect(opening.items).toEqual(permanent);
   const roster = requireAugmentFacts(opening,'combat-roster',opening.round)[0].roster;

@@ -3,6 +3,7 @@
  * auto-deployment, the PvP roster lock and the settlement on the latest live seat. The rules themselves are
  * covered by tests/t10-*.test.ts; here only what the room orchestrates.
  */
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
 import { ROOM_COMMAND_GATE } from '../../src/server/room/room';
@@ -144,7 +145,11 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     }
     const before = seat(room.state, 's0').match, botBefore = seat(room.state, 's4').match;
     const cap = before.level;
-    const reserves = own(before).sort((a, b) => (a.location as { slot: number }).slot - (b.location as { slot: number }).slot);
+    // Anvils are bench-only units opened by selling (ANVIL_POLICY.benchOnly, a229dd6f) and are never auto-deployed. Under the
+    // v26 14.24 neutrals/loot (568eeea4) s0 now holds an anvil at round 5, so the reserve order skips it explicitly.
+    const anvils = own(before).filter(unit => isAnvil(unit.definitionId));
+    expect(anvils.every(unit => unit.location.kind === 'bench')).toBe(true);
+    const reserves = own(before).filter(unit => !isAnvil(unit.definitionId)).sort((a, b) => (a.location as { slot: number }).slot - (b.location as { slot: number }).slot);
     expect(onBoard(before)).toHaveLength(0);
     expect(reserves.length).toBeGreaterThanOrEqual(cap);
     const revision = seat(room.state, 's0').seatRevision;
@@ -155,6 +160,7 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     const cells = [4, 5, 6, 7].flatMap(row => [3, 2, 4, 1, 5, 0, 6].map(col => `${col},${row}`));
     const expected = reserves.slice(0, cap).map((unit, index) => [unit.id, cells[index]]);
     expect(onBoard(after.match).map(unit => [unit.id, where(unit)]).sort()).toEqual([...expected].sort());
+    for (const anvil of anvils) expect(own(after.match).find(unit => unit.id === anvil.id)!.location).toEqual(anvil.location);
     expect(after.match.multiplayer?.combatRosterLocked).toBe(true);
     // One publication for deployment and lock; its events go out with that state push, one per moved unit, in order.
     expect(after.seatRevision).toBe(revision + 1);

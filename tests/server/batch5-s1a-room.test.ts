@@ -4,7 +4,9 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { makeRoom, runUntil } from './helpers';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:22});
+// v26 D5 (7953c99a) moved the room 2-1 draws: seed 22's s3 no longer reaches beggars-can-be-choosers within three public
+// rerolls. Re-searched room seeds 0..39 with the same seat and rerolls: seed 31 (s3 is offered it without rerolling).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:31});
 let sid:string;
 beforeAll(()=>{
  room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');

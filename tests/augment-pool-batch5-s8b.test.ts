@@ -28,7 +28,11 @@ it('only the 4-2 node permits Glorious Evolution',()=>{
 // The integrated-pool seed offers this 4-2 card. Split the real route into
 // rounds so ordinary Vitest limits apply to each battle, and retain replay evidence.
 // v25 batch-5 pool: first fielded public route to 4-2 offering glorious-evolution (seed search 0..100).
-const ROUTE_SEED=12;
+// v26: D5 (7953c99a) moved the augment draws and the 14.24 neutrals/targeting changes moved the fights; seed 12's 4-2
+// offer is now greater-moonlight/... without it. Re-searched the same fielded route from 0: hits are 28, 57, 82, 89.
+// Seed 28's longer v26 fights put single route rounds over the default 5 s case limit on a loaded machine (no timeouts are
+// raised), so use seed 57, the fastest of the hits measured (slowest route round 1.4 s at load ~20; seed 89 1.9 s).
+const ROUTE_SEED=57;
 let route=createMatch(ROUTE_SEED); const battles:BattleRecord[]=[];
 function fight(context:MatchState):MatchState {
  const start=startMatchCombat(context);let s=accepted(start);const initial=s.combat!,events:MatchEvent[]=[...(start.ok?start.events:[])];

@@ -196,7 +196,9 @@ it('Pit Fighter heals the integer total over exactly 40 ticks, with no instant h
   let c=combat(tierArmy('pit-fighter',8));const id=c.units.find(u=>u.team==='player')!.id;
   c={...c,units:c.units.map(u=>({...u,hp:u.id===id?Math.floor(u.maxHp*.45):u.hp,cooldownTicks:1000,moveCooldownTicks:1000}))};
   // Enemy attacks exactly once to cross the post-damage survival barrier.
-  c={...c,units:c.units.map(u=>u.id==='enemy'?{...u,cooldownTicks:0,cell:{col:0,row:3}}:u.id===id?{...u,cell:{col:0,row:4}}:u)};
+  // targeting-p1 (8106acee): the holder is no longer the enemy's only nearest candidate; an equal-distance tie now draws
+  // the combat stream and can pick another Pit Fighter. Aim the single attack at the holder, as the ally case above does.
+  c={...c,units:c.units.map(u=>u.id==='enemy'?{...u,targetId:id,cooldownTicks:0,cell:{col:0,row:3}}:u.id===id?{...u,cell:{col:0,row:4}}:u)};
   c=stepCombat(c).state;
   const holder=c.units.find(u=>u.id===id)!,hp=holder.hp,total=Math.floor(holder.maxHp*8000/10000);
   expect(holder.tasks!.filter(t=>t.kind==='g24Heal')).toHaveLength(40);

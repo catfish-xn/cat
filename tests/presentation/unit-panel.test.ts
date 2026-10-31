@@ -16,7 +16,10 @@ beforeAll(async () => {
     export {registerRootUiAssets} from './src/presentation/s13-assets';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
-    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
+    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' },
+    // bb1990d5 (v26 augment icons layout) made augment-text-data import ./augment-hud.css; an in-memory bundle has no CSS
+    // output path, so drop stylesheets exactly as tests/presentation/hover-dom.test.ts does. The page still loads src/style.css.
+    loader: { '.css': 'empty' } });
   bundle = result.outputFiles[0].text;
 });
 beforeAll(async () => {

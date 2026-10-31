@@ -15,8 +15,12 @@ let state: MatchState, acquired: MatchState, paid: MatchState, priorCredits: num
 let paidSerialized: string;
 let anomalyTarget:string;
 let deployment: MatchState['preparation']['units'];
-/** v25 pool: first fielded 4-2 seed in 0..100 after rerolls 0/1/2 (seed 17); draw scripted when the slot drifts. */
-const H9_GOLDEN_FIND = { seed: 17, rerolls: [0, 1, 2] as const };
+/** v25 pool: first fielded 4-2 seed in 0..100 after rerolls 0/1/2 (seed 17); draw scripted when the slot drifts.
+ * v26 D5 (7953c99a) and the 14.24 neutral fights moved the route: seed 17 no longer shows a-golden-find after those rerolls.
+ * Re-searched 0..149 on the same route: hits 5, 30, 79. Seeds 5 and 30 already own a history augment before 4-2
+ * (lucky-gloves-plus / forward-thinking), so the legacy checkpoint below would replay the whole game and its hook exceeds
+ * the default limit; seed 79 keeps the v25 shape (no augmentHistory before the pick). */
+const H9_GOLDEN_FIND = { seed: 79, rerolls: [0, 1, 2] as const };
 function goldenFindOffer() {
   let state = reachRoundFielded('4-2', H9_GOLDEN_FIND.seed);
   for (const slot of H9_GOLDEN_FIND.rerolls) {
