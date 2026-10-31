@@ -10,7 +10,8 @@
  */
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
-import { createCombatReplayRecorder, runSharedMatchCommand, type CombatReplayRecorder, type SharedPoolState } from '../../server-entry';
+import { createCombatReplayRecorder, type CombatReplayRecorder, type SharedPoolState } from '../../server-entry';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import { primeCombatReplay } from './projection';
 import type { BattleInput, BattleResult, BattleSeatOutcome, PlaceholderBattleResult } from './types';
 
@@ -73,16 +74,19 @@ function* ownCombatSteps(seatId: string, state: MatchState, pool: SharedPoolStat
     if (state.phase === 'settlement' || state.phase === 'gameOver') return { outcome: { seatId, state, result: lastResult(state), damage: lastDamage(state), combat: null }, pool };
     throw new BattleResolveError(seatId, `wrong-phase:${state.phase}`);
   }
-  const started = runSharedMatchCommand(pool, state, { type: 'startCombat' });
+  const started = runSharedMatchCommand(pool, state, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'startPlaceholderCombat' : 'startCombat' });
   if (!started.ok) throw new BattleResolveError(seatId, started.reason);
   const initial = combatOf(seatId, started.state);
   const events: LedgerCombatEvent[] = ledger(started.events);
   // First-pass capture: the opening combat ledger, then each rules step exactly once (one match step is one combat tick).
   const recorder: CombatReplayRecorder | null = capture?.([seatId]) ? createCombatReplayRecorder(initial, events) : null;
   let current = started.state, latest = started.pool;
+  // Start already conserved this pair. Later ticks pass that returned pair through unchanged,
+  // so the input walk is not repeated; each tick still conserves its own output.
+  let inputAlreadyConserved = true;
   while (current.phase === 'combat') {
     yield;
-    const step = runSharedMatchCommand(latest, current, { type: 'step' });
+    const step = runSharedMatchCommand(latest, current, { type: state.multiplayer && state.m8.round.kind === 'pvp' ? 'stepPlaceholderCombat' : 'step' }, undefined, inputAlreadyConserved);
     if (!step.ok) throw new BattleResolveError(seatId, step.reason);
     const stepEvents = ledger(step.events);
     recorder?.record(combatOf(seatId, current), { state: combatOf(seatId, step.state), events: stepEvents });

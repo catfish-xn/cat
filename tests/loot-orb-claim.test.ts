@@ -18,6 +18,7 @@ import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {createCombat} from '../src/simulation/combat';
 import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
+import {augmentNeedsHistory} from '../src/simulation/augment-history-owners';
 import { foldResourceProvenance } from '../src/simulation/restore-checks/fold-provenance';
 import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
@@ -75,9 +76,15 @@ function pvpSeat() {
     const next=batch(nextSharedRound(pool,[state],round));pool=next.pool;state=next.states[0];
   }
   while(state.phase==='choice') {
-    const c=state.pendingChoice!,r=accept(runSharedMatchCommand(pool,state,{type:'timeoutChoice',round:4,choiceId:c.choiceId,generation:c.generation}));
+    // v26 D5 (7953c99a) changed this seat's 2-1 offers: the timeout default is now Scoreboard Scrapper, an
+    // AUGMENT_HISTORY_OWNERS augment whose online save needs an independent server authority to restore.
+    // These fixtures restore server-free snapshots (as in v25), so choose the first offer without history.
+    const c=state.pendingChoice!,pick=c.kind==='augment'?c.offers.find(id=>!augmentNeedsHistory(id)):undefined;
+    const r=accept(runSharedMatchCommand(pool,state,pick?{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:pick}
+      :{type:'timeoutChoice',round:4,choiceId:c.choiceId,generation:c.generation}));
     pool=r.pool;state=r.state;
   }
+  expect(state.augmentHistory).toBeUndefined();
   return {pool,state};
 }
 function pvpReceipt(state:MatchState,loss=false):RoundSettlementReceipt {
@@ -119,20 +126,24 @@ describe('multiplayer explicit orb claims',()=>{
     expect(result.state.m8.loot.receipts.slice(0,state.m8.loot.receipts.length)).toEqual(state.m8.loot.receipts);
     expect(result.state.m8.loot.direct.filter(d=>d.status==='planned')).toEqual(planned);
     expect(result.state.m8.loot.direct.filter(d=>d.status==='revealed')).toEqual([]);
+    const carriedIds=(state.m8.loot.carry??[]).filter(row=>state.m8.loot.direct.some(d=>d.dropId===row.dropId&&d.status==='carried')||state.m8.loot.choiceEligibility.some(c=>c.dropId===row.dropId&&c.status==='carried')).map(row=>row.dropId);
+    expect(result.state.m8.loot.direct.filter(d=>d.status==='carried')).toEqual([]);
+    expect(result.state.m8.loot.carry??[]).toEqual((state.m8.loot.carry??[]).filter(row=>!carriedIds.includes(row.dropId)));
     expect(result.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
-    expect(result.events).toHaveLength(dropIds.length*2);
-    for(const [i,event] of result.events.entries()){
-      expect(event).toMatchObject({domain:'match',eventSeq:state.nextMatchEventSeq+i});
-      expect(event.type).toBe(i%2===0?'lootForfeited':'lootGranted');
-    }
-    expect(result.events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId)).toEqual(dropIds);
+    expect(result.events).toHaveLength(carriedIds.length+dropIds.length*2);
+    for(const [i,event] of result.events.entries()) expect(event).toMatchObject({domain:'match',eventSeq:state.nextMatchEventSeq+i});
+    expect(result.events.slice(0,carriedIds.length).map(event=>'dropId' in event?event.dropId:'')).toEqual(carriedIds);
+    expect(result.events.slice(0,carriedIds.length).every(event=>event.type==='lootForfeited')).toBe(true);
+    const pairs=result.events.slice(carriedIds.length);
+    for(const [i,event] of pairs.entries()) expect(event.type).toBe(i%2===0?'lootForfeited':'lootGranted');
+    expect(result.events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId)).toEqual([...carriedIds,...dropIds]);
     expect(result.events.filter(e=>e.type==='lootGranted').map(e=>e.receipt)).toEqual(receipts);
     expect(result.state.nextMatchEventSeq).toBe(state.nextMatchEventSeq+result.events.length);
     const {m8:oldM8,nextMatchEventSeq:_oldSeq,...oldRest}=state;
     const {m8:newM8,nextMatchEventSeq:_newSeq,...newRest}=result.state;
     expect(newRest).toEqual(oldRest);expect({...newM8,loot:oldM8.loot}).toEqual(oldM8);
-    const {direct:_oldDirect,receipts:_oldReceipts,queuedOrbClaims:_oldQueue,...oldLootRest}=oldM8.loot;
-    const {direct:_newDirect,receipts:_newReceipts,queuedOrbClaims:_newQueue,...newLootRest}=newM8.loot;
+    const {direct:_oldDirect,receipts:_oldReceipts,queuedOrbClaims:_oldQueue,carry:_oldCarry,...oldLootRest}=oldM8.loot;
+    const {direct:_newDirect,receipts:_newReceipts,queuedOrbClaims:_newQueue,carry:_newCarry,...newLootRest}=newM8.loot;
     expect(newLootRest).toEqual(oldLootRest);
     const restored=restoreSharedOrbSnapshot(paid.pool,JSON.stringify(result.state));
     expect(restored).toEqual(result.state);

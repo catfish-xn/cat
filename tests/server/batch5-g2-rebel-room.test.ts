@@ -12,8 +12,10 @@ import type { BattleResult } from '../../src/simulation/two-sided-types';
 
 const clock = new ManualClock();
 const room = new Room(SEATS.map(s => ({...s, kind: 'human'})), {...ROOM_TIMING_DEFAULTS, ...TIMINGS,
-  roomId: 'g2-rebel-room', seed: 59, clock, resolver: new TwoSidedBattleResolver()});
-const seatId = 's6', mine = () => room.state.seats.find(s => s.seatId === seatId)!;
+  // D5 registration (7953c99a, v26 merge 3ce71065) moved the 2-1 offers: seed 59 / s6 (v25) no longer offers
+  // Rebel Resurgence; seed 18 / s2 is a re-searched room (seeds 1..18) that does, with the same Akali/Irelia gifts.
+  roomId: 'g2-rebel-room', seed: 18, clock, resolver: new TwoSidedBattleResolver()});
+const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!;
 let executed: BattleResult;
 afterAll(() => room.dispose());
 
@@ -108,6 +110,17 @@ it.each(['health', 'star', 'equipment', 'quota'] as const)('B5-70 cold online re
 
 for (const round of ['2-2', '2-3', '2-4', '2-5', '2-6', '2-7']) it(`B5-70 persists through the online ${round} entry`, () => {
   expect(runUntilClaiming(room, clock, s => s.roundId === round && s.phase === (round === '2-4' ? 'settlement' : 'preparation')).roundId).toBe(round);
+});
+
+// v26 14.24 neutrals (568eeea4, merged e5892c51) make the eight-seat 2-7 krug battles last longer: draining all of the
+// 2-7 preparation timer and its frozen-phase battle slices in one case (v25: one runUntilClaiming) now takes ~8 s. The same timers fire in the same
+// order, three per case, as in forming-room's resumable route; nothing is claimed or decided between them.
+for (const part of [1, 2, 3, 4]) it(`B5-70 resolves the online 2-7 PvE battle slices, part ${part}`, () => {
+  for (let n = 0; n < 3 && !(room.state.roundId === '2-7' && room.state.phase === 'battle'); n++) {
+    expect(['preparation', 'frozen']).toContain(room.state.phase);
+    expect(clock.fireNext()).toBe(true);
+  }
+  expect(room.state.fault).toBeNull();
 });
 
 it('B5-70 real online PvE retains and authenticates the spawned combat bodies in Match saves', () => {

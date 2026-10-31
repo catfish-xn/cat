@@ -20,6 +20,8 @@ import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
 import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+import { createPlayerDamage } from './player-damage';
+import type { PvpDamage } from '../../presentation/pvp-damage';
 export { LEGEND_MODEL };
 /** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
 export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
@@ -79,6 +81,8 @@ export interface TabletopContext {
   readonly now?: () => number;
 }
 export interface Tabletop {
+  /** Authoritative PvP total and terminal survivor cells, delivered by the lazy settlement presenter. */
+  damage(hit: PvpDamage): void;
   /** A confirmed Mel save, at my legend; receipt deduplication belongs to BoardScene. */
   saved(): void;
   /** Board-space points the camera should keep in view (legends, the orb column), for this board size. */
@@ -99,9 +103,10 @@ export interface Tabletop {
    * Visiting another board (TFT: my legend goes there): mine leaves this one, its walk dropped and no orb claimed meanwhile;
    * back home it stands at its own spot again.
    */
-  away(on: boolean): void;
+  away(on: boolean, carousel?: boolean): void;
   /** Acceptance read (?debug3d). */
-  debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean; dropping: boolean; opened: boolean }[]; hits: string[]; opening: number; bolt: boolean };
+  debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean; dropping: boolean; opened: boolean }[]; hits: string[]; opening: number; bolt: boolean;
+    volley: ReturnType<ReturnType<typeof createPlayerDamage>['debug']> };
   dispose(): void;
 }
 
@@ -133,6 +138,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     opponent: own(new MeshStandardMaterial({ color: '#e3a08f', roughness: 0.55 })), eye: own(new MeshStandardMaterial({ color: '#1b2230' })) };
 
   const now = ctx.now ?? (() => performance.now());
+  const damage = createPlayerDamage(ctx);
+  let damageFrame: BoardFrame | null = null;
   const anchors = { me: new Vector3(), opponent: new Vector3(), enemySide: new Vector3(), orbs: [] as Vector3[], center: new Vector3() };
   /** Board cells: hex widths from the board origin. `bounds` is where my legend may walk (board-space x/z). */
   const board = { x: 0, z: 0, width: 1, bounds: { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } };
@@ -185,7 +192,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
   /** Set while I visit another board (`away`). */
-  let away = false;
+  let away = false, carousel = false;
   const legend = (side: 'me' | 'opponent'): LegendView => {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
@@ -196,7 +203,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-legend-${side}`;
     view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
-    root.add(standIn(side)); root.visible = !(away && side === 'me');
+    root.add(standIn(side)); root.visible = !carousel && !(away && side === 'me');
     placeLegend(view); scene.add(root);
     if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
     if (side === 'opponent' && before) opponentWalk = before.walk;
@@ -414,6 +421,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   // --- HP-loss bolt ------------------------------------------------------------------------------------------------
   let hit: HitPlan | null = null;
   const hitsPlayed: string[] = [];
+  const damagePlayed: string[] = [];
   const endBolt = (bolt: Bolt) => { bolt.disposed = true; bolt.fx?.dispose(); bolt.fx = null; bolt.mesh?.removeFromParent(); bolt.mesh = null; };
   const startHit = (key: string, fromLegend: boolean) => {
     if (hit?.bolt) endBolt(hit.bolt);
@@ -458,6 +466,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   // --- frames ------------------------------------------------------------------------------------------------------
   let seeded = false, seenHit: string | null = null, pvpLinger = 0, pvpShown = false;
   const onFrame = (frame: BoardFrame) => {
+    damageFrame = frame;
     layout(frame);
     legend('me');
     // A shown battle against another board (no neutral PvE monster among the enemies) has that board's legend on its side.
@@ -501,7 +510,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     });
 
     const key = frame.hit?.key ?? null;
-    if (seeded && key && key !== seenHit) {
+    if (seeded && key && key !== seenHit && !frame.hit?.pvp) {
       const fromLegend = pvpShown && pvpLinger > 0;
       if (fromLegend) legend('opponent');
       startHit(key, fromLegend);
@@ -513,9 +522,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   let clock = 0;
   const update = (seconds: number) => {
     clock += seconds;
+    damage.update(seconds);
     if (!legends.size && !orbs.size && !hit && !bursts.size) return;
     updateHit(seconds);
-    if (pvpLinger > 0 && !hit) {
+    if (pvpLinger > 0 && !hit && !damage.isActive()) {
       pvpLinger = Math.max(0, pvpLinger - seconds);
       if (pvpLinger === 0) dropLegend('opponent');
     }
@@ -563,6 +573,22 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    damage(event) {
+      const frame = damageFrame;
+      const key = `${event.key}:${event.target}`;
+      if (!frame || away || damagePlayed.includes(key)) return;
+      damagePlayed.push(key);
+      if (damagePlayed.length > 64) damagePlayed.shift();
+      if (!hitsPlayed.includes(event.key)) hitsPlayed.push(event.key);
+      pvpLinger = OPPONENT_LINGER_SECONDS;
+      if (hitsPlayed.length > 32) hitsPlayed.shift();
+      legend('opponent');
+      const sources = event.sources.map(cell => new Vector3(
+        frame.origin.x + Math.sqrt(3) * frame.hexRadius * (cell.col + (cell.row % 2) / 2), ctx.championHeight * 0.6,
+        frame.origin.y + frame.hexRadius * 1.5 * cell.row));
+      damage.play(event, sources, () => (legends.get(event.target)?.root.position ?? anchors[event.target]).clone().setY(legendHeight * 0.9),
+        () => act(legends.get(event.target), 'hit'));
+    },
     orbBox(id, area) { const view = orbs.get(id); return view && reachable(view) ? projectedBox(view.root, ctx.camera, area) : undefined; },
     saved() {
       const view = legends.get('me');
@@ -571,13 +597,17 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
         save.expiresAt = now() + 1400; // A dropped frame must not stretch the save past its wall-clock bound.
       }
     },
-    away(on) {
-      if (on === away) return;
+    away(on, inCarousel = false) {
+      const changed = on !== away, wasCarousel = carousel;
+      carousel = inCarousel;
+      for (const [side, view] of legends) view.root.visible = !carousel && !(on && side === 'me');
+      if (!changed) return;
+      if (on) damage.clear();
       away = on; orbTarget = null;
       const view = legends.get('me');
       if (!view) return;
-      view.path = null; view.root.visible = !on;
-      if (!on) { view.walked = false; placeLegend(view); }
+      view.path = null;
+      if (!on) { if (!wasCarousel) view.walked = false; placeLegend(view); }
     },
     walk(walk) {
       if (walk.scene !== 'board' || walk.who !== 'opponent') return;
@@ -587,8 +617,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     },
     debug: () => ({ legends: [...legends.values()].map(view => `${view.id}:${view.lease ? 'model' : 'standin'}${view.path ? ':walk' : ''}`),
       orbs: [...orbs.values()].map(view => ({ orbId: view.orbId, tier: view.tier, effect: view.fx !== null, dropping: view.drop !== null, opened: view.opened })),
-      hits: [...hitsPlayed], opening: bursts.size, bolt: !!hit?.bolt && !hit.bolt.disposed }),
+      hits: [...hitsPlayed], opening: bursts.size, bolt: !!hit?.bolt && !hit.bolt.disposed, volley: damage.debug() }),
     dispose() {
+      damage.dispose();
       if (hit?.bolt) endBolt(hit.bolt);
       hit = null;
       for (const entry of [...bursts]) endBurst(entry);

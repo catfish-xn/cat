@@ -22,6 +22,7 @@ class Node {
   removeEventListener(type: string) { this.listeners.delete(type); }
   click() { this.listeners.get('click')?.(); }
   querySelector() { return null; }
+  querySelectorAll() { return []; }
   closest(_selector?: string): Node | null { return null; }
   isContentEditable = false;
   remove() {}
@@ -30,7 +31,7 @@ class Node {
 describe('3D scouting shop availability', () => {
   let app: OnlineApplication | undefined, root: Node, shop: Node, listeners: ClientListeners, off: (() => void) | undefined;
   let shutdown: (() => void) | undefined;
-  const sceneMocks = ['phaser', '../src/rendering/online/mode', '../src/rendering/app-shell',
+  const sceneMocks = ['../src/presentation/merge-fx-loader', 'phaser', '../src/rendering/online/mode', '../src/rendering/app-shell',
     '../src/rendering/strategy-panel', '../src/presentation/help-panel', '../src/presentation/s13-assets',
     '../src/presentation/unit-view', '../src/stats/stats-panel', '../src/stats/combat-feedback-renderer',
     '../src/rendering/online/orb-dock', '../src/rendering/online/online-application'];
@@ -146,6 +147,30 @@ describe('3D scouting shop availability', () => {
     refresh.mockClear(); listeners.replay(prefix(0)); expect(refresh).toHaveBeenCalledTimes(1);
   }, 20_000);
 
+  it('delivers confirmed star-ups once after a phase-change redraw, and keeps normal confirmations on their existing path', async () => {
+    const { OnlineApplication } = await import('../src/rendering/online/online-application');
+    const { RemoteSession } = await import('../src/rendering/online/remote-session');
+    const { createMatch } = await import('../src/simulation/match');
+    const client = { transport: 'websocket', listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
+    const initial = createMatch(42), session = new RemoteSession(client, initial, () => 0);
+    const order: string[] = [], confirmed = vi.fn(), upgrades = vi.fn(() => order.push('upgrade')), serverEvents = vi.fn();
+    app = new OnlineApplication(session, client, { refresh: () => order.push('refresh'), clearInput() {}, status() {}, confirmed, upgrades, serverEvents });
+    const event = { type: 'unitUpgraded', survivorId: 'unit-1', consumedIds: ['unit-2', 'unit-3'], definitionId: 'lux',
+      fromStar: 1, toStar: 2, location: { kind: 'bench', slot: 0 } } as const;
+    const settlement = { ...initial, phase: 'settlement' as const, combat: null };
+    listeners.state(settlement, [{ commandId: 1, events: [event] }], []);
+    expect(order).toEqual(['refresh', 'upgrade']); expect(upgrades).toHaveBeenCalledExactlyOnceWith([event]);
+    expect(confirmed).not.toHaveBeenCalled(); expect(serverEvents).not.toHaveBeenCalled();
+    // A later push of the same state carries no new receipt, so it cannot replay the merge.
+    listeners.state(settlement, [], []); expect(upgrades).toHaveBeenLastCalledWith([]); upgrades.mockClear();
+    const commands = [{ commandId: 2, events: [event] }];
+    listeners.state({ ...settlement }, commands, []);
+    expect(confirmed).toHaveBeenCalledExactlyOnceWith(commands); expect(upgrades).toHaveBeenCalledTimes(1);
+    expect(upgrades).toHaveBeenLastCalledWith([event]);
+    listeners.state({ ...settlement }, [], [event]);
+    expect(serverEvents).toHaveBeenCalledExactlyOnceWith([event]); expect(upgrades).toHaveBeenCalledTimes(2);
+  });
+
   /** Public create + native event boundary; only graphics and unrelated DOM widgets are substituted.
    * The real OnlineApplication, RemoteSession and BoardScene choose whether any intent reaches send.
    * No private scene fields/methods are accessed, and no server or asset requests are made.
@@ -215,6 +240,8 @@ describe('3D scouting shop availability', () => {
       blocksSell = false;
       constructor(actions: { selectUnit: (id: string) => void }) { selectUnit = actions.selectUnit; }
       render() {} reset() {} cancel() {} destroy() {} status() {}
+      // bb1990d5: BoardScene refreshes augment icons in place once the idle asset manifest loads.
+      refreshAugmentIcons() {}
     } }));
     vi.doMock('../src/presentation/help-panel', () => ({ HelpPanel: class { open = false; destroy() {} } }));
     vi.doMock('../src/presentation/s13-assets', async importOriginal => ({
@@ -224,12 +251,12 @@ describe('3D scouting shop availability', () => {
       loadRootUiAssets: assetRoot === undefined ? async () => {} : (await importOriginal<typeof import('../src/presentation/s13-assets')>()).loadRootUiAssets,
     }));
     const drawn = new Set<string>();
-    vi.doMock('../src/presentation/unit-view', () => ({ UnitView: class {
+    vi.doMock('../src/presentation/unit-view', () => ({ PIECE_RADIUS: 27, UnitView: class {
       token: Drawing;
       constructor(_scene: unknown, private unit: { id: string }, x: number, y: number) {
         drawn.add(unit.id); this.token = new Drawing(x, y).setName(`unit:${unit.id}`).setData('unitId', unit.id);
       }
-      update() {} setRing() {} resetMeters() {} drawCombat() {} destroy() { drawn.delete(this.unit.id); }
+      update() {} setAnomalies() {} setOverflow() {} setRing() {} resetMeters() {} drawCombat() {} destroy() { drawn.delete(this.unit.id); }
     } }));
     vi.doMock('../src/stats/stats-panel', () => ({ createStatsPanel: () => ({ render() {}, dispose() {} }) }));
     vi.doMock('../src/stats/combat-feedback-renderer', () => ({ createCombatFeedbackRenderer: () => ({ reset() {}, dispose() {} }) }));
@@ -277,9 +304,26 @@ describe('3D scouting shop availability', () => {
         expect(send.mock.calls.filter(([command]) => command.type === type)).toHaveLength(1);
       send.mockClear();
     };
-    return { press, send, watch, session: session!, replayFor, drawn, initial, expectBlocked, expectEnabled,
+    return { scene, press, send, watch, session: session!, replayFor, drawn, initial, expectBlocked, expectEnabled,
       loadIdlePortraits: () => { for (const callback of idleCallbacks) callback(); }, portraitPreload };
   }
+
+  it('keeps the star-up overlay alive after real BoardScene.create and disposes it on shutdown', async () => {
+    const presented: unknown[] = [];
+    let alive = false;
+    vi.doMock('../src/presentation/merge-fx-loader', () => ({ lazyMergeFx: () => {
+      alive = true;
+      return { play: (merges: unknown) => { if (alive) presented.push(merges); }, dispose: () => { alive = false; } };
+    } }));
+    const keyboard = await mountKeyboard();
+    Object.assign(keyboard.scene, { scale: { gameSize: { width: 900, height: 600 } } });
+    const unit = keyboard.initial.preparation.units.find(unit => unit.team === 'player')!;
+    const event = { type: 'unitUpgraded', survivorId: unit.id, consumedIds: ['b', 'c'], definitionId: unit.definitionId,
+      fromStar: 1, toStar: 2, location: unit.location } as const;
+    listeners.state(keyboard.initial, [], [event]);
+    expect(presented).toHaveLength(1); expect(alive).toBe(true);
+    shutdown!(); shutdown = undefined; expect(alive).toBe(false);
+  });
 
   it.each([null, 'https://ui-assets.invalid/synthetic/root/'])('starts and accepts controls while optional portraits load (root %s)', async assetRoot => {
     const keyboard = await mountKeyboard(assetRoot);

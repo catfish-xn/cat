@@ -11,6 +11,10 @@ import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { convertedTimelines } from './s13-timelines';
 import { RENDER_PHASE } from './engine/model/enums';
+import { readEmissionMesh } from './assets/emissionMesh';
+import { readMeshBuffer } from './assets/meshBuffer';
+import { meshEmission } from './assets/emission';
+import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
 
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
@@ -40,6 +44,7 @@ export interface PreparedVfx {
   samplers: ReadonlyMap<string, EmitterSamplers>;
   meshes: ReadonlyMap<string, BufferGeometry>;
   poses?: ReadonlyMap<string, Pose>;
+  surfaces?: EmissionSurfaces;
   /** An original empty definition is an intentional no-op, never a failed replacement. */
   empty?: boolean;
 }
@@ -109,13 +114,17 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(champion) || !Array.isArray(cues) || cues.length === 0 || cues.length > 12) throw new VfxLoadError('invalid', 'skill');
     for (const cue of cues) {
       if (!record(cue) || typeof cue.system !== 'string' || !Object.hasOwn(raw.systems, cue.system)
-        || !['cast-start', 'hit', 'projectile'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
+        || !['cast-start', 'hit', 'projectile', 'link'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
         || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
-        || (cue.action !== undefined && cue.action !== 'attack' && cue.action !== 'cast')
+        || (cue.location !== undefined && cue.location !== 'board')
+        || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))
+        || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
+        || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
+        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
@@ -148,6 +157,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   const children = new Map<string, VfxLibrary>();
   const urlOf = (path: string) => vfxUrl(root, (options.directory ?? '') + path);
   const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture>>();
+  const birthMeshes = new Map<string, Promise<EmissionSampler>>();
   const black = new DataTexture(new Uint8Array(4), 1, 1); black.needsUpdate = true;
   const ensureOpen = () => { if (closed) throw new VfxLoadError('closed', 'library'); };
   const texture = (url: string) => {
@@ -186,11 +196,31 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       }
       const empty = !drawn.some(d => !d.emitter.disabled);
       const samplers = new Map<string, EmitterSamplers>(), geometry = new Map<string, BufferGeometry>(), poses = new Map<string, Pose>();
-      for (const { key, emitter: e } of drawn) {
+      const surfaces = new Map<string, Map<number, EmitterSurfaces>>();
+      const emission = async (named: NamedAsset, submeshes: readonly string[] = []) => {
+        if (!reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
+        const mesh = readMeshBuffer(await reader.readBinary(assetPath(named))); ensureOpen();
+        if (mesh.skinIndices) throw new VfxLoadError('unsupported', 'surface-skin-pose');
+        return meshEmission(mesh, submeshes);
+      };
+      for (const { key, path, emitter: e } of drawn) {
         if (e.disabled) continue;
-        if (e.childSet?.children.some(child => child === null) || e.emissionMesh || e.emissionSurface || e.hudLayer
+        if (e.childSet?.children.some(child => child === null) || e.hudLayer
           || !(drawsAsQuad(e) || drawsAsProjection(e) || drawsAsTrail(e) || drawsAsBeam(e) || drawsAsMesh(e) || drawsTheAttachment(e)) && !e.childSet) {
           throw new VfxLoadError('unsupported', `emitter:${e.name}`);
+        }
+        if (e.emissionMesh || e.emissionSurface) {
+          const surface = e.emissionSurface;
+          if (e.emissionMesh && !reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
+          if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
+          if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
+            throw new VfxLoadError('unsupported', 'surface-host-pose');
+          // Mesh bytes stay on the birth-mesh loop below. This pass only installs the surface so that loop can keep it.
+          if (surface) {
+            const sampled = await emission(surface.mesh!, surface.submeshes);
+            let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
+            held.set(e.index, { mesh: held.get(e.index)?.mesh ?? null, surface: sampled });
+          }
         }
         const slots = { base: e.texture, mult: e.multTexture, color: e.colorTexture, palette: e.palette?.texture ?? null, erosion: e.erosion?.map ?? null,
           normal: e.distortion?.map ?? null, reflection: e.reflection?.map ?? null };
@@ -221,7 +251,17 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           geometry.set(key, await mesh); ensureOpen();
         }
       }
-      const result = { model, drawn, samplers, meshes: geometry, poses, empty }; prepared.set(id, result); return result;
+      for (const { emitter: e, path } of drawn) {
+        if (e.disabled || !e.emissionMesh) continue;
+        if (!reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
+        const url = assetPath(e.emissionMesh.mesh);
+        let pending = birthMeshes.get(url);
+        if (!pending) { pending = reader.readBinary(url).then(readEmissionMesh); birthMeshes.set(url, pending); }
+        const sampler = await pending; ensureOpen();
+        let system = surfaces.get(path); if (!system) { system = new Map(); surfaces.set(path, system); }
+        system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
+      }
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));
@@ -250,7 +290,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       for (const t of ownedTextures) t.dispose();
       for (const g of ownedGeometry) g.dispose();
       ownedTextures.clear(); ownedGeometry.clear();
-      converted.clear(); cubes.clear();
+      converted.clear(); cubes.clear(); birthMeshes.clear();
       textures.clear(); meshes.clear(); documents.clear(); prepared.clear(); current = null;
     },
   };

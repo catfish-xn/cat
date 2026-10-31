@@ -4,8 +4,9 @@ import { TRAINER_EMBLEMS, TRAINER_ID, trainerStar } from './content/opening-batc
 import { OpeningEncounterError, openingEncounterId, validateOpeningEncounterState, type OpeningEncounterContext } from './opening-encounter';
 import { openingSeatDraw } from './opening-batch-b-rng';
 import { grantMechanicUnit, grantMechanicItem } from './seat-mechanics/grants';
-import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
+import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import type { MatchCommandResult, MatchState, MatchEvent } from './match-types';
+import { restartMissionRemovedUnit } from './restart-mission';
 export { TRAINER_GOLEMS_POLICY } from './content/trainer-golems';
 export type TrainerGolemEmblems = readonly [string,string,string];
 const source='opening-trainer-golems', receiptId='opening-batch-b/trainer-golems';
@@ -50,13 +51,15 @@ export function validateTrainerGolems(state:MatchState):void {
  // Restore checks this before the structural roster check; a malformed roster is reported there.
  const units=Array.isArray(state.preparation?.units)?state.preparation.units.filter(u=>u.definitionId===TRAINER_ID):[];
  if(openingEncounterId(state)!=='trainer-golems'){check(!grants.length&&!units.length);return;}
- check(grants.length===4&&units.length===1);
+ check(grants.length===4);
  const unit=units[0],birth=grants[0];
- check(unit&&unit.team==='player'&&unit.location.kind==='board'&&unit.starLevel===trainerStar(getMultiplayerRoundByOrdinal(state.round).stage));
- check(birth?.kind==='unit'&&birth.resolution==='held'&&birth.unitId===unit?.id&&birth.definitionId===TRAINER_ID&&birth.receiptId===receiptId);
+ check(birth?.kind==='unit'&&birth.resolution==='held'&&typeof birth.unitId==='string'&&birth.definitionId===TRAINER_ID&&birth.receiptId===receiptId);
+ const unitId=birth?.kind==='unit'?birth.unitId!:null,retired=unitId?restartMissionRemovedUnit(state,unitId):undefined;
+ if(retired)check(units.length===0&&retired.definitionId===TRAINER_ID&&retired.starLevel===trainerStar(getMultiplayerRoundById(retired.roundId).stage));
+ else check(units.length===1&&unit&&unit.id===unitId&&unit.team==='player'&&unit.location.kind==='board'&&unit.starLevel===trainerStar(getMultiplayerRoundByOrdinal(state.round).stage));
  const emblems=trainerEmblems(state.augmentTierSeed,state.sharedPool?.seatId??'solo');
- grants.forEach((r,i)=>{check(r.source===source&&r.round===1&&r.roundId==='1-2');if(i){check(r.kind==='item'&&r.receiptId===`${receiptId}/emblem/${i-1}`&&r.definitionId===emblems[i-1]);if(r.kind==='item')check(state.items.some(x=>x.id===r.itemId&&x.definitionId===r.definitionId&&x.location.kind==='unit'&&x.location.unitId===unit.id&&x.location.slot===i-1));}});
- check(state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id).length===3);
+ grants.forEach((r,i)=>{check(r.source===source&&r.round===1&&r.roundId==='1-2');if(i){check(r.kind==='item'&&r.receiptId===`${receiptId}/emblem/${i-1}`&&r.definitionId===emblems[i-1]);if(r.kind==='item'&&!retired)check(state.items.some(x=>x.id===r.itemId&&x.definitionId===r.definitionId&&x.location.kind==='unit'&&x.location.unitId===unitId&&x.location.slot===i-1));}});
+ check(state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unitId).length===(retired?0:3));
 }
 export function applyTrainerGolemsOpening(state:MatchState,shared?:OpeningEncounterContext):MatchCommandResult {
  try{

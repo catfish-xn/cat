@@ -3,10 +3,10 @@ import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
 import { toCombatViewState, toDisplayEvents, type CombatViewState, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
 import {
-  buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
+  buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop, claimOrb,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
   combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, rerollAugment, setShopLock,
-  moveItemSummon, readItemSummons,
+  moveItemSummon, readItemSummons, isSummonPreparation,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
@@ -100,18 +100,23 @@ export class MatchSession {
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }
   /** v15: one free reroll of one card (`optionIndex` 0..2); the rules check the slot, the generation and the pool. */
   augmentReroll(choiceId: string, generation: number, optionIndex: number) { return this.paused ? this.blocked() : this.commit(rerollAugment(this.matchState, choiceId, generation, optionIndex)); }
-  /** v15: orbs wait on the board only online (state.multiplayer); single player grants loot itself, so there is none to claim. */
-  claimOrb(_orbId: string): MatchCommandResult { return this.blocked(); }
+  /** Reward orbs, including augment gifts, use the same public command in solo and online. */
+  claimOrb(orbId: string): ReturnType<typeof claimOrb> {
+    if (this.paused) return this.blocked();
+    const result = claimOrb(this.matchState, orbId, this.matchState.round);
+    return result.ok ? this.commit(result) : result;
+  }
   /** G2-4b: move the preparation summon of one item instance (兹若特传送门); the rules check phase, ownership and the cell. */
   moveItemSummon(itemInstanceId: string, cell: HexCell) { return this.paused ? this.blocked() : this.commit(moveItemSummon(this.matchState, itemInstanceId, cell)); }
   private summonCache: { readonly state: MatchState; readonly summons: readonly ItemSummonView[] } | null = null;
   /**
-   * G2-4b: my movable preparation summons where the rules place them now (empty outside preparation). Offline the rules'
-   * `readItemSummons` of my state, in the same fields the server sends online (RemoteSession reads its push instead).
+   * G2-4b: my movable preparation summons where the rules place them now (also shown during an anomaly choice). Offline the rules'
+   * `readItemSummons` of my state, including the anomaly choice over the preparation board, in the same fields the
+   * server sends online (RemoteSession reads its push instead).
    */
   get itemSummons(): readonly ItemSummonView[] {
     const state = this.matchState;
-    if (this.summonCache?.state !== state) this.summonCache = { state, summons: state.phase !== 'preparation' ? [] : readItemSummons(state)
+    if (this.summonCache?.state !== state) this.summonCache = { state, summons: !isSummonPreparation(state) ? [] : readItemSummons(state)
       .filter(origin => origin.unit.team === 'player')
       .map(origin => ({ kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId, unit: structuredClone(origin.unit) })) };
     return this.summonCache.summons;

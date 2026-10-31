@@ -40,7 +40,10 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
     state=accepted(grantMechanicItem(state,{receiptId:'d11:collector',source:'test',definitionId:'TFT4_Item_OrnnTheCollector'}));
     state=accepted(equipItem(state,state.items.at(-1)!.id,'unit-1',0));
   }
-  const opponent={...state,augments:[],anomalyBinding:null,items:id==='headhunter'?[{id:'item-1',definitionId:'TFT9_Item_OrnnTrickstersGlass',location:{kind:'unit' as const,unitId:'unit-1',slot:0}}]:[],temporaryEquipment:[],preparation:{...state.preparation,units:[unit('unit-1','irelia','player',1,4)]}};
+  // 1-star Irelia is 700 HP. Collector executes only when a hit lands while the target is already
+  // under 12% (84 HP), and this lux's hits are larger than that window, so the kill records no gold.
+  // 3-star Irelia is 2268 HP (window 272). Same lux 3 + Leona board: one collector receipt, player win.
+  const opponent={...state,augments:[],anomalyBinding:null,items:id==='headhunter'?[{id:'item-1',definitionId:'TFT9_Item_OrnnTrickstersGlass',location:{kind:'unit' as const,unitId:'unit-1',slot:0}}]:[],temporaryEquipment:[],preparation:{...state.preparation,units:[unit('unit-1','irelia','player',1,4,id==='avarice-incarnate'?3:1)]}};
   const a=snapshotForBattle(state,'A'),b=snapshotForBattle(opponent,'B');
   expect(restorePlayerBattleSnapshot(JSON.parse(JSON.stringify(a)))).toEqual(a);
   if(giftOrbs.length){
@@ -77,7 +80,11 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
   expect(committed.state.multiplayer!.receipts.at(-1)?.g23Facts).toEqual(proposal.g23Facts);
   if(giftOrbs.length){
     expect(committed.state.m8.loot.queuedOrbClaims).toEqual([]);
-    expect(toPrivateSeatView(committed.state).orbClaimReceipts).toHaveLength(2);
+    // reachRound seed 7 already holds 6 PvE orb claims before 2-1: 1-2 vest, 2 gold, reforger; 1-3 bow, powder, trundle.
+    // The two d11-fill claims are added on that route, so the view length is 8.
+    const claims = toPrivateSeatView(committed.state).orbClaimReceipts!;
+    expect(claims.filter(r => r.dropId.includes('d11-fill'))).toHaveLength(2);
+    expect(claims).toHaveLength(8);
     expect(toPrivateSeatView(committed.state).unclaimedOrbs!.filter(o=>o.source==='mechanic')).toEqual([]);
     expect(committed.state.seatMechanics!.receipts.filter(r=>r.source==='d11-fill')).toHaveLength(2);
   }

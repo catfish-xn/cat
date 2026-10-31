@@ -4,11 +4,19 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v25-online-rules: batch-5 history-backed augments, including Golden Find, Forbidden Magic and H13 item transforms.
- * Conditional shop-history-v1 and augment-history-v1 authenticate affected saves; no new replay facts or commands.
- * Schema/save/replay/command remain 12/8/8/7; older identities are rejected. */
+/** v26-neutrals-1424, plus targeting-p0 (28fd974a), targeting-p1, melee pathing, anomaly-ui (6093cd26) and d5-register (2a7dd541).
+ * Neutrals: 2026-10-29 approved PvE stats/counts and stage-6 Elder Dragon.
+ * Targeting: in-range retention and one-step chase; equal distance draws the combat
+ * lcg32 stream; stun/knock-up holds the ordinary target until the release tick.
+ * Melee pathing: shortest empty attack hex, held until settled or the target changes;
+ * equal length draws the same stream; same-tick contests follow id order.
+ * The optional engaged-target fact is authenticated by combat replay. No new commands/events.
+ * Anomaly: planning, shared eligibility, initial-twelve quote protection and R5 sale-persistent entitlement.
+ * D5: D0–D5 actual PvP damage, four augment registrations, stage bans, and over-encumbered bench capacity.
+ * Schema/save/replay/command remain 12/8/8/7. Older identities are rejected.
+ * targeting-p0, targeting-p1, melee pathing, anomaly-ui and d5-register labeled this s13-g2-3-v26-online-rules; epoch re-record stays with the execution side. */
 export const M8_VERSION = {
-  schemaVersion: 12, rulesVersion: 's13-g2-3-v25-online-rules', contentVersion: 's13-14.24b-g2-3-v25-online-rules',
+  schemaVersion: 12, rulesVersion: 's13-g2-3-v26-neutrals-1424', contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424',
   saveFormatVersion: 8, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** D2-A: the shipped M7 identifiers, used only to recognize files for read-only preservation. */

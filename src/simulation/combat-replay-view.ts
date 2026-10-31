@@ -106,9 +106,17 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatFinished': return { ...envelope, ...pick(event, ['type', 'result', 'reason']) };
     case 'packetDamage': return { ...envelope, type: event.type, sourceId: event.outcome.context.source.ownerId,
       targetId: event.outcome.context.targetId, damageType: event.outcome.context.damageType,
+      // Display provenance only: skill vs equipment, not the source object or packet id.
+      sourceKind: event.outcome.context.source.sourceKind,
+      definitionId: event.outcome.context.source.definitionId,
+      delivery: event.outcome.context.delivery,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
-      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId,
+        sourceKind: share.source.sourceKind, definitionId: share.source.definitionId,
+        // The heal ledger has no damage delivery. This only fills PacketOrigin so a share
+        // can be told from an ability heal; it is not a damage context and does not settle.
+        delivery: healShareDelivery(share.source.sourceKind), actual: share.actual })) };
     case 'manaChanged': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'before', 'after']) };
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
@@ -131,7 +139,24 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
-export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
+type PacketOrigin = {
+  readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth';
+  readonly definitionId: string;
+  readonly delivery: 'basic-attack' | 'ability-direct' | 'ability-periodic' | 'attack-extra' | 'equipment-proc' | 'item-burn';
+};
+/** Older replays omit these. New projections always send them; callers must not treat a missing tag as ability damage. */
+type RelaxPacketOrigin<T> = T extends { readonly type: 'packetDamage' }
+  ? Omit<T, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] }
+  : T extends { readonly type: 'heal'; readonly shares: readonly (infer Share)[] }
+    ? Omit<T, 'shares'> & { readonly shares: readonly (Omit<Share, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] })[] }
+    : T;
+export type CombatAnimationEvent = RelaxPacketOrigin<NonNullable<ReturnType<typeof animationEvent>>>;
+function healShareDelivery(kind: PacketOrigin['sourceKind']): PacketOrigin['delivery'] {
+  if (kind === 'ability') return 'ability-direct';
+  if (kind === 'item') return 'equipment-proc';
+  if (kind === 'attack') return 'basic-attack';
+  return 'attack-extra';
+}
 export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
   | import('./seat-mechanics/replay-units').ReplayMembershipEvent;

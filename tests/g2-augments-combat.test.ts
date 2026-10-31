@@ -121,8 +121,11 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // the route's empty-board helper); death cards still see an ally death. Climb the Ladder I is a 3-2/4-2 card, so its seed
 // is a 3-2 seed. The Blistering Strikes 16/648 ignite restore regression lives in tests/blistering-restore.test.ts.
 // v25 batch-5 pool (285 cards): re-searched first public routes in 0..100 without Trainer-Golem openings.
+// D5 310-card pool, same rule (Trainer Golem openings skipped; 2-1 via reachRound('2-1', false), Climb via reachRound('3-2', false)):
+// clockwork-accelerator 40 no longer offers it (first hit is 127; none in 0..126). inspiring-epitaph 21 → 20.
+// climb-the-ladder-i 46 → 40. lone-hero 70 still offers it. Blistering stays on the scripted 61 draw.
 it.each([
- ['blistering-strikes',61],['clockwork-accelerator',40],['lone-hero',70],['climb-the-ladder-i',46],['inspiring-epitaph',21],
+ ['blistering-strikes',61],['clockwork-accelerator',127],['lone-hero',70],['climb-the-ladder-i',40],['inspiring-epitaph',20],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  const run=()=>{
  // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.

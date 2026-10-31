@@ -729,7 +729,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (!seat) return fail(commandId, 'unknown-seat');
       if (message.round !== state.round) return fail(commandId, 'stale-round', `room is at round ${state.round}`);
       if (message.seatRevision !== seat.seatRevision) return fail(commandId, 'seat-revision-mismatch', `seat is at revision ${seat.seatRevision}`);
-      const result = current.handle(session.seatId, message.command);
+      const result = current.handlePlayer(session.seatId, message.command);
       if (!result.ok) return fail(commandId, result.reason);
       // §18.8 03: a tool use answers with its own receipt kind and only the whitelisted operation events.
       return message.command.type === 'useConsumable'

@@ -4,7 +4,10 @@ import {accepted,reachRound,readyMatch,finish,emptyBoard} from './match-helpers'
 import type {MatchState,MatchCommandResult} from '../src/simulation/match-types';
 const states={} as Record<MatchState['phase'],MatchState>;
 beforeAll(()=>{
- states.choice=reachRound('2-1',false);states.preparation=readyMatch();
+ // 2-1 is an augment choice whose returnPhase is preparation. v22 keeps that board editable, so
+ // deployMatchUnit is legal there (a bench no-op returns ok with no events). 2-4 opens the
+ // component choice with returnPhase settlement, which still rejects every preparation command.
+ states.choice=reachRound('2-4',false);states.preparation=readyMatch();
  states.combat=accepted(api.startMatchCombat(states.preparation));states.settlement=finish(states.combat);
  // Explicit HP boundary fixture; never counted as a natural-route victory.
  states.gameOver=accepted(api.startMatchCombat(emptyBoard({...states.preparation,playerHp:1})));

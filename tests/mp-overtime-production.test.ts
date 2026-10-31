@@ -32,7 +32,9 @@ it('three Black Rose champions compile one Sion per side at 6-6 and after advanc
 
 it('public production commands reach ordinal 39, resolve its earned armory, and settle real overtime combat once', () => {
   // Seed 43 (was 42): with the global 14.24 stage bans, seed 42's timeout picks no longer survive the PvE rounds to 39.
-  let state = accepted(enableMultiplayerSettlement(createMatch(43), 'A'));
+  // v26 D5 pool (7953c99a): seed 44 (was 43). Seed 43's forfeited 4-2 offer now acquires Mirrored Monetization,
+  // whose PvP death facts the Room records (recordRoomBattleFacts); this two-seat harness only emulates the roster table.
+  let state = accepted(enableMultiplayerSettlement(createMatch(44), 'A'));
   const receipts = [];
   let rumbleId: string | undefined;
   let armoryId: string | undefined;
@@ -71,7 +73,7 @@ it('public production commands reach ordinal 39, resolve its earned armory, and 
             u => u.location.kind === 'bench' && u.location.slot === n))!;
           opponent = accepted(deployMatchUnit(opponent, unit.id, { kind: 'bench', slot }));
         }
-        // Batch5 history augments (seed 43 selects Contested) require the real frozen table,
+        // Batch5 history augments (seed 43 selected Contested) require the real frozen table,
         // just as Room records it before resolving PvP. Keep this two-seat harness on that boundary.
         const battleId = `natural:${state.round}`;
         const seats = [state, opponent].map((match, index) => ({ ...historyRoster(match), seatId: index === 0 ? 'A' : 'B',

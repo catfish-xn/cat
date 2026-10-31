@@ -10,6 +10,7 @@ import { mountFullscreenToggle } from './rendering/fullscreen-toggle';
 import { isOnlineMode } from './rendering/online/mode';
 import { loadSoloApplication } from './m6/application-loader';
 import { mountThreeMode } from './rendering/three-mode/three-loader';
+import { restorePlannerHighlights } from './presentation/team-planner-loader';
 applyThemeVariables();
 const removeImageFallback = installImageFallback();
 const removeBuildBadge = mountBuildBadge(document.body);
@@ -25,10 +26,12 @@ async function startGame(): Promise<void> {
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   // CSS touch-action:none controls canvas gestures. Phaser must still track
   // cancellation without preventDefault on a noncancelable touchcancel event.
-  input: { touch: { capture: false } },
+  // Shortcuts are window keydown listeners in BoardScene. Phaser's KeyboardManager is unused.
+  input: { keyboard: false, touch: { capture: false } },
   render: { antialias: true },
   callbacks: {
     postBoot(game) {
+      game.events.once(Phaser.Core.Events.POST_RENDER, restorePlannerHighlights);
       // Phaser filters touch-derived mouse events at its window entry, but not
       // at its canvas entry. Keep the touch input and discard only that duplicate
       // mouse stream; genuine mouse input and every keyboard repeat stay immediate.

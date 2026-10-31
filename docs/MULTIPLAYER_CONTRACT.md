@@ -1,3 +1,17 @@
+## 2026-10-30 placeholder PvP 历史与异常诊断修复
+
+2026-10-30 placeholder 历史修复：PvP 的 `pvp-roster`、`combat-binding`、`deaths`、`player-damage` 使用房间 `result.battleId`；死亡样本内部 `combatId` 保留真实执行身份。placeholder 结果若含 `mapping/a/b/terminal/events`，与 two-sided 共用真实死亡观察、R2 portable、H7/H8/H9 结算；`mirrorOfSeatId != null` 才表示镜像。生产单席模拟仍由 Match 记录死亡，生成对手没有玩家 HP 账户，伤害事实的 `opponentSeatId/hpBefore/hpAfterDamage/actualDamage` 均为 null；Golden Find 使用该场 `combat-roster` 对应的原始单位 ID 归属，真正双边战斗仍使用 T2 ID。
+
+诊断扩展：规则导出 `runSharedMatchCommand(pool: SharedPoolState, state: MatchState, command: SharedMatchCommand, onUnexpectedError?: (error: unknown) => void): SharedPoolResult`，三参数调用兼容。非 `PoolError` 失败先向此回调交付原始异常，仍返回 `invalid-pool`、原 pool/state、无事件；`PoolError` 沿用原失败枚举。服务器 `room/logged-shared-pool.ts` 包装调用并用现有 `Logger/textLogger` 写 `shared-pool.unexpected-error`（房间、席位、回合、命令、原错误和堆栈）；日志不进入领域状态或网络回执；诊断回调自身抛错也不影响原子失败返回。
+
+正向发金恢复回归发现：Batch 3 自动给自有假人绑定赠品的历史不能按普通手动穿装重放。历史恢复现按确定性 `emblemGifts/ownDummyId`、`augment-pool-batch3-dummy` 收据及紧邻的出生事实核对单位、物品、槽位和回合，再恢复这次自动绑定；普通手动穿装仍走原校验，伪造目标/槽位/来源及重复绑定均拒绝。此项只修复真实状态的恢复，不改赠品、手动装备规则、版本或 digest。
+
+## 2026-10-29 v26 anomA：异变准备、资格和初始 12 项报价
+
+本节覆盖下文旧异变“30 秒独立选择再准备”及“仅排上一项”的描述。4-6 从入场共用一次 75 秒 preparation 截止点，提前确认不重置；待选可执行准备期合法部署/上下场/移动及其他经济操作，**所有棋子禁止出售**（含锁定目标，`wrong-phase`，无 state/卡池/事件变化），确认后可卖，单人及本地房间同步。用户 11:38/12:02 补充决定覆盖此前待选出售权限。前端打开异变界面时锁盘、隐藏后允许调阵，由另一单接线；隐藏不解除服务器禁售。本人私有投影新增 `anomalyTargetIds: readonly string[]`；公共资格查询、失败语义、召唤物已知/待证分类、报价事实及所有生产调用链见 [v26 anomA 完整合同](V26_ANOMALY_R1_R3_R4A.md)。
+
+首次免费报价计入初始 12 项排重，之后只排紧接上一项。独立 `anomaly-offer-history-v1` 记录报价事实；离线只重演报价窗口并认证选择收据和目标资源谱系，确认后不再开启普通局的永久强化战斗记录，联机从 4-6 起恢复必须另给独立 server authority，以认证候选删除历史的情况。rules/content 升 v26，schema/save/replay/command 保持 12/8/8/7。D14 超时在领域内先按人口上限部署锁定目标、再验证资格。R2/R6/R7 保持，R5 卖后重买保留留后续任务；旧纪元/快照不在本单重录。
+
 ## 2026-10-27 B5-07 商店故障房间计时器
 
 B5-07 已开放（2-1、3-2 可投放，4-2 禁用）。采用 P-B5-07：仅 PvE 准备期，每2500ms跨界免费刷新，至30000ms最多12次；锁店时消费该边界且不补刷，离开准备期停止。沿用原准备期时长，未延长 PvE 默认20000ms；在该默认时长下最多8次。房间不计算次数、金币或随机数。
@@ -855,7 +869,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
 | 本轮已揭示掉落（SR-C7-02） | 可选 `revealedLoot.{roundId,revealedDrops}`；条目仅 `dropId,encounterId,sourceUnitId,roundId,payload,status,receiptId,allowedActions,reason?`，payload 仅 `{kind:'gold',quantity}` 或 `{kind:'unit'\|'item',definitionId,quantity}` | 仅本席当前 PvE 轮已揭示内容，具体门槛、状态及排序见 §14.1；不是 m8.loot 账本，不含计划、未来候选或随机流 |
-| 已提交本席轮结果 | `roundResults[].{round,roundId,roundKind,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 已提交本席轮结果 | `roundResults[].{round,roundId,roundKind,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,damageDealt?,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；`damageDealt` 仅联机 PvP，等于对手实扣血（镜像 0），详见 [D0–D1](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md)；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
 | 本轮已公开 PvE 遭遇预览（SR-B7-02） | `m8.preparation.{roundId,encounterId,enemies}`；enemies 每项按准备单位白名单复制 | 仅 m8.round.kind=pve、轮 ID 与 roundDefinitionId 相同且 preparation.encounterId 与本轮一致时存在；仅 enemy 棋盘单位。相同单位也进入 preparation.units，供站位和 readEncounterPreview 使用；不公开未来计划、掉落或 PvP 模板 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
@@ -941,6 +955,7 @@ interface RoundSettlementReceipt {
   readonly settlementEligible: boolean;
   readonly result: 'win' | 'loss' | 'draw';
   readonly damage: number;       // T2 未截断伤害，不能改成 hpLost
+  readonly damageDealt?: number; // D0 房间 PvP 必带：对手同轮 hpLost；镜像为 0
   readonly baseDamage: number;
   readonly opposingSurvivors: number;
   readonly growth: readonly PersistentGrowth[]; // 本席原始 unitId 的增量
@@ -970,6 +985,8 @@ interface RoundSettlementReceipt {
 所有失败返回**原 state 引用，无 events 字段、无资源/RNG/序号改变**。去重在阶段/轮次检查前；输入首先经过有限 JSON 数据检查，非 JSON 载荷不享受去重。一个合法获胜收据亦必须写入收入和成长一次，不能把 damage=0 当成无操作。
 
 ### 11.3 B4 全轮编排（由 Claude 在 src/server 实现）
+
+2026-10-29 D0 补充：房间通过公开 `pvpSettlementHpLost(opponentLiveState, oppositeProposal)` 构建本席 `damageDealt`，全部席位提交规则后逐项核对本席待提交收据/已保存收据/RoundResult 与对手同轮 `hpLost` 一致；镜像为 0，任何不一致原子拒绝全轮。字段数值/失败语义、D1 35 点奖励与完整调用表以 [D0–D1 合同](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md) 为准。旧无 D1 的直接规则调用可省略此可选键；本节旧示意不代表房间可漏填。
 
 1. 冻结本轮 active 席位、配对、battleSeed、battleId、roomRevision；准备截止时先处理 §11.4 与 §15.4 自动上场，随后冻结快照。运行中冻结输入不可修改，live seat 运营按 §15。
 2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。
@@ -1403,8 +1420,8 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | attack | attackerId, targetId；普攻动画 |
 | targetChanged | unitId, before, after；目标标记 |
 | death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
-| packetDamage | sourceId, targetId, damageType, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字，不执行规则 |
-| heal | targetId, actual, shares: {sourceId, actual}[]；实际治疗与施加者份额 |
+| packetDamage | sourceId, targetId, damageType, sourceKind, definitionId, delivery, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字和特效归属。sourceKind、definitionId、delivery 只供表现区分技能和装备，不执行规则，不下发 instanceId、effectIndex 或完整 Source。旧回放缺字段时不当作技能伤害 |
+| heal | targetId, actual, shares: {sourceId, sourceKind, definitionId, delivery, actual}[]；实际治疗与施加者份额。份额的三个来源字段与伤害包相同，只供表现区分；治疗账本没有伤害 delivery，投影按 sourceKind 收成 ability-direct / equipment-proc / basic-attack / attack-extra，不执行规则 |
 | manaChanged | targetId, before, after；表现事实 |
 | cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |
 | shieldLayerChanged | reason, key, targetId, remaining；单层提示，不累加为总盾 |
@@ -1412,11 +1429,13 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | statChanged / maxHpChanged | unitId, stat, before, after / unitId, beforeMax, afterMax, beforeHp, afterHp |
 | combatFinished | result, reason；全局胜负仍由对局调度决定 |
 
+packetDamage 另复制三枚来源标量，供表现区分技能自身伤害与装备伤害，不重算伤害：`sourceKind`（攻击/技能/羁绊/装备/强化/异常/敌方成长）、`definitionId`（技能或装备 id，例如 `viktor-ability`、`TFT9_Item_OrnnDeathfireGrasp`）、`delivery`（`basic-attack` / `ability-direct` / `ability-periodic` / `attack-extra` / `equipment-proc` / `item-burn`）。不下发完整 Source、instanceId、effectIndex、packetId 或 permissions。缺这三项的旧回放不能当成技能包。B 视角不改写这三项。不升版本号或 digest。
+
 activityChanged/effectTriggered 的执行程序不下发，可见数值后果在 unitUpdated。当前视图不承诺完整的状态图标/持续时间选择器；若 C 需要这些，应另提具体白名单字段，不能回填 runtime。B 视角沿用 §12.6 的纯显示镜像：所有首末/关键帧 unit.cell/startingCell、movement.from/to、cast.completionCell，以及新增 unitUpdated.changes.cell/startingCell 都要翻转 row；队伍/胜负互换、ID/seq/数值不变。对 changes.team（若存在）与 combatFinished.result 同样转换，不镜像 RNG 或重跑战斗。
 
 toCombatReplay 失败以 RangeError 抛出：`invalid-replay-input`（非 tick0 初态、末态未结束或 tick 超界）；`replay-divergence`（重执行未逐 tick 推进、单位集合变化、末视图或投影动画序列不符）。底层非法引擎输入异常原样传播；这些都是服务器故障，不能据此伪造平局/结算。该函数不是不可信战斗验证器，不能用其接受动画序列来证明战斗真实性。toCombatViewState/显示 reducer 无业务失败枚举；只用于可信状态/本协议 DTO。
 
-**SR-G5-01 治疗来源。** heal 保留单条领域事件及原 tick/eventSeq，不拆分或重复序号；actual 为目标实际获得的总治疗，新增 `shares: {sourceId: string, actual: number}[]`，按 outcome.shares 原顺序逐条复制 ownerId 与 actual。包括零份额，同一 owner 的多个来源不合并。权威机制已完成重伤、取整与生命上限裁剪，不得重新按比例分配；可信账本满足 `sum(shares.actual) === actual`。不下发完整 Source、contributions 或执行计划。B 视角保持 sourceId/targetId/份额数值不变。重执行、终态与动画序列校验保持，新增来源和份额同样纳入 replay-divergence 比对。历史无 shares 的缓存回放需从完整账本重新生成才能使用来源统计；本包不改版本号或 digest。
+**SR-G5-01 治疗来源。** heal 保留单条领域事件及原 tick/eventSeq，不拆分或重复序号；actual 为目标实际获得的总治疗，`shares: {sourceId, sourceKind, definitionId, delivery, actual}[]` 按 outcome.shares 原顺序逐条复制 ownerId、sourceKind、definitionId 与 actual。delivery 不是伤害上下文：治疗账本没有该字段，只按 sourceKind 收成与伤害包相同的 PacketOrigin 取值（ability→ability-direct，item→equipment-proc，attack→basic-attack，其余→attack-extra），供表现区分技能和装备。包括零份额，同一 owner 的多个来源不合并。权威机制已完成重伤、取整与生命上限裁剪，不得重新按比例分配；可信账本满足 `sum(shares.actual) === actual`。不下发 instanceId、effectIndex、contributions 或执行计划。B 视角保持 sourceId、sourceKind、definitionId、delivery、targetId 和份额数值不变。重执行、终态与动画序列校验保持，来源和份额同样纳入 replay-divergence 比对。历史无 shares 的缓存回放需从完整账本重新生成才能使用来源统计；本包不改版本号或 digest。
 
 **G5 战斗统计权威入口**（simulation/combat-summary.ts 与 server-entry 导出）：
 
@@ -2020,13 +2039,22 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 
 新增 room phase `carousel`：P7-1 撤销 1-1 前奏，仅五次 x-4 替换旧 supply；`roundId` 不重新编号。单次选秀一个权威 CarouselState，使用服务器冻结存活 Match 集合调用 `prepareCarouselParticipants`，再 `createCarousel(pool,roundId,rng)`；共享池和创建收据必须一次发布。在 carousel 期间冻结其他共享池及本席资产写命令，准备/战斗命令返回现有 `wrong-phase`，不另开第二套供给领取路径。
 
-新增 `ClientCommand {type:'carousel-pick'; carouselId:string; revision:number; slot:number}`。seatId 取连接凭证，不能取客户端字段。服务器校验 carouselId/revision（不一致 `stale-carousel`）、整数 slot，推进已到期逻辑时间/自动选取，再调用 `pickFromCarousel` 和 `grantCarouselPick` 原子发布；若 grant 失败，**整个 pick 事务回滚**，不留下已占槽但未发布的网络半事务。机器人与离线玩家调用 `autoPickFromCarousel`，不在 server 重写评分算法。失败沿现行 command-result 带规则 reason；身份/协议失败沿现行边界，领域枚举完整转发，不改成泛化 success。
+v26（2026-10-28 用户批准，取代原直接选取约定）：客户端只能发送既有 `walk` 消息。3D 发送 `{scene:'carousel',to:{x,y}}`，点棋子也取点击处的地面交点；路径固定，不追逐。2D 卡片发送 `{scene:'carousel',slot}`，房间用 `interceptCarouselUnit` 规划一次直线路径，只有与该槽接触才领取。两种路径都通过注入 `Clock` 排接触，收到请求时不改规则状态、不发领取收据。
+
+`Room.handlePlayer(seatId:string,command:SeatCommand):RoomCommandResult` 是 WebSocket `handleCommand` 和 `LocalRoomClient.send` 共用的玩家入口：旧 `carousel-pick`（即使 id/revision 正确）返回现有 `wrong-phase`，未知座位返回 `unknown-seat`，不推进规则时钟、不改 state/pool/RNG/账本；其余命令转给 `handle`。旧消息仍可解析以返回明确拒绝，不变协议版本。`Room.handle` 是服务器内部的可信测试/编排入口，不得用作玩家传输入口；`arriveCarousel` 调用私有 `pickCarousel` 及 `pickCarouselForSeat` 原子发布。机器人、托管和超时继续经 `catchUpCarousel` → `autoPickCarouselForSeat`，评分和领取规则不另实现。
+
+共享判定常量 `CAROUSEL_UNIT_PICK_RADIUS = 0.55`（格）位于 `src/server/legend-motion.ts`，服务器接触规划、到达复核和 3D 可选圈都读取它。小小英雄中心到槽中心距离 ≤ 此半径即接触；9 槽、转盘半径 2.5 格的相邻圈间隙约 0.6101007166 格。依据为本项目现有圈尺寸及上述用户批准值，不声称是拳头公开碰撞参数。步行中接触沿用 10 ms 采样和 24 次二分；停止后的旋转进入用圆周几何求最早时刻，排到同一 `LegendWalkBook.contacts`，截止前站着也能拿。重定向、成功领取、场景清理或 dispose 取消旧接触；领取不修改目的地，领取后仍可地面走路。
+
+`Room.walkLegend(seatId:string,request:LegendWalkRequest)` 返回 `{ok:true,walk:LegendWalk}` 或 `{ok:false,reason:string}`。失败原因为 `settlement-pending | unknown-seat | seat-eliminated | seat-controlled | rate-limited | wrong-phase | carousel-closed | carousel-locked | already-picked | invalid-walk | slot-taken`；沿用 80 ms 节流，不加新真实计时 API。`carouselWalkContact(walk,index,count,openedAt,untilAt=walk.arriveAt):number|null` 返回服务器绝对时钟的最早接触时刻（包含起点/圈边界），`untilAt` 覆盖终点后的静止时间。真人直接选的失败和走路失败都不生成领域事件。
+
+`LocalRoomClient.walk(request):boolean` 调用同一个 `Room.walkLegend`；`subscribeWalks` 转发为 `listeners.legend(walk,serverNow)`，重新监听补发房间保留的路线，detach 退订。`RemoteSession.carouselPick` 和 3D `runTo` 已移除。选秀是否仍在进行作为 `publishCarousel(build,active?)` 的第二参数传给 3D，切到棋盘侧仍隐藏己方、客方及侦察访客的小小英雄；小地图原本只画阵容点，没有小小英雄。选秀退出恢复己方棋盘原位置。领域事件、回放格式和 simulation 数值/内容身份不变。
+
 
 公共 `carousel` 投影为 null 或 `{id,roundId,revision,status,slots:[{slot,definitionId,itemId,pickedBy}],releaseOrder,releaseAtMs,elapsedMs,deadlineMs}`；所有席看到同一槽与放行计划，本席额外 `{eligible,pickedSlot,receiptId,heldCarouselUnits}`。不发送 pool.available、其他席私有资产、RNG、完整收据或种子。公开 HP 本已公开，不能用 carousel 投影扩大私有权限。字段由规则状态派生，每次投影独立复制，不能因 UI 拉取而消耗 RNG 或触发自动选取。
 
 ### 21.2 权威时钟、同时动作与恢复
 
-服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器命令序号先到先得，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
+服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器接触时刻先到先得，同刻按注入时钟的调度插入顺序，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
 
 到达固定 deadline 且全部选完后规则关闭并返还未选槽，服务器等待 2000ms 离场后进入下一准备期；一次性推进收据防止双刷新/双收入。开局直接按免费艾瑞莉娅进入既有 1-2；x-4 原本自然轮经济/刷新恰一次，旧 supply 不再发。规则逻辑状态与池、所有席 Match、receipt、elapsedMs、deadline 和阶段推进收据一起持久化；恢复安装剩余计时器，不重新 create、pick 或 grant，已过截止则按相同冻结顺序补执行尚未提交者。保存中存在内部 reserved 收据时按同一原子 grant 事务完成，严禁发过的 granted 再发；损坏恢复拒绝，不靠重新随机修补。
 
@@ -2071,7 +2099,7 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 
 恢复调用：先 `restoreCarousel(serializedCarousel)`，再逐席 `restoreCarouselSeat(carousel,serializedMatch)`，全部成功后原子安装；不在恢复路径发奖。该席位端口是可信服务器持久化的 P7 资产一致性检查，其他房间/经济/战斗恢复边界沿原有实现；不接收客户端上传 Match。
 
-网络命令允许 G1 按 SR-G1-02 使用 `{type:'carouselPick',slot}`，carouselId/revision 由既有服务器命令信封校验；不要求将此服务器编排命令加进普通 `ClientCommand`。§21.1 的 `carousel-pick` 为旧提案命名，以本行和 G1 实际协议为准。公开槽投影使用 `listCarouselSlots` 的 starLevel/items，不能发送原始 CarouselState。
+早期 SR-G1-02 的 `{type:'carouselPick',slot}` 和直接 `carousel-pick` 玩家入口由 v26 §21.1 的 `walk` 约定取代；只保留服务器内部原子领取编排。公开槽投影使用 `listCarouselSlots` 的 starLevel/items，不能发送原始 CarouselState。
 
 ### 21.6 P7-1 字段迁移与准备期唯一结算（2026-10-15）
 
@@ -2152,20 +2180,30 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 
 **指令**：新增线指令 `{type:'moveItemSummon', itemInstanceId:string, cell:{col:int,row:int}}`（`MoveItemSummonCommand`，属于 `WireCommand`，不进 `ClientCommand`，机器人不会发）。每层 onlyKeys；`itemInstanceId` 非空，`cell` 两个整数，其它形状一律 `invalid-message`。
 - 房间阶段门：只在 `preparation` 和 `choice` 两个房间阶段放行（与 deploy 同窗口但不进战斗/结算的 OPS）；其余阶段 `wrong-phase`。
-- 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
+- 分派：`moveItemSummon(state, itemInstanceId, cell)` 原样调用，成功时只发 `seatMechanicChanged{key:'g24ItemPositions'}`，不碰共享池、物品、人口；失败原因沿用规则侧：`wrong-phase`（不在准备或强化待选布阵窗口、PvP 阵容已锁、不可操作）、`unknown-unit`（本席没有该物品实例的召唤物）、`outside-deployment-zone`、`occupied`。失败返回原 pool 和原 state 引用。
 - 客户端：`RemoteSession.moveItemSummon` 发送后等回执和下一次 state 推送，本地不先移动；战斗回放期间不发。
 
-**私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席阶段不是 `preparation` 时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
+**私有状态推送**：`SeatStateView` 新增 `itemSummons: ItemSummonView[]`，由 `toSeatPrivateView` 调规则的 `readItemSummons(match)` 得到，逐字段复制 `kind / ownerId / itemInstanceId / unit{id, definitionId, team, starLevel, location}`，只取 `team:'player'`；本席不在 `preparation` 或备战内强化选择窗口时为空数组。不含阶段数值（生命、攻击），客户端不计算、不铸造单位、不按缺席推断死亡。保存的格子仍只在 `seatMechanics.seat.g24ItemPositions`（已随机制容器整体下发），界面不直接读它，以 `itemSummons[].unit.location` 为准。
 
-**界面**：准备阶段且棋盘上没有战斗时，`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
+**界面**：准备阶段或海克斯待选布阵窗口且棋盘上没有战斗时，全部召唤物（含锻炉、赛恩及 `itemSummons`）按规则公共移动命令可拖动；`itemSummons` 画成我方可拖动棋子；只能拖到我方空格，放下即发 `moveItemSummon`；不能进备战席、不能出售、不能装备，不计人口。拖动提示只是显示判断，结果以规则回执为准。
 
 **公开棋盘（观战/查看他人阵容）**：棋盘站位是公开信息，`toPublicBoard` 对每个席位调 `readItemSummons`，把站在棋盘上的召唤物追加为 `PublicBoardUnit{definitionId, starLevel, cell, items:[], summon:true}`；`starLevel` 是规则按阶段给的外观星级。只带棋盘上可见的这四项加标记，不带持有者 id、物品实例 id、战斗 id、生命比例或 `g24ItemPositions`。界面把它画在对应格子，不计羁绊、不当头像、不显示英雄数值卡。
 
 **机器人**：不发 `moveItemSummon`，召唤物停在规则默认位置（持有者所在列的前排，或最近空格；移动过的保持已存位置）。
 
+### 26.1 黑色玫瑰赛恩准备期（用户2026-10-29）
+
+本节扩展§26的线指令和显示结构；覆盖旧文“只开战召唤赛恩”的描述。新增 `ItemSummonView.kind='sion'`，`itemInstanceId='g23-sion'` 为席位专属位置键，不是物品。仍使用 `moveItemSummon` 的完整字段校验、房间阶段门、服务器规则分派、席位回执和重连状态推送，无新命令、定时器或客户端规则。
+
+`isSummonPreparation(state)` 由 `src/server-entry` 导出；准备期及其 `returnPhase:'preparation'` 的强化选择窗口可显示、移动，包括本地房间与单人。全部召唤物（含赛恩、锻炉及 `itemSummons`）强化窗口可拖；普通英雄在此窗口上下棋盘沿用 D2 的公共部署命令。服务器发空数组表示其他阶段没有备战投影；RemoteSession以收到的数组为准，不从被白名单省略的私有相位字段推算。
+
+项目约定：赛恩默认 `(3,4)`、不占人口/备战席、不可出售/装备，`g23-sion` 位置键整局保留。公开棋盘显示与虚空生物/熔炉一致，带 `{definitionId:'g23-sion',starLevel:1,cell,items:[],summon:true}`，不带命名成员id/保存键；不计普通英雄人口或羁绊，不选作玩家头像。准备期计数与战斗编译共用成员投影，包含纹章、R3复制体及镜厅；服务器只读取投影，不另算阈值。PvP两侧始终传编译羁绊预占格，再镜像坐标，保持赛恩与熔炉准备/开战位置一致。
+
+位置保存、阈值、失败枚举、冻结与战斗身份见 [MATCH_CONTRACT 可移动准备期召唤物](MATCH_CONTRACT.md#可移动准备期召唤物含赛恩2026-10-29)。机器人不发移动赛恩意图：`formationAction` 继续只摆永久英雄，赛恩由规则在剩余格中放置；英雄占其保存格时按同一最近空格算法让位，不增加人口或备战席压力。18场既有默认站位对照的战斗字节未变；历史fixture未重录，源代码摘要/内容身份待统一处理，见 [实施报告](SION_PREPARATION_REPORT.md)。
+
 ## 27. 侦察公开阵容扩展（2026-10-20 用户决定）
 
-用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子，**看不到连胜/连败**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
+2026-10-20 用户决定：点开别的玩家时能看到对方的强化、装备、异常、场上和备战席棋子；当时不公开连胜/连败，**此限制已由下方 §27.1 的 2026-10-29 决定覆盖**。只改服务器投影和界面；规则、数值、NET_PROTOCOL（只增视图字段，不改客户端消息或回执，依据同 `messages.ts` 中 G1-P6 的说明）、schema、save、replay、digest 都不变。
 
 **投影**：`SeatPublic.publicBoard`（`PublicBoard`）在原 `units` 之外由 `toPublicBoard` 逐字段新增三个字段，均为可选类型、房间总是填写：
 - `bench: PublicBenchUnit[]`：本席 `preparation.units` 中 `team:'player'`、位于备战席的单位，`{definitionId, starLevel, slot, items[]}`，按 slot 升序；`items` 为该单位所持装备定义 id，按装备槽序。
@@ -2173,9 +2211,21 @@ G2-3 自动钩子的已知失败通过领域事件 `mechanicFailed{hook:'rewards
 - `augments: string[]`：已拥有强化的定义 id，按 `MatchState.augments` 顺序（获得顺序）。
 - `anomaly?: string`（加在 `units[]` 与 `bench[]` 的单位上）：`anomalyBinding.unitId` 指向该单位时为其异常定义 id，否则省略该键。不带 `choiceId`、`boundRound`、单位 id。
 
-不公开：连胜/连败（`streak`）、金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
+`publicBoard` 不包含连胜/连败（`streak`，§27.1 在席位顶层单独公开）；仍不公开金币、经验、商店、待选强化与刷新次数（`pendingChoice`）、`choiceId`/`acquiredRound`/`boundRound`、单位与装备实例 id、随机流。测试：`tests/server/projection.test.ts`、`tests/server/net/server.test.ts`。
 
-**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。面板和右栏都不显示他人连胜/连败。
+**界面**：右栏点击席位打开的只读面板依次显示强化、棋盘、备战席、未装备装备和羁绊，带异常的单位头像上有异常标记；羁绊仍只按棋盘单位计算。连胜/连败改读下方 §27.1 的席位顶层字段。
+
+### 27.1 V26 公开连胜/连败（2026-10-29，SR-V26-SIDEBAR）
+
+`SeatPublic` 新增可选 `readonly streak?: { readonly kind: 'win' | 'loss' | null; readonly count: number }`，路径为 `PlayerView.seats[].streak`，终局 `PlayerView.ranking[].streak` 使用同一席位投影。`count` 为非负安全整数，无连胜/连败为 `{kind:null,count:0}`。类型可选以兼容旧视图；当前房间所有席位、所有阶段始终填写，包含机器人、已淘汰席与观战者收到的视图。旧视图缺字段时界面不推算。
+
+`SeatState.streak: MatchState['streak']` 是房间已提交的公开 streak 账本：创建席位时逐字段复制初值，结算时在 `commitSettlement` / `publishOpeningResolution` 从该次规则结果复制 `kind/count`，与 `SeatState.hp` 一起提交。非结算变化仅在新获取 Called Shot 且规则 `batch5Streak` 能解释该次变化时，由 `syncedSeatStreak` 同步账本；选择发布时即与本人私有 streak 和公开 `publicBoard.augments` 一致，不等本轮结算。已拥有的 Called Shot 不构成再次改写依据，无法解释的非结算 streak 变化沿用 `invalid-results` 拒绝发布。live `seat.match` 可能在房间提交前已经自行完成 PvE 结算（空棋盘开战即结束，或 live-bank 指令经 `pveCatchUp` 追帧结束）；这时公开 HP/streak 均保持上次提交值，普通指令、断线重连或新 SeatState 不得提前发布结果。治疗可按既有 HP 同步入口更新 HP，不改变 streak。
+
+`toSeatPublic(seat: SeatState): SeatPublic`（`src/server/room/projection.ts`）只逐字段复制已提交的 `seat.streak.kind/count` 为独立对象，按不可变 SeatState 缓存；不直接读取 live `seat.match.streak`，不传引用，不展开经济对象，不附带金币、收入、历史、收据或随机流。`publicBoard` 白名单不变，继续禁止其内部出现 streak。`toPlayerView(room,seatId,serverNow)` 对所有接收者公开相同结果，结算提交时与公开 `seat.hp` 同一次账本发布；首次下发、增量、本地房间、wire JSON 编码和 resume 快照共用此入口。淘汰保留最后已提交值，观战与重连不重计或清零。
+
+只公开已有经济状态：PvE、平局、补给/选秀及加时对 streak 的影响完全沿用现有经济/结算入口，服务器与客户端不另算。无新命令或失败原因；未知接收席位仍沿用 `toPlayerView` 的 `RangeError`。兼容增量字段不提升 ROOM/NET 协议版本，不改规则、内容版本、digest、存档或回放规则。
+
+验收：`tests/server/projection.test.ts` 保留私有数据隔离断言并精确扩展席位顶层白名单，检查 streak 仅含 kind/count、独立复制、按 SeatState 缓存更新、live Match 不覆盖账本、重复读取与观战/终局；`room-streak-ledger.test.ts` 验自然候选选择 Called Shot 后逐发布、全接收者和本人私有 streak 立即一致，并拒绝无新获取、错误数值及已拥有强化解释的改写；`projection-wire.test.ts` 验 Called Shot 选择后即时推送与重连，以及真实 PvE 后全席 HP/streak 一起提交与重连；`local-room-client.test.ts` 验本地首帧/更新；`t10-combat-ops.test.ts` 验空棋盘 PvE 在 battle 期间保持旧公开 HP/streak，提交进入 settlement 后一起变化，含期间操作与旧缓存视图；`live-bank.test.ts` 验 battle 指令经 `pveCatchUp` 完成 PvE 也不提前公开。`g5-economy-preview.test.ts` 在既有整局路径逐发布核对 `SeatState.hp/streak` 已提交账本，并以已提交回合的规则 `streakAfter` 交叉验证，覆盖连续胜负、打断、PvE、平局、补给和淘汰。投影新增字段使 v25 纪元摘要/联机视图快照漂移属预期，交给 Claude 统一重录；本任务不执行 `--write` 或改基线断言。
 
 ### First-pass replay capture supplement
 
@@ -2297,7 +2347,7 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 - `Room.startSettlementWork(factory: SettlementWorkFactory): void`，`SettlementWorkFactory = () => Generator<void, void, void>`：统一启动/续算/取消/重建入口；已有工作或 dispose 后不重复启动。工作必须在最后一次不 yield 的提交段前保持状态与回放私有。`planSettlement` 的同步入口与此路径共用 `planSteps`。#382 的流式接入复用该入口与同一 FIFO：流式轮在 `commitStreamSteps` 中重用 finishStreams 暂存的计划，基础变化时经 `planStreamSteps`（逐席位 yield，再 `yield* planSteps`）重规划。
 - #382 评审补充：`finishStreams` 只通过注入 clock 安排下一回调，再以 `startSettlementWork(() => finishStreamSteps())` 切片执行首次 `planStreamSteps`。末拍与首次规划不共用同一回调预算；完整规划成功后才设置 pendingSettlement、发布 battles 和至少 800ms 的 battle 尾段。battles 非空仍表示可通过 `toCombatReplayFor` 读取完整终局回放，部分计划不可见；尾段截止继续复用或切片重建计划。战斗推进和规划均使用 `sliceNow ?? clock.now` 检查预算。
 - `deferDuringSettlement` 同时覆盖 `streamingBoundaryPending`：一拍跨多个分片时沿用上述 FIFO，等全体战斗封口后才执行席位操作、发布状态；此路径不重跑已经完成的 tick。原 round / seatRevision 校验、queued 占位返回值和取消语义不变。
-- 所有外部席位写入口均走同一门：`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
+- 所有外部席位写入口均走同一门：`handlePlayer`（普通命令转 `handle`，直接选秀立即拒绝）、`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
 - PvE live 尾算使用独立的 `LivePveTrack` / `CombatReplayRecorder.fork()`；fork 共享不可变帧，后续逐 tick 写入独立数组，不改规则、帧或事件序号。丢弃工作不会污染已发布回放，也不会重复发奖。所有临时席位/战斗发布与最终 `commitSettlement` 之间不 yield。
 - 冻结期网络命令在提交后的最新状态校验原 `round` / `seatRevision`：同轮旧席位版本返回既有 `seat-revision-mismatch` 回执，若轮次已变则仍优先返回 `stale-round`；显式匹配新版本的请求可继续按规则执行。失败不消耗资源或 RNG，同 ID 重发取得相同失败回执，客户端可用新 ID / 最新版本重试。
 - 删除 `MAX_SETTLEMENT_RESTARTS` 与 `settlement-restart-limit` fault 路径，持续输入不会导致重建饥饿或因命令批次数结束整局。`MAX_STALE_SEAT_RETRIES=3` 保留为内部提交异常防线：首次尝试后至多重试三次；失败 fault 为 `invalid-results` / `detail='stale-seat-retry-limit:3'`，正常排队输入不会触发此路径。

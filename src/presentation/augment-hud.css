@@ -1,0 +1,4 @@
+/* Scout hide only. Chip size, gap and rail position stay in src/style.css
+   (44px targets, 4px gap, 32px artwork). A smaller --augment-size or a
+   position:fixed row loses to min-width and crosses the board. */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .augment-strip { display: none; }

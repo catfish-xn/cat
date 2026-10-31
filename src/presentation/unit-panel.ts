@@ -181,7 +181,7 @@ export function showSceneDescription(target: import('../rendering/board-feed').B
   if (target.kind === 'unit' || target.kind === 'carousel') {
     const data = target.kind === 'carousel' ? target.unit : unit;
     if (data) body = unitCardBody(data.definitionId, data.starLevel, null,
-      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'));
+      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'), 'notes' in data ? data.notes : []);
   } else if (target.kind === 'item') {
     const entry = catalogEntry(target.id); if (entry) body = itemCardBody(entry);
   } else if (target.kind === 'orb') {

@@ -5,7 +5,7 @@ import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { LegendWalkBook, LEGEND_WALK_MIN_GAP_MS } from '../../src/server/room/legend-walk';
 import {
-  CAROUSEL_CONTACT_CELLS, carouselWalkContact, CAROUSEL_LEGEND_RADIUS, LEGEND_CELLS_PER_SECOND, carouselHome, carouselUnitPoint, interceptCarouselUnit, walkPoint, type LegendWalk,
+  CAROUSEL_UNIT_PICK_RADIUS, carouselWalkContact, CAROUSEL_LEGEND_RADIUS, LEGEND_CELLS_PER_SECOND, carouselHome, carouselUnitPoint, interceptCarouselUnit, walkPoint, type LegendWalk,
 } from '../../src/server/legend-motion';
 import { parseClientMessage, NET_PROTOCOL_VERSION } from '../../src/server/net/messages';
 import { makeRoom, runUntil } from './helpers';
@@ -208,19 +208,104 @@ describe('walk message (wire)', () => {
 });
 
 describe('ground-walk contact geometry', () => {
-  it('requires contact rather than proximity, ignores idle orbiting, and finds contact before the destination', () => {
+  it('requires the approved circle contact and finds entry before the destination', () => {
     const walk = (x: number): LegendWalk => ({ seatId: 's0', scene: 'carousel', from: { x, y: 4 }, to: { x, y: 1 }, startedAt: 0, arriveAt: 1200, slot: null });
     const near = walk(0.6);
-    expect(carouselWalkContact(near, 0, 9, 0)).toBeNull();
+    expect(carouselWalkContact(near, 0, 9, 0)).not.toBeNull(); // old 0.25-circle miss is inside the approved circle
+    expect(carouselWalkContact(walk(1.0), 0, 9, 0)).toBeNull();
     const crossing = walk(0), at = carouselWalkContact(crossing, 0, 9, 0);
     expect(at).not.toBeNull();
     expect(at!).toBeLessThan(crossing.arriveAt);
     const legend = walkPoint(crossing, at!), unit = carouselUnitPoint(0, 9, at!);
-    expect(Math.hypot(legend.x - unit.x, legend.y - unit.y)).toBeCloseTo(CAROUSEL_CONTACT_CELLS, 6);
+    expect(Math.hypot(legend.x - unit.x, legend.y - unit.y)).toBeCloseTo(CAROUSEL_UNIT_PICK_RADIUS, 6);
     expect(carouselWalkContact({ ...crossing, arriveAt: 0 }, 0, 9, 0)).toBeNull();
   });
 });
 
+
+describe('v26 pickup circle and idle orbit', () => {
+  it('uses exactly 0.55 cells, includes the boundary and leaves a 0.61-cell lane between nine units', () => {
+    expect(CAROUSEL_UNIT_PICK_RADIUS).toBe(0.55);
+    const gap = 2 * 2.5 * Math.sin(Math.PI / 9) - 2 * CAROUSEL_UNIT_PICK_RADIUS;
+    expect(gap).toBeCloseTo(0.6101007166, 8);
+    expect(2 * CAROUSEL_UNIT_PICK_RADIUS).toBeLessThan(1.71);
+    const idle = (y: number): LegendWalk => ({ seatId: 's0', scene: 'carousel', from: { x: 0, y }, to: { x: 0, y }, startedAt: 0, arriveAt: 0, slot: null });
+    expect(carouselWalkContact(idle(2.5 + 0.55), 0, 9, 0)).toBe(0);
+    expect(carouselWalkContact(idle(2.5 + 0.550001), 0, 9, 0, 48_000)).toBeNull();
+    const waiting = idle(2.5), openedAt = -3000;
+    const at = carouselWalkContact(waiting, 0, 9, openedAt, 48_000)!;
+    expect(at).toBeGreaterThan(0);
+    expect(carouselWalkContact(waiting, 0, 9, openedAt, at - 0.001)).toBeNull();
+    const unit = carouselUnitPoint(0, 9, at - openedAt);
+    expect(Math.hypot(unit.x, unit.y - 2.5)).toBeCloseTo(0.55, 8);
+  });
+
+  it('crosses the moving gap without a pick when the legend center stays outside both circles', () => {
+    const midAt = 400, angle = Math.PI / 9 + midAt / 48_000 * Math.PI * 2;
+    const point = (r: number) => ({ x: Math.sin(angle) * r, y: Math.cos(angle) * r });
+    const walk: LegendWalk = { seatId: 's0', scene: 'carousel', from: point(3.5), to: point(1.5), startedAt: 0, arriveAt: 800, slot: null };
+    for (let index = 0; index < 9; index++) expect(carouselWalkContact(walk, index, 9, 0)).toBeNull();
+  });
+
+  it('grants an idle collision after arrival, and a redirect cancels that standing collision', () => {
+    for (const redirect of [false, true]) {
+      const { room, clock } = toCarousel();
+      const first = humansByRelease(room)[0]!;
+      advanceTo(room, clock, room.state.carousel!.state.releaseAtMs[first]!);
+      const startedAt = clock.now(), openedAt = room.state.carousel!.startedAt, end = openedAt + room.state.carousel!.state.deadlineMs;
+      const from = carouselHome(room.state.seats.findIndex(seat => seat.seatId === first), 8), slots = rules.listCarouselSlots(room.state.carousel!.state);
+      // Find a genuine gap to stand in: no contact in transit, then a rotating free unit enters it.
+      const candidate = Array.from({ length: 360 }, (_, i) => {
+        const angle = i * Math.PI / 180, to = { x: Math.sin(angle) * 2.5, y: Math.cos(angle) * 2.5 };
+        const walk: LegendWalk = { seatId: first, scene: 'carousel', from, to, startedAt, arriveAt: startedAt + Math.hypot(to.x - from.x, to.y - from.y) / 2.5 * 1000, slot: null };
+        const contacts = slots.flatMap((slot, index) => {
+          if (slot.pickedBy !== null) return [];
+          const at = carouselWalkContact(walk, index, slots.length, openedAt, end);
+          return at === null ? [] : [{ slot: slot.slot, at }];
+        }).sort((a, b) => a.at - b.at);
+        return { walk, contact: contacts[0] };
+      }).find(entry => entry.contact && entry.contact.at > entry.walk.arriveAt + 100 && entry.contact.at < entry.walk.arriveAt + 3000)!;
+      expect(candidate).toBeDefined();
+      expect(room.walkLegend(first, { scene: 'carousel', to: candidate.walk.to })).toMatchObject({ ok: true, walk: candidate.walk });
+      clock.advance(candidate.walk.arriveAt - clock.now());
+      expect(room.state.carousel!.state.receipts.some(receipt => receipt.seatId === first)).toBe(false);
+      if (redirect) expect(room.walkLegend(first, { scene: 'carousel', to: from }).ok).toBe(true);
+      clock.advance(candidate.contact!.at - clock.now() + 0.001);
+      if (redirect) expect(takerOf(room, candidate.contact!.slot)).toBeNull();
+      else {
+        expect(takerOf(room, candidate.contact!.slot)).toBe(first);
+        expect(room.walks.find(walk => walk.seatId === first)).toEqual(candidate.walk);
+        expect(room.state.carousel!.state.receipts.filter(receipt => receipt.seatId === first)).toHaveLength(1);
+      }
+      room.dispose(); expect(clock.pending).toBe(0);
+    }
+  }, 60_000);
+
+  it('rejects a direct player pick over real sockets without any room mutation, then grants the walked contact', async () => {
+    const harness = await startServer({ carousel: rules }, new TwoSidedBattleResolver());
+    try {
+      const [client] = await seatTwo(harness), room = harness.server.room!;
+      runUntil(room, harness.clock, state => state.phase === 'carousel', 3000);
+      const me = room.state.seats.find(seat => seat.name === '甲')!.seatId;
+      advanceTo(room, harness.clock, room.state.carousel!.state.releaseAtMs[me]!);
+      await flush();
+      const carousel = room.state.carousel!.state, slot = rules.listCarouselSlots(carousel).find(slot => slot.pickedBy === null)!.slot;
+      const before = room.state;
+      const command = { type: 'carousel-pick' as const, carouselId: carousel.id, revision: carousel.revision, slot };
+      expect(await client.command(command, { round: room.state.round, seatRevision: room.state.seats.find(seat => seat.seatId === me)!.seatRevision })).toMatchObject({ ok: false, reason: 'wrong-phase' });
+      expect(room.state).toBe(before); expect(room.walks).toEqual([]);
+      expect(room.handlePlayer(me, command)).toMatchObject({ ok: false, reason: 'wrong-phase' });
+      expect(room.state).toBe(before);
+      client.sendRaw(JSON.stringify({ type: 'walk', protocolVersion: NET_PROTOCOL_VERSION, commandId: 900, roomId: room.state.roomId, scene: 'carousel', slot }));
+      const pushed = await client.waitFor(message => message.type === 'legend');
+      expect(pushed).toMatchObject({ type: 'legend', walk: { seatId: me, slot } });
+      expect(room.state).toBe(before);
+      const walk = room.walks[0]!;
+      harness.clock.advance(walk.arriveAt - harness.clock.now());
+      expect(room.state.carousel!.state.receipts.filter(receipt => receipt.seatId === me)).toHaveLength(1);
+    } finally { await harness.close(); }
+  }, 60_000);
+});
 
 describe('ground contact timer ownership', () => {
   it('cancels every old contact on a redirect or scene clear, while preserving the walk after stopping contacts', () => {

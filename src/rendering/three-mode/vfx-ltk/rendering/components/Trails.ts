@@ -20,7 +20,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -35,11 +37,11 @@ import {
   commitRibbon,
   type Cursor,
   packUv,
-  ribbonBuffers,
   strand,
   UV_STRIDE,
   writeTrail,
 } from "../utils/ribbon";
+import { borrowRibbonBuffers, releaseRibbonBuffers } from "../utils/drawBufferPool";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { uvDraw, uvTransformInto } from "../utils/uvTransform";
 
@@ -87,7 +89,7 @@ export interface TrailsProps {
 export function createTrails({ emitter, sources, samplers, rank, hidden }: TrailsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
   const trail = emitter.trail;
-  const buffers = memo(() => ribbonBuffers(TRAIL_VERTICES), []);
+  const buffers = memo(() => borrowRibbonBuffers(TRAIL_VERTICES), []);
   const material = memo(
     () =>
       ribbonMaterial(
@@ -100,13 +102,7 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
     [emitter, samplers],
   );
 
-  cleanup(
-    () => () => {
-      buffers.geometry.dispose();
-      buffers.edgeGeometry.dispose();
-    },
-    [buffers],
-  );
+  cleanup(() => () => releaseRibbonBuffers(buffers, TRAIL_VERTICES), [buffers]);
 
   const pair = makePair(material);
 
@@ -154,9 +150,11 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
 }
 
 /** One source's particles of `emitter` as a strand, into `STRAND`, in the order they were born. */
+let trailFrame: FrameSlot | undefined;
 function strandInto(source: Source, emitter: EmitterModel, stamp: number): void {
   const pool = source.pool;
-  const frame = frameOf(source, emitter);
+  trailFrame ??= frameOf(source, emitter) as FrameSlot;
+  const frame = frameInto(source, emitter, trailFrame);
   const time = frame.now;
   let held = 0;
   const buckets = bucketsOf(pool, stamp);

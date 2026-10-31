@@ -8,11 +8,18 @@ import type { DisplayCombatEvent } from '../presentation/combat-display';
 import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
 import { readLegendChoice } from './legend-choice';
+import type { PvpDamage } from '../presentation/pvp-damage';
 
 export interface BoardPiece {
+  /** Obtained effects only (native binding or public portable item); never pending offers. */
+  readonly anomalies?: readonly import('../presentation/anomaly-display').UnitAnomaly[];
+  /** Parked by over-encumbered capacity; drawn, but not a combatant. */
+  readonly nonCombat?: true;
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
   /** 4 on a promoted 终极英雄 (mine, or an opponent's in a shown battle); `starLevel` stays physical. Draw `effectiveStarLevel ?? starLevel` stars in `starColor`. */
   readonly effectiveStarLevel?: 4;
+  /** The combat snapshot's frozen form, independent of movement/tween coordinates. */
+  readonly form?: 'melee' | 'ranged';
   /** A PvE monster (hero-identity `neutral`, from the neutral catalog); the 3D layer gives it no star row. */
   readonly neutral?: true;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */
@@ -27,6 +34,8 @@ export interface BoardPiece {
   readonly meters?: BoardMeters;
   /** Server-projected Enforcer wanted target; display only. */
   readonly enforcerWanted?: boolean;
+  /** Presentation stamp from the frozen public combat formations; no inventory mutation. */
+  readonly itemsConfiscated?: boolean;
   /** Worn items in slot order, then this round's temporary (窃贼手套) items, with the 2D icon URL (null when there is none); absent when it has none. */
   readonly items?: readonly { readonly id: string; readonly icon: string | null; readonly stacks?: number; readonly maxStacks?: number }[];
   /** Crowd control on it in the shown combat (presentation/control-display.ts): 'airborne' is a knock-up; absent when none. */
@@ -34,6 +43,7 @@ export interface BoardPiece {
 }
 export interface BoardMeters { readonly hp: number; readonly maxHp: number; readonly mana: number; readonly maxMana: number; readonly shield: number }
 export interface BoardFrame {
+  readonly usableBenchSlots?: number;
   readonly rows: number; readonly columns: number; readonly hexRadius: number; readonly origin: { readonly x: number; readonly y: number };
   readonly bench: readonly { readonly x: number; readonly y: number }[];
   readonly pieces: readonly BoardPiece[];
@@ -41,6 +51,8 @@ export interface BoardFrame {
   readonly fighting: boolean;
   /** The unit BoardScene is dragging (either input), or null; the 3D layer drops its own drag once this clears. */
   readonly dragging: string | null;
+  /** BoardScene's current selection; the 3D view lifts it slightly, without a foot ring. */
+  readonly selectedId?: string | null;
   /** Owner-only sacrifice marker from the private seat view, or null when hidden. */
   readonly mutationSacrificeCell?: { readonly col: number; readonly row: number } | null;
   /** v15 (online): my unclaimed orbs as the private view lists them (oldest first); empty offline. Where they sit is the layer's own layout. */
@@ -75,7 +87,11 @@ export interface BoardOrb {
   readonly source?: string;
 }
 /** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
-export interface BoardHit { readonly key: string; readonly damage: number }
+export interface BoardHit {
+  readonly key: string; readonly damage: number;
+  /** Online PvP is presented through playerDamage; solo and PvE retain the legacy HP hit. */
+  readonly pvp?: boolean;
+}
 export interface BoardDropHint {
   /** Where the dragged unit would land, as BoardScene's own hit test reads the point; undefined over nothing. */
   readonly target?: { readonly kind: 'board'; readonly x: number; readonly y: number } | { readonly kind: 'bench'; readonly x: number; readonly y: number };
@@ -107,15 +123,23 @@ export type BoardDescription =
   | { readonly kind: 'item'; readonly id: string }
   | { readonly kind: 'orb'; readonly id: string }
   | { readonly kind: 'public-orbs'; readonly count: number; readonly tiers: readonly string[] };
+/** Presentation coordinates captured before consumed tokens disappear. Never infers a promotion from roster diffs. */
+export interface BoardMergePoint { readonly id: string; readonly x: number; readonly y: number; readonly benchSlot?: number }
+export interface BoardMerge {
+  readonly definitionId: string; readonly fromStar: number; readonly toStar: number;
+  readonly from: readonly BoardMergePoint[]; readonly to: BoardMergePoint;
+}
 export interface BoardFeedListener {
+  merges?(merges: readonly BoardMerge[]): void;
+  playerDamage?(hit: PvpDamage): void;
   playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
   unitAt?(client: { x: number; y: number }): string | undefined;
   /** CSS-pixel box of the drawn piece as the layer projects it; undefined when the piece is not drawn or off screen. */
   screenBox?(id: string): BoardScreenBox | undefined;
-  /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
-  carousel?(view: BoardCarousel | null): void;
+  /** Online 选秀 to draw, or null for the board side. `active` keeps board legends absent on either side. */
+  carousel?(view: BoardCarousel | null, active?: boolean): void;
   /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
   scout?(view: BoardScout | null): void;
   /** A little-legend walk the room took (any seat, either scene). */
@@ -201,9 +225,9 @@ export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]):
   if (events.length) listener.events(events);
 }
 /** Only a layer that draws the carousel gets the build called; true when one does (the 2D panel then hides its ring). */
-export function publishCarousel(build: () => BoardCarousel | null): boolean {
+export function publishCarousel(build: () => BoardCarousel | null, active?: boolean): boolean {
   if (!listener?.carousel) return false;
-  listener.carousel(build());
+  listener.carousel(build(), active);
   return true;
 }
 /** Only a layer that draws scouting gets the build called; true when one does (the 2D panel then shrinks to its strip). */
@@ -212,7 +236,9 @@ export function publishScout(build: () => BoardScout | null): boolean {
   listener.scout(build());
   return true;
 }
+export function publishBoardMerges(merges: readonly BoardMerge[]): void { listener?.merges?.(merges); }
 export function publishPlayerSaved(event: MelSaveReceipt): void { listener?.playerSaved?.(event); }
+export function publishPlayerDamage(hit: PvpDamage): void { listener?.playerDamage?.(hit); }
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {

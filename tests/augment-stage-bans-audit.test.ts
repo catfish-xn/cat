@@ -190,7 +190,7 @@ it('reports missing research as an error rather than claiming an empty audit pas
   const { status, result } = f.run(); expect(status).toBe(1); expect(result.errors[0].code).toBe('SOURCE_MISSING');
 });
 
-// Characterize findings, not a waiver: keep the three table/source differences
+// Characterize findings, not a waiver: keep the remaining table/source difference
 // and intentional user overrides visible.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
@@ -199,10 +199,8 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
   // Batch 5 adds augment inventory and bans; companion equipment is excluded.
-  expect(r.summary).toEqual({ sourceRows: 312, poolAugments: 270, shippedRows: 221, regeneratedRows: 221, unrestricted: 76, errors: 3, crossVersionDifferences: 8, communityDifferences: 2 });
+  expect(r.summary).toEqual({ sourceRows: 312, poolAugments: 274, shippedRows: 227, regeneratedRows: 225, unrestricted: 76, errors: 1, crossVersionDifferences: 8, communityDifferences: 2 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
-    ['TABLE_MISMATCH', 'TFT13_Augment_Formswapper', ['2-1']],
-    ['TABLE_MISMATCH', 'TFT13_TeamupAugment_BloodBrothers', ['2-1', '4-2']],
     ['TABLE_MISMATCH', 'TFT_Augment_TableScraps', ['2-1', '3-2', '4-2']],
   ]);
   expect(r.overrides).toContainEqual({apiName:'TFT11_Augment_FineVintage',source:['2-1','3-2','4-2'],expected:['3-2','4-2'],decision:'P-FINE-VINTAGE-STAGE'});
@@ -210,6 +208,9 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_AGoldenFind');
   expect(r.errors.find((e: { apiName: string }) => e.apiName === 'TFT_Augment_TableScraps').actual).toEqual(['3-2', '4-2']);
   expect(JSON.parse(r.canonical.shipped)).toMatchObject({ TFT13_Augment_Academy: ['4-2'], TFT13_Augment_Cabal: ['2-1', '4-2'],
+    TFT13_Augment_Formswapper: ['2-1'], TFT13_TeamupAugment_BloodBrothers: ['2-1', '4-2'],
+    TFT13_Augment_Grant6Cost_Warwick: ['2-1', '3-2'], TFT_Augment_BRB: ['3-2', '4-2'],
+    TFT11_Augment_OverEncumbered: ['3-2', '4-2'], TFT_Augment_RestartMission: ['2-1', '4-2'],
     TFT11_Augment_FineVintage: ['3-2', '4-2'], TFT_Augment_TableScraps: ['3-2', '4-2'],
     TFT13_Augment_Ambusher: ['4-2'], TFT_Augment_HallOfMirrors: ['2-1', '3-2', '4-2'] });
   expect(r.overrides).toContainEqual({apiName:'TFT13_Augment_Ambusher',source:[],expected:['4-2'],decision:'P-LOOT-EXPLOSION-STAGE'});

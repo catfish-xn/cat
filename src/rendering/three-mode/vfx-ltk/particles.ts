@@ -10,7 +10,7 @@ import { createTrails } from './rendering/components/Trails';
 import { createBeams } from './rendering/components/Beams';
 import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
-import { meshBuffers } from './rendering/utils/buffers';
+import { borrowMeshBuffers } from './rendering/utils/drawBufferPool';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
@@ -39,6 +39,10 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   return geometry;
 }
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
+export function pointAnchor(point: readonly [number, number, number]): Anchor {
+  return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
+    basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
+}
 export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
   const point = new Vector3(), matrix = new Matrix4();
   let attachment: Object3D | undefined;
@@ -69,16 +73,21 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
-  const driver = createDriver(options.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
-  const from = options.anchor.originAt(0), to = options.target?.originAt(0) ?? from;
-  const distance = Math.hypot(...from.map((value, index) => value - to[index]));
-  let rig: RigModel = { life: 'once', height: 0, joints: options.joints, stopAt: options.stopAfter,
-    motion: options.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-      flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / options.projectileSeconds } } }
-      : { kind: 'bone', anchor: options.anchor, target: options.target },
+  const spec = { ...options };
+  const rigFor = (): RigModel => {
+    const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
+    const distance = Math.hypot(...from.map((value, index) => value - to[index]));
+    return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.stopAfter,
+      motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
+        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
-  driver.swap(prepared.model); driver.steer(rig);
+  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
+  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  let rig = rigFor();
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };
@@ -95,7 +104,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       const props = { emitter, sources, samplers, rank: definition.rank, hidden: false, room: ROOT_PARTICLES };
       let draw: ParticleDraw | undefined;
       if (drawsTheAttachment(emitter)) {
-        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, options.attachment);
+        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
           draws.push(held); object.add(held.object);
@@ -105,7 +114,11 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const geometry = prepared.meshes.get(definition.key);
         if (geometry) {
           const pose = prepared.poses?.get(definition.key);
-          draw = createMeshes({ ...props, buffers: { ...meshBuffers(staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) } });
+          draw = createMeshes({
+            ...props,
+            meshKey: definition.key,
+            buffers: { ...borrowMeshBuffers(definition.key, staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) },
+          });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
       else if (drawsAsTrail(emitter)) draw = createTrails(props);
@@ -122,7 +135,14 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
-    get finished() { return closed || elapsed >= options.duration; },
+    /** Play the same prepared system again. The caller only does this for the same attachment. */
+    reuse(next: typeof options) {
+      if (closed) return;
+      spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
+      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed;
+      elapsed = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+    },
+    get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;

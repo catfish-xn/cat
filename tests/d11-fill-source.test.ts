@@ -53,7 +53,12 @@ it('registers the D11 pack with the complete independent catalog and retains the
   expect(Object.keys(D11_FILL_DEFINITIONS)).toHaveLength(5);
   // The full catalog includes table-scraps and young-and-wild-and-free, which require sharedCarousel.
   const fullPool = [...new Set((['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)))].sort();
-  expect(fullPool).toHaveLength(306); // Fifth-batch expansion, independently enumerated with carousel admission enabled.
+  // v26 D5 (7953c99a): 310 = fifth-batch 306 (independently enumerated with carousel admission enabled) plus
+  // brb, over-encumbered, restart-mission and what-you-really-are.
+  expect(fullPool).toHaveLength(310);
+  const d5=['brb','over-encumbered','restart-mission','what-you-really-are'];
+  expect(fullPool.filter(id=>d5.includes(id))).toEqual([...d5].sort());
+  expect(fullPool.filter(id=>!d5.includes(id))).toHaveLength(306);
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(fullPool);expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);
   expect(createMatch().contentDigest).toBe(CONTENT_DIGEST);
   expect(AUGMENT_DEFINITIONS['built-different'].effects).toContainEqual({kind:'mechanic',mechanic:'builtDifferent',values:{health2:240,health3:330,health4:420,health5:530,speed2:4500,speed3:5000,speed4:5500,speed5:6000}});

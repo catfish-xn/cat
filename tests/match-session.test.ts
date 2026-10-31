@@ -166,7 +166,7 @@ describe('match session commands and fixed clock', () => {
     expect(session.startFailure).toBeUndefined(); expect(session.start().ok).toBe(true);
     expect(session.phase).toBe('settlement'); expect(session.combat?.tick).toBe(0);
     // Round income is paid at the next round entry (deferred-income.ts).
-    expect(session.state).toMatchObject({ gold: 2 - deferredRoundIncome(session.state.roundResults.at(-1)!), playerHp: 97, level:2, xp: 0 });
+    expect(session.state).toMatchObject({ gold: 2 - deferredRoundIncome(session.state.roundResults.at(-1)!), playerHp: 98, level:2, xp: 0 });
     const settled = session.state;
     rejected(session, session.start(), 'wrong-phase', settled);
     expect(session.advance(60_000)).toEqual([]); expect(session.state).toBe(settled);
@@ -180,7 +180,10 @@ describe('match session commands and fixed clock', () => {
 
   it('preserves the purchased player roster and unique results for five rounds', () => withB1Offers(['starry-night'], () => {
     // v24 seed 7226 route; v25 pool scripts Starry Night at 2-1 (augments.toEqual(['starry-night']) is the fixture self-check).
-    const session = new MatchSession(reachRound('1-3',true,7226));
+    // v26 PvE loot carryover (8f794062, merge c684c3ec): seed 7226's conceded 1-2 loot now delivers Smeech later, so
+    // the roster is no longer purchase-only. 136 is the first seed from 1 on which this exact route acquires no loot hero
+    // through round 7 (v25: 7226).
+    const session = new MatchSession(reachRound('1-3',true,136));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);

@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { rerollAugment, selectChoice, startMatchCombat, nextRound } from '../src/simulation/match';
 import { augmentCandidates, deriveAugmentTier } from '../src/simulation/augment-offers';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
 import { nextRandom } from '../src/simulation/rng';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
@@ -95,7 +96,9 @@ it('draws the last candidate successfully, then refuses an empty pool without us
   // v22 mutual exclusions (e.g. team-ups) apply against owned augments, so pair the owned ID with
   // the first candidate it does not exclude.
   const ownedOf=(definitionId:string)=>[{definitionId,choiceId:'prior',acquiredRound:1}];
-  const [ownedId,lastId]=candidates.map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers,null,node)[0]] as const).find(([,last])=>last)!;
+  // v26 D5 (7953c99a): brb now sorts first; a synthetic owned history augment has no augment-history-v1
+  // ledger (an illegal state), so pair only owned IDs that need no history (was: brb-free pool's first ID).
+  const [ownedId,lastId]=candidates.filter(id=>!augmentNeedsHistory(id)).map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers,null,node)[0]] as const).find(([,last])=>last)!;
   const owned=ownedOf(ownedId);
   // v22 invariant: the shown offers are part of the seen ledger.
   const before=freeze({...original,augments:owned,removedAugmentIds:[...c.offers,...candidates.filter(id=>id!==ownedId&&id!==lastId)]});

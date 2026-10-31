@@ -6,6 +6,7 @@ import { getDeploymentCap } from '../../src/simulation/match';
 import { augmentNeedsHistory } from '../../src/simulation/augment-history-owners';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
 import { proposeSettlement } from '../../src/simulation/two-sided-battle';
@@ -14,7 +15,10 @@ import { rewardPlan, mutationLabsExpected } from '../fixtures/m5/augment-rewards
 import type { MatchState } from '../../src/simulation/match-types';
 
 const clock = new ManualClock();
-const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' as const })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS, roomId: 'test-room', seed: 42, clock, resolver: new TwoSidedBattleResolver() });
+// D5's 310-card pool: seed 42's 3-2 offers, after one reroll per slot, never include
+// natural-selection even though every alive seat fielded an Experiment. Seed 10 does,
+// on s3, with the same command budget (room seeds 0..12).
+const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' as const })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS, roomId: 'test-room', seed: 10, clock, resolver: new TwoSidedBattleResolver() });
 const match = (id: string) => room.state.seats.find(s => s.seatId === id)!.match;
 const experiment = (id: string) => UNIT_DEFINITIONS[id]?.traits.includes('experiment');
 let seatId: string, donorId: string, donorItems: MatchState['items'];
@@ -72,9 +76,23 @@ it('reaches 3-2 and finds an offered mutation with the permitted one-reroll-per-
   expect(owner).toBeDefined(); if (!owner) throw new Error('mutation absent from real room offers'); seatId = owner.seatId;
 });
 it('chooses mutation, grants exactly three independently derived Experiments, and deploys/equips the sacrifice', () => {
-  for (const u of match(seatId).preparation.units.filter(u => u.location.kind === 'bench' && !experiment(u.definitionId))) expect(room.handle(seatId, { type: 'sell', unitId: u.id })).toMatchObject({ ok: true });
+  // Seed 10's bench holds TFT_ArmoryKeyOrnn. planOpenAnvil rejects any pending
+  // choice, and the 3-2 augment choice is still open, so champions sell first
+  // and the anvil opens only after natural-selection is taken. Its timeout
+  // offer is the same card the anvil would grant unattended.
+  for (const u of match(seatId).preparation.units.filter(u => u.location.kind === 'bench' && !experiment(u.definitionId) && !isAnvil(u.definitionId))) {
+    const sold = room.handle(seatId, { type: 'sell', unitId: u.id });
+    expect(sold.ok, sold.ok ? '' : `${u.definitionId}: ${sold.reason}`).toBe(true);
+  }
   const choice = match(seatId).pendingChoice!;
   expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: 'natural-selection' })).toMatchObject({ ok: true });
+  for (const u of match(seatId).preparation.units.filter(u => u.location.kind === 'bench' && isAnvil(u.definitionId))) {
+    const sold = room.handle(seatId, { type: 'sell', unitId: u.id });
+    expect(sold.ok, sold.ok ? '' : `${u.definitionId}: ${sold.reason}`).toBe(true);
+    const forge = match(seatId).pendingChoice;
+    expect(forge?.kind).toBe('forge');
+    if (forge?.kind === 'forge') expect(room.handle(seatId, { type: 'choose', choiceId: forge.choiceId, generation: forge.generation, definitionId: forge.offers[0] })).toMatchObject({ ok: true });
+  }
   const owned = match(seatId).augments.find(a => a.definitionId === 'natural-selection')!;
   const expected = rewardPlan({ ...match(seatId), augments: [owned] }, {}).gifts;
   expect(expected).toHaveLength(3);

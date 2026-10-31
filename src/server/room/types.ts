@@ -5,9 +5,9 @@
  * Every number is an integer. The room never computes a rule: each seat keeps its own
  * MatchState and only the public commands of src/simulation/match.ts change it.
  *
- * Authority: `SeatState.hp` is the room's authoritative HP; `MatchState.playerHp` is a
- * derived mirror that the placeholder resolver keeps equal by construction (see
- * battle-resolver.ts). Clients never read the mirror.
+ * Authority: `SeatState.hp` and `SeatState.streak` are the room's committed public ledgers.
+ * A live MatchState can already have settled a PvE round before the room commits it;
+ * public projections never read HP or streak from that uncommitted state.
  */
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
@@ -52,6 +52,8 @@ export interface SeatState {
   readonly controlEpoch: number;
   /** Authoritative HP (truncated at 0). */
   readonly hp: number;
+  /** Committed rules streak: initialized and settled alongside HP; newly acquired Called Shot is synced immediately. */
+  readonly streak: MatchState['streak'];
   readonly alive: boolean;
   /** Final rank (1 = winner) once decided; null while still playing. */
   readonly rank: number | null;
@@ -109,7 +111,7 @@ export interface BattleInput {
  * One seat's own rules combat as the replay projection needs it (contract §14.2, PvE): the CombatState right
  * after start, the finished CombatState and the complete ledger including tick 0. No per-tick states are kept.
  */
-export type SeatCombat = CombatReplayInput;
+export type SeatCombat = CombatReplayInput & Partial<Pick<RulesBattleResult, 'mapping' | 'a' | 'b'>>;
 export interface BattleSeatOutcome {
   readonly seatId: string;
   /** Seat state after its battle, as produced by the rules; the room stores it verbatim. */

@@ -84,7 +84,15 @@ describe('TP opening and earned reward sources',()=>{
     // A legitimate sale empties the real army, so the PvE concession kills no source.
     const sold=accept(sellSharedUnit(pool,states[0],'unit-1')),lost=fight(sold.pool,sold.state);
     expect(lost.pool.rewards).toEqual([]);expect(lost.pool.pending).toEqual([]);expect(lost.pool.available).toEqual(lost.pool.initial);
-    expect(lost.state.m8.loot.direct[0].status).toBe('forfeited');conserved(lost.pool,[lost.state]);
+    // v26 PvE loot carryover (c684c3ec / 8f794062, docs/CURSOR_pve-loot-carryover.md): a non-lethal PvE loss
+    // with no kill now carries every unearned slot to the next PvE (1-3) instead of forfeiting it (was 'forfeited').
+    // Carrying still reserves nothing and compensates nothing: the pool assertions above stay unchanged.
+    expect(lost.state.m8.loot.direct[0].status).toBe('carried');
+    expect(lost.state.m8.loot.direct.every(drop=>drop.status==='carried')).toBe(true);
+    expect(lost.state.m8.loot.earnedEvidence).toEqual([]);expect(lost.state.m8.loot.receipts).toEqual([]);
+    expect(lost.state.m8.loot.carry?.map(row=>row.dropId)).toEqual(lost.state.m8.loot.direct.map(drop=>drop.dropId));
+    expect(new Set(lost.state.m8.loot.carry?.map(row=>row.deliverRoundId))).toEqual(new Set(['1-3']));expect(lost.state.roundDefinitionId).toBe('1-2');
+    conserved(lost.pool,[lost.state]);
   });
 });
 

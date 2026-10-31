@@ -4,15 +4,23 @@
  * Nothing here decides rules; it only shows what the server sent.
  */
 import { freeRerollsUsed } from '../../simulation/free-rerolls';
+import type ConfiscationDisplay from '../../presentation/confiscation-display';
+import { enforcerConfiscates } from '../../simulation/strategy-snapshot';
+import { UNIT_DEFINITIONS } from '../../simulation/units';
+import { ITEM_DEFINITIONS } from '../../simulation/content/g2-3-item-registry';
+import { deriveTraits } from '../../simulation/trait-snapshot';
+import { combatEquipmentDisplay } from '../../presentation/battle-equipment';
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import { displayUnitName } from '../display-names';
+import { ANOMALY_SELL_BLOCKED } from '../strategy-panel';
 import { anomalyDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName } from '../../presentation/augment-display';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishPlayerDamage, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
+import type { PvpDamageFeedback } from '../../presentation/pvp-damage';
 import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
@@ -26,7 +34,7 @@ import { ScoutMinimap } from './scout-minimap';
 import { OpponentBoardPanel, publicTraitRows } from './opponent-board';
 import { traitColumnShowRows } from '../trait-column';
 import { PlayersSidebar } from './players-sidebar';
-import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
+import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { EliminationCard, RankingOverlay } from './ranking';
 import { rankBattle } from '../../presentation/battle-ranking';
 import type { CombatReplay } from '../../simulation/combat-replay-view';
@@ -45,10 +53,12 @@ export interface OnlineHooks {
   changed?(change: SessionChange): void;
   /** The server confirmed pending commands of mine; the state already shows them. */
   confirmed?(commands: readonly ConfirmedCommand[]): void;
-  /** The server refused a pending command; `text` is set for network/room refusals, else `reason` is a rule failure. */
+  /** A pending command was refused or lost receipt tracking; `text` names transport/room issues, else `reason` is a rule failure. */
   refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
   /** The server's own events behind a state push (T10: deadline auto-deployment, post-battle merges), after it is shown. */
   serverEvents?(events: readonly MatchEvent[]): void;
+  /** All receipted merges in this push, once after its final redraw (commands and server events together). */
+  upgrades?(events: readonly MatchEvent[]): void;
   /** v15: an orb claimed in the frozen moment before the battle was refused by the rules after its ok receipt. */
   orbClaimRefused?(orbId: string, reason: string): void;
 }
@@ -105,6 +115,7 @@ export class OnlineApplication implements SceneApplication {
   private pendingRank: number | null | undefined = undefined;
   private hitLanding = false;
   private view: PlayerView | null = null;
+  confiscation?: ConfiscationDisplay;
   /** board-feed subscription the 3D carousel was last sent to, and the next seat release that changes what it draws. */
   private carouselFeedGeneration = -1;
   private carouselNextRelease = Infinity;
@@ -116,19 +127,29 @@ export class OnlineApplication implements SceneApplication {
   private unlisten: () => void;
   private unsubscribe: () => void;
   private disposed = false;
+  private damageFx: Promise<PvpDamageFeedback | null>;
   private ignoreNextDelta = true;
   replaySelectedUnit: string | null = null;
   /** @param mounts Online-only board-frame mounts (countdown above the board, shop dock below); the sidebar then keeps only the phase badge. */
   constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
+    // Until the optional chunk loads, keep the normal equipment path without a stamp.
+    void import('../../presentation/confiscation-display').then(module => this.confiscation = new module.default(
+      enforcerConfiscates, UNIT_DEFINITIONS, ITEM_DEFINITIONS, deriveTraits, combatEquipmentDisplay,
+    )).catch(() => {});
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
     this.lobby = new Lobby(app, { join: name => client.joinQueue(name, readLegendChoice()), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
+    this.damageFx = import('../../presentation/pvp-damage').then(module => {
+      const feedback = module.createPvpDamageFeedback(this.sidebar.root, publishPlayerDamage);
+      if (this.disposed) feedback.dispose();
+      return feedback;
+    }).catch(error => { console.warn('PvP 扣血表现加载失败', error); return null; });
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.minimap = new ScoutMinimap(app, seatId => this.toggleBoard(seatId));
-    this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
+    this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
     this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });
@@ -147,14 +168,16 @@ export class OnlineApplication implements SceneApplication {
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
       state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
-      replay: (replay, unitIds) => { this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
+      replay: (replay, unitIds) => { this.confiscation?.capture(replay.initial); this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
       replayRevised: replay => { if (!this.session.reviseReplay(replay)) this.hooks.refresh(); },
       // The battle of the seat I visit (start, then each revision); a late one for a board I left is dropped.
       watched: (seatId, replay) => {
         if (seatId !== this.opponentBoard.openSeatId || !this.opponentBoard.drawnIn3d) return;
+        this.confiscation?.capture(replay.initial, seatId);
         if (!this.session.watchReplay(seatId, replay)) { this.syncScout(); this.hooks.refresh(); }
       },
       refused: refusal => this.onRefused(refusal),
+      interrupted: commandIds => this.onInterrupted(commandIds),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
       // The room's clock onto mine (the push is taken as fresh), and whose legend it is from my seat.
@@ -171,6 +194,8 @@ export class OnlineApplication implements SceneApplication {
   private onLobby(view: LobbyView) { this.lobby.render(view); }
   /** A push that only confirms my own commands keeps selection and panels (like a local command); anything else redraws. */
   private onState(state: MatchState, confirmed: readonly ConfirmedCommand[], serverEvents: readonly MatchEvent[]) {
+    const damageBattle = this.session.lastBattle;
+    void this.damageFx.then(fx => fx?.state(state, damageBattle));
     const before = this.session.state;
     if (state.phase === 'gameOver' && before.phase !== 'gameOver') this.leaveScouting();
     // A push I did not cause (no confirmation) that closes my open choice: say what it settled. Usually the room's timeout pick,
@@ -188,6 +213,8 @@ export class OnlineApplication implements SceneApplication {
       const line = this.phaseLine;
       if (line && line.round === state.round && line.phase === state.phase) { this.phaseLine = null; this.hooks.status(line.text); }
     }
+    const upgrades = [...confirmed.flatMap(command => command.events), ...serverEvents].filter(event => event.type === 'unitUpgraded');
+    this.hooks.upgrades?.(upgrades);
     // The settlement's merges arrive before the phase change; its status line keeps them (syncStatus).
     const merged = mergeNotice(serverEvents);
     if (merged) this.mergeNote = { round: state.round, text: merged };
@@ -204,6 +231,10 @@ export class OnlineApplication implements SceneApplication {
     this.carousel.clearPending(); this.publishCarousel3d();
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
+  }
+  private onInterrupted(commandIds: readonly number[]) {
+    this.carousel.clearPending(); this.publishCarousel3d();
+    for (const commandId of commandIds) this.hooks.refused?.(commandId, null, '操作回执中断 · 请确认最新状态后重试');
   }
   private connectionText: string | null = null;
   private reclaimedTimer: number | null = null;
@@ -269,10 +300,12 @@ export class OnlineApplication implements SceneApplication {
   }
   private lastTick: number | null = null;
   private onView(view: PlayerView) {
+    this.confiscation?.observe(view);
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
     noteServerNow(view.phase.serverNow); // the anvil armory counts the server's own deadline down
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
+    void this.damageFx.then(fx => fx?.view(view));
     // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
     setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
@@ -362,7 +395,7 @@ export class OnlineApplication implements SceneApplication {
   }
   /**
    * ?render=3d: the carousel side is drawn by the 3D layer from the same view (board-feed BoardCarousel); its clicks come
-   * back through the panel's own pickSlot. The 2D panel then keeps head, countdown and release order only.
+   * to the room as ground walks. The 2D panel then keeps head, countdown and release order only.
    */
   private publishCarousel3d() {
     this.carouselFeedGeneration = boardFeedGeneration();
@@ -378,20 +411,17 @@ export class OnlineApplication implements SceneApplication {
           cost: getHeroIdentity(slot.definitionId).cost,
           items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), pickedBy: slot.pickedBy,
           takable: view.eligible && slot.pickedBy === null && pending === null, pending: pending === slot.slot })) };
-    });
+    }, view !== null);
     this.carousel.drawnIn3d = drawn && shown;
     if (!shown) this.carouselNextRelease = Infinity;
   }
   private carouselReleaseDue(): boolean { return (this.carousel.elapsedNow() ?? -Infinity) >= this.carouselNextRelease; }
-  private pickCarousel(slot: number, view: CarouselView) {
-    const result = this.session.carouselPick(view.id, view.revision, slot);
-    this.publishCarousel3d(); // pending
-    if (result.ok) return;
-    const notice = this.session.takeNotice();
-    if (notice?.kind === 'pending') return; // the receipt and the next view answer it
-    this.carousel.clearPending(); this.publishCarousel3d();
-    this.hooks.status(notice?.kind === 'offline' ? notice.text : NON_RULE_REFUSALS[result.reason as ReceiptFailure] ?? `选秀未成功：${result.reason}`);
+  private pickCarousel(slot: number) {
+    const sent = this.client.walk?.({ scene: 'carousel', slot }) ?? false;
+    if (!sent) { this.carousel.clearPending(); this.hooks.status('选秀行走未发送，请重试'); }
+    this.publishCarousel3d();
   }
+
   /**
    * G5: the stats of my battle add up live while it plays back, then hold its final totals until my next battle starts.
    * The economy hint shows whenever the server sends a preview (preparation and my battle).
@@ -406,8 +436,9 @@ export class OnlineApplication implements SceneApplication {
     this.economy.render(state, playing);
     // A held unit is sold in the room's preparation or choice window; the seat stays in preparation through the x-4 carousel
     // and under the PvP roster lock, where the server refuses it, so the button follows the room phase too.
-    const sellable = state.phase === 'preparation' && (this.view?.phase.kind === 'preparation' || this.view?.phase.kind === 'choice');
-    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], sellable);
+    const anomaly = state.pendingChoice?.kind === 'anomaly';
+    const sellable = !anomaly && state.phase === 'preparation' && (this.view?.phase.kind === 'preparation' || this.view?.phase.kind === 'choice');
+    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], sellable, anomaly ? ANOMALY_SELL_BLOCKED : undefined);
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {
@@ -494,6 +525,7 @@ export class OnlineApplication implements SceneApplication {
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
+    void this.damageFx.then(fx => fx?.reset());
     this.opening.hideAll(); this.opening.forgetMatch();
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
     this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; forgetServerNow(); setBoardLegends(null); setBoardWarmHints([]);
@@ -547,6 +579,7 @@ export class OnlineApplication implements SceneApplication {
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
+    void this.damageFx.then(fx => fx?.dispose());
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();

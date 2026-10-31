@@ -1,8 +1,12 @@
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
+export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
+export type TimelineVariant = 'empowered' | 'self';
 export interface TimelineCue {
   readonly system: string;
-  readonly action?: 'cast' | 'attack';
-  readonly event: 'cast-start' | 'projectile' | 'hit';
+  readonly action?: TimelineAction;
+  /** Observed presentation form; untagged cues belong only to the default form. */
+  readonly variant?: TimelineVariant;
+  readonly event: 'cast-start' | 'projectile' | 'hit' | 'link';
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
@@ -13,26 +17,38 @@ export interface TimelineCue {
   readonly travelSeconds?: number;
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
+  /** A single world point supplied by the board, never an invented unit target. */
+  readonly location?: 'board';
+  /** Fan out projectiles/impacts only to this many actual receipt targets. */
+  readonly targetLimit?: number;
+  /** A beam keeps its source bone while aiming at the actual target; it does not fly. */
+  readonly stationary?: boolean;
 }
-export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string }
+export type WorldPoint = readonly [number, number, number];
+export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint }
 export interface TimelineMapping {
   readonly spawns: readonly TimelineSpawn[];
   /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
-  readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[];
+  readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[];
 }
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
-export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0): TimelineMapping {
+export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0, board?: WorldPoint): TimelineMapping {
   const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
-  const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[] = [];
+  const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[] = [];
   for (const cue of cues) {
     if (cue.phase !== undefined && cue.phase !== castIndex % 3) continue;
+    if (cue.location === 'board') {
+      if (!board || board.some(n => !Number.isFinite(n))) unsupported.push({ cue, reason: 'missing-point' });
+      else spawns.push({ ...cue, sourceId, point: board });
+      continue;
+    }
     if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId }); continue; }
     if (!unique.length) { unsupported.push({ cue, reason: 'missing-target' }); continue; }
     if (cue.event === 'projectile' && unique[0] === sourceId) {
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
-    for (const targetId of cue.event === 'projectile' || cue.primary ? unique.slice(0, 1) : unique) {
+    for (const targetId of cue.primary ? unique.slice(0, 1) : cue.targetLimit ? unique.slice(0, cue.targetLimit) : cue.event === 'projectile' ? unique.slice(0, 1) : unique) {
       spawns.push({ ...cue, sourceId, targetId });
     }
   }

@@ -1,11 +1,14 @@
+import { validateHistoricalEquipment } from './b8-restore';
+import { validatePortableAnomaly } from './restore-checks/portable-anomaly-check';
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
+import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
-import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
+import { appendAugmentFact, historyRoster, validateAugmentAuthority, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { mechanicGrantEvents } from './g2-3-runtime';
@@ -20,7 +23,7 @@ import type { SharedPoolState } from './shared-pool-types';
 import type { MatchState } from './match-types';
 import type { CostTier, UnitUpgradedEvent } from './unit-types';
 import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, CarouselReceipt, CarouselState, CarouselFailure, CarouselEvent, CarouselResult } from './carousel-types';
-import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
+import { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY, carouselCostCounts } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
 import { releaseSeatOnElimination } from './shared-pool';
 import { appendResourceProvenance } from './resource-provenance';
@@ -30,9 +33,8 @@ import { draftPool, returnHolding, reconcileHoldings } from './shared-pool-ledge
 import { carouselPriorityChoice, tableScrapsPick } from './augment-pool-batch5-h5';
 import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
 export type * from './carousel-types';
-export { CAROUSEL_RULES, CAROUSEL_COST_ODDS };
+export { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY };
 const rounds: readonly CarouselRoundId[] = ['2-4', '3-4', '4-4', '5-4', '6-4'];
-const odds = CAROUSEL_COST_ODDS;
 const completed = Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'completed').sort();
 const integer = (n: number, min = 0) => Number.isSafeInteger(n) && n >= min;
 const validRound = (r: string): r is CarouselRoundId => rounds.includes(r as CarouselRoundId);
@@ -95,21 +97,25 @@ export function prepareCarouselParticipants(pool: SharedPoolState, states: reado
 function drawSlots(initial: Readonly<Record<string, number>>, roundId: CarouselRoundId, rngState: number, id: string) {
     const available = { ...initial }, slots: CarouselSlot[] = [];
     let wordState = rngState;
-    const draw = () => { const n = nextRandom(wordState); wordState = n.state; return n.word; };
+    const words = Array.from({ length: CAROUSEL_COST_POLICY.rng.words }, () => {
+        const n = nextRandom(wordState); wordState = n.state; return n.word;
+    });
+    const counts = [...carouselCostCounts(Number(roundId.split('-')[0]), words[CAROUSEL_COST_POLICY.rng.groupWordIndex])];
     for (let slot = 0; slot < 9; slot++) {
-        let roll = Math.floor(draw() * 10000 / 4294967296), tier = 1;
-        for (let i = 0; i < 5; i++) {
+        let roll = Math.floor(words[slot * 3] * (9 - slot) / 4294967296), tier = 1;
+        for (let i = 0; i < counts.length; i++) {
             tier = i + 1;
-            if (roll < odds[roundId as Exclude<CarouselRoundId,'1-1'>][i])
+            if (roll < counts[i])
                 break;
-            roll -= odds[roundId as Exclude<CarouselRoundId,'1-1'>][i];
+            roll -= counts[i];
         }
-        const stocked = ([1, 2, 3, 4, 5] as CostTier[]).filter(t => SHOP_CATALOG_BY_COST[t].some(d => available[d] > 0)).sort((a, b) => Math.abs(a - tier) - Math.abs(b - tier) || a - b), catalog = [...SHOP_CATALOG_BY_COST[stocked[0]]].sort();
-        let member = Math.floor(draw() * catalog.reduce((sum, d) => sum + available[d], 0) / 4294967296);
+        counts[tier - 1]--;
+        const stocked = ([1, 2, 3, 4, 5, 6] as CostTier[]).filter(t => SHOP_CATALOG_BY_COST[t].some(d => available[d] > 0)).sort((a, b) => Math.abs(a - tier) - Math.abs(b - tier) || a - b), catalog = [...SHOP_CATALOG_BY_COST[stocked[0]]].sort();
+        let member = Math.floor(words[slot * 3 + 1] * catalog.reduce((sum, d) => sum + available[d], 0) / 4294967296);
         const definitionId = catalog.find(d => { if (member < available[d])
             return true; member -= available[d]; return false; })!;
         available[definitionId]--;
-        const items = roundId === '5-4' || roundId === '6-4' ? completed : COMPONENT_IDS, itemId = items[Math.floor(draw() * items.length / 4294967296)];
+        const items = roundId === '5-4' || roundId === '6-4' ? completed : COMPONENT_IDS, itemId = items[Math.floor(words[slot * 3 + 2] * items.length / 4294967296)];
         slots.push({ slot, definitionId, itemId, reservationId: `${id}:slot:${slot}`, pickedBy: null });
     }
     return { available, slots, wordState };
@@ -169,7 +175,7 @@ export function validateCarousel(state: CarouselState): void {
         throw Error('invalid-carousel');
     let seed = state.rngBefore.state;
     validateSeed(seed);
-    for (let i = 0; i < 27; i++)
+    for (let i = 0; i < CAROUSEL_COST_POLICY.rng.words; i++)
         seed = nextRandom(seed).state;
     if (state.rngBefore.algorithm !== 'lcg32-v1' || state.rngAfter.algorithm !== 'lcg32-v1' || state.rngAfter.state !== seed || !equal(state.receipts, state.pool.carouselReceipts.filter(r => r.carouselId === state.id)))
         throw Error('invalid-carousel');
@@ -415,6 +421,7 @@ export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchS
     }
 }
 export function sellPendingCarouselUnit(pool: SharedPoolState, match: MatchState, unitId: string): SharedPoolResult {
+    if (brbShopDisabled(match)) return { ok: false, pool, state: match, reason: 'wrong-phase' };
     try {
         assertSharedPoolConservation(pool, [match]);
         const pending = match.carousel?.pendingUnits.find(u => u.unitId === unitId);
@@ -578,6 +585,13 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     validateTombRaider(match);
     validateMadChemistOnlineSave(carousel.pool, match, authority);
+    // Historical equipment rebuilds entitlement from the candidate receipt, so a
+    // rewritten definition stays self-consistent. From 4-6, and for any multiplayer
+    // anomaly carried without augment history, require the same independent
+    // checkpoint as restoreSharedOrbSnapshot (absence included; round cannot opt out).
+    const anomalyEvidence = !!(match.anomalySelection || match.anomalyBinding || match.scheduleReceipts.some(r => r.kind === 'anomaly') || match.resourceProvenance.entries.some(e => e.kind === 'anomaly-selected'));
+    if (!(match.round < getCatalogRoundById('4-6').ordinal) || match.multiplayer && !match.augmentHistory && (anomalyEvidence || match.anomalyOfferHistory)) validateAugmentAuthority(match, authority, true);
+    if (anomalyEvidence) { validateHistoricalEquipment(null, match); validatePortableAnomaly(match); }
     return match;
 }
 

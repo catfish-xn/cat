@@ -285,14 +285,15 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 306 independently tiered identities, with two restricted to shared carousel',()=>{
+// v26 D5 (7953c99a) registers four augments (what-you-really-are, brb, over-encumbered, restart-mission): 304/306 -> 308/310.
+it('contains exactly 310 independently tiered identities, with two restricted to shared carousel',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(304);expect(new Set(all).size).toBe(304);
+  const all=pools.flat();expect(all).toHaveLength(308);expect(new Set(all).size).toBe(308);
   // Independently transcribed integrated catalog, including Shop Glitch and the two H9 identities and the R1/R2/R3/R4 identities.
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
-  expect(shared).toHaveLength(306);expect(new Set(shared).size).toBe(306);
+  expect(shared).toHaveLength(310);expect(new Set(shared).size).toBe(310);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
-  const groups={silver:['patience-is-a-virtue','mad-chemist','recombobulator','pandoras-bench','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find','cloning-facility','rebel-resurgence','aerial-warfare','natural-selection','voidcaller','loot-explosion'],prismatic:['invested-plus','invested-plus-plus','hall-of-mirrors','lucky-gloves','lucky-gloves-plus','ghost-of-friends-past','void-swarm']};
+  const groups={silver:['patience-is-a-virtue','mad-chemist','recombobulator','pandoras-bench','survivor','diversified-portfolio','diversified-portfolio-plus','over-encumbered','restart-mission'],gold:['brb','clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find','cloning-facility','rebel-resurgence','aerial-warfare','natural-selection','voidcaller','loot-explosion'],prismatic:['invested-plus','invested-plus-plus','hall-of-mirrors','lucky-gloves','lucky-gloves-plus','ghost-of-friends-past','void-swarm','what-you-really-are']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
 it('retains batch-4 stage bans and all exclusions against the current pool in both directions',()=>{
@@ -410,7 +411,9 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const HEROIC_SEED=12;
+// v26 D5 (7953c99a) changed the 2-1 candidate pool; seed 12 (old value) no longer reaches Heroic Grab Bag at 2-1
+// within the public slot rerolls. 63 is the first seed (ascending from 0) whose route selects it with no prior duplicator.
+const HEROIC_SEED=63;
 const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {

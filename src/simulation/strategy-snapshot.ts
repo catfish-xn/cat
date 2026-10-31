@@ -11,9 +11,9 @@ import { CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 import { mutationEquipmentProjection } from './augment-pool-batch5-g3-mutation';
 import { b5PortalEffects } from './augment-pool-batch5-g4-swarm';
 import { drainSetup } from './setup-work';
-import { projectR3Roster, r3Traits, bindR3Copies, isR3Augment } from './augment-pool-batch5-r3';
-import { projectHallOfMirrors, bindHallOfMirrors, type R3OriginalArmy } from './augment-pool-batch5-r3-mirrors';
-import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
+import { r3Traits, bindR3Copies, isR3Augment } from './augment-pool-batch5-r3';
+import { bindHallOfMirrors, type R3OriginalArmy } from './augment-pool-batch5-r3-mirrors';
+import { projectStrategyMembership } from './strategy-membership';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
@@ -22,7 +22,7 @@ import {projectVoidspawns,voidspawnStage} from './g2-4b-voidspawn';
 import {appendMirrorSummons} from './g2-4b-summons';
 import {g23JunkerEffects} from './g2-3-junker';
 import { g23ExperimentEffects } from './g2-3-experiment';
-import { g23SionTeam } from './g2-3-summons';
+import { g23SionTeam, SION_POSITION_KEY } from './g2-3-summons';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { g23ConversionProgramValues } from './g2-3-combat';
@@ -42,7 +42,7 @@ import { getUnitStats } from './unit-stats';
 import { readRoundEnemyProjection } from './round-enemies';
 import { hexDistance } from './board';
 import { resolveAbility } from './combat-abilities';
-import { projectEffectiveMembership, type TraitProjectionContext } from './traits/effective-membership';
+import type { TraitProjectionContext } from './traits/effective-membership';
 import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
@@ -89,23 +89,12 @@ export function enforcerConfiscates(traits: readonly TraitSnapshot[], victim: Te
 /** `confiscated` adds teams whose opposing Enforcer 10 is compiled elsewhere (two-sided sides, battle-time equipment). */
 export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot, confiscated: readonly Team[] = []): Generator<void, StrategySnapshot, void> {
   state=readCombatStrategyInputs(state);
-  const hall = projectHallOfMirrors(state);
+  const membership = projectStrategyMembership(state, catalog.traits, context);
+  const { hall, r3, teamups, projection, traits: openingTraits } = membership;
   let original: R3OriginalArmy | undefined;
   if (hall.mirrors.length) original = equipmentBasis?.r3Original?.[0] ?? { team: 'player', preparation: state.preparation,
     strategy: yield* buildStrategySnapshotSteps({ ...state, augments: state.augments.filter(a => a.definitionId !== 'hall-of-mirrors') }, catalog, context, undefined, confiscated) };
-  state = hall.state;
-  const r3 = projectR3Roster(state);
-  state = r3.state;
-  if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
-  const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
-  const sisterUnits=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&['jinx','vi'].includes(u.definitionId));
-  const sisterSources=sisterAugment&&new Set(sisterUnits.map(u=>u.definitionId)).size===2?sisterUnits.map(u=>({kind:'add-trait' as const,sourceId:sisterAugment.choiceId+':sisters:'+u.id,unitId:u.id,traitId:'sisters',activeFromRound:state.round,expiresBeforeRound:state.round+1})):[];
-  const teamups=bindV20Teamups(state), teamupSources=v20MembershipSources(state,teamups);
-  const traitContext=sisterSources.length||teamupSources.length?{round:state.round,sources:[...(context?.sources??[]),...sisterSources,...teamupSources]}:context;
-  const projection=projectEffectiveMembership(state.preparation,traitContext,catalog.traits,[...state.items,
-    ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
-  state={...state,preparation:projection.preparation};
-  const openingTraits=[...r3Traits(projection,'player',catalog.traits,r3.copies,hall.mirrors),...r3Traits(projection,'enemy',catalog.traits,r3.copies,hall.mirrors)];
+  state = membership.state;
   const experimentInput = state;
   state = mutationEquipmentProjection(state, openingTraits);
   // P enforcer-confiscation-v1: confiscate first, from the combat projection only; emblems (membership already
@@ -155,9 +144,10 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId),maximumPlayerHp(state.augments,state.round))]));
   yield;
   const compileUnit = (unit: typeof boardUnits[number]) => {
-    // P (2026-10-24): a placed Hextech Forge carries its Jayce's saved cell, so the combat constructor lays it out the same way.
-    const forgeOwner = unit.definitionId === 'g23-forge' ? unit.id.slice(0, -':g23-forge'.length) : undefined;
-    const summonCell = forgeOwner && state.itemSummonPositions && Object.hasOwn(state.itemSummonPositions, forgeOwner) ? state.itemSummonPositions[forgeOwner] : undefined;
+    // Freeze the owner's saved preparation cell for the combat constructor.
+    const positionKey = unit.definitionId === 'g23-forge' ? unit.id.slice(0, -':g23-forge'.length)
+      : unit.definitionId === 'g23-sion' && unit.team === 'player' ? SION_POSITION_KEY : undefined;
+    const summonCell = positionKey && state.itemSummonPositions && Object.hasOwn(state.itemSummonPositions, positionKey) ? state.itemSummonPositions[positionKey] : undefined;
     const suppressFamily=teamups.get('menaces')?.[0]===unit.id;
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];

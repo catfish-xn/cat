@@ -17,7 +17,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -36,17 +38,18 @@ import {
   commitRibbon,
   type Cursor,
   packUv,
-  ribbonBuffers,
   strand,
   UV_STRIDE,
   writeBeam,
   writeSegmentBeam,
 } from "../utils/ribbon";
+import { borrowRibbonBuffers, releaseRibbonBuffers } from "../utils/drawBufferPool";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { uvDraw, uvTransformInto } from "../utils/uvTransform";
 
 /** How many beams one emitter draws across every source, which caps its share of the pools. */
 const BEAMS_PER_EMITTER = 256;
+const BEAM_VERTICES = BEAMS_PER_EMITTER * 4;
 
 /** Maximum ribs in one source's segment beam, two vertices each, which fills the same buffers. */
 const RIBS_PER_SOURCE = BEAMS_PER_EMITTER * 2;
@@ -109,7 +112,7 @@ export interface BeamsProps {
 export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
   const beam = emitter.beam;
-  const buffers = memo(() => ribbonBuffers(BEAMS_PER_EMITTER * 4), []);
+  const buffers = memo(() => borrowRibbonBuffers(BEAM_VERTICES), []);
   const material = memo(
     () =>
       ribbonMaterial(
@@ -122,17 +125,12 @@ export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsP
     [emitter, samplers],
   );
 
-  cleanup(
-    () => () => {
-      buffers.geometry.dispose();
-      buffers.edgeGeometry.dispose();
-    },
-    [buffers],
-  );
+  cleanup(() => () => releaseRibbonBuffers(buffers, BEAM_VERTICES), [buffers]);
 
   const pair = makePair(material);
 
   const drawn = !hidden && !emitter.disabled && beam !== null && emitter.mesh === null;
+  let frameSlot: FrameSlot | undefined;
 
   eachFrame((state) => {
     if (!drawn || beam === null) {
@@ -158,7 +156,8 @@ export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsP
     for (const source of sources) {
       const pool = source.pool;
       const origin = source.origin;
-      const frame = frameOf(source, emitter);
+      frameSlot ??= frameOf(source, emitter) as FrameSlot;
+      const frame = frameInto(source, emitter, frameSlot);
       beamEndsInto(source, beam, SOURCE, TARGET);
       const bound = beamTint(source, beam);
 

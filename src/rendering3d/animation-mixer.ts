@@ -40,8 +40,10 @@ export class UnitAnimationMixer {
     const clips = names.map(name => this.clips.get(name));
     if (clips.some(c => !c || !Number.isFinite(c.duration) || c.duration <= 0)) return null;
     const duration = clips.reduce((n, c) => n + c!.duration, 0), interval = context.attackIntervalSeconds;
+    // Fit the whole swing between observed attacks, leaving recovery time for the idle blend.
+    // Two intervals still let a long clip restart before its ending on every attack (Mordekaiser).
     const durationSeconds = state === 'cast' ? Math.min(2.5, Math.max(0.3, duration))
-      : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 2) : duration;
+      : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 0.9) : duration;
     return { clips: names, durationSeconds };
   }
   private play(clip: AnimationClip, loop: boolean, blend: number): void {

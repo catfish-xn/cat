@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PerspectiveCamera, Scene } from 'three';
-import type { BoardControls, BoardFeedListener, BoardFrame, LegendControls } from '../src/rendering/board-feed';
+import type { BoardControls, BoardFeedListener, BoardFrame, CarouselControls, LegendControls } from '../src/rendering/board-feed';
 import type { ScoutStage } from '../src/rendering/three-mode/scout-stage';
 import type { Tabletop } from '../src/rendering/three-mode/tabletop';
 import type { Renderer3d } from '../src/rendering/three-mode/contract';
@@ -12,7 +12,7 @@ describe('3D scouting input boundary', () => {
   let mounted: Renderer3d | undefined, listener: BoardFeedListener;
   let tick: FrameRequestCallback, now: number;
   let handlers: Map<string, (event: PointerEvent) => void>;
-  let controls: BoardControls, walk: ReturnType<typeof vi.fn<LegendControls['walk']>>, fetchAsset: ReturnType<typeof vi.fn>;
+  let controls: BoardControls, walk: ReturnType<typeof vi.fn<LegendControls['walk']>>, fetchAsset: ReturnType<typeof vi.fn>, directPick: ReturnType<typeof vi.fn<CarouselControls['pick']>>;
   type Debug = { scene: Scene; camera: PerspectiveCamera; scout: ScoutStage; tabletop: Tabletop; stage: CarouselStage };
   const debug = () => (window as unknown as { __render3d: Debug }).__render3d;
   const frame: BoardFrame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 100, y: 100 },
@@ -39,7 +39,7 @@ describe('3D scouting input boundary', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     fetchAsset = vi.fn(() => { throw new Error('unexpected asset request'); }); vi.stubGlobal('fetch', fetchAsset);
     controls = { hover: vi.fn(), look: vi.fn(), describe: vi.fn(), select: vi.fn(), dragStart: vi.fn(), dragMove: vi.fn(), dragEnd: vi.fn(), dragCancel: vi.fn(), claimOrb: vi.fn() };
-    walk = vi.fn(() => true);
+    walk = vi.fn(() => true); directPick = vi.fn();
     vi.doMock('three', async importOriginal => ({
       ...await importOriginal<typeof import('three')>(),
       WebGLRenderer: class {
@@ -54,7 +54,7 @@ describe('3D scouting input boundary', () => {
     }));
     const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
     renderer.useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => controls,
-      legendControls: () => ({ walk }), legends: () => ({ me: 'pengu', opponent: null }) });
+      carouselControls: () => ({ pick: directPick, hover() {} }), legendControls: () => ({ walk }), legends: () => ({ me: 'pengu', opponent: null }) });
     mounted = await renderer.mountRenderer3d({ clientWidth: 800, clientHeight: 600, append() {} } as unknown as HTMLElement, { assetBase: null });
     listener.frame(frame);
   });
@@ -70,6 +70,57 @@ describe('3D scouting input boundary', () => {
   const noCommands = () => {
     for (const command of [controls.select, controls.dragStart, controls.dragMove, controls.dragEnd, controls.claimOrb, walk]) expect(command).not.toHaveBeenCalled();
   };
+
+  it('sends ground coordinates over a carousel unit with no slot, chase or direct-pick fallback', () => {
+    const { stage } = debug();
+    // The real feed has optional carousel controls; an unavailable walk must never fall back to them.
+    const carousel = { id: 'v26', elapsedMs: 0, at: now,
+      seats: [{ seatId: 'me', me: true, releaseAtMs: 0 }],
+      slots: [{ slot: 0, definitionId: 'lux', starLevel: 1, items: [], pickedBy: null, takable: true, pending: false }] };
+    listener.carousel!(carousel, true);
+    advance(2);
+    const area = { left: 0, top: 0, width: 800, height: 600 };
+    const holder = stage.scene.getObjectByName('render3d-carousel-units')!.children[0]!;
+    holder.updateWorldMatrix(true, true); stage.camera.updateMatrixWorld();
+    const ndc = holder.getWorldPosition(new Vector3()).project(stage.camera);
+    const at = { x: (ndc.x + 1) * 400, y: (1 - ndc.y) * 300 };
+    expect(stage.slotAt(at, area)?.slot).toBe(0);
+    const expected = stage.walkTo(at, area)!;
+    expect(click(0, at.x, at.y)).toHaveBeenCalledOnce();
+    expect(walk).toHaveBeenLastCalledWith({ scene: 'carousel', to: expected });
+    walk.mockReturnValue(false);
+    click(2, at.x, at.y);
+    expect(walk).toHaveBeenCalledTimes(2);
+    expect(walk.mock.calls.every(([request]) => request.slot === undefined)).toBe(true);
+    expect(stage.debug().legends.every(legend => !legend.includes(':chase'))).toBe(true);
+    expect(directPick).not.toHaveBeenCalled();
+    expect(fetchAsset).not.toHaveBeenCalled();
+  });
+
+  it('keeps all board legends absent for the whole carousel, including the board side and scouting, then restores my spot', () => {
+    const { scene, tabletop, scout } = debug();
+    const home = scene.getObjectByName('render3d-legend-me')!;
+    tabletop.walkTo({ x: home.position.x - 50, y: home.position.z - 50 });
+    advance(1);
+    const position = home.position.clone();
+    listener.carousel!(null, true); // board side: no carousel scene, but the authoritative phase is still carousel
+    listener.frame(frame);
+    expect(home.visible).toBe(false);
+    expect(tabletop.walkTo({ x: 200, y: 200 })).toBeNull();
+    listener.scout!({ seatId: 'other', name: 'Other', board: { units: [] } });
+    const legends = scout.group.children.filter(child => child.name === 'render3d-scout-piece');
+    expect(legends).toHaveLength(2);
+    expect(legends.every(legend => !legend.visible)).toBe(true);
+    expect(scout.walkVisitor({ x: 200, y: 200 })).toBe(false);
+    listener.scout!(null);
+    expect(home.visible).toBe(false);
+    listener.carousel!(null, false);
+    expect(home.visible).toBe(true);
+    expect(home.position).toEqual(position);
+    listener.scout!({ seatId: 'other', name: 'Other', board: { units: [] } });
+    expect(scout.group.children.filter(child => child.name === 'render3d-scout-piece').every(legend => legend.visible)).toBe(true);
+    expect(fetchAsset).not.toHaveBeenCalled();
+  });
 
   it('reports scout identities and projected boxes, including bench units, with no command', () => {
     listener.frame({ ...frame, bench: [{ x: 100, y: 550 }] });
@@ -128,7 +179,8 @@ describe('3D scouting input boundary', () => {
     expect(controls.describe).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'carousel' }), expect.any(Object));
     pointer('pointerup', point, 'touch'); noCommands();
     pointer('pointerdown', point, 'touch'); pointer('pointerup', point, 'touch');
-    expect(walk).toHaveBeenCalledExactlyOnceWith({ scene: 'carousel', slot: 0 });
+    expect(walk).toHaveBeenCalledExactlyOnceWith({ scene: 'carousel', to: expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }) });
+    expect(walk.mock.calls[0]![0].slot).toBeUndefined();
     expect(controls.claimOrb).not.toHaveBeenCalled();
   });
 

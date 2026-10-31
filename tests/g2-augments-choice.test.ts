@@ -64,9 +64,14 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(306); // Full batch-5 catalog, including both shared-carousel-only cards.
+  // 310 = batch-5 306 plus the four D5 cards (brb, over-encumbered, restart-mission, what-you-really-are), all in the ordinary pools.
+  expect(ids).toHaveLength(310);
   const ordinary=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort();
-  expect(ordinary).toHaveLength(304);
+  expect(ordinary).toHaveLength(308);
+  const d5=['brb','over-encumbered','restart-mission','what-you-really-are'];
+  expect(ids.filter(id=>d5.includes(id)).sort()).toEqual([...d5].sort());
+  expect(ids.filter(id=>!d5.includes(id))).toHaveLength(306);
+  expect(ordinary.filter(id=>!d5.includes(id))).toHaveLength(304);
   expect(ids.filter(id=>!ordinary.includes(id))).toEqual(['table-scraps','young-and-wild-and-free']);
   expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
@@ -128,7 +133,10 @@ describe('independent augment card-reroll oracle',()=>{
   expect(()=>validateAugmentReroll(state,{...result,state:{...after,pendingChoice:{...after.pendingChoice,offers:c.offers}}},command)).toThrow();
  });
  it('independently checks owned exclusion and the next node reset after exhausting an earlier node',()=>{
-  let state=reachRound('2-1',false),c=state.pendingChoice!;
+  // D5 pool: default seed 42 now selects a history augment at 2-1, so the 3-2 reroll is appended to the
+  // proof and the independent whole-state oracle diverges. Seed 0 selects shimmerscale-essence (no history);
+  // the same reroll, node reset and owned-exclusion checks still hold.
+  let state=reachRound('2-1',false,0),c=state.pendingChoice!;
   state=accepted(rerollAugment(state,c.choiceId,c.generation,2));
   const rng=state.choiceRngState;
   while(state.roundDefinitionId!=='3-2'){

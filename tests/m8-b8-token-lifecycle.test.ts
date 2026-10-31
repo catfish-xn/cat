@@ -3,6 +3,10 @@ import type { Unit } from '../src/simulation/units';
 import type { CombatState, CombatUnit } from '../src/simulation/combat-types';
 import { createMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { MatchSession } from '../src/rendering/match-session';
+import { RemoteSession } from '../src/rendering/online/remote-session';
+import { sionPreparation } from './fixtures/sion-preparation';
+import type { BoardControls } from '../src/rendering/board-feed';
+import type { UnitAnomaly } from '../src/presentation/anomaly-display';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -38,14 +42,23 @@ const display = vi.hoisted(() => {
     lastUnit: Unit;
     lastCombatUnit: CombatUnit | undefined;
     ring = 'normal';
+    equipped: readonly string[] = [];
+    extras = { temporary: [] as readonly string[] };
+    hp = { visible: false };
+    shield = { visible: false };
+    meter() { return { value: 0, maxValue: 0 }; }
     destroyCount = 0;
     resetCount = 0;
+    anomalies: readonly UnitAnomaly[] = [];
     constructor(_scene: unknown, unit: Unit, x: number, y: number) {
-      this.token = new Token(`unit:${unit.id}`, x, y).setData('unitId', unit.id);
+      this.token = new Token(`unit:${unit.id}`, x, y).setData('unitId', unit.id)
+        .setData('definitionId', unit.definitionId).setData('team', unit.team).setData('starLevel', unit.starLevel);
       this.lastUnit = unit;
       created.push(this);
     }
     update(unit: Unit, _equipped: readonly string[]) { this.lastUnit = unit; }
+    setAnomalies(anomalies: readonly UnitAnomaly[]) { this.anomalies = anomalies; }
+    setOverflow() {}
     setRing(ring: string) { this.ring = ring; }
     drawCombat(unit: CombatUnit, _combat: CombatState) { this.lastCombatUnit = unit; }
     resetMeters() { this.resetCount++; }
@@ -55,9 +68,9 @@ const display = vi.hoisted(() => {
   return { Token, View, created };
 });
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
-vi.mock('../src/presentation/unit-view', () => ({ UnitView: display.View }));
+vi.mock('../src/presentation/unit-view', () => ({ UnitView: display.View, PIECE_RADIUS: 27 }));
 import { OnlineApplication } from '../src/rendering/online/online-application';
-import type { BoardFrame } from '../src/rendering/board-feed';
+import { subscribeBoardFeed, type BoardFrame } from '../src/rendering/board-feed';
 import { BoardScene } from '../src/rendering/BoardScene';
 
 type Token = InstanceType<typeof display.Token>;
@@ -66,7 +79,13 @@ type View = InstanceType<typeof display.View>;
 interface SceneBridge {
   session: MatchSession;
   application: unknown;
+  position(location: Unit['location']): { x: number; y: number };
   boardFrame(): BoardFrame;
+  boardControls(): BoardControls;
+  dropAt(token: Token, point: { x: number; y: number } | null): void;
+  sell(id: string): void;
+  overlay: { clear(): void };
+  dropZones: { clear(): void };
   tokens: Map<string, Token>;
   views: Map<string, View>;
   namedObjects: Map<string, Token>;
@@ -86,6 +105,9 @@ interface SceneBridge {
   syncLoadoutTip(): void;
   renderActiveStats(): void;
   showEvents(): void;
+  showUpgrades(events: readonly import('../src/simulation/match-types').MatchEvent[]): readonly unknown[];
+  mergeFx: { play: ReturnType<typeof vi.fn> };
+  scale: { gameSize: { width: number; height: number } };
   setStatus(): void;
   clearCombatEffects(): void;
   command(result: MatchCommandResult, message: string): void;
@@ -156,6 +178,66 @@ function resolveRewardAndContinue(scene: SceneBridge, beforeContinue?: () => voi
 }
 
 describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser claim)', () => {
+  it.each([false, true])('keeps consumed-token origins through repeated syncs and plays each receipt once (3D=%s)', use3d => {
+    const initial = createMatch(42), base = initial.preparation.units.find(unit => unit.team === 'player')!;
+    const a: Unit = { ...base, id: 'a', location: { kind: 'board', cell: { col: 2, row: 4 } } };
+    const b: Unit = { ...base, id: 'b', location: { kind: 'bench', slot: 0 } };
+    const c: Unit = { ...base, id: 'c', location: { kind: 'bench', slot: 1 } };
+    const before = { ...initial, preparation: { ...initial.preparation, units: [a, b, c] } };
+    const scene = makeScene(before), play = vi.fn(), merges = vi.fn();
+    scene.mergeFx = { play }; scene.scale = { gameSize: { width: 900, height: 600 } };
+    const expected = [b, c].map(unit => ({ id: unit.id, x: token(scene, unit.id).x, y: token(scene, unit.id).y,
+      benchSlot: unit.location.kind === 'bench' ? unit.location.slot : undefined }));
+    scene.session = new MatchSession({ ...before, preparation: { ...before.preparation, units: [{ ...a, starLevel: 2 }] } });
+    sessions.push(scene.session);
+    scene.reconcileTokens(); scene.reconcileTokens();
+    const event = { type: 'unitUpgraded', survivorId: 'a', consumedIds: ['b', 'c'], definitionId: base.definitionId,
+      fromStar: 1, toStar: 2, location: a.location } as const;
+    const off = use3d ? subscribeBoardFeed({ frame() {}, events() {}, merges }) : () => {};
+    try {
+      expect(scene.showUpgrades([event])).toHaveLength(1);
+      expect((use3d ? merges : play).mock.calls[0][0][0].from).toEqual(expected);
+      expect((use3d ? play : merges)).not.toHaveBeenCalled();
+      expect(scene.showUpgrades([event])).toHaveLength(0);
+      expect((use3d ? merges : play)).toHaveBeenCalledTimes(1);
+      expect(scene.session.preparation.units).toHaveLength(1);
+      expect(scene.session.preparation.units[0].starLevel).toBe(2);
+    } finally { off(); }
+  });
+
+  it('still animates a synchronous local-online command result through RemoteSession', () => {
+    const scene = makeScene(), initial = scene.session.state, unit = initial.preparation.units.find(unit => unit.team === 'player')!;
+    const event = { type: 'unitUpgraded', survivorId: unit.id, consumedIds: ['b', 'c'], definitionId: unit.definitionId,
+      fromStar: 1, toStar: 2, location: unit.location } as const;
+    const state = { ...initial, preparation: { ...initial.preparation, units: initial.preparation.units.map(entry => entry.id === unit.id ? { ...entry, starLevel: 2 as const } : entry) } };
+    const result = { ok: true, state, events: [event] } as const;
+    const client = { send: vi.fn(() => result) } as unknown as import('../src/rendering/online/protocol').GameClient;
+    scene.session = new RemoteSession(client, initial); sessions.push(scene.session);
+    const play = vi.fn(); scene.mergeFx = { play }; scene.scale = { gameSize: { width: 900, height: 600 } };
+    scene.command(scene.session.buy(0, initial.shop.generation), 'local');
+    expect(client.send).toHaveBeenCalledTimes(1); expect(play).toHaveBeenCalledTimes(1);
+    expect(play.mock.calls[0][0][0].toStar).toBe(2); expect(scene.session.state).toBe(state);
+  });
+
+  it('P4 reads native and portable holders across board/bench moves and clears removed effects', () => {
+    // Isolated display fixture: this is not a naturally progressed or restore-valid 4-6 save.
+    const base = createMatch(42), unit = base.preparation.units.find(unit => unit.team === 'player')!;
+    const copy = { ...unit, id: 'copy-holder', location: { kind: 'bench' as const, slot: 1 } };
+    const initial: MatchState = { ...base, anomalyBinding: { definitionId: 'the-finisher', unitId: unit.id, choiceId: 'display-fixture', boundRound: 1 },
+      preparation: { ...base.preparation, units: [...base.preparation.units, copy] },
+      items: [{ id: 'portable-fixture', definitionId: 'TFT13_AnotherAnomaly_Item:the-finisher', location: { kind: 'unit', unitId: copy.id, slot: 0 } }] };
+    const scene = makeScene(initial), view = scene.views.get(unit.id)!, original = token(scene, unit.id), copied = scene.views.get(copy.id)!;
+    const effects = [{ id: 'the-finisher', source: 'native' }], copiedEffects = [{ id: 'the-finisher', source: 'portable' }];
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects);
+    command(scene, scene.session.deploy(unit.id, { kind: 'bench', slot: 0 }));
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects); expect(token(scene, unit.id)).toBe(original);
+    command(scene, scene.session.deploy(unit.id, { kind: 'board', cell: { col: 0, row: 4 } }));
+    expect(view.anomalies).toEqual(effects); expect(copied.anomalies).toEqual(copiedEffects); expect(token(scene, unit.id)).toBe(original);
+    scene.session = new MatchSession({ ...scene.session.state, items: [], anomalyBinding: null }); sessions.push(scene.session);
+    scene.sync();
+    expect(view.anomalies).toEqual([]); expect(copied.anomalies).toEqual([]); expect(token(scene, unit.id)).toBe(original);
+  });
+
   it('creates the actual seed-42 Tristana before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
     const scene = makeScene();
     const initialIds = [...scene.tokens.keys()];
@@ -299,6 +381,24 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
 
 
 describe('BoardScene online interest feed', () => {
+  it('publishes the real selection and keeps optional piece metadata unchanged for the 3D view', () => {
+    const scene = makeScene();
+    scene.tokens.clear(); scene.views.clear();
+    const token = new display.Token('unit:chosen', 100, 200)
+      .setData('definitionId', 'unit').setData('team', 'player').setData('starLevel', 3)
+      .setData('effectiveStarLevel', 4).setData('neutral', true);
+    scene.tokens.set('chosen', token); scene.selectedId = 'chosen';
+    const frame = scene.boardFrame();
+    expect(frame.selectedId).toBe('chosen'); expect(frame.dragging).toBeNull();
+    expect(frame.pieces).toHaveLength(1);
+    expect(frame.pieces[0]).toMatchObject({ id: 'chosen', effectiveStarLevel: 4, neutral: true, x: 100, y: 200 });
+    expect(frame.pieces[0].control).toBeUndefined();
+    token.setData('effectiveStarLevel', 3).setData('neutral', false); scene.selectedId = null;
+    const cleared = scene.boardFrame();
+    expect(cleared.selectedId).toBeNull(); expect(cleared.pieces[0].effectiveStarLevel).toBeUndefined();
+    expect(cleared.pieces[0].neutral).toBeUndefined(); expect(cleared.pieces[0].control).toBeUndefined();
+  });
+
   it('omits mines offline/before the private view, caps banked gold, and keys only income already paid on next entry', () => {
     const scene = makeScene();
     // No unit meters are needed for this frame-only check.
@@ -318,5 +418,49 @@ describe('BoardScene online interest feed', () => {
     expect(scene.boardFrame().goldMineIncomeKey).toBe('round:1:one');
     scene.session = new MatchSession({ ...initial, gold: 29, round: 2, roundResults: [result] });
     expect(scene.boardFrame()).toMatchObject({ goldMines: 2, goldMineIncomeKey: 'round:1:one' });
+  });
+});
+
+
+describe('Sion preparation in the real BoardScene and its 3D controls', () => {
+  it('keeps its token visible and draggable inside the preparation augment window', () => {
+    const state = sionPreparation();
+    const scene = makeScene({ ...state, phase: 'choice', combat: null, pendingChoice: { kind: 'augment', choiceId: 'prep-window',
+      eventId: 'prep-window', generation: 0, offers: [], returnPhase: 'preparation', step: 'offer', targetId: null, rerollCount: 0 } });
+    const summon = scene.session.itemSummons.find(s => s.kind === 'sion')!;
+    expect(token(scene, summon.unit.id)).toMatchObject({ visible: true, input: { enabled: true, draggable: true } });
+    const before = scene.session.state;
+    scene.dropAt(token(scene, summon.unit.id), scene.position({ kind: 'board', cell: { col: 6, row: 7 } }));
+    expect(scene.session.state).not.toBe(before);
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 6, row: 7 } });
+  });
+
+  it('creates a draggable 2D token and 3D feed piece, submits the shared drop command, and refuses bench/sale', () => {
+    const scene = makeScene(sionPreparation());
+    const summon = scene.session.itemSummons.find(s => s.kind === 'sion')!;
+    const body = token(scene, summon.unit.id);
+    expect(body.input).toEqual({ enabled: true, draggable: true });
+    expect(scene.boardFrame().pieces.filter(p => p.id === summon.unit.id)).toMatchObject([
+      { definitionId: 'g23-sion', visible: true, alive: true, benchSlot: null },
+    ]);
+    const at = (col: number, row: number) => scene.position({ kind: 'board', cell: { col, row } });
+    const move = vi.spyOn(scene.session, 'moveItemSummon');
+    scene.dropAt(body, at(6, 7)); scene.sync();
+    expect(move).toHaveBeenLastCalledWith('g23-sion', { col: 6, row: 7 });
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 6, row: 7 } });
+    const before = scene.session.state;
+    scene.dropAt(body, scene.position({ kind: 'bench', slot: 0 }));
+    scene.sell(summon.unit.id);
+    expect(scene.session.state).toBe(before);
+    expect(scene.setStatus).toHaveBeenLastCalledWith('赛恩由黑色玫瑰召唤 · 不能出售');
+    // Only pointer/GPU surfaces are substituted. The production 3D control callbacks and rule command run unchanged.
+    Object.assign(scene.input, { manager: { pointers: [] }, setDragState() {} });
+    scene.overlay = { clear() {} }; scene.dropZones = { clear() {} };
+    const controls = scene.boardControls();
+    expect(controls.dragStart(summon.unit.id)).toBe(true);
+    controls.dragEnd(at(5, 7), { x: 10, y: 10 });
+    expect(move).toHaveBeenLastCalledWith('g23-sion', { col: 5, row: 7 });
+    expect(scene.session.itemSummons.find(s => s.kind === 'sion')!.unit.location).toEqual({ kind: 'board', cell: { col: 5, row: 7 } });
+    expect(scene.boardFrame().pieces.filter(p => p.definitionId === 'g23-sion')).toHaveLength(1);
   });
 });

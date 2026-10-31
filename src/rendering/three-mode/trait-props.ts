@@ -15,6 +15,7 @@ import {
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
+import type { OriginalUi } from './ui-original-assets';
 
 /**
  * Same text as conqueror-flag.ts's conquestLabel (stacks / next chest, the total once all are open). Kept local: a
@@ -36,6 +37,8 @@ const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
 const GOLD = '#e5b64a', SHIMMER = '#c25bff';
 
 export interface TraitPropsContext {
+  readonly ui?: Pick<OriginalUi, 'sprite' | 'subscribe'>;
+  readonly font?: () => string;
   readonly scene: Scene;
   readonly camera: Camera;
   readonly effectScale: number;
@@ -96,31 +99,36 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
 
   /** A count billboard outside a prop's moving body, so the total stays readable during a payout or a bob. */
-  interface CountLabel { text: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
+  interface CountLabel { text: string; font: string; failed: boolean; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
   const countLabel = (root: Group, name: string, color: string, height: () => number): CountLabel => {
     const entry: CountLabel = {
-      text: '', view: null,
+      text: '', font: '', failed: false, view: null,
       show(text) {
-        const changed = entry.text !== text;
+        const font = ctx.font?.() ?? 'sans-serif', skin = ctx.ui?.sprite('world.label'), paintKey = `${font}|${skin?.url ?? ''}`;
+        const changed = entry.text !== text || entry.font !== paintKey;
+        entry.font = paintKey;
         entry.text = text; // Also available in headless tests without a document/canvas.
+        if (entry.failed) return;
         if (!entry.view) {
           const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
-          if (!canvas?.getContext('2d')) return;
+          if (!canvas?.getContext('2d')) { entry.failed = true; return; }
           canvas.width = 192; canvas.height = 80;
           const texture = new CanvasTexture(canvas);
           const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
           sprite.name = name; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
           root.add(sprite); entry.view = { canvas, texture, sprite };
         } else if (!changed) return;
-        const draw = entry.view.canvas.getContext('2d')!;
+        const draw = entry.view.canvas.getContext('2d');
+        if (!draw) { entry.failed = true; entry.dispose(); return; }
         draw.clearRect(0, 0, 192, 80);
-        draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
-        draw.fillStyle = color; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+        if (skin && typeof draw.drawImage === 'function') draw.drawImage(skin.source, 0, 0, 192, 80);
+        else { draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill(); }
+        draw.fillStyle = color; draw.font = `bold 48px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
         draw.fillText(text, 96, 42, 174); entry.view.texture.needsUpdate = true;
         entry.view.sprite.position.y = height();
       },
       place(y) { if (entry.view) entry.view.sprite.position.y = y; },
-      dispose() { entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
+      dispose() { entry.failed = true; entry.view?.sprite.removeFromParent(); entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
     };
     return entry;
   };
@@ -255,6 +263,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const update = (seconds: number) => {
     clock += seconds;
     if (chestRoot.visible) {
+      chestLabel.show(chestLabel.text);
       openHold = Math.max(0, openHold - seconds);
       // Brighter toward the next chest, a slow breath once it is close; full while a chest is paying out.
       const breath = glow > 0.75 ? 0.15 * Math.sin(clock * 4) : 0, shine = openHold > 0 ? 1 : glow * 0.85 + breath;
@@ -270,6 +279,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       }
     }
     if (flaskRoot.visible) {
+      flaskLabel.show(flaskLabel.text);
       fill += (fillTarget - fill) * Math.min(1, seconds * FILL_RATE);
       level.scale.y = Math.max(0.001, fill * (LIQUID_TOP - LIQUID_BOTTOM));
       liquid.emissiveIntensity = offer ? 0.9 + 0.4 * Math.sin(clock * 6) : 0.5;

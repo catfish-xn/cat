@@ -20,9 +20,10 @@ import { traitHoverCard } from '../../presentation/hover-card';
 import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBenchUnit, PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
-import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../../presentation/g23-display';
+import { anomalyIconHtml, itemDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../../presentation/augment-display';
 import { publicOrbsElement, readPublicOrbs } from './orb-dock';
+import { anomalyNotes, unitAnomalies } from '../../presentation/anomaly-display';
 
 /** Bench slots drawn when the seat's bench is shorter (TFT bench width); a longer bench draws every slot. */
 const BENCH_SLOTS = 9;
@@ -33,13 +34,13 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 
 /** The public board as a preparation state for the rules' trait selector (definition ids and board cells only). */
 function publicPreparation(board: PublicBoard, layout: Board): GameState {
-  return { board: layout, benchSize: 0, units: board.units.filter(unit => !unit.summon).map((unit, index) => ({
+  return { board: layout, benchSize: 0, units: board.units.filter(unit => !unit.summon && !unit.nonCombat).map((unit, index) => ({
     id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
   })) };
 }
 /** The public board units' held items, so emblems count toward the scouted traits as they do on my own column. */
 function publicItems(board: PublicBoard): ItemInstance[] {
-  return board.units.filter(unit => !unit.summon).flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
+  return board.units.filter(unit => !unit.summon && !unit.nonCombat).flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
     id: `public-${index}-${slot}`, definitionId, location: { kind: 'unit' as const, unitId: `public-${index}`, slot },
   })));
 }
@@ -124,10 +125,10 @@ export class OpponentBoardPanel {
     const orbs = publicOrbsElement(readPublicOrbs(seat));
     if (orbs) head.append(orbs);
     // 3D strip only (CSS): the seat's anomalies in one chip, unit by unit on hover (the grid with their marks is hidden there).
-    const marked = [...board.units, ...board.bench ?? []].filter(unit => unit.anomaly);
+    const marked = [...board.units, ...board.bench ?? []].filter(unit => unitAnomalies(unit.anomaly, unit.items).length);
     if (marked.length) {
       const chip = element('span', `异常 ${marked.length}`, 'opponent-anomalies');
-      chip.title = marked.map(unit => `${getHeroIdentity(unit.definitionId).name}：${anomalyDisplayName(unit.anomaly!)}`).join('\n'); head.append(chip);
+      chip.title = marked.map(unit => `${getHeroIdentity(unit.definitionId).name}：${anomalyNotes(unitAnomalies(unit.anomaly, unit.items)).join('\n')}`).join('\n'); head.append(chip);
     }
     const close = element('button', '关闭', 'opponent-close'); close.type = 'button'; close.dataset.debug = 'online:opponent-close';
     close.setAttribute('aria-label', '关闭对方阵容（Esc）'); close.addEventListener('click', () => this.close()); head.append(close);
@@ -198,19 +199,22 @@ export class OpponentBoardPanel {
     const star = unit.effectiveStarLevel ?? unit.starLevel;
     chip.dataset.inspectId = `scout:${this.openSeatId}:${place}:${unit.definitionId}:${star}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(star);
+    if (unit.anomaly) chip.dataset.unitAnomaly = unit.anomaly;
     // G2-4b: a summon's card would show champion base stats, not its stage values; its title names it instead.
     const summon = 'summon' in unit && unit.summon === true;
     if (summon) chip.dataset.summon = 'true';
     else { chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(star); }
+    if ('nonCombat' in unit && unit.nonCombat) chip.append(element('span','暂留不参战'));
     chip.title = `${identity.name}${summon ? '（兹若特传送门召唤）' : ''} ${'★'.repeat(star)}${star === 4 ? '（终极英雄）' : ''}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(star), `opponent-stars star-${star}`), portrait);
-    if (unit.anomaly) {
+    const anomalies = unitAnomalies(unit.anomaly, unit.items);
+    if (anomalies.length) {
       // 2026-10-20 scouting: the anomaly bound to this unit, marked on its portrait with the shared anomaly icon.
-      const name = anomalyDisplayName(unit.anomaly), mark = element('span', '', 'opponent-anomaly');
-      mark.dataset.anomaly = unit.anomaly; mark.title = [`异常：${name}`, anomalyPlayerDescription(unit.anomaly)].filter(Boolean).join('\n');
+      const mark = element('span', '', 'opponent-anomaly');
+      mark.dataset.anomaly = anomalies[0].id; mark.title = anomalyNotes(anomalies).join('\n');
       mark.insertAdjacentHTML('afterbegin', anomalyIconHtml(14) || '<b>异</b>');
-      chip.title += ` · 异常：${name}`; chip.append(mark);
+      chip.title += ` · ${mark.title}`; chip.append(mark);
     }
     if (unit.items.length) {
       const items = element('span', '', 'opponent-items');

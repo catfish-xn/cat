@@ -22,8 +22,10 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 
 function publicVoidSwarm() {
-  // Real first-node draw in the authorized 0..100 range; no scripted offers.
-  const open=reachRound('2-1',false,53);
+  // Real first-node draw; no scripted offers. D5 310-card pool: seed 53 offers wandering-trainer-ii,
+  // dual-purpose, sorcerer-crown. First non-Trainer-Golem seed in 0..300 whose reachRound('2-1') offer
+  // contains void-swarm is 57 (also inside the previous 0..100 bound).
+  const open=reachRound('2-1',false,57);
   expect(open.pendingChoice!.offers).toContain('void-swarm');
   return resolveM5Choices(open,['void-swarm']);
 }
@@ -39,12 +41,15 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
     .map(f=>({kind:f.kind,sequence:f.sequence}))).toEqual([
       {kind:'combat-roster',sequence:3},{kind:'pvp-roster',sequence:4},{kind:'deaths',sequence:5},
     ]);
-  // Independently exported with 97068956's unmodified match.ts and these same
-  // public commands. Hash the entire serialization, including history sequences.
+  // Hash of this same public command sequence after the D5 re-pin (seed 57). Computed from
+  // serializeMatch of that route; not a content-identity or ur-i3 re-record.
   // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
+  // v26 identity-only refresh (ec1ce026, v26-neutrals-1424 epoch): the save bytes differ from the D5 pin
+  // 14cc123e20bea6891bfefb28e78d78c8fbae55b9d2328d391acb837964cc00dc only in contentDigest
+  // bbfbe0dd->9dc693dd and the frozen loot replayDigest 10ece6a9->a56b2c4a; history order and all other bytes unchanged.
   const save=serializeMatch(started);
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('8dedd86620e10240b954970b1f2c544e9dc8275ab65c5c5a2bb59c889bd8178d');
+    .toBe('a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a');
   expect(restoreMatch(save)).toEqual(started);
 });
 

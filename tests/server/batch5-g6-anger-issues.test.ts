@@ -21,7 +21,10 @@ const inputs = (s: MatchState) => [s, JSON.stringify(s), canonicalContent(s)];
 
 for (const first of [carry, anger]) describe(`B5-21 + B5-83: ${first} first`, () => {
   // The 0..100 tier search found 29 gives gold/prismatic/prismatic for the inverse route.
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: first === carry ? 0 : 29 });
+  // v26: the carry route's 2-7 krugs leg (14.24 neutrals 568eeea4 + targeting 8106acee/927d3045) took 3146 combat ticks
+  // over 8 seats on seed 0 (v25: 1943) and ~2x the v25 wall time, with no history augment on any seat. Seed 35 keeps the
+  // same scripted carry/anger route and takes 2367 ticks there (was seed 0; timeout unchanged).
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: first === carry ? 35 : 29 });
   let seatId = 's3', restoreOffers: () => void;
   let state: MatchState, fixed: MatchState['items'], ordinaryIds: string[] = [];
   let authority: ReturnType<typeof captureAugmentHistoryAuthority>;

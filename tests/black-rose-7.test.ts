@@ -12,6 +12,7 @@ import { readCombatStats } from '../src/simulation/combat-s13';
 import { effectiveStatuses } from '../src/simulation/m8/status';
 import { vampRates } from '../src/simulation/m8/s13-mechanisms';
 import { reachRound, accepted, freeze } from './match-helpers';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 
 // 14.24 TFT13_Cabal: tiers 3/4/5(5-6)/7, Sion resists 40/45/50/100; TFT13_SionSpell_Unleashed: 75% revive HP,
 // 300% AS, 40% omnivamp, control immunity for the rest of combat. Once per combat and the 1s delay are P-S5.
@@ -204,7 +205,11 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
 
 /** PvE seat (online PvE rounds run as a Match combat): 7 Black Rose deployed through public commands. */
 function pveRose7(): MatchState {
-  let s = reachRound('2-5', true, 42);
+  // v26 D5 (7953c99a) changed seed 42's public 2-1 offer so the first card is snipers-nest, a history owner. Its solo
+  // proof replays only public commands, so the test-injected gold below made restore fail at the replayed buyXp.
+  // Pick the first public card that owns no augment history, as the v25 route did (no history, no replay).
+  let s = reachRound('2-5', true, 42, [], Object.keys(AUGMENT_HISTORY_OWNERS));
+  expect(s.augmentHistory).toBeUndefined();
   s = accepted(grantMechanicGold(s, { receiptId: 'rose7-xp', source: 'test', amount: 200 }));
   while (s.level < 7) s = accepted(buyXp(s));
   for (const [i, definitionId] of [...NATIVE, 'garen', 'lux'].entries()) {

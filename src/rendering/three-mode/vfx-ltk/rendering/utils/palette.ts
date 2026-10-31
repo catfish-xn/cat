@@ -12,7 +12,7 @@
  */
 
 import type { EmitterModel, PaletteModel } from "../../engine/model/model";
-import { frameOf, type Source } from "../../engine/simulation/particleRead";
+import { frameInto, frameOf, type FrameSlot, type Source } from "../../engine/simulation/particleRead";
 import { sampleCurve } from "../../engine/utils/sampleCurve";
 
 /** The palette draws: it names a texture and cuts it into at least one row. */
@@ -44,6 +44,7 @@ export function paletteScrollInto(palette: PaletteModel, phase: number, out: num
  * The scroll is a uniform, one per emitter, so every child of one definition takes the
  * first one's phase. An emitter drawing no palette, or no source, leaves `out` alone.
  */
+let scrollFrame: FrameSlot | undefined;
 export function sourcesScrollInto(
   emitter: EmitterModel,
   sources: readonly Source[],
@@ -51,5 +52,6 @@ export function sourcesScrollInto(
 ): void {
   const first = sources.at(0);
   if (emitter.palette === null || first === undefined) return;
-  paletteScrollInto(emitter.palette, frameOf(first, emitter).phase, out);
+  scrollFrame ??= frameOf(first, emitter) as FrameSlot;
+  paletteScrollInto(emitter.palette, frameInto(first, emitter, scrollFrame).phase, out);
 }

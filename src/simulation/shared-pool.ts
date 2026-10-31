@@ -1,3 +1,6 @@
+import { validateAnomalyHistoryProof } from './anomaly-history-restore';
+import { getCatalogRoundById } from './round-selectors';
+import { validatePortableAnomaly } from './restore-checks/portable-anomaly-check';
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
@@ -15,6 +18,7 @@ import { validateBatch5H7Gold } from './restore-checks/batch5-h7-check';
 import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
 import { headStartShopDisabled } from './augment-pool-batch5-h12';
+import { brbShopDisabled } from './augment-brb';
 import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
@@ -63,7 +67,7 @@ import { canOperateMatch } from './operation-policy';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
-import { openAnvil, buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
+import { openAnvil, buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, startPlaceholderMatchCombat, stepPlaceholderMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
 import { externalAugmentBlocks } from './augment-offers';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
@@ -77,7 +81,7 @@ import type { CostTier } from './unit-types';
 import { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, type SharedPoolState, type SharedPoolResult,
   type SharedPoolBatchResult, type SharedPoolEvent, type SharedPoolFailure, type SharedMatchCommand } from './shared-pool-types';
 import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, returnHolding,
-  assertSharedPoolConservation, reconcileHoldings, rewardPolicy, type PoolDraft } from './shared-pool-ledger';
+  assertSharedPoolConservation, assertCarriedPoolConservation, reconcileHoldings, rewardPolicy, type PoolDraft } from './shared-pool-ledger';
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
 
@@ -86,17 +90,22 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
+  // From the anomaly node onward an independent checkpoint also certifies absence/deletion of quote history.
+  if (!(state.round < getCatalogRoundById('4-6').ordinal)) validateAugmentAuthority(state, authority, true);
   preflightAugmentHistory(state);
   validateCarryGolem(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);
   if(trustedPoolGiftRequiresAuthority(pool,state))validateAugmentAuthority(state,authority,true);
   validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);if(!state.augmentHistory)validateAnomalyHistoryProof(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);
+  if(state.anomalySelection || state.anomalyBinding || state.scheduleReceipts.some(r=>r.kind==='anomaly') || state.resourceProvenance.entries.some(e=>e.kind==='anomaly-selected')) {
+    validateHistoricalEquipment(null,state);validatePortableAnomaly(state);
+  }
   if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>a.definitionId==='loot-explosion'||Object.hasOwn(AUGMENT_BATCH5_G5,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G2,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+  if(state.augments.some(a=>a.definitionId==='over-encumbered'||a.definitionId==='loot-explosion'||Object.hasOwn(AUGMENT_BATCH5_G5,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G2,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
     r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')||r.source==='augment-pool-batch5-g5'||r.receiptId.includes('expected-unexpectedness')||r.receiptId.includes('prismatic-pipeline')||Object.keys(AUGMENT_BATCH5_G4).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_G2).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H12).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H10).some(id=>r.receiptId.includes(id))||r.source==='augment-batch5-h8-forward-thinking'||r.source==='augment-batch5-h8-monetization'||Object.keys(AUGMENT_BATCH5_H8).some(id=>r.receiptId.includes(id))||r.receiptId.includes('hard-commit')||r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`)||Object.keys(AUGMENT_BATCH5_S8B).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S8A).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
     validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
@@ -123,7 +132,11 @@ export function createSharedPool(poolId:string,seed:number,options:{readonly sea
   assertSharedPoolConservation(pool);return pool;
 }
 const failure=(pool:SharedPoolState,state:MatchState,reason:SharedPoolFailure):SharedPoolResult=>({ok:false,pool,state,reason});
-const reasonOf=(error:unknown):SharedPoolFailure=>error instanceof PoolError?error.reason:'invalid-pool';
+const reasonOf=(error:unknown,onUnexpectedError?:(error:unknown)=>void):SharedPoolFailure=>{
+  if(error instanceof PoolError)return error.reason;
+  try { onUnexpectedError?.(error); } catch { /* Diagnostics must not interrupt atomic failure. */ }
+  return 'invalid-pool';
+};
 const stamp=(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}=>({state,events:[]});
 function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   const seatId=state.sharedPool!.seatId,seat=pool.seats.find(s=>s.seatId===seatId)!;
@@ -132,24 +145,57 @@ function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   pool.seats=pool.seats.map(s=>s===seat?{...seat,revision,shop}:s);if(bumpPool) pool.revision++;
   return {...state,shop,sharedPool:{poolId:pool.poolId,seatId,revision}};
 }
-function active(pool:SharedPoolState,state:MatchState):void {
+// A carried tick may skip the input walk only for the exact pair this process just checked.
+// The boolean is not that proof: an in-place stock edit keeps the same objects, and a caller
+// can pass a different pair. The seal is a value snapshot, so either change runs the full walk.
+const provenPairs = new WeakMap<SharedPoolState, { readonly state: MatchState; readonly stock: string; readonly roster: string }>();
+function stockSeal(pool: SharedPoolState): string {
+  const parts: Array<string | number | boolean> = [pool.version, pool.poolId, pool.seed, pool.revision, pool.naturalRound, pool.seatCount, pool.order.join(',')];
+  for (const id of SHOP_CATALOG) parts.push(pool.initial[id], pool.available[id]);
+  for (const seat of pool.seats) parts.push(seat.seatId, seat.seatIndex, seat.released, seat.revision, seat.shop.generation);
+  for (const row of pool.shops) parts.push(row.seatId, row.generation, row.slot, row.definitionId, row.starLevel ?? 0);
+  for (const row of pool.holdings) parts.push(row.seatId, row.unitId, row.definitionId, row.sources.join(','));
+  for (const row of pool.pending) parts.push(row.seatId, row.dropId, row.receiptId, row.definitionId, row.starLevel ?? 1);
+  for (const row of pool.rewards) parts.push(row.seatId, row.receiptId, row.definitionId, row.resolution, row.gold, row.starLevel ?? 1);
+  for (const row of pool.carouselReservations) parts.push(row.reservationId, row.definitionId, row.seatId ?? '');
+  for (const row of pool.carouselReceipts) parts.push(row.id, row.status, row.definitionId, row.unitId ?? '');
+  return parts.join('\0');
+}
+function rosterSeal(state: MatchState): string {
+  const parts: Array<string | number> = [state.seed, state.phase, state.sharedPool?.revision ?? -1, state.multiplayer?.status ?? ''];
+  for (const unit of state.preparation.units) if (unit.team === 'player') parts.push(unit.id, unit.definitionId, unit.starLevel);
+  return parts.join('\0');
+}
+function sealProvenPair(pool: SharedPoolState, state: MatchState): void {
+  provenPairs.set(pool, { state, stock: stockSeal(pool), roster: rosterSeal(state) });
+}
+function pairStillProven(pool: SharedPoolState, state: MatchState): boolean {
+  const proven = provenPairs.get(pool);
+  return !!proven && proven.state === state && proven.stock === stockSeal(pool) && proven.roster === rosterSeal(state);
+}
+function active(pool:SharedPoolState,state:MatchState,inputAlreadyConserved=false):void {
   requirePool(pool.carouselReservations.length===0,'wrong-phase');
-  assertSharedPoolConservation(pool,[state]);
+  // Placeholder combat passes the pair returned by the previous successful command. Skip the
+  // input walk only when that same pair is still sealed. Each tick still checks its own output.
+  if(!inputAlreadyConserved || !pairStillProven(pool, state))assertSharedPoolConservation(pool,[state]);
   requirePool(!pool.seats.find(s=>s.seatId===state.sharedPool!.seatId)!.released&&state.multiplayer?.status==='active','seat-eliminated');
 }
 function transact(pool:SharedPoolState,state:MatchState,
-  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string):SharedPoolResult {
+  command:(draft:PoolDraft,policy:UnitLootPolicy,events:SharedPoolEvent[])=>MultiplayerCommandResult,preSold?:string,onUnexpectedError?:(error:unknown)=>void,inputAlreadyConserved=false):SharedPoolResult {
   try {
-    active(pool,state);
+    active(pool,state,inputAlreadyConserved);
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[];
     const result=command(draft,rewardPolicy(draft,state,poolEvents),poolEvents);
     if(!result.ok) return failure(pool,state,result.reason);
     requirePool(safe(result.state.gold)&&safe(result.state.nextMatchEventSeq),'invalid-seat-state');
     reconcileHoldings(draft,state,result.state,poolEvents,preSold);
-    if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) return {ok:true,pool,state,events:result.events,poolEvents};
-    const next=finish(draft,result.state);assertSharedPoolConservation(draft,[next]);
+    if(result.state===state&&canonicalContent(draft)===canonicalContent(pool)) { sealProvenPair(pool, state); return {ok:true,pool,state,events:result.events,poolEvents}; }
+    const next=finish(draft,result.state);
+    if(inputAlreadyConserved)assertCarriedPoolConservation(draft,[next],pool);
+    else assertSharedPoolConservation(draft,[next]);
+    sealProvenPair(draft, next);
     return {ok:true,pool:draft,state:next,events:result.events,poolEvents};
-  } catch(error) {return failure(pool,state,reasonOf(error));}
+  } catch(error) {return failure(pool,state,reasonOf(error,onUnexpectedError));}
 }
 
 /** Import only the untouched public opening, before any shared shop is generated. */
@@ -259,7 +305,7 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
-    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state)&&!brbShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
@@ -268,7 +314,7 @@ export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
-    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state)&&!brbShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
@@ -307,14 +353,14 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 }
 
 /** All original Match paths that may award a unit use this transaction-local pool policy. */
-export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
+export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand,onUnexpectedError?:(error:unknown)=>void,inputAlreadyConserved=false):SharedPoolResult {
   return transact(pool,state,(_draft,policy,poolEvents)=>{
     const result=matchCommand(_draft,policy,poolEvents);
     // Subscription Service opens its shop the moment it is acquired (a pick or a timed-out pick).
     if(!result.ok||!subscriptionAcquired(state,result.state))return result;
     releaseShop(_draft,state.sharedPool!.seatId);
     return {...result,state:drawSubscriptionShop(_draft,result.state,poolEvents)};
-  });
+  },undefined,onUnexpectedError,inputAlreadyConserved);
   function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy,poolEvents:SharedPoolEvent[]):MultiplayerCommandResult {
     switch(command.type) {
       case 'buyXp': return buyXpWithShopRefresh(state,policy,leveled=>{releaseShop(_draft,state.sharedPool!.seatId);return drawShop(_draft,leveled,poolEvents,'dual-purpose');});
@@ -327,6 +373,8 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
       }
       case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
+      case 'startPlaceholderCombat': return startPlaceholderMatchCombat(state,policy);
+      case 'stepPlaceholderCombat': return stepPlaceholderMatchCombat(state,policy);
       case 'settleCombatStream': return settleMatchCombatStream(state,command.terminal,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);

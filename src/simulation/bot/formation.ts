@@ -1,3 +1,4 @@
+import { isOverflowUnit, usableBenchSlots } from '../bench-capacity';
 import type { ClientCommand } from '../../server/protocol';
 import { sameCell, type HexCell } from '../board';
 import { getDeploymentCap } from '../match';
@@ -14,10 +15,16 @@ export const cheapest = (a: Unit, b: Unit) => getUnitSellPrice(a) - getUnitSellP
 
 /** Fixed target assignment prevents repeated calls from moving a unit back and forth. */
 export function formationAction(state: MatchState, roster: readonly Unit[]): ClientCommand | undefined {
+  const parked=roster.filter(u=>isOverflowUnit(state.preparation,u.id)).sort(cheapest);
+  if(parked.length) {
+    const action:ClientCommand={type:'sell',unitId:parked[0].id};
+    if(legal(state,action))return action;
+  }
+  roster=roster.filter(u=>!isOverflowUnit(state.preparation,u.id));
   const selected = [...roster].sort(strongest).slice(0, getDeploymentCap(state));
   const selectedIds = new Set(selected.map(u=>u.id));
   const excess = roster.filter(u=>u.location.kind==='board' && !selectedIds.has(u.id)).sort(cheapest);
-  const freeBench = Array.from({length:state.preparation.benchSize},(_,slot)=>slot)
+  const freeBench = Array.from({length:usableBenchSlots(state.preparation)},(_,slot)=>slot)
     .find(slot=>!roster.some(u=>u.location.kind==='bench' && u.location.slot===slot));
   if (excess.length) {
     if (freeBench !== undefined) {

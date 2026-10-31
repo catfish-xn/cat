@@ -14,3 +14,18 @@ it('accepts verified postcombat and carousel upgrade fact shapes without changin
  const later:ResourceProvenanceEntry[]=[{sequence:0,roundId:'4-6',kind:'unit-upgraded-after-combat',event:upgrade},{sequence:1,roundId:'4-6',kind:'carousel-unit-claimed',unitId:'unit-5',receiptId:'r',upgrades:[{...upgrade,fromStar:2,toStar:3,consumedIds:['unit-1','unit-4'],survivorId:'unit-5'}]}];
  const before=structuredClone(later);expect(traceBoundUnitIdentity('unit-3',later)).toBe('unit-5');expect(later).toEqual(before);
 });
+it.each(['unit-upgraded','unit-upgraded-after-combat','carousel-preparation-settled','carousel-unit-claimed'] as const)(
+ 'retires the actual %s survivor on unit-removed and never resurrects it',kind=>{
+ const event=kind==='unit-upgraded'?{kind,event:upgrade,acquisitionSequence:1}
+  :kind==='unit-upgraded-after-combat'?{kind,event:upgrade}
+  :kind==='carousel-preparation-settled'?{kind,receiptIds:['r'],claimedUnitIds:[],upgrades:[upgrade]}
+  :{kind,unitId:'unit-1',receiptId:'r',upgrades:[upgrade]};
+ const removed:ResourceProvenanceEntry={sequence:1,roundId:'4-6',kind:'unit-removed',unitId:'unit-1',receiptId:'restart',definitionId:'lux',starLevel:2};
+ const entries:ResourceProvenanceEntry[]=[{sequence:0,roundId:'4-6',...event},removed,
+  {sequence:2,roundId:'4-6',kind:'unit-upgraded-after-combat',event:{...upgrade,consumedIds:['unit-1'],survivorId:'unit-7'}}];
+ const before=structuredClone(entries);
+ expect(traceBoundUnitIdentity('unit-3',entries)).toBeNull();
+ expect(traceBoundUnitIdentity('unit-1',entries)).toBeNull();
+ expect(traceBoundUnitIdentity('unit-9',entries)).toBe('unit-9');
+ expect(entries).toEqual(before);
+});

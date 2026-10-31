@@ -37,7 +37,7 @@ const stripAssetChecks: Plugin = {
 // augment-dynamic-values 的客户端计算只供单机显示，由强化文本 loader 按需加载。
 // restore-checks 只被单人存档恢复引用，跟着 application 进 assets/solo/。
 // 单独 manualChunks 会把共享依赖吸进入口的静态 import，所以不另开入口能直接 import 的包。
-const AUGMENT_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:augment-text-data|augment-pool-text|augment-zh|s13-augment-asset-manifest)\.ts$/;
+const AUGMENT_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:augment-text-data|augment-pool-text|augment-zh|s13-augment-asset-manifest|augment-hud)\.ts$/;
 const TOOLTIP_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:tooltip-text-data|ability-zh|trait-official-text|unit-roles|trait-display-text|trait-extra-text|special-item-templates)\.ts$/;
 const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
 
@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
   build: { rollupOptions: { output: {
     // One build key: a second one silently replaced this whole block and dropped the Phaser chunk (v16 trim).
     manualChunks: id => (AUGMENT_UI_DATA.test(id) ? 'augment-text' : TOOLTIP_UI_DATA.test(id) ? 'tooltip-text' : THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
-    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel', 'pvp-damage', 'team-planner', 'confiscation-display', 'merge-fx'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
     // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
     assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },

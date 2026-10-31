@@ -10,9 +10,10 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { BattleRecord } from '../src/m6/contracts';
 import { goldenStates } from './fixtures/m8-golden-states.cjs';
 
-// The B9 capacity selector uses v25's recorded public-route preparation.
-// Native stepping yields 684 ticks and 6760 ledger events; its terminal must also
-// equal the previously recorded v25 settlement. The v24 method is documented in
+// The B9 capacity selector uses v26's recorded public-route preparation (round 32 of the
+// sniper golden, re-recorded by edaa63dd after the D5 2-1 reroll; was v25's 684 ticks /
+// 6760 events). Native stepping yields 610 ticks and 4729 ledger events; its terminal must also
+// equal the recorded v26 settlement. The v24 method is documented in
 // docs/CI_V24_INTEGRATION_FIX.md.
 function fixture(): BattleRecord {
   const before = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'preparation') as MatchState;
@@ -47,17 +48,18 @@ function reference(record: BattleRecord) {
 describe('validated playback checkpoints preserve the unoptimized trajectory', () => {
   it('keeps every frame, terminal, ledger and record byte-identical on the B9 fixture', () => {
     const record = fixture(), originalBytes = JSON.stringify(record), expected = reference(record);
-    // This terminal was already recorded in the v25 public-route fixture.
+    // This terminal was already recorded in the v26 public-route fixture.
     const archivedTerminal = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'settlement')!.combat;
     expect(expected.terminal).toEqual(archivedTerminal);
-    expect(record.endTick).toBe(684); expect(record.events).toHaveLength(6760);
-    // Independent native stepping of the v25 input: pin all 685 native frame byte
+    expect(record.endTick).toBe(610); expect(record.events).toHaveLength(4729);
+    // Independent native stepping of the v26 input: pin all 611 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
-    expect(bytesHash([...expected.hashes])).toBe('cf8c0c9136360c088e39d1259b8fd4bdf44d0940bb482be12c335b9b651a2a6d');
-    // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
-    expect(bytesHash(record)).toBe('64fb5f0af6a6d507d574c2ba2e6db53d291dc296d1d66671f797a583ce7d6566');
-    expect(bytesHash(record.events)).toBe('c619dab88165e2ee1e3ca6a5e01c2eb0387fdabf69d1d8d79e35588b2345a519');
-    expect(bytesHash(expected.terminal)).toBe('c4c0d27c2df046bd5f9986873249715bfa97950a3238544555efd3e532091d8d');
+    // v26 re-pin (edaa63dd sniper golden; v25 values: frames cf8c0c91…, record 64fb5f0a…,
+    // events c619dab8…, terminal c4c0d27c…, see docs/V25_STARRY_PINS.md).
+    expect(bytesHash([...expected.hashes])).toBe('12d0a6abc1301d639c2b94f6bb3a220cf515270eb00fc69ee05ed206f713eb1e');
+    expect(bytesHash(record)).toBe('ccaed15a672062d5a0f13ca2b52a47db34199b2af3574c505dc68bf05070388a');
+    expect(bytesHash(record.events)).toBe('d060a74fd71f3610183f558cd393796bf2912a7b7e2de0bf1e306ff3debd00b6');
+    expect(bytesHash(expected.terminal)).toBe('8c6016830cd9a08bdb26b2f801ba1914c0191aba8b54b5639dced51016d5534f');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);
@@ -71,10 +73,17 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
       expect(bytesHash(frame.combat), `frame ${tick}`).toBe(expected.hashes.get(tick));
       expect(frame.nextEventSeq).toBe(frame.combat.nextEventSeq);
     }
+    // v26 fixture (edaa63dd): this round-32 board holds the Protective Shielding anomaly, whose
+    // combat-start shields are emitted by the first step but labelled tick 0 ("initial programs finish
+    // at tick 0", combat-s13.ts). The tick-0 frame is the pre-step state, so its ledger is the opening
+    // prefix; the remaining tick-0 events must be exactly the first step's tick-0 events.
+    const opening = record.initial.nextEventSeq!;
+    expect(record.events.filter(e => e.tick === 0).slice(opening))
+      .toEqual(stepCombat(structuredClone(record.initial)).events.filter(e => e.tick === 0));
     for (const tick of [record.endTick, 40, 39, 41, 0, 280, record.endTick - 1]) {
       const frame = playback.seek(tick);
       expect(bytesHash(frame.combat)).toBe(expected.hashes.get(tick));
-      expect(JSON.stringify(frame.events)).toBe(JSON.stringify(record.events.filter(e => e.tick <= tick)));
+      expect(JSON.stringify(frame.events)).toBe(JSON.stringify(tick === 0 ? record.events.slice(0, opening) : record.events.filter(e => e.tick <= tick)));
       expect(Object.isFrozen(frame.combat.units)).toBe(true);
     }
     playback.seek(0); playback.play();

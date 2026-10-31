@@ -1,7 +1,7 @@
 import { isAnvil } from '../content/anvils';
 import type { ClientCommand } from '../../server/protocol';
 import type { MatchState } from '../match-types';
-import { buyUnit, getDeploymentCap, needsAnomalyRecruitment } from '../match';
+import { buyUnit, getDeploymentCap, needsAnomalyRecruitment, readAnomalyTargetIds } from '../match';
 import { MATCH_RULES } from '../match-rules';
 import { getShopOdds } from '../progression';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
@@ -54,7 +54,7 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
     if(!choice) return done;
     const identity={choiceId:choice.choiceId,generation:choice.generation};
     const actions:ClientCommand[]=choice.kind==='anomaly' && choice.step==='target'
-      ? [...roster].sort(byId).map(u=>({type:'anomalyTarget',...identity,unitId:u.id}))
+      ? [...readAnomalyTargetIds(state)].sort().map(unitId=>({type:'anomalyTarget',...identity,unitId}))
       // G2-3 forge/blackMarket/armory: the same free default the timeout would pick.
       : isMechanicChoice(choice) ? [{type:'choose',...identity,definitionId:choice.payload.timeoutOption}]
       : choice.offers.map(definitionId=>({type:'choose',...identity,definitionId}));

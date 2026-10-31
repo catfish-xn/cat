@@ -1,3 +1,4 @@
+import { AUGMENT_D5 } from './augment-pool-d5';
 import { PORTABLE_ANOMALY_ITEMS } from './augment-pool-batch5-r2-items';
 import { AUGMENT_BATCH5_R2, ANGER_RAGEBLADE, PORTABLE_ANOMALY_EXCLUDED } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_R3 } from './augment-pool-batch5-r3';
@@ -76,7 +77,8 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
-  augmentStageBans:{version:'augment-stage-bans-14.24-tags-user-override-v3',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27;P-LOOT-EXPLOSION-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2;ambusher-user-override-2026-10-27'},
+  augmentD5:{version:'augment-pool-d5-v26',content:AUGMENT_D5,brbUnlockOnAcquisition:true,trueColors:'authoritative-d0-only-legacy-pairs-absent-skip',placeholderPvp:'server-only-single-seat-engine-no-d0'},
+  augmentStageBans:{version:'augment-stage-bans-14.24-tags-user-override-v4',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27;P-LOOT-EXPLOSION-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2;ambusher-user-override-2026-10-27'},
   augmentPoolBatch5B5a:{version:'augment-pool-batch5-b5a-v1',content:AUGMENT_BATCH5_B5A,convention:'P-B5-50-51-55-2026-10-27'},
   augmentPoolBatch5S1a:{version:'augment-pool-batch5-s1a-v1',content:AUGMENT_BATCH5_S1A,convention:'P-B5-S1A-2026-10-27'},
   augmentPoolBatch5S1b:{version:'augment-pool-batch5-s1b-v1',content:AUGMENT_BATCH5_S1B,convention:'P-B5-03-04-2026-10-27'},

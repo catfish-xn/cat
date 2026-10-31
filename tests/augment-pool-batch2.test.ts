@@ -12,7 +12,7 @@ import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED, AUGMENT_BATCH2_BLOCKED } from '
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
-import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit, nextRound, type MatchState } from '../src/simulation/match';
+import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit, nextRound, rerollAugment, type MatchState } from '../src/simulation/match';
 import { augmentCandidates, resolveAugmentTier, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
 import { batch1GiftPlan, drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
@@ -158,8 +158,10 @@ function acquire(id:string){
   expect(choice.offers).toContain(id);
   return accepted(selectChoice(state,choice.choiceId,choice.generation,id));
  }
- if(id==='betrayal'){
-  const state=fieldedRoute(52,'3-2'),choice=state.pendingChoice!;
+ if(id in PINNED_FIELDED_SEED){
+  let state=fieldedRoute(PINNED_FIELDED_SEED[id],'3-2');
+  for(const slot of PINNED_FIELDED_REROLLS[id]??[]){const c=state.pendingChoice!;state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));}
+  const choice=state.pendingChoice!;
   expect(state.roundDefinitionId).toBe('3-2');expect(choice.kind).toBe('augment');expect(choice.offers).toContain(id);
   return accepted(selectChoice(state,choice.choiceId,choice.generation,id));
  }
@@ -175,7 +177,15 @@ function acquire(id:string){
 }
 // Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS or PINNED_FIELDED_SEED); it is played in cached legs, one case each,
 // so each selection case below stays inside the default timeout (acquireAugment resumes the same cached route).
-const PINNED_FIELDED_SEED:Readonly<Record<string,number>>={'betrayal':52,'rocket-collection-plus':8};
+// v26 D5 (7953c99a) moved the fielded 3-2 draws: betrayal was seed 52 (now contested/inspiring-epitaph/magic-roll).
+// Seeds 11 and 65 offer it but their 3-2 saves need crown/augment history evidence; seed 119 is the first in 0..199
+// whose fielded 3-2 offer holds it without rerolls and without history.
+// v26 D5 stage bans (7953c99a, augment-stage-bans.ts) took why-not-both (TFT13_Augment_Formswapper: 2-1) and blood-brothers
+// (TFT13_TeamupAugment_BloodBrothers: 2-1, 4-2) off 2-1, where v25 acquired them by the first 2-1 seed scan. 3-2 is trait-tailored,
+// so both now come from the fielded route: blood-brothers seed 67 (first in 0..199, prismatic 3-2, no reroll); why-not-both seed 262
+// (first in 0..299, gold 3-2 after rerolling slot 0). Neither route holds a history augment.
+const PINNED_FIELDED_SEED:Readonly<Record<string,number>>={'betrayal':119,'rocket-collection-plus':8,'blood-brothers':67,'why-not-both':262};
+const PINNED_FIELDED_REROLLS:Readonly<Record<string,readonly number[]>>={'why-not-both':[0]};
 const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&(STAGE_SEEDS[id]?.fielded||id in PINNED_FIELDED_SEED));
 it.each(FIELDED_SELECTIONS.flatMap(id=>(id in PINNED_FIELDED_SEED?FIELDED_LEGS.slice(0,FIELDED_LEGS.indexOf('3-2')+1).map(leg=>[PINNED_FIELDED_SEED[id],leg] as const):fieldedLegCases(id)).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>withB1Offers(_id==='rocket-collection-plus'?[_id]:[],()=>{
  expect((_id==='rocket-collection-plus'?rocketRoute(leg):fieldedRoute(seed,leg)).roundDefinitionId).toBe(leg);

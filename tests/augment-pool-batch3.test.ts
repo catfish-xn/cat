@@ -485,6 +485,10 @@ it('a real match with a training dummy restores mid-combat exactly and rejects a
  expect(checked).toBeGreaterThan(0);
 });
 });
+describe('public selection round saves',()=>{
+// The Golden Egg's v26 4-2 route fights stage 2, so its public offer is searched once in a bounded hook (as the
+// augment runtime saves do), outside the selection/restore case.
+beforeAll(()=>{publicOpen('the-golden-egg');});
 it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure','tower-defense'])('%s: a public selection saves and restores through a real round', id=>{
  let s=publicOpen(id);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
@@ -496,6 +500,7 @@ it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','a
  s=resolveM5Choices(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  // The Golden Egg is a 4-2 card (14.24 stage tags): that conceding route may end the match at this fight.
  if(s.phase!=='gameOver'){s=accept(nextRound(s,s.round) as any).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);}
+});
 });
 it('P: the Golden Egg hatches at the first round entry its 11-turn timer reaches 0, one extra turn per player-combat win', ()=>{
  const hatch=(s:MatchState)=>[...new Set(batch3RewardPlan(s).map(g=>g.acquiredRound))];
@@ -550,8 +555,13 @@ it('Tower Defense: a stationary emblem dummy that shoots 100% AD + 60/90/135% AP
   return {start,cell:c.units.find(x=>x.id==='tower')!.cell,out,interval:start.attackIntervalTicks,speed:start.attackSpeedBonusBps};
  };
  const early=shots(3),mid=shots(14),late=shots(30);
- expect([early.out[0].raw,mid.out[0].raw,late.out[0].raw]).toEqual([120,150,195]);
- expect(late.out.filter((o:any)=>o.context.actionSeq===late.out[0].context.actionSeq).map((o:any)=>o.raw)).toEqual([195,97]);
+ // v26 targeting-p1 (8106acee): the two equidistant dummies are now a combat-RNG tie, so the primary arrow hits e1 and
+ // the 50% second arrow (e0) is emitted first within the action (v25: out[0] was the 195 primary on e0). Assert the
+ // same first action as a primary/second pair on two different dummies instead of relying on emission order.
+ const firstLate=late.out.filter((o:any)=>o.context.actionSeq===late.out[0].context.actionSeq);
+ expect([early.out[0].raw,mid.out[0].raw,Math.max(...firstLate.map((o:any)=>o.raw))]).toEqual([120,150,195]);
+ expect(firstLate.map((o:any)=>o.raw).sort((a:number,b:number)=>b-a)).toEqual([195,97]);
+ expect(new Set(firstLate.map((o:any)=>o.context.targetId)).size).toBe(2);
  expect(early.cell).toEqual({col:3,row:7});expect(early.out.length).toBeGreaterThan(0);
  expect(new Set(early.out.map((o:any)=>o.context.actionSeq)).size).toBe(early.out.length);
  const perSeq=(r:typeof late)=>Math.max(...[...r.out.reduce((m:Map<number,number>,o:any)=>m.set(o.context.actionSeq,(m.get(o.context.actionSeq)??0)+1),new Map()).values()]);
@@ -668,7 +678,10 @@ function reach42(seed:number):MatchState {
  while(state.roundDefinitionId!=='4-2'){
   state=resolveM5Choices(state);
   if(state.phase==='preparation'){
-   if(state.roundDefinitionId.startsWith('1-')){
+   // v26 PvE loss damage (merged 54557be5) and the 14.24 neutrals eliminate the v25 concede-from-stage-2 route
+   // before 4-2 for every seed in 0..299, so stage 2 is now fought with the public fielded bench; stage 3 still concedes.
+   if(state.roundDefinitionId.startsWith('2-')){state=accept(startMatchCombat(fieldBench(state)) as any).state;while(state.phase==='combat')state=stepMatch(state).state;}
+   else if(state.roundDefinitionId.startsWith('1-')){
     const hero=state.preparation.units.find(u=>u.team==='player')!;
     state=accept(deployMatchUnit(state,hero.id,{kind:'board',cell:{col:3,row:4}}) as any).state;
     state=accept(startMatchCombat(state) as any).state;while(state.phase==='combat')state=stepMatch(state).state;
@@ -691,7 +704,11 @@ function openAt(id:string,seed:number):MatchState|undefined {
 /** Pinned results of publicPick's seed search (the first seed from 0 whose openAt offers the card) for cards whose
  * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (v25 drift-13: seed 89 is the first openAt/reach42 hit in 0..100 that restores after pick).
  * The pinned seed must still open the offer; re-run the search if the pool, openings or route change. */
-const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':89};
+// v26: the first publicPick seeds for Corrosion (68: Spoils of War III) and Blazing Soul I (11: Cluttered Mind) now own
+// crown-history cards whose saves need full battle replay, so these mid-combat save cases pin the next history-free
+// openAt seeds (Corrosion 69, Blazing Soul I 12) found by the same 0.. search (cause: D5 3ce71065 / PvE loot carryover c684c3ec).
+// The Golden Egg's pinned seed moves 89 -> 28 with the stage-2 fielded reach42 (first openAt hit in 0..120 that restores).
+const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':28,'corrosion':69,'blazing-soul-i':12};
 // The draw policy is part of the input. Frozen, genuinely executed checkpoints
 // stay private; callers receive their own plain snapshot and still run all
 // acquisition/combat/restore checks independently.
@@ -718,8 +735,12 @@ function publicPick(id:string,maxSeed=6000,from=0,buy=true):MatchState {
  }
  throw Error('no public '+id);
 }
+// v26: Dummify's first publicPick seed (38) now owns Ghost of Friends Past (an augment-history owner), whose resource
+// prefix check rejects the completeness forgery before forming validation; 61 is the first later history-free seed
+// (cause: D5 3ce71065; v25 searched from 0).
+const PICK_FROM:Readonly<Record<string,number>>={dummify:61};
 it.each([['dummify','forming-dummy',10000,0,250],['golemify','augment-golem',9000,6000,150]] as const)('%s: every champion is removed (items back to inventory) for one summon carrying their totals', (id,unit,hpBps,adBps,perStage)=>{
- const open=publicPick(id),champions=open.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId].summon);
+ const open=publicPick(id,6000,PICK_FROM[id]??0),champions=open.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId].summon);
  expect(champions.length).toBeGreaterThan(0);
  const health=champions.reduce((n,u)=>n+getUnitStats(u.definitionId,u.starLevel).health,0),attack=champions.reduce((n,u)=>n+getUnitStats(u.definitionId,u.starLevel).attack,0);
  const c=open.pendingChoice!,s=accept(selectChoice(open,c.choiceId,c.generation,id) as any).state as MatchState;

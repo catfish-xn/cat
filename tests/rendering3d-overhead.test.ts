@@ -12,6 +12,45 @@ function fakeCanvas() {
 describe('3D overhead meters and items', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('shows the confiscation stamp above retained emblem icons and clears it outside combat', () => {
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const meters = { hp: 1, maxHp: 1, mana: 0, maxMana: 0, shield: 0 };
+    overhead.set('player', meters, [{ id: 'emblem', icon: null }], true, true);
+    const stamp = overhead.object.getObjectByName('render3d-confiscated-items')!;
+    const wanted = overhead.object.getObjectByName('render3d-enforcer-wanted')!;
+    expect(stamp.visible).toBe(true); expect(wanted.position.y).toBeGreaterThan(stamp.position.y);
+    overhead.set('player', undefined, undefined, false, true);
+    expect(stamp.visible).toBe(false); expect(overhead.drawn).toBe(false); overhead.dispose();
+  });
+
+  it('distinguishes allies in green and enemies in red without a foot marker', () => {
+    const { rects, canvas } = fakeCanvas();
+    vi.stubGlobal('document', { createElement: () => canvas });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const meters = { hp: 300, maxHp: 600, mana: 0, maxMana: 50, shield: 0 };
+    expect(DEFAULT_METER_COLORS.hp).toBe('#5fd68a'); expect(DEFAULT_METER_COLORS.hpEnemy).toBe('#f08080');
+    overhead.set('player', meters, undefined);
+    expect(rects.find(rect => rect.fill === '#5fd68a')?.w).toBe(62);
+    expect(rects.some(rect => rect.fill === '#f08080')).toBe(false);
+    overhead.set('enemy', meters, undefined);
+    expect(rects.find(rect => rect.fill === '#f08080')?.w).toBe(62);
+    expect(rects.some(rect => rect.fill === '#5fd68a')).toBe(false);
+    overhead.dispose();
+  });
+
+  it('keeps obtained anomaly marks visible on board and bench without meters, and clears them with the binding', () => {
+    vi.stubGlobal('document', { createElement: () => fakeCanvas().canvas });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const mark = overhead.object.getObjectByName('render3d-overhead-anomaly')!;
+    for (const source of ['native', 'portable'] as const) {
+      overhead.set('player', undefined, undefined, false, false, [{ id: 'the-finisher', source }]);
+      expect(mark.visible).toBe(true); expect(overhead.drawn).toBe(true);
+    }
+    overhead.set('player', undefined, undefined);
+    expect(mark.visible).toBe(false); expect(overhead.drawn).toBe(false);
+    overhead.dispose();
+  });
+
   it('draws HP in team color with a shield segment and mana, and redraws only when the values change', () => {
     const { rects, canvas } = fakeCanvas();
     vi.stubGlobal('document', { createElement: () => canvas });
@@ -53,4 +92,97 @@ describe('3D overhead meters and items', () => {
     expect(dispose).toHaveBeenCalled(); expect(icon.source).toBeDefined(); // the shared icon stays with its owner
     expect(overhead.object.children).toHaveLength(0);
   });
+
+  it('redraws unchanged meters when a reviewed skin arrives, preserving ratios, ticks, shield and flash', () => {
+    const { canvas, rects } = fakeCanvas(), drawImage = vi.fn();
+    Object.assign(canvas.getContext(), { drawImage });
+    vi.stubGlobal('document', { createElement: vi.fn(() => fakeCanvas().canvas).mockReturnValueOnce(canvas) });
+    let ready = false, update = () => {};
+    const unsubscribe = vi.fn(), source = {} as CanvasImageSource;
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null,
+      ui: { sprite: id => ready && id !== 'health.mana-full' ? { source, url: 'blob:test', width: 80, height: 8, dispose() {} } : undefined,
+        subscribe(listener) { update = listener; return unsubscribe; } } });
+    overhead.set('player', { hp: 300, maxHp: 600, mana: 25, maxMana: 50, shield: 60 }, undefined);
+    expect(drawImage).not.toHaveBeenCalled(); ready = true; update();
+    // HP/shield/mana take the same destination widths as their original color fills, with proportional source crops.
+    expect(drawImage.mock.calls[0]).toEqual([source, 0, 0, 128, 26]); // opaque frame backing must not cover the values
+    expect(drawImage.mock.calls[1]).toEqual([source, 0, 0, 40, 8, 2, 2, 62, 12]);
+    expect(drawImage.mock.calls[2]).toEqual([source, 0, 0, 8, 8, 64, 2, 12.4, 12]);
+    expect(drawImage.mock.calls[3]).toEqual([source, 0, 0, 40, 8, 2, 19, 62, 5]);
+    expect(rects).toContainEqual({ fill: 'rgba(9, 18, 25, 0.6)', x: 64, w: 2 });
+    overhead.flashMana(true); expect(rects).toContainEqual({ fill: '#ffffff', x: 2, w: 124 });
+    overhead.dispose(); expect(unsubscribe).toHaveBeenCalledTimes(1);
+    const calls = drawImage.mock.calls.length; update(); expect(drawImage).toHaveBeenCalledTimes(calls);
+  });
+
+  it('repaints item stack numerals on font readiness while retaining the displayed stack count', () => {
+    const labels: { text: string; font: string }[] = [];
+    vi.stubGlobal('document', { createElement: () => {
+      const { canvas } = fakeCanvas(), g = Object.assign(canvas.getContext(), { font: '',
+        fillText(text: string) { labels.push({ text, font: g.font }); } });
+      return canvas;
+    } });
+    let font = 'sans-serif', update = () => {};
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null, font: () => font,
+      ui: { sprite: () => undefined, subscribe(listener) { update = listener; return () => {}; } } });
+    overhead.set('player', undefined, [{ id: 'synthetic-stack', icon: null, stacks: 2, maxStacks: 3 }]);
+    expect(labels.at(-1)).toEqual({ text: '2', font: 'bold 30px sans-serif' });
+    font = 'Render3dBeaufort, sans-serif'; update();
+    expect(labels.at(-1)).toEqual({ text: '2', font: `bold 30px ${font}` });
+    const count = labels.length; update(); expect(labels).toHaveLength(count); overhead.dispose();
+  });
+
+  it('redraws only badge canvases on font readiness, retaining sprites, materials and an in-flight icon', async () => {
+    const createElement = vi.fn(() => {
+      const { canvas } = fakeCanvas(); Object.assign(canvas.getContext(), { fillText() {} }); return canvas;
+    });
+    vi.stubGlobal('document', { createElement });
+    let font = 'sans-serif', update = () => {}, finish!: (icon: Texture) => void;
+    const itemTexture = vi.fn(() => new Promise<Texture>(resolve => { finish = resolve; }));
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture, font: () => font,
+      ui: { sprite: () => undefined, subscribe(listener) { update = listener; return () => {}; } } });
+    overhead.set('player', undefined, [{ id: 'stack', icon: 'pending.png', stacks: 2, maxStacks: 3 }, { id: 'plain', icon: null }]);
+    const row = overhead.object.getObjectByName('render3d-overhead-items')!, icons = [...row.children];
+    const badge = overhead.object.getObjectByName('render3d-item-stack-0') as Sprite, map = badge.material.map!;
+    const material = (icons[0] as Sprite).material, version = map.version, canvasCount = createElement.mock.calls.length;
+    const dropMaterial = vi.spyOn(material, 'dispose'), dropMap = vi.spyOn(map, 'dispose');
+    const dropBadge = vi.spyOn(badge.material, 'dispose');
+    font = 'Render3dBeaufort, sans-serif'; update();
+    expect(row.children[0]).toBe(icons[0]); expect(row.children[1]).toBe(icons[1]);
+    expect((icons[0] as Sprite).material).toBe(material);
+    expect(overhead.object.getObjectByName('render3d-item-stack-0')).toBe(badge);
+    expect(badge.material.map).toBe(map); expect(map.version).toBeGreaterThan(version);
+    expect(createElement).toHaveBeenCalledTimes(canvasCount); expect(itemTexture).toHaveBeenCalledTimes(1);
+    expect(dropMaterial).not.toHaveBeenCalled(); expect(dropBadge).not.toHaveBeenCalled(); expect(dropMap).not.toHaveBeenCalled();
+    const icon = new Texture(); finish(icon);
+    await vi.waitFor(() => expect(material.map).toBe(icon));
+    const painted = map.version; update(); expect(map.version).toBe(painted);
+    overhead.dispose();
+    expect(dropMaterial).toHaveBeenCalledTimes(1); expect(dropBadge).toHaveBeenCalledTimes(1); expect(dropMap).toHaveBeenCalledTimes(1);
+  });
+});
+
+it('marks a parked reserve without combat meters and clears the mark on return',()=>{
+  const overhead=createUnitOverhead({colors:()=>DEFAULT_METER_COLORS,itemTexture:async()=>null});
+  overhead.set('player',undefined,undefined,false,false,undefined,true);
+  const label=overhead.object.getObjectByName('render3d-over-encumbered') as Sprite;
+  expect(label.visible).toBe(true);expect(overhead.drawn).toBe(true);
+  overhead.set('player',undefined,undefined,false,false,undefined,false);
+  expect(label.visible).toBe(false);expect(overhead.drawn).toBe(false);overhead.dispose();
+});
+
+it('keeps confiscation and parked reserve flags independent when both are present', () => {
+  const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+  const meters = { hp: 1, maxHp: 1, mana: 0, maxMana: 0, shield: 0 };
+  overhead.set('player', meters, undefined, true, true, undefined, true);
+  const stamp = overhead.object.getObjectByName('render3d-confiscated-items')!;
+  const parked = overhead.object.getObjectByName('render3d-over-encumbered')!;
+  expect(stamp.visible).toBe(true); expect(parked.visible).toBe(true);
+  expect(parked.position.y).toBeGreaterThan(stamp.position.y);
+  overhead.set('player', undefined, undefined, false, true, undefined, true);
+  expect(stamp.visible).toBe(false); expect(parked.visible).toBe(true); expect(overhead.drawn).toBe(true);
+  overhead.set('player', meters, undefined, true, true, undefined, false);
+  expect(stamp.visible).toBe(true);
+  expect(overhead.object.getObjectByName('render3d-enforcer-wanted')!.visible).toBe(true);
+  overhead.dispose();
 });

@@ -16,6 +16,7 @@ import { readCombatStrategyInputs } from '../src/simulation/combat-input';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from '../src/simulation/battle-equipment';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { accepted } from './match-helpers';
+import { toPublicBoard } from '../src/server/room/projection';
 import * as oracle from './fixtures/m5/oracle.g2.cjs';
 import { validateRewards } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
@@ -34,8 +35,11 @@ it('B5-81 is gold and offered only at 4-2; all six excluded definitions are abse
 });
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),{
- roomId:'test-room',seed:21,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
+ roomId:'test-room',seed:112,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
+// v26 D5 pool (7953c99a): room seed 112 (was 21, whose s4 4-2 offer no longer has another-anomaly).
+// s4 is offered it at 4-2 for seeds 18, 32, 48, 97 and 112 in 0..159; 112 has the lightest per-round
+// load (14.24 neutrals made the 2-7 PvE round the heaviest), keeping each round within the default timeout.
 const mine=()=>room.state.seats.find(s=>s.seatId==='s4')!.match;
 function arrive(roundId:string):void {
  for(let n=0;n<2000;n++){
@@ -111,7 +115,7 @@ it('B5-81 filters actual rerolls, grants the copy immediately and rejects replay
  expect(mine().items.find(i=>i.id===itemId)).toEqual({id:itemId,definitionId:PORTABLE_ANOMALY_PREFIX+chosen,location:{kind:'inventory'}});
  const beforeRetry=mine();expect(room.handle('s4',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:chosen}).ok).toBe(false);expect(mine()).toBe(beforeRetry);
  const failed=room.handle('s4',{type:'equip',itemId,unitId:original.id,slot:0});expect(failed).toMatchObject({ok:false,reason:'item-restricted'});expect(mine()).toBe(beforeRetry);
- const target=mine().preparation.units.find(u=>u.team==='player'&&u.id!==original.id&&u.location.kind==='board')!;expect(target).toBeDefined();copyUnit=target.id;
+ const target=mine().preparation.units.find(u=>u.team==='player'&&u.definitionId!==original.definitionId&&u.location.kind==='board')!;expect(target).toBeDefined();copyUnit=target.id;
  const empty=[0,1,2].find(slot=>!mine().items.some(i=>i.location.kind==='unit'&&i.location.unitId===copyUnit&&i.location.slot===slot))!;expect(empty).toBeDefined();
  expect(room.handle('s4',{type:'equip',itemId,unitId:copyUnit,slot:empty})).toMatchObject({ok:true});
  const projected=buildStrategySnapshot(mine()).units.find(u=>u.unitId===copyUnit)!;
@@ -129,7 +133,9 @@ it('B5-81 online save round trips and rejects forged definition, stats, source, 
   (x:any)=>{x.items.find((i:any)=>i.id===itemId).location.unitId=x.anomalyBinding.unitId;},
   (x:any)=>{x.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch5-r2').round++;},
   (x:any)=>{x.seatMechanics.receipts=x.seatMechanics.receipts.filter((r:any)=>r.source!=='augment-pool-batch5-r2');},
-  (x:any)=>{delete x.augmentHistory;},(x:any)=>{x.anomalyBinding.definitionId='dual-wielding';}];
+  (x:any)=>{delete x.augmentHistory;},(x:any)=>{x.anomalyBinding.definitionId='dual-wielding';},
+  (x:any)=>{x.anomalySelection=null;},(x:any)=>{x.anomalySelection.championDefinitionId='forged';},
+  (x:any)=>{x.anomalyBinding.unitId=copyUnit;}];
  for(const mutate of mutations){const bad=structuredClone(s);mutate(bad);for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreSharedOrbSnapshot(room.state.pool,input,authority)).toThrow();}
  expect(()=>restoreSharedOrbSnapshot(room.state.pool,s)).toThrow(/authority/);
 });
@@ -138,6 +144,26 @@ it('B5-81 removes the copied effect and all item stats through the real room mag
  expect(room.handle('s4',{type:'useConsumable',consumableId:tool!.consumableId,target:{kind:'unit',unitId:copyUnit}})).toMatchObject({ok:true});
  expect(mine().items.find(i=>i.id===itemId)?.location).toEqual({kind:'inventory'});
  expect(buildStrategySnapshot(mine()).units.find(u=>u.unitId===copyUnit)!.sources.filter(s=>s.source.sourceKind==='anomaly')).toEqual([]);
+ expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),room.augmentHistoryAuthority('s4'))).toEqual(mine());
+});
+
+it('R5 real shared-pool sale/rebuy retains native identity, public projection and portable original ban without a second grant',()=>{
+ const original=mine().anomalyBinding!,hero=mine().anomalySelection!.championDefinitionId;
+ const receipts=mine().seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-r2');
+ for(const u of mine().preparation.units.filter(u=>u.team==='player'&&u.definitionId===hero))
+  expect(room.handle('s4',{type:'sell',unitId:u.id})).toMatchObject({ok:true});
+ expect(mine().anomalyBinding).toBeNull();
+ expect(mine().anomalySelection).toMatchObject({definitionId:chosen,championDefinitionId:hero,choiceId:original.choiceId});
+ expect(toPublicBoard(mine()).units.some(u=>u.anomaly===chosen)).toBe(false);
+ expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),room.augmentHistoryAuthority('s4'))).toEqual(mine());
+ for(let n=0;n<100&&!mine().shop.slots.some(o=>o.status==='available'&&o.definitionId===hero);n++)
+  expect(room.handle('s4',{type:'reroll'})).toMatchObject({ok:true});
+ const slot=mine().shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===hero);expect(slot).toBeGreaterThanOrEqual(0);
+ expect(room.handle('s4',{type:'buy',slot,generation:mine().shop.generation})).toMatchObject({ok:true});
+ const native=mine().anomalyBinding!;expect(native).toMatchObject({definitionId:chosen,choiceId:original.choiceId});
+ const board=toPublicBoard(mine());expect([...board.units,...board.bench??[]].filter(u=>u.anomaly===chosen).map(u=>u.definitionId)).toEqual([hero]);
+ expect(room.handle('s4',{type:'equip',itemId,unitId:native.unitId,slot:0})).toMatchObject({ok:false,reason:'item-restricted'});
+ expect(mine().seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-r2')).toEqual(receipts);
  expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),room.augmentHistoryAuthority('s4'))).toEqual(mine());
 });
 

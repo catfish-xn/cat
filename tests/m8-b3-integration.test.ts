@@ -64,12 +64,16 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
     // replay2: the legacy resistanceFlat projection is a stat-buff/debuff group whose armor contribution carries the flat amount (MR rides beside it).
     expect(statusEvents(result.events).flatMap(e => e.kind === 'stat-buff' || e.kind === 'stat-debuff' ? e.group.contributions.filter(c => c.application.modifier?.stat === 'armor' && c.application.modifier.value.kind === 'constant').map(c => (c.application.modifier!.value as { amount: number }).amount) : [])).toEqual([100, 100]);
   });
-  it('rolls A/B/C independently in target order: seed42 words .252/.088/.577', () => {
+  // targeting-p1 (8106acee): eA and eC are both adjacent to Zyra, so the opening target is an equal-distance tie that now
+  // draws the first combat word (.252), selecting eC. The spell-crit rolls still run independently in target order on the
+  // next three words: eA .088 (crit), eB .577 (no crit), eC (crit). v25: eA primary, rolls .252/.088/.577, three draws.
+  it('rolls A/B/C independently in target order after the tie draw: seed42 words .252 (tie) then .088/.577/next', () => {
     const actor = hero('zyra', true), auth = actor.spellCrit!;
     const result = stepCombat(battle([{ ...actor, spellCrit: { ...auth, chanceBps: 2500 } }, dummy('eA'), dummy('eB', 3, 3), dummy('eC', 2, 4)], { rngState: 42, rngDraws: 0 }));
-    // replay2 pre-crit raw on the critical eB packet: old post-crit 133 = floor(95×14000/10000).
-    expect(packets(result.events).map(e => [e.unitId, e.raw, e.critical])).toEqual([['eA', 260, false], ['eB', 95, true], ['eC', 95, false]]);
-    expect(result.state.rngDraws).toBe(3);
+    expect(result.state.units.find(u => u.id === 'p')!.targetId).toBe('eC');
+    // replay2 pre-crit raw on the critical packets: old post-crit 133 = floor(95×14000/10000).
+    expect(packets(result.events).map(e => [e.unitId, e.raw, e.critical])).toEqual([['eA', 95, true], ['eB', 95, false], ['eC', 260, true]]);
+    expect(result.state.rngDraws).toBe(4);
   });
   it('cancelled Maddie future shots cost zero words; the committed first shot retains its word', () => {
     const first = stepCombat(battle([hero('maddie', true), dummy()], { rngState: 42, rngDraws: 0 }));

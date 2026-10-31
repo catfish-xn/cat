@@ -5,6 +5,8 @@ import { avatarUnit } from './opponent-board';
 import type { PlayerView, SeatPublic } from './protocol';
 import { StageTrack } from './stage-track';
 import { overtimeIndicator } from '../../presentation/overtime-display';
+import { SidebarRanking } from '../../presentation/sidebar-ranking';
+import { sidebarWinStreak, type SidebarStreak } from '../../presentation/sidebar-streak';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -34,6 +36,8 @@ export class PlayersSidebar {
   private spectateBanner: HTMLElement;
   /** Last HP shown per seat: a drop leaves a fading "lost" segment and a -N chip on the bar (presentation only). */
   private shownHp = new Map<string, { hp: number; from: number; at: number }>();
+  private readonly ranking = new SidebarRanking();
+  private readonly rows = new Map<string, HTMLElement>();
   /** performance.now() minus the server clock, so the countdown follows the server. */
   private clockOffset = 0;
   /** Length of the current countdown (first sight of its deadline) and the deadline it belongs to, for the TFT progress line. */
@@ -80,30 +84,48 @@ export class PlayersSidebar {
       this.stageTrack!.render(view.phase.kind === 'lobby' || view.phase.kind === 'ended' ? 0 : view.phase.round);
       this.countdownHost!.dataset.phase = view.phase.kind; this.countdownHost!.toggleAttribute('data-spectating', spectating);
     }
-    const ordered = [...view.seats].sort(compareSeats);
     // G1-P6: before the freeze only candidates are known (weak mark); the drawn opponent, or a single candidate, is certain (strong mark).
     const candidates = view.opponentCandidates ?? [];
     const opponent = view.opponentSeatId ?? (candidates.length === 1 ? candidates[0]! : null);
     const pairing = (seatId: string): Pairing => seatId === opponent ? 'opponent' : candidates.includes(seatId) ? 'candidate' : null;
-    this.list.replaceChildren(...ordered.map(seat => this.seatRow(seat, seat.seatId === view.mySeatId, pairing(seat.seatId))));
+    this.ranking.render(this.list, view.seats, seat => this.seatRow(seat, seat.seatId === view.mySeatId, pairing(seat.seatId)));
+    for (const id of this.rows.keys()) if (!view.seats.some(seat => seat.seatId === id)) { this.rows.delete(id); this.shownHp.delete(id); }
     this.tick();
   }
-  private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
+  private seatRow(seat: SeatPublic & { readonly streak?: SidebarStreak }, me: boolean, pairing: Pairing) {
     // A human whose connection dropped (server `connected`, kept fresh by the #229 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
     const offline = seat.kind === 'human' && !seat.connected;
-    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`);
+    const existing = this.rows.get(seat.seatId), row = existing ?? element('li');
+    row.className = `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`;
+    this.rows.set(seat.seatId, row);
+    row.style.animationDelay = '';
     row.dataset.debug = `online:seat:${seat.seatId}`;
-    if (pairing) row.dataset.pairing = pairing;
+    if (pairing) row.dataset.pairing = pairing; else delete row.dataset.pairing;
     if (this.onSelect) {
       row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', `查看 ${seat.name} 的阵容`);
       row.setAttribute('aria-pressed', String(seat.seatId === this.viewing));
-      row.addEventListener('click', () => this.onSelect!(seat.seatId));
-      row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.onSelect!(seat.seatId); } });
+      if (!existing) {
+        row.addEventListener('click', () => this.onSelect!(seat.seatId));
+        row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.onSelect!(seat.seatId); } });
+      }
     }
-    const avatar = element('span', '', 'seat-avatar'); avatar.dataset.debug = `online:avatar:${seat.seatId}`;
+    const portrait = existing?.children[0] as HTMLElement | undefined ?? element('span', '', 'seat-portrait');
+    const avatar = portrait.children[0] as HTMLElement | undefined ?? element('span', '', 'seat-avatar'); avatar.dataset.debug = `online:avatar:${seat.seatId}`;
     const unit = avatarUnit(seat.publicBoard);
     if (unit) { avatar.dataset.definition = unit.definitionId; avatar.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40)); }
-    else avatar.append(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder'));
+    else { delete avatar.dataset.definition; avatar.replaceChildren(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder')); }
+    const winFire = sidebarWinStreak(seat);
+    // Local ui/manifest.json lists tft_winstreak_atlas as unavailable. Code-drawn flame
+    // stays outside the clipped portrait and works in both render modes, without an asset request.
+    if (!portrait.children.length) portrait.append(avatar);
+    const streakNode = portrait.children[1] as HTMLElement | undefined;
+    if (winFire !== null) {
+      const fire = streakNode ?? element('span', '', 'seat-streak-fire');
+      fire.setAttribute('aria-hidden', 'true');
+      fire.dataset.debug = `online:streak:${seat.seatId}`;
+      fire.classList.toggle('level-2', winFire.level === 2);
+      if (!streakNode) portrait.append(fire);
+    } else streakNode?.remove();
     const head = element('div', '', 'seat-head');
     // 机: a fill-in bot for the whole match; a human seat a bot is playing while its player is away shows 机 in the
     // takeover style plus 接管中 (B6). Only one of them controls a seat at a time.
@@ -132,12 +154,12 @@ export class PlayersSidebar {
       const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
       chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
     }
-    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
+    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, winFire === null ? '' : `${winFire.count} 连胜`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
     for (const node of Array.from(head.querySelectorAll<HTMLElement>('[title]'))) { node.setAttribute('aria-label', node.title); node.removeAttribute('title'); }
     bar.append(fill);
     // TFT player list: round portrait on the left, name and bar in the middle, HP and level on the right.
     const main = element('div', '', 'seat-main'); main.append(head, bar);
-    row.append(avatar, main, foot); return row;
+    row.replaceChildren(portrait, main, foot); return row;
   }
   /** Shows the player list or the battle stats in the column (3D; 2D keeps both). */
   setTab(key: 'players' | 'stats'): void {
@@ -180,10 +202,5 @@ export class PlayersSidebar {
     this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; this.connectionBadge.dataset.tone = tone;
   }
   show(visible: boolean) { this.root.hidden = !visible; }
-  dispose() { this.detach(); this.stageTrack?.dispose(); this.root.remove(); this.countdownHost?.replaceChildren(); }
-}
-function compareSeats(a: SeatPublic, b: SeatPublic): number {
-  if (a.alive !== b.alive) return a.alive ? -1 : 1;
-  if (a.alive) return b.hp - a.hp || a.name.localeCompare(b.name, 'zh');
-  return (a.rank ?? 99) - (b.rank ?? 99);
+  dispose() { this.ranking.dispose(); this.rows.clear(); this.shownHp.clear(); this.detach(); this.stageTrack?.dispose(); this.root.remove(); this.countdownHost?.replaceChildren(); }
 }

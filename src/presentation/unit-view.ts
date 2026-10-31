@@ -1,3 +1,4 @@
+// D3 labels read the authority's overflow overlay; no combat or capacity decisions here.
 /**
  * M7 board/bench piece view. Pure presentation: reads Unit/CombatUnit snapshots and
  * draws them; never writes domain state. The container keeps the original 58×58 hit
@@ -18,6 +19,7 @@ import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
 import { DISPLACEMENT_SLIDE_2D, KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
 import { anvilIconUrl, isAnvilUnit } from './anvil-display';
+import type { UnitAnomaly } from './anomaly-display';
 
 export const PIECE_RADIUS = 27;
 /** v22 anvil piece: icon size and disc colour (dark forge bronze). */
@@ -35,7 +37,7 @@ export interface MeterData { value: number; maxValue: number; ratio: number; wid
 export class UnitView {
   readonly token: Phaser.GameObjects.Container;
   /** Everything drawn; offset by the motion below so the token (input, hit tests, positions) never moves for it. */
-  private readonly body: Phaser.GameObjects.Container;
+  readonly body: Phaser.GameObjects.Container;
   /** White overlay for the hit flash. */
   private readonly flash: Phaser.GameObjects.Arc;
   private readonly stackLabels: Phaser.GameObjects.Text[] = [];
@@ -70,8 +72,12 @@ export class UnitView {
   private readonly costBadge: Phaser.GameObjects.Arc;
   private readonly costText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.Graphics;
+  declare confiscationTag?: Phaser.GameObjects.Text;
   /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
+  private readonly overflowTag: Phaser.GameObjects.Text;
   private readonly pendingTag: Phaser.GameObjects.Text;
+  private readonly anomalyMark: Phaser.GameObjects.Text;
+  anomalies: readonly UnitAnomaly[] = [];
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
@@ -85,6 +91,8 @@ export class UnitView {
   extras: GearExtras = NO_GEAR_EXTRAS;
   ring: RingState = 'normal';
 
+  setOverflow(on: boolean): void { this.overflowTag.setVisible(on); }
+
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
     this.identity = getHeroIdentity(unit.definitionId);
     const add = scene.add;
@@ -97,12 +105,14 @@ export class UnitView {
     this.items = add.graphics();
     this.flash = add.circle(0, 0, PIECE_RADIUS, 0xffffff).setAlpha(0);
     this.pendingTag = add.text(21, -19, '', { fontSize: '10px', fontStyle: 'bold', color: '#0b151f', backgroundColor: '#68ddd0', padding: { x: 2, y: 1 }, resolution: 2 }).setOrigin(0.5).setVisible(false);
+    this.anomalyMark = add.text(20, 14, '异', { fontSize: '11px', fontStyle: 'bold', color: '#f0dcff', backgroundColor: '#492f60', padding: { x: 3, y: 1 }, resolution: 2 }).setOrigin(0.5).setName('anomaly-mark').setVisible(false);
+    this.overflowTag = add.text(0, -42, '暂留不参战', {fontSize:'11px',color:'#f2d5a0',backgroundColor:'#352b24',padding:{x:3,y:2},resolution:2}).setOrigin(0.5).setVisible(false).setName('over-encumbered');
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
     this.statusIcons = add.graphics().setVisible(false);
     this.shieldLabel = add.text(0, 48, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.flash, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.statusIcons, this.pendingTag, this.anomalyMark, this.overflowTag];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
@@ -122,12 +132,20 @@ export class UnitView {
   get name(): string { return this.identity.name; }
   get symbol(): string { return this.label.text; }
 
+  /** Kept separate from identity redraws so combat equipment refreshes cannot erase a native mark. */
+  setAnomalies(anomalies: readonly UnitAnomaly[]): void {
+    this.anomalies = anomalies;
+    this.anomalyMark.setText(anomalies.some(entry => entry.source === 'portable') ? '异·复' : '异').setVisible(anomalies.length > 0);
+    this.token.setData('anomalies', anomalies);
+  }
+
   /**
    * Preparation identity: hero, star level, cost and equipped item pips. `pending` (C18): items worn now that enter the
    * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
    * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
   update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel, itemStacks?: CombatViewUnit['itemStacks']): void {
+    this.confiscationTag?.setVisible(false);
     const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}|${JSON.stringify(itemStacks)}`;
     if (key === this.renderKey) return;
     this.renderKey = key; this.lastDrawn = { unit, star };

@@ -22,6 +22,47 @@ function setup(overrides: Partial<TraitPropsContext> = {}) {
 }
 
 describe('3D trait props: Conqueror chest and Shimmer flask', () => {
+  it.each([1, 2, 3])('stops allocating count canvases when context acquisition %s fails', failAt => {
+    const contexts: ReturnType<typeof vi.fn>[] = [];
+    const createElement = vi.fn(() => {
+      const g = { clearRect() {}, beginPath() {}, roundRect() {}, fill() {}, fillText() {} };
+      let calls = 0;
+      const getContext = vi.fn(() => ++calls >= failAt ? null : g); contexts.push(getContext);
+      return { width: 0, height: 0, getContext };
+    });
+    vi.stubGlobal('document', { createElement });
+    let font = 'sans-serif';
+    const { scene, props } = setup({ font: () => font });
+    props.frame(frame({ conquest: conquest(5, 0), shimmer: shimmer(20) }));
+    font = 'loaded-font'; props.update(0);
+    for (let i = 0; i < 30; i++) {
+      font = `font-${i}`;
+      props.frame(frame({ conquest: conquest(6 + i, 0), shimmer: shimmer(21 + i) })); props.update(0.05);
+    }
+    expect(createElement).toHaveBeenCalledTimes(2);
+    for (const context of contexts) expect(context).toHaveBeenCalledTimes(failAt);
+    expect(scene.getObjectByName('render3d-conqueror-stacks')).toBeUndefined();
+    expect(scene.getObjectByName('render3d-shimmer-count')).toBeUndefined();
+    expect(props.debug().chest.label).toBe('35/10'); expect(props.debug().flask.label).toBe('50/100');
+    props.dispose();
+  });
+
+  it('repaints existing counter text when the UI font loads, without a new board frame or repeated glyph draws', () => {
+    const drawn: { text: string; font: string }[] = [];
+    vi.stubGlobal('document', { createElement: () => {
+      const g = { font: '', clearRect() {}, beginPath() {}, roundRect() {}, fill() {},
+        fillText(text: string) { drawn.push({ text, font: g.font }); } };
+      return { width: 0, height: 0, getContext: () => g };
+    } });
+    let font = 'sans-serif';
+    const { props } = setup({ font: () => font });
+    props.frame(frame({ conquest: conquest(5, 0), shimmer: shimmer(20) }));
+    expect(drawn).toEqual([{ text: '5/10', font: 'bold 48px sans-serif' }, { text: '20/100', font: 'bold 48px sans-serif' }]);
+    font = 'Render3dBeaufort, sans-serif'; props.update(0);
+    expect(drawn.slice(2)).toEqual([{ text: '5/10', font: `bold 48px ${font}` }, { text: '20/100', font: `bold 48px ${font}` }]);
+    props.update(0.1); expect(drawn).toHaveLength(4); expect(props.debug().bursts).toBe(0); props.dispose();
+  });
+
   it('stays hidden without counters, with the banner right of the board and the flask left, off every cell', () => {
     const { scene, props } = setup();
     const board = frame();

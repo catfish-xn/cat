@@ -51,6 +51,8 @@ export interface ClientListeners {
    */
   replayRevised?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
+  /** These commands lost receipt tracking; release pending UI without assuming whether the server applied them. */
+  interrupted?(commandIds: readonly number[]): void;
   /** v15: an orb claim held while the round was frozen was refused by the rules at battle entry (its receipt was ok). */
   notice?(notice: SeatNotice): void;
   connection?(status: ConnectionStatus): void;
@@ -72,7 +74,7 @@ export interface GameClient {
    * not change until the receipt and the state push that follows it (or a `refused` callback).
    */
   send(command: WireCommand): ClientSendResult;
-  /** My legend's walk to the room (no receipt); false when it was not sent. In-browser rooms have none. */
+  /** My legend's walk to the room (no receipt); false when it was not sent or the local room refused it. */
   walk?(request: LegendWalkRequest): boolean;
   /** Watch another seat's battles (null: stop); kept across a reconnect. In-browser rooms have none. */
   watch?(seatId: string | null): void;

@@ -1,3 +1,4 @@
+import { isOverflowUnit } from './bench-capacity';
 import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
 import { canEquipPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { canOperateEquipment } from './operation-policy';
@@ -29,6 +30,7 @@ export function previewCombine(state: Readonly<MatchState>, aId: string, bId: st
 }
 
 export function previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview {
+  if (isOverflowUnit(state.preparation,unitId)) return {allowed:false,reason:'wrong-phase',conflictingItemIds:[]};
   if (!canOperateEquipment(state)) return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
   if (isTemporaryItemId(state, itemId)) return { allowed: false, reason: 'temporary-item', conflictingItemIds: [] };
   const item=state.items.find(i=>i.id===itemId);

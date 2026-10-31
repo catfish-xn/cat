@@ -1,4 +1,46 @@
+## 2026-10-30 v26 纪元身份（v26-neutrals-1424）
+
+当前 rules/content 为 `s13-g2-3-v26-neutrals-1424` / `s13-14.24b-g2-3-v26-neutrals-1424`，schema/save/replay/command 仍为 **12/8/8/7**，WebSocket 封套 6；CONTENT=`fnv1a32-utf16:9dc693dd`，LOOT=`fnv1a32-utf16:a56b2c4a`。旧身份（含 v25-online-rules）不迁移，直接拒绝。本节覆盖下文各节（含 R5 节中 `v26-online-rules` 的标签）关于当前身份的说法。录制、基线 e9384c02 及漂移证据见 [V26 纪元报告](V26_EPOCH_REPORT.md)。
+
+## 2026-10-29 D5：正式注册四张强化（v26）
+
+四张卡的生产定义、品级、API 名和研究阶段标签统一注册；五处 backlog 禁令逐一核对，补变形者与本可发生之事两处（另三处已存在）。摸鱼取得时自动解锁；D0 缺失的本地占位结算不累计真心本色；重启任务暂存、D14 退场身份、黑玫空成员显式失败、单人法球领取已补齐。公开函数、失败原因、全部调用入口、夹具替换和重录影响见 [D5 合同](D5_REGISTERED_AUGMENTS.md)。以下 D1–D4 的“未注册”表述为当时交付范围，现由 D5 正式注册取代。
+
+## 2026-10-29 D0–D1：对手实扣血与真心本色
+
+联机 PvP 的可选 `RoundResult.damageDealt` 为对手同轮 `hpLost`（截过杀、含梅尔保命、镜像为 0），房间收据必带并在全轮发布前双边校验；单人/PvE/选秀不增加键。D1 `what-you-really-are` 从取得当轮起累计此字段，35 点给沃里克与护手，取得给饮血剑；本单仅实现效果，不注册候选池。字段、函数签名、失败原因、所有调用入口、奖励及投影读取路径见 [D0–D1 合同](D01_DAMAGE_DEALT_AND_TRUE_COLORS.md)。用户已允许预期的 v25 源码 SHA/联机快照变化，重录留待 D5/集成由 Claude 执行，本单不运行 `--write`。
+
+## 2026-10-29 D2：brb 效果预接入与海克斯布阵
+
+假装摸鱼效果已接入、尚未注册候选池；D5 统一注册与身份处理。含取得轮的三个自然轮禁用玩家商店，系统推进与布阵照常；所有海克斯选择可隐藏并上下棋子。函数签名、失败原因、供给轮锻造器出生认证及全部入口见 [D2 合同](D2_BRB_CONTRACT.md)。
+
+## 2026-10-29 D4：重启任务（未入候选池）
+
+用户规则 9／10／11 已实现：选择 `restart-mission` 清除场上／备战席棋子、不发出售金币，永久装备回库存；锻造器、选秀暂存保留。固定六个二星（1×一费、3×二费、2×三费）从对应完整商店目录等权有放回抽取，先入奖励法球，领取时按共享池现有缺池折金／合星协议处理。公开命令与失败枚举不变，独立 RNG 子流不影响商店等现有流。导出签名、唯一清除标记、魔像退场、恢复拒绝边界与单人／server／本地房间／bot／2D／3D 调用点见 [D4 合同](D4_RESTART_MISSION.md)。未注册候选池、未改身份或纪元证据，源码摘要留 D5 统一重录。
+
+## 2026-10-29 v26 anomA：异变准备、资格和初始 12 项报价
+
+本节覆盖下文旧异变“30 秒独立选择再准备”及“仅排上一项”的描述。4-6 从入场共用一次 75 秒 preparation 截止点，提前确认不重置；待选可执行准备期合法部署/上下场/移动及其他经济操作，**所有棋子禁止出售**（含锁定目标，返回原 state 和 `wrong-phase`），确认后可卖，单人同步。用户 11:38/12:02 补充决定覆盖此前待选出售权限。前端打开异变界面时锁盘、隐藏后允许调阵，由另一单接线；隐藏不解除服务器禁售。本人私有投影新增 `anomalyTargetIds: readonly string[]`；公共资格查询、失败语义、召唤物已知/待证分类、报价事实及所有生产调用链见 [v26 anomA 完整合同](V26_ANOMALY_R1_R3_R4A.md)。
+
+首次免费报价计入初始 12 项排重，之后只排紧接上一项。独立 `anomaly-offer-history-v1` 记录报价事实，离线只重演报价窗口并封存最终选择证明，普通局不因此启用永久强化/战斗历史；联机从 4-6 起恢复必须另给独立 server authority，以认证候选删除历史的情况。rules/content 升 v26，schema/save/replay/command 保持 12/8/8/7。R2 保留目标锁定；D14 超时先按人口上限自动部署锁定目标，再做资格判断。R6/R7 保持，R5 卖后重买保留留后续任务；旧纪元/快照不在本单重录。
+
+## 2026-10-29 D3 运力不足（待 D5 注册）
+
+下一整个阶段用 `preparation.usableBenchSlots=1` 覆盖物理九格；暂留棋子通过 `overflowUnitIds` 标记，购买拒绝、出售回席、完成阶段三散件和全部调用签名见 [D3 合同](D3_OVER_ENCUMBERED.md)。当前未加入候选/等级/定义总表；历史纪元和内容摘要常量不改写。
+
+受限回合的 `CombatInputBasis.resourcePreparation?:GameState` 保存实际开战持有状态（容量覆盖、暂留 ID 和棋盘位置）；`inputs.preparation` 仍是九格战斗投影。恢复同时认证两份数据、投影相等与公开命令历史；B8 从实际持有状态重放掉落，在结算边界重放容量解除，再认证容量出售／掉落重试及完整最终阵容。阶段 x-7 解除容量不自动重试已延期的直接掉落；原 `pending-capacity` 与出售重试语义不变。开战时无容量覆盖则不增加字段，格式号与历史纪元不变。暂留棋子不能作为异变目标。
+
+2026-10-30 待发重试修复：单人合法容量出售后，`grantDirectLoot(initial:MatchState,terminal:boolean,unitLootPolicy?:UnitLootPolicy,claimedDrops?:readonly FrozenDirectDrop[])` 在未指定 `claimedDrops` 时，先按冻结回合顺序、回合内 `sourceUnitId → slotOrdinal → entryOrdinal` 顺序重试交付轮为当轮的历史 `pending-capacity`，再处理当前计划；返回 `{state,events,upgradeEvents}`，容量仍不足则继续待发、不分配身份或收据。显式领取列表与联机语义保持。B8 恢复重演顺延奖励在战后第一次尝试、出售后再次尝试及实际收据顺序；旧收据不能倒推为结算前已发。历史容量状态恢复必须满足 carry 交付轮等于当轮且战斗已结束；`carried` 的英雄与自选仅允许交付轮在未来或当轮战斗尚未结束；forge 直接掉落满席失败保持 `carried` 且不阻止 Continue，因此也允许交付轮已过或当轮交付战斗已结束，仍须通过冻结 payload、合法顺延来源及资源重演认证。结算首发仍是当轮先于顺延，出售重试仍是旧回合先于当轮。见 [D3 调查与验证](D3_OVER_ENCUMBERED.md#2026-10-30-历史-pending-capacity-出售重试修复)。
+
 ## 2026-10-27 v25-h8：三项历史依赖强化
+
+## 2026-10-29 PvE 失败扣血（用户 10:55 批准，待统一纪元）
+
+本节取代历史“PvE 失败或平局固定 3HP”。现在为 `max(1, 阶段基础伤害 + 存活野怪数)`，阶段1–7基础为0/2/5/8/10/12/17；每只存活敌方单位+1，不看星级，沿用 `countsG23SurvivorDamage` 排除召唤物/非战斗单位。胜利和补给仍不掉血，PvP与加时保持原公式。单机、联机PvE、LocalRoomClient及淘汰预测均由共享领域入口结算。经济预览仍只给金币方案，不从敌方信息预测掉血。
+
+内部 `OpeningEconomyInput` 新增必填 `enemySurvivors:number`；`planOpeningEconomy(input)` 的 opening 分支新增 `baseDamage:number`。`planPlayerDamage(input:Pick<RoundEconomyInput,'stage'|'roundKind'|'roundId'|'result'|'enemySurvivors'>):{readonly baseDamage:number;readonly playerDamage:number}` 统一开局/普通伤害。非法阶段、野怪加时身份、非安全非负整数存活数、总伤害溢出抛 `RangeError`。公开 Match/服务器命令及失败原因不变；失败仍保持原 state、无事件/资源/RNG变化。`RoundResult.baseDamage` 现在表示真实阶段基础，`playerDamage` 为最少1规则后的请求伤害，`hpLost` 为HP钳制后的实扣。恢复按同一公式重算，拒绝旧固定3收据。
+
+政策版本为 `s13-player-damage-pve-v3` / `m8b-opening-project-v3`。外层身份、生成摘要及历史fixture留给Claude统一升级/重录，本工作区不可直接发布；未运行任何 `--write`。旧断言替换及验证清单见 [PvE 扣血交付](PVE_LOSS_DAMAGE_20261029.md)。
 
 本分支新增 B5-45/46/47，原分支 rules/content 为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`，schema/save/replay/command 保持 **12/8/8/7**，NET=5。三项均已开放；旧身份不迁移，epoch 不重录。P 约定与全部内部接口见 [历史设计的 B5-45／46／47 调用约定](AUGMENT_HISTORY_DESIGN.md#b5-454647-调用约定2026-10-27)。
 
@@ -748,7 +790,7 @@ P2/征服者/黑市英雄先产生奖励法球；其 MechanicReceipt 为 resolut
 
 `forfeitTerminalOrbs(state: MatchState): MatchStep` 从 `simulation/match` 和 `server-entry` 公共导出，返回 `{state, events}`，无失败枚举。这是服务器确认**整局终局**后对每席调用的可信领域钩子，不是客户端命令；房间终局不等于席位淘汰，因此不要求 `phase=gameOver` 或 `multiplayer.status=eliminated`，赢家及其他 active 存活席位同样要调用。调用者负责终局判定及提交返回的 state/事件，不能在普通轮次截止调用。
 
-清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机为空操作；重复调用（包括 JSON 快照恢复后）无新事件或收据，队列也为空时返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
+清空 queuedOrbClaims；将所有已揭示、已赚但未领的 PvE/机制法球条目一次性作废。状态仍为 `carried`、尚未到发放场或发放场尚未领取的失败顺延条目同样作废：只发 `lootForfeited`，不写收据、不发资源。已在发放场写成收据的顺延奖励不动。每条按原法球/条目顺序写唯一 `LootReceipt`（resolution=forfeited、gold=0、claimedRoundId=当前轮、无获得英雄/物品），依次发 `lootForfeited`、`lootGranted`。事件统一走 Match 编号器：`domain='match'`，eventSeq 从输入 nextMatchEventSeq 连续递增，返回状态推进相同数量。不执行获取、选择或装备钩子，不扣共享池，不消耗资源或 RNG，不触碰已领及未赚的 planned 条目，不改变席位 phase/status。单机没有已赚未领法球；若仍有未发放的失败顺延，单机同样只发 `lootForfeited`。没有任何待作废条目时重复调用（包括 JSON 快照恢复后）无新事件或收据，并返回原 state 引用。原 `forfeitUnclaimedOrbs` 保留为内部未编号计划器；服务器终局应使用此新入口，不能重复编号。
 
 ## 强化等级与按卡刷新：待 v15 收口（用户确认 2026-10-20）
 
@@ -815,7 +857,7 @@ match.ts 与既有 server-entry 继续导出。有效调用必须传下标；TS 
 
 ### G2-3 / Claude 服务器配套交接（本PR不越界）
 
-`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
+`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产，但二者已作为可移动棋盘投影显示（赛恩为用户2026-10-29规则，见本文“赛恩准备期”）；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
 
 双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算，镜像无进度/收益。当前`src/server/room/room.ts`的`buildReceipt`（约1052行）仍只复制旧字段；Claude需补`...(proposal.g23Facts ? {g23Facts:proposal.g23Facts} : {})`，不自行算规则。该转发未完成前不能宣称G2-3联机机制已上线。见`docs/UI_REQUESTS.md`的G23-SERVER-FACTS。冻结战斗输入的g23/playerHp由规则快照函数提供，服务器不得另造进度。
 
@@ -834,7 +876,7 @@ Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and
 - Tactician's Crown (金铲铲冠冕, `TFT_Item_ForceOfNature`, source `MaxArmySizeIncrease` 1; user rule 2026-10-17): every G2-3 reward claim with `kind:'item'` and `definitionId:'TFT_Item_ForceOfNature'` adds +1 to `getDeploymentCap` permanently, wherever the crown sits (inventory, board or bench unit) and even after its holder is sold, it is removed or the instance is gone. A grant that fails records no claim and adds nothing. Saves, frozen combat inputs and PvP snapshots add no field: each validates population against the claims in the G2-3 progress it already carries, and a frozen input's claims must be a prefix of the authoritative claims. In this slice crowns come only from Conqueror tiers 12/15 (no spatula, no recipe).
 - Crown win gold (`TFT_Item_ForceOfNature`, source `PercentGoldChance=10`): user conventions G24-CROWN-GOLD-01..05 count only crowns equipped on deployed units at combat start (dead holders still count, inventory/bench excluded). Each crown independently rolls 10% for 1 gold on PvE/PvP wins; losses/draws do not roll. The G23 lcg32-v1 stream consumes one draw per crown after the battle's black-market draw. Gold is credited directly, after high-roller/chest payouts, once under `g23:crown:<battleId>` with source `tacticians-crown`; no pickup orb. `G23BattleFacts.crowns?:number` is omitted when zero (otherwise 1..84, the structural 7×4 deployment cells × 3 equipment slots bound); `G23EconomyAction.crownGold?:number` exists when rolled, including zero. Restore validates deterministic economy replay, mechanic receipt linkage, frozen combat input and terminal facts; repeated step/settlement/Continue never pays again. Rules/content v5 and policy `g2-4a-v5`; schema/save/replay unchanged; previous identity rejected, no migration. Evidence and convention provenance: `docs/evidence/g2-3/RECONCILIATION.md`.
 
-- `combineItems` and `equipItem` are atomic. Two inventory components become one new item ID; only the nine supported recipes are legal. Three equipment slots, deterministic upgrade transfer, overflow return and sale return remain authoritative in Match. Tristana growth sums into an upgrade survivor; selling destroys that unit's growth and anomaly binding.
+- `combineItems` and `equipItem` are atomic. Two inventory components become one new item ID; only the nine supported recipes are legal. Three equipment slots, deterministic upgrade transfer, overflow return and sale return remain authoritative in Match. Tristana growth sums into an upgrade survivor; selling destroys that instance's growth. v26 R5 retains the seat's `anomalySelection`; sale only detaches the current `anomalyBinding`, which restores to one eligible copy of the same champion (see the R5 contract below).
 - Choice is a real phase; all ordinary commands reject until it resolves. Choices validate ID/generation. Seven-way component choices consume no RNG; augment three-way offers consume three words; anomaly single offers consume one word, with1G rerolls excluding only the previous offer. Target binding precedes offers. Confirmation is free. Upgrades migrate bindings.
 - Choice may carry a finished Combat snapshot during post-PvE rewards, and `returnPhase` distinguishes preparation from settlement. Restore verifies it against the scheduled timing (supply always returns settlement) and rejects forged return phases. Rendering must refresh on every transition out of Combat, including Combat→choice. A supply round has no Combat: selecting its component atomically settles income and XP. No early Continue can bypass rewards.
 - Shop, choice, reward and battle-seed streams are independent. Successful Start consumes one battle-seed word and freezes a separate Combat RNG. A random component consumes one reward word. Other command/choice/settlement operations consume no words unless explicitly specified by R4.
@@ -955,6 +997,8 @@ D1–D8 按推荐 A 签署；公共签名、失败枚举和 shared-deferred 调�
 
 
 ## P7 共享选秀规则 API（2026-10-15）
+
+2026-10-29 10:55 用户批准的英雄固定构成覆盖旧每槽费用概率，数值见 [S13_RULES_GAP §11.2](S13_RULES_GAP.md#112-费用固定构成2026-10-29-1055-用户批准替换-p7-每槽费用概率)。`createCarousel(pool, roundId, rng)`、恢复、授予、自动选取的签名与失败枚举保持不变；9 槽均为 1 星，库存不足按最近费用／同距离低费优先回退，范围 1–6；总余量不足 9 返回 `pool-exhausted`，原 pool/rng 引用和空事件保留。27 个随机词及装备消费位置保持不变。`CAROUSEL_COST_ODDS` 为旧 server-entry 名称兼容别名，现在指向 `CAROUSEL_COST_POLICY`（固定张数、普通／六费组概率与抽取语义），不得再当作按槽基点表。领域内 `carouselCostCounts(stage:number,groupWord:number):readonly number[]` 返回费用 1–6 的只读名额，stage≥2、groupWord 为 uint32，非法参数抛 `RangeError('invalid-carousel-composition')`；该函数不推进 RNG，也不扩展可玩日程。规则 revision 已升，外层纪元与内容摘要等待 Claude 统一录制，详见 [交付报告](CAROUSEL_COMPOSITION_20261029.md)。
 
 玩法/证据/分布以 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀规则2026-10-15) 为唯一数值来源，联机调用见 MULTIPLAYER_CONTRACT §21。本节接口从 server-entry 导出；服务器接线仍由 G1 完成。所有对象为 JSON 数据；输入不变、失败返回原对象、零事件、RNG 不推进。
 
@@ -1255,7 +1299,7 @@ CHOICE_SKIP_OPTION = '@skip'
 
 - `UnitDefinition.formSwap?: true`。`resolveUnitForm(definition, team, location, board?)` 和 `getUnitForm(unit)` 返回 `'melee' | 'ranged' | null`：本方部署区离敌方最近的两排是近战，后两排是远程；备战席和普通英雄为 null。用户已定：开战时按站位定形态，战斗中不切换。
 - `CombatUnit.form?`：Codex 在开战快照里按 `getUnitForm` 填写并据此选那套属性和技能；回放单位视图带 `form`。
-- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；本批Sion/Forge仅在Combat入口由spawnCombatUnit生成，不进入准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
+- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；Sion/Forge在准备期由readItemSummons投影为可移动棋盘单位，在Combat入口由spawnCombatUnit创建隔离战斗实体，不进入永久准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
 
 ### 5 物品
 
@@ -1330,19 +1374,21 @@ the latter is captured from the owning seat by snapshotForBattle.
 adds own-side earned receipts up to that cap. No combat payout is spendable
 until the existing settlement transaction commits it.
 
-### G2-4b WIP — movable portal summon
+### 可移动准备期召唤物（含赛恩，2026-10-29）
 
-`readItemSummons(state:MatchState):ItemSummonOrigin[]` derives owner-visible
-preparation summons from equipped portals. `moveItemSummon(state,itemInstanceId,
-cell:HexCell):MatchCommandResult` persists a portal's desired cell in the seat
-mechanic `g24ItemPositions`; it accepts only an unlocked live preparation,
-owned active summon and unoccupied friendly cell. Failures return unchanged
-state, no event/RNG: wrong-phase, unknown-unit, outside-deployment-zone, occupied.
-Success emits seatMechanicChanged. Ordinary hero movement into a projected cell
-makes the summon relocate on next projection; a full half omits it. No permanent
-unit or population is minted. Frozen solo inputs and two-sided snapshots capture
-positions; restore rejects invalid/future item identities or frozen/current
-position disagreement. UI/server command dispatch adapters are not implemented.
+`readItemSummons(state: MatchState): readonly MovableSummon[]` 为只读棋盘投影；包括传送门虚空生物、杰斯熔炉和黑色玫瑰赛恩。它可用于公开阵容查询；显示及命令阶段由 `isSummonPreparation(state): boolean` 判断：`preparation` 或 `choice.kind='augment' && returnPhase='preparation'`。`MovableSummon.kind` 新增 `'sion'`，字段仍为 `{kind, ownerId, itemInstanceId, unit}`。
+
+赛恩准备期（用户决定，历史证据边界见 [实施报告](SION_PREPARATION_REPORT.md)）：当前有效阵容达到黑玫三档立即显示一只赛恩。准备期与战斗编译共用 `projectStrategyMembership(state: CombatStrategyInputs, definitions?: Readonly<Record<string, TraitDefinition>>, context?: TraitProjectionContext)`：先投影镜厅、R3复制体，再计装备纹章、临时成员来源，并通过同一个 `r3Traits` 统计成员与档位；返回投影后的 `state / projection / traits` 及编译所需的 `hall / r3 / teamups`，不修改原阵容或消耗资源/RNG。非法成员来源或context回合不符沿用 `RangeError`，不是Match命令的新reason。准备期召唤物也使用该投影的占格，复制体及镜厅变化不会再导致“准备期未显示、开战才出现赛恩”。
+
+以下为**项目约定**，不声称已由14.24研究确认：默认己方前排中格 `(3,4)`；不占人口/备战席；不可出售/装备；公开棋盘显示方式与虚空生物、熔炉一致。默认格占用时沿用行列扫描找空格。拖动使用 `moveItemSummon(state, 'g23-sion', cell): MatchCommandResult`，只允许本席部署区的整数空格。`g23-sion` 是席位位置键，存于 `seatMechanics.seat.g24ItemPositions`，**整局保留**；不把它解析为装备实例，也不随命名成员出售/合星、回合切换或羁绊降档而清除。降档隐藏、再达标恢复所存位置；保存格被英雄占用时找最近空格，不覆写原保存格。熔炉保存格、赛恩、默认熔炉、传送门依次放置；整个半场没有空格时沿用不生成重叠投影的约定。
+
+强化选择窗口：本分支保证 `choice.kind='augment' && returnPhase='preparation'` 时赛恩可拖动。普通英雄在强化选择期间上下棋盘的解锁由 D2 分支 `claude/v26-d2-brb` 提供，合并后共用同一备战窗口；本分支不另改普通英雄操作策略。
+
+失败仍为 `wrong-phase / unknown-unit / outside-deployment-zone / occupied`，保持原 state、无事件和 RNG 消耗；淘汰、锁定阵容、非备战选择及 masterwork-upgrade 窗口拒绝。成功仅发 `seatMechanicChanged{key:'g24ItemPositions'}`，不花金币、不占人口/备战席、不进共享池、不参与合星。赛恩不是永久资产，用其投影 id 走普通出售、装备、备战席部署命令返回 `unknown-unit`，不能借此交易或穿戴。
+
+冻结输入及 `PlayerBattleSnapshot.itemSummonPositions` 带上席位位置键；`snapshot.units` 仍禁止塞入赛恩资产。编译把位置冻结为 `StrategyUnitSnapshot.summonCell`，双边战斗按席位坐标再镜像。PvP单侧 `projectG23Summons` **始终传 `compiled.traits`**，与Combat及恢复校验一致：纹章激活的赛恩先于默认熔炉占格，不能等Combat补召唤后再找空格。Combat 沿用一只战斗实体、一次 `unitSpawned` 和初始 `bindingChanged`，不重复召唤；结束后战斗实体留在回放，下一备战期重建满状态投影且保留站位。服务器与2D/3D只传显示及移动意图；不算阈值、属性或战斗结果。
+
+`G23_SUMMON_POLICY.sion.preparationVersion='sion-preparation-v1'` 已纳入完整内容/loot摘要；赛恩战斗数值不变。按本次用户要求，生成身份常量、全局v25纪元及历史fixture由Claude统一重录，此分支不运行 `--write`。
 
 
 ## G2-4B 辅助装锻造器预演合同（2026-10-17）
@@ -1732,3 +1778,36 @@ G4 出生修订 `augment-pool-batch5-g4-v25-spawn-1`：内部 `castB5Voidcaller(
 - `validateCarryGolem(state: MatchState): void` 在离线与共享恢复入口执行：核对持有者、唯一单位、推导星级、四张获取收据、固定装备位置与7条连续资源来源事实；魔像坐标必须为默认棋盘己方部署区内无重叠的整数格。从资源流起点独立累计装备获取、合成、消耗品替换产生的分配，核对每次连续序号及最终 `nextItemSerial`，不依赖收据或当前装备ID反推起始值。无持有者的残留单位/收据同样拒绝。对象、JSON、规范文本及传入房间 authority 的恢复均检查；失败为 `RangeError('Invalid carry golem authority')`，沿各恢复入口原有错误封装；不修补缺失凭证。
 - 存活伤害沿用训练师魔像政策：附赠魔像不进入 `countsG23SurvivorDamage` 的伤害人数，10英雄加魔像全存活时 `opposingSurvivors=10`，正常进入 `applyRoundSettlement`，不修改伤害上限。`applyG23Radiant(state, newItemIds?)` 的全量与后续新增装备转换均跳过魔像固定套装；消耗品拒绝原子保留state与空事件，精工候选查询返回空列表。普通英雄的同款装备仍正常转换。
 - 正式 `StarLevel` 类型可表达4，但 `getUnitStats`、`resolveAbility` 和资源结构检查仅允许carry-golem的正式四星，普通英雄仍一至三星；既有战斗临时四星规则不变。无新增历史事实或保存节，内容身份脚本重算，旧epoch不重录。研究状态及取整/装备/人口政策详见 `S13_RULES_GAP.md` P-B5-83。
+
+
+## v26 R5 — 出售后保留异变（2026-10-29 用户批准）
+
+此条与 [R1/R3/R4a/R5 统一合同](V26_ANOMALY_R1_R3_R4A.md) 一起覆盖 M5 的“出售销毁异变”。4-6 共用一次75秒准备时钟，待选期间全部禁售、部署和移动放行；确认后可卖，资格按下文保留。首次免费报价计入前12项去重，第13项起只排上一项。R2 首次目标锁定、R6 字符串 ID 升序默认目标及 P-B5-81 保持现状。
+
+```ts
+interface AnomalySelection {
+  readonly definitionId: string;          // 已选择的异变
+  readonly championDefinitionId: string;  // 确认当时的英雄定义
+  readonly choiceId: string;
+  readonly boundRound: number;            // 原获得轮，恢复不更新
+}
+// MatchState / toPrivateSeatView(state)
+readonly anomalySelection: AnomalySelection | null;
+readonly anomalyBinding: AnomalyBinding | null; // 当前真实持有实例；无可用持有者必须为 null
+```
+
+选择事务同时写入唯一 schedule receipt、`anomalySelection`、原生绑定及资源事实 `{kind:'anomaly-selected',choiceId,unitId,sequence,roundId}`。事实中的 unitId 和选择收据的 unitId 是历史身份，可指向后来卖出的实例；当前 `anomalyBinding.unitId` 只可指向己方实体或进入未知的原实体托管。资格本身不含 unitId，不借悬空绑定保留效果。恢复不重新开启选择、不更换异变、不扣金币、不推进 RNG、不分配新选择身份。
+
+现持有者保持优先权，上场/下场和移动不抢占；合星按原 survivor 迁移。持有者出售、移除或永久变成另一英雄后，规则在当前可用的同英雄副本中按字符串 unitId 升序绑定**一个**实例，不按星级或站位重新排序。没有候选则休眠。仅原生异变限制为一份；便携异常作为 P-B5-81 已批准的独立复制物品照常生效。当轮轮盘卡维持原先的准备期结算边界，待归位和合星后才参与恢复；托管未入位的卡不抢占已有持有者。`isEligibleAnomalyTarget(state, unit, offers?, purpose?)` 统一拒绝未结算轮盘卡、已有 anomalySelection 或 anomalyBinding、非己方/未知定义/锻造器；timeout 另排全部 catalog summon。`readAnomalyTargetIds`、手动选择、刷新、确认和超时选目标共用此谓词。`selectAnomalyTarget` 对轮盘收据尚未准备期结算的目标返回 `invalid-target`，即使该卡已入位；失败保留原 state、零事件、零 RNG 消耗，收据结算后可正常选择。
+
+终极英雄恢复还须实体三星一费，等待与晋升都按最初的三次真实结算期限，空持有者期间不重开时钟；进入未知只离场/归来一次，出售已归来实体后重获同英雄沿用归来效果。`d14.phase='retired'` 表示上一实例退出；原资格及期限仍在，再获合格实例可恢复。Tristana 等实例成长继续在出售时删除；Headhunter 的原生累计击杀沿原 boundRound 的席位账本延续，便携异常仍独立按 itemId 累计。单场计数器沿原规则每场重建。
+
+`buyUnit`/`buySharedUnit`、掉落领取、机制/强化奖励、复制器、轮盘准备期归位、延迟合星及独立 ownership 引擎共用规则恢复。现有命令签名和失败 reason 枚举不变（如 `bench-full`、`purchased-slot`、`stale-shop`、`wrong-phase`、`item-restricted`）；失败保持原 state/pool、零事件、零资源/RNG 消耗。完整入口表见 [R5 交接](V26_ANOMALY_R5.md)。
+
+新增事件 `anomalyRestored: {definitionId,unitId,choiceId,boundRound}`；`anomalyTransferred` 继续表示实例迁移，`anomalyRemoved` 表示当前绑定解除，不再表示资格销毁。选择初次获得仍发 `choiceSelected`。恢复若使便携异常持有者成为原生持有者，原物品退库存并发 `itemsReturned`，后续装备预览/提交都返回 `item-restricted`。不重发双刀流装备、贪财金币或 Another Anomaly 复制物品；原收据身份不变。
+
+`toPrivateSeatView(state)` 白名单公开本人资格四字段；对手 `toPublicBoard` 与双方 `snapshotForBattle` 仍只公开当前实体效果，不公开休眠资格或待确认报价。战斗输入冻结当前真实绑定。`lockMatchCombatRoster(state)` 原签名不变，内部 `multiplayer.combatAnomaly={binding,provenancePrefixLength}` 冻结当时场上原生持有者（没有则 null）；战斗中出售备战席导致的恢复只影响未来战斗，本场 Headhunter 结算用冻结身份。结算解除锁定时移除此内部字段。
+
+`restoreMatch` / `serializeMatch` 重放已认证出生、出售、移除、变形、合星和唯一选择事实，比对资格、单一绑定、冻结输入及 D14 原期限；`restoreSharedOrbSnapshot` / `restoreCarouselSeat` 补做同一历史装备/异变路径校验。无法从候选资格字段自行授权一名新英雄，也不可信任悬空 unitId 或把绑定随意挪给另一副本。历史装备折叠按候选选择收据重建 `definitionId`，因此不能单独认证异变定义。从目录 4-6 起（含删除报价历史的空席），两个联机入口都必须带独立 `AugmentHistoryAuthority`。`restoreCarouselSeat` 对无强化历史的多人席，只要带有资格、绑定、选择收据、`anomaly-selected` 或报价历史，同样要求该句柄，候选把 `round` 改小也不能跳过。缺句柄为 `Invalid augment history: missing independent server authority`，句柄与候选不一致为 `server facts/state mismatch`。对象与 JSON 相同。同步改写 selection、binding、选择收据定义（以及最后一条报价）必须拒绝。
+
+合并身份统一为 rules `s13-g2-3-v26-neutrals-1424` / content `s13-14.24b-g2-3-v26-neutrals-1424`；CONTENT=`fnv1a32-utf16:038b00ca`，LOOT=`fnv1a32-utf16:9af7b4d0`，已纳入 R1/R3/R4a/R5 与待选禁售策略。schema/save/replay/command 仍为 12/8/8/7，NET=5；旧纪元不迁移。固定证据另按统一 v26 身份重录；不改已发布证据，不执行 `--write`。

@@ -7,7 +7,7 @@ import { shopOfferCost, starryUpgrade } from './shop-augments';
 import { xpPurchaseCost } from './augment-xp';
 import { MATCH_RULES } from './match-rules';
 
-export const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose'||id==='shop-glitch'||id==='reroll-transfer'||id==='at-what-cost';
+export const shopOwner=(id:string)=>id==='brb'||Boolean(AUGMENT_SHOP[id])||id==='dual-purpose'||id==='shop-glitch'||id==='reroll-transfer'||id==='at-what-cost';
 export const point=(s:MatchState):ShopHistoryPoint=>({round:s.round,level:s.level,xp:s.xp,resourcePrefix:s.resourceProvenance.entries.length,owners:s.augments.map(a=>a.choiceId),gold:s.gold,mechanicPrefix:s.seatMechanics?.receipts.length??0,lootPrefix:s.m8.loot.receipts.length,schedulePrefix:s.scheduleReceipts.length,economyPrefix:s.roundResults.length});
 const append=(s:MatchState,e:ShopHistoryEntry):MatchState=>s.shopHistory?{...s,shopHistory:{...s.shopHistory,entries:[...s.shopHistory.entries,e]}}:s;
 export function recordShopAcquisition(before:MatchState,after:MatchState):MatchState {

@@ -3,6 +3,8 @@ import type { LootPayload } from './m8/contracts';
 import type { LootView, RevealedDropView } from './m8/ui-contracts';
 import { compareLootFreezeSlots, lootChoiceId } from './loot-identity';
 import { hasPendingLootCapacity, unresolvedLootChoices } from './loot-runtime';
+import { carryByDrop } from './pve-loot-carry';
+import { getCatalogRoundById } from './round-selectors';
 import { freezeContent } from './content/freeze';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { unclaimedOrbPlans } from './orb-claim';
@@ -41,6 +43,22 @@ export function readLootView(state: Readonly<MatchState>): LootView {
     else if (progress?.status === 'forfeited' && loot.earnedEvidence.some(e=>e.dropId===drop.dropId)) drops.push({...identity,status:'forfeited',receiptId:null,allowedActions:[],reason:state.multiplayer?.status==='eliminated'?'eliminated-forfeited':'timeout-forfeited'});
     else if (progress?.status === 'retained-terminal') drops.push({ ...identity, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' });
   }
+  const carried = carryByDrop(state as MatchState);
+  if (carried.size) {
+    const visible = new Set(drops.map(drop => drop.dropId));
+    for (const drop of state.m8.loot.frozen.rounds.flatMap(round => round.encounterPlan.drops).filter(drop => carried.has(drop.dropId)).sort(compareLootFreezeSlots)) {
+      const row = carried.get(drop.dropId)!;
+      const progress = loot.direct.find(value => value.dropId === drop.dropId);
+      const outstanding = progress?.status === 'carried' || progress?.status === 'revealed' || progress?.status === 'pending-capacity';
+      if (visible.has(drop.dropId) || getCatalogRoundById(row.deliverRoundId).ordinal > state.round || row.deliverRoundId !== roundId && !outstanding) continue;
+      const paid = loot.receipts.find(receipt => receipt.dropId === drop.dropId);
+      const identity = { orbId: drop.orbId, entryOrdinal: drop.entryOrdinal, dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: payloadView(paid ? paid.payload : drop.payload) };
+      if (progress?.status === 'granted' && paid) drops.push({ ...identity, status: 'granted', receiptId: progress.receiptId, allowedActions: [] });
+      else if (progress?.status === 'carried' || progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer ? 'awaiting-claim' : 'auto-grant-in-domain' });
+      else if (progress?.status === 'pending-capacity') drops.push({ ...identity, status: 'pending-capacity', receiptId: null, allowedActions: [], reason: 'bench-full' });
+      else if (progress?.status === 'retained-terminal') drops.push({ ...identity, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' });
+    }
+  }
   // Approved addendum: the earned loot pick that is the current PendingChoice (identity only).
   const current = state.phase === 'choice' ? state.pendingChoice : null;
   const descriptor = current && unresolvedLootChoices(state as MatchState).find(value => lootChoiceId(value.dropId) === current.choiceId);
@@ -54,7 +72,8 @@ export function readLootView(state: Readonly<MatchState>): LootView {
         : hasPendingLootCapacity(state as MatchState) ? 'pending-capacity'
           : unresolvedLootChoices(state as MatchState).length || state.roundResults.length !== state.round
             || state.roundResults.at(-1)?.round !== state.round ? 'unsettled-round' : null;
-  const revealedOrbs=(plan?.orbs??[]).flatMap(orb=>{
+  const carriedOrbIds = new Set(drops.filter(drop => carried.has(drop.dropId)).map(drop => drop.orbId));
+  const revealedOrbs=[...(plan?.orbs??[]), ...loot.frozen.rounds.flatMap(round => round.orbs).filter(orb => carriedOrbIds.has(orb.orbId) && !(plan?.orbs??[]).some(current => current.orbId === orb.orbId))].flatMap(orb=>{
     const visible=drops.filter(d=>d.orbId===orb.orbId);if(!visible.length)return [];
     const status=visible.every(d=>d.status==='granted')?'claimed' as const
       :visible.every(d=>d.status==='forfeited')?'forfeited' as const

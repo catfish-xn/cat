@@ -13,7 +13,7 @@ import { nextShopGlitchPreparationTime } from '../../simulation/augment-pool-bat
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStreamSteps, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStreamSteps, combineItems, createMatch, deployMatchUnit, equipItem, isAnomalyPreparationRound, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
@@ -21,14 +21,16 @@ import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { needsOpponentHp } from '../../simulation/augment-settlement-gold';
 import { settlementLevelUpHealth } from '../../simulation/augment-xp';
 import { explainedHp, liveHpAfterSettlement } from '../../simulation/player-hp';
+import { batch5Streak } from '../../simulation/augment-pool-batch5-progress';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
-  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
-  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders, pvpSettlementHpLost,
+  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { readOpeningEncounterView } from '../../server-entry';
@@ -37,7 +39,7 @@ import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type Liv
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type CarouselPickCommand, type LittleLegendId, type SeatKind } from '../protocol';
-import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_CONTACT_CELLS, carouselUnitPoint, carouselHome, carouselWalkContact, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
+import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_UNIT_PICK_RADIUS, carouselUnitPoint, carouselHome, carouselWalkContact, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
 import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
@@ -421,7 +423,7 @@ export class Room {
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
       return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, legend: spec.legend ?? seatLegend(spec.kind, index), connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
-        alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
+        streak: { kind: match.streak.kind, count: match.streak.count }, alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
       deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, pairingHistory: {}, opponentCandidates: {}, carousel: null, carouselLedger: [], battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
@@ -491,7 +493,7 @@ export class Room {
   /**
    * Phase and seat gate only; the rules decide everything else and a refusal changes nothing. A human seat a bot took
    * over refuses its player's commands until the player resumes (one controller at a time, B6). Fill-in bot seats have
-   * no session, so no player command reaches them; server-side callers may still drive them here directly.
+   * no session, so no player command reaches them; server-side callers may still drive them here directly. This is a trusted internal entry; transports use handlePlayer.
    */
   handle(seatId: string, command: SeatCommand): RoomCommandResult {
     if (this.deferDuringSettlement(() => { this.handle(seatId, command); })) return this.deferredResult();
@@ -499,6 +501,15 @@ export class Room {
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
     if (seat.controller === 'takeover') return { ok: false, reason: 'seat-controlled', state: seat.match };
     return this.apply(seat, command);
+  }
+
+  /** Untrusted player entry, shared by the network session and the in-browser room. Picks require physical contact. */
+  handlePlayer(seatId: string, command: SeatCommand): RoomCommandResult {
+    if (command.type === 'carousel-pick') {
+      const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+      return { ok: false, reason: seat ? 'wrong-phase' : 'unknown-seat', state: seat?.match ?? null };
+    }
+    return this.handle(seatId, command);
   }
 
   /**
@@ -696,7 +707,13 @@ export class Room {
           const proposal = [result.proposals.a, result.proposals.b].find(candidate => candidate.seatId === seatId);
           if (!proposal) return { ok: false, detail: `battle ${result.battleId} has no proposal for seat ${seatId}` };
           if (!proposal.settlementEligible) return { ok: false, detail: `seat ${seatId} proposal is not eligible` };
-          const problem = queue(seatId, { kind: 'receipt', receipt: buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length), damage: proposal.damage });
+          const opposite = [result.proposals.a, result.proposals.b].find(candidate => candidate.seatId !== seatId);
+          const opponent = opposite && byId.get(opposite.seatId);
+          if (!opposite || (!envelope.mirrorOf && !opponent)) return { ok: false, detail: `seat ${seatId}: missing opponent damage proposal` };
+          let damageDealt: number;
+          try { damageDealt = envelope.mirrorOf ? 0 : pvpSettlementHpLost(opponent!.match, opposite); }
+          catch { return { ok: false, detail: `seat ${seatId}: invalid opponent damage proposal` }; }
+          const problem = queue(seatId, { kind: 'receipt', receipt: buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length, damageDealt), damage: proposal.damage });
           if (problem) return { ok: false, detail: problem };
         }
       } else {
@@ -772,6 +789,15 @@ export class Room {
       if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
       seats.push(settled(seat.match, outcome.damage, null, []));
     }
+    // Both rules commits exist now. Cross-check before the room's post-damage hooks.
+    for (const result of results) if (result.kind === 'two-sided') for (const seatId of result.participants) {
+      const seat = seats.find(s => s.seatId === seatId)!;
+      const envelope = envelopes.get(result.battleId)!;
+      const opponent = seats.find(s => s.seatId === (result.battle.a.seatId === seatId ? result.battle.b.seatId : result.battle.a.seatId));
+      const lost = envelope.mirrorOf ? 0 : opponent?.match.roundResults.find(r => r.round === state.round)?.hpLost;
+      if (lost === undefined || seat.receipt?.damageDealt !== lost || seat.match.multiplayer?.receipts.at(-1)?.damageDealt !== lost
+        || seat.match.roundResults.at(-1)?.damageDealt !== lost) return { ok: false, detail: `seat ${seatId}: damageDealt disagrees with opponent hpLost` };
+    }
     seats = [...recordRoomBattleFacts(seats, results)];
     // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
     const unbalanced = conservationProblem(pool, seats.map(seat => seat.match));
@@ -810,7 +836,7 @@ export class Room {
       basis: { poolRevision: state.poolRevision, seatRevisions: Object.fromEntries(alive.map(seat => [seat.seatId, seat.seatRevision])) } } };
   }
 
-  /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
+  /** Publishes the staged round once: HP and streak from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
   commitSettlement(settlement: RoundSettlement): CommitResult {
     if (!this.publishingSettlement && this.deferDuringSettlement(() => { this.commitSettlement(settlement); })) return { ok: false, reason: 'settlement-pending', state: this.current };
     const state = this.current;
@@ -830,6 +856,7 @@ export class Room {
       const rank = ranks.get(seat.seatId) ?? null;
       const stillAlive = outcome.hpAfter > 0;
       return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1,
+        streak: { kind: outcome.match.streak.kind, count: outcome.match.streak.count },
         serverEvents: { seatRevision: seat.seatRevision + 1, events: outcome.events } };
     });
     this.replace({ ...state, seats: recordRoomSettlementTable(seats), pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
@@ -879,9 +906,15 @@ export class Room {
     this.continueRound();
   }
 
-  /** After round entry (and its carousel, when it had one): the round's own choice phase, or what follows it. */
+  /** Round entry: augment/anomaly choices share their preparation clock; other rounds keep their own choice phase. */
   private continueRound(): void {
     if (this.opensAugmentPreparation()) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.augmentPreparationMs ?? AUGMENT_PREPARATION_MS); }
+    if (this.aliveSeats().every(seat => isAnomalyPreparationRound(seat.match)
+      && (seat.match.phase === 'preparation' || seat.match.phase === 'choice' && seat.match.pendingChoice?.returnPhase === 'preparation'))) {
+      this.resolvePendingOnEntry();
+      const duration = this.options.preparationMs;
+      return this.setPhase('preparation', duration === PER_ROUND_PREPARATION ? getRoundPreparationMs(this.aliveSeats()[0].match.roundDefinitionId) : duration);
+    }
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
   }
@@ -1021,8 +1054,8 @@ export class Room {
   /**
    * A little-legend walk (legend-motion.ts). Changes no rule state and answers only whether it was taken. On the carousel
    * the room plans it from where it left this legend (home on the seat's cradle), only for a released seat
-   * (including after its pick). Active walks pick on contact; a unit click aims at its future position (the same grant as a
-   * click, decided on the carousel as it is then): the first legend to reach a unit takes it. A board walk is display
+   * (including after its pick). Ground paths stay fixed and can pick any first contact, including after stopping.
+   * A 2D card request alone aims at that card's future position and grants on contact with it. A board walk is display
    * only: the room bounds it and relays it to the room, so an opponent can draw that legend.
    */
   walkLegend(seatId: string, request: LegendWalkRequest): { readonly ok: true; readonly walk: LegendWalk } | { readonly ok: false; readonly reason: string } {
@@ -1050,30 +1083,29 @@ export class Room {
     if (alreadyPicked && request.slot !== undefined) return { ok: false, reason: 'already-picked' };
     const index = this.current.seats.findIndex(candidate => candidate.seatId === seatId);
     const from = this.legendWalks.position(seatId, 'carousel', now) ?? carouselHome(index, this.current.seats.length);
+    let to: CellPoint, targetSlot: number | null = null;
     if (request.slot === undefined) {
       if (!request.to) return { ok: false, reason: 'invalid-walk' };
-      const to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
-      const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: null };
-      const contacts = alreadyPicked ? [] : rules.listCarouselSlots(room.state)
-        .flatMap((slot, index, slots) => {
-          if (slot.pickedBy !== null) return [];
-          const at = carouselWalkContact(walk, index, slots.length, room.startedAt);
-          return at === null ? [] : [{ slot: slot.slot, at }];
-        }).sort((a, b) => a.at - b.at || a.slot - b.slot);
-      this.legendWalks.start(walk);
-      const carouselId = room.state.id;
-      this.legendWalks.contacts(walk, contacts.map(contact => ({ at: contact.at,
-        arrive: () => this.arriveCarousel(seatId, carouselId, contact.slot, walk) })));
-      return { ok: true, walk };
+      to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
+    } else {
+      // 2D card accessibility: the server plans one straight interception, never a client-side chase.
+      const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
+      if (target < 0 || slots[target]!.pickedBy !== null) return { ok: false, reason: 'slot-taken' };
+      to = interceptCarouselUnit(from, target, slots.length, elapsed).to;
+      targetSlot = request.slot;
     }
-    const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
-    if (target < 0 || slots[target]!.pickedBy !== null) return { ok: false, reason: 'slot-taken' };
-    const meet = interceptCarouselUnit(from, target, slots.length, elapsed);
-    const walk: LegendWalk = { seatId, scene: 'carousel', from, to: meet.to, startedAt: now, arriveAt: now + meet.ms, slot: request.slot };
-    const carouselId = room.state.id;
-    const contactAt = carouselWalkContact(walk, target, slots.length, room.startedAt) ?? walk.arriveAt;
+    const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: targetSlot };
+    // Ground walks touch any free unit; 2D card walks target that card. Both include standing contact. Replacing the walk cancels these timers.
+    const contacts = alreadyPicked ? [] : rules.listCarouselSlots(room.state)
+      .flatMap((slot, index, slots) => {
+        if (slot.pickedBy !== null || (targetSlot !== null && slot.slot !== targetSlot)) return [];
+        const at = carouselWalkContact(walk, index, slots.length, room.startedAt, room.startedAt + room.state.deadlineMs);
+        return at === null ? [] : [{ slot: slot.slot, at }];
+      }).sort((a, b) => a.at - b.at || a.slot - b.slot);
     this.legendWalks.start(walk);
-    this.legendWalks.contacts(walk, [{ at: contactAt, arrive: () => this.arriveCarousel(seatId, carouselId, walk.slot!, walk) }]);
+    const carouselId = room.state.id;
+    this.legendWalks.contacts(walk, contacts.map(contact => ({ at: contact.at,
+      arrive: () => this.arriveCarousel(seatId, carouselId, contact.slot, walk) })));
     return { ok: true, walk };
   }
   /** A legend reached its unit: the pick as a click on the carousel as it is now. Taken by someone else first: it stays there. */
@@ -1087,7 +1119,7 @@ export class Room {
     if (index < 0 || slots[index]!.pickedBy !== null) return;
     const now = this.options.clock.now(), position = this.legendWalks.position(seatId, 'carousel', now)!;
     const unit = carouselUnitPoint(index, slots.length, now - room.startedAt);
-    if (Math.hypot(position.x - unit.x, position.y - unit.y) > CAROUSEL_CONTACT_CELLS + 1e-6) return;
+    if (Math.hypot(position.x - unit.x, position.y - unit.y) > CAROUSEL_UNIT_PICK_RADIUS + 1e-6) return;
     const result = this.pickCarousel(seat, { type: 'carousel-pick', carouselId, revision: room.state.revision, slot });
     if (result.ok) this.legendWalks.stop(seatId, 'carousel');
   }
@@ -1868,8 +1900,9 @@ export class Room {
     let seats = advanced.map((seat): SeatState => {
       if (!before.has(seat.seatId)) return seat;
       const rank = eliminated.get(seat.seatId);
-      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
-      return { ...seat, hp: 0, alive: false, rank, eliminatedRound: seat.match.round };
+      const streak = { kind: seat.match.streak.kind, count: seat.match.streak.count };
+      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, streak, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
+      return { ...seat, hp: 0, streak, alive: false, rank, eliminatedRound: seat.match.round };
     });
     const unknown = [...eliminated.keys(), ...survivors.keys()].find(seatId => !before.has(seatId));
     // Cross-check against the rules' own seat states: a previously alive seat is out (HP gone or marked eliminated)
@@ -2012,7 +2045,9 @@ export class Room {
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
-    const synced = this.syncedSeatHp(next);
+    const hpSynced = this.syncedSeatHp(next);
+    if (typeof hpSynced === 'string') return this.fail({ kind: 'invalid-results', detail: hpSynced });
+    const synced = this.syncedSeatStreak(hpSynced);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
     let recorded: RoomState;
     try { recorded = recordRoomPublication(this.current, synced); }
@@ -2060,6 +2095,31 @@ export class Room {
       if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
       changed = true;
       return { ...seat, hp: after.playerHp };
+    });
+    const bad = seats.find(seat => typeof seat === 'string');
+    if (typeof bad === 'string') return bad;
+    return changed ? { ...next, seats: seats as SeatState[] } : next;
+  }
+
+  /** Publishes a non-settlement streak change only when a newly acquired Called Shot explains it. The rules own the
+   * value; an already owned augment cannot explain another rewrite. Live battle results wait for the room commit. */
+  private syncedSeatStreak(next: RoomState): RoomState | string {
+    if (next.seats === this.current.seats) return next;
+    let changed = false;
+    const seats = next.seats.map(seat => {
+      const prev = this.current.seats.find(candidate => candidate.seatId === seat.seatId);
+      if (!prev || seat.match === prev.match || seat.streak.kind !== prev.streak.kind || seat.streak.count !== prev.streak.count || !seat.alive) return seat;
+      const before = prev.match, after = seat.match;
+      if (after.streak.kind === before.streak.kind && after.streak.count === before.streak.count) return seat;
+      if (after.roundResults.length !== before.roundResults.length) return seat;
+      const acquired = after.augments.some(augment => augment.definitionId === 'called-shot' && augment.acquiredRound === after.round
+        && !before.augments.some(owned => owned.choiceId === augment.choiceId));
+      const explained = acquired ? batch5Streak(after, after.round, before.streak) : before.streak;
+      if (after.streak.kind !== explained.kind || after.streak.count !== explained.count) return `seat ${seat.seatId}: rules streak has no explained source`;
+      // As with HP, a seat already settled by the rules must not publish that battle result through a later command.
+      if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
+      changed = true;
+      return { ...seat, streak: { kind: after.streak.kind, count: after.streak.count } };
     });
     const bad = seats.find(seat => typeof seat === 'string');
     if (typeof bad === 'string') return bad;
@@ -2203,7 +2263,7 @@ function conservationProblem(pool: SharedPoolState, states: readonly MatchState[
 }
 
 /** §11.3 receipt: a trusted hand-over built from the frozen envelope and the rules' own proposal, never from a client. */
-function buildReceipt(roomId: string, envelope: BattleInput, proposal: SideProposal, combatTicks: number, combatEventCount: number): RoundSettlementReceipt {
+function buildReceipt(roomId: string, envelope: BattleInput, proposal: SideProposal, combatTicks: number, combatEventCount: number, damageDealt: number): RoundSettlementReceipt {
   const own = envelope.seats.find(s => s.seatId === proposal.seatId)!.state;
   const opponent = (envelope.mirrorOf ?? envelope.seats.find(s => s.seatId !== proposal.seatId))?.state;
   return {
@@ -2212,7 +2272,7 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
     battleId: envelope.battleId, seatId: proposal.seatId,
     round: envelope.round, roundId: envelope.roundId,
     settlementEligible: proposal.settlementEligible, result: proposal.result,
-    damage: proposal.damage, baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors,
+    damage: proposal.damage, damageDealt, baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors,
     growth: proposal.growth, combatTicks, combatEventCount,
     // G23-SERVER-FACTS: the rules' own battle facts, forwarded verbatim (a mirror copy has none and never settles).
     ...(proposal.g23Facts ? { g23Facts: proposal.g23Facts } : {}),

@@ -200,7 +200,7 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     const pending = new Promise<ModelLease>(done => { resolve = done; });
     vi.spyOn(core.ModelCache.prototype, 'load').mockReturnValue(pending);
     await mount(); await publish([piece({ alive: false })]);
-    // The only piece root holds its ring and the team pawn while the model is pending.
+    // The only piece root holds the team pawn while the model is pending.
     const roots = scene.children.filter(object => object instanceof three.Group && !!object.getObjectByName('render3d-pawn'));
     expect(roots).toHaveLength(1); const unit = roots[0] as Group;
     expect(unit).toBeDefined(); expect(unit.visible).toBe(false);
@@ -228,7 +228,9 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
 
   it('uses the fallback countdown for a pawn with no model assets', async () => {
     await mount(null); await publish([piece()]);
-    const unit = scene.children.find(object => object instanceof three.Group && object.children.length === 2) as Group;
+    const unit = scene.getObjectByName('render3d-pawn')!.parent as Group;
+    expect(unit).toBeDefined(); expect(unit.children).toHaveLength(1); // body only, no persistent foot ring
+    unit.traverse(child => expect((child as import('three').Mesh).geometry).not.toBeInstanceOf(three.RingGeometry));
     await publish([piece({ alive: false })]); advance(1000);
     expect(unit.visible).toBe(true);
     advance(250); expect(unit.visible).toBe(false);

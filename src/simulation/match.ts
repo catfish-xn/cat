@@ -1,4 +1,9 @@
+import { drawAnomalyOffer, isEligibleAnomalyTarget, recordAnomalyOffer } from './anomaly-choice';
+import { reconcileMatchAnomaly } from './anomaly-ownership';
+import { overEncumberedActive, completeOverEncumbered, reconcileOverEncumbered } from './over-encumbered';
+import { combatBenchProjection, isOverflowUnit } from './bench-capacity';
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
+import { brbShopDisabled } from './augment-brb';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { transformPandorasBench, transformRecombobulator } from './augment-pool-batch5-r6';
 import { grantCarryGolem, growCarryGolem } from './augment-pool-batch5-g6';
@@ -17,7 +22,8 @@ import { recordAugmentOfferLevel } from './augment-history';
 import { enterH13ItemRound } from './augment-pool-batch5-h13-entry';
 import { salvageSoldItems } from './augment-pool-batch5-h13-salvage';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
-import { soloShopOrb } from './shop-orbs';
+import { soloRewardOrb } from './shop-orbs';
+import { applyRestartMission } from './restart-mission';
 import { applyHeadStart, headStartShopDisabled, sellPreparedUnit } from './augment-pool-batch5-h12';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
 import { batch5Streak, drainBatch5Gold } from './augment-pool-batch5-progress';
@@ -55,7 +61,7 @@ export type { TrainerGolemEmblems } from './trainer-golems';
 export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, readOpeningForgeProgress, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
 export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
-import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
+import { acquireD14, reconcileD14 } from './d14-runtime';
 import { pruneForgePositions } from './forge-positions';
 import { grantConsumableCopy } from './consumables';
 import { grantPveRemover } from './pve-remover';
@@ -90,7 +96,7 @@ import { FINAL_ROUND } from './round-schedule';
 import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
-import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
+import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity, dueCarriedDirectDrops, revealDueCarriedChoices } from './loot-runtime';
 import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, validateCombatStart, type CombatState } from './combat';
@@ -120,7 +126,7 @@ import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round
 import { planReward } from './rewards';
 import { CONTENT_DIGEST, canonicalContent } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
-import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
+import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { generateChoices } from './choices';
 import { resolveAugmentTier, augmentCandidates, drawAugmentCard, augmentNodeOf, isTraitTailoredNode, fieldedTraitSnapshot, recordedOfferFilter, type AugmentOfferFilter } from './augment-offers';
 export { deriveAugmentTier, resolveAugmentTier, augmentRerollLimit } from './augment-offers';
@@ -137,9 +143,10 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  const over=completeOverEncumbered(state); state=over.state; events=[...events,...over.events];
   state=applyAngerIssues(state);
   const inventory=drainBatch5Inventory(state);events=[...events,...mechanicGrantEvents(state,inventory)];state=inventory;
-  const d14Events:MatchEvent[]=[];state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
+  const d14Events:MatchEvent[]=[];state=reconcileMatchAnomaly(state,d14Events);state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   if(state.augments.some(a=>a.definitionId==='anger-issues')){const temp=planTemporaryEquipment(state);state=temp.state;events=[...events,...temp.events];}
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
@@ -163,19 +170,25 @@ export function recordAugmentSettlementTable(state: MatchState, seats: readonly 
   return stampMatchEvents(recorded, mechanicGrantEvents(state, recorded));
 }
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
-  // Choice-phase trading can consume/sell the currently selected anomaly target.
-  // Follow an upgrade survivor, or ask for a new target without offering a free reroll.
+  // Choice-phase acquisitions can consume the selected anomaly target in an upgrade.
+  // Follow its survivor without offering a free reroll; sales are refused while pending.
   const choice = state.pendingChoice;
   const choiceEvents: MatchEvent[] = [];
-  if (state.multiplayer && state.phase === 'choice' && choice?.kind === 'anomaly' && choice.targetId) {
+  if (state.phase === 'choice' && choice?.kind === 'anomaly' && choice.targetId) {
     let targetId: string | null = choice.targetId;
     for (const event of events) if (event.type === 'unitUpgraded' && event.consumedIds.includes(targetId)) targetId = event.survivorId;
-    if (!state.preparation.units.some(unit => unit.id === targetId && unit.team === 'player')) targetId = null;
+    if (!isEligibleAnomalyTarget(state, state.preparation.units.find(unit => unit.id === targetId))) targetId = null;
     if (targetId !== choice.targetId) {
       const pendingChoice = { ...choice, targetId, step: targetId ? 'offer' as const : 'target' as const, generation: choice.generation + 1 };
       state = { ...state, pendingChoice };
       choiceEvents.push({type:'choiceOpened',choice:pendingChoice});
     }
+  }
+  // Before the first quote, an empty roster returns to the existing recruitment gate.
+  // A quoted offer must instead remain pending, so recruitment can never grant a free replacement draw.
+  if (state.phase === 'choice' && choice?.kind === 'anomaly' && !choice.offers.length
+    && !state.preparation.units.some(unit => unit.team === 'player')) {
+    state = { ...state, phase: 'preparation', pendingChoice: null } as MatchState;
   }
   // Multiplayer trading can upgrade Rumble while its popup is folded away.
   if (state.phase === 'choice' && choice?.kind === 'armory' && choice.choiceId.startsWith('g23:junker:')) {
@@ -194,7 +207,8 @@ function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): Matc
 }
 /** Only the uncompleted anomaly node may defer choice while its roster is empty. */
 export function needsAnomalyRecruitment(state: MatchState): boolean {
-  return !(state.multiplayer && state.round > FINAL_ROUND) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')
+  return !(state.multiplayer && state.round > FINAL_ROUND) && (state.phase === 'preparation' || state.phase === 'choice' && state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.step === 'target')
+    && !state.preparation.units.some(unit => unit.team === 'player')
     && getRoundSchedule(state.round).some(event => event.kind === 'anomaly' && !state.scheduleReceipts.some(receipt => receipt.eventId === event.id)
       && !state.multiplayer?.forfeitedChoices.includes(event.id));
 }
@@ -273,7 +287,7 @@ function execute_createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization 
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
     consumables: [], nextConsumableSerial: 1, reforgeState:{state:(seed^CONSUMABLE_RULES.seedXor)>>>0,draws:0},
-    items: [], nextItemSerial: 1, augments: [], anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
+    items: [], nextItemSerial: 1, augments: [], anomalySelection: null, anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
     choiceRngState: (seed ^ 0x9e3779b9) >>> 0, rewardRngState: (seed ^ 0x85ebca6b) >>> 0, nextMatchEventSeq: 0,
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
     level: MATCH_RULES.initialLevel, xp: OPENING_INITIAL_STATE.xp, playerHp: MATCH_RULES.initialHp, nextUnitSerial: OPENING_INITIAL_STATE.nextUnitSeq,
@@ -293,10 +307,18 @@ function execute_createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization 
 export function isAugmentPreparationChoice(state: MatchState): boolean {
   return state.phase === 'choice' && state.pendingChoice?.kind === 'augment' && state.pendingChoice.returnPhase === 'preparation';
 }
-function isBoardEditablePhase(state: MatchState): boolean { return state.phase === 'preparation' || isAugmentPreparationChoice(state); }
+/** The shared planning clock belongs to the scheduled round, including empty seats/other planning popups. */
+export function isAnomalyPreparationRound(state: MatchState): boolean {
+  return state.round <= FINAL_ROUND && !state.roundResults.some(result => result.round === state.round)
+    && getRoundSchedule(state.round).some(event => event.kind === 'anomaly');
+}
+export function isAnomalyPreparationChoice(state: MatchState): boolean {
+  return state.phase === 'choice' && state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.returnPhase === 'preparation';
+}
+function isBoardEditablePhase(state: MatchState): boolean { return state.phase === 'preparation' || isAugmentPreparationChoice(state) || isAnomalyPreparationChoice(state); }
 export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
-  if (!canOperateMatch(state)) return 'wrong-phase';
+  if (!canOperateMatch(state) && !(isAugmentPreparationChoice(state) && state.multiplayer?.status !== 'eliminated')) return 'wrong-phase';
   if ((!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && (target?.kind === 'board'
     || state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board'))) return 'wrong-phase';
   const planned = deployUnit(state.preparation, unitId, target);
@@ -328,11 +350,16 @@ function execute_lockMatchCombatRoster(state: MatchState): MatchCommandResult {
   if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation'
     || state.m8.round.kind !== 'pvp' || state.pendingChoice !== null) return fail(state, 'wrong-phase');
   if (state.multiplayer.combatRosterLocked) return { ok: true, state, events: [] };
-  return { ok: true, state: { ...state, multiplayer: { ...state.multiplayer, combatRosterLocked: true } }, events: [] };
+  const binding=state.anomalyBinding&&state.preparation.units.some(u=>u.id===state.anomalyBinding!.unitId&&u.location.kind==='board')?state.anomalyBinding:null;
+  return { ok: true, state: { ...state, multiplayer: { ...state.multiplayer, combatRosterLocked: true,
+    combatAnomaly:{binding,provenancePrefixLength:state.resourceProvenance.entries.length} } }, events: [] };
 }
 /** Server preparation-deadline hook. Never called by the offline Start path. */
 function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
-  if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation' || isCombatRosterLocked(state)) return fail(state, 'wrong-phase');
+  if (!state.multiplayer || state.multiplayer.status !== 'active' || !(state.phase === 'preparation' || isAnomalyPreparationChoice(state)) || isCombatRosterLocked(state)) return fail(state, 'wrong-phase');
+  return autoDeployFormation(state);
+}
+function autoDeployFormation(state: MatchState): MatchCommandResult {
   const cap = getDeploymentCap(state), count = getPlayerDeploymentCount(state.preparation);
   if (count > cap) return fail(state, 'population-cap');
   const board = state.preparation.board, zone = board.deploymentZones.player;
@@ -341,8 +368,11 @@ function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
   const rows = Array.from({ length: zone.lastRow - zone.firstRow + 1 }, (_, offset) => zone.firstRow + offset);
   if (board.deploymentZones.enemy.firstRow > zone.lastRow) rows.reverse();
   const cells = rows.flatMap(row => columns.map(col => ({ col, row })));
+  const priorityId = state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.offers.some(id => id === 'ultimate-hero' || id === 'into-the-unknown')
+    ? state.pendingChoice.targetId : null;
   const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench' && !isAnvil(unit.definitionId))
-    .sort((a, b) => (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
+    .sort((a, b) => Number(b.id === priorityId) - Number(a.id === priorityId)
+      || (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
   let next: MatchState = state;
   const events: MatchEvent[] = [];
   for (const unit of reserves) {
@@ -357,7 +387,9 @@ function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
   return { ok: true, state: next, events };
 }
 function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
+  if (overEncumberedActive(state)) return fail(state, 'bench-full');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -374,16 +406,21 @@ function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneratio
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const reinforced = applyReinfourcement(state, recordShopBuy(state,purchased,slotIndex), unitLootPolicy);
-  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(reinforced.state) : { state: reinforced.state, events: [] };
+  const entered = !state.pendingChoice && needsAnomalyRecruitment(state) ? enterScheduledEvents(reinforced.state) : { state: reinforced.state, events: [] };
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
   return acceptEquipment(gifted, [...plan.events, ...reinforced.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 function execute_openAnvil(state:MatchState,unitId:string):MatchCommandResult {
   const result=planOpenAnvil(state,unitId);
-  return result.ok?acceptEquipment(result.state,result.events):result;
+  if(!result.ok)return result;
+  const freedBench=state.preparation.units.some(u=>u.id===unitId&&u.location.kind==='bench');
+  const over=reconcileOverEncumbered(result.state,freedBench);
+  return acceptEquipment(over.state,[...result.events,...over.events]);
 }
 function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (state.pendingChoice?.kind === 'anomaly') return fail(state, 'wrong-phase');
   if(state.preparation.units.some(u=>u.id===unitId&&isAnvil(u.definitionId)))return openAnvil(state,unitId);
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -391,8 +428,9 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
   if (!isSellableUnit(unit.definitionId) || noScoutLockedUnits(state).has(unitId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
-  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
+  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench' && !isOverflowUnit(state.preparation,unitId)) return fail(state, 'wrong-phase');
   let { state: sold, events } = sellPreparedUnit(state, unit, capacity);
+  const over=reconcileOverEncumbered(sold,unit.location.kind==='bench'); sold=over.state; events.push(...over.events);
   const returnedState=sold; sold=salvageSale(state,sold,unitId);
   sold=salvageSoldItems(state,sold,unitId);
   events.unshift(...mechanicGrantEvents(returnedState,sold));
@@ -401,6 +439,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   return acceptEquipment(sold,events);
 }
 function execute_setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (typeof locked !== 'boolean') return fail(state, 'invalid-choice');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -408,6 +447,7 @@ function execute_setShopLock(state: MatchState, locked: boolean, expectedGenerat
   return accept(recordShopLock(state,{ ...state, shop: { ...state.shop, locked } }));
 }
 function execute_rerollShop(state: MatchState): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
@@ -418,11 +458,13 @@ function execute_rerollShop(state: MatchState): MatchCommandResult {
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 function execute_buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if(state.sharedPool&&state.augments.some(a=>a.definitionId==='dual-purpose'))return fail(state,'invalid-mechanic-state');
   return buyXpWithShopRefresh(state,unitLootPolicy);
 }
 /** Shared-pool transactions supply their authoritative shop generator; direct shared Dual Purpose is refused. */
 export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult {
+  if (brbShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= augmentLevelCap(state.augments)) return fail(state, 'max-level');
   const cost = xpPurchaseCost(state.augments, state.round);
@@ -452,13 +494,16 @@ export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPo
   return accept(gifted,mechanicGrantEvents(state,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  return combatStartFailure(state, false);
+}
+function combatStartFailure(state: MatchState, placeholderPvp: boolean): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return 'wrong-phase';
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return 'wrong-phase';
   if (needsAnomalyRecruitment(state)) return 'missing-player';
   if (getPlayerDeploymentCount(state.preparation) > getDeploymentCap(state)) return 'population-cap';
-  const reason = validateCombatStart(state.preparation);
+  const reason = validateCombatStart(combatBenchProjection(state.preparation));
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
   return reason === 'missing-player' ? undefined : reason;
 }
@@ -506,6 +551,8 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   let committed=combat?grantPveRemover(commitG23Settlement(observed,facts!,unitLootPolicy,hookEvents)):observed;
   committed=drainLootExplosionRewards(committed);
   const contested=drainContestedGold(committed);hookEvents.push(...mechanicGrantEvents(committed,contested));committed=contested;
+  // Unlock stage-end capacity before deferred merges and queued-orb retries.
+  const over=reconcileOverEncumbered(committed); committed=over.state; hookEvents.push(...over.events);
   if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
     const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;
   }
@@ -528,18 +575,21 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const revealed=revealMatchLoot(initial,combat), events=[...revealed.events];
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
-  const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
+  const opened=revealDueCarriedChoices({...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null});
+  const before=opened;
   let terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&countsG23SurvivorDamage(unit)).length}).hpAfter===0;
   if(terminal&&melCanSave(before,g23SoloFacts(before,combat),0)&&!before.m8.round.isFinal)terminal=false;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
+  const carried=state.multiplayer?{state,events:[] as MatchEvent[],upgradeEvents:[] as import('./unit-types').UnitUpgradedEvent[]}:grantDirectLoot(state,terminal,unitLootPolicy,dueCarriedDirectDrops(state));
+  state=carried.state; events.push(...carried.events);
   if (terminal) for (const descriptor of unresolvedLootChoices(state)) {
     const fallback=grantLootChoice(state,descriptor,descriptor.terminalFallbackDefinitionId,'terminal-fallback');
     state=fallback.state;events.push(...fallback.events);
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
-  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
+  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),[...granted.upgradeEvents,...carried.upgradeEvents]),unitLootPolicy,events));
   const afterUpgrades=settledPlan.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainP2Gifts(settledPlan.state,unitLootPolicy) : settledPlan.state;
   let settled=pruneForgePositions(reconcileD14(afterUpgrades,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
@@ -552,8 +602,13 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   const entered=enterScheduledEvents(settled,'after');
   return {state:entered.state,events:[...events,...entered.events]};
 }
-function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
-  const reason = matchStartFailure(state); if (reason) return fail(state, reason);
+function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchCommandResult {
+  const reason = combatStartFailure(state, placeholderPvp); if (reason) return fail(state, reason);
+  // The offline Start button is its preparation deadline. BRB uses the same
+  // deterministic fill as the room; player shop restrictions never gate it.
+  const deployment = !state.multiplayer && brbShopDisabled(state) ? autoDeployFormation(state) : null;
+  if (deployment && !deployment.ok) return deployment;
+  if (deployment?.ok) state = deployment.state;
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
@@ -562,7 +617,7 @@ function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPo
     && state.augments.some(a=>a.definitionId==='contested'||a.definitionId==='void-swarm')
     ? recordAugmentPvpRoster(state, started.state.combatId!, [{...historyRoster(state),seatId:'solo',index:0,hp:state.playerHp,alive:true,rank:1,eliminatedRound:null}], null) : state;
   const next = withCombat({ ...combatStart, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
-  return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
+  return accept(next.state, [...(deployment?.ok ? deployment.events : []), ...toLedgerEvents(started.events), ...next.events]);
 }
 /** Streaming PvE: only open/advance combat here. Terminal loot, income and pool reservations
  * are committed later in fixed seat order by settleCombatStream. No wall clock enters rules. */
@@ -620,10 +675,10 @@ function execute_settleMatchCombatStream(state: MatchState, terminal: CombatStat
   const settled = withCombat(base, terminal, unitLootPolicy);
   return accept(settled.state, settled.events);
 }
-function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
+function execute_stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy, placeholderPvp = false): MatchStep {
   if (state.phase !== 'combat' || state.pendingCombatTerminal) return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
-  if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
+  if (state.multiplayer && state.m8.round.kind === 'pvp' && !placeholderPvp) return {state,events:[]};
   const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
   const live=sampled===state.combat?sampled:{...sampled,bankSamples:[...(state.combat.bankSamples??[]),
     {tick:state.combat.tick,team:'player' as const,liveGold:state.gold}]};
@@ -651,6 +706,8 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  const overPlan=reconcileOverEncumbered({...state,round});
+  const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
   state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round})));
@@ -671,12 +728,12 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   let prepared = growCarryGolem(growTrainerGolem(enterOpeningCrabs(carousel.state)));
   const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
   prepared = portfolioEvents.state;
-  const openingEvents: MatchEvent[] = [...transformed.events, ...portfolioEvents.events];
+  const openingEvents: MatchEvent[] = [...overEntry.events, ...transformed.events, ...portfolioEvents.events];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
   const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
-  const gifted=drained.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='glorious-evolution'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'||a.definitionId==='expected-unexpectedness'||a.definitionId==='prismatic-pipeline'))?drainP2Gifts(drained):drained;
+  const gifted=drained.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='glorious-evolution'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'||a.definitionId==='expected-unexpectedness'||a.definitionId==='prismatic-pipeline'))?drainP2Gifts(drained):drained;
   const shopEntry=enterShopAugmentRound(gifted),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
   prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {
@@ -709,6 +766,8 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const overPlan=reconcileOverEncumbered({...state,round:definition.ordinal});
+    const overEntry=stampMatchEvents(overPlan.state,overPlan.events); state=overEntry.state;
     state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
     state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal})));
     const transformPlan = transformPandorasBench(state, transformStock);
@@ -725,9 +784,9 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
     const entry=growCarryGolem(drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))));
-    const gifted=entry.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
+    const gifted=entry.augments.some(a=>(a.definitionId==='brb'||a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
-    return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
+    return accepted.ok?{...accepted,events:[...overEntry.events,...transformed.events,...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
@@ -803,13 +862,11 @@ function execute_selectAnomalyTarget(state: MatchState, choiceId: string, genera
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
-  if (!target || target.team !== 'player' || isAnvil(target.definitionId) || state.anomalyBinding !== null) return fail(state, 'invalid-target');
-  if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
-  const draw = state.multiplayer && choice.offers.length
-    ? {offers:choice.offers,choiceRngState:state.choiceRngState}
-    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id=>r2AnomalyAllowed(state.augments,id)&&eligibleD14Target(target,id)), state.choiceRngState);
-  return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
-    [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
+  if (!isEligibleAnomalyTarget(state, target, choice.offers)) return fail(state, 'invalid-target');
+  const retained = choice.offers.length > 0;
+  const draw = retained ? { offers: choice.offers, choiceRngState: state.choiceRngState } : drawAnomalyOffer(state, target!);
+  const next = { ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer' as const, targetId: unitId, offers: draw.offers, generation: generation + 1 } } as MatchState;
+  return accept(retained ? next : recordAnomalyOffer(state, next), [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
 /** Base slot rerolls and any shared extra uses; missing legacy slot arguments fail closed until UI/server wiring. */
 function execute_rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number, augmentBlocked: readonly string[] = []): MatchCommandResult {
@@ -841,16 +898,13 @@ function execute_rerollAnomaly(state: MatchState, choiceId: string, generation: 
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
-  if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
+  if (!isEligibleAnomalyTarget(state, state.preparation.units.find(unit => unit.id === choice.targetId), choice.offers)) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
-  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => r2AnomalyAllowed(state.augments,id)&&!choice.offers.includes(id)&&eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),id)), state.choiceRngState);
-  return accept(recordShopAnomalyReroll(state,{ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
-    pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } }),
+  const draw = drawAnomalyOffer(state, state.preparation.units.find(u => u.id === choice.targetId)!);
+  const next = recordAnomalyOffer(state, { ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
+    pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } });
+  return accept(recordShopAnomalyReroll(state, next),
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);
-}
-function generateAnomalyOffer(ids: readonly string[], rngState: number): { offers: string[]; choiceRngState: number } {
-  const pool = [...ids].sort(), draw = nextRandom(rngState);
-  return { offers: [pool[Math.floor(draw.word * pool.length / 0x100000000)]], choiceRngState: draw.state };
 }
 
 const multiplayerFail = (state: MatchState, reason: MultiplayerFailure): MultiplayerCommandResult => ({ok:false,state,reason});
@@ -884,12 +938,21 @@ function execute_forfeitPendingChoice(state: MatchState, expectedRound: number,
   try {
     let current: MatchState = state;
     const events: MatchEvent[] = [];
-    if (choice.kind === 'anomaly' && choice.step === 'target') {
-      const target = state.preparation.units.filter(u=>u.team==='player'&&choice.offers.every(id=>eligibleD14Target(u,id))).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
-      if (!target) return accept({...state,phase:choice.returnPhase ?? 'preparation',combat:null,pendingChoice:null,
+    // R1 deadline deployment must precede D14's board-only eligibility check, also for direct domain callers.
+    if (choice.kind === 'anomaly') {
+      const deployed = execute_autoDeployToCap(current);
+      if (!deployed.ok) return multiplayerFail(state, deployed.reason);
+      current = deployed.state; events.push(...deployed.events);
+    }
+    if (choice.kind === 'anomaly' && (choice.step === 'target'
+      || !isEligibleAnomalyTarget(current, current.preparation.units.find(u => u.id === choice.targetId), choice.offers, 'timeout'))) {
+      const target = current.preparation.units.filter(u => isEligibleAnomalyTarget(current, u, choice.offers, 'timeout')).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)[0];
+      if (!target) return accept({...current,phase:choice.returnPhase ?? 'preparation',combat:null,pendingChoice:null,
         multiplayer:{...state.multiplayer,forfeitedChoices:[...new Set([...state.multiplayer.forfeitedChoices,choice.eventId])]}} as MatchState,
-        [{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'empty-anomaly'}]);
-      const selected = selectAnomalyTarget(current,choice.choiceId,choice.generation,target.id);
+        [...events,{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'empty-anomaly'}]);
+      // Reuse an existing quote when timeout replaces an ineligible locked summon. No RNG or fee.
+      const targeting = choice.step === 'target' ? current : { ...current, pendingChoice: { ...choice, step: 'target' as const, targetId: null } } as MatchState;
+      const selected = selectAnomalyTarget(targeting,choice.choiceId,choice.generation,target.id);
       if (!selected.ok) return multiplayerFail(state,selected.reason);
       current=selected.state; events.push(...selected.events);
     }
@@ -922,7 +985,7 @@ function execute_claimOrb(state: MatchState, orbId: string, expectedRound: numbe
     const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
     if(!result.ok)return result;
     // Queue acceptance must not run resource/equipment/choice hooks during combat.
-    if(isCombatRosterLocked(state)||result.state===state&&soloShopOrb(state,orbId)&&!result.events.length)return result;
+    if(isCombatRosterLocked(state)||result.state===state&&soloRewardOrb(state,orbId)&&!result.events.length)return result;
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);
@@ -992,8 +1055,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
   if(choice.kind==='anomaly'&&!r2AnomalyAllowed(state.augments,definitionId))return fail(state,'invalid-choice');
-  if(choice.kind==='anomaly'&&!eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),definitionId))return fail(state,'invalid-target');
-  if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
+  if (choice.kind === 'anomaly' && !isEligibleAnomalyTarget(state, state.preparation.units.find(u => u.id === choice.targetId), [definitionId])) return fail(state, 'invalid-target');
   if(choice.kind==='augment'&&!h12SelectionAllowed(state,definitionId))return fail(state,'invalid-choice');
   const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
   const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
@@ -1009,7 +1071,9 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     items: granted?.ok ? granted.state.items : state.items,
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
+    anomalySelection: choice.kind === 'anomaly' ? { definitionId, championDefinitionId: state.preparation.units.find(u => u.id === choice.targetId)!.definitionId, choiceId, boundRound: state.round } : state.anomalySelection,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  if(choice.kind==='augment'&&definitionId==='brb'&&selected.shop.locked)selected={...selected,shop:{...selected.shop,locked:false}};
   if(choice.kind==='augment'&&definitionId==='max-cap'&&selected.level===7)selected={...selected,xp:0};
   const beforeHistoryAcquisition = selected;
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
@@ -1018,6 +1082,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...mechanicGrantEvents(beforeHistoryAcquisition,selected)];
   if(choice.kind==='augment'){
+    if (definitionId === 'restart-mission') { const restarted = applyRestartMission(selected); selected = restarted.state; events.push(...restarted.events); }
     if(definitionId==='head-start'){const sold=applyHeadStart(selected);selected=sold.state;events.push(...sold.events);}
     if (definitionId === 'recombobulator') { const transformed = transformRecombobulator(selected, unitLootPolicy); selected = transformed.state; events.push(...transformed.events); }
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
@@ -1033,7 +1098,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
-  if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
+  if(choice.kind==='anomaly'){selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'anomaly-selected',choiceId,unitId:choice.targetId!})};selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
   if(choice.kind==='augment'){const granted=grantCarryGolem(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment')selected=recordShopAcquisition(state,selected);
@@ -1058,7 +1123,7 @@ function execute_claimG23Reward(state:MatchState,atomId:string,definitionId:stri
  return granted.ok?accept(granted.state,granted.events):fail(state,granted.reason);
 }
 
-export {readItemSummons,moveItemSummon} from './g2-4b-voidspawn';
+export {readItemSummons,moveItemSummon,isSummonPreparation} from './g2-4b-voidspawn';
 
 export function deployMatchUnit(...args: Parameters<typeof execute_deployMatchUnit>): ReturnType<typeof execute_deployMatchUnit> {
   return traceHistoryCommand('deployMatchUnit', args, () => execute_deployMatchUnit(...args));
@@ -1088,12 +1153,25 @@ export function buyXp(...args: Parameters<typeof execute_buyXp>): ReturnType<typ
   return traceHistoryCommand('buyXp', args, () => execute_buyXp(...args));
 }
 
-export function startMatchCombat(...args: Parameters<typeof execute_startMatchCombat>): ReturnType<typeof execute_startMatchCombat> {
+export function startMatchCombat(...args: [MatchState, UnitLootPolicy?]): MatchCommandResult {
   return traceHistoryCommand('startMatchCombat', args, () => execute_startMatchCombat(...args));
 }
 
-export function stepMatch(...args: Parameters<typeof execute_stepMatch>): ReturnType<typeof execute_stepMatch> {
+/** Trusted local placeholder resolver only; never dispatched from a player's wire command.
+ * Keeps multiplayer ownership/pool/history, but runs the existing single-seat combat engine without D0 damage. */
+export function startPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('startMatchCombat', [state, unitLootPolicy], () => execute_startMatchCombat(state, unitLootPolicy, true));
+}
+
+export function stepMatch(...args: [MatchState, UnitLootPolicy?]): MatchStep {
   return traceHistoryCommand('stepMatch', args, () => execute_stepMatch(...args));
+}
+
+/** Companion to startPlaceholderMatchCombat; ordinary stepMatch keeps its PvP no-op guard. */
+export function stepPlaceholderMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.combatRosterLocked || state.m8.round.kind !== 'pvp' || state.phase !== 'combat') return fail(state, 'wrong-phase');
+  return traceHistoryCommand('stepMatch', [state, unitLootPolicy], () => ({ok:true as const,...execute_stepMatch(state, unitLootPolicy, true)}));
 }
 
 export function nextRound(...args: Parameters<typeof execute_nextRound>): ReturnType<typeof execute_nextRound> {
@@ -1187,3 +1265,5 @@ export function settleMatchCombatStream(...args: Parameters<typeof execute_settl
 export function createMatch(...args: Parameters<typeof execute_createMatch>): MatchState {
   return initializeAugmentTrace(execute_createMatch(...args));
 }
+
+export { readAnomalyTargetIds, readAnomalyOfferHistory, isEligibleAnomalyTarget } from './anomaly-choice';

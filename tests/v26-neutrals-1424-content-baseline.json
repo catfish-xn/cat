@@ -1,0 +1,28 @@
+{
+  "parentEpoch": "v25-online-rules",
+  "contentDigest": "fnv1a32-utf16:9dc693dd",
+  "lootReplayDigest": "fnv1a32-utf16:a56b2c4a",
+  "rulesVersion": "s13-g2-3-v26-neutrals-1424",
+  "contentVersion": "s13-14.24b-g2-3-v26-neutrals-1424",
+  "schemaVersion": 12,
+  "saveFormatVersion": 8,
+  "replayFormatVersion": 8,
+  "commandProtocolVersion": 7,
+  "netProtocolVersion": 6,
+  "previousContentDigest": "fnv1a32-utf16:f671ab88",
+  "previousLootReplayDigest": "fnv1a32-utf16:36ebfac2",
+  "traceHashes": {
+    "state": "1d38d154b80001b81398b0518faccc1e539089b0335cab8fa44a11e97b8ada4d",
+    "events": "2fc5afcb0a7d6165ca37b4f08d4ec42b21662bf8ee29b369fadfa78f880ba663",
+    "rng": "6a51e9d56c70d5c04656107c3820eecd28fedfaf4bd83f84a3770c3c8e6245fa"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 274,
+    "events": 147,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:0453f70d",
+    "eventHash": "fnv1a32-utf16:08a8b268"
+  },
+  "reason": "v26 integrates the 14.24 neutral restore, targeting-p0/p1, melee pathing, anomaly-ui and d5-register on v25; schema/save/replay/command 12/8/8/7, NET6. Old identities are rejected without migration."
+}

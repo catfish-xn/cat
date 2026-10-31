@@ -14,6 +14,8 @@ import { readyMatch } from './match-helpers';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-replay';
 
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -21,7 +23,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   let callbacks: Map<number, FrameRequestCallback>, now: number, nextId: number;
   let loads: MockInstance<EffectLibrary['load']>, consumes: MockInstance<UnitActionState['consume']>;
   let textureDisposed: ReturnType<typeof vi.fn<() => void>>;
-  type DebugPiece = { root: import('three').Object3D; state: UnitActionState; mixer: UnitAnimationMixer; lease: ModelLease; disposed: boolean };
+  type DebugPiece = { root: import('three').Object3D; state: UnitActionState; mixer: UnitAnimationMixer; lease: ModelLease; disposed: boolean; form: 'front' | 'back' };
   const debug = () => (window as unknown as { __render3d: { pieces: Map<string, DebugPiece>; scene: import('three').Scene;
     ltk: ReturnType<typeof createLtkRuntime> } }).__render3d;
   const frame: BoardFrame = { rows: 4, columns: 4, hexRadius: 34, origin: { x: 50, y: 50 }, bench: [], dragging: null, fighting: true,
@@ -40,7 +42,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
       effects: { flash: { path: 'flash.json' } },
       actionEffects: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])) };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -58,8 +60,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     const start: TimelineCue = { system: 'start', event: 'cast-start', delay: 0, duration: 1 };
     const hit: TimelineCue = { system: 'hit', event: 'hit', delay: .1, duration: 1 };
     const flight: TimelineCue = { system: 'flight', event: 'projectile', delay: .05, duration: .3, travelSeconds: .3 };
-    const ltkIndex = { version: 1, systems: { start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
-      assets: { 'synthetic.tex': 'texture.png' }, skills: { vander: [start, hit], kogmaw: [start, flight, hit] } };
+    const ltkIndex = { version: 1, systems: { ...Object.fromEntries(Object.values(BATCH1_TIMELINES).flatMap(cues => cues.map(c => [c.system, c.system + '.json']))), start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
+      assets: { 'synthetic.tex': 'texture.png' }, skills: { ...BATCH1_TIMELINES, vander: [start, hit], kogmaw: [start, flight, hit] } };
     vi.doMock('../src/rendering/three-mode/asset-reader', () => ({ createAssetReader: () => ({
       readJson: async (url: string) => url.includes('/vfx-ltk/') ? url.endsWith('/index.json') ? ltkIndex : syntheticSystem()
         : ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
@@ -78,6 +80,121 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   afterEach(() => {
     mounted?.dispose(); mounted = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals();
     vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/asset-reader'); vi.resetModules();
+  });
+
+  it('batch 1: catches up Zeri attack forms, plays only her third-attack beam and resets at the round boundary', async () => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'zeri' },
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm('zeri'); await flush(); listener.frame(board); loads.mockClear();
+    const events = [1, 2, 10].map((tick, i) => ({ type: 'attack', tick, eventSeq: i, attackerId: 'a', targetId: 'b' } as const));
+    const before = structuredClone(events); listener.events(events);
+    expect(debug().ltk.queued).toBe(2); expect(loads).not.toHaveBeenCalled();
+    await advance(250); await advance(30);
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['d160dfa9']);
+    expect(events).toEqual(before);
+    listener.frame({ ...board, fighting: false }); expect(debug().ltk.queued).toBe(0); expect(debug().ltk.active).toBe(0);
+    listener.frame(board); listener.events([{ ...events[0], eventSeq: 0 }]); await advance(250); await advance(30);
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['215abe6e']);
+  });
+
+  it.each(Object.keys(BATCH1_TIMELINES))('batch 1: sequence rollback preserves animation and death cleanup for %s', async champion => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
+    listener.events([cast(100)]);
+    const piece = debug().pieces.get('a')!, consume = vi.spyOn(piece.state, 'consume').mockClear();
+    const play = vi.spyOn(debug().ltk, 'play'), stop = vi.spyOn(debug().ltk, 'stopUnit');
+    const events = [attack(100), attack(1), cast(2), { type: 'death', unitId: 'a', tick: 3, eventSeq: 3 }] as DisplayCombatEvent[];
+    const before = structuredClone(events);
+    // Deliver separately so every rollback event is current for ordinary effect playback.
+    for (const event of events) listener.events([event]);
+    expect(consume.mock.calls.map(([event]) => event)).toEqual(events);
+    expect(piece.state.output.state).toBe('death');
+    expect(stop).toHaveBeenCalledExactlyOnceWith('a');
+    expect(play).not.toHaveBeenCalled();
+    expect(debug().ltk.queued).toBe(0); expect(debug().ltk.active).toBe(0);
+    expect(events).toEqual(before);
+  });
+
+  it('batch 1: interrupted casts suppress only batch 1 effects and keep other cast-index rotation', async () => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'vander' }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm('vander'); await flush(); listener.frame(board);
+    const play = vi.spyOn(debug().ltk, 'play');
+    listener.events([{ ...cast(1), completed: false } as DisplayCombatEvent]);
+    listener.events([cast(2)]);
+    expect(play.mock.calls.map(args => [args[0], args[3], args[4]])).toEqual([['vander', 0, 'cast'], ['vander', 1, 'cast']]);
+    listener.frame({ ...board, fighting: false, pieces: [{ ...board.pieces[0], definitionId: 'twitch' }] });
+    await debug().ltk.warm('twitch'); await flush();
+    listener.frame({ ...board, pieces: [{ ...board.pieces[0], definitionId: 'twitch' }] }); play.mockClear();
+    const piece = debug().pieces.get('a')!, consume = vi.spyOn(piece.state, 'consume').mockClear();
+    const interrupted = { ...cast(1), completed: false } as DisplayCombatEvent;
+    listener.events([interrupted]);
+    expect(consume).toHaveBeenCalledExactlyOnceWith(interrupted);
+    expect(play).not.toHaveBeenCalled(); expect(debug().ltk.queued).toBe(0);
+    listener.events([attack(2)]);
+    expect(play).toHaveBeenCalledWith('twitch', 'a', ['a'], 0, 'attack', undefined);
+  });
+
+  it('batch 1: Leona self buff releases its slots and explodes from status expiration before the animation filter', async () => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'leona' },
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm('leona'); await flush(); listener.frame(board); loads.mockClear();
+    listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]); await advance();
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['8d9a4ccc']);
+    listener.events([
+      { type: 'statusChanged', eventSeq: 2, tick: 61, targetId: 'a', kind: 'damage-reduction', effectiveMagnitudeBps: 0, reason: 'expired' },
+      { type: 'packetDamage', eventSeq: 3, tick: 61, sourceId: 'a', targetId: 'b', damageType: 'magic', hit: true, hpDamage: 10, absorbed: 0, critical: false, killingPacket: false },
+    ]);
+    expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(2); await advance();
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['dda108d2', '6f29051a']);
+    expect(loads).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('batch 1: Lux self/ally shield uses one form and no self projectile (self=%s)', async self => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'lux' },
+      { ...frame.pieces[0], id: 'b', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm('lux'); await flush(); listener.frame(board); loads.mockClear();
+    listener.events([{ ...cast(1), targetIds: [self ? 'a' : 'b'] } as DisplayCombatEvent]);
+    expect(debug().ltk.queued).toBe(self ? 1 : 2); await advance();
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual([self ? '44c9516a' : 'f2d605de']);
+    expect(loads).not.toHaveBeenCalled();
+  });
+
+  it('keeps the authoritative form while movement crosses deployment rows', async () => {
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'melee', y: -1000 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('front');
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'melee', y: 2000 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('front');
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], form: 'ranged', y: 130 }] }); await advance();
+    expect(debug().pieces.get('a')!.form).toBe('back');
+  });
+
+  it.each([false, true])('uses attack spacing through Mordekaiser cast endings (skill feel=%s)', async skillFeel => {
+    vi.stubGlobal('location', { search: skillFeel ? '?debug3d' : '?debug3d&skillfx=off' });
+    listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'mordekaiser' }] });
+    await flush();
+    const piece = debug().pieces.get('a')!;
+    expect(piece.lease.placeholder).toBe(false);
+    // Synthetic clips on the real renderer's mixer; no model files or WebGL context are required.
+    const swingClip = piece.lease.animations.find(c => c.name === 'attack')!;
+    swingClip.duration = 3;
+    piece.lease.animations.find(c => c.name === 'cast')!.duration = 2.6;
+    const completed: number[] = [];
+    const swing = piece.mixer.mixer.clipAction(swingClip);
+    for (const tick of mordekaiserAnimationReplay()) {
+      const previous = piece.state.output.state;
+      listener.events!(tick.events);
+      await advance(50);
+      if (tick.tick === 38) expect(piece.state.output.state).toBe('cast');
+      if (tick.tick === 75) {
+        expect(piece.state.output.playback?.clips).toEqual(['attack']);
+        expect(piece.state.output.playback!.durationSeconds).toBeLessThan(1.85);
+      }
+      if (previous === 'attack' && piece.state.output.state === 'idle') {
+        expect(swing.paused).toBe(true); expect(swing.time).toBeCloseTo(3);
+        completed.push(tick.tick);
+      }
+    }
+    expect(completed.length).toBeGreaterThanOrEqual(4);
   });
 
   it.each([
@@ -207,6 +324,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     listener.events!([attack(1)]); await advance(80);
     const oldAttack = original.mixer.clipAction(piece.lease.animations.find(clip => clip.name === 'attack')!);
     expect(oldAttack.isRunning()).toBe(true);
+    listener.events!([attack(11)]);
+    expect(piece.state.output.playback?.durationSeconds).toBe(0.45);
     if (reason === 'phase') { listener.frame({ ...frame, fighting: false }); listener.frame(frame); }
     if (reason === 'visibility') {
       listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], visible: false }] }); listener.frame(frame);
@@ -221,6 +340,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(piece.mixer).not.toBe(original); expect(oldAttack.isRunning()).toBe(false);
     expect(piece.state.output.state).toBe('idle'); expect(piece.state.output.revision).toBe(0);
     expect(piece.mixer.mixer.clipAction(piece.lease.animations[0]).isRunning()).toBe(true);
+    listener.events!([attack(1)]);
+    expect(piece.state.output.playback?.durationSeconds).toBe(1); // no cadence inherited from the old action
     const step = (tick: number): CombatViewEvent => ({ type: 'movement', tick, eventSeq: tick, unitId: 'a',
       from: { row: 0, col: 0 }, to: { row: 0, col: 1 } });
     listener.events!([step(2)]); const moving = piece.state.output;

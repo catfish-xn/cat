@@ -1,13 +1,13 @@
+import { usableBenchSlots } from './bench-capacity';
 /** Production adapter: Match/resourceProvenance remain the sole ownership authority.
  * The independent D3/D14 transaction engine is a reference harness, never a second live ledger. */
 import type { MatchState, MatchBase, MatchEvent } from './match-types';
 import type { Unit, UnitLocation } from './unit-types';
-import type { ItemInstance } from './strategy-types';
+import type { AnomalyBinding, ItemInstance } from './strategy-types';
 import { UNIT_DEFINITIONS } from './units';
 import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
 import { D14_POLICY } from './content/d14-anomalies';
 import { appendResourceProvenance } from './resource-provenance';
-import { traceBoundUnitIdentity } from './bound-unit-identity';
 import { isDeploymentCell } from './board';
 import { deploymentCapFor } from './deployment-cap';
 import { readG23Progress } from './g2-3-state';
@@ -46,7 +46,9 @@ export function acquireD14(state:MatchState):MatchState {
     temporaryEquipment:d14.held?state.temporaryEquipment.filter(i=>i.holderId!==unit.id):state.temporaryEquipment};
 }
 export function returnLocation(state:MatchState):UnitLocation|null {
-  for(let slot=0;slot<state.preparation.benchSize;slot++)if(!state.preparation.units.some(u=>u.team==='player'&&u.location.kind==='bench'&&u.location.slot===slot))return {kind:'bench',slot};
+  if(state.preparation.overflowUnitIds?.length)return null;
+  for(let slot=0;slot<usableBenchSlots(state.preparation);slot++)if(!state.preparation.units.some(u=>u.team==='player'&&u.location.kind==='bench'&&u.location.slot===slot))return {kind:'bench',slot};
+  if(state.preparation.usableBenchSlots!==undefined)return null;
   if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&countsTowardPopulation(u.definitionId)).length>=deploymentCapFor(state.level,readG23Progress(state)))return null;
   for(let row=0;row<state.preparation.board.rows;row++)for(let col=0;col<state.preparation.board.columns;col++){
     const cell={row,col};if(isDeploymentCell(state.preparation.board,'player',cell)&&!state.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.row===row&&u.location.cell.col===col))return {kind:'board',cell};
@@ -55,13 +57,15 @@ export function returnLocation(state:MatchState):UnitLocation|null {
 }
 /** Called after unique settlements/deferred merges and after unlocked resource commands. */
 export function reconcileD14(state:MatchState,events:MatchEvent[]=[]):MatchState {
-  const d=state.d14;if(!d||d.phase==='retired')return state;
+  const d=state.d14;if(!d)return state;
   const binding=state.anomalyBinding;
   if(!binding||binding.choiceId!==d.choiceId)return {...state,d14:{...d,phase:'retired',held:null}};
+  const resumed = d.phase === 'retired' ? { ...d, phase: (d.anomalyId === 'ultimate-hero' ? 'waiting' : 'returned') as D14Progress['phase'] } : d;
   let next=state;
   const unitId=binding.unitId;
-  if(d.unitId!==unitId)next={...next,d14:{...d,unitId}};
-  if(d.phase==='waiting'&&state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds){
+  if(resumed !== d) next={...next,d14:resumed};
+  if(d.unitId!==unitId)next={...next,d14:{...resumed,unitId}};
+  if(resumed.phase==='waiting'&&state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds){
     events.push({type:'d14Promoted',unitId,choiceId:d.choiceId});return {...next,d14:{...d,unitId,phase:'promoted'}};
   }
   if(d.phase==='absent'&&d.held&&state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds&&state.phase!=='combat'&&!state.multiplayer?.combatRosterLocked){
@@ -83,10 +87,10 @@ export function d14HeldAtPrefix(state:MatchState,prefix:number){
   const id=selected.unitId;
   return {heldUnitIds:[id],heldItemIds:selected.heldItems.map(i=>i.id)};
 }
-export function d14CertificateAtCombat(state:MatchState):D14CombatCertificate|undefined{
+export function d14CertificateAtCombat(state:MatchState,binding:AnomalyBinding|null):D14CombatCertificate|undefined{
   const d=state.d14;if(!d||d.selectionPrefixLength>=state.combatInputBasis!.provenancePrefixLength)return undefined;
   const before=state.roundResults.filter(r=>r.round<state.round).length;
-  const unitId=traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,state.combatInputBasis!.provenancePrefixLength));
+  const unitId=binding?.choiceId===d.choiceId?binding.unitId:null;
   if(!unitId)return undefined;
   if(d.anomalyId==='ultimate-hero')return {unitId,anomalyId:d.anomalyId,phase:before>=d.atOrdinal+D14_POLICY.numRounds?'promoted':'waiting'};
   return state.resourceProvenance.entries.slice(0,state.combatInputBasis!.provenancePrefixLength).some(e=>e.kind==='d14-returned')?{unitId,anomalyId:d.anomalyId,phase:'returned'}:undefined;

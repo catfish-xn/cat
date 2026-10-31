@@ -14,7 +14,8 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, type Envelope } from './model-fit';
+import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { updateModelGrounding } from './model-grounding';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
@@ -26,6 +27,7 @@ const STAR_SIZE = 12, STAR_GAP = 12;
 
 /** One unit as scouting may show it. */
 export interface ScoutUnit {
+  readonly nonCombat?: true;
   readonly definitionId: string; readonly starLevel: number; readonly effectiveStarLevel?: 4;
   readonly items: readonly string[]; readonly anomaly?: string; readonly summon?: true;
 }
@@ -49,6 +51,7 @@ function unitOf(raw: unknown): ScoutUnit | null {
   const source = raw as Record<string, unknown>, starLevel = int(source.starLevel);
   if (typeof source.definitionId !== 'string' || starLevel === null) return null;
   return { definitionId: source.definitionId, starLevel, items: strings(source.items),
+    ...(source.nonCombat === true ? {nonCombat:true as const}:{}),
     ...(source.effectiveStarLevel === 4 ? { effectiveStarLevel: 4 as const } : {}),
     ...(typeof source.anomaly === 'string' ? { anomaly: source.anomaly } : {}), ...(source.summon === true ? { summon: true as const } : {}) };
 }
@@ -97,6 +100,8 @@ export interface ScoutStageContext {
   readonly overhead: OverheadContext;
   /** Item icon URL (the 2D bundle's) for an item definition id; null when there is none. */
   readonly itemIcon: (id: string) => string | null;
+  /** 2D presentation adapter recognizes both native and equipment-copy effects from public identities. */
+  readonly hasAnomaly?: (native: string | undefined, items: readonly string[]) => boolean;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
 }
 export interface ScoutStage {
@@ -105,6 +110,7 @@ export interface ScoutStage {
   /** The seat to draw on this board layout, or null to stop (everything is released). */
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
   /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
+  away(on: boolean): void;
   walkVisitor(point: { x: number; y: number }): boolean;
   inspectRoot(id: string): Group | undefined;
   descriptionAt(client: { x: number; y: number }, camera: Camera, area: ScreenArea): { target: BoardDescription; box: BoardScreenBox } | undefined;
@@ -141,6 +147,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let current: ScoutView | null = null, layoutKey = '';
   const pieces: Piece[] = [], orbs: Mesh[] = [];
   let legend: Piece | null = null, visitor: Piece | null = null;
+  let away = false;
   let roam: { minX: number; maxX: number; minZ: number; maxZ: number; speed: number } | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
@@ -156,7 +163,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
-        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope) });
+        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));
@@ -187,11 +194,11 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.stars.object.scale.setScalar(STAR_SIZE); piece.stars.object.position.copy(at).setY(ctx.championHeight + STAR_GAP);
       group.add(piece.stars.object);
     }
-    if (unit.anomaly) {
+    if (ctx.hasAnomaly ? ctx.hasAnomaly(unit.anomaly, unit.items) : unit.anomaly) {
       const gem = new Mesh(anomalyGeometry, anomalyMaterial); gem.name = 'render3d-scout-anomaly';
       gem.position.set(STAR_SIZE * 2.2, ctx.championHeight + STAR_GAP, 0); piece.root.add(gem);
     }
-    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined);
+    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined, false, false, undefined, unit.nonCombat);
     piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     piece.overhead.object.visible = piece.overhead.drawn;
     return piece;
@@ -230,6 +237,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
         return fit(stand, legendHeight);
       }, loadModel ? id => loadLegendLease(loadModel, id) : null);
+      piece.root.visible = !away;
       piece.root.position.copy(at);
       piece.root.rotation.y = Math.atan2(center.x - at.x, center.z - at.z);
       return piece;
@@ -253,6 +261,10 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   return {
     group,
     get active() { return current !== null; },
+    away(on) {
+      away = on;
+      for (const piece of [legend, visitor]) if (piece) { piece.root.visible = !on; if (on) piece.path = null; }
+    },
     show(scout, frame) {
       if (!scout || !frame) { if (current) { clear(); current = null; layoutKey = ''; group.visible = false; } return; }
       const view = readScout(scout);
@@ -298,11 +310,12 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const base = piece.state.update(seconds), walking = !!piece.path && (base.state === 'idle' || base.state === 'move');
         const output = walking || piece === visitor ? { ...base, ...(walking ? { state: 'move' as const, loop: true } : {}), revision: base.revision * 2 + (walking ? 1 : 0) } : base;
         if (piece.mixer) { piece.mixer.apply(output); piece.mixer.update(seconds); }
+        if (piece.lease) updateModelGrounding(piece.lease.scene, output.state === 'idle', seconds);
       }
       orbs.forEach((orb, index) => { orb.position.y = ORB_FLOAT + Math.sin(clock * 2 + index) * 2; });
     },
     walkVisitor(point) {
-      if (!current || !visitor || !roam) return false;
+      if (away || !current || !visitor || !roam) return false;
       const to = new Vector3(Math.min(roam.maxX, Math.max(roam.minX, point.x)), 0, Math.min(roam.maxZ, Math.max(roam.minZ, point.y)));
       const from = visitor.root.position.clone().setY(0);
       if (from.distanceToSquared(to) > 1) visitor.root.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);

@@ -1,7 +1,9 @@
+import { isOverflowUnit } from '../../simulation/bench-capacity';
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized. Other seats'
- * board and bench units, items and augments are public (C5, `publicBoard`). A seat's own state leaves only
+ * board and bench units, items and augments are public (C5, `publicBoard`), as is its streak (V26, SeatPublic).
+ * A seat's own state leaves only
  * as the rules' `toPrivateSeatView` (B7, contract §14.1), its battle as a compact replay (§14.2).
  */
 import type { HexCell } from '../../simulation/board';
@@ -13,7 +15,7 @@ import {
 import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
+import { d14PublicUnitMark, listCarouselSlots, readItemSummons, isSummonPreparation, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatChoiceDeadline, SeatPublic, SeatState } from './types';
 
@@ -28,6 +30,7 @@ export function toSeatPublic(seat: SeatState): SeatPublic {
   const cached = publicSeats.get(seat);
   if (cached) return cached;
   const view: SeatPublic = { seatId: seat.seatId, name: seat.name, kind: seat.kind, legend: seat.legend, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
+    streak: { kind: seat.streak.kind, count: seat.streak.count },
     publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match) };
   publicSeats.set(seat, view);
   return view;
@@ -42,8 +45,9 @@ export function toPublicOrbs(match: MatchState): PublicOrbSummary {
 /**
  * Public build of one seat (C5, 2026-10-20 scouting): its own board and bench units, each with the definition ids
  * of the items it holds and of its bound anomaly, its unequipped item definitions and its owned augment definitions. Built field by field
- * from the preparation state; shop, gold, XP, streak, pending choices, unit/item instance ids and RNG never leave
- * the room. Board sorted by cell and bench by slot so equal builds serialize identically.
+ * from the preparation state; shop, gold, XP, pending choices, unit/item instance ids and RNG stay private.
+ * Streak is published separately on SeatPublic, never on this board. Board sorted by cell and bench by slot
+ * so equal builds serialize identically.
  */
 export function toPublicBoard(match: MatchState): PublicBoard {
   const units: PublicBoardUnit[] = [], bench: PublicBenchUnit[] = [];
@@ -55,7 +59,7 @@ export function toPublicBoard(match: MatchState): PublicBoard {
     ...(d14PublicUnitMark(match, unitId) ?? {}) });
   for (const unit of match.preparation.units) {
     if (unit.team !== 'player') continue;
-    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...anomalyOf(unit.id) });
+    if (unit.location.kind === 'board') units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: heldBy(unit.id), ...(isOverflowUnit(match.preparation,unit.id)?{nonCombat:true as const}:{}), ...anomalyOf(unit.id) });
     else bench.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, slot: unit.location.slot, items: heldBy(unit.id), ...anomalyOf(unit.id) });
   }
   // G2-4b (§26): a board position is public, so are the summons standing on it; only what the board shows, nothing of the holder.
@@ -190,10 +194,10 @@ export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoice
 }
 /**
  * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty
- * outside preparation (they exist in a battle only as its own units). Never minted, moved or scaled here.
+ * outside preparation and its augment or anomaly choice (a battle supplies its own units). Never minted, moved or scaled here.
  */
 export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] {
-  if (match.phase !== 'preparation') return [];
+  if (!isSummonPreparation(match)) return [];
   return readItemSummons(match).filter(origin => origin.unit.team === 'player').map(origin => ({
     kind: origin.kind, ownerId: origin.ownerId, itemInstanceId: origin.itemInstanceId,
     unit: { id: origin.unit.id, definitionId: origin.unit.definitionId, team: origin.unit.team, starLevel: origin.unit.starLevel,

@@ -1,3 +1,5 @@
+import { validateAnomalyHistoryProof } from './anomaly-history-restore';
+import { validateOverEncumbered } from './over-encumbered';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { validateCarryGolem } from './restore-checks/carry-golem-check';
@@ -184,6 +186,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+  validateOverEncumbered(state);
   // Validate asset containers before mechanic validators traverse their unit arrays.
   mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
@@ -212,6 +215,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     validateInputAssets({preparation:{...state.preparation,units:[held.unit]},items:held.items},{playerLevel:state.level,nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial,teamSizeBonus},[],inputValidation);
     requireValue(!units.has(held.unit.id)&&held.items.every(i=>!state.items.some(v=>v.id===i.id)),'D14 duplicate holding');
     units.set(held.unit.id,held.unit);
+  }
+  if (state.anomalySelection !== null) {
+    record(state.anomalySelection); const selection = state.anomalySelection;
+    requireValue(Object.keys(selection).sort().join(',') === 'boundRound,championDefinitionId,choiceId,definitionId', 'anomaly selection fields');
+    definitionId(selection.definitionId, ANOMALY_DEFINITIONS, 'selected anomaly');
+    definitionId(selection.championDefinitionId, UNIT_DEFINITIONS, 'anomaly champion');
+    id(selection.choiceId); integer(selection.boundRound, 1); requireValue(selection.boundRound <= state.round, 'selection round');
   }
   if (state.anomalyBinding !== null) {
     record(state.anomalyBinding); const binding = state.anomalyBinding;
@@ -255,7 +265,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
     requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
     requireValue(choice.returnPhase === (event?.timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' : 'preparation'), 'choice return phase');
-    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
+    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && (choice.offers.length === 0 ? choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player') : choice.offers.length === 1 && choice.generation >= choice.rerollCount + 2), 'target substate');
     else {
       requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 8 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
       const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : choice.kind === 'component' ? ITEM_DEFINITIONS : ANOMALY_DEFINITIONS;
@@ -263,7 +273,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       if (choice.kind === 'component') { validateComponentCandidates(choice.offers); }
       if (choice.kind === 'component') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => ITEM_DEFINITIONS[def].kind === 'component'), 'component offers');
       else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
-      else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
+      else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation >= choice.rerollCount + 1, 'locked target');
     }
   } else if (!lootChoice) requireValue(state.pendingChoice === null, 'pending outside choice');
   validateAugmentOfferHistory(state);
@@ -345,7 +355,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, parsedImmutable, forSerialization);
-    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,undefined,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,expectedStrategy.traits,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
@@ -416,6 +426,17 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
       requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && (unit.maxMana > 0 || unit.mana === 0), 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
+      if (unit.targetEngaged !== undefined) requireValue(unit.targetEngaged === true && unit.alive && unit.targetId !== null, 'engaged target');
+      if (unit.meleeApproach !== undefined) {
+        const approach = unit.meleeApproach;
+        record(approach);
+        requireValue(Object.keys(approach).length === 2 && Object.hasOwn(approach, 'targetId') && Object.hasOwn(approach, 'cell'), 'melee approach keys');
+        requireValue(combatIds.has(approach.targetId) && combat.units.find(other => other.id === approach.targetId)?.team !== unit.team, 'melee approach target reference');
+        record(approach.cell);
+        requireValue(Object.keys(approach.cell).length === 2 && Object.hasOwn(approach.cell, 'col') && Object.hasOwn(approach.cell, 'row'), 'melee approach cell keys');
+        integer(approach.cell.col); integer(approach.cell.row);
+        requireValue(contains(combatPreparation.board, approach.cell), 'melee approach cell');
+      }
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
@@ -440,6 +461,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
     if(!verifiedDynamic&&parsedImmutable)replay.shareValidatedDeclarations(combat);
   }
+  // A validated full-state augment proof already authenticates the quote section and target.
+  if (!state.augmentHistory) validateAnomalyHistoryProof(state);
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
   const detached=typeof input === 'string' ? state : structuredClone(state);

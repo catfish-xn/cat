@@ -1,3 +1,4 @@
+import { brbGiftPlan } from '../augment-brb';
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { readAugmentIncome } from '../augment-income';
 import { outcomeAcquisitionXp } from '../augment-pool-batch3-progress';
@@ -121,7 +122,7 @@ export function validateShopHistory(state:MatchState):void {
    let xp=grantMatchXp(cursor,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a)+(a.definitionId==='at-what-cost'?atWhatCostGrant(cursor.level,cursor.xp):0));
    if(a.definitionId==='max-cap'&&xp.level===7)xp={...xp,xp:0};
    check(xp.level===e.point.level&&xp.xp===e.point.xp,'acquisition XP');
-   cursor={...cursor,...xp,augments:[...cursor.augments,a]};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
+   cursor={...cursor,...xp,augments:[...cursor.augments,a],...(a.definitionId==='brb'?{shop:{...cursor.shop,locked:false}}:{})};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
   }else if(e.kind==='round'){
    keys(e,['kind','point']);check(!needNatural&&e.point.round===cursor.round+1,'round entry');
    const previous=state.roundResults.find(r=>r.round===cursor.round);check(previous,'round settlement');
@@ -216,7 +217,7 @@ function evidenceGold(state:MatchState,p:ShopHistoryPoint):number {
 function anomalyRecovery(state:MatchState,cursor:MatchState,p:ShopHistoryPoint):boolean {
  if(state.sharedPool||cursor.round>FINAL_ROUND||!getRoundSchedule(cursor.round).some(e=>e.kind==='anomaly')
   ||cursor.shop.slots.some(s=>s.status==='available'&&shopOfferCost(s)<=cursor.gold))return false;
- const folded=foldResourceProvenance(state.resourceProvenance,{pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory,s3bState:state,batch5Inventory:batch5InventoryPlan(state),
+ const folded=foldResourceProvenance(state.resourceProvenance,{brbRewards:brbGiftPlan(state),pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory,s3bState:state,batch5Inventory:batch5InventoryPlan(state),
   g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),scheduleReceipts:state.scheduleReceipts,
   lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
   throughRoundOrdinal:state.round,prefixLength:p.resourcePrefix,

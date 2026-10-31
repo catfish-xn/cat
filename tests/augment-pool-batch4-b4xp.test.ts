@@ -6,7 +6,7 @@ import { createMatch, selectChoice, nextRound, startMatchCombat, stepMatch, buyU
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import type { MatchState, MatchEvent } from '../src/simulation/match-types';
 import type { BattleRecord } from '../src/m6/contracts';
-import { recordVersion } from '../src/simulation/battle-record-validation';
+import { deepFreeze, ownBattleRecord, recordVersion } from '../src/simulation/battle-record-validation';
 import { digestContent, canonicalContent } from '../src/simulation/content';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
@@ -28,8 +28,10 @@ function fight(context:MatchState,battles:BattleRecord[]):MatchState {
  const start=startMatchCombat(context);let s=accepted(start),events:MatchEvent[]=[...start.ok?start.events:[]];const initial=s.combat!;
  while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
  const terminal=s.combat!,ledger=events.filter((e):e is BattleRecord['events'][number]=>e.domain==='combat');
- battles.push({version:recordVersion(context),roundId:context.roundDefinitionId,runId:'b4xp',combatId:terminal.combatId!,context,initial,events:ledger,
-  endTick:terminal.tick,nextEventSeq:terminal.nextEventSeq!,result:terminal.result,stateHash:digestContent(terminal),eventHash:digestContent(ledger)});
+ // Own the frozen record so later text/JSON/object restores and tamper rejects reuse that one replay.
+ // Clear Mind's qualifying fight runs to tick 830; repeating the cold replay exceeded the 5s case.
+ battles.push(ownBattleRecord(deepFreeze({version:recordVersion(context),roundId:context.roundDefinitionId,runId:'b4xp',combatId:terminal.combatId!,context,initial,events:ledger,
+  endTick:terminal.tick,nextEventSeq:terminal.nextEventSeq!,result:terminal.result,stateHash:digestContent(terminal),eventHash:digestContent(ledger)})));
  return resolveM5Choices(s);
 }
 function opening(id:string,seedOverride?:number):{state:MatchState;battles:BattleRecord[];before:MatchState} {
@@ -135,8 +137,12 @@ it('PvE/supply never pays; max-level capping retains the requested entitlement; 
 it('online settlement uses the latest live bench/inventory and deduplicates atomically without server changes',()=>{
  for(const [id,xp] of rows){
   // Seed 63's Warwick opening requires death facts. This receipt-only condition
-  // fixture uses the real seed-95 Scuttle offer; opening death authentication has its own suite.
-  let s=opening(id,id==='slammin'?95:undefined).state;s=accepted(enableMultiplayerSettlement(s,'A') as any);
+  // fixture needs a Scuttle opening so PvP settlement does not demand those facts.
+  // Seed 95 is still scuttle-puddle, but D5's four new cards (306 -> 310) moved its
+  // 2-1 draw to portable-forge|pyromaniac|shop-glitch. Bounded search 0..399: 252 is
+  // the only scuttle-puddle seed whose cheap 2-1 draw contains slammin, and the
+  // public empty-board route still offers slammin|welcome-to-the-playground|thorn-plated-armor.
+  let s=opening(id,id==='slammin'?252:undefined).state;s=accepted(enableMultiplayerSettlement(s,'A') as any);
   if(id==='clear-mind')s=clearChampionBench(s);
   s=accepted(lockMatchCombatRoster(s));
   if(id==='cluttered-mind')s=fillBench({...s,gold:s.gold+100});
