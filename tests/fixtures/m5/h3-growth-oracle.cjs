@@ -6,7 +6,7 @@
  */
 const assert = require('node:assert/strict');
 const {isDeepStrictEqual} = require('node:util');
-const {observedEqual,observedArray,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
+const {observedEqual,observedArray,extendObservedArray,identicalPrefix,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
 const IDS = ['no-scout-no-pivot', 'cooking-pot'];
 const owners = s => s.augments.filter(a => IDS.includes(a.definitionId));
 const roster = s => ({units:s.preparation.units.filter(u=>u.team==='player'),items:s.items});
@@ -28,14 +28,30 @@ const histories = {facts:'facts',resources:'merge facts',results:'settlements',r
 const references = c => Object.fromEntries(Object.keys(histories).map(k=>[k,c[k].slice()]));
 const current = c => Object.fromEntries(Object.entries(c).filter(([k])=>!(k in histories)));
 function retained(old,refs,next,full,message,exact=false) {
+  // sameRefs is only a construction hint for the detached snapshot. A shortened
+  // or boundary journal still deep-equals here, and a replaced row that is not
+  // identical still fails with the original whole-prefix diagnostic.
+  let sameRefs=!full&&(exact?next.length===old.length:next.length>=old.length);
   if(full||(exact?next.length!==old.length:next.length<old.length))
     assert.deepEqual(exact?next:next.slice(0,old.length),old,message);
-  else for(let i=0;i<old.length;i++)if(next[i]!==refs?.[i]&&!isDeepStrictEqual(next[i],old[i]))
-    assert.deepEqual(next.slice(0,old.length),old,message);
-  return next.slice(old.length);
+  else if(!(refs&&refs.length===old.length&&identicalPrefix(next,refs))){
+    sameRefs=false;
+    for(let i=0;i<old.length;i++)if(next[i]!==refs?.[i]&&!isDeepStrictEqual(next[i],old[i]))
+      assert.deepEqual(next.slice(0,old.length),old,message);
+  }
+  return {rows:next.slice(old.length),sameRefs};
 }
+// Not part of the ledger value compared with the v25 baseline.
+const journalStable=new WeakMap();
+// Growth receipts are sparse. Remember the fact objects already classified so a
+// deaths-only suffix is not filtered again. receipt() still reads the live
+// objects, so an in-place delta edit fails the same assertion.
+const growthFactsCache=new WeakMap();
 function prefix(memory,c,key,full) {
-  return retained(memory.observed[key],memory.references?.[key],c[key],full,`H3 retained ${histories[key]}`);
+  const kept=retained(memory.observed[key],memory.references?.[key],c[key],full,`H3 retained ${histories[key]}`);
+  let flags=journalStable.get(memory);if(!flags)journalStable.set(memory,flags={});
+  flags[key]=kept.sameRefs;
+  return kept.rows;
 }
 function observe(memory,c,full) {
   if(full) { assert.deepEqual(c,memory.observed,'H3 independent observed checkpoint');return; }
@@ -72,15 +88,29 @@ function saveObserved(memory,before,c) {
   // Changed current branches use F5's detached observation reuse. Journal rows
   // retain their detached values even if a live reference was edited in place;
   // only the new suffix is cloned. A boundary or audit still compares all rows.
+  // v26 records a deaths fact on every combat tick once history exists (a
+  // history-owner augment, or a prismatic 4-2 offer). Rebuilding that whole
+  // detached array each tick was quadratic. prefix() already proved a
+  // reference-stable prefix, so those rows are reused and only the suffix is cloned.
   const observed=copyChanged(current(before),current(c),current(memory.observed),memory.freezeInputs);
+  const stable=journalStable.get(memory);
   return freezeObservedNode({...observed,...Object.fromEntries(Object.keys(histories).map(k=>{
-    const old=memory.observed[k];
-    const snapshot=c[k]===before[k]&&c[k].length===old.length?old:observedArray(c[k],(value,i)=>{
+    const old=memory.observed[k],live=c[k],prev=before[k];
+    let snapshot;
+    if(live===prev&&live.length===old.length)snapshot=old;
+    else if(stable?.[k]===true&&live.length>=old.length){
+      if(live.length===old.length)snapshot=old;
+      else{
+        const suffix=[];
+        for(let i=old.length;i<live.length;i++)suffix.push(copyChanged(undefined,live[i],undefined,memory.freezeInputs));
+        snapshot=extendObservedArray(old,suffix);
+      }
+    }else snapshot=observedArray(live,(value,i)=>{
       if(i>=old.length)return copyChanged(undefined,value,undefined,memory.freezeInputs);
-      if(memory.freezeInputs&&value!==before[k]?.[i])freezeObservation(value);
+      if(memory.freezeInputs&&value!==prev?.[i])freezeObservation(value);
       return old[i];
     },old);
-    if(memory.freezeInputs&&c[k]!==before[k]&&c[k].length<=64)freezeObservedNode(c[k]);
+    if(memory.freezeInputs&&live!==prev&&live.length<=64)freezeObservedNode(live);
     return [k,snapshot];
   }))});
 }
@@ -221,7 +251,14 @@ function checkH3Growth(memory,before,after,command) {
     }
     add(scout,['no-scout-no-pivot',scout.choiceId,b.battleId],[...counts].sort(([a],[b])=>order(a,b)).map(([id,n])=>({...zero(id),healthFlat:20*n,attackDamageBps:150*n,abilityPowerCenti:150*n})));
   }
-  assert.deepEqual(facts(after).filter(f=>f.kind==='growth').map(receipt),next.expected,'H3 independent complete growth receipts');
+  const liveFacts=facts(after),cachedGrowth=growthFactsCache.get(memory);
+  let growthFacts;
+  if(cachedGrowth&&identicalPrefix(liveFacts,cachedGrowth.facts)){
+    growthFacts=cachedGrowth.rows;
+    for(let i=cachedGrowth.facts.length;i<liveFacts.length;i++)if(liveFacts[i].kind==='growth')growthFacts=growthFacts.concat(liveFacts[i]);
+  }else growthFacts=liveFacts.filter(f=>f.kind==='growth');
+  assert.deepEqual(growthFacts.map(receipt),next.expected,'H3 independent complete growth receipts');
+  growthFactsCache.set(next,{facts:liveFacts,rows:growthFacts});
   next.merges.push(...merges.map(m=>m.event));next.observed=saveObserved(memory,beforeCheckpoint,afterCheckpoint);
   next.references=references(afterCheckpoint);return next;
 }

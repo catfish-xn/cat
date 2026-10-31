@@ -4,7 +4,7 @@
  */
 const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
-const {observedPrefixEqual}=require('./observed-equal.cjs');
+const {observedPrefixEqual,identicalPrefix}=require('./observed-equal.cjs');
 const ID='scoreboard-scrapper';
 const owner=s=>s.augments.find(a=>a.definitionId===ID);
 const ordinary=(u,base)=>u.team==='player'&&Object.hasOwn(base.COST,u.definitionId);
@@ -52,8 +52,22 @@ const GROWTH_ASSERT='independent scoreboard growth (amount, recipients, owner, u
 // a second augment disguising scoreboard stats. Callers that omit h3Growth keep
 // the old complete-set check.
 function growthReceipt(f){return {kind:f.kind,seatId:f.seatId,round:f.round,roundId:f.roundId,choiceId:f.choiceId,receiptId:f.receiptId,deltas:f.deltas};}
+let scoreboardFacts=null,scoreboardGrowth=[];
+function growthFacts(facts){
+ if(scoreboardFacts&&identicalPrefix(facts,scoreboardFacts)){
+  if(facts.length===scoreboardFacts.length)return scoreboardGrowth;
+  const extra=[];
+  for(let i=scoreboardFacts.length;i<facts.length;i++)if(facts[i].kind==='growth')extra.push(facts[i]);
+  scoreboardFacts=facts;
+  if(extra.length)scoreboardGrowth=scoreboardGrowth.concat(extra);
+  return scoreboardGrowth;
+ }
+ const rows=[];
+ for(let i=0;i<facts.length;i++)if(facts[i].kind==='growth')rows.push(facts[i]);
+ scoreboardFacts=facts;scoreboardGrowth=rows;return rows;
+}
 function validateScoreboardHistory(s,base){
- const actual=(s.augmentHistory?.facts??[]).filter(f=>f.kind==='growth');
+ const actual=growthFacts(s.augmentHistory?.facts??[]);
  const expected=expectedGrowth(s,base);
  const remaining=(base.h3Growth??[]).slice();
  const unexplained=[];
@@ -84,7 +98,10 @@ function validateScoreboardCombat(s,input,base,provenancePrefixLength=s.resource
 }
 function validateH6Transition(before,after,command,base){
  const prior=before.augmentHistory?.facts??[],next=after.augmentHistory?.facts??[];
- observedPrefixEqual(next,prior,'augment history facts append-only');
+ // Combat ticks append one deaths fact and keep every earlier row. Reference
+ // identity is the append-only check; a replaced row still uses the full
+ // prefix comparison, including deep equality and the original diagnostic.
+ if(!identicalPrefix(next,prior))observedPrefixEqual(next,prior,'augment history facts append-only');
  const a=owner(after);
  if(a){
   const appended=next.slice(prior.length);

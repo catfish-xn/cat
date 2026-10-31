@@ -28,6 +28,35 @@ function observedArray(values, map = value => value, previous) {
   return result;
 }
 
+// Append already-certified rows without revisiting the retained prefix. The
+// prefix must already have been checked; this only freezes the new container
+// and certifies it the same way observedArray would after an identity prefix.
+function extendObservedArray(previous, suffix) {
+  if (suffix.length === 0) return previous;
+  const result = previous.slice();
+  const priorSources = rowSources.get(previous);
+  const sources = priorSources ? priorSources.slice() : [];
+  let safe = immutable.has(previous);
+  for (let j = 0; j < suffix.length; j++) {
+    const value = suffix[j];
+    result.push(value);
+    if (value !== null && typeof value === 'object' && !immutable.has(value)) safe = false;
+  }
+  Object.freeze(result);
+  if (safe) {
+    immutable.add(result);
+    let prevDense = dense.get(previous);
+    if (prevDense === undefined) {
+      prevDense = denseKeys(Object.keys(previous), previous.length);
+      if (immutable.has(previous)) dense.set(previous, prevDense);
+    }
+    const denseResult = prevDense === true;
+    dense.set(result, denseResult);
+    if (denseResult) rowSources.set(result, sources);
+  }
+  return result;
+}
+
 function equalRow(actual, expected, sources, i) {
   if (Object.is(actual, expected) || actual && typeof actual === 'object' && sources?.[i] === actual) return true;
   if (!plainEqual(actual, expected)) return false;
@@ -129,6 +158,15 @@ function observedEqual(actual, expected, message) {
 // Exactly the retained-prefix assertion, without allocating a slice and its
 // string index keys on every tick. Extra properties on next are intentionally
 // ignored, as with slice; unusual expected arrays retain Node's full semantics.
+// Hot path for a journal that only appends. Kept in its own function so the
+// reference scan stays monomorphic; a replaced row returns false and the caller
+// keeps the original deep equality diagnostic.
+function identicalPrefix(next, prior) {
+  if (!Array.isArray(next) || !Array.isArray(prior) || next.length < prior.length) return false;
+  for (let i = 0; i < prior.length; i++) if (next[i] !== prior[i]) return false;
+  return true;
+}
+
 function observedPrefixEqual(next, expected, message) {
   let safe = dense.get(expected);
   if (safe === undefined && Array.isArray(expected) && Object.getPrototypeOf(expected) === Array.prototype
@@ -150,4 +188,4 @@ function observedPrefixEqual(next, expected, message) {
   }
   observedEqual(next.slice(0, expected.length), expected, message);
 }
-module.exports = { observedEqual, observedPrefixEqual, observedArray, freezeObservedNode, freezeObservation };
+module.exports = { observedEqual, observedPrefixEqual, identicalPrefix, observedArray, extendObservedArray, freezeObservedNode, freezeObservation };

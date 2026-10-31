@@ -3,7 +3,7 @@ vi.mock('phaser', () => ({ default: {} }));
 // Only the unrelated DOM widgets are passive; the application loader and push handlers stay real.
 const widgets = vi.hoisted(() => {
   class Widget {
-    root = { querySelector: () => null };
+    root = { querySelector: () => null, querySelectorAll: () => [] };
     render() {} update() {} show() {} close() {} dispose() {}
     createToggle() { return {}; }
   }
