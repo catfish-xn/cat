@@ -40,11 +40,12 @@ class RouteFirstSequencer extends BaseSequencer {
     const { index, count } = this.ctx.config.shard!;
     const root = this.ctx.config.root;
     const path = (file: TestSpecification) => relative(root, file.moduleId).split('\\').join('/');
-    const load = Array.from({ length: count }, (_, shard) => shard === 0 && count > 1 ? SHARD_ONE_HEADSTART : 0);
+    // Shard 1 takes only SHARD_ONE_SOLO (see below).
+    const load = Array.from({ length: count }, (_, shard) => shard === 0 && count > 1 ? Infinity : 0);
     const mine: TestSpecification[] = [];
     const ordered = [...files].sort((a, b) => shardWeight(path(b)) - shardWeight(path(a)) || (path(a) < path(b) ? -1 : 1));
     for (const file of ordered) {
-      const target = load.indexOf(Math.min(...load));
+      const target = count > 1 && SHARD_ONE_SOLO.includes(path(file)) ? 0 : load.indexOf(Math.min(...load));
       load[target] += shardWeight(path(file));
       if (target === index - 1) mine.push(file);
     }
@@ -57,11 +58,14 @@ class RouteFirstSequencer extends BaseSequencer {
 const SHARD_WEIGHTS: Record<string, number> = JSON.parse(readFileSync(new URL('./tests/fixtures/shard-weights.json', import.meta.url), 'utf8'));
 const UNKNOWN_WEIGHT = 2;
 const shardWeight = (path: string): number => SHARD_WEIGHTS[path] ?? UNKNOWN_WEIGHT;
-// Shard 1 also runs the timing project after its fast tests (ci.yml, full tier): 150-250 s
-// on CI, which is about 900 of these table seconds (CI shards finish ~4.8 table seconds per second).
-// With eight shards that exceeds a shard's share, so shard 1 gets no fast files (ci.yml passes
-// --passWithNoTests for it).
-const SHARD_ONE_HEADSTART = 900;
+// Shard 1 runs the timing project after its fast step (ci.yml, full tier), 150-250 s on CI,
+// so it takes no balanced fast files. Its fast step runs only these: files with a case near
+// the 5 s limit even alone, which any parallel worker pushes over. There they have the machine
+// to themselves; the cases and their limits are unchanged. (ci.yml keeps --passWithNoTests.)
+const SHARD_ONE_SOLO = [
+  // "opens the independently sampled late PvE orb…": ~3.4 s alone, 5.5 s on a shared shard.
+  'tests/server/batch5-g5-pipeline-late-room.test.ts',
+];
 export default defineConfig({
   test: {
     sequence: { sequencer: RouteFirstSequencer },
