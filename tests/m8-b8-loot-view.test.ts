@@ -1,9 +1,11 @@
+import {readFileSync} from 'node:fs';
+import {gunzipSync} from 'node:zlib';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
-import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation,configuredPrefix,reserveExcept,players,TERMINAL_EMPTY_BOARD_ROUNDS} from './fixtures/t13-loot-public';
+import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation,configuredPrefix,reserveExcept,players,pinTerminalPrefix,TERMINAL_EMPTY_BOARD_ROUNDS} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -34,9 +36,11 @@ async function prepareTerminalHero(){
  // The new loss formula makes the terminal route win 3-7; its earned glove can
  // otherwise consume the first belt as Guardbreaker before the second arrives.
  // Reserve real belts and rods for the original Warmog/two-Deathcap boundary.
+ // The independent route ledger rechecks every combat tick and is about a third of this
+ // trajectory. The commands below are the same either way; this case only needs them.
  let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',supplyChoices:['rod','rod','belt'],
   reservedComponents:['belt','rod'],equipmentTargets:{warmog:{definitionId:'garen'}},
-  emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[]}),[]);
+  emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[],independentAudit:false}),[]);
  const holder=players(s).find(u=>u.definitionId==='loris');if(!holder)throw Error('Missing earned Loris');
  for(const unit of players(s).filter(u=>s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))){
   const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover');if(!remover)throw Error('Missing earned remover');
@@ -54,9 +58,16 @@ async function prepareTerminalHero(){
  return fillBench(s,['ezreal']);
 }
 // Warm shared prefixes once; report each original 10 s callback separately.
+// Seed 2253 rolls a prismatic 4-2 offer, so its solo proof starts at match creation
+// and a cold serialize replays every combat. The gzip is that audited route's save.
+// restoreMatch replays it into the existing proof cache; later cases only extend it.
+// Regenerate with scripts/record-m8-b8-terminal-prefix.mjs after a real rule change.
 async function warmTerminal(hero=false){
  const began=performance.now();
- try{if(hero)terminalHero=await prepareTerminalHero();else await terminalPreparation(null);}
+ try{
+  if(hero)terminalHero=await prepareTerminalHero();
+  else pinTerminalPrefix(restoreMatch(gunzipSync(readFileSync(new URL('./fixtures/m8-b8-terminal-2253.json.gz',import.meta.url))).toString()));
+ }
  finally{console.info(`B8 terminal warmup ${hero?'hero':'default'}: ${performance.now()-began} ms`);}
 }
 beforeAll(async () => { await warmTerminal(); });
