@@ -630,7 +630,7 @@ class Ledger {
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
-  const independentRewards=validateRewards(before,after,command,events,{CATALOG,COST,ROUNDS,lootReceipts,xp,entryXp,benchXp});
+  const independentRewards=validateRewards(before,after,command,events,{CATALOG,COST,ROUNDS,lootReceipts,xp,entryXp,benchXp,h3Growth:h3.expected});
   // Round income (base/interest/streak) and its investment growth are paid at the next round entry (deferred-income.ts); win gold is immediate.
   let paidInvestment=0;
   if(command?.type==='continue'){this.gold+=this.pending.gold;this.pending.gold=0;paidInvestment=this.pending.investmentHp;this.pending.investmentHp=0;}
