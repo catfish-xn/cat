@@ -25,9 +25,9 @@
     "tests/assets3d-augment-icons.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5496,
+      "currentBytes": 6538,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fde2ba1f0fed68522b3728d86fcb00b9acec8cc776b8271884b7644ba0de81f5",
+      "currentSha256": "5e92c345c5e20987f46e142f8eef0d873793e304d5cbc9df546eb453de52a1af",
       "firstDifferentByte": 0
     },
     "tests/assets3d-neutrals.test.ts": {
@@ -857,7 +857,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cb9b0fd0938f378a013be231c2a617369589f947b6aa8ce92882dc05c85ab28d",
+      "currentSha256": "d58590cd6d2c95bf26f61f9c9d15ef1c34eb4876dc81d4252b8064cd9483f34c",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1130,10 +1130,10 @@
     },
     "tests/m5-match-integration.test.ts": {
       "previousBytes": 5486,
-      "currentBytes": 6163,
+      "currentBytes": 8181,
       "previousSha256": "bf143b39fbbfb91277f4e3ab9a3c7a32d43220c55dd129a46dcb02570d9c9fc5",
-      "currentSha256": "16d3586143262e7ce016664480aa45ef7589d332b8ff9fdaa042148215529315",
-      "firstDifferentByte": 2470
+      "currentSha256": "b3517c91a47bd0af652b1b18e43440c3e2c5dde5ed0217df7934364cc253a0db",
+      "firstDifferentByte": 1154
     },
     "tests/m5-oracle-augment-ledger.test.ts": {
       "previousBytes": 42594,
@@ -1418,9 +1418,9 @@
     },
     "tests/m8-b8-live-reveal.test.ts": {
       "previousBytes": 13403,
-      "currentBytes": 15157,
+      "currentBytes": 15937,
       "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-      "currentSha256": "a531d2bdafeb38f9edea5d7dec04a4b194e2495ceffb2ae4d3583edbab9f831e",
+      "currentSha256": "bce2e96816679a6e107e837d40dada443fe7f9841c7fac873bcc3bddf0200614",
       "firstDifferentByte": 527
     },
     "tests/m8-b8-live-transfer.test.ts": {

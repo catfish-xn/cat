@@ -58,7 +58,7 @@
     "src/simulation/augment-gift-plan.ts": "10d0aeaf84227fc0372d707d075ab05614eb72f2b8c76efc4ea54ca0334072e0",
     "src/simulation/augment-history-log.ts": "bfd7ca2f7b9ccd5cfebfb51c292a3607b7529c62b01c0b2790d5f9c165492d38",
     "src/simulation/augment-history-owners.ts": "de3c86a037fe76195789fbf218c47d6d4d7e19fa60b1c3446b1faf54748ce1d6",
-    "src/simulation/augment-history-restore.ts": "e71f14df775349359db0035a90ccea5f8d1539a30a2ff627d1cf57b866a267d3",
+    "src/simulation/augment-history-restore.ts": "cc2c8a786b4bf22acba04d3b3632e624560e2801285fb1d70db0c3d91e9bb52c",
     "src/simulation/augment-history-types.ts": "024af209b2ac14a0d06e0d0b0f757344697b870bf8f9e5b48ca842d4c80e3d4a",
     "src/simulation/augment-history.ts": "f070cfe95ac742172a1053f3584688fec3577b3eb7df742887f37b6c11f06f6b",
     "src/simulation/augment-income.ts": "7725de829f93c380a81738a0ae528bf54039748b975be04c2addc9916a116ef0",
@@ -758,9 +758,9 @@
   "byteEvidence": {
     "previousCommit": "e9384c02fe352c7da3e672d2f1a2eb61754e1f5b",
     "previousBytes": 13403,
-    "currentBytes": 15157,
+    "currentBytes": 15937,
     "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-    "currentSha256": "a531d2bdafeb38f9edea5d7dec04a4b194e2495ceffb2ae4d3583edbab9f831e",
+    "currentSha256": "bce2e96816679a6e107e837d40dada443fe7f9841c7fac873bcc3bddf0200614",
     "firstDifferentByte": 527
   },
   "helperSha256": "91de46b4306293f059f049b7446b3f2c253832c088cbf7e592a4be6d5110bc89",
