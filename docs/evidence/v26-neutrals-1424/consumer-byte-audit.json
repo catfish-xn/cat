@@ -685,6 +685,13 @@
       "currentSha256": "f4498bf2c7d4e36b2350493de9d61a75cc538b1185ee969544836d6ec5ee5dc2",
       "firstDifferentByte": 88
     },
+    "tests/fixtures/m5/augment-h6-oracle.cjs": {
+      "previousBytes": 5501,
+      "currentBytes": 6565,
+      "previousSha256": "2d8d8b8f8c3e835f15f71afeab5acc064bde14519706344b4c1653018c620d3f",
+      "currentSha256": "dfd26ad688c6fa92104ed027f0176e5cadc305dc56de2772119852a247f96bc2",
+      "firstDifferentByte": 299
+    },
     "tests/fixtures/m5/full-match-golden.v26-neutrals-1424.json": {
       "previousExists": false,
       "previousBytes": 0,
@@ -702,9 +709,9 @@
     },
     "tests/fixtures/m5/oracle.g2.cjs": {
       "previousBytes": 105672,
-      "currentBytes": 110189,
+      "currentBytes": 110210,
       "previousSha256": "e18093e90501ca3636ee849ae3c6872fc249d6553b4796dce844cdda089a944e",
-      "currentSha256": "34c03ded937eadc4679991e0e97508c90ad100ac2ed213010115da4d0ed65b1a",
+      "currentSha256": "44d4013af881b28dcb135e19d9843cf880e808003e5125eadfd6b13429727f3e",
       "firstDifferentByte": 16171
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -850,7 +857,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8ecfe9db79a2a0f230933368ec168d9a8a48480c2a59301fd2531633d1fcd929",
+      "currentSha256": "cb9b0fd0938f378a013be231c2a617369589f947b6aa8ce92882dc05c85ab28d",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1134,6 +1141,13 @@
       "previousSha256": "f4ff4a6c082bc788fa80d520fb89b74150d6fd47d281bae3a8dd7f5fa27b31d4",
       "currentSha256": "6becad3f3c288c39f8f289d3aec793fc8c1afe66534375ad78bdb145ea5df567",
       "firstDifferentByte": 23149
+    },
+    "tests/m5-oracle-h6.test.ts": {
+      "previousBytes": 9215,
+      "currentBytes": 10746,
+      "previousSha256": "4ec9a3198176354c063f4a8864f54da001dc30cc487cb4ad1b0815c3fb30d5a8",
+      "currentSha256": "d83fe4bf475beac6b948966c2ced60616078a004a5597ad4946c9d995461ced2",
+      "firstDifferentByte": 3999
     },
     "tests/m5-oracle-route-driver.test.ts": {
       "previousBytes": 1794,

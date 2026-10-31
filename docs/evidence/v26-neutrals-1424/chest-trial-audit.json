@@ -5,7 +5,7 @@
     "scripts/record-chest-trial-v26.cjs": "0e0313d3ebfff3d41a4dc190a37552675fd60f3d8db354e387cab4da8216e787",
     "tests/fixtures/v26-neutrals-1424-chest-trial.ts": "892873e050247d4148c92e51e05e57ace44312df1e0a6aa11c73d6a87a019f29",
     "tests/fixtures/b8-public-equipment.ts": "f16636be18edd9f68f85526e231324bc21f698cf2d462c2d355d288aeb2ea0d1",
-    "tests/fixtures/m5/oracle.g2.cjs": "34c03ded937eadc4679991e0e97508c90ad100ac2ed213010115da4d0ed65b1a"
+    "tests/fixtures/m5/oracle.g2.cjs": "44d4013af881b28dcb135e19d9843cf880e808003e5125eadfd6b13429727f3e"
   },
   "fixtureBytes": 52835,
   "fixtureSha256": "46a96105898ef7cac11fdc549a7cb58bdbfe09589039ea53776985d83b4e5d52",

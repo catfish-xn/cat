@@ -4,7 +4,7 @@
     "scripts/audit-v26-neutrals-1424-adaptations.cjs": "5056acb3f9de4639e25fa97cd74567f183cb9c07c6c3ff55556bac00d26c7ae2",
     "scripts/compare-v26-neutrals-1424-digests.cjs": "c6068ab5802ed0457be8019e905614baa22f3bc4d5af4d36bf1c853745640bc5",
     "scripts/content-digest.ts": "6538e90b639fcf07a00c97191068cd2f8ed322c64e2a9dd958892e1815613302",
-    "scripts/generate-m5-route.cjs": "9f8f7354474df086e04f0275c69e2864ff88b88016f0ca58e6a4e3025ecb3d43",
+    "scripts/generate-m5-route.cjs": "c6871d5d64ae1c64b36c7a604a37a93c2d1a063f5b5dffc7f58a66d0ae87403d",
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/m5-route-hash.cjs": "bdc279df8a1a3953638c1df7e347681aee3b6ffa32b75ba3434d81b0951ec1cf",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
@@ -629,7 +629,7 @@
     "tests/fixtures/m5/assert-golden.cjs": "f4498bf2c7d4e36b2350493de9d61a75cc538b1185ee969544836d6ec5ee5dc2",
     "tests/fixtures/m5/augment-batch5-g5-oracle.cjs": "927a96ed3d7423486cbfdca70c334240def09ee7d48c25fa8dd6498833ebb25d",
     "tests/fixtures/m5/augment-batch5-s3b-oracle.cjs": "d93ce048ea5b554153db57b99dd17135f7ae27b65ecc2070bf9e8186f34f7b04",
-    "tests/fixtures/m5/augment-h6-oracle.cjs": "2d8d8b8f8c3e835f15f71afeab5acc064bde14519706344b4c1653018c620d3f",
+    "tests/fixtures/m5/augment-h6-oracle.cjs": "dfd26ad688c6fa92104ed027f0176e5cadc305dc56de2772119852a247f96bc2",
     "tests/fixtures/m5/augment-h7-oracle.cjs": "4ff8ca2650aade50c1794a57a81b90a65a6253ca82f4ae17828b6d0508062908",
     "tests/fixtures/m5/augment-inventory-oracle.cjs": "441c034090d001caf7db72cdb230a4ec312efae4e98d1c978ade9fcdf8528971",
     "tests/fixtures/m5/augment-pool-batch5-b5a.cjs": "1626d0d36772e2a7e4c4856751b7e7f5dd515eec142de8aeb531126e330b3386",
@@ -649,7 +649,7 @@
     "tests/fixtures/m5/lucky-gloves-oracle.cjs": "e64f822ae05b5ca49a2c4da66d5dd0a3fa492cbc94e570b19a15567b8a8fb489",
     "tests/fixtures/m5/observed-equal.cjs": "765d2f0efe4b7e20ea54810d129fe633c85c699b0b812767a386f95a6a1a7d14",
     "tests/fixtures/m5/oracle.cjs": "939cb50ff6d0a285ee34e9592076dcf9cb6127e92e6531f29ede6a760e0f7b56",
-    "tests/fixtures/m5/oracle.g2.cjs": "34c03ded937eadc4679991e0e97508c90ad100ac2ed213010115da4d0ed65b1a",
+    "tests/fixtures/m5/oracle.g2.cjs": "44d4013af881b28dcb135e19d9843cf880e808003e5125eadfd6b13429727f3e",
     "tests/fixtures/m5/oracle.t13.cjs": "0b11a6cc60f3d31e59553d5121acb8a1fdc22ce3c6091ae3065ff0f8c35ad6ca",
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
@@ -709,7 +709,7 @@
       "previousBytes": 66919,
       "currentBytes": 69072,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "8ecfe9db79a2a0f230933368ec168d9a8a48480c2a59301fd2531633d1fcd929",
+      "currentSha256": "cb9b0fd0938f378a013be231c2a617369589f947b6aa8ce92882dc05c85ab28d",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
