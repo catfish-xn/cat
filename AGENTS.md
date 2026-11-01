@@ -89,6 +89,8 @@ npm run preview        # 预览 dist/，需先 build
 - `src/simulation/`：纯领域规则。`match.ts` 是整局唯一权威入口；`combat-s13*.ts` 是当前战斗；`content/` 是固定赛季内容。
 - `src/rendering/`：Phaser 场景、输入、DOM 面板。
 - `tests/`：回归测试；`tests/fixtures/` 存放 oracle 和 golden。
+- 临时测试脚本用完后删除，不要留在项目里。
+- 需要长期保留的测试统一放在 tests 文件夹，新增前先告诉我。
 - `docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md`、`M5_RULES.md`：当前规则与 API 契约，改规则前必读。
 
 # 必须遵守的不变量
