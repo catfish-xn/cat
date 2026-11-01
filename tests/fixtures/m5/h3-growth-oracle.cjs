@@ -19,35 +19,40 @@ function entryItemsAfterPandora(before, afterRound) {
   }
   return items;
 }
-/** Independent round-entry roster audit (P-B5-S3B Pandora + 运力不足 history projection).
+/** Independent history roster audit (P-B5-S3B Pandora + 运力不足 history projection).
  * Does not replay production reconcile or bench projection; checks lineage and allowed moves only. */
-function validateRoundEntryRoster(before, afterRound, entry) {
-  const expectedItems = entryItemsAfterPandora(before, afterRound);
-  assert.deepEqual(entry.items, expectedItems, 'H3 independent entry items');
+function validateProjectedPlayerRoster(before, entry, expectedItems, label, itemsMessage) {
+  assert.deepEqual(entry.items, expectedItems, itemsMessage ?? `H3 independent ${label} items`);
   const prep = before.preparation, overflow = new Set(prep.overflowUnitIds ?? []);
   const beforePlayer = prep.units.filter(u => u.team === 'player');
-  assert.equal(entry.units.length, beforePlayer.length, 'H3 entry roster unit count');
-  assert.deepEqual([...entry.units.map(u => u.id)].sort(), beforePlayer.map(u => u.id).sort(), 'H3 entry roster unit ids');
+  assert.equal(entry.units.length, beforePlayer.length, `H3 ${label} roster unit count`);
+  assert.deepEqual([...entry.units.map(u => u.id)].sort(), beforePlayer.map(u => u.id).sort(), `H3 ${label} roster unit ids`);
   const benchSlots = [];
   for (const entryUnit of entry.units) {
     const prev = beforePlayer.find(u => u.id === entryUnit.id);
-    assert.equal(entryUnit.definitionId, prev.definitionId, 'H3 entry unit definition');
-    assert.equal(entryUnit.starLevel, prev.starLevel, 'H3 entry unit star');
-    assert.deepEqual(unitEquip(entry.items, entryUnit.id), unitEquip(expectedItems, entryUnit.id), 'H3 entry unit equipment');
+    assert.equal(entryUnit.definitionId, prev.definitionId, `H3 ${label} unit definition`);
+    assert.equal(entryUnit.starLevel, prev.starLevel, `H3 ${label} unit star`);
+    assert.deepEqual(unitEquip(entry.items, entryUnit.id), unitEquip(expectedItems, entryUnit.id), `H3 ${label} unit equipment`);
     const prevLoc = prev.location, entryLoc = entryUnit.location;
     if (prevLoc.kind === 'board' && overflow.has(entryUnit.id)) {
       // 运力不足 card text: extras stay on the board in play; history lists them as bench reserves.
-      assert.equal(entryLoc.kind, 'bench', 'H3 entry overflow reserve projection');
+      assert.equal(entryLoc.kind, 'bench', `H3 ${label} overflow reserve projection`);
       benchSlots.push(entryLoc.slot);
     } else if (prevLoc.kind === 'board') {
-      assert.deepEqual(entryLoc, prevLoc, 'H3 entry board placement');
+      assert.deepEqual(entryLoc, prevLoc, `H3 ${label} board placement`);
     } else if (prevLoc.kind === 'bench') {
-      assert.equal(entryLoc.kind, 'bench', 'H3 entry bench slot change only');
+      assert.equal(entryLoc.kind, 'bench', `H3 ${label} bench slot change only`);
       benchSlots.push(entryLoc.slot);
-    } else assert.fail('H3 entry unexpected before location');
+    } else assert.fail(`H3 ${label} unexpected before location`);
   }
-  assert.equal(new Set(benchSlots).size, benchSlots.length, 'H3 entry projected bench slots distinct');
-  for (const slot of benchSlots) assert(slot >= 0 && slot < prep.benchSize, 'H3 entry bench slot bounds');
+  assert.equal(new Set(benchSlots).size, benchSlots.length, `H3 ${label} projected bench slots distinct`);
+  for (const slot of benchSlots) assert(slot >= 0 && slot < prep.benchSize, `H3 ${label} bench slot bounds`);
+}
+function validateRoundEntryRoster(before, afterRound, entry) {
+  validateProjectedPlayerRoster(before, entry, entryItemsAfterPandora(before, afterRound), 'entry', 'H3 independent entry items');
+}
+function validateFrozenRoster(before, frozen) {
+  validateProjectedPlayerRoster(before, frozen, before.items, 'independent frozen roster', 'H3 independent frozen roster');
 }
 const facts = s => s.augmentHistory?.facts ?? [];
 const resources = s => s.resourceProvenance.entries;
@@ -270,8 +275,9 @@ function checkH3Growth(memory,before,after,command) {
     assert.equal(after.m8.round.kind,'pvp','H3 PvP boundary');
     assert(!next.battles.some(b=>b.battleId===f.battleId||b.round===f.round),'H3 duplicate PvP freeze');
     const own=f.seats.filter(s=>s.seatId===memory.seatId);assert.equal(own.length,1,'H3 frozen seat');
-    assert.deepEqual({units:own[0].units,items:own[0].items},historyEntryRoster(before.preparation,before.items),'H3 independent frozen roster');
-    next.battles.push({battleId:f.battleId,round:before.round,roster:copy(roster(before))});
+    const frozen={units:own[0].units,items:own[0].items};
+    validateFrozenRoster(before,frozen);
+    next.battles.push({battleId:f.battleId,round:before.round,roster:copy(frozen)});
   }
   const entries=added.filter(f=>f.kind==='round-entry');
   if(after.round!==before.round&&before.augmentHistory) {
