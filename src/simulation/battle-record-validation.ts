@@ -10,6 +10,7 @@ import { validateMatchStructure } from './serialization-structure';
 import { readG23Progress } from './g2-3-state';
 import { needsCrownHistory, missingCrownHistory } from './crown-history';
 import { canonicalContent, digestContent, withSynchronousRestoreEncoding } from './content';
+import { augmentCombatTranscript } from './augment-history-restore';
 import { validateHistoricalEquipment } from './b8-restore';
 import { equalOrderedJson, isImmutableJson } from './immutable-json';
 
@@ -250,8 +251,29 @@ export function validateBattlePlayback(record: BattleRecord, battles?: readonly 
     return deepFreeze({ terminal: verified.terminal, checkpoints });
   });
 }
+function transcriptReplay(record: BattleRecord): VerifiedReplay | undefined {
+  // The transcript is this admission's match-proof replay, not a previous success.
+  // A mismatch falls through to the full tick walk so the existing errors stay.
+  const transcript = augmentCombatTranscript(record.combatId);
+  if (!transcript) return undefined;
+  try {
+    const context = record.context;
+    if (!equalContent(transcript.context, context) || !equalContent(transcript.initial, record.initial)) return undefined;
+    if (!equalContent(transcript.events, record.events)) return undefined;
+    if (!equalContent(record.version, recordVersion(context)) || record.roundId !== context.m8.round.roundId) return undefined;
+    if (context.phase !== 'preparation' || record.combatId !== `round-${context.round}`) return undefined;
+    const terminal = transcript.terminal;
+    if (terminal.result !== record.result || terminal.tick !== record.endTick || terminal.nextEventSeq !== record.nextEventSeq) return undefined;
+    if (digestContent(terminal) !== record.stateHash || digestContent(record.events) !== record.eventHash) return undefined;
+    return { terminal, settledMatch: transcript.settled };
+  } catch { return undefined; }
+}
 function validateM8Record(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   checkShape(record);
+  if (!checkpoints && mutableExternalEvidence === 0) {
+    const reused = transcriptReplay(record);
+    if (reused) return reused;
+  }
   let state = validateMatchStructure(record.context);
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');

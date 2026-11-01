@@ -5,6 +5,7 @@ import { CONTENT_DIGEST } from '../simulation/content';
 import { validateMatchStructure } from '../simulation/serialization-structure';
 import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION } from '../simulation/m8/version';
 import { validateBattleCollectionSync } from '../replay/history';
+import { recordCombatTranscripts } from '../simulation/augment-history-restore';
 
 /** M8_UI_CONTRACT §6: format routing first, then the matching validator; a header alone is never a licence. */
 export type RejectedReason = Extract<CompatibilityView, { status: 'rejected' }>['reason'];
@@ -60,7 +61,9 @@ export function routeSaveFile(input: unknown): RoutedFile {
   }
   try {
     // Staging only: resumption additionally requires full collection validation.
-    const restored = validateMatchStructure(match);
+    // The proof replay is this admission's combat evidence. Recording it lets the
+    // following battle checks compare those events instead of simulating again.
+    const restored = recordCombatTranscripts(() => validateMatchStructure(match));
     return { view: null, envelope: structuredClone({ ...input, match: restored }) as unknown as SaveEnvelope };
   } catch (error) { return reject('invalid-data', fileRules, error instanceof Error ? error.message : String(error)); }
 }

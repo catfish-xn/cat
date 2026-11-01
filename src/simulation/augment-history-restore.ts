@@ -1,6 +1,6 @@
 import { validateOverEncumbered } from './over-encumbered';
 import { validateBatch5R6Transforms } from './restore-checks/batch5-r6-check';
-import type { MatchState } from './match-types';
+import type { MatchEvent, MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
 import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -13,6 +13,68 @@ import { validateMatchStructure } from './serialization-structure';
 import { freezeContent } from './content/freeze';
 import { grantMechanicUnit } from './seat-mechanics/grants';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+
+/** Combat events from the match-proof replay already required to admit the save.
+ * Battle admission compares them to the record. The map lives only for that call. */
+export interface AugmentCombatTranscript {
+  readonly id: string;
+  readonly context: MatchState;
+  readonly initial: NonNullable<MatchState['combat']>;
+  readonly events: MatchEvent[];
+  settled: MatchState;
+  terminal: NonNullable<MatchState['combat']>;
+}
+interface TranscriptCapture {
+  readonly map: Map<string, AugmentCombatTranscript>;
+  open: AugmentCombatTranscript | null;
+  recording: boolean;
+  depth: number;
+}
+let capture: TranscriptCapture | null = null;
+const CONTINUED_COMBAT = new Set(['stepMatch', 'useConsumable', 'combineItems', 'equipItem']);
+/** Opens a capture around one archive admission. Nested admissions share it. */
+export function openCombatTranscriptCapture(): () => void {
+  const parent = capture;
+  if (!parent) capture = { map: new Map(), open: null, recording: false, depth: 0 };
+  let closed = false;
+  return () => {
+    if (closed) return;
+    closed = true;
+    if (!parent) capture = null;
+  };
+}
+/** Records transcripts only while `fn` runs. The map stays until the capture closes. */
+export function recordCombatTranscripts<T>(fn: () => T): T {
+  if (!capture) return fn();
+  const previous = capture.recording;
+  capture.recording = true;
+  try { return fn(); }
+  finally { capture.recording = previous; sealCombatTranscript(); }
+}
+export function augmentCombatTranscript(combatId: string): AugmentCombatTranscript | undefined {
+  return capture?.map.get(combatId);
+}
+function sealCombatTranscript(): void {
+  if (!capture?.open) return;
+  capture.map.set(capture.open.id, capture.open);
+  capture.open = null;
+}
+function noteCombatTranscript(before: MatchState, name: string, after: MatchState, events: readonly MatchEvent[] | undefined): void {
+  if (!capture) return;
+  const produced: MatchEvent[] = [];
+  for (const event of events ?? []) if (event.domain === 'combat') produced.push(event);
+  const open = capture.open;
+  if (open && before.phase === 'combat' && before.combat?.combatId === open.id && CONTINUED_COMBAT.has(name)) {
+    for (const event of produced) open.events.push(event);
+    open.settled = after;
+    if (after.combat?.combatId === open.id) open.terminal = after.combat;
+    return;
+  }
+  sealCombatTranscript();
+  if (name === 'startMatchCombat' && after.combat?.combatId) {
+    capture.open = { id: after.combat.combatId, context: before, initial: after.combat, events: produced, settled: after, terminal: after.combat };
+  }
+}
 
 interface ReplayEvidence {
   readonly origin: string;
@@ -469,11 +531,19 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   const encoded = proof.commands.map(c => ({name:c.name,args:canonicalContent(c.args),count:c.count}));
   // Canonical JSON collapses -0 to 0, so such proofs must use cold replay.
   const cacheable = !containsNegativeZero([proof.origin, ...proof.commands.map(c => c.args)]);
-  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts) : undefined;
+  const active = capture;
+  const recordThis = active !== null && active.recording && active.depth === 0;
+  // A recording admission needs every combat's events. Reusing a prefix would
+  // skip those commands and leave the archive to simulate them again. A second
+  // pass in the same capture already has the transcripts, so it may resume.
+  const transcriptsReady = recordThis && active.map.size > 0;
+  const prefix = cacheable && (!recordThis || transcriptsReady) ? replayPrefix(origin, encoded, h.facts) : undefined;
   // A hit skips validateMatchStructure(proof.origin) and resumes commands from
   // frozen evidence. This is correct only while all SOLO_COMMANDS are pure
   // functions that never mutate their inputs in place.
   let replay = prefix?.state ?? initializeAugmentTrace(validateMatchStructure(proof.origin));
+  if (active) active.depth++;
+  try {
   for (const [index,c] of proof.commands.entries()) {
     const skipped = prefix?.commands[index]?.count ?? 0;
     if (skipped === c.count) continue;
@@ -482,12 +552,16 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
     const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
     for (let i = skipped; i < c.count; i++) {
       const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : c.name === 'grantMechanicUnit' ? grantMechanicUnit : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
-      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState };
+      const before = replay;
+      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState; events?: readonly MatchEvent[] };
       historyCheck(result && result.ok !== false, `replay command ${c.name}`);
       const next = result.state ?? result as unknown as MatchState;
       historyCheck(next !== replay, 'replay no-op'); replay = next;
+      if (recordThis) noteCombatTranscript(before, c.name, next, result.events);
     }
   }
+  if (recordThis) sealCombatTranscript();
+  } finally { if (active) active.depth--; }
   const replayText = canonicalContent(replay);
   historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
   if (cacheable) rememberReplay(origin, encoded, replay, replayText);

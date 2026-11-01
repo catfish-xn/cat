@@ -6,6 +6,7 @@ import { validateMatchStructure } from '../simulation/serialization-structure';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { needsCrownHistory } from '../simulation/crown-history';
 import { canonicalContent, digestContent } from '../simulation/content';
+import { recordCombatTranscripts } from '../simulation/augment-history-restore';
 import { ownBattleRecord as markOwned, deepFreeze, recordVersion, equalContent, isOwnedBattleRecord,
   replayBattleRecord, matchHistoryChecks, validateBattleRecord } from '../simulation/battle-record-validation';
 export { isOwnedBattleRecord, deepFreeze, recordVersion, equalContent, checkRecordCompatibility,
@@ -32,7 +33,7 @@ export function admitArchives(envelopes: readonly unknown[], route: (file: unkno
 }
 /** Strict archive topology and historical context validation; yields once after each battle. */
 function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
-  const match = validateMatchStructure(envelope.match);
+  const match = recordCombatTranscripts(() => validateMatchStructure(envelope.match));
   yield* matchHistoryChecks(match, envelope.battles, envelope.runId);
   if (match.combat?.status === 'running') {
     check(envelope.currentBattle !== null, '缺少当前事件前缀');
@@ -60,6 +61,36 @@ interface WorkingRecord {
   hashes?: { state: string; events: string };
   // Only this recorder appends to the detached, deeply frozen event ledger.
   eventHashPrefix?: { count: number; hash: number };
+}
+function shareStatusValue(value: unknown, table: Map<string, object>): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const text = JSON.stringify(value);
+  const hit = table.get(text);
+  if (hit) return hit;
+  table.set(text, value);
+  return value;
+}
+function shareRecordStatus(record: BattleRecord): BattleRecord {
+  const table = new Map<string, object>();
+  let changed = false;
+  const events = record.events.map(event => {
+    const next = shareStatusEvent(event, table);
+    if (next !== event) changed = true;
+    return next;
+  });
+  return changed ? { ...record, events } : record;
+}
+function shareStatusEvent(event: LedgerCombatEvent, table: Map<string, object>): LedgerCombatEvent {
+  if (event.type !== 'statusChanged') return event;
+  let changed = false;
+  const contributions = event.group.contributions.map(contribution => {
+    const source = shareStatusValue(contribution.source, table) as typeof contribution.source;
+    const application = shareStatusValue(contribution.application, table) as typeof contribution.application;
+    if (source === contribution.source && application === contribution.application) return contribution;
+    changed = true;
+    return { ...contribution, source, application };
+  });
+  return changed ? { ...event, group: { ...event.group, contributions } } : event;
 }
 function captureEventHash(working: WorkingRecord): string {
   // Keep the FNV state before the closing bracket so the next capture only
@@ -97,7 +128,7 @@ export class BattleHistory {
   private current: WorkingRecord | null;
   constructor(readonly runId: string, battles: readonly BattleRecord[] = [], currentBattle: BattleRecord | null = null) {
     // Recorder-owned records are already detached and deeply immutable; sharing them keeps their verified replay.
-    const own = (record: BattleRecord) => isOwnedBattleRecord(record) ? record : markOwned(deepFreeze(structuredClone(record)));
+    const own = (record: BattleRecord) => isOwnedBattleRecord(record) ? record : markOwned(deepFreeze(shareRecordStatus(structuredClone(record))));
     this.completed = battles.map(own);
     const owned = currentBattle ? own(currentBattle) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
