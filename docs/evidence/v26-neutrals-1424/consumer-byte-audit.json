@@ -2151,9 +2151,9 @@
     },
     "tests/s13-p1-multiplayer-income.test.ts": {
       "previousBytes": 3703,
-      "currentBytes": 5091,
+      "currentBytes": 5156,
       "previousSha256": "81ddd8341a62dce27452814ac6fd58e0ac59aee5c2c0bfe47f7900dc86eedbf1",
-      "currentSha256": "2a8e4d89338f17463873c0ccff2513c1337f5fd728eb9fa5b50f89d339820781",
+      "currentSha256": "a3a916e6f5cb331df3333cada7a2c4a3d5da9eda3ad884e4dc28c2067d8e5466",
       "firstDifferentByte": 51
     },
     "tests/s13-p3-acquisition.test.ts": {
