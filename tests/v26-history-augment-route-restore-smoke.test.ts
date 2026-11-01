@@ -7,10 +7,8 @@ import { dispatch, run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 
-// Full seed-42 sniper victory replays ~37 s in one vitest case. Capture the genuine
-// public route once at import; the case only replays the tail after one serialize→restore.
-// Checkpoint immediately after the public 2-1 snipers-nest pick; tail is the rest of 2-1
-// through one battle into 2-2 preparation.
+// Seed-42 public sniper picks snipers-nest at 2-1; capture stops at 2-2 preparation (one battle after the pick).
+// The case replays only the tail after one serialize→restore inside the default 5 s limit.
 const BUILD = 'sniper';
 const SEED = 42;
 const END = '2-2';
@@ -56,10 +54,8 @@ async function capturePublicSniperSmokeRoute(): Promise<{
   return { checkpoint, tail, referenceEnd };
 }
 
-const routeCapture = capturePublicSniperSmokeRoute();
-
 it('public sniper route with snipers-nest survives one mid-run serialize restore', async () => {
-  const { checkpoint, tail, referenceEnd } = await routeCapture;
+  const { checkpoint, tail, referenceEnd } = await capturePublicSniperSmokeRoute();
   expect(checkpoint.augments.map(augment => augment.definitionId)).toContain('snipers-nest');
   expect(Object.hasOwn(AUGMENT_HISTORY_OWNERS, 'snipers-nest')).toBe(true);
   const proof = checkpoint.augmentHistory?.proof;
