@@ -106,6 +106,14 @@ describe('carried combat ticks', () => {
     expect(runSharedMatchCommand(roster.pool, roster.state, { type: 'step' }, undefined, true))
       .toEqual({ ok: false, pool: roster.pool, state: roster.state, reason: 'invalid-seat-state' });
 
+    const seatBinding = carriedCombat();
+    const forgedSeatId = seatBinding.pool.seats[0]!.seatId === seatBinding.state.sharedPool!.seatId
+      ? `${seatBinding.state.sharedPool!.seatId}-forged`
+      : seatBinding.pool.seats[0]!.seatId;
+    (seatBinding.state.sharedPool as { seatId: string }).seatId = forgedSeatId;
+    expect(runSharedMatchCommand(seatBinding.pool, seatBinding.state, { type: 'step' }, undefined, true))
+      .toEqual({ ok: false, pool: seatBinding.pool, state: seatBinding.state, reason: 'invalid-seat-state' });
+
     const external = carriedCombat();
     const externalId = Object.keys(external.pool.available)[0]!;
     const substituted = {

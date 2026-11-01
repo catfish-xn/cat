@@ -148,6 +148,13 @@ function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
 // A carried tick may skip the input walk only for the exact pair this process just checked.
 // The boolean is not that proof: an in-place stock edit keeps the same objects, and a caller
 // can pass a different pair. The seal is a value snapshot, so either change runs the full walk.
+//
+// stockSeal covers pool stock tables and seat shop generations, not slot offers or orb/carousel
+// metadata. rosterSeal covers phase, sharedPool seat binding and revision, multiplayer status,
+// and player roster ids — not gold/level/xp, combat, m8 loot ledgers, resource provenance,
+// multiplayer.seatId, or shop slot contents. Those stay on the full assertSharedPoolConservation
+// walk when the seal breaks, and on every tick's output check (assertCarriedPoolConservation /
+// assertSharedPoolConservation on the post-command state) plus frozen/immutable shop bindings.
 const provenPairs = new WeakMap<SharedPoolState, { readonly state: MatchState; readonly stock: string; readonly roster: string }>();
 function stockSeal(pool: SharedPoolState): string {
   const parts: Array<string | number | boolean> = [pool.version, pool.poolId, pool.seed, pool.revision, pool.naturalRound, pool.seatCount, pool.order.join(',')];
@@ -162,7 +169,7 @@ function stockSeal(pool: SharedPoolState): string {
   return parts.join('\0');
 }
 function rosterSeal(state: MatchState): string {
-  const parts: Array<string | number> = [state.seed, state.phase, state.sharedPool?.revision ?? -1, state.multiplayer?.status ?? ''];
+  const parts: Array<string | number> = [state.seed, state.phase, state.sharedPool?.seatId ?? '', state.sharedPool?.revision ?? -1, state.multiplayer?.status ?? ''];
   for (const unit of state.preparation.units) if (unit.team === 'player') parts.push(unit.id, unit.definitionId, unit.starLevel);
   return parts.join('\0');
 }
