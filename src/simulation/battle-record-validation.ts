@@ -138,9 +138,12 @@ const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
 const CONTENT_REPLAY_LIMIT = 48;
 const contentReplays = new Map<string, { readonly record: BattleRecord; readonly verified: VerifiedReplay }>();
 let coldBattleReplays = 0;
+let transcriptBattleReuses = 0;
 let mutableExternalEvidence = 0;
 /** Combat reconstructions actually simulated. A matching unowned copy does not increment this. */
 export function coldBattleReplayCount(): number { return coldBattleReplays; }
+/** Battles admitted from this import's match-proof replay. The final hash check still ran. */
+export function transcriptBattleReuseCount(): number { return transcriptBattleReuses; }
 function contentReplayKey(record: BattleRecord): string {
   const names = record && typeof record === 'object' ? Object.keys(record).filter(key => key !== 'runId').sort() : [];
   return `${names.join(',')}\n${record.eventHash}\n${record.stateHash}\n${record.combatId}\n${record.endTick}\n${record.result ?? ''}\n${record.roundId}\n${record.nextEventSeq}`;
@@ -221,6 +224,16 @@ function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): Veri
     const reused = takeContentReplay(record);
     if (reused) return reused;
   }
+  // The match-proof replay already executed these commands. Reuse that combat
+  // when every field the tick walk would check still matches, including hashes.
+  // Playback checkpoints and in-combat equipment commands keep the tick walk:
+  // a transcript has no trajectory and does not re-execute those commands.
+  if (!checkpoints && mutableExternalEvidence === 0 && !record.equipmentCommands?.length && augmentCombatTranscript(record.combatId)) {
+    validatorFor(record);
+    checkShape(record);
+    const fromTranscript = transcriptReplay(record);
+    if (fromTranscript) { transcriptBattleReuses++; return fromTranscript; }
+  }
   coldBattleReplays++;
   const verified = validatorFor(record)(record, checkpoints);
   if (reuseContent) rememberContentReplay(record, verified);
@@ -270,10 +283,6 @@ function transcriptReplay(record: BattleRecord): VerifiedReplay | undefined {
 }
 function validateM8Record(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   checkShape(record);
-  if (!checkpoints && mutableExternalEvidence === 0) {
-    const reused = transcriptReplay(record);
-    if (reused) return reused;
-  }
   let state = validateMatchStructure(record.context);
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');

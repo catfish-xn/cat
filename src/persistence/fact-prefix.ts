@@ -30,27 +30,12 @@ function replaceKey<T extends object>(value: T, key: string, next: unknown): T {
   return copy as T;
 }
 
-/** Same key order and values. One fact is enough for the tail of an append-only log. */
-function sameValue(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
-  const leftKeys = Object.keys(left), rightKeys = Object.keys(right);
-  if (leftKeys.length !== rightKeys.length) return false;
-  const leftRecord = left as Record<string, unknown>, rightRecord = right as Record<string, unknown>;
-  for (let i = 0; i < leftKeys.length; i++) {
-    const key = leftKeys[i];
-    if (key !== rightKeys[i] || !sameValue(leftRecord[key], rightRecord[key])) return false;
-  }
-  return true;
-}
-
 function isFactPrefix(facts: readonly FactTail[], source: readonly FactTail[]): boolean {
   if (facts.length > source.length || facts.length === 0) return false;
-  // Small logs are compared in full so a rewritten early fact is stored as written.
-  // A long log compares its ends: facts are append-only, and import still replays.
-  const limit = facts.length <= 64 ? facts.length : 2;
-  const indexes = limit === facts.length ? facts.map((_, index) => index) : [0, facts.length - 1];
-  return indexes.every(index => sameValue(facts[index], source[index]));
+  // Every fact is compared. A length alone is stored only when the battle log is
+  // exactly that prefix, so import cannot replace a rewritten middle fact.
+  for (let index = 0; index < facts.length; index++) if (!sameJson(facts[index], source[index])) return false;
+  return true;
 }
 
 interface CatalogEntry { value: unknown; count: number; id: number }
@@ -377,7 +362,7 @@ export function expandAugmentFactPrefixes(input: unknown): void {
     const length = (facts as Record<string, unknown>)[AUGMENT_FACT_PREFIX];
     if (typeof length !== 'number' || !Number.isInteger(length) || length < 0 || !Array.isArray(source) || length > source.length)
       throw new Error('强化事实前缀');
-    history.facts = source.slice(0, length);
+    history.facts = structuredClone(source.slice(0, length));
   };
   if (Array.isArray(envelope.battles)) for (const record of envelope.battles) expand(record);
   expand(envelope.currentBattle);

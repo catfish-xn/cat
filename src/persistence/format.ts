@@ -58,16 +58,15 @@ export async function validateFile(file: Blob, validateHistory: ValidateHistory)
 const archiveFiles = new WeakMap<BattleRecord, {records:readonly BattleRecord[];file:Blob}>();
 function archiveBytes(text: string): Blob {
   // encodeInto writes UTF-8 once; Blob(string) otherwise scans and encodes again.
-  // Chrome encodes a catalog faster in modest chunks than in one buffer. Short
-  // texts keep the single encodeInto path, including lone surrogates.
-  if (text.length > 8 * 1024 * 1024) return encodeUtf8Chunks(text);
+  // A catalog past 64MB used to take that second pass. ASCII JSON fits an exact
+  // buffer, so the large path encodes once without a 3x scratch allocation.
+  if (text.length > MAX_SAVE_BYTES / 4) return encodeLargeUtf8(text);
   const bytes = new Uint8Array(text.length * 3);
   const { written } = new TextEncoder().encodeInto(text, bytes);
   return new Blob([bytes.subarray(0,written)]);
 }
-function encodeUtf8Chunks(text: string): Blob {
+function encodeLargeUtf8(text: string): Blob {
   const encoder = new TextEncoder();
-  // Catalog JSON is ASCII: one exact buffer is cheaper than slicing it into chunks.
   const exact = new Uint8Array(text.length);
   const exactWritten = encoder.encodeInto(text, exact).written;
   if (exactWritten === text.length) return new Blob([exact]);
@@ -80,15 +79,9 @@ function encodeUtf8Chunks(text: string): Blob {
     }
     if (end <= index) end = Math.min(text.length, index + 1);
     const slice = text.slice(index, end);
-    // Catalog JSON is ASCII, so the slice length is the UTF-8 length. A non-ASCII
-    // slice (a surrogate or multibyte character) falls back to the sized buffer.
-    let bytes = new Uint8Array(slice.length);
-    let { written } = encoder.encodeInto(slice, bytes);
-    if (written !== slice.length) {
-      bytes = new Uint8Array(slice.length * 3);
-      written = encoder.encodeInto(slice, bytes).written;
-    }
-    parts.push(bytes.subarray(0, written) as BlobPart);
+    const bytes = new Uint8Array(slice.length * 3);
+    const { written } = encoder.encodeInto(slice, bytes);
+    parts.push(bytes.subarray(0, written));
     index = end;
   }
   return new Blob(parts);
@@ -124,7 +117,7 @@ function exportParts(envelope: SaveEnvelope): BlobPart[] {
     if (key === 'battles') {
       parts.push(separator, JSON.stringify(key), ':', archiveFile(battles, sourceFacts));
     } else if (key === 'currentBattle' && value) {
-      const field = JSON.stringify({[key]: compactBattleRecord(value as BattleRecord, sourceFacts)}).slice(1,-1);
+      const field = JSON.stringify({ [key]: compactBattleRecord(value as BattleRecord, sourceFacts) }).slice(1, -1);
       if (!field) continue;
       parts.push(separator, field);
     } else {

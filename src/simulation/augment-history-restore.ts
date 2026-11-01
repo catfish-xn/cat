@@ -31,7 +31,10 @@ interface TranscriptCapture {
   depth: number;
 }
 let capture: TranscriptCapture | null = null;
+let augmentReplaySteps = 0;
 const CONTINUED_COMBAT = new Set(['stepMatch', 'useConsumable', 'combineItems', 'equipItem']);
+/** Command steps actually executed by augment-history replay. A prefix hit stays at the previous value. */
+export function augmentHistoryReplaySteps(): number { return augmentReplaySteps; }
 /** Opens a capture around one archive admission. Nested admissions share it. */
 export function openCombatTranscriptCapture(): () => void {
   const parent = capture;
@@ -547,10 +550,21 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   for (const [index,c] of proof.commands.entries()) {
     const skipped = prefix?.commands[index]?.count ?? 0;
     if (skipped === c.count) continue;
+    // Archive admission compares battle records to this proof and does not
+    // validate each battle context again. Those contexts are shorter command
+    // prefixes, and a longer cached proof cannot resume them. Keep the state
+    // already produced at each combat start so playback does not replay the match.
+    if (recordThis && cacheable && skipped === 0 && c.name === 'startMatchCombat') {
+      // Freeze a copy. rememberReplay freezes its argument in place, and this
+      // walk still passes `replay` into the next pure command.
+      const text = canonicalContent(replay);
+      rememberReplay(origin, encoded.slice(0, index), structuredClone(replay), text);
+    }
     // A command may retain a location/target object. Private evidence must not
     // retain or freeze any object owned by the candidate save.
     const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
     for (let i = skipped; i < c.count; i++) {
+      augmentReplaySteps++;
       const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : c.name === 'grantMechanicUnit' ? grantMechanicUnit : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
       const before = replay;
       const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState; events?: readonly MatchEvent[] };
