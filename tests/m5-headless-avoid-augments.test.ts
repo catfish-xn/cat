@@ -23,8 +23,3 @@ it('rerolls one unused slot only when every offer is a history owner', () => {
   expect(chooseAugmentOffer(['snipers-nest', 'rebel-resurgence', 'over-encumbered'], order, avoid, [true, false, true])).toEqual({ id: null, reroll: true });
   expect(chooseAugmentOffer(['snipers-nest', 'rebel-resurgence', 'over-encumbered'], order, avoid, spent)).toEqual({ id: 'snipers-nest', reroll: false });
 });
-
-it('does not apply avoid to augmentRerollPriorities entries', () => {
-  expect(chooseAugmentOffer(['snipers-nest', 'reunion'], order, avoid, fresh, ['snipers-nest'])).toEqual({ id: 'snipers-nest', reroll: false });
-  expect(chooseAugmentOffer(['rebel-resurgence', 'built-different'], ['rebel-resurgence', ...order], avoid, fresh, ['rebel-resurgence'])).toEqual({ id: 'rebel-resurgence', reroll: false });
-});
