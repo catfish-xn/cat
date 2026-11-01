@@ -428,7 +428,8 @@ function validateRewardsCore(before,after,command,events,base){
  if(entry)xpGain=base.entryXp(before);
  if(select){xpGain=({'silver-spoon':10,epoch:6,'epoch-plus':8,'level-up':12,'slammin-plus':10})[command.definitionId]??0;
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
- const progression=base.xp(before.level,before.xp,xpGain);
+ const xpCap=s=>s.augments.some(a=>a.definitionId==='max-cap')?7:10;
+ const progression=base.xp(before.level,before.xp,xpGain,xpCap(select?{...before,augments}:before));
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
  if(pvpSettlement){
   const r=after.roundResults.at(-1);

@@ -6,10 +6,75 @@
  */
 const assert = require('node:assert/strict');
 const {isDeepStrictEqual} = require('node:util');
+const {pandoraChanges} = require('./augment-batch5-s3b-oracle.cjs');
 const {observedEqual,observedArray,extendObservedArray,identicalPrefix,reuseGrowthFacts,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
 const IDS = ['no-scout-no-pivot', 'cooking-pot'];
 const owners = s => s.augments.filter(a => IDS.includes(a.definitionId));
 const roster = s => ({units:s.preparation.units.filter(u=>u.team==='player'),items:s.items});
+function roundAt(ordinal) {
+  const {ROUNDS} = require('./oracle.g2.cjs');
+  return ROUNDS[ordinal - 1];
+}
+function overEncumberedActive(state) {
+  const stage = roundAt(state.round).stage;
+  return state.augments.some(a => a.definitionId === 'over-encumbered'
+    && stage === roundAt(a.acquiredRound).stage + 1
+    && !state.roundResults.some(r => {
+      const settled = roundAt(r.round);
+      return settled.stage === stage && settled.subround === 7;
+    }));
+}
+function combatBenchProjection(preparation) {
+  if (preparation.usableBenchSlots === undefined && preparation.overflowUnitIds === undefined) return preparation;
+  const ids = preparation.overflowUnitIds ?? [];
+  const occupied = new Set(preparation.units.flatMap(u => u.location.kind === 'bench' ? [u.location.slot] : []));
+  const slots = Array.from({ length: preparation.benchSize }, (_, i) => i).filter(i => !occupied.has(i));
+  const {overflowUnitIds: _o, usableBenchSlots: _u, ...base} = preparation;
+  return {...base, units: preparation.units.map(u => ids.includes(u.id)
+    ? {...u, location: {kind: 'bench', slot: slots[ids.indexOf(u.id)]}} : u)};
+}
+function reconcileOverEncumbered(state, returnOverflow = false) {
+  const active = overEncumberedActive(state), p = state.preparation;
+  if (!active && p.usableBenchSlots === undefined && p.overflowUnitIds === undefined) return p;
+  const limit = active ? 1 : p.benchSize;
+  let units = [...p.units];
+  let parked = (p.overflowUnitIds ?? []).filter(id => units.some(u => u.id === id));
+  const freeBench = () => Array.from({length: limit}, (_, slot) => slot)
+    .find(slot => !units.some(u => u.location.kind === 'bench' && u.location.slot === slot));
+  for (const u of units.filter(u => u.team === 'player' && u.location.kind === 'bench' && u.location.slot >= limit)
+    .sort((a, b) => a.location.slot - b.location.slot)) {
+    const slot = freeBench();
+    if (slot !== undefined) { units = units.map(x => x.id === u.id ? {...x, location: {kind: 'bench', slot}} : x); continue; }
+    const zone = p.board.deploymentZones.player;
+    const cells = Array.from({length: zone.lastRow - zone.firstRow + 1}, (_, r) => zone.lastRow - r)
+      .flatMap(row => Array.from({length: p.board.columns}, (_, col) => ({row, col})));
+    const cell = cells.find(c => !units.some(u => u.location.kind === 'board' && u.location.cell.col === c.col && u.location.cell.row === c.row));
+    assert(cell, 'H3 over-encumbered parking capacity');
+    units = units.map(x => x.id === u.id ? {...x, location: {kind: 'board', cell}} : x);
+    parked.push(u.id);
+  }
+  for (const id of !active || returnOverflow ? parked : []) {
+    const slot = freeBench(); if (slot === undefined) break;
+    units = units.map(x => x.id === id ? {...x, location: {kind: 'bench', slot}} : x);
+  }
+  parked = parked.filter(id => units.some(u => u.id === id && u.location.kind === 'board'));
+  const {usableBenchSlots: _u, overflowUnitIds: _o, ...base} = p;
+  return {...base, units, ...(active ? {usableBenchSlots: 1, overflowUnitIds: parked} : {})};
+}
+function historyEntryRoster(preparation, items) {
+  const projected = combatBenchProjection(preparation);
+  return {units: projected.units.filter(u => u.team === 'player'), items};
+}
+/** Match production round-entry order: over-encumbered reconcile, then Pandora II item rolls. */
+function roundEntryRoster(before, afterRound) {
+  const entryState = {...before, round: afterRound, preparation: copy(before.preparation)};
+  const preparation = reconcileOverEncumbered(entryState);
+  let items = copy(before.items);
+  for (const change of pandoraChanges(entryState, afterRound)) {
+    items = items.map(i => i.id === change.itemId ? {...i, definitionId: change.to} : i);
+  }
+  return historyEntryRoster(preparation, items);
+}
 const facts = s => s.augmentHistory?.facts ?? [];
 const resources = s => s.resourceProvenance.entries;
 const copy = structuredClone;
@@ -235,7 +300,7 @@ function checkH3Growth(memory,before,after,command) {
   const entries=added.filter(f=>f.kind==='round-entry');
   if(after.round!==before.round&&before.augmentHistory) {
     assert.equal(after.round,before.round+1,'H3 natural entry');assert.equal(before.phase,'settlement','H3 entry after settlement');
-    assert.equal(entries.length,1,'H3 required entry');assert.deepEqual(entries[0].roster,roster(before),'H3 independent entry equipment/roster');
+    assert.equal(entries.length,1,'H3 required entry');assert.deepEqual(entries[0].roster,roundEntryRoster(before,after.round),'H3 independent entry equipment/roster');
   } else assert.equal(entries.length,0,'H3 unexpected entry');
   const add=(owner,key,deltas)=>next.expected.push({kind:'growth',seatId:memory.seatId,round:after.round,roundId:after.roundDefinitionId,choiceId:owner.choiceId,receiptId:JSON.stringify(key),deltas});
   const pot=owners(before).find(a=>a.definitionId==='cooking-pot');
