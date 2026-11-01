@@ -251,7 +251,13 @@ function rewardPlan(s,env){
   }
  }
  const explosion=lootExplosionPlan(s);
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
+ const oeGifts=[];
+ for(const a of s.augments.filter(x=>x.definitionId==='over-encumbered')){
+  const stage=env.ROUNDS[a.acquiredRound-1].stage+1;
+  const due=s.roundResults.find(r=>{const row=env.ROUNDS[r.round-1];return row.stage===stage&&row.sub===7;});
+  if(due&&due.hpAfter>0)oeGifts.push(...expand(s,{...a,acquiredRound:due.round,choiceId:JSON.stringify([a.choiceId,'over-encumbered-stage',stage])},[Q('component',3)],env));
+ }
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...oeGifts,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
 }
 // P-B5-69 (2026-10-27): independent integer weights and reward mapping, not production receipts.
 function lootExplosionPlan(s) {
