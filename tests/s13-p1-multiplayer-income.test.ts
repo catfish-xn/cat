@@ -27,16 +27,17 @@ function reachOpening(seed:number):MatchState{
   if(state.phase==='preparation')state=accepted(startMatchCombat(emptyBoard(state)));
   state=resolveM5Choices(state);
   if(state.phase!=='settlement')throw new Error(`Cannot reach 2-1 from ${state.roundDefinitionId}/${state.phase}`);
-  state=clearPendingCapacity(state);
+  if(hasPendingLootCapacity(state))state=clearPendingCapacity(state);
   state=accepted(nextRound(state,state.round));
  }
  return state;
 }
 const onlineAccepted=(r:ReturnType<typeof applyRoundSettlement>)=>{if(!r.ok)throw Error(r.reason);return r.state;};
 it.each(['going-long','investment-strategy-ii'])('%s public board crosses Conqueror breakpoint and both real online receipts settle',id=>{
- const first={'going-long':317,'investment-strategy-ii':323}[id]!;
- let s=reachOpening(first),found=false;
- for(let seed=first;seed<3000;seed++){ // bounded; the 14.24 stage tags moved the first matching seed
+ /** First seed with augment offer + darius/draven shop after v26 reachOpening (309/330; 317/323 only met shop, not offer). */
+ const first={'going-long':309,'investment-strategy-ii':330}[id]!;
+ let s!:MatchState,found=false;
+ for(let seed=first;seed<3000;seed++){ // bounded; re-pin if 14.24 stage tags drift
   if(openingEncounter(seed)==='trainer-golems')continue; // v23 fmix32 openings: the unbenchable golem blocks reachRound's empty board.
   s=reachOpening(seed);
   const available=new Set([...s.shop.slots.filter(x=>x.status==='available').map(x=>x.definitionId),...s.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)]);
