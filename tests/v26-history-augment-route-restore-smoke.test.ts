@@ -91,6 +91,9 @@ it('public sniper route with snipers-nest survives one mid-run serialize restore
   expect(proof.origin.round).toBe(1);
   expect(checkpoint.augmentHistory!.facts.filter(fact => fact.kind === 'acquire').length).toBeGreaterThanOrEqual(1);
   expect(atCombatTick(referenceEnd, STOP_ROUND, STOP_COMBAT_TICK)).toBe(true);
+  // The tail must add combat/PvP roster history, or the restore comparison would not exercise history replay.
+  const addedFacts = referenceEnd.augmentHistory!.facts.slice(checkpoint.augmentHistory!.facts.length);
+  expect(addedFacts.some(fact => fact.kind === 'combat-roster' || fact.kind === 'pvp-roster')).toBe(true);
 
   let restored = restoreMatch(serializeMatch(checkpoint));
   expect(restored).toEqual(checkpoint);
