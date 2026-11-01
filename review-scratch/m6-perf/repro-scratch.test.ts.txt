@@ -1,0 +1,206 @@
+import { describe, expect, it } from 'vitest';
+import * as fs from 'node:fs';
+import { M8_VERSION } from '../src/simulation/m8/version';
+import { createMatch, equipItem, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
+import type { MatchState } from '../src/simulation/match-types';
+import type { LedgerCombatEvent } from '../src/simulation/combat-types';
+import type { BattleRecord, SaveEnvelope } from '../src/m6/contracts';
+import { BattleHistory, validateBattleCollection } from '../src/replay';
+import { validateBattlePlayback } from '../src/simulation/battle-record-validation';
+import { exportFile, validateFile } from '../src/persistence/format';
+import { coldBattleReplayCount, transcriptBattleReuseCount } from '../src/simulation/battle-record-validation';
+import { augmentCombatTranscript, openCombatTranscriptCapture } from '../src/simulation/augment-history-restore';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
+import { accepted, resolveM5Choices } from './match-helpers';
+
+const OUT = '/home/user/scratch';
+const log = (...a: unknown[]) => fs.appendFileSync(OUT + '/log.txt', a.map(String).join(' ') + '\n');
+function envelopeOf(seed: number, opts: { equip?: boolean; minBattles?: number } = {}): { env: SaveEnvelope; equipped: number } {
+  const runId = `review-${seed}`;
+  const history = new BattleHistory(runId);
+  let match = createMatch(seed);
+  let equipped = 0;
+  const combatEvents = (events: readonly { domain?: string }[]) => events.filter((e): e is LedgerCombatEvent => e.domain === 'combat');
+  const resolve = (state: MatchState) => {
+    let guard = 0;
+    while (state.phase === 'choice' && guard++ < 12) {
+      const choice = state.pendingChoice;
+      if (choice?.kind === 'augment') {
+        const owned = choice.offers.find(id => augmentNeedsHistory(id));
+        if (owned) { state = accepted(selectChoice(state, choice.choiceId, choice.generation, owned)); continue; }
+        const slot = choice.rerolledSlots?.findIndex(used => !used) ?? -1;
+        if (slot >= 0) { state = accepted(rerollAugment(state, choice.choiceId, choice.generation, slot)); continue; }
+      }
+      state = resolveM5Choices(state);
+    }
+    return state;
+  };
+  const min = opts.minBattles ?? 1;
+  const stop = getCatalogRoundById('4-2').ordinal;
+  for (let guard = 0; guard < 120 && match.round <= stop && (!match.augmentHistory || history.completedRecords.length < min || (opts.equip && !equipped)); guard++) {
+    if (match.phase === 'gameOver') break;
+    if (match.phase === 'choice') { match = resolve(match); continue; }
+    if (match.phase === 'settlement') {
+      const before = match; const advanced = nextRound(match, match.round); if (!advanced.ok) break;
+      match = advanced.state; history.observe({ before, after: match, events: combatEvents(advanced.events), reason: 'command' }); continue;
+    }
+    if (match.phase !== 'preparation') break;
+    const before = match; const started = startMatchCombat(match); if (!started.ok) break;
+    match = started.state; history.observe({ before, after: match, events: combatEvents(started.events), reason: 'command' });
+    let ticks = 0;
+    while (match.phase === 'combat') {
+      if (opts.equip && match.augmentHistory && ticks === 2) {
+        for (const item of match.items.filter(i => i.location.kind === 'inventory')) {
+          for (const unit of match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board')) {
+            for (let slot = 0; slot < 3; slot++) {
+              const r = equipItem(match, item.id, unit.id, slot);
+              if (r.ok) { const b = match; match = r.state; history.observe({ before: b, after: match, events: combatEvents(r.events), reason: 'command' }); equipped++; break; }
+            }
+            if (equipped) break;
+          }
+          if (equipped) break;
+        }
+      }
+      const tb = match; const stepped = stepMatch(match); match = stepped.state; ticks++;
+      history.observe({ before: tb, after: match, events: combatEvents(stepped.events), reason: 'tick' });
+    }
+  }
+  if (!match.augmentHistory || history.completedRecords.length < 1) throw new Error(`seed ${seed} stopped`);
+  return { env: { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
+    runId, createdAt: '2026-10-06T00:00:00.000Z', match, battles: history.completedRecords, currentBattle: null }, equipped };
+}
+const blob = (text: string) => new Blob([text]);
+async function admit(text: string) { return validateFile(blob(text), validateBattleCollection); }
+const counters = () => ({ cold: coldBattleReplayCount(), reuse: transcriptBattleReuseCount() });
+
+describe('review scratch', () => {
+  it('tamper: event / hashes / result / endTick on compact and plain files are rejected', async () => {
+    const { env } = envelopeOf(902431, { minBattles: 12 });
+    const compact = await exportFile(env).text();
+    const plain = JSON.stringify(env);
+    fs.writeFileSync(`${OUT}/compact.json`, compact); fs.writeFileSync(`${OUT}/plain.json`, plain);
+    log('sizes', compact.length, plain.length, 'battles', env.battles.length, 'hasDict', compact.includes('statusDictionary'), 'hasPrefix', compact.includes('$augmentFactPrefix'));
+    const c0 = counters(); await admit(compact); const c1 = counters();
+    log('compact ok reuse', c1.reuse - c0.reuse, 'cold', c1.cold - c0.cold);
+    await admit(plain); const c2 = counters();
+    log('plain ok reuse', c2.reuse - c1.reuse, 'cold', c2.cold - c1.cold);
+    const mut = (f: (r: any) => void) => { const e = JSON.parse(plain); f(e.battles[0]); return JSON.stringify(e); };
+    const cases: Record<string, string> = {
+      eventTick: mut(r => { const ev = r.events.find((x: any) => x.type === 'packetDamage') ?? r.events[0]; if (ev.outcome?.hpDamage !== undefined) ev.outcome.hpDamage += 1; else ev.tick += 1; }),
+      eventDropLast: mut(r => { r.events.pop(); }),
+      stateHash: mut(r => { r.stateHash = r.stateHash.replace(/.$/, c => c === '0' ? '1' : '0'); }),
+      eventHash: mut(r => { r.eventHash = r.eventHash.replace(/.$/, c => c === '0' ? '1' : '0'); }),
+      result: mut(r => { r.result = r.result === 'win' ? 'loss' : 'win'; }),
+      endTick: mut(r => { r.endTick += 1; }),
+      nextEventSeq: mut(r => { r.nextEventSeq += 1; }),
+      initial: mut(r => { r.initial.tick = 1; }),
+      contextGold: mut(r => { r.context.gold += 1; }),
+      // consistent forge: change an event and recompute nothing -> must fail
+    };
+    // compact-file tamper: alter a packed row value
+    const ce = JSON.parse(compact);
+    const ev0 = ce.battles[0].events; const idx = ev0.findIndex((x: any) => Array.isArray(x) && x[0] === '$p');
+    if (idx >= 0) { ev0[idx][9] += 1; cases.compactRow = JSON.stringify(ce); }
+    for (const [name, text] of Object.entries(cases)) {
+      const before = counters();
+      let err = '';
+      try { await admit(text); } catch (e) { err = String((e as Error).message).slice(0, 80); }
+      const after = counters();
+      log('tamper', name, err ? 'REJECTED ' + err : 'ACCEPTED!!', 'reuse+', after.reuse - before.reuse, 'cold+', after.cold - before.cold);
+      expect(err).not.toBe('');
+    }
+  }, 600_000);
+
+  it('malicious prefixes / dictionaries', async () => {
+    const compact = fs.readFileSync(`${OUT}/compact.json`, 'utf8');
+    const base = () => { const e = JSON.parse(compact); const k = e.battles.findIndex((b: any) => b.context.augmentHistory && !Array.isArray(b.context.augmentHistory.facts)); log('prefix battle', k); e.battles[0] = e.battles[k]; return e; };
+    const variants: Record<string, (e: any) => void> = {
+      prefixNeg: e => { e.battles[0].context.augmentHistory.facts = { $augmentFactPrefix: -1 }; },
+      prefixHuge: e => { e.battles[0].context.augmentHistory.facts = { $augmentFactPrefix: 1e9 }; },
+      prefixFloat: e => { e.battles[0].context.augmentHistory.facts = { $augmentFactPrefix: 1.5 }; },
+      prefixStr: e => { e.battles[0].context.augmentHistory.facts = { $augmentFactPrefix: '3' }; },
+      prefixShorter: e => { const f = e.battles[0].context.augmentHistory.facts; if (f.$augmentFactPrefix > 0) f.$augmentFactPrefix -= 1; },
+      prefixExtraKey: e => { e.battles[0].context.augmentHistory.facts = { $augmentFactPrefix: 0, x: 1 }; },
+      dictNotArray: e => { e.battles[0].statusDictionary = {}; },
+      refOOB: e => { e.battles[0].statusDictionary = [1]; e.battles[0].events.push({ $statusRef: 5 }); },
+      refNeg: e => { e.battles[0].statusDictionary = [1]; e.battles[0].events.push({ $statusRef: -1 }); },
+      rowBad: e => { e.battles[0].statusDictionary = [1]; e.battles[0].events.push(['$s', 0, 'x', 'u', 'k', 'notarray', null, 0, 0, 1]); },
+      matchFactsRemoved: e => { e.match.augmentHistory.facts = []; },
+    };
+    for (const [name, f] of Object.entries(variants)) {
+      const e = base(); f(e); let err = '';
+      const t = performance.now();
+      try { await admit(JSON.stringify(e)); } catch (x) { err = String((x as Error).message).slice(0, 80); }
+      log('malicious', name, err ? 'REJECTED ' + err : 'ACCEPTED!!', Math.round(performance.now() - t) + 'ms');
+    }
+    // amplification bomb: one large dictionary entry referenced many times
+    for (const [entryKB, refs] of [[64, 2000], [512, 20000], [4096, 200000]] as const) {
+      const e = base();
+      const big = { s: 'x'.repeat(entryKB * 1024) };
+      e.battles[0].statusDictionary = [big];
+      for (const ev of e.battles[0].events) if (ev && !Array.isArray(ev) && typeof ev === 'object') { /* keep */ }
+      const extra = Array.from({ length: refs }, () => ({ $statusRef: 0 }));
+      
+      // also stuff refs deep in a single event to bypass the events length cap
+      e.battles[0].events[0] = { ...e.battles[0].events[0], pad: extra };
+      const text = JSON.stringify(e);
+      let err = ''; const t = performance.now(); const h0 = process.memoryUsage().heapUsed;
+      try { await admit(text); } catch (x) { err = String((x as Error).message).slice(0, 80); }
+      log('bomb', entryKB + 'KBx' + refs, 'file', (text.length / 1e6).toFixed(1) + 'MB', err ? 'REJECTED ' + err : 'ACCEPTED!!', Math.round(performance.now() - t) + 'ms', 'heapΔ', ((process.memoryUsage().heapUsed - h0) / 1e6).toFixed(0) + 'MB');
+    }
+  }, 600_000);
+
+  it('capture state does not leak after a throwing import', async () => {
+    const plain = fs.readFileSync(`${OUT}/plain.json`, 'utf8');
+    await expect(validateFile(blob(plain), async () => { throw new Error('boom'); })).rejects.toThrow();
+    log('after throw transcript visible?', augmentCombatTranscript('round-1') !== undefined, augmentCombatTranscript('round-2') !== undefined);
+    expect(augmentCombatTranscript('round-1')).toBeUndefined();
+    // throw inside routeSaveFile path (bad match) then direct validation must cold-replay
+    const e = JSON.parse(plain); e.match.gold = -5;
+    await expect(admit(JSON.stringify(e))).rejects.toThrow();
+    const env = JSON.parse(plain) as SaveEnvelope;
+    const c0 = counters(); await validateBattleCollection(env); const c1 = counters();
+    log('direct after failures reuse', c1.reuse - c0.reuse, 'cold', c1.cold - c0.cold);
+    expect(c1.reuse - c0.reuse).toBe(0);
+    // concurrent imports share a capture
+    const c2 = counters();
+    const plainB = JSON.stringify(envelopeOf(902432).env);
+    await Promise.all([admit(plain), admit(plainB)]);
+    const c3 = counters();
+    log('concurrent reuse', c3.reuse - c2.reuse, 'cold', c3.cold - c2.cold);
+    expect(augmentCombatTranscript('round-1')).toBeUndefined();
+    // a leaked outer opener (never closed) would keep transcripts forever: check closer idempotent
+    const close = openCombatTranscriptCapture(); close(); close();
+    expect(augmentCombatTranscript('round-1')).toBeUndefined();
+  }, 600_000);
+
+  it('record that omits in-combat equipment commands', async () => {
+    let found: { env: SaveEnvelope; equipped: number } | null = null;
+    for (const seed of [902431, 902432, 902433, 902434, 902435, 11, 12, 13]) {
+      try { const r = envelopeOf(seed, { equip: true }); if (r.equipped) { found = r; log('equip seed', seed); break; } } catch { /* next */ }
+    }
+    if (!found) { log('NO equip scenario found'); return; }
+    const env = found.env;
+    const i = env.battles.findIndex(b => b.equipmentCommands?.length);
+    log('record with equipment', i, JSON.stringify(env.battles[i]?.equipmentCommands));
+    if (i < 0) return;
+    // honest file admits
+    const c0 = counters(); await admit(JSON.stringify(env)); const c1 = counters();
+    log('honest equip: reuse', c1.reuse - c0.reuse, 'cold', c1.cold - c0.cold);
+    // forged: strip equipmentCommands
+    const forged = JSON.parse(JSON.stringify(env));
+    delete forged.battles[i].equipmentCommands;
+    let err = '';
+    try { await admit(JSON.stringify(forged)); } catch (x) { err = String((x as Error).message).slice(0, 100); }
+    const c2 = counters();
+    log('STRIPPED equipmentCommands:', err ? 'REJECTED ' + err : 'ACCEPTED', 'reuse', c2.reuse - c1.reuse, 'cold', c2.cold - c1.cold);
+    fs.writeFileSync(`${OUT}/stripped-equip.json`, JSON.stringify(forged));
+    if (!err) {
+      const admitted = await admit(JSON.stringify(forged));
+      let perr = '';
+      try { validateBattlePlayback(admitted.battles[i], admitted.battles); } catch (x) { perr = String((x as Error).message).slice(0, 100); }
+      log('playback of stripped record:', perr ? 'FAILS ' + perr : 'ok');
+    }
+  }, 900_000);
+});
