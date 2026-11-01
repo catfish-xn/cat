@@ -7,17 +7,21 @@ import { dispatch, run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 
-// Full seed-42 sniper victory with snipers-nest + rebel-resurgence replays ~37 s in one
-// vitest case. Stop at 2-6 preparation instead: snipers-nest is already on the route,
-// augmentHistory has replayed from round 1, and the tail stays within the default timeout.
+// Full seed-42 sniper victory replays ~37 s in one vitest case. Capture the genuine
+// public route once at import (same pattern as m5-replay-helper); the case itself only
+// replays the tail after one serialize→restore. Stop at 2-3 preparation: snipers-nest
+// is already taken, augmentHistory has replayed from round 1, and 2-2 still crosses
+// one real battle before the checkpoint.
 const BUILD = 'sniper';
 const SEED = 42;
-const CHECKPOINT = '2-5';
-const END = '2-6';
+const CHECKPOINT = '2-2';
+const END = '2-3';
 
-it('public sniper route with snipers-nest survives one mid-run serialize restore', async () => {
+type TailCommand = Parameters<typeof dispatch>[2] | undefined;
+
+async function capturePublicSniperSmokeRoute(): Promise<{ checkpoint: MatchState; tail: TailCommand[] }> {
   let checkpoint: MatchState | undefined;
-  const tail: (Parameters<typeof dispatch>[2] | undefined)[] = [];
+  const tail: TailCommand[] = [];
   let recordTail = false;
   const done = new Error('history-augment smoke route captured');
   try {
@@ -36,18 +40,25 @@ it('public sniper route with snipers-nest survives one mid-run serialize restore
   } catch (error) {
     if (error !== done) throw error;
   }
-  expect(checkpoint).toBeDefined();
-  expect(tail.length).toBeGreaterThan(0);
-  expect(checkpoint!.augments.map(augment => augment.definitionId)).toContain('snipers-nest');
+  if (!checkpoint) throw new Error(`public ${BUILD} route never reached ${CHECKPOINT} preparation`);
+  if (tail.length === 0) throw new Error(`public ${BUILD} route produced no tail after ${CHECKPOINT}`);
+  return { checkpoint, tail };
+}
+
+const routeCapture = capturePublicSniperSmokeRoute();
+
+it('public sniper route with snipers-nest survives one mid-run serialize restore', async () => {
+  const { checkpoint, tail } = await routeCapture;
+  expect(checkpoint.augments.map(augment => augment.definitionId)).toContain('snipers-nest');
   expect(Object.hasOwn(AUGMENT_HISTORY_OWNERS, 'snipers-nest')).toBe(true);
-  const proof = checkpoint!.augmentHistory?.proof;
+  const proof = checkpoint.augmentHistory?.proof;
   expect(proof?.kind).toBe('solo');
   if (proof?.kind !== 'solo') throw new Error('expected solo augment-history proof');
   expect(proof.origin.round).toBe(1);
-  expect(checkpoint!.augmentHistory!.facts.filter(fact => fact.kind === 'acquire').length).toBeGreaterThanOrEqual(1);
+  expect(checkpoint.augmentHistory!.facts.filter(fact => fact.kind === 'acquire').length).toBeGreaterThanOrEqual(1);
 
-  let reference = structuredClone(checkpoint!);
-  let restored = restoreMatch(serializeMatch(checkpoint!));
+  let reference = structuredClone(checkpoint);
+  let restored = restoreMatch(serializeMatch(checkpoint));
   expect(restored).toEqual(checkpoint);
   for (const command of tail) {
     if (command) {
