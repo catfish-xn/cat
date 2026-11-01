@@ -7,13 +7,38 @@ import { dispatch, run } from '../scripts/generate-m5-route.cjs';
 import { accepted } from './match-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 
-// Seed-42 public sniper picks snipers-nest at 2-1; capture stops at 2-2 preparation (one battle after the pick).
-// The case replays only the tail after one serialize→restore inside the default 5 s limit.
+// Seed-42 public sniper picks snipers-nest at 2-1. Stop at 2-1 combat tick 30: roster/formation
+// history is already written at combat start, so restore+replay still exercises augment history
+// through the real battle without paying for the rest of 2-1, settlement, or 2-2 prep.
+// Does not cover settlement or entering 2-2 preparation.
 const BUILD = 'sniper';
 const SEED = 42;
-const END = '2-2';
+const STOP_ROUND = '2-1';
+const STOP_COMBAT_TICK = 30;
 
-type TailCommand = Parameters<typeof dispatch>[2] | undefined;
+type TailCommand = Parameters<typeof dispatch>[2];
+
+function atCombatTick(state: MatchState, roundDefinitionId: string, tick: number): boolean {
+  return state.roundDefinitionId === roundDefinitionId
+    && state.phase === 'combat'
+    && state.combat?.tick === tick;
+}
+
+function replayRouteTailUntil(
+  state: MatchState,
+  tail: readonly TailCommand[],
+  stop: { roundDefinitionId: string; combatTick: number },
+): MatchState {
+  let current = state;
+  for (const command of tail) {
+    current = accepted(dispatch(api, current, command));
+    while (current.phase === 'combat') {
+      current = stepMatch(current).state;
+      if (atCombatTick(current, stop.roundDefinitionId, stop.combatTick)) return current;
+    }
+  }
+  throw new Error(`tail never reached ${stop.roundDefinitionId} combat tick ${stop.combatTick}`);
+}
 
 async function capturePublicSniperSmokeRoute(): Promise<{
   checkpoint: MatchState;
@@ -30,7 +55,7 @@ async function capturePublicSniperSmokeRoute(): Promise<{
       build: BUILD,
       seed: SEED,
       onStep(_before, result, command) {
-        if (recordTail) tail.push(command);
+        if (recordTail && command) tail.push(command);
         if (
           !checkpoint
           && command?.type === 'select'
@@ -39,8 +64,8 @@ async function capturePublicSniperSmokeRoute(): Promise<{
           checkpoint = structuredClone(result.state);
           recordTail = true;
         }
-        if (checkpoint && result.state.roundDefinitionId === END && result.state.phase === 'preparation') {
-          referenceEnd = structuredClone(result.state);
+        if (checkpoint && atCombatTick(result.state, STOP_ROUND, STOP_COMBAT_TICK)) {
+          referenceEnd = result.state;
           throw done;
         }
       },
@@ -49,7 +74,9 @@ async function capturePublicSniperSmokeRoute(): Promise<{
     if (error !== done) throw error;
   }
   if (!checkpoint) throw new Error(`public ${BUILD} route never acquired snipers-nest`);
-  if (!referenceEnd) throw new Error(`public ${BUILD} route never reached ${END} preparation after snipers-nest`);
+  if (!referenceEnd) {
+    throw new Error(`public ${BUILD} route never reached ${STOP_ROUND} combat tick ${STOP_COMBAT_TICK} after snipers-nest`);
+  }
   if (tail.length === 0) throw new Error(`public ${BUILD} route produced no tail after snipers-nest`);
   return { checkpoint, tail, referenceEnd };
 }
@@ -63,13 +90,10 @@ it('public sniper route with snipers-nest survives one mid-run serialize restore
   if (proof?.kind !== 'solo') throw new Error('expected solo augment-history proof');
   expect(proof.origin.round).toBe(1);
   expect(checkpoint.augmentHistory!.facts.filter(fact => fact.kind === 'acquire').length).toBeGreaterThanOrEqual(1);
-  expect(referenceEnd.roundDefinitionId).toBe(END);
+  expect(atCombatTick(referenceEnd, STOP_ROUND, STOP_COMBAT_TICK)).toBe(true);
 
   let restored = restoreMatch(serializeMatch(checkpoint));
   expect(restored).toEqual(checkpoint);
-  for (const command of tail) {
-    if (command) restored = accepted(dispatch(api, restored, command));
-    else restored = stepMatch(restored).state;
-  }
+  restored = replayRouteTailUntil(restored, tail, { roundDefinitionId: STOP_ROUND, combatTick: STOP_COMBAT_TICK });
   expect(restored).toEqual(referenceEnd);
 });
