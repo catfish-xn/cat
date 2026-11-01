@@ -137,6 +137,20 @@ const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
 // can edit the same objects after a success, and the next call must simulate again.
 const CONTENT_REPLAY_LIMIT = 48;
 const contentReplays = new Map<string, { readonly record: BattleRecord; readonly verified: VerifiedReplay }>();
+const pendingContentReplays = new WeakMap<BattleRecord, VerifiedReplay>();
+let contentReplayAdmission = 0;
+/** While a parsed save is being admitted, defer content-replay retention until the record is owned. */
+export function openContentReplayAdmission(): () => void {
+  contentReplayAdmission++;
+  return () => { contentReplayAdmission--; };
+}
+/** Certify one admitted archive into the content replay cache without cloning its record graph. */
+export function sealContentReplayAdmission(record: BattleRecord): void {
+  const verified = pendingContentReplays.get(record);
+  if (!verified) return;
+  pendingContentReplays.delete(record);
+  storeContentReplay(record, verified, false);
+}
 let coldBattleReplays = 0;
 let transcriptBattleReuses = 0;
 let mutableExternalEvidence = 0;
@@ -189,15 +203,21 @@ function takeContentReplay(record: BattleRecord): VerifiedReplay | null {
 }
 function rememberContentReplay(record: BattleRecord, verified: VerifiedReplay): void {
   if (!validatedFieldValues(record)) return;
+  if (contentReplayAdmission > 0 && !isOwnedBattleRecord(record)) {
+    pendingContentReplays.set(record, verified);
+    return;
+  }
+  storeContentReplay(record, verified, true);
+}
+function storeContentReplay(record: BattleRecord, verified: VerifiedReplay, cloneRecord: boolean): void {
   const key = contentReplayKey(record);
   if (contentReplays.has(key) && !sameBattleContent(record, contentReplays.get(key)!.record)) return;
   if (contentReplays.size >= CONTENT_REPLAY_LIMIT && !contentReplays.has(key)) {
     const oldest = contentReplays.keys().next().value;
     if (oldest !== undefined) contentReplays.delete(oldest);
   }
-  // Keep a detached copy. The caller's record is often frozen later, and an in-place edit of the
-  // same object would otherwise compare equal to itself and reuse a stale proof. Hits clone again.
-  contentReplays.set(key, { record: structuredClone(record), verified: structuredClone(verified) });
+  const storedRecord = cloneRecord ? structuredClone(record) : record;
+  contentReplays.set(key, { record: storedRecord, verified: structuredClone(verified) });
 }
 export function validateBattleRecord(record: BattleRecord, battles?: readonly BattleRecord[]): VerifiedReplay {
   const verified = replayBattleRecord(record);
@@ -237,7 +257,6 @@ function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): Veri
     const fromTranscript = transcriptReplay(record);
     if (fromTranscript) {
       transcriptBattleReuses++;
-      if (!checkpoints && !isOwnedBattleRecord(record)) rememberContentReplay(record, fromTranscript);
       return fromTranscript;
     }
   }

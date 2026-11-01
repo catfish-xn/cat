@@ -1,6 +1,6 @@
 import type { BattleRecord, SaveEnvelope } from '../m6/contracts';
 import { deepFreeze, isOwnedBattleRecord, validateBattleCollection } from '../replay/history';
-import { ownBattleRecord } from '../simulation/battle-record-validation';
+import { ownBattleRecord, openContentReplayAdmission, sealContentReplayAdmission } from '../simulation/battle-record-validation';
 import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_SAVE_BYTES } from '../m6/limits';
 import { SaveError } from './repository';
@@ -48,14 +48,15 @@ export async function validateFile(file: Blob, validateHistory: ValidateHistory)
   // routeSaveFile replays the match proof before the battle archive. Keep that
   // replay's combat transcripts until the archive comparison finishes.
   const closeTranscripts = openCombatTranscriptCapture();
+  const closeContentReplayAdmission = openContentReplayAdmission();
   let envelope: SaveEnvelope;
   try { envelope = await validateEnvelope(parsed, validateHistory); }
-  finally { closeTranscripts(); }
+  finally { closeContentReplayAdmission(); closeTranscripts(); }
   // File parsing owns these graphs. Certify immutable archives once after every
   // authority/replay check; activation need not detach the same packets again.
   // Object-input validateEnvelope deliberately keeps its caller's data mutable.
   for (const record of [...envelope.battles,...(envelope.currentBattle?[envelope.currentBattle]:[])]) {
-    deepFreeze(record); ownBattleRecord(record);
+    deepFreeze(record); ownBattleRecord(record); sealContentReplayAdmission(record);
   }
   return envelope;
 }

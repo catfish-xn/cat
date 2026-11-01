@@ -305,27 +305,29 @@ function resolveStatusRef(value: unknown, dictionary: readonly unknown[]): unkno
   return dictionary[id];
 }
 
-function noteStatusRef(value: unknown, dictionary: readonly unknown[], budget: { expanded: number }): void {
+function noteStatusRef(value: unknown, dictionary: readonly unknown[], dictChars: readonly number[], budget: { expanded: number }): void {
   if (!isStatusRef(value)) return;
   const id = value[STATUS_REF];
   if (typeof id !== 'number' || !Number.isInteger(id) || id < 0 || id >= dictionary.length) throw new Error('状态字典');
-  budget.expanded += jsonChars(dictionary[id]);
+  budget.expanded += dictChars[id];
   if (budget.expanded > STATUS_REF_EXPANSION_CAP) throw new Error('状态字典');
 }
 
 function validateStatusDictionaryEvents(events: unknown, dictionary: readonly unknown[]): void {
   if (!Array.isArray(events)) throw new Error('状态字典');
+  const dictChars = dictionary.map(entry => jsonChars(entry));
   const budget = { expanded: 0 };
+  const noteRef = (value: unknown) => noteStatusRef(value, dictionary, dictChars, budget);
   for (const event of events) {
     if (Array.isArray(event)) {
       if (event[0] === STATUS_ROW && event.length === 10) {
-        noteStatusRef(event[6], dictionary, budget);
+        noteRef(event[6]);
         if (!Array.isArray(event[5])) throw new Error('状态字典');
         for (const row of event[5]) {
           if (!Array.isArray(row) || row.length !== 7) throw new Error('状态字典');
-          noteStatusRef(row[0], dictionary, budget);
-          noteStatusRef(row[1], dictionary, budget);
-          noteStatusRef(row[3], dictionary, budget);
+          noteRef(row[0]);
+          noteRef(row[1]);
+          noteRef(row[3]);
           assertNoStatusRef(row[2]);
           assertNoStatusRef(row[4]);
           assertNoStatusRef(row[5]);
@@ -347,15 +349,15 @@ function validateStatusDictionaryEvents(events: unknown, dictionary: readonly un
     const record = event as Record<string, unknown>;
     if (record.type === 'statusChanged' && record.group && typeof record.group === 'object') {
       const group = record.group as Record<string, unknown>;
-      noteStatusRef(group.effectiveSourceKey, dictionary, budget);
+      noteRef(group.effectiveSourceKey);
       const contributions = group.contributions;
       if (!Array.isArray(contributions)) throw new Error('状态字典');
       for (const contribution of contributions) {
         if (!contribution || typeof contribution !== 'object') throw new Error('状态字典');
         const row = contribution as Record<string, unknown>;
-        noteStatusRef(row.key, dictionary, budget);
-        noteStatusRef(row.source, dictionary, budget);
-        noteStatusRef(row.application, dictionary, budget);
+        noteRef(row.key);
+        noteRef(row.source);
+        noteRef(row.application);
         assertNoStatusRef(row.targetId);
         assertNoStatusRef(row.appliedAtTick);
         assertNoStatusRef(row.expiresAtTick);
