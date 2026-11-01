@@ -1,4 +1,5 @@
 import type { BattleRecord, SaveEnvelope } from '../m6/contracts';
+import { MAX_SAVE_BYTES } from '../m6/limits';
 
 /** Battle contexts repeat the match's append-only augment-fact log. The file stores the length. */
 export const AUGMENT_FACT_PREFIX = '$augmentFactPrefix';
@@ -10,6 +11,7 @@ const STATUS_ROW = '$s';
 const PACKET_ROW = '$p';
 const MANA_ROW = '$m';
 const SHIELD_ROW = '$h';
+const STATUS_REF_EXPANSION_CAP = MAX_SAVE_BYTES;
 const PACKET_EVENT_KEYS = ['type', 'tick', 'outcome', 'domain', 'combatId', 'eventSeq'];
 const PACKET_OUTCOME_KEYS = ['context', 'hit', 'raw', 'prevented', 'mitigated', 'critical', 'absorbed', 'hpDamage', 'overkill', 'killingPacket'];
 const PACKET_CONTEXT_KEYS = ['source', 'targetId', 'damageType', 'delivery', 'actionSeq', 'rootActionSeq', 'parentPacketId', 'triggeringCastActionSeq', 'packetId', 'packetOrdinal', 'equipmentDepth', 'redirected', 'area', 'critEligibility', 'permissions'];
@@ -247,6 +249,133 @@ export function compactBattleRecords(records: readonly BattleRecord[], sourceFac
   return changed ? compacted : records;
 }
 
+function quotedChars(text: string): number {
+  let n = 2;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    n += c === 34 || c === 92 || c === 8 || c === 9 || c === 10 || c === 12 || c === 13 ? 2 : c < 32 ? 6 : 1;
+  }
+  return n;
+}
+
+/** Canonical JSON length without building the string. */
+function jsonChars(value: unknown): number {
+  const seen = new WeakSet<object>();
+  const walk = (v: unknown): number => {
+    if (v === null) return 4;
+    if (typeof v === 'string') return quotedChars(v);
+    if (typeof v === 'boolean') return v ? 4 : 5;
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v).length : 0;
+    if (typeof v !== 'object') return 0;
+    if (seen.has(v)) return 0;
+    seen.add(v);
+    if (Array.isArray(v)) {
+      let n = 2;
+      for (let i = 0; i < v.length; i++) n += (i ? 1 : 0) + walk(v[i]);
+      return n;
+    }
+    const keys = Object.keys(v); let n = 2;
+    for (let i = 0; i < keys.length; i++) n += (i ? 1 : 0) + quotedChars(keys[i]) + 1 + walk((v as Record<string, unknown>)[keys[i]]);
+    return n;
+  };
+  return walk(value);
+}
+
+function isStatusRef(value: unknown): value is Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  return keys.length === 1 && keys[0] === STATUS_REF;
+}
+
+function assertNoStatusRef(value: unknown): void {
+  if (value === null || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    for (const child of value) assertNoStatusRef(child);
+    return;
+  }
+  if (isStatusRef(value)) throw new Error('状态字典');
+  const record = value as Record<string, unknown>;
+  for (const key of Object.keys(record)) assertNoStatusRef(record[key]);
+}
+
+function resolveStatusRef(value: unknown, dictionary: readonly unknown[]): unknown {
+  if (!isStatusRef(value)) return value;
+  const id = value[STATUS_REF];
+  if (typeof id !== 'number' || !Number.isInteger(id) || id < 0 || id >= dictionary.length) throw new Error('状态字典');
+  return dictionary[id];
+}
+
+function noteStatusRef(value: unknown, dictionary: readonly unknown[], budget: { expanded: number }): void {
+  if (!isStatusRef(value)) return;
+  const id = value[STATUS_REF];
+  if (typeof id !== 'number' || !Number.isInteger(id) || id < 0 || id >= dictionary.length) throw new Error('状态字典');
+  budget.expanded += jsonChars(dictionary[id]);
+  if (budget.expanded > STATUS_REF_EXPANSION_CAP) throw new Error('状态字典');
+}
+
+function validateStatusDictionaryEvents(events: unknown, dictionary: readonly unknown[]): void {
+  if (!Array.isArray(events)) throw new Error('状态字典');
+  const budget = { expanded: 0 };
+  for (const event of events) {
+    if (Array.isArray(event)) {
+      if (event[0] === STATUS_ROW && event.length === 10) {
+        noteStatusRef(event[6], dictionary, budget);
+        if (!Array.isArray(event[5])) throw new Error('状态字典');
+        for (const row of event[5]) {
+          if (!Array.isArray(row) || row.length !== 7) throw new Error('状态字典');
+          noteStatusRef(row[0], dictionary, budget);
+          noteStatusRef(row[1], dictionary, budget);
+          noteStatusRef(row[3], dictionary, budget);
+          assertNoStatusRef(row[2]);
+          assertNoStatusRef(row[4]);
+          assertNoStatusRef(row[5]);
+          assertNoStatusRef(row[6]);
+        }
+        assertNoStatusRef(event[1]);
+        assertNoStatusRef(event[2]);
+        assertNoStatusRef(event[3]);
+        assertNoStatusRef(event[4]);
+        assertNoStatusRef(event[7]);
+        assertNoStatusRef(event[8]);
+        assertNoStatusRef(event[9]);
+        continue;
+      }
+      assertNoStatusRef(event);
+      continue;
+    }
+    if (!event || typeof event !== 'object') continue;
+    const record = event as Record<string, unknown>;
+    if (record.type === 'statusChanged' && record.group && typeof record.group === 'object') {
+      const group = record.group as Record<string, unknown>;
+      noteStatusRef(group.effectiveSourceKey, dictionary, budget);
+      const contributions = group.contributions;
+      if (!Array.isArray(contributions)) throw new Error('状态字典');
+      for (const contribution of contributions) {
+        if (!contribution || typeof contribution !== 'object') throw new Error('状态字典');
+        const row = contribution as Record<string, unknown>;
+        noteStatusRef(row.key, dictionary, budget);
+        noteStatusRef(row.source, dictionary, budget);
+        noteStatusRef(row.application, dictionary, budget);
+        assertNoStatusRef(row.targetId);
+        assertNoStatusRef(row.appliedAtTick);
+        assertNoStatusRef(row.expiresAtTick);
+        assertNoStatusRef(row.endRewardConsumed);
+      }
+      assertNoStatusRef(group.targetId);
+      assertNoStatusRef(group.kind);
+      assertNoStatusRef(group.effectiveMagnitudeBps);
+      assertNoStatusRef(group.nextPulseAtTick);
+      assertNoStatusRef(record.tick);
+      assertNoStatusRef(record.reason);
+      assertNoStatusRef(record.domain);
+      assertNoStatusRef(record.combatId);
+      assertNoStatusRef(record.eventSeq);
+      continue;
+    }
+    assertNoStatusRef(event);
+  }
+}
+
 /** Restores fact arrays on a freshly parsed file. Live objects have real arrays and are left untouched. */
 export function expandAugmentFactPrefixes(input: unknown): void {
   if (!input || typeof input !== 'object') return;
@@ -257,34 +386,36 @@ export function expandAugmentFactPrefixes(input: unknown): void {
     if (!Object.hasOwn(host, STATUS_DICTIONARY)) return;
     const dictionary = host.statusDictionary;
     if (!Array.isArray(dictionary)) throw new Error('状态字典');
-    const revive = (value: unknown): unknown => {
-      if (Array.isArray(value)) {
-        let changed = false;
-        const copy = value.map(child => {
-          const next = revive(child);
-          if (next !== child) changed = true;
-          return next;
+    validateStatusDictionaryEvents(host.events, dictionary);
+    const resolveValue = (value: unknown): unknown => resolveStatusRef(value, dictionary);
+    const revived = host.events.map(event => {
+      if (Array.isArray(event) && event[0] === STATUS_ROW && event.length === 10) {
+        return event.map((cell, index) => {
+          if (index === 5 && Array.isArray(cell)) {
+            return cell.map(row => Array.isArray(row) ? row.map((cell, rowIndex) => rowIndex === 0 || rowIndex === 1 || rowIndex === 3 ? resolveValue(cell) : cell) : row);
+          }
+          return index === 6 ? resolveValue(cell) : cell;
         });
-        return changed ? copy : value;
       }
-      if (!value || typeof value !== 'object') return value;
-      const keys = Object.keys(value);
-      if (keys.length === 1 && keys[0] === STATUS_REF) {
-        const id = (value as Record<string, unknown>)[STATUS_REF];
-        if (typeof id !== 'number' || !Number.isInteger(id) || id < 0 || id >= dictionary.length) throw new Error('状态字典');
-        return dictionary[id];
+      if (!event || typeof event !== 'object' || Array.isArray(event)) return event;
+      const recordEvent = event as Record<string, unknown>;
+      if (recordEvent.type !== 'statusChanged' || !recordEvent.group || typeof recordEvent.group !== 'object') return event;
+      const group = recordEvent.group as Record<string, unknown>;
+      const nextGroup: Record<string, unknown> = { ...group, effectiveSourceKey: resolveValue(group.effectiveSourceKey) };
+      if (Array.isArray(group.contributions)) {
+        nextGroup.contributions = group.contributions.map(contribution => {
+          if (!contribution || typeof contribution !== 'object') return contribution;
+          const row = contribution as Record<string, unknown>;
+          return {
+            ...row,
+            key: resolveValue(row.key),
+            source: resolveValue(row.source),
+            application: resolveValue(row.application),
+          };
+        });
       }
-      let changed = false;
-      const copy: Record<string, unknown> = {};
-      for (const key of keys) {
-        const current = (value as Record<string, unknown>)[key];
-        const next = revive(current);
-        copy[key] = next;
-        if (next !== current) changed = true;
-      }
-      return changed ? copy : value;
-    };
-    const revived = revive(host.events);
+      return { ...recordEvent, group: nextGroup };
+    });
     delete host.statusDictionary;
     host.events = expandStatusRows(revived, record.combatId) as BattleRecord['events'];
   };

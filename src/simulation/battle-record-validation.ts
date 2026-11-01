@@ -228,15 +228,22 @@ function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): Veri
   // when every field the tick walk would check still matches, including hashes.
   // Playback checkpoints and in-combat equipment commands keep the tick walk:
   // a transcript has no trajectory and does not re-execute those commands.
-  if (!checkpoints && mutableExternalEvidence === 0 && !record.equipmentCommands?.length && augmentCombatTranscript(record.combatId)) {
+  const transcript = augmentCombatTranscript(record.combatId);
+  // Transcript merge includes equip/useConsumable/combineItems effects; only
+  // stepMatch-only combats may skip the tick walk when equipmentCommands is empty.
+  if (!checkpoints && mutableExternalEvidence === 0 && !record.equipmentCommands?.length && transcript && !transcript.inCombatCommands) {
     validatorFor(record);
     checkShape(record);
     const fromTranscript = transcriptReplay(record);
-    if (fromTranscript) { transcriptBattleReuses++; return fromTranscript; }
+    if (fromTranscript) {
+      transcriptBattleReuses++;
+      if (!checkpoints && !isOwnedBattleRecord(record)) rememberContentReplay(record, fromTranscript);
+      return fromTranscript;
+    }
   }
   coldBattleReplays++;
   const verified = validatorFor(record)(record, checkpoints);
-  if (reuseContent) rememberContentReplay(record, verified);
+  if (!checkpoints && !isOwnedBattleRecord(record)) rememberContentReplay(record, verified);
   // Only recorder-owned, detached immutable records qualify, after full replay.
   // Reconstruction already owns this detached graph. Freeze it directly;
   // replayBattleRecord copies it at the public boundary, never inside the walk.
@@ -268,7 +275,7 @@ function transcriptReplay(record: BattleRecord): VerifiedReplay | undefined {
   // The transcript is this admission's match-proof replay, not a previous success.
   // A mismatch falls through to the full tick walk so the existing errors stay.
   const transcript = augmentCombatTranscript(record.combatId);
-  if (!transcript) return undefined;
+  if (!transcript || transcript.inCombatCommands) return undefined;
   try {
     const context = record.context;
     if (!equalContent(transcript.context, context) || !equalContent(transcript.initial, record.initial)) return undefined;

@@ -95,7 +95,7 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
   report.measurements=await page.evaluate(()=>{
    const fixtures=globalThis.__M6_PERF_FIXTURES;delete globalThis.__M6_PERF_FIXTURES;
    return (async fixtures=>{
-   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),...details}));
+   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),heap:typeof performance!=='undefined'&&performance.memory?{usedJSHeapSize:performance.memory.usedJSHeapSize,totalJSHeapSize:performance.memory.totalJSHeapSize}:null,...details}));
    mark('measurements-entered');
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{validateFile,exportFile}=await import('/src/persistence/format.ts');
    const {BattleHistory,PlaybackSession,validateBattleCollection}=await import('/src/replay/index.ts');
@@ -122,10 +122,11 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
     // B9 (issue #23): the original complete-catalog validated import pipeline runs again.
     // All payloads are independently validated by the actual imported public format path.
     let token=await measured('completeImport',async()=>{
+     mark('complete-import-start',{heap:typeof performance!=='undefined'&&performance.memory?performance.memory.usedJSHeapSize:null});
      const candidate=await validateFile(exportFile(complete),validateBattleCollection);
      const prepared=new MatchSession(candidate.match,candidate.battles.at(-1)?.events??[]),history=new BattleHistory(candidate.runId,candidate.battles,candidate.currentBattle);
      if(history.completedRecords.length!==fixtures.expectedBattleCount)throw Error('full import lost history');
-     const result=await measured('activation',()=>repository.activate(null,candidate));prepared.dispose();return result;
+     const result=await measured('activation',()=>repository.activate(null,candidate));prepared.dispose();mark('complete-import-end');return result;
     });
     await validateFile(exportFile(current),validateBattleCollection);
     token=await measured('activation',()=>repository.activate(token,current));

@@ -23,6 +23,8 @@ export interface AugmentCombatTranscript {
   readonly events: MatchEvent[];
   settled: MatchState;
   terminal: NonNullable<MatchState['combat']>;
+  /** stepMatch 以外的 CONTINUED_COMBAT 命令（equipItem 等）已并入本 transcript。 */
+  inCombatCommands: boolean;
 }
 interface TranscriptCapture {
   readonly map: Map<string, AugmentCombatTranscript>;
@@ -31,6 +33,8 @@ interface TranscriptCapture {
   depth: number;
 }
 let capture: TranscriptCapture | null = null;
+// Concurrent admissions share one capture; round ids overwrite transcripts and
+// only force cold replay, they cannot weaken hash checks.
 let augmentReplaySteps = 0;
 const CONTINUED_COMBAT = new Set(['stepMatch', 'useConsumable', 'combineItems', 'equipItem']);
 /** Command steps actually executed by augment-history replay. A prefix hit stays at the previous value. */
@@ -68,6 +72,7 @@ function noteCombatTranscript(before: MatchState, name: string, after: MatchStat
   for (const event of events ?? []) if (event.domain === 'combat') produced.push(event);
   const open = capture.open;
   if (open && before.phase === 'combat' && before.combat?.combatId === open.id && CONTINUED_COMBAT.has(name)) {
+    if (name !== 'stepMatch') open.inCombatCommands = true;
     for (const event of produced) open.events.push(event);
     open.settled = after;
     if (after.combat?.combatId === open.id) open.terminal = after.combat;
@@ -75,7 +80,7 @@ function noteCombatTranscript(before: MatchState, name: string, after: MatchStat
   }
   sealCombatTranscript();
   if (name === 'startMatchCombat' && after.combat?.combatId) {
-    capture.open = { id: after.combat.combatId, context: before, initial: after.combat, events: produced, settled: after, terminal: after.combat };
+    capture.open = { id: after.combat.combatId, context: before, initial: after.combat, events: produced, settled: after, terminal: after.combat, inCombatCommands: false };
   }
 }
 
@@ -554,12 +559,9 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
     // validate each battle context again. Those contexts are shorter command
     // prefixes, and a longer cached proof cannot resume them. Keep the state
     // already produced at each combat start so playback does not replay the match.
-    if (recordThis && cacheable && skipped === 0 && c.name === 'startMatchCombat') {
-      // Freeze a copy. rememberReplay freezes its argument in place, and this
-      // walk still passes `replay` into the next pure command.
-      const text = canonicalContent(replay);
-      rememberReplay(origin, encoded.slice(0, index), structuredClone(replay), text);
-    }
+    // Per-combat prefix snapshots during transcript capture allocate large frozen
+    // graphs; their GC showed up in firstSeek measurements after import. The
+    // final rememberReplay below retains the full proof for later resumes.
     // A command may retain a location/target object. Private evidence must not
     // retain or freeze any object owned by the candidate save.
     const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
@@ -578,7 +580,7 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   } finally { if (active) active.depth--; }
   const replayText = canonicalContent(replay);
   historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
-  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
+  if (cacheable && !recordThis) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime','grantMechanicUnit']);
