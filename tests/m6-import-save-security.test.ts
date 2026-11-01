@@ -13,7 +13,7 @@ import { accepted, resolveM5Choices } from './match-helpers';
 
 const blob = (text: string) => new Blob([text]);
 
-function envelopeWithInCombatEquip(seed: number): SaveEnvelope {
+export function envelopeWithInCombatEquip(seed: number): SaveEnvelope {
   const runId = `security-equip-${seed}`;
   const history = new BattleHistory(runId);
   let match = createMatch(seed);

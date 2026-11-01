@@ -376,6 +376,43 @@ function validateStatusDictionaryEvents(events: unknown, dictionary: readonly un
   }
 }
 
+function containsStatusRef(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  if (Array.isArray(value)) {
+    for (const item of value) if (containsStatusRef(item)) return true;
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (Object.hasOwn(record, STATUS_REF)) return true;
+  for (const key in record) {
+    if (Object.hasOwn(record, key) && containsStatusRef(record[key])) return true;
+  }
+  return false;
+}
+
+function recordHasCompressionMarkers(record: unknown): boolean {
+  if (!record || typeof record !== 'object') return false;
+  const host = record as Record<string, unknown>;
+  if (Object.hasOwn(host, STATUS_DICTIONARY)) return true;
+  const history = (host.context as { augmentHistory?: { facts?: unknown } } | undefined)?.augmentHistory;
+  const facts = history?.facts;
+  if (facts && typeof facts === 'object' && !Array.isArray(facts) && Object.hasOwn(facts, AUGMENT_FACT_PREFIX)) return true;
+  if (!Array.isArray(host.events)) return false;
+  for (const event of host.events) {
+    if (Array.isArray(event) && (event[0] === STATUS_ROW || event[0] === PACKET_ROW || event[0] === MANA_ROW || event[0] === SHIELD_ROW)) return true;
+    if (containsStatusRef(event)) return true;
+  }
+  return false;
+}
+
+/** Detects on-disk compact battle encoding. Expanded in-memory archives must not carry these markers. */
+export function hasSaveCompressionMarkers(input: unknown): boolean {
+  if (!input || typeof input !== 'object') return false;
+  const envelope = input as Partial<SaveEnvelope>;
+  const records = [...(Array.isArray(envelope.battles) ? envelope.battles : []), ...(envelope.currentBattle ? [envelope.currentBattle] : [])];
+  return records.some(recordHasCompressionMarkers);
+}
+
 /** Restores fact arrays on a freshly parsed file. Live objects have real arrays and are left untouched. */
 export function expandAugmentFactPrefixes(input: unknown): void {
   if (!input || typeof input !== 'object') return;

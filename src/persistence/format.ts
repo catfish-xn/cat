@@ -5,8 +5,9 @@ import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_SAVE_BYTES } from '../m6/limits';
 import { SaveError } from './repository';
 import { rejectedView, routeSaveFile, type RejectedReason } from './compatibility';
-import { compactBattleRecord, compactBattleRecords, expandAugmentFactPrefixes } from './fact-prefix';
+import { compactBattleRecord, compactBattleRecords, expandAugmentFactPrefixes, hasSaveCompressionMarkers } from './fact-prefix';
 import { openCombatTranscriptCapture } from '../simulation/augment-history-restore';
+import { PRIOR_M8_SAVE_FORMAT_VERSION } from '../simulation/m8/version';
 
 export type ValidateHistory = (envelope: SaveEnvelope) => void | Promise<void>;
 function reject(message: string): never { throw new SaveError('validation', `存档无效：${message}`); }
@@ -36,6 +37,12 @@ export async function validateFile(file: Blob, validateHistory: ValidateHistory)
   if (file.size > MAX_SAVE_BYTES) reject('文件体积超限');
   let parsed: unknown;
   try { parsed = JSON.parse(await file.text()); } catch { reject('文件不是有效 JSON'); }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const version = (parsed as { saveFormatVersion?: unknown }).saveFormatVersion;
+    if (version === PRIOR_M8_SAVE_FORMAT_VERSION && hasSaveCompressionMarkers(parsed)) {
+      reject('压缩存档标记与 save 8 不兼容');
+    }
+  }
   try { expandAugmentFactPrefixes(parsed); }
   catch (error) { reject(error instanceof Error ? error.message : '强化事实前缀'); }
   // routeSaveFile replays the match proof before the battle archive. Keep that

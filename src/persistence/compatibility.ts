@@ -3,9 +3,10 @@ import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { CONTENT_DIGEST } from '../simulation/content';
 import { validateMatchStructure } from '../simulation/serialization-structure';
-import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION } from '../simulation/m8/version';
+import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION, PRIOR_M8_SAVE_FORMAT_VERSION } from '../simulation/m8/version';
 import { validateBattleCollectionSync } from '../replay/history';
 import { recordCombatTranscripts } from '../simulation/augment-history-restore';
+import { hasSaveCompressionMarkers } from './fact-prefix';
 
 /** M8_UI_CONTRACT §6: format routing first, then the matching validator; a header alone is never a licence. */
 export type RejectedReason = Extract<CompatibilityView, { status: 'rejected' }>['reason'];
@@ -46,7 +47,11 @@ export function routeSaveFile(input: unknown): RoutedFile {
       &&match?.schemaVersion===6&&match.contentVersion===LEGACY_M8_VERSION.contentVersion;
     return valid?{view:legacyView(LEGACY_M8_VERSION),envelope:null}:reject('invalid-data',fileRules);
   }
-  if (input.saveFormatVersion !== M8_VERSION.saveFormatVersion || input.replayFormatVersion !== M8_VERSION.replayFormatVersion) return reject('unsupported-version', fileRules);
+  const saveFormat = input.saveFormatVersion;
+  const replayFormat = input.replayFormatVersion;
+  if (saveFormat !== M8_VERSION.saveFormatVersion && saveFormat !== PRIOR_M8_SAVE_FORMAT_VERSION) return reject('unsupported-version', fileRules);
+  if (replayFormat !== M8_VERSION.replayFormatVersion) return reject('unsupported-version', fileRules);
+  if (saveFormat === PRIOR_M8_SAVE_FORMAT_VERSION && hasSaveCompressionMarkers(input)) return reject('invalid-data', fileRules);
   if (Object.keys(input).sort().join('|') !== KEYS || !match) return reject('invalid-data', fileRules);
   if (MATCH_HEADER.some(key => match[key] !== M8_VERSION[key])) return reject('unsupported-version', fileRules);
   if (match.contentDigest !== CONTENT_DIGEST) return reject('digest-mismatch', fileRules);
