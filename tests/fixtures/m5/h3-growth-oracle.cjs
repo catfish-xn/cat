@@ -270,7 +270,7 @@ function checkH3Growth(memory,before,after,command) {
     assert.equal(after.m8.round.kind,'pvp','H3 PvP boundary');
     assert(!next.battles.some(b=>b.battleId===f.battleId||b.round===f.round),'H3 duplicate PvP freeze');
     const own=f.seats.filter(s=>s.seatId===memory.seatId);assert.equal(own.length,1,'H3 frozen seat');
-    assert.deepEqual({units:own[0].units,items:own[0].items},roster(before),'H3 independent frozen roster');
+    assert.deepEqual({units:own[0].units,items:own[0].items},historyEntryRoster(before.preparation,before.items),'H3 independent frozen roster');
     next.battles.push({battleId:f.battleId,round:before.round,roster:copy(roster(before))});
   }
   const entries=added.filter(f=>f.kind==='round-entry');
