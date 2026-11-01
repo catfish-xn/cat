@@ -1,10 +1,13 @@
 import type { BattleRecord, SaveEnvelope } from '../m6/contracts';
 import { deepFreeze, isOwnedBattleRecord, validateBattleCollection } from '../replay/history';
-import { isImmutableJson } from '../simulation/immutable-json';
+import { ownBattleRecord, openContentReplayAdmission, sealContentReplayAdmission } from '../simulation/battle-record-validation';
 import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_SAVE_BYTES } from '../m6/limits';
 import { SaveError } from './repository';
 import { rejectedView, routeSaveFile, type RejectedReason } from './compatibility';
+import { compactBattleRecord, compactBattleRecords, expandAugmentFactPrefixes, hasSaveCompressionMarkers } from './fact-prefix';
+import { openCombatTranscriptCapture } from '../simulation/augment-history-restore';
+import { PRIOR_M8_SAVE_FORMAT_VERSION } from '../simulation/m8/version';
 
 export type ValidateHistory = (envelope: SaveEnvelope) => void | Promise<void>;
 function reject(message: string): never { throw new SaveError('validation', `存档无效：${message}`); }
@@ -34,12 +37,26 @@ export async function validateFile(file: Blob, validateHistory: ValidateHistory)
   if (file.size > MAX_SAVE_BYTES) reject('文件体积超限');
   let parsed: unknown;
   try { parsed = JSON.parse(await file.text()); } catch { reject('文件不是有效 JSON'); }
-  const envelope = await validateEnvelope(parsed, validateHistory);
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const version = (parsed as { saveFormatVersion?: unknown }).saveFormatVersion;
+    if (version === PRIOR_M8_SAVE_FORMAT_VERSION && hasSaveCompressionMarkers(parsed)) {
+      reject('压缩存档标记与 save 8 不兼容');
+    }
+  }
+  try { expandAugmentFactPrefixes(parsed); }
+  catch (error) { reject(error instanceof Error ? error.message : '强化事实前缀'); }
+  // routeSaveFile replays the match proof before the battle archive. Keep that
+  // replay's combat transcripts until the archive comparison finishes.
+  const closeTranscripts = openCombatTranscriptCapture();
+  const closeContentReplayAdmission = openContentReplayAdmission();
+  let envelope: SaveEnvelope;
+  try { envelope = await validateEnvelope(parsed, validateHistory); }
+  finally { closeContentReplayAdmission(); closeTranscripts(); }
   // File parsing owns these graphs. Certify immutable archives once after every
   // authority/replay check; activation need not detach the same packets again.
   // Object-input validateEnvelope deliberately keeps its caller's data mutable.
   for (const record of [...envelope.battles,...(envelope.currentBattle?[envelope.currentBattle]:[])]) {
-    deepFreeze(record); isImmutableJson(record);
+    deepFreeze(record); ownBattleRecord(record); sealContentReplayAdmission(record);
   }
   return envelope;
 }
@@ -48,21 +65,44 @@ export async function validateFile(file: Blob, validateHistory: ValidateHistory)
 // Weak keys release bytes with the history; keep a detached membership snapshot.
 const archiveFiles = new WeakMap<BattleRecord, {records:readonly BattleRecord[];file:Blob}>();
 function archiveBytes(text: string): Blob {
-  // encodeInto writes UTF-8 once; Blob(string) otherwise scans/encodes again.
-  // Keep the original path for very large files to bound the scratch buffer.
-  if (text.length > MAX_SAVE_BYTES / 4) return new Blob([text]);
+  // encodeInto writes UTF-8 once; Blob(string) otherwise scans and encodes again.
+  // A catalog past 64MB used to take that second pass. ASCII JSON fits an exact
+  // buffer, so the large path encodes once without a 3x scratch allocation.
+  if (text.length > MAX_SAVE_BYTES / 4) return encodeLargeUtf8(text);
   const bytes = new Uint8Array(text.length * 3);
   const { written } = new TextEncoder().encodeInto(text, bytes);
   return new Blob([bytes.subarray(0,written)]);
 }
-function archiveFile(records: readonly BattleRecord[]): Blob {
+function encodeLargeUtf8(text: string): Blob {
+  const encoder = new TextEncoder();
+  const exact = new Uint8Array(text.length);
+  const exactWritten = encoder.encodeInto(text, exact).written;
+  if (exactWritten === text.length) return new Blob([exact]);
+  const size = 256 * 1024, parts: BlobPart[] = [];
+  for (let index = 0; index < text.length;) {
+    let end = Math.min(text.length, index + size);
+    if (end < text.length) {
+      const lead = text.charCodeAt(end - 1);
+      if (lead >= 0xD800 && lead <= 0xDBFF) end--;
+    }
+    if (end <= index) end = Math.min(text.length, index + 1);
+    const slice = text.slice(index, end);
+    const bytes = new Uint8Array(slice.length * 3);
+    const { written } = encoder.encodeInto(slice, bytes);
+    parts.push(bytes.subarray(0, written));
+    index = end;
+  }
+  return new Blob(parts);
+}
+function archiveFile(records: readonly BattleRecord[], sourceFacts: Parameters<typeof compactBattleRecords>[1]): Blob {
   const previous = archiveFiles.get(records[0]);
   const prefix = previous && previous.records.length <= records.length
     && previous.records.every((record,i)=>records[i]===record);
   if (prefix && previous.records.length===records.length) return previous.file;
+  const body = compactBattleRecords(records, sourceFacts);
   const file = prefix
-    ? new Blob([previous.file.slice(0,-1), ',', archiveBytes(JSON.stringify(records.slice(previous.records.length)).slice(1))])
-    : archiveBytes(JSON.stringify(records));
+    ? new Blob([previous.file.slice(0,-1), ',', archiveBytes(JSON.stringify(body.slice(previous.records.length)).slice(1))])
+    : archiveBytes(JSON.stringify(body));
   archiveFiles.set(records[0],{records:Object.freeze([...records]),file}); return file;
 }
 function exportParts(envelope: SaveEnvelope): BlobPart[] {
@@ -78,11 +118,16 @@ function exportParts(envelope: SaveEnvelope): BlobPart[] {
     || 'toJSON' in battles || !battles.length
     || Array.from({length:battles.length},(_,i)=>Object.getOwnPropertyDescriptor(battles,String(i)))
       .some(descriptor=>!descriptor || !('value' in descriptor) || !isOwnedBattleRecord(descriptor.value))) return [JSON.stringify(envelope)];
+  const sourceFacts = envelope.match.augmentHistory?.facts;
   const parts: BlobPart[] = ['{']; let separator = '';
   for (const key of keys) {
     const value = descriptors[key].value;
     if (key === 'battles') {
-      parts.push(separator, JSON.stringify(key), ':', archiveFile(battles));
+      parts.push(separator, JSON.stringify(key), ':', archiveFile(battles, sourceFacts));
+    } else if (key === 'currentBattle' && value) {
+      const field = JSON.stringify({ [key]: compactBattleRecord(value as BattleRecord, sourceFacts) }).slice(1, -1);
+      if (!field) continue;
+      parts.push(separator, field);
     } else {
       // A wrapper preserves native property-key/toJSON/undefined semantics.
       const field = JSON.stringify({[key]:value}).slice(1,-1);
