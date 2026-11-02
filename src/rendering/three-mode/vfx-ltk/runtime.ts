@@ -167,6 +167,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && run.action === action) { release(run, true); running.delete(run); }
     },
+    /** True while a cue of this action from the source is queued or running. */
+    playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
+      for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) return true;
+      return false;
+    },
     stopUnit(id: string) {
       for (let at = waiting.length - 1; at >= 0; at--) {
         const row = waiting[at];
