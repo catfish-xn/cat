@@ -162,6 +162,9 @@ describe('UI frozen-stage planning and offline extraction (synthetic bytes only)
   it('validates locale/CLI and excludes mobile portraits and unrelated atlases from seeds', () => {
     expect(seedPath('assets/ux/tft/championsplashes/tft13_test_mobile.tex')).toBe(false);
     expect(seedPath('assets/ux/tft/tft_hud_texture_atlas.tft_set12.tex')).toBe(true);
+    expect(seedPath('assets/ux/tft/stageicons/swordsvictory.tex')).toBe(true);
+    expect(seedPath('assets/ux/tft/stageicons/augment_up_coming.tex')).toBe(true);
+    expect(seedPath('assets/ux/tft/stageicons/tft3_kayncurrent.tex')).toBe(false);
     expect(() => cliArguments(['--locale', 'bad'])).toThrow('unsupported-locale');
     expect(() => cliArguments(['--fetch', '--fetch'])).toThrow('invalid-argument');
     expect(VERSION).toBe('14.24.6442327');
