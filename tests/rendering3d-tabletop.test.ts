@@ -246,8 +246,8 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     tabletop.frame(frame({ fighting: true, pieces: [monster] }));
     expect(tabletop.walkTo({ x: 0, y: 0 }, 'a')).toBeNull(); // not revealed yet
     tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }], orbs: [{ ...orb('a'), source: 'm' }] }));
-    // My legend walks straight through the corpse while the orb is still flying out of it.
-    tabletop.walkTo({ x: monster.x, y: monster.y });
+    // My legend walks straight through the corpse, to two hex widths past it, while the orb is still flying out of it.
+    tabletop.walkTo({ x: monster.x + Math.sqrt(3) * 34 * 2, y: monster.y });
     clock += 60_000; tabletop.update(0.016);
     expect(claimOrb).not.toHaveBeenCalled();
     step(1);
@@ -327,6 +327,39 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
     tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016); tabletop.update(0.016);
     expect(claimOrb).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens an orb at my legend\'s touch before the room answers, once, and draws it again if the claim is refused', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { scene, tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    tabletop.walkTo({ x: 0, y: 0 }, 'a');
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
+    // Opened at the touch: the opening plays and the orb is gone, with no answer from the room yet.
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'a')?.opened).toBe(true);
+    expect(tabletop.debug().opening).toBe(1);
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(false);
+    // Frames without an answer keep it open; the room's grant then removes it without a second opening.
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(false);
+    tabletop.frame(frame({ orbs: [], openedOrbs: ['a'] }));
+    expect(tabletop.debug().orbs).toEqual([]);
+    expect(tabletop.debug().opening).toBe(1);
+
+    // A refused claim: the orb is drawn again and may be claimed again.
+    tabletop.frame(frame({ orbs: [orb('b')], openedOrbs: ['a'] }));
+    tabletop.walkTo({ x: 0, y: 0 }, 'b'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenLastCalledWith('b');
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'b')?.opened).toBe(true);
+    tabletop.frame(frame({ orbs: [orb('b')], openedOrbs: ['a'], orbRefusals: { b: 1 } }));
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'b')?.opened).toBe(false);
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(true);
+    const width = Math.sqrt(3) * 34;
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'b'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb.mock.calls.filter(([id]) => id === 'b')).toHaveLength(2);
   });
 
   it('claims an orb it crossed during one long frame (a dropped frame or a background tab)', () => {
