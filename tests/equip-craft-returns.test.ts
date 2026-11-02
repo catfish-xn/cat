@@ -31,17 +31,24 @@ describe('crafting on a unit returns what the finished item cannot keep', () => 
     const state = { ...prepared(), nextItemSerial: 5, items: [stock('item-1', 'spatula'), held('item-2', 'tear')] };
     expect(accepted(equipItem(state, 'item-1', 'unit-1', 0)).items).toEqual([held('item-5', FAMILY_EMBLEM)]);
   });
-  it.each([0, 1, 2])("Thief's Gloves crafted beside a finished item in slot %s returns every other worn item", other => {
+  it.each([0, 1, 2])("Thief's Gloves crafted beside a finished item in slot %s pop back; the worn items stay", other => {
     const glove = other === 0 ? 1 : 0, third = [0, 1, 2].find(s => s !== other && s !== glove)!;
     const state = { ...prepared(), nextItemSerial: 6, items: [stock('item-1', 'gloves'), held('item-2', 'gloves', 'unit-1', glove),
       held('item-3', 'deathblade', 'unit-1', other), held('item-4', 'sword', 'unit-1', third)] };
-    expect(previewEquip(state, 'item-1', 'unit-1', other)).toEqual({ allowed: true, reason: null, occupiedSlots: [0, 1, 2], conflictingItemIds: [],
-      combination: { resultDefinitionId: 'thiefs-gloves', consumedItemIds: ['item-1', 'item-2'], returnedItemIds: ['item-3', 'item-4'] } });
+    const preview = previewEquip(state, 'item-1', 'unit-1', other);
+    expect(preview).toEqual({ allowed: true, reason: null, occupiedSlots: [], conflictingItemIds: [],
+      combination: { resultDefinitionId: 'thiefs-gloves', consumedItemIds: ['item-1', 'item-2'], resultReturned: true } });
+    if (preview.allowed) expect(allowedPreviewText(preview, other, id => id)).toBe('将合成 thiefs-gloves · 弹回装备栏');
     const result = equipItem(state, 'item-1', 'unit-1', other);
     const next = accepted(result);
     expect(next.items.filter(i => i.location.kind === 'unit' && i.location.unitId === 'unit-1'))
-      .toEqual([held('item-6', 'thiefs-gloves', 'unit-1', 0)]);
-    expect(next.items.filter(i => i.location.kind === 'inventory').map(i => i.id).sort()).toEqual(['item-3', 'item-4']);
-    expect(result.ok && result.events.find(e => e.type === 'itemsReturned')).toMatchObject({ type: 'itemsReturned', itemIds: ['item-3', 'item-4'], unitId: 'unit-1' });
+      .toEqual([held('item-3', 'deathblade', 'unit-1', other), held('item-4', 'sword', 'unit-1', third)]);
+    expect(next.items.filter(i => i.location.kind === 'inventory')).toEqual([stock('item-6', 'thiefs-gloves')]);
+    expect(result.ok && result.events.some(e => e.type === 'itemEquipped' || e.type === 'itemsReturned')).toBe(false);
+  });
+  it("Thief's Gloves crafted on a unit that wears nothing else are worn in all three slots", () => {
+    const state = { ...prepared(), nextItemSerial: 6, items: [stock('item-1', 'gloves'), held('item-2', 'gloves', 'unit-1', 1)] };
+    expect(previewEquip(state, 'item-1', 'unit-1', 1)).toMatchObject({ allowed: true, occupiedSlots: [0, 1, 2] });
+    expect(accepted(equipItem(state, 'item-1', 'unit-1', 1)).items).toEqual([held('item-6', 'thiefs-gloves', 'unit-1', 0)]);
   });
 });
