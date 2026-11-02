@@ -51,7 +51,7 @@ body[data-online]:has(> .render3d-layer) .choice-dialog[data-augment-tier="prism
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] :is(.augment-slot > button:first-child, .choice-cards > button):is(:hover, :focus-visible) {
   transform: translateY(-4px); box-shadow: 0 10px 34px #000c, 0 0 18px color-mix(in srgb, var(--aug-edge) 55%, transparent), inset 0 0 24px #0008; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-name { display: block; margin-bottom: 10px; font-size: 22px; color: #f0e6d2; }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: 0; white-space: normal; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: -1.6em; margin-bottom: 12px; white-space: pre-line; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-icon { flex: none; width: 112px; height: 112px; margin: 0 0 3dvh; border-radius: 16px; box-shadow: 0 0 0 2px var(--aug-edge), 0 0 22px color-mix(in srgb, var(--aug-edge) 45%, transparent); }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { box-sizing: border-box; width: auto; min-width: 0; height: clamp(44px, 5.6dvh, 60px); min-height: 44px; aspect-ratio: 118 / 60; padding: 0 6px; border: 1px solid #785a28; border-radius: 999px; background: #0b151fe6; color: #f0e6d2; font-size: 13px; line-height: 1; white-space: nowrap; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
