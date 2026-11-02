@@ -92,6 +92,8 @@ export class OnlineApplication implements SceneApplication {
   private sidebar: PlayersSidebar;
   private opponentBoard: OpponentBoardPanel;
   private minimap: ScoutMinimap;
+  /** TFT: the opponent's chosen augments on their side of the board during my PvP battle (lazy chunk). */
+  private opponentAugments: import('./opponent-augment-strip').OpponentAugmentStrip | null = null;
   private carousel: CarouselPanel;
   private carouselHolding: CarouselHoldingSlot;
   /** G5: battle ranking (right column) and the preparation economy hint. */
@@ -149,6 +151,11 @@ export class OnlineApplication implements SceneApplication {
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.minimap = new ScoutMinimap(app, seatId => this.toggleBoard(seatId));
+    void import('./opponent-augment-strip').then(module => {
+      if (this.disposed) return;
+      this.opponentAugments = new module.OpponentAugmentStrip(document.getElementById('board-root') ?? frame);
+      this.syncOpponentAugments();
+    }).catch(() => undefined);
     this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
@@ -537,7 +544,7 @@ export class OnlineApplication implements SceneApplication {
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
     const shown = this.session.combatView;
-    this.sidebar.tick(shown?.status === 'running' ? shown.tick : null); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
+    this.sidebar.tick(shown?.status === 'running' ? shown.tick : null); this.carousel.tick(); this.syncSummary(); this.flushOutcome(); this.syncOpponentAugments();
     // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
     if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
     if (this.opponentBoard.openSeatId && this.scoutFeedGeneration !== boardFeedGeneration()) this.syncScout();
@@ -554,6 +561,10 @@ export class OnlineApplication implements SceneApplication {
     if (!document.hidden && this.session.playingBack) { this.session.skipPlayback(); this.hooks.clearInput(); this.hooks.refresh(); }
   };
   /** The shop is out of reach while not playing, and while the 3D layer shows another seat's board (CSS slides it away). */
+  private syncOpponentAugments() {
+    this.opponentAugments?.update({ view: this.view, playing: this.mode === 'active' && !this.spectating,
+      battlePlaying: !!this.session.liveBattle && !this.session.watchedSeat, scouting: this.opponentBoard.openSeatId !== null });
+  }
   private syncShopInert() {
     if (this.mounts) this.mounts.shopDock.inert = !(this.mode === 'active' && !this.spectating) || this.opponentBoard.drawnIn3d;
   }
@@ -583,7 +594,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.minimap.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.opening.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.minimap.dispose(); this.opponentAugments?.dispose(); this.opponentAugments = null; this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.opening.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }
