@@ -298,6 +298,13 @@
       "currentSha256": "a9ea96bf81791631833b2d93ac284707d78addc001a04f1bdc85ddf7e1ef8576",
       "firstDifferentByte": 786
     },
+    "tests/augment-pool-batch5-h13-pandora.test.ts": {
+      "previousBytes": 7732,
+      "currentBytes": 8512,
+      "previousSha256": "bfaaf34913498f18f4302d2e95e846fa1b17d73e24e89b9a9b3ad754195ed1c3",
+      "currentSha256": "1da68e31ebf816dc5c933775308ee6eee6238c0a022186555ceed7bdc97a807f",
+      "firstDifferentByte": 2742
+    },
     "tests/augment-pool-batch5-h13-room.test.ts": {
       "previousBytes": 5546,
       "currentBytes": 5781,
@@ -425,11 +432,18 @@
       "currentSha256": "f8c2fae82943ef9186d50e4ae25673d2236618ab45e46fc6f4bd737b07123f32",
       "firstDifferentByte": 2553
     },
+    "tests/augment-pool-batch5-s3a-pandora.test.ts": {
+      "previousBytes": 5754,
+      "currentBytes": 6835,
+      "previousSha256": "9fd72867ce826efff37cde2ff9a1084af2ab95c244f51c0ebb7f8ed2889f91b3",
+      "currentSha256": "7146c220dd0a0376101a06b862916334bf86ba03baddb5e22469871c6a1c5856",
+      "firstDifferentByte": 4614
+    },
     "tests/augment-pool-batch5-s3b.test.ts": {
       "previousBytes": 20473,
-      "currentBytes": 20704,
+      "currentBytes": 21339,
       "previousSha256": "33788d92ef07f9c153823c5881603d3773d734253082fee8ab31cdb943367b58",
-      "currentSha256": "18affdb50d804197c302f8985c837469cd596eb8dc2fd4ed2350a23ed77314ad",
+      "currentSha256": "29dce7c10f576f4e1bccf1da347388515e3e940a6a8323b5dd2470ab23d41c01",
       "firstDifferentByte": 1813
     },
     "tests/augment-pool-batch5-s6c-room.test.ts": {
@@ -751,12 +765,26 @@
       "currentSha256": "696a14a43cb9f958ee0008a417b3a562d397e3ac1b6f05b066ecffc2052327bf",
       "firstDifferentByte": 241
     },
+    "tests/fixtures/m5/augment-batch5-s3b-oracle.cjs": {
+      "previousBytes": 4650,
+      "currentBytes": 4779,
+      "previousSha256": "d93ce048ea5b554153db57b99dd17135f7ae27b65ecc2070bf9e8186f34f7b04",
+      "currentSha256": "ec3445121a0ad7fb994a0e26d6efc6c03a9cd46f5808967582dda131db814cdd",
+      "firstDifferentByte": 3144
+    },
     "tests/fixtures/m5/augment-h6-oracle.cjs": {
       "previousBytes": 5501,
       "currentBytes": 7168,
       "previousSha256": "2d8d8b8f8c3e835f15f71afeab5acc064bde14519706344b4c1653018c620d3f",
       "currentSha256": "da789771c2131241737ea812c4ba29210b955e24e346ad2765bf1ac5c1cdfebe",
       "firstDifferentByte": 299
+    },
+    "tests/fixtures/m5/augment-inventory-oracle.cjs": {
+      "previousBytes": 2893,
+      "currentBytes": 3135,
+      "previousSha256": "441c034090d001caf7db72cdb230a4ec312efae4e98d1c978ade9fcdf8528971",
+      "currentSha256": "b9f6e6e306dd2f8d5b86dff0ae87ed5bcd281b02b98d12f5e52957f181789b6a",
+      "firstDifferentByte": 570
     },
     "tests/fixtures/m5/augment-rewards-oracle.cjs": {
       "previousBytes": 77538,
@@ -772,6 +800,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "0c0a1db2de43aa0286ad4c3923a9883e68b4b3d76a8860d4d2301dabe2a502d5",
       "firstDifferentByte": 0
+    },
+    "tests/fixtures/m5/h13-inventory-oracle.cjs": {
+      "previousBytes": 4461,
+      "currentBytes": 4710,
+      "previousSha256": "caa196914d630d3b24ba6c2e078ab05fa113f27f71cea50b7050ee95b126ff55",
+      "currentSha256": "d0913efec2c144e2c58f7d8d50cc3c12eb9266f54eab5eaef823b35e28aa813e",
+      "firstDifferentByte": 296
     },
     "tests/fixtures/m5/h3-growth-oracle.cjs": {
       "previousBytes": 16966,
@@ -958,9 +993,9 @@
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 69276,
+      "currentBytes": 69382,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d608806468570183ada8ca19fccd1dbcc5cf8cd2ef83afb84290764d5fe39e2f",
+      "currentSha256": "286d04643476a7143216d415257f7b632db4b6be0a1458c95f54420637dd0db7",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
