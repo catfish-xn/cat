@@ -15,14 +15,16 @@ import { CAROUSEL_TIMER_EFFECT, createCarouselTimerRing } from './carousel-timer
  * room, a unit is picked only on authoritative contact, first come first served. A unit leaves the ring only when the view names the seat that took it:
  * the unit follows that legend on a tether as it moves freely. A held seat
  * counts down over its head and its chains break at release; the stage opens with a short push-in.
+ * As in S13 (docs/CAROUSEL_UI_S13_20261102.md), each unit on offer shows the original inspect badge (eye) over the item it
+ * carries, in an item frame, and stands in its cost's quality ring (`carousel-shareddraft-unittier<cost>`); no star row.
  * Missing models or effects draw stand-ins; a procedural release timer remains readable with incomplete effects.
  */
 import {
   AmbientLight, Box3, CanvasTexture, Color, CylinderGeometry, DoubleSide, DirectionalLight, Group, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, Texture, TextureLoader, Vector2, Vector3, type Object3D,
+  LinearFilter, PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3,
+  type Object3D,
 } from 'three';
-import { UnitAnimationMixer, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
-import { createOriginalStarMark } from './original-stars';
+import { UnitAnimationMixer, type ActionOutput, type ModelLease, type ParticleEffect } from '../../rendering3d';
 import type { OriginalUi } from './ui-original-assets';
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
@@ -67,19 +69,26 @@ const FX = {
   wall: 'carousel-shareddraft-firstdraftwall-galaxy', wallEnd: 'carousel-shareddraft-firstdraftwall-death-galaxy',
   selected: 'carousel-shareddraft-unitselected', indicator: 'carousel-shareddraft-playerindicator',
 } as const;
+/** The quality ring a unit on offer stands in, by its cost (1–6), as in TFT; bounded and rebuilt while it stands. */
+export const carouselTierEffect = (cost: number) => `carousel-shareddraft-unittier${Math.max(1, Math.min(6, Math.trunc(cost) || 1))}`;
+const TIER_SECONDS = 4;
 const RESTRAINT_EARLY_SECONDS = 1.2, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SELECTED_SECONDS = 1.5, INDICATOR_SECONDS = 30;
 /** Stand-in feedback when an effect is missing: a ring that swells and fades this long. */
 const POP_SECONDS = 0.5;
-const ITEM_SIZE = 18, STAR_SIZE = 12, STAR_GAP = 12;
+/** Overhead, from the head up: the carried item in its frame, then the inspect badge (board units). */
+const ITEM_SIZE = 16, ITEM_FRAME = 20, ITEM_GAP = 12, BADGE_SIZE = 18, BADGE_GAP = 4;
 /** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
 const PICK_HALF_WIDTH = 0.65;
 /**
- * Carousel champions stand this much larger than on the board (their body, stars, items and pick box), so each draft
+ * Carousel champions stand this much larger than on the board (their body, overhead marks and pick box), so each draft
  * unit reads at a glance (playtest 10-22: "make the pieces bigger, easier to tell apart").
  */
 const UNIT_SIZE = 1.7;
-/** Lightweight hover/pending feedback, in board units; cost/availability live over the head. */
-const HOVER_LIFT = 5, PENDING_LIFT = 10, QUALITY_SIZE = 8;
+/** Lightweight hover/pending feedback, in board units; availability shows on the inspect badge. */
+const HOVER_LIFT = 5, PENDING_LIFT = 10;
+/** Original inspect badge states (UI sidecar sprite ids) and their flat stand-in colors. */
+const BADGE = { idle: 'carousel.inspect', hover: 'carousel.inspect.hover', off: 'carousel.inspect.disabled', pending: 'carousel.inspect.selected' } as const;
+const BADGE_COLOR = { idle: '#2f7b7f', hover: '#7fe0dc', off: '#1b2b30', pending: '#e6bc76' } as const;
 /**
  * Ground-walk prediction, display only (cells, seconds), replaced by the authoritative room line.
  * A confirmed unit trails TETHER_CELLS behind; ground clicks stay inside the cradles' ring.
@@ -114,7 +123,7 @@ export interface CarouselStageContext {
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
-  /** The 2D theme's cost color (1 gray … 5 gold) for the overhead quality mark; a neutral gray without it. */
+  /** The 2D theme's cost color (1 gray … 5 gold) for the stand-in quality ring; a neutral gray without it. */
   readonly costColor?: (cost: number) => string;
   /** Item icon textures (tests pass a stub); defaults to three's TextureLoader. */
   readonly loadTexture?: (url: string) => Promise<Texture>;
@@ -161,9 +170,13 @@ class Stride {
 interface Body { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: Stride; disposed: boolean }
 interface UnitView extends Body {
   readonly slot: number; readonly definitionId: string; readonly holder: Group;
-  /** Small cost-colored overhead square: bright when takable/pending, dim while unavailable. */
-  readonly quality: Sprite;
-  stars: StarMark; items: Sprite[]; data: BoardCarouselSlot;
+  /** The original inspect (eye) badge over the item: its state shows takable, hovered, pending or unavailable. */
+  readonly badge: Sprite;
+  /** Item frames (original item slot) behind the item icons. */
+  readonly frames: Sprite[];
+  /** The cost quality ring at its feet while it stands on the ring. */
+  tier: Loop | null;
+  items: Sprite[]; data: BoardCarouselSlot;
   /** Seat named by the view as having taken it: the unit has left the turning ring for that seat's legend. */
   takenBy: string | null;
 }
@@ -204,6 +217,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     cradle: own(new CylinderGeometry(0.62 * cell, 0.7 * cell, 0.2 * cell, 24)), wall: own(new CylinderGeometry(4.2 * cell, 4.2 * cell, 0.6 * cell, 48, 1, true)),
     pawn: own(new CylinderGeometry(9, 13, 34, 16)), head: own(new SphereGeometry(10, 16, 12)), legend: own(new SphereGeometry(14, 20, 14)),
     lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
+    tier: own(new RingGeometry(0.42 * cell, 0.56 * cell, 40)),
     marker: own(new SphereGeometry(5, 12, 8)),
   };
   const materials = {
@@ -223,6 +237,38 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     void texture.then(loaded => { if (loaded) { sprite.map = loaded; sprite.color.set('#ffffff'); sprite.needsUpdate = true; } });
     return sprite;
   };
+
+  // Original UI sprites (inspect badge states, item frame) as shared textures; repainted when the UI sidecar arrives.
+  const uiTextures = new Map<string, CanvasTexture>();
+  const uiTexture = (id: string): CanvasTexture | null => {
+    if (uiTextures.has(id)) return uiTextures.get(id)!;
+    const sprite = ctx.ui?.sprite(id);
+    if (!sprite) return null; // not ready: asked again on the next paint
+    const texture = new CanvasTexture(sprite.source as HTMLCanvasElement);
+    texture.colorSpace = SRGBColorSpace; texture.minFilter = LinearFilter; texture.generateMipmaps = false;
+    uiTextures.set(id, texture);
+    return texture;
+  };
+  const paint = (sprite: Sprite, id: string, color: string) => {
+    const map = uiTexture(id), material = sprite.material;
+    if (material.map === map && (map ? true : material.color.getHexString() === new Color(color).getHexString())) return;
+    material.map = map; material.color.set(map ? '#ffffff' : color); material.needsUpdate = true;
+  };
+  const badgeState = new WeakMap<UnitView, keyof typeof BADGE>();
+  const skinBadge = (view: UnitView, state: keyof typeof BADGE) => {
+    badgeState.set(view, state); paint(view.badge, BADGE[state], BADGE_COLOR[state]);
+  };
+  const skinFrames = (view: UnitView) => { for (const frame of view.frames) paint(frame, 'item.frame', '#0d1a1e'); };
+  const dropTier = (view: UnitView) => {
+    if (!view.tier) return;
+    const stand = view.tier.stand; endLoop(view.tier); view.tier = null;
+    (stand?.material as MeshStandardMaterial | undefined)?.dispose();
+  };
+  const unsubscribeUi = ctx.ui?.subscribe(() => {
+    for (const texture of uiTextures.values()) texture.dispose();
+    uiTextures.clear();
+    for (const view of unitViews.values()) { skinBadge(view, badgeState.get(view) ?? 'off'); skinFrames(view); }
+  });
 
   // --- platform --------------------------------------------------------------------------------------------------
   const platform = new Group(); platform.name = 'render3d-carousel-platform';
@@ -476,10 +522,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       if (loop.stand) loop.stand.visible = false;
     }).catch(() => { loop.loading = false; });
   };
-  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null, parent?: Object3D): Loop => {
+  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null, parent?: Object3D, load = true): Loop => {
     const entry: Loop = { id, seconds, point: point.clone(), fx: null, stand, left: 0, loading: false, disposed: false, ...(parent ? { parent } : {}) };
     if (stand) { stand.position.copy(point); (parent ?? scene).add(stand); }
-    loops.add(entry); startLoop(entry);
+    loops.add(entry); if (load) startLoop(entry);
     return entry;
   };
   function endLoop(entry: Loop | null) {
@@ -527,30 +573,39 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const body = new Mesh(geometry.pawn, materials.pawn); body.position.y = 17;
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6)); root.scale.setScalar(UNIT_SIZE);
-    const quality = new Sprite(new SpriteMaterial({ color: data.cost ? ctx.costColor?.(data.cost) ?? '#9aa4ae' : '#9aa4ae',
-      depthTest: false, depthWrite: false, transparent: true }));
-    quality.name = 'render3d-carousel-quality'; quality.renderOrder = 1001; quality.scale.setScalar(QUALITY_SIZE);
-    quality.position.set(-STAR_SIZE * 3, ctx.championHeight * UNIT_SIZE + STAR_GAP, 0);
-    const stars = createOriginalStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor, ui: ctx.ui });
-    stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight * UNIT_SIZE + STAR_GAP;
-    holder.add(root, stars.object, quality);
-    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, quality, stars, items: [], data, takenBy: null,
+    const top = ctx.championHeight * UNIT_SIZE;
+    const itemY = top + ITEM_GAP + ITEM_FRAME / 2, badgeY = itemY + (data.items.length ? ITEM_FRAME / 2 + BADGE_GAP : 0) + BADGE_SIZE / 2;
+    const badge = new Sprite(new SpriteMaterial({ color: BADGE_COLOR.off, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
+    badge.name = 'render3d-carousel-inspect'; badge.renderOrder = 1002; badge.scale.set(BADGE_SIZE, BADGE_SIZE * 43 / 46, 1); // the original badge is 46×43
+    badge.position.set(0, badgeY, 0);
+    holder.add(root, badge);
+    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, badge, frames: [], tier: null, items: [], data, takenBy: null,
       lease: null, mixer: null, state: new Stride(), disposed: false };
-    // Item marks bound to the same slot, above the stars.
+    // The item it carries, each in an original item frame, between its head and the badge.
     data.items.forEach((item, at) => {
+      const x = (at - (data.items.length - 1) / 2) * (ITEM_FRAME + 3);
+      const frame = new Sprite(new SpriteMaterial({ color: '#0d1a1e', depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
+      frame.name = 'render3d-carousel-item-frame'; frame.renderOrder = 1000; frame.scale.setScalar(ITEM_FRAME); frame.position.set(x, itemY, 0);
       const sprite = new Sprite(itemMaterial(item.icon)); sprite.name = `render3d-carousel-item-${item.id}`;
-      sprite.scale.setScalar(ITEM_SIZE); sprite.renderOrder = 1001;
-      sprite.position.set((at - (data.items.length - 1) / 2) * (ITEM_SIZE + 3), ctx.championHeight * UNIT_SIZE + STAR_GAP + STAR_SIZE + ITEM_SIZE * 0.6, 0);
-      holder.add(sprite); view.items.push(sprite);
+      sprite.scale.setScalar(ITEM_SIZE); sprite.renderOrder = 1001; sprite.position.set(x, itemY, 0);
+      holder.add(frame, sprite); view.frames.push(frame); view.items.push(sprite);
     });
+    skinFrames(view);
+    // Its cost's quality ring at the feet, as in TFT; a flat cost-colored ring stands in without the effect.
+    const ring = new Mesh(geometry.tier, new MeshStandardMaterial({ color: data.cost ? ctx.costColor?.(data.cost) ?? '#9aa4ae' : '#9aa4ae',
+      emissive: data.cost ? ctx.costColor?.(data.cost) ?? '#9aa4ae' : '#9aa4ae', emissiveIntensity: 0.7, transparent: true, opacity: 0.85, depthWrite: false }));
+    ring.name = 'render3d-carousel-tier'; ring.rotation.x = -Math.PI / 2;
+    const tierId = carouselTierEffect(data.cost ?? 1);
+    view.tier = loop(tierId, TIER_SECONDS, new Vector3(0, 0.02 * cell, 0), ring, holder, !ctx.hasEffect || ctx.hasEffect(tierId));
     units.add(holder);
     attach(view, data.definitionId, ctx.championHeight, ctx.championWidth);
     return view;
   };
   const dropUnit = (view: UnitView) => {
-    view.quality.material.dispose();
-    releaseBody(view); view.stars.dispose();
-    for (const sprite of view.items) sprite.material.dispose();
+    view.badge.material.dispose();
+    dropTier(view);
+    releaseBody(view);
+    for (const sprite of [...view.items, ...view.frames]) sprite.material.dispose();
     view.holder.removeFromParent();
   };
 
@@ -561,8 +616,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const styleCue = (view: UnitView) => {
     if (view.takenBy) return;
     const { takable, pending } = view.data;
-    view.quality.visible = !!view.data.cost || takable || pending;
-    view.quality.material.opacity = takable || pending ? 1 : 0.35;
+    skinBadge(view, pending ? 'pending' : takable ? hovered === view.slot ? 'hover' : 'idle' : 'off');
     view.holder.position.y = unitFeet + (pending ? PENDING_LIFT : takable && hovered === view.slot ? HOVER_LIFT : 0);
   };
   const clearPlatform = () => {
@@ -630,7 +684,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
     releaseTaken(unit);
     unit.takenBy = seat.seatId;
-    unit.quality.visible = false; unit.holder.position.y = unitFeet;
+    unit.badge.visible = false; for (const frame of unit.frames) frame.visible = false; dropTier(unit); unit.holder.position.y = unitFeet;
     taken.attach(unit.holder);
     // A receipt confirms contact on the server. Never start another chase or replace the walk with a trip home.
     grab(seat, unit, !settled);
@@ -712,7 +766,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       // Also draw a confirmed pick arriving with a late seat/slot snapshot, at that legend rather than on the ring.
       const newlyCreated = !entry;
       if (!entry) { entry = createUnit(slot, index, standing.length); unitViews.set(slot.slot, entry); }
-      entry.data = slot; entry.stars.setLevel(slot.starLevel);
+      entry.data = slot;
       if (taker && entry.takenBy !== taker.seatId) take(entry, taker, first || newlyCreated);
       if (!entry.takenBy) styleCue(entry);
     });
@@ -874,7 +928,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const view of unitViews.values()) {
       if (view.takenBy) continue;
       const base = view.holder.getWorldPosition(new Vector3()), size = view.holder.getWorldScale(scale).x;
-      const feet = screen(base.clone()), star = screen(view.stars.object.getWorldPosition(new Vector3()));
+      const feet = screen(base.clone()), star = screen(view.badge.getWorldPosition(new Vector3()));
       const side = screen(base.clone().addScaledVector(right, PICK_HALF_WIDTH * UNIT_SIZE * cell * size));
       const half = Math.hypot(side.x - feet.x, side.y - feet.y), slack = half * 0.4;
       if (Math.abs(px - feet.x) > half || py < star.y - slack || py > feet.y + slack) continue;
@@ -929,6 +983,9 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     }),
     dispose() {
       clear();
+      unsubscribeUi?.();
+      for (const texture of uiTextures.values()) texture.dispose();
+      uiTextures.clear();
       void Promise.all(textures.values()).then(list => list.forEach(texture => texture?.dispose()));
       textures.clear();
       for (const resource of owned) resource.dispose();
