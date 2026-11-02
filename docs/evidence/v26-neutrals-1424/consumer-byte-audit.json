@@ -2491,9 +2491,9 @@
     },
     "tests/server/batch5-g6-room.test.ts": {
       "previousBytes": 13257,
-      "currentBytes": 13588,
+      "currentBytes": 13841,
       "previousSha256": "7252d38f3667bddae46880b8842f3723d3832a0a0ea39f6f4ebc597a74c45821",
-      "currentSha256": "2e1f2cf901e2823eae312c075d517c757ac834146c802985560db7f2c20d8a6b",
+      "currentSha256": "13bc4f863672c7c5809503b11b9d7fed6eb7cb4fc80d409d1bca5b9da090fe48",
       "firstDifferentByte": 1315
     },
     "tests/server/batch5-h3-cooking-room.test.ts": {
