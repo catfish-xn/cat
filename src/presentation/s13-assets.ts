@@ -18,27 +18,40 @@ const index = new Map<string, S13Asset>(S13_ASSETS.map(asset => [`${asset.kind}:
  * `kind:id` → absolute URL. Read once when a root is configured; anything it lacks keeps the bundled file or the fallback.
  */
 const rootAssets = new Map<string, string>();
-let rootManifest: Promise<void> | null = null;
-export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (...args) => fetch(...args)): Promise<void> {
+let rootManifest: Promise<void> | null = null, rootLoaded = false;
+export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (...args) => fetch(...args), timeoutMs = 3000): Promise<void> {
   if (!base) return Promise.resolve();
   // Optional: a request or body that hangs is aborted after 3 s (and given up on even if the fetcher ignores the signal),
   // so the bundled portraits still load.
   return rootManifest ??= new Promise<void>(resolve => {
-    const abort = new AbortController(), timer = setTimeout(() => { abort.abort(); resolve(); }, 3000);
+    const abort = new AbortController(), timer = setTimeout(() => { abort.abort(); resolve(); }, timeoutMs);
     fetcher(new URL('ui-assets.json', base).href, { signal: abort.signal }).then(response => response.ok ? response.json() : null)
-      .then(manifest => { if (!abort.signal.aborted) registerRootUiAssets(base, manifest); }, () => undefined)
+      .then(manifest => { if (!abort.signal.aborted) rootLoaded = registerRootUiAssets(base, manifest); }, () => undefined)
       .finally(() => { clearTimeout(timer); resolve(); });
   });
 }
+/**
+ * A slow first read (the 3 s deadline above) used to leave the root's augment icons as lettered badges for the whole match.
+ * Reads the side manifest again, with a longer deadline, only while no read has succeeded. Resolves true once it has.
+ */
+export async function retryRootUiAssets(base: string | null, fetcher?: typeof fetch): Promise<boolean> {
+  if (!base || rootLoaded) return rootLoaded;
+  rootManifest = null;
+  await loadRootUiAssets(base, fetcher, 10_000);
+  return rootLoaded;
+}
+/** True once a root's side manifest has been read. */
+export const rootUiAssetsLoaded = (): boolean => rootLoaded;
 /** Registers root UI entries whose path stays inside the root; anything else is ignored. */
-export function registerRootUiAssets(base: string, manifest: unknown): void {
+export function registerRootUiAssets(base: string, manifest: unknown): boolean {
   const assets = (manifest as { assets?: unknown } | null)?.assets;
-  if (!Array.isArray(assets)) return;
+  if (!Array.isArray(assets)) return false;
   for (const entry of assets as { kind?: unknown; id?: unknown; path?: unknown }[]) {
     if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment' && entry?.kind !== 'ability') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
       || !/^[\w-]+(\/[\w.-]+)*$/.test(entry.path) || entry.path.split('/').includes('..')) continue;
     rootAssets.set(`${entry.kind}:${entry.id}`, new URL(entry.path, base).href);
   }
+  return true;
 }
 
 /** An augment icon carried by the asset root (augments missing from the bundled manifest), or null. */

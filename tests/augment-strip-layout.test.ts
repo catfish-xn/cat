@@ -47,8 +47,10 @@ it('accepts only bounded, verified frame metadata and local texture paths', () =
   ]) expect(alter(change)).toBeNull();
 });
 
-for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
-  it(`${mode} owns a 44px row above traits without covering shop/board controls at ${viewport.width}x${viewport.height}`, async () => {
+// Phones are not a layout target (AGENTS.md). The 2D fixture has no board canvas, so at 390px its shop dock stacks over
+// the board's place and says nothing about the real page; 3D keeps a phone case for the on-screen and 44px checks.
+for (const [mode, viewport] of [['2d', { width: 1440, height: 1000 }], ['3d', { width: 1440, height: 1000 }], ['3d', { width: 390, height: 844 }]] as const) {
+  it(`${mode} hangs a 44px row at the board's upper-left corner without covering shop/board controls at ${viewport.width}x${viewport.height}`, async () => {
     const context = await browser.newContext({ viewport, hasTouch: viewport.width === 390 });
     const page = await context.newPage(), errors: string[] = [], skinRequests: string[] = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -96,14 +98,20 @@ for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 
         window.__clear = () => { state = {...state, augments:[], anomalyBinding:null}; panel.render(); };
         window.__dispose = () => { window.__skin?.dispose(); panel.destroy(); sidebar.dispose(); };
       })()`);
-      const row = page.locator('.augment-strip'), chips = row.locator('.augment-chip');
+      const row = page.locator('.augment-strip'), chips = row.locator(':scope > .augment-chip');
+      await page.waitForFunction(() => (document.querySelector('.augment-strip') as HTMLElement | null)?.dataset.placed);
       expect(await chips.count()).toBe(4);
       expect(await row.getAttribute('aria-label')).toBe('已选强化与异常');
+      // S13 layout: on <body>, next to the board, not inside the left column above traits.
+      expect(await row.evaluate(el => el.parentElement === document.body)).toBe(true);
       const boxes = await Promise.all((await chips.all()).map(chip => chip.boundingBox()));
-      const strip = (await row.boundingBox())!, traits = (await page.locator('.trait-column').boundingBox())!;
-      const columns = mode === '3d' && viewport.width === 390 ? 2 : 4;
-      expect(strip.width).toBe(columns * 44 + (columns - 1) * 4); expect(strip.height).toBe(columns === 2 ? 92 : 44);
-      expect(traits.y - strip.y - strip.height).toBeGreaterThanOrEqual(8);
+      const strip = (await row.boundingBox())!, board = (await page.locator('#board-root').boundingBox())!;
+      const columns = await row.evaluate(el => Number(getComputedStyle(el).getPropertyValue('--augment-columns')));
+      expect(columns).toBeGreaterThanOrEqual(1);
+      expect(strip.width).toBe(columns * 44 + (columns - 1) * 4);
+      expect(strip.x).toBeGreaterThanOrEqual(0); expect(strip.x + strip.width).toBeLessThanOrEqual(viewport.width);
+      // Phones are not a layout target (AGENTS.md); there the row only has to stay on screen at full size.
+      if (viewport.width > 700) { expect(strip.y).toBeLessThan(board.y + board.height / 2); expect(strip.x + strip.width / 2).toBeLessThan(board.x + board.width / 2); }
       for (const [i, box] of boxes.entries()) {
         expect(box!.width).toBe(44); expect(box!.height).toBe(44);
         expect(box!.x).toBe(strip.x + i % columns * 48); expect(box!.y).toBe(strip.y + Math.floor(i / columns) * 48);
@@ -111,15 +119,28 @@ for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 
       const disjoint = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
       for (const selector of ['#shop-dock', '[data-debug="board-key"]', ...(mode === '3d' ? ['[data-debug="board-exit"]'] : [])]) {
         const box = (await page.locator(selector).boundingBox())!;
-        expect(disjoint(strip, box), selector).toBe(true);
+        expect(disjoint(strip, box), `${selector} ${JSON.stringify([strip, box])}`).toBe(true);
       }
-      for (const player of await page.locator('.online-seat').all()) expect(disjoint(strip, (await player.boundingBox())!), 'player control').toBe(true);
+      if (viewport.width > 700) for (const player of await page.locator('.online-seat').all()) expect(disjoint(strip, (await player.boundingBox())!), 'player control').toBe(true);
+      // Two hover levels: an icon opens the titled list (icon + name per row); a list row opens its description card.
+      const list = row.locator('.augment-list'), rows = list.locator('.augment-row');
       for (const chip of await chips.all()) {
-        await chip.click();
         expect(await chip.evaluate(el => { const b = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); })).toBe(true);
-        expect(await page.locator('[data-debug="hover:text"]:not([hidden])').count()).toBe(1);
-        await page.keyboard.press('Escape');
       }
+      await chips.first().click();
+      expect(await list.isVisible()).toBe(true);
+      expect(await list.locator('.augment-list-title').innerText()).toBe('海克斯强化');
+      expect(await rows.count()).toBe(4);
+      expect(await rows.last().innerText()).toContain('异常');
+      await rows.first().click();
+      expect(await page.locator('[data-debug="hover:text"]:not([hidden])').count()).toBe(1);
+      expect(await page.locator('[data-debug="hover:text"]:not([hidden])').innerText()).toContain('打气');
+      await page.keyboard.press('Escape');
+      // A tap outside closes the list again (touch has no hover-out).
+      await page.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.mouse.move(viewport.width - 4, viewport.height - 4);
+      expect(await list.isVisible()).toBe(false);
       // Tab-focus remains on the actual described icon; refreshes preserve a pinned target until its inventory changes.
       await chips.first().focus(); expect(await chips.first().getAttribute('aria-label')).toContain('打气');
       for (const id of ['mobile:buy-xp', 'mobile:reroll', 'mobile:sell', 'shop-lock']) {

@@ -295,10 +295,10 @@ export class StrategyPanel {
     }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip';
-    // Keep the row in the rail above traits. document.body + position:fixed used a size below
-    // 44px; min-width then made the real row cross the board. Descriptions attach before
+    // The row hangs on <body> at the board's upper-left corner (augment-hud.ts places it in viewport pixels),
+    // so the left column folding or the 3D drawer opening never covers it. Descriptions attach before
     // data-online exists, because BoardScene constructs this panel first. One listener only.
-    this.traitColumn.root.before(this.augmentStrip);
+    document.body.append(this.augmentStrip);
     this.augmentStrip.setAttribute('role', 'group'); this.augmentStrip.setAttribute('aria-label', '已选强化与异常');
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root), attachTextCards(this.augmentStrip));
     void import('../presentation/augment-hud').then(mod => {
@@ -472,15 +472,31 @@ export class StrategyPanel {
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
     this.root.dispatchEvent(new CustomEvent<string>(PANEL_STATUS_EVENT, { detail: message, bubbles: true }));
   }
-  /** Late asset-root icons: replace the chip's badge or src only. Does not rebuild the panel, shop or drag. */
+  /** Late asset-root icons: replace the badge or src of each icon and list row only. Does not rebuild the panel, shop or drag. */
   refreshAugmentIcons(): void {
-    for (const chip of Array.from(this.augmentStrip.querySelectorAll<HTMLElement>('[data-augment]'))) {
-      if (chip.parentElement !== this.augmentStrip) continue;
-      const id = chip.dataset.augment;
-      if (id) syncOwnedAugmentIcon(chip, id);
+    for (const node of Array.from(this.augmentStrip.querySelectorAll<HTMLElement>('.augment-chip[data-augment], .augment-row[data-augment]'))) {
+      const id = node.dataset.augment;
+      if (id) syncOwnedAugmentIcon(node, id);
     }
   }
-  /** Owned augment: icon + zh name; hovering shows the authored effect text. */
+  /**
+   * Owned augment: an icon in the board-corner row, plus a row (icon + zh name) in the list the row opens;
+   * the list row carries the authored effect text, as the client's second hover level.
+   */
+  private augmentEntry(id: string, values: AugmentDynamicValues): [HTMLElement, HTMLElement] {
+    const name = augmentDisplayName(id), text = [name, augmentPlayerDescription(id, values[id]), augmentEffectText(id)].filter(Boolean).join('\n');
+    return [this.stripIcon(name, augmentIconOrBadgeHtml(id, 32), { augment: id }), this.listRow(name, text, augmentIconOrBadgeHtml(id, 32), { augment: id })];
+  }
+  /** Bound anomaly: the shared anomaly icon (a lettered badge without it), after the augments, with name and holder in its list row. */
+  private anomalyEntry(id: string, unitDefinitionId: string | undefined): [HTMLElement, HTMLElement] {
+    const holder = unitDefinitionId ? displayUnitName(unitDefinitionId) : '', name = `${anomalyDisplayName(id)}${holder ? ` → ${holder}` : ''}`;
+    const text = [`异常：${name}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
+    const icon = anomalyIconHtml(32, 'augment-icon') || '<span class="augment-icon augment-badge anomaly-badge" style="width:32px;height:32px;font-size:16px" aria-hidden="true">异</span>';
+    const chip = this.stripIcon(name, icon, { anomaly: id, debug: 'anomaly-chip' });
+    chip.classList.add('anomaly-chip');
+    return [chip, this.listRow(`异常：${name}`, text, icon, { anomaly: id })];
+  }
+  /** Owned augment in the panel's 永久构筑 line: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string, values: AugmentDynamicValues): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
     chip.dataset.augment = id; const text = [augmentDisplayName(id), augmentPlayerDescription(id, values[id]), augmentEffectText(id)].filter(Boolean).join('\n');
@@ -488,15 +504,17 @@ export class StrategyPanel {
     chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 20));
     return chip;
   }
-  /** Bound anomaly: the shared anomaly icon (a lettered badge without it) + name and holder; hovering shows its text. */
-  private anomalyChip(id: string, unitDefinitionId: string | undefined): HTMLElement {
-    const name = anomalyDisplayName(id), holder = unitDefinitionId ? displayUnitName(unitDefinitionId) : '';
-    const chip = element('span', `${name}${holder ? ` → ${holder}` : ''}`, 'augment-chip anomaly-chip');
-    chip.dataset.anomaly = id; chip.dataset.debug = 'anomaly-chip';
-    const text = [`异常：${name}${holder ? ` → ${holder}` : ''}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
-    if (isOnline()) textCard(chip, text); else chip.title = text;
-    chip.insertAdjacentHTML('afterbegin', anomalyIconHtml(20, 'augment-icon') || '<span class="augment-icon augment-badge anomaly-badge" style="width:20px;height:20px;font-size:10px" aria-hidden="true">异</span>');
+  private stripIcon(name: string, icon: string, data: Record<string, string>): HTMLElement {
+    const chip = element('span', name, 'augment-chip'); Object.assign(chip.dataset, data);
+    chip.tabIndex = 0; chip.setAttribute('role', 'button'); chip.setAttribute('aria-label', name);
+    chip.insertAdjacentHTML('afterbegin', icon);
     return chip;
+  }
+  private listRow(name: string, text: string, icon: string, data: Record<string, string>): HTMLElement {
+    const row = element('div', '', 'augment-row'); Object.assign(row.dataset, data);
+    row.insertAdjacentHTML('afterbegin', icon); row.append(element('span', name, 'augment-row-name'));
+    if (isOnline()) textCard(row, text); else { row.title = text; row.tabIndex = 0; }
+    return row;
   }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
@@ -617,8 +635,11 @@ export class StrategyPanel {
     const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
     if (augmentKey !== this.augmentKey) {
       this.augmentKey = augmentKey;
-      this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId, values)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
-    }
+      const entries = [...state.augments.map(augment => this.augmentEntry(augment.definitionId, values)), ...(anomaly ? [this.anomalyEntry(anomaly.definitionId, anomalyUnit?.definitionId)] : [])];
+      const list = element('div', '', 'augment-list'); list.dataset.debug = 'augment-list';
+      list.append(element('div', '海克斯强化', 'augment-list-title'), ...entries.map(([, row]) => row));
+      this.augmentStrip.replaceChildren(...entries.map(([chip]) => chip), ...(entries.length ? [list] : []));
+    } else if (this.augmentStrip.querySelector('.augment-badge[data-augment]')) this.refreshAugmentIcons();
     this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
