@@ -61,6 +61,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactF
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
+import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
@@ -657,6 +658,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
+  // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
+  const anvilIdle = ltk ? createAnvilIdleLoop({
+    play: (key, id) => ltk.play(key, id, [], 0, 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
+  }) : null;
+  const anvilPieces = function* () { for (const [id, view] of pieces) if (isAnvilPiece(view.definitionId)) yield { id, definitionId: view.definitionId, alive: view.alive && !view.disposed }; };
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   // The same summon/anvil placeholder returns each round. Its icon material is
@@ -1014,7 +1020,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); ltkCastCounts.clear(); ltkEvents.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkCastCounts.clear(); ltkEvents.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1165,7 +1171,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    feel.update(seconds); batch3?.update(seconds); ltk?.update(seconds, camera);
+    feel.update(seconds); batch3?.update(seconds); anvilIdle?.update(seconds, anvilPieces(), reducedMotion()); ltk?.update(seconds, camera);
     for (const item of referenceEffects) { item.fx.update(seconds, camera); if (item.fx.finished) { referenceEffects.delete(item); recycleReference(item.fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);

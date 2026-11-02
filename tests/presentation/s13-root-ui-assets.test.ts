@@ -95,6 +95,21 @@ describe('root UI manifest path containment', () => {
     expect(assets.s13AssetUrl('champion', HERO)).toBe(`${ROOT}icons/hero.png`);
     expect(assets.s13AssetUrl('item', 'synthetic-item')).toBeNull();
   });
+
+  it('registers item art only for content items without a bundled icon (静止法衣), never over a bundled one', () => {
+    const bundled = assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens');
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Shroud')).toBeNull();
+    assets.registerRootUiAssets(ROOT, { assets: [
+      entry('items/shroud.png', 'TFT_Item_Shroud', 'item'), entry('items/again.png', 'TFT_Item_Shroud', 'item'),
+      entry('items/mittens.png', 'TFT_Item_Artifact_Mittens', 'item'), entry('items/spatula.png', 'spatula', 'item'),
+    ] });
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Shroud')).toBe(`${ROOT}items/shroud.png`);
+    expect(assets.s13AssetUrl('item', 'spatula')).toBe(`${ROOT}items/spatula.png`);
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens')).not.toBe(`${ROOT}items/mittens.png`);
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens')).toBeTruthy();
+    expect(bundled).toBeTruthy();
+    expect(assets.s13IconHtml('item', 'TFT_Item_Shroud', 16, 'item-icon')).toContain(`src="${ROOT}items/shroud.png"`);
+  });
 });
 
 describe('root UI manifest failure isolation', () => {
