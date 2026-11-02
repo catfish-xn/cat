@@ -128,7 +128,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       sprite.position.set((index - (items.length - 1) / 2) * (ITEM_SIZE + ITEM_GAP), ITEM_SIZE / 2, 0);
       icons.add(sprite);
       if (item.stacks !== undefined && item.maxStacks !== undefined) {
-        const full = item.stacks >= item.maxStacks;
+        // maxStacks null: uncapped (鬼索/大天使), never 满.
+        const full = item.maxStacks !== null && item.stacks >= item.maxStacks;
         const badgeCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
         if (badgeCanvas) { badgeCanvas.width = 64; badgeCanvas.height = 40; }
         const g = badgeCanvas?.getContext('2d');
