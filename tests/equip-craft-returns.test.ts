@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equipItem, restoreMatch, serializeMatch, type MatchState } from '../src/server-entry';
+import { equipItem, type MatchState } from '../src/server-entry';
 import { previewEquip } from '../src/simulation/item-selectors';
 import { allowedPreviewText } from '../src/presentation/equipment-feedback';
 import { accepted, bench, hero, prepared } from './t10-helpers';
