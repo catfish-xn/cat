@@ -13,7 +13,7 @@ import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '.
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
-import type { CandidateMap, PairingHistory } from './pairing';
+import type { CandidateMap, OpponentLog, PairingHistory } from './pairing';
 import type { CarouselFailure, CarouselLedgerEntry, RoomCarousel } from './carousel';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type LittleLegendId, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
@@ -219,6 +219,8 @@ export interface RoomState {
    * a reconnecting seat (V2 D8) sees the same candidates; PvE and supply rounds add nothing.
    */
   readonly pairingHistory: PairingHistory;
+  /** Every seat's opponent per past PvP round (stage tracker hover), recorded with `pairingHistory`; optional so older states stay valid. */
+  readonly opponentLog?: OpponentLog;
   /** G1-P6: possible opponents of each alive seat this PvP round, set at round entry from `pairingHistory`; empty otherwise. */
   readonly opponentCandidates: CandidateMap;
   /** G1-P7: the shared carousel while `phase` is `carousel`; null otherwise. Part of the room state, so a reconnecting seat sees it as is. */

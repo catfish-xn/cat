@@ -23,4 +23,16 @@ describe('server match log', () => {
     observe(room(base, 'r2'));
     expect(records.at(-1)![2]).toMatchObject({ roomId: 'r2', generation: 2 });
   });
+
+  it('logs the copies left in the shared pool once per preparation round', () => {
+    const records: [string, Record<string, unknown>][] = [];
+    const observe = createMatchLogObserver((_level, event, fields = {}) => records.push([event, { ...fields }]));
+    const withPool = (round: number, phase: string, vander: number) => ({ ...room({ ...base, round }), round, phase, pool: { available: { vander, jinx: 9 } } }) as unknown as RoomState;
+    observe(withPool(3, 'preparation', 20));
+    observe(withPool(3, 'preparation', 19));
+    observe(withPool(3, 'battle', 19));
+    observe(withPool(4, 'preparation', 18));
+    const pools = records.filter(([event]) => event === 'pool.left').map(([, fields]) => fields);
+    expect(pools).toEqual([{ roomId: 'r1', round: 3, available: 'vander:20,jinx:9' }, { roomId: 'r1', round: 4, available: 'vander:18,jinx:9' }]);
+  });
 });
