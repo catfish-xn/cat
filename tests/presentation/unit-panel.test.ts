@@ -200,3 +200,18 @@ it('refreshes independent Titan counters in the pinned panel and hover body, the
   expect(result.after).toContain('7/25'); expect(result.after).toContain('25/25');
   expect(result.hover).toContain(result.after); expect(result.same).toBe(true); expect(result.cleared).toBe(true);
 });
+
+it('keeps the ability text in a card that opens from the ability icon', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, body = api.buildUnitPanel({ id: 'lux', definitionId: 'lux', starLevel: 2, team: 'player' });
+    document.body.append(body);
+    const button = body.querySelector('.inspect-ability') as HTMLButtonElement, card = body.querySelector('.inspect-ability-card') as HTMLElement;
+    const closed = card.checkVisibility(), size = button.getBoundingClientRect();
+    button.focus(); const open = card.checkVisibility() && button.getAttribute('aria-expanded') === 'true';
+    button.blur(); const reclosed = !card.checkVisibility();
+    const role = card.querySelector('[data-debug="unit-card:role"]') !== null, stats = body.querySelectorAll('.inspect-stat').length;
+    body.remove(); return { closed, open, reclosed, role, stats, target: size.width >= 44 && size.height >= 44, label: button.getAttribute('aria-label') };
+  });
+  expect(result).toMatchObject({ closed: false, open: true, reclosed: true, role: true, stats: 8, target: true });
+  expect(result.label).toContain('技能');
+});
