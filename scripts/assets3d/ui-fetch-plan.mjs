@@ -22,6 +22,9 @@ export function seedPath(path, locale = 'zh_CN') {
   if (/^assets\/ux\/tft\/hud\/(tft_scoreboard_localplayerframe|unitshop\/tft_emptyshop|unitshop\/tft_shopcard_rarity[45]_(default|hover|clicked)|itemtracker\/tft_itemframe_(active|hover|inactive|pressed|selected))\.tex$/.test(path)) return true;
   if (/^assets\/ux\/tft\/tft_(unitshop_lock(enabled|disabled)_clicked|button_augment_(default|hover|clicked))\.tex$/.test(path)) return true;
   if (/^assets\/ux\/tft\/armory\/tft_set13\/(crime\/tft_crime_(frame|.*button.*)|goop\/frame)\.tex$/.test(path)) return true;
+  // Opening encounter: panel auto-atlas, portrait frame, stage-tracker icons, announcement banner frame.
+  if (/^uiautoatlas\/clientstates\/gameplay\/ux\/tft\/tftencounterpanel\/atlas_\d+\.tex$/.test(path)) return true;
+  if (/^assets\/ux\/tft\/(hud\/encounterpanel\/encounterframe_portrait|stageicons\/encounter_(current|upcoming|victory)|mograph\/tft_announcebanner_frame_(fill|glow|projhex))\.tex$/.test(path)) return true;
   return path === 'assets/ux/tft/mograph/sets/set13/augmentcard/set13_augmentcard_spine.atlas';
 }
 export function dictionaryPath(path, locale) {
