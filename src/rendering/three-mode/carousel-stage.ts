@@ -258,23 +258,32 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
         // GLBs carry the source transform and X mirror: one shared scale, nothing else.
         lease.scene.scale.setScalar(ctx.sourceScale); lease.scene.name = id;
         (CAROUSEL_SCENERY as readonly string[]).includes(id) ? scenery.add(lease.scene) : platform.add(lease.scene);
-        pieces.set(id, lease);
+        pieces.set(id, lease); surfaceCache.clear();
         standIn.visible = !pieces.size;
         resurface();
       }).catch(() => { platformLoading--; });
     }
   };
-  const ray = new Raycaster(), down = new Vector3(0, -1, 0);
+  const ray = new Raycaster(), down = new Vector3(0, -1, 0), origin = new Vector3();
+  // The platform never moves, so each spot is cast once: a cast walks every (quantized) triangle of the platform GLBs,
+  // and walking legends asked for it every frame (2-4 选秀 stutter). Snapped to SURFACE_STEP; emptied when pieces change.
+  const SURFACE_STEP = 0.1 * cell;
+  const surfaceCache = new Map<string, number>();
   /** Height of the named surfaces under (x, z), else the stand-in disc's top plus the doc's quarter cell. */
   const surfaceAt = (x: number, z: number, ids: readonly string[]): number => {
+    const gx = Math.round(x / SURFACE_STEP), gz = Math.round(z / SURFACE_STEP), key = `${ids.join()}|${gx}|${gz}`;
+    const cached = surfaceCache.get(key);
+    if (cached !== undefined) return cached;
+    let height = FEET * cell;
     const targets = ids.flatMap(id => pieces.get(id)?.scene ?? []);
     if (targets.length) {
       platform.updateWorldMatrix(true, true);
-      ray.set(new Vector3(x, 60 * cell, z), down);
+      ray.set(origin.set(gx * SURFACE_STEP, 60 * cell, gz * SURFACE_STEP), down);
       const hit = ray.intersectObjects(targets, true)[0];
-      if (hit) return hit.point.y;
+      if (hit) height = hit.point.y;
     }
-    return FEET * cell;
+    surfaceCache.set(key, height);
+    return height;
   };
 
   // --- layout ----------------------------------------------------------------------------------------------------
@@ -559,7 +568,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const clearPlatform = () => {
     platformGeneration++;
     for (const lease of pieces.values()) lease.release();
-    pieces.clear(); platform.clear(); scenery.clear(); standIn.clear(); standIn.visible = true; built = false;
+    pieces.clear(); surfaceCache.clear(); platform.clear(); scenery.clear(); standIn.clear(); standIn.visible = true; built = false;
   };
   const clear = () => {
     for (const view of unitViews.values()) dropUnit(view);
