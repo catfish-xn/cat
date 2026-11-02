@@ -223,10 +223,10 @@
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
       "previousBytes": 18380,
-      "currentBytes": 15330,
+      "currentBytes": 29773,
       "previousSha256": "1b08d0563585aa157dcc3d4bf42c51625e8ce0601fc7031b973a7e94568bac99",
-      "currentSha256": "ea5089a6489efa2ec54afc8b1cc2566a1c476488fbddd6dd9464d8229bce3d30",
-      "firstDifferentByte": 9144
+      "currentSha256": "f63571f33cd8b19e4ab1addfdb4f7ad7a5cd9fd2416c8c9d78749e01cf4ba0b6",
+      "firstDifferentByte": 4261
     },
     "tests/augment-pool-batch5-h1-clock.test.ts": {
       "previousBytes": 6324,
@@ -923,7 +923,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30683fd5a561700b2c89ba7dcb18893d9c928549216436dafbea604d6b276bb8",
+      "currentSha256": "9143e662827b3ad23c895d4b92f6c571aa7e1c9e0368313cb494059e565a7249",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1140,9 +1140,9 @@
     },
     "tests/loot-orb-claim.test.ts": {
       "previousBytes": 33082,
-      "currentBytes": 34715,
+      "currentBytes": 38601,
       "previousSha256": "d130f636abdfd16b55cb1d22d66281bc700425e1b6cdfd601025f8fb6a7f0679",
-      "currentSha256": "29c4bff4e40e03d3d5b07a087e3a4dc37477897b3e6cc9354169377cd1f9610a",
+      "currentSha256": "460d62acb80bb98892803e0d4bafcefbd9d1fdde27ec45b7c8d5dc18078ce329",
       "firstDifferentByte": 1630
     },
     "tests/m4-ledger-bound.test.ts": {
@@ -2343,10 +2343,10 @@
     },
     "tests/server/batch5-g5-pipeline-room.test.ts": {
       "previousBytes": 14719,
-      "currentBytes": 15114,
+      "currentBytes": 15954,
       "previousSha256": "d4abd6cef2586bac97af647d3f3d2f5b3f701a1c7daf1ca35f723f606f725949",
-      "currentSha256": "5e1a50ab80b6bc3c475327a801cc1b71627de907c3c2924154b343c70abe4cad",
-      "firstDifferentByte": 8596
+      "currentSha256": "9ea5d7303e07ca118435141a7963e9399aa4d14b6a6f1febc9031f9c441aac46",
+      "firstDifferentByte": 3967
     },
     "tests/server/batch5-g6-anger-issues.test.ts": {
       "previousBytes": 7949,

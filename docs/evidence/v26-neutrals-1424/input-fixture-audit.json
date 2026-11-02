@@ -486,7 +486,7 @@
     "src/simulation/masterwork-choice.ts": "52f9227528e0ac99ed6f79c6e8ff44c89a62b5c50b76c64e2b2b7a81ab8ca63e",
     "src/simulation/match-rules.ts": "e0ca00e28f6c79d7f978a61963ea7c2872517a81feb53b68fb1ada0500d9181b",
     "src/simulation/match-types.ts": "4fcaa7d7b39337638fe32917f4def50b96a745cd039a34e71275a5e42e29e31b",
-    "src/simulation/match.ts": "56c38b4c18f36390e5a0359caef39d88bf8228249d4532575534b6df2a4c571c",
+    "src/simulation/match.ts": "6afdb284c8dee8bd625ad7664de84f53bf682f89a27548f2ee531292769bca85",
     "src/simulation/mel-save.ts": "1b9343c7f0304bbfe1ed69ebb05bff42948bc9260cb12ab1a72ae8d189f3e0b4",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "01b74cb93a194985fdbace5e47b027bca5f55d08650f47ed3f4e69186e4c5586",
@@ -709,7 +709,7 @@
       "previousBytes": 66919,
       "currentBytes": 69072,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "30683fd5a561700b2c89ba7dcb18893d9c928549216436dafbea604d6b276bb8",
+      "currentSha256": "9143e662827b3ad23c895d4b92f6c571aa7e1c9e0368313cb494059e565a7249",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
