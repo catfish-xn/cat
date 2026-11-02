@@ -1,6 +1,6 @@
 ## 2026-10-30 v26 纪元身份（v26-neutrals-1424）
 
-当前 rules/content 为 `s13-g2-3-v26-neutrals-1424` / `s13-14.24b-g2-3-v26-neutrals-1424`，schema/save/replay/command 仍为 **12/8/8/7**，WebSocket 封套 6；CONTENT=`fnv1a32-utf16:9dc693dd`，LOOT=`fnv1a32-utf16:a56b2c4a`。旧身份（含 v25-online-rules）不迁移，直接拒绝。本节覆盖下文各节（含 R5 节中 `v26-online-rules` 的标签）关于当前身份的说法。录制、基线 e9384c02 及漂移证据见 [V26 纪元报告](V26_EPOCH_REPORT.md)。
+当前 rules/content 为 `s13-g2-3-v26-neutrals-1424` / `s13-14.24b-g2-3-v26-neutrals-1424`，schema/save/replay/command 为 **12/9/8/7**（save 9 在导出时新增可选的紧凑战斗编码，回放语义不变；save 8 旧档在身份匹配时仍可导入），WebSocket 封套 6；CONTENT=`fnv1a32-utf16:9dc693dd`，LOOT=`fnv1a32-utf16:a56b2c4a`。旧身份（含 v25-online-rules）不迁移，直接拒绝。本节覆盖下文各节（含 R5 节中 `v26-online-rules` 的标签）关于当前身份的说法。录制、基线 e9384c02 及漂移证据见 [V26 纪元报告](V26_EPOCH_REPORT.md)。
 
 ## 2026-10-29 D5：正式注册四张强化（v26）
 
