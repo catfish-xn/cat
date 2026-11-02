@@ -53,7 +53,7 @@ describe('3D crowd control', () => {
 describe('3D forced moves', () => {
   it('pulls, grabs and knockbacks hop once along the slide; other moves do not', async () => {
     const { DISPLACEMENT_REASONS, displacementHop } = await import('../src/rendering/three-mode/unit-control');
-    expect([...DISPLACEMENT_REASONS].sort()).toEqual(['mordekaiser-pull', 'sett-grab', 'sevika-knockback']);
+    expect([...DISPLACEMENT_REASONS].sort()).toEqual(['mordekaiser-pull', 'sett-grab', 'sevika-knockback', 'vander-knockback']);
     expect(DISPLACEMENT_REASONS.has('ambessa-chain')).toBe(false); // her own dash stays a run
     expect(displacementHop(0, 0.3)).toBe(0);
     expect(displacementHop(0.15, 0.3)).toBeCloseTo(1);
