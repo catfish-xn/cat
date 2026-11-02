@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { augmentStripLayout } from '../../src/presentation/augment-hud';
+import { augmentStripLayout, clearAugmentStrip } from '../../src/presentation/augment-hud';
 
 // S13 places the owned row at the board's upper-left corner (docs/V26_AUGMENT_ICONS_LAYOUT.md), not in the trait rail.
 const board = { left: 540, top: 70, right: 1190, bottom: 750 };
@@ -42,5 +42,14 @@ describe('owned augment row at the board corner', () => {
       expect(layout.height).toBe(44);
     }
     expect(augmentStripLayout({ viewportWidth: 1920, viewportHeight: 1080, count: 0, threeD: true, board, left: [] }).width).toBe(0);
+  });
+
+  it('slides down past HUD boxes it would cover on narrow screens, and stays put when nothing is covered', () => {
+    const layout = { left: 68, top: 179, columns: 4, width: 188, height: 44 };
+    const seat = { left: 198, top: 124, right: 284, bottom: 182 }, traits = { left: 64, top: 169, right: 260, bottom: 299 };
+    expect(clearAugmentStrip(layout, [seat, traits], 844)).toEqual({ ...layout, top: 303 });
+    expect(clearAugmentStrip(layout, [{ left: 300, top: 0, right: 390, bottom: 844 }], 844)).toEqual(layout);
+    // No clear spot above the bottom edge: keep the anchor rather than leave the screen.
+    expect(clearAugmentStrip(layout, [{ left: 0, top: 150, right: 390, bottom: 830 }], 844)).toEqual(layout);
   });
 });

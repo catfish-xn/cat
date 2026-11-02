@@ -47,9 +47,7 @@ it('accepts only bounded, verified frame metadata and local texture paths', () =
   ]) expect(alter(change)).toBeNull();
 });
 
-// Phones are not a layout target (AGENTS.md). The 2D fixture has no board canvas, so at 390px its shop dock stacks over
-// the board's place and says nothing about the real page; 3D keeps a phone case for the on-screen and 44px checks.
-for (const [mode, viewport] of [['2d', { width: 1440, height: 1000 }], ['3d', { width: 1440, height: 1000 }], ['3d', { width: 390, height: 844 }]] as const) {
+for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   it(`${mode} hangs a 44px row at the board's upper-left corner without covering shop/board controls at ${viewport.width}x${viewport.height}`, async () => {
     const context = await browser.newContext({ viewport, hasTouch: viewport.width === 390 });
     const page = await context.newPage(), errors: string[] = [], skinRequests: string[] = [];
@@ -87,6 +85,8 @@ for (const [mode, viewport] of [['2d', { width: 1440, height: 1000 }], ['3d', { 
           seats:Array.from({length:8}, (_,i)=>({seatId:'s'+i,name:'玩家 '+i,kind:i?'bot':'human',connected:true,controller:'human',hp:100,level:4,alive:true,publicBoard:[]})) });
         const board = document.getElementById('board-root');
         board.innerHTML = '<button data-debug="board-key" style="position:absolute;right:8px;bottom:8px">查看棋盘</button>';
+        // 2D: the real page sizes #board-root around Phaser's 480×520 canvas; without it the board box has no size.
+        if (${JSON.stringify(mode)} === '2d') board.insertAdjacentHTML('afterbegin', '<canvas width="480" height="520" style="display:block;max-width:100%"></canvas>');
         if (${JSON.stringify(mode)} === '3d') {
           const layer = document.createElement('div'); layer.className = 'render3d-layer';
           layer.innerHTML = '<canvas class="render3d-canvas"></canvas><div class="render3d-bar"><button data-debug="board-exit">切回 2D</button></div>';
@@ -121,7 +121,9 @@ for (const [mode, viewport] of [['2d', { width: 1440, height: 1000 }], ['3d', { 
         const box = (await page.locator(selector).boundingBox())!;
         expect(disjoint(strip, box), `${selector} ${JSON.stringify([strip, box])}`).toBe(true);
       }
-      if (viewport.width > 700) for (const player of await page.locator('.online-seat').all()) expect(disjoint(strip, (await player.boundingBox())!), 'player control').toBe(true);
+      for (const player of await page.locator('.online-seat').all()) expect(disjoint(strip, (await player.boundingBox())!), 'player control').toBe(true);
+      const traits = (await page.locator('.trait-column').boundingBox())!;
+      expect(disjoint(strip, traits), 'trait column').toBe(true);
       // Two hover levels: an icon opens the titled list (icon + name per row); a list row opens its description card.
       const list = row.locator('.augment-list'), rows = list.locator('.augment-row');
       for (const chip of await chips.all()) {

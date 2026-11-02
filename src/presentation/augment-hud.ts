@@ -67,6 +67,24 @@ export function augmentStripLayout(input: AugmentStripLayoutInput): AugmentStrip
   return { left: Math.round(left), top: Math.round(top), columns, width, height };
 }
 
+const overlaps = (a: AugmentStripRect, b: AugmentStripRect): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * Narrow screens pack the player list and traits into the corner: slide the row down past any HUD box it would cover.
+ * Keeps the row where it is when nothing is covered or no clear spot exists above the viewport bottom.
+ */
+export function clearAugmentStrip(layout: AugmentStripLayout, obstacles: readonly AugmentStripRect[], viewportHeight: number): AugmentStripLayout {
+  const at = (top: number): AugmentStripRect => ({ left: layout.left, top, right: layout.left + layout.width, bottom: top + layout.height });
+  let top = layout.top;
+  for (let guard = 0; guard <= obstacles.length; guard++) {
+    const hit = obstacles.filter(box => overlaps(at(top), box));
+    if (!hit.length) return { ...layout, top };
+    top = Math.ceil(Math.max(...hit.map(box => box.bottom))) + AUGMENT_CHIP_GAP;
+    if (top + layout.height > viewportHeight - EDGE) return layout;
+  }
+  return layout;
+}
+
 const rectOf = (node: Element | null): AugmentStripRect | null => {
   if (!node || (node as HTMLElement).hidden) return null;
   const box = node.getBoundingClientRect();
@@ -84,7 +102,10 @@ export function placeAugmentStrip(strip: HTMLElement): void {
   // The 2D item column sits under the board's left edge, below the row, so it is not a horizontal limit there.
   const left = ['#panels-root', '#strategy-root', '#trait-column', '.left-panel-toggle', ...(threeD ? ['#item-dock'] : [])]
     .map(selector => rectOf(document.querySelector(selector))).filter((box): box is AugmentStripRect => box !== null);
-  const layout = augmentStripLayout({ viewportWidth: window.innerWidth, viewportHeight: window.innerHeight, count, threeD, board, left });
+  // Visible controls only: the item and trait containers are tall transparent boxes in 2D.
+  const obstacles = Array.from(document.querySelectorAll('.online-seat, #trait-column .trait-row, #shop-dock, #item-dock :is(.item-card, .consumable-card), .render3d-bar, [data-debug="board-key"]'))
+    .map(rectOf).filter((box): box is AugmentStripRect => box !== null);
+  const layout = clearAugmentStrip(augmentStripLayout({ viewportWidth: window.innerWidth, viewportHeight: window.innerHeight, count, threeD, board, left }), obstacles, window.innerHeight);
   strip.style.left = `${layout.left}px`; strip.style.top = `${layout.top}px`;
   strip.style.setProperty('--augment-columns', String(layout.columns));
   strip.dataset.placed = threeD ? '3d' : '2d';
