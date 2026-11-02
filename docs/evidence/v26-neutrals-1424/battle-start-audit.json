@@ -211,7 +211,7 @@
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
-    "src/simulation/combat-targeting.ts": "9fcefc64b911340f682b42ba708bad90e644f92a969af9b4890ba8e9dafbc60e",
+    "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
     "src/simulation/combat-types.ts": "0f7cc62ce96889d42bcc2b75484788f5db6efcce87e510dd027c2f5b1d41d3be",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
@@ -640,9 +640,9 @@
     "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d"
   },
   "previousBytes": 4979457,
-  "currentBytes": 7716253,
+  "currentBytes": 7735296,
   "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-  "currentSha256": "f10554489d90479afc19b630bc42f58325e203826f8cf1399d8b2bf7988bba0e",
+  "currentSha256": "48b8cd45c9f14ce0a5aba4cf97ca79f1fac9319d4375a9007563df21ab9a7b0d",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
@@ -681,9 +681,9 @@
     },
     {
       "round": 23,
-      "time": 1279150,
-      "initialHash": "c51736ffafbd6243b77fd9ff4f65fea0b9b663a6dda8731e4e00e23a228620d8",
-      "firstHash": "7e970aa6205fc62bd83c97a413de58ece5b99622c6ffcfa9b19a3ddcdfe1bd6c",
+      "time": 1280850,
+      "initialHash": "302fa21fa78f54dc86d464438fb796dada19496e94beec426e9fa9836c65c37f",
+      "firstHash": "afa2ea519ef40f4c5c3249666b9857539d33c45a816861e5a1ad4e68a998c6df",
       "boardCounts": [
         8,
         7,

@@ -194,7 +194,7 @@
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
-    "src/simulation/combat-targeting.ts": "9fcefc64b911340f682b42ba708bad90e644f92a969af9b4890ba8e9dafbc60e",
+    "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
     "src/simulation/combat-types.ts": "0f7cc62ce96889d42bcc2b75484788f5db6efcce87e510dd027c2f5b1d41d3be",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
@@ -708,14 +708,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 904308,
-          "currentBytes": 1158940,
+          "currentBytes": 1158915,
           "previousSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1",
-          "currentSha256": "41b7f35d59e725f6bc1b7b5467f260563e9af2e565667e5271b2d80832806cf8",
+          "currentSha256": "51e577f18fd4eb56cefdc9f97a0056a314a20f02fa1bf939684ea570cb726e69",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "41b7f35d59e725f6bc1b7b5467f260563e9af2e565667e5271b2d80832806cf8",
-        "stateUtf8Sha256": "79b09e7bd3f712ab85fff7a9ebc50ca6f08e50a6c407d2b45686788a8cdc260e",
+        "gzipSha256": "51e577f18fd4eb56cefdc9f97a0056a314a20f02fa1bf939684ea570cb726e69",
+        "stateUtf8Sha256": "a0f90e6937d2d69d0b1ce2edc85f6588f9778d482c586b15950ac5f6efdc2cb2",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1"
       },
@@ -1396,7 +1396,7 @@
             "roundId": "3-7",
             "result": "playerWin",
             "combatTicks": 95,
-            "combatEventCount": 268,
+            "combatEventCount": 270,
             "settlementId": "round-17-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -2288,20 +2288,20 @@
         "formedBattles": 9,
         "boundBattles": 14,
         "transitioned": true,
-        "ticks": 14306,
+        "ticks": 14328,
         "commands": 252
       },
       "recording": {
         "byteEvidence": {
           "previousBytes": 937538,
-          "currentBytes": 1216811,
+          "currentBytes": 1216757,
           "previousSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2",
-          "currentSha256": "7d5462f2134fea075378718c07e022ad6107e6e2aaaa66f3407a4f89f7016af6",
+          "currentSha256": "dc8227ee81baf285a9492ca63db00dfd65ba1e9096235f213c78098f075441f7",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "7d5462f2134fea075378718c07e022ad6107e6e2aaaa66f3407a4f89f7016af6",
-        "stateUtf8Sha256": "127dce8e453539af60912e9c599bea4ba856392173a5ea235a9565eaab97896e",
+        "gzipSha256": "dc8227ee81baf285a9492ca63db00dfd65ba1e9096235f213c78098f075441f7",
+        "stateUtf8Sha256": "794d8a8bfdb5d93792b8320015a92ddd720d461c5d55d8f295d1709cafdc9dda",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2"
       },
@@ -2981,8 +2981,8 @@
             "round": 17,
             "roundId": "3-7",
             "result": "playerWin",
-            "combatTicks": 195,
-            "combatEventCount": 346,
+            "combatTicks": 198,
+            "combatEventCount": 363,
             "settlementId": "round-17-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -3341,8 +3341,8 @@
             "round": 26,
             "roundId": "5-2",
             "result": "playerWin",
-            "combatTicks": 476,
-            "combatEventCount": 1987,
+            "combatTicks": 495,
+            "combatEventCount": 2330,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3382,7 +3382,7 @@
             "roundId": "5-3",
             "result": "playerWin",
             "combatTicks": 452,
-            "combatEventCount": 2003,
+            "combatEventCount": 2012,
             "settlementId": "round-27-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5447,7 +5447,7 @@
         "formedBattles": 9,
         "boundBattles": 14,
         "transitioned": true,
-        "ticks": 14152,
+        "ticks": 14174,
         "commands": 273
       },
       "recording": null,
@@ -6127,8 +6127,8 @@
             "round": 17,
             "roundId": "3-7",
             "result": "playerWin",
-            "combatTicks": 195,
-            "combatEventCount": 346,
+            "combatTicks": 198,
+            "combatEventCount": 363,
             "settlementId": "round-17-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -6487,8 +6487,8 @@
             "round": 26,
             "roundId": "5-2",
             "result": "playerWin",
-            "combatTicks": 476,
-            "combatEventCount": 1987,
+            "combatTicks": 495,
+            "combatEventCount": 2330,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6528,7 +6528,7 @@
             "roundId": "5-3",
             "result": "playerWin",
             "combatTicks": 467,
-            "combatEventCount": 2098,
+            "combatEventCount": 2101,
             "settlementId": "round-27-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -7007,12 +7007,12 @@
       }
     }
   },
-  "candidateSha256": "44be1476a6b33d6572c6a87ce509d35ba2935bbbd304ccdc08349da9846f853a",
+  "candidateSha256": "0c0a1db2de43aa0286ad4c3923a9883e68b4b3d76a8860d4d2301dabe2a502d5",
   "goldenByteEvidence": {
     "previousBytes": 110194,
     "currentBytes": 107972,
     "previousSha256": "b6b2508ad17e621aa47b7928db591df3723815df9d183420a7bcea35786c8507",
-    "currentSha256": "44be1476a6b33d6572c6a87ce509d35ba2935bbbd304ccdc08349da9846f853a",
+    "currentSha256": "0c0a1db2de43aa0286ad4c3923a9883e68b4b3d76a8860d4d2301dabe2a502d5",
     "firstDifferentByte": 15
   }
 }
