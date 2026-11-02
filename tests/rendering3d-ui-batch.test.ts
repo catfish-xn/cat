@@ -62,7 +62,7 @@ describe('optional batch skin behavior', () => {
       crop: async (_s, r) => ({ ...sprite(), width: r[2], height: r[3], dispose: disposed }),
       font: () => { throw Error('unexpected font'); }, style: () => style };
     const ui = startOriginalUi('https://assets.test/', async path => path.endsWith('.json') ? new Blob([JSON.stringify(raw)]) : bytes, p);
-    await ui.ready; expect(ui.sprite('star.3')).toBeDefined(); expect(style.set.mock.calls[0][0]).toContain('[data-debug="reroll"]');
+    await ui.ready; expect(ui.sprite('star.3')).toBeDefined(); expect(style.set.mock.calls[0][0]).toContain('[data-debug="mobile:reroll"]');
     ui.dispose(); expect(disposed).toHaveBeenCalledTimes(3); expect(imageDispose).toHaveBeenCalledTimes(1); expect(style.dispose).toHaveBeenCalledTimes(1);
   });
 });

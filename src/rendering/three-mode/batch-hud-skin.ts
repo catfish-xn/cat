@@ -3,9 +3,9 @@ import type { ReadyUiSprite } from './ui-original-assets';
 const scope = 'body:has(.render3d-layer)';
 // Use :is so every branch stays scoped to a mounted 3D layer, including body-owned tooltips.
 const targets: Readonly<Record<string, string>> = {
-  'button.refresh': '[data-debug="reroll"]',
-  'button.xp': '[data-debug="buy-xp"]',
-  'button.sell': '[data-debug="sell"]',
+  'button.refresh': '[data-debug="mobile:reroll"]',
+  'button.xp': '[data-debug="mobile:buy-xp"]',
+  'button.sell': '[data-debug="mobile:sell"]',
   'button.lock.off': '[data-debug="shop-lock"][aria-pressed="false"]',
   'button.lock.on': '[data-debug="shop-lock"][aria-pressed="true"]',
   'shop.empty': '.shop-dock .shop-panel:not(.shop-choice) > .touch-shop > .shop-card:not(.shop-offer):not([data-unit-def])',
