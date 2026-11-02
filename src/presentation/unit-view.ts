@@ -7,7 +7,7 @@
 import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
 import type { CombatState } from '../simulation/combat-types';
-import { combatItemStackBadges, itemStackBadgeText } from './battle-equipment';
+import { combatItemStackBadges, itemStackBadgeText, itemStackFull } from './battle-equipment';
 import type { CombatViewUnit } from './combat-display';
 import type { DisplayUnit } from './combat-display';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
@@ -213,7 +213,7 @@ export class UnitView {
       if (badge) {
         let label = this.stackLabels[index];
         if (!label) { label = this.scene.add.text(0, 0, '', { fontSize: '10px', fontStyle: 'bold', backgroundColor: '#091219', resolution: 2 }).setOrigin(1, 1); this.stackLabels[index] = label; this.body.add(label); }
-        label.setText(itemStackBadgeText(badge)).setColor(badge.stacks >= badge.maxStacks ? '#ffd84d' : '#ffffff').setPosition(x + half, ITEM_Y + half).setVisible(true);
+        label.setText(itemStackBadgeText(badge)).setColor(itemStackFull(badge) ? '#ffd84d' : '#ffffff').setPosition(x + half, ITEM_Y + half).setVisible(true);
       }
       const slot = icons++, key = itemTextureKey(definitionId);
       if (!this.scene.textures.exists(key)) {

@@ -1,0 +1,18 @@
+/* TFT: during my PvP battle the opponent's chosen augments hang on their (far) side of the board, the mirror of my own row.
+   Same chip as the owned row: 44px target, 32px artwork, gold rim; the 3D sidecar frame applies to both
+   (three-mode/augment-strip-skin.ts). 2D: inside the board's top-right corner, over the opponent's half.
+   3D: the camera fills the viewport, so the row mirrors the owned row's viewport anchor (docs/V26_AUGMENT_ICONS_LAYOUT.md). */
+.opponent-augment-strip { position: absolute; top: 8px; right: 8px; z-index: 8; display: flex; flex-flow: row nowrap; gap: 4px; pointer-events: none; }
+.opponent-augment-strip[hidden] { display: none; }
+.opponent-augment-strip .augment-chip { position: relative; display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 6px;
+  background: #0b151fb3; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e66, 0 0 0 1px #b8303066; cursor: help; pointer-events: auto; }
+.opponent-augment-strip .augment-chip:focus-visible { outline: 2px solid #68ddd0; outline-offset: -2px; }
+.opponent-augment-strip .augment-icon { display: block; width: 32px !important; height: 32px !important; border-radius: 4px; }
+.opponent-augment-strip .augment-badge { display: grid; font-size: 14px !important; }
+body[data-online]:has(> .render3d-layer) .opponent-augment-strip { position: fixed; top: 23.8dvh; right: 26.7vw; left: auto; transform: translate(50%, -50%); z-index: 20; visibility: visible; }
+@media (max-width: 700px) and (orientation: portrait) {
+  /* Phones: the row stays inside the board box; two columns at most so it never reaches the right-hand controls. */
+  body[data-online]:has(> .render3d-layer) .opponent-augment-strip { position: absolute; top: 8px; right: 8px; transform: none; }
+  .opponent-augment-strip { flex-wrap: wrap; max-width: 92px; justify-content: flex-end; }
+}

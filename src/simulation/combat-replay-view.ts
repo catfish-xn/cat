@@ -42,7 +42,8 @@ export interface CombatViewItemStack {
   readonly instanceId: string;
   readonly definitionId: string;
   readonly stacks: number;
-  readonly maxStacks: number;
+  /** null: uncapped growth (鬼索的狂暴之刃 per attack, 大天使之杖 per pulse); the client shows the count without 满. */
+  readonly maxStacks: number | null;
   /** Supplied by the online equipment projection when the held slot is known. */
   readonly slot?: number;
   readonly temporary?: boolean;
@@ -58,6 +59,17 @@ function itemStackView(unit: CombatUnit): { readonly itemStacks?: readonly Comba
       && r.source.parentItemInstanceId === source.parentItemInstanceId && r.counters[counter.id] !== undefined);
     itemStacks.push({ instanceId: source.instanceId, definitionId: source.definitionId,
       stacks: runtime?.counters[counter.id] ?? 0, maxStacks: counter.cap });
+  }
+  // Uncapped growth items read the runtime that already applies the stat: one rageblade stack per counted
+  // attack-growth trigger, one archangel stack per completed periodic pulse. Same source instance, no recount.
+  const same = (a: { readonly sourceKind: string; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number },
+    b: typeof a) => a.sourceKind === b.sourceKind && a.definitionId === b.definitionId && a.instanceId === b.instanceId && a.effectIndex === b.effectIndex;
+  for (const m of unit.mechanics ?? []) {
+    if (m.source.sourceKind !== 'item') continue;
+    if (m.mechanic === 'rageblade') itemStacks.push({ instanceId: m.source.instanceId, definitionId: m.source.definitionId,
+      stacks: unit.triggerLedger?.runtimes.find(r => same(r.source, m.source))?.triggerCount ?? 0, maxStacks: null });
+    if (m.mechanic === 'archangel') itemStacks.push({ instanceId: m.source.instanceId, definitionId: m.source.definitionId,
+      stacks: unit.mechanismState?.periodicTasks.find(t => same(t.source, m.source))?.pulseOrdinal ?? 0, maxStacks: null });
   }
   // Explicit [] clears removed equipment; optional in the wire type for legacy replays.
   return { itemStacks };

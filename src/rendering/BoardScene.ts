@@ -50,7 +50,7 @@ import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber, starColor } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
-import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, s13AssetUrl, championPortraitKey } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, retryRootUiAssets, rootUiAssetsLoaded, s13AssetUrl, championPortraitKey } from '../presentation/s13-assets';
 import { readAssetBase3d } from './render-mode';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
@@ -371,7 +371,20 @@ export class BoardScene extends Phaser.Scene {
     });
     // Portraits load once the page is idle so they never delay the first usable controls.
     // The asset root's side manifest (v19 six-cost portraits) is read first, so its portraits load in the same pass.
-    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { if (this.sys.isActive()) { this.strategyPanel?.refreshAugmentIcons(); loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); } });
+    const applyRootAssets = () => { if (this.sys.isActive()) { this.strategyPanel?.refreshAugmentIcons(); loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); } };
+    // A first read that misses its 3 s deadline is retried a few times, so augment icons do not stay lettered badges all match.
+    // The root is read once; the callbacks below may run after teardown, when window is gone in tests.
+    const retryRoot = (base: string, attempt: number) => globalThis.setTimeout(() => {
+      if (!this.sys.isActive()) return;
+      void retryRootUiAssets(base).then(loaded => {
+        if (!this.sys.isActive()) return;
+        if (loaded) applyRootAssets(); else if (attempt < 3) retryRoot(base, attempt + 1);
+      });
+    }, 5000 * attempt);
+    const loadPortraits = () => {
+      const base = readAssetBase3d();
+      void loadRootUiAssets(base).then(() => { applyRootAssets(); if (base && !rootUiAssetsLoaded() && this.sys.isActive()) retryRoot(base, 1); });
+    };
     const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
