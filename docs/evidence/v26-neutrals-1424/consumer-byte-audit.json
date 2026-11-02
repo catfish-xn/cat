@@ -2336,9 +2336,9 @@
     "tests/server-match-log.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1883,
+      "currentBytes": 2754,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0eb244ae6f463aebb7a58172b8836f6fdfcf4f36d9262795254dcc54a221cc4a",
+      "currentSha256": "4aef7f3244f1c017ff96515f89d7c7224ac092efed7e17f17f2dbe34dd2e2846",
       "firstDifferentByte": 0
     },
     "tests/server/augment-clock-progression.test.ts": {
