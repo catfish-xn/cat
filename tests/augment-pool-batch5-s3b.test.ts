@@ -123,12 +123,15 @@ it('Pandora II grants two components, rerolls only inventory at the next entry, 
  reject(s,x=>{x.resourceProvenance.entries.find(isS3bConversion).receiptId='["augment-pool-batch5-s3b","wrong"]';});
  expect(nextRound(s,before.round)).toMatchObject({ok:false,state:s});
 });
-it('Pandora category pools allow no-op rolls and exclude special items and equipped components',()=>{
+it('Pandora category pools allow no-op rolls, reroll each class in place and keep Tactician/radiant items and equipped components',()=>{
  const state={seed:0,augments:[{definitionId:'pandoras-items-ii',choiceId:'test',acquiredRound:4}]};
- const ids=['sword','blue-buff','spatula','frying-pan','TFT_Item_ForceOfNature','TFT13_Item_AcademyEmblemItem','TFT4_Item_OrnnDeathsDefiance','TFT4_Item_OrnnObsidianCleaver'];
+ const ids=['sword','blue-buff','spatula','frying-pan','TFT_Item_ForceOfNature','TFT13_Item_AcademyEmblemItem','TFT4_Item_OrnnDeathsDefiance','TFT4_Item_OrnnObsidianCleaver','TFT5_Item_InfinityEdgeRadiant'];
  const items=ids.map((definitionId,i)=>({id:`item-${i+1}`,definitionId,location:{kind:'inventory' as const}}));
  const facts=pandoraConversions(state,[...items,{id:'held',definitionId:'bow',location:{kind:'unit',unitId:'u',slot:0}}],5);
- expect(facts.map(f=>f.itemId)).toEqual(['item-1','item-2']);
+ expect(facts.map(f=>f.itemId)).toEqual(['item-1','item-2','item-3','item-4','item-6','item-7','item-8']);
+ const pool=(f:{from:string})=>f.from==='spatula'||f.from==='frying-pan'?['frying-pan','spatula']:f.from.endsWith('EmblemItem')?Object.keys(ITEM_DEFINITIONS).filter(id=>/^TFT13_Item_\w+EmblemItem$/.test(id))
+  :f.from==='TFT4_Item_OrnnDeathsDefiance'?G24_FORGE_POOLS.TFT_ArmoryKeyOrnn:f.from==='TFT4_Item_OrnnObsidianCleaver'?G24_FORGE_POOLS.TFT_ArmoryKeySupport:f.from==='sword'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:G24_FORGE_POOLS.TFT_ArmoryKeyCompleted;
+ for(const f of facts)expect(pool(f),f.itemId).toContain(f.to);
  expect(pandoraConversions(state,items,4)).toEqual([]);
  let unchanged=false;for(let seed=0;seed<=100;seed++)unchanged ||= pandoraItem(seed,'same-roll','sword')==='sword';expect(unchanged).toBe(true);
  for(const from of ['sword','blue-buff'])for(let seed=0;seed<=100;seed++)expect(from==='sword'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:G24_FORGE_POOLS.TFT_ArmoryKeyCompleted).toContain(pandoraItem(seed,'roll',from));
