@@ -29,6 +29,16 @@ describe('unit facing rule', () => {
     expect(headingToward({ x: 0, z: 0 }, { x: 0.2, z: 0.2 })).toBeNull();
   });
 
+  it('a piece on the bench never turns: not to where it slides after a drop or a swap, not in combat', () => {
+    const bench = { ...base, onBench: true };
+    near(desiredHeading({ ...bench, fighting: false, destination: { x: 40, z: 0 } })!, restHeading('player'));
+    near(desiredHeading({ ...bench, fighting: false, destination: { x: 0, z: 40 } })!, restHeading('player'));
+    near(desiredHeading({ ...bench, destination: { x: -40, z: 0 }, target: { x: 0, z: 10 } })!, restHeading('player'));
+    near(desiredHeading({ ...bench, team: 'enemy', fighting: false, destination: { x: 40, z: 0 } })!, restHeading('enemy'));
+    // Leaving the bench for the board: it looks where it goes, as any board piece.
+    near(desiredHeading({ ...base, fighting: false, destination: { x: 40, z: 0 } })!, Math.PI / 2);
+  });
+
   const frames = (turn: HeadingTurn, desired: number | null, seconds: number, step = 1 / 60) => {
     const seen: number[] = [];
     for (let left = seconds; left > 1e-9; left -= step) seen.push(turn.update(desired, Math.min(step, left)));
