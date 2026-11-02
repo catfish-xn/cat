@@ -102,7 +102,7 @@ function p3Description(id: string): string | null {
 const outcomeNames: Readonly<Record<string,string>> = {
   'magic:egg':'金蛋', 'magic:high-triple':'战术师之戒', 'magic:low-triple':'英雄复制器与金币',
   'magic:health':'全队生命值', 'magic:units':'2星弈子', 'magic:components':'基础装备', 'magic:pan':'金锅铲与基础装备',
-  'chaos:gold':'金币', 'chaos:three-star':'3星弈子与金币', 'chaos:hullbreakers':'大亨之铠', 'chaos:horizon-focus':'狙击手的专注',
+  'chaos:gold':'金币', 'chaos:three-star':'3星弈子与金币', 'chaos:hullbreakers':'碎舰者', 'chaos:horizon-focus':'狙击手的专注',
   'chaos:thiefs-gloves':'窃贼手套', 'chaos:solari-dummy':'钢铁烈阳之匣假人', 'chaos:zeke-dummy':'基克的先驱假人',
   'chaos:emblems':'纹章', 'chaos:xp':'经验', 'chaos:rerolls':'免费刷新',
 };
@@ -140,8 +140,16 @@ export const augmentPlayerDescription = (id: string, dynamic?: AugmentDynamicVal
  */
 export function augmentEffectText(id: string): string {
   const effects: readonly Effect[] = AUGMENT_DEFINITIONS[id]?.effects ?? [], described = augmentPlayerDescription(id) !== null;
-  return effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；');
+  return [effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；'), REWARD_POOL_NOTES[id]].filter(Boolean).join('；');
 }
+/**
+ * Project-written reward lists for augments whose official text only says "a random reward" (later patches list the pool;
+ * 14.24 does not). They spell out the pool this build actually draws from (S13_RULES_GAP, 混沌召唤), not the live one.
+ */
+const REWARD_POOL_NOTES: Readonly<Record<string, string>> = {
+  'call-to-chaos': '可能的奖励（每项10%）：58金币；1个3星3费弈子和20金币；3个碎舰者和1个装备拆卸器；3个狙击手的专注和1个装备拆卸器；'
+    + '3个窃贼手套和1个装备拆卸器；1个携带2个钢铁烈阳之匣的训练假人；1个携带2个基克的先驱的训练假人；5个随机纹章；64经验；40次免费刷新',
+};
 
 /**
  * The choice card's two text areas, as the original card sets them: the effect description, then the extra notes in
