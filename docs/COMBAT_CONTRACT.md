@@ -16,6 +16,10 @@
 
 `decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?,hardControlled=false,draw?)`；`ordinaryNearestTies(unit,units,tick)` 返回等距候选。`S13_COMBAT_RULES.ordinaryTargeting` 为 `v26-p1-retain-in-range-one-step-equal-distance-lcg32-hard-cc-hold`，内容摘要因此变化；不重录 fixture。证据见 [CURSOR_targeting-p1](CURSOR_targeting-p1.md)。
 
+## v26 近战抢格：阵亡单位不再占攻击格（2026-11-02 修复）
+
+已死亡（`alive` 为假或 `hp <= 0`）的单位不参与攻击格归属：每 tick 建立 `goalOwner` 时跳过，提交移动时清掉其 `meleeApproach` 且不再重写。此前阵亡在目标邻格的近战，每 tick 仍按“已在射程”把脚下格子写回锁定，活着的友军把该格当作别人的而原地等待（实测：角落目标只剩这一格时队友整场发呆）。存活单位的抢格、平局抽词与等待规则不变；`meleePathing` 规则串未改。回归用例见 [melee-dead-claim.test.ts](../tests/melee-dead-claim.test.ts)。
+
 ## v26 近战抢格（2026-10-29 用户批准）
 
 射程 1 且尚未接战的单位不再用“任意进射程格子”的 BFS。攻击格是目标的棋盘邻居。已选定的攻击格一直保持，直到有单位停在上面（已进入自己目标的射程、不能移动、或无路可走），或目标换了、该格不再是攻击格。另以 `standsStill` 的占格身体（排除锁定格本身）作为墙检查可达性：锁定格被永久围住时失效，重新选择可达攻击格；只是路过或移动冷却中的单位不使锁定失效，也不因此改道后退。所有攻击格都有人时原地等待。
