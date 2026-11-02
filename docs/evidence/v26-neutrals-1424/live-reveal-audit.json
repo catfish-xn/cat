@@ -189,7 +189,7 @@
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "1380a434541a475a614b7932a5de8ab09eb1acf5ffa496cacbbbf392cd4470f4",
     "src/simulation/combat-s13-state.ts": "79839b1df406583f40f4b3cc3db20e4a5fccbc9c3c090586bfdac1a267c71680",
-    "src/simulation/combat-s13.ts": "44968b590d8fa027dd2f5c95a96be88af8b664e8f6cc5aec913a0171283740e9",
+    "src/simulation/combat-s13.ts": "6005f035cfdc4c8cff02eae2cc667cf0d6d570a4f0b27aa1c8d9a79e8187d1a3",
     "src/simulation/combat-six-cost.ts": "0eaae8ef1bbe29ea9ea834142d58e9ce5528628e7064dc46112f4788c857b523",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
@@ -661,7 +661,7 @@
   "seed": 15972,
   "partialSeed": 54239,
   "roundId": "4-7",
-  "prefixHash": "d399c295b919bd93cbffa654a8017b65e5779b5d01e9be88b598a94b1e8da3af",
+  "prefixHash": "0f3bbdbe59e87b941488917b52be590e3b5e799df107d7ea5bd905af6c3a3177",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -946,7 +946,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "9ac33825f4e14da47362f07da57b53490c460568e40a9b4e3a204ae943d6d1de",
-      "terminalHash": "bb99387a325fe2d3b2e62524ee2af08ce8c659b5a19b730b9caf643943a8a23c",
+      "terminalHash": "81073184ba35916f7ea85d0d44d2e86f69677554083fe540c2b197dc95580b65",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1113,7 +1113,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "113af2a41670498643165233701bbc327d52868f4e7e684b56f6309f899ade24",
-      "terminalHash": "0c72018932bfbfb7b34154fd34eb3f9f2ffc4db5acac836b48b13478a800f0cb",
+      "terminalHash": "d5f46d2e78f0560816f13f5fe03422f737ab26d28e8f562435dfa74e46a86bda",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1174,7 +1174,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "f90208764c84b145e6b10a4f24f4845364bfb8309e9f0970bbe576c507c8252b",
-      "terminalHash": "02646d17219e7708247566f347407f016a36bc05916c0d315d1a1083fef21889",
+      "terminalHash": "73659d41b572abd911900c6f26ac4408aff7b73c3ba09771c1154128c36e613a",
       "receipts": 2,
       "unitSerialDelta": 1,
       "itemSerialDelta": 0,
@@ -1183,7 +1183,7 @@
         "col": 6,
         "row": 7
       },
-      "prefixHash": "178f9323b162ce79a6e69443c794fd7b77038a47436f798e00633586d9eed1e0"
+      "prefixHash": "96f0b7adc6c81d3d5f84efae778e69f5724a976af1df378c582ca3cf19d1a1e2"
     },
     "loris-r01": {
       "deaths": [
@@ -1232,7 +1232,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "50c5a2ae365ae240c9671c08ad3a6c69d7da62e4677a84fbbd583ed4d12239b6",
-      "terminalHash": "9ce5f03e93d4e5fd6826b8fbdc14a11943280ac1ec6794ecef8b3e83fe28d6ae",
+      "terminalHash": "db69f23293c5adcf61f7faf8c39bf4de817307b932ae323f537d3921f3ce5df2",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
@@ -1241,7 +1241,7 @@
         "col": 0,
         "row": 6
       },
-      "prefixHash": "178f9323b162ce79a6e69443c794fd7b77038a47436f798e00633586d9eed1e0"
+      "prefixHash": "96f0b7adc6c81d3d5f84efae778e69f5724a976af1df378c582ca3cf19d1a1e2"
     },
     "unloadedCarrier": {
       "roundId": "1-4",
