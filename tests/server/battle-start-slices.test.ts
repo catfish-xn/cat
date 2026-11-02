@@ -116,7 +116,7 @@ describe('battle opening slices', () => {
         if (!queued) finishOpening(room, clock);
         const seatId = 'seat-1';
         const match = () => room.state.seats.find(s => s.seatId === seatId)!.match;
-        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'violet'), generation: match().shop.generation }));
+        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'amumu'), generation: match().shop.generation }));
         execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench' && !u.definitionId.startsWith('TFT_ArmoryKey'))!.id }));
         execute('reroll', () => room.handle(seatId, { type: 'reroll' }));
         const orb = readLootView(frozen.seats[0]!.match).unclaimedOrbs![0]!;
@@ -189,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 7, 8, 7, 8, 8, 7]); // v26 recording (battle-start.json checkpoint round 23)
+        .toEqual([8, 8, 8, 7, 8, 8, 8]); // v26 recording (battle-start.json checkpoint round 23; seed 20261016 after the 2026-11-02 carousel change)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

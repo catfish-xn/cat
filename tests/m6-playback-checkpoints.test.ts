@@ -58,7 +58,8 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // events c619dab8…, terminal c4c0d27c…, see docs/V25_STARRY_PINS.md).
     expect(bytesHash([...expected.hashes])).toBe('12d0a6abc1301d639c2b94f6bb3a220cf515270eb00fc69ee05ed206f713eb1e');
     // v26 卯足全力内容变化: content digest 9dc693dd → ed366cad in the record only (frames/events/terminal unchanged; was ccaed15a…).
-    expect(bytesHash(record)).toBe('e5f71f49c813385e07c10c1e7a0be83cd43032a233a6a4323a93a747bad7defc');
+    // v26 选秀 8 件散件必出: content digest ed366cad → 150d825d in the record only (frames/events/terminal unchanged; was e5f71f49…).
+    expect(bytesHash(record)).toBe('85e05c7465fc222bd8135eb68fef459693aa24c50e801fe3e9a1a592499e8a7f');
     expect(bytesHash(record.events)).toBe('d060a74fd71f3610183f558cd393796bf2912a7b7e2de0bf1e306ff3debd00b6');
     expect(bytesHash(expected.terminal)).toBe('8c6016830cd9a08bdb26b2f801ba1914c0191aba8b54b5639dced51016d5534f');
     // An external JSON record is cold on each constructor, like browser fixtures.
