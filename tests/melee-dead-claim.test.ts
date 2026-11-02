@@ -29,3 +29,24 @@ describe('melee approach after an ally dies on an attack hex', () => {
   });
 
 });
+
+describe('melee retarget when the nearest enemy is walled off', () => {
+  // e-near at (3,3) is ringed by frozen allies of the walker; z-far at (0,0) still has an open attack hex.
+  const wall = (id: string, col: number, row: number) => body(id, 'player', col, row, { cooldownTicks: 1000, moveCooldownTicks: 1000 });
+  const foe = (id: string, col: number, row: number) => body(id, 'enemy', col, row, { cooldownTicks: 1000, moveCooldownTicks: 1000 });
+  const units = () => [
+    body('p', 'player', 3, 6),
+    foe('e-near', 3, 3),
+    wall('w1', 4, 3), wall('w2', 4, 4), wall('w3', 3, 4), wall('w4', 2, 3), wall('w5', 3, 2), wall('w6', 4, 2),
+    foe('z-far', 0, 0),
+  ];
+
+  it('walks to a reachable enemy instead of waiting on the nearest one', () => {
+    let state: CombatState = freeze(battle(units(), { rngState: 42, rngDraws: 0 }));
+    const start = { col: 3, row: 6 };
+    for (let i = 0; i < 10; i++) state = stepCombat(state).state;
+    const p = state.units.find(u => u.id === 'p')!;
+    expect(p.targetId).toBe('z-far');
+    expect(p.cell).not.toEqual(start);
+  });
+});

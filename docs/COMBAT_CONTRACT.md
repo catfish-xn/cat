@@ -16,6 +16,10 @@
 
 `decideCombatTarget(board,unit,units,tick,occupied,reselect,previous?,hardControlled=false,draw?)`；`ordinaryNearestTies(unit,units,tick)` 返回等距候选。`S13_COMBAT_RULES.ordinaryTargeting` 为 `v26-p1-retain-in-range-one-step-equal-distance-lcg32-hard-cc-hold`，内容摘要因此变化；不重录 fixture。证据见 [CURSOR_targeting-p1](CURSOR_targeting-p1.md)。
 
+## v26 近战绕路换目标（2026-11-02 用户批准）
+
+普通最近目标回退（P0/P1 的“最近敌人”分支）对可移动的射程 1 单位多一步：若最近距离的候选里没有任何一人有“空且能走到”的攻击格（邻格未被占，且从单位脚下只经空格可达），改取有这种攻击格的敌人里距离最近的一组，再按 P1 的等距规则（当前目标在组内则沿用，否则 `ctx.draw` 抽一次）定人。最近组里只要有一人可达，只在可达者中决胜。没有任何敌人可达时维持原最近目标原地等待。可达性只看本 tick 的占格快照，不看友军的攻击格锁定。被绕开的敌人身边腾出空位后，它若仍是最近敌人，下一 tick 会被重新选中。嘲讽、背叛、剔除弱者、硬控冻结、射程内保持与已接战一步追击都不变。随机 400 场 7v7 模拟里，“有可达空位却超过 40 tick 不动”从 64 次降到 3 次。`ordinaryTargeting` / `meleePathing` 规则串与内容摘要未改（待审核决定是否升串）。回归用例见 [melee-dead-claim.test.ts](../tests/melee-dead-claim.test.ts)。
+
 ## v26 近战抢格：阵亡单位不再占攻击格（2026-11-02 修复）
 
 已死亡（`alive` 为假或 `hp <= 0`）的单位不参与攻击格归属：每 tick 建立 `goalOwner` 时跳过，提交移动时清掉其 `meleeApproach` 且不再重写。此前阵亡在目标邻格的近战，每 tick 仍按“已在射程”把脚下格子写回锁定，活着的友军把该格当作别人的而原地等待（实测：角落目标只剩这一格时队友整场发呆）。存活单位的抢格、平局抽词与等待规则不变；`meleePathing` 规则串未改。回归用例见 [melee-dead-claim.test.ts](../tests/melee-dead-claim.test.ts)。
