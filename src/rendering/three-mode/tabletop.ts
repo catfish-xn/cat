@@ -177,6 +177,14 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
   const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbStandMaterial(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
   const orbHaloMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbHaloMaterialFor(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  // Trait orb tints ignore the tier, so each variant's materials are made once, not per orb.
+  const variantMaterials = new Map<string, MeshStandardMaterial>();
+  const variantMaterial = (kind: 'stand' | 'halo', tier: BoardOrb['tier'], variant: NonNullable<BoardOrb['variant']>) => {
+    const key = `${kind}:${variant}`;
+    let material = variantMaterials.get(key);
+    if (!material) { material = kind === 'stand' ? orbStandMaterial(tier, variant) : orbHaloMaterialFor(tier, variant); variantMaterials.set(key, material); }
+    return material;
+  };
   const boltGeometry = own(new SphereGeometry(7, 16, 12));
   const boltMaterial = own(new MeshStandardMaterial({ color: '#ffe3a1', emissive: '#ffb347', emissiveIntensity: 1, transparent: true }));
   const flashMaterial = own(new MeshStandardMaterial({ color: '#ff9b6b', emissive: '#ff6a3d', emissiveIntensity: 1, transparent: true, opacity: 0.8 }));
@@ -439,9 +447,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
   const createOrb = (orb: BoardOrb, index: number): OrbView => {
     const root = new Group(); root.name = `render3d-orb-${orb.tier}`;
-    const halo = new Mesh(orbHaloGeometry, orb.variant ? orbHaloMaterialFor(orb.tier, orb.variant) : orbHaloMaterial[orb.tier]);
+    const halo = new Mesh(orbHaloGeometry, orb.variant ? variantMaterial('halo', orb.tier, orb.variant) : orbHaloMaterial[orb.tier]);
     halo.rotation.x = -Math.PI / 2; halo.position.y = 1;
-    const stand = new Mesh(orbGeometry, orb.variant ? orbStandMaterial(orb.tier, orb.variant) : orbMaterial[orb.tier]);
+    const stand = new Mesh(orbGeometry, orb.variant ? variantMaterial('stand', orb.tier, orb.variant) : orbMaterial[orb.tier]);
     stand.position.y = ORB_FLOAT; stand.renderOrder = -1;
     root.add(halo, stand); root.position.copy(orbSlot(index)); scene.add(root);
     const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, halo, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
@@ -455,7 +463,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
   /** The tier's (or trait skin's) opening where the orb lies. */
   const openOrb = (view: OrbView) => burst(view.variant ? `orb-${view.variant}-open` : ORB_OPEN[view.tier], OPEN_SECONDS,
-    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, (view.variant ? orbStandMaterial(view.tier, view.variant) : orbMaterial[view.tier]).clone()), ORB_OPEN[view.tier],
+    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, (view.variant ? variantMaterial('stand', view.tier, view.variant) : orbMaterial[view.tier]).clone()), ORB_OPEN[view.tier],
     orbParticleScale(view.tier, view.variant));
   /** Drawn, landed and not already opened by a queued claim: my legend may walk onto it. */
   const reachable = (view: OrbView) => !view.opened && view.root.visible;
