@@ -109,7 +109,8 @@ describe('production representation preserves runtime semantics', () => {
     // (fnv1a32-utf16:f671ab88 content, fnv1a32-utf16:36ebfac2 loot; 2026-10-28 Starry Night).
     expect(parsed.content).toBe(parsed.CONTENT_DIGEST);
     expect(parsed.loot).toBe(parsed.LOOT_REPLAY_DIGEST);
-    expect(parsed.content).toBe('fnv1a32-utf16:9dc693dd');
+    // v26 卯足全力内容变化 (2026-11-02): 9dc693dd → ed366cad.
+    expect(parsed.content).toBe('fnv1a32-utf16:ed366cad');
     expect(parsed.loot).toBe('fnv1a32-utf16:a56b2c4a');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
