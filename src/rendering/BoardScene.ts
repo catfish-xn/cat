@@ -373,10 +373,18 @@ export class BoardScene extends Phaser.Scene {
     // The asset root's side manifest (v19 six-cost portraits) is read first, so its portraits load in the same pass.
     const applyRootAssets = () => { if (this.sys.isActive()) { this.strategyPanel?.refreshAugmentIcons(); loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); } };
     // A first read that misses its 3 s deadline is retried a few times, so augment icons do not stay lettered badges all match.
-    const retryRoot = (attempt: number) => window.setTimeout(() => void retryRootUiAssets(readAssetBase3d()).then(loaded => {
-      if (loaded) applyRootAssets(); else if (attempt < 3 && this.sys.isActive()) retryRoot(attempt + 1);
-    }), 5000 * attempt);
-    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { applyRootAssets(); if (!rootUiAssetsLoaded() && readAssetBase3d()) retryRoot(1); });
+    // The root is read once; the callbacks below may run after teardown, when window is gone in tests.
+    const retryRoot = (base: string, attempt: number) => globalThis.setTimeout(() => {
+      if (!this.sys.isActive()) return;
+      void retryRootUiAssets(base).then(loaded => {
+        if (!this.sys.isActive()) return;
+        if (loaded) applyRootAssets(); else if (attempt < 3) retryRoot(base, attempt + 1);
+      });
+    }, 5000 * attempt);
+    const loadPortraits = () => {
+      const base = readAssetBase3d();
+      void loadRootUiAssets(base).then(() => { applyRootAssets(); if (base && !rootUiAssetsLoaded() && this.sys.isActive()) retryRoot(base, 1); });
+    };
     const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
