@@ -30,6 +30,13 @@
       "currentSha256": "5e92c345c5e20987f46e142f8eef0d873793e304d5cbc9df546eb453de52a1af",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-boards-alignment.test.ts": {
+      "previousBytes": 8832,
+      "currentBytes": 3045,
+      "previousSha256": "8e08cd05e07115df61d82c6599896ed1fd541b5a488000153e59bdf713d43f24",
+      "currentSha256": "564c32fed2ee164570837a580f77e6bb47f14ca51c05d033ea4fa81156814db1",
+      "firstDifferentByte": 56
+    },
     "tests/assets3d-neutrals.test.ts": {
       "previousBytes": 5474,
       "currentBytes": 5630,
@@ -1848,9 +1855,9 @@
     },
     "tests/presentation/s13-root-ui-assets.test.ts": {
       "previousBytes": 13691,
-      "currentBytes": 14774,
+      "currentBytes": 16514,
       "previousSha256": "10f29b95995125a55352497218b2e6d6030beb1e489f669a1fe6b7e2bf4dc07b",
-      "currentSha256": "6dde70f99251375c3e8e35fc4f487e79c70a413d605af3cf790a25228c43c782",
+      "currentSha256": "815788594d41d3219f8dc5ae14f2c9b486f279d213437479789f9544d8f524f4",
       "firstDifferentByte": 5958
     },
     "tests/presentation/sidebar.test.ts": {
@@ -3010,6 +3017,13 @@
       "previousSha256": "9e5d2d8dfd409c24e50e90c577a9443daee34b6e439bb94567d510426e7a713b",
       "currentSha256": "dc88659e9943493ae3b8460be3bae0f86ddabb610f7956ce42c6c5d3a90978f0",
       "firstDifferentByte": 8599
+    },
+    "tests/trait-runtime-g23.test.ts": {
+      "previousBytes": 11206,
+      "currentBytes": 14103,
+      "previousSha256": "428e665ad91b568f80c44d1d8fbe618a4df07de73b106b2fde12a092f7f4f832",
+      "currentSha256": "bc1af03edfe1eda95fcb7075b730392ac2e2890d6ab00ce24ce64dd2c5dea966",
+      "firstDifferentByte": 196
     },
     "tests/ur-i3-combat-statuses.test.ts": {
       "previousBytes": 13806,
