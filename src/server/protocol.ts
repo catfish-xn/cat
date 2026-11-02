@@ -221,6 +221,11 @@ export interface PlayerView {
    * always fills it.
    */
   readonly opponentCandidates?: readonly string[];
+  /**
+   * My opponent in each past PvP round (and the current one once drawn), oldest first; `mirror` when it was a frozen
+   * copy of that seat. For the stage tracker's "曾经获胜：X" hover. Optional so older views stay valid.
+   */
+  readonly opponentHistory?: readonly { readonly round: number; readonly seatId: string; readonly mirror?: true }[];
   /** G1-P7: the shared carousel while the room is in its carousel phase; null or absent otherwise. */
   readonly carousel?: CarouselView | null;
   /**

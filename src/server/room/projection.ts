@@ -89,6 +89,7 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
     phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
+    opponentHistory: room.opponentLog?.[seatId] ?? [],
     carousel: toCarouselView(room, seatId),
     openingEncounter: toPublicOpeningEncounter(room),
     ranking,

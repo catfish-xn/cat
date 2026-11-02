@@ -55,13 +55,29 @@ const icons: Readonly<Record<string, string>> = {
   'streak.loss': '.economy-streak[data-kind="loss"]',
   'streak.none': '.economy-streak[data-kind="none"]',
 };
+/**
+ * 14.24 Map22 stageicons, one image per round kind and state (victory teal, defeat red, current gold, upcoming grey),
+ * keyed `stage.round.<kind>.<state>`; draft has no victory image. A 野怪 round picks its kind by monster family
+ * (迅捷蟹/危险巨蟹 have no 14.24 icon and use krugs). Missing ids leave the stage.pvp/… image or the line icon.
+ */
+const ROUND_ICON_KINDS: Readonly<Record<string, string>> = {
+  swords: ':is([data-icon="pvp"],[data-icon="anomaly"])', augment: '[data-icon="augment"]', draft: '[data-icon="carousel"]',
+  minions: '[data-family="minion"]', krugs: ':is([data-family="krug"],[data-family="scuttle"],[data-family="giant-crab"])',
+  wolves: '[data-family="wolf"]', raptors: '[data-family="razorbeak"]', herald: '[data-family="rift-herald"]', elder: '[data-family="elder-dragon"]',
+};
+const ROUND_ICON_STATES = ['victory', 'defeat', 'current', 'upcoming'] as const;
+const roundIcons: Readonly<Record<string, string>> = Object.fromEntries(Object.entries(ROUND_ICON_KINDS).flatMap(([kind, match]) =>
+  ROUND_ICON_STATES.filter(state => kind !== 'draft' || state !== 'victory').map(state => [`stage.round.${kind}.${state}`, `.stage-round${match}[data-state="${state}"]`])));
+/** The opening encounter's entry in the stage tracker's left slot (14.24 stageicons encounter_*.tft_set13). */
+const encounterIcons: Readonly<Record<string, string>> = Object.fromEntries((['current', 'victory', 'upcoming'] as const)
+  .map(state => [`stage.encounter.${state}`, `.opening-chip.stage-encounter[data-state="${state}"]`]));
 const states: Readonly<Record<string, string>> = {
   hover: ':not(:disabled):is(:hover,:focus-visible)', pressed: ':not(:disabled):active',
   disabled: ':disabled', selected: ':is([aria-selected="true"],[aria-pressed="true"]):not(:disabled)',
 };
 export const BATCH_UI_SPRITES: readonly string[] = [
   ...Object.keys(targets).flatMap(id => [id, ...Object.keys(states).map(state => `${id}.${state}`)]),
-  ...Object.keys(icons), 'player.avatar', 'player.avatar.me', 'player.hp-icon', 'item.column',
+  ...Object.keys(icons), ...Object.keys(roundIcons), ...Object.keys(encounterIcons), 'player.avatar', 'player.avatar.me', 'player.hp-icon', 'item.column',
   ...['inactive', 'bronze', 'silver', 'gold', 'prismatic', 'unique'].map(tier => `trait.${tier}`),
   'world.countdown', 'world.label',
   'carousel.inspect', 'carousel.inspect.hover', 'carousel.inspect.disabled', 'carousel.inspect.selected', 'star.1', 'star.2', 'star.3', 'star.4',
@@ -117,6 +133,12 @@ export function batchHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>): stri
       rules.push(`body[data-online]:has(> .render3d-layer) ${selector}::before{content:attr(data-value);width:auto;height:auto;background:url(${JSON.stringify(sprite.url)}) left center / 13px 13px no-repeat;}`);
       rules.push(`${scope} ${selector} svg{display:none;}`);
     }
+  }
+  for (const [id, selector] of Object.entries({ ...roundIcons, ...encounterIcons })) {
+    const sprite = sprites.get(id); if (!sprite) continue;
+    const size = id.startsWith('stage.encounter.') ? '24px 24px' : '20px 20px';
+    rules.push(`${scope} ${selector}{background:url(${JSON.stringify(sprite.url)}) center / ${size} no-repeat!important;color:transparent!important;}`);
+    rules.push(`${scope} ${selector} :is(svg,.opening-chip-icon){visibility:hidden;}`);
   }
   for (const kind of ['', '.me']) {
     const sprite = sprites.get(`player.avatar${kind}`); if (!sprite) continue;
