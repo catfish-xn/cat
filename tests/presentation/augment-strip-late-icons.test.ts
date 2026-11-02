@@ -22,6 +22,9 @@ class El {
   }
   private matches(selector: string): boolean {
     if (selector === '[data-augment]') return Object.hasOwn(this.dataset, 'augment');
+    if (selector.includes(',')) return selector.split(',').some(part => this.matches(part.trim()));
+    const owned = /^\.([\w-]+)\[data-augment\]$/.exec(selector);
+    if (owned) return Object.hasOwn(this.dataset, 'augment') && this.className.split(/\s+/).includes(owned[1]!);
     if (selector === 'img.augment-icon') return this.tagName === 'IMG' && this.className.split(/\s+/).includes('augment-icon');
     if (selector === '.augment-badge') return this.className.split(/\s+/).includes('augment-badge');
     return false;

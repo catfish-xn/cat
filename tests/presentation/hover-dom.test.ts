@@ -166,9 +166,12 @@ it('carousel hero uses slot stars, item has its own card, holding unit includes 
 });
 it('chosen augment and anomaly G cards use existing display text and pin on click/tap', async () => {
   const expected = await page.evaluate(() => (window as any).expected);
-  expect(await hover('.augment-strip [data-augment]')).toBe(expected.augment);
-  await page.click('.augment-strip [data-augment]'); await page.mouse.move(1500, 1100); expect(clean(await page.locator('[data-debug="hover:text"]:not([hidden])').innerText())).toBe(expected.augment);
-  await page.keyboard.press('Escape'); await page.tap('.anomaly-chip'); expect(await page.locator('[data-debug="hover:text"]:not([hidden])').innerText()).toContain(expected.anomaly);
+  // Two levels, as in the client: the board-corner icon opens the list; each list row carries the description card.
+  await page.click('.augment-strip > .augment-chip[data-augment]');
+  const row = '.augment-list .augment-row[data-augment]';
+  expect(await hover(row)).toBe(expected.augment);
+  await page.click(row); await page.mouse.move(1500, 1100); expect(clean(await page.locator('[data-debug="hover:text"]:not([hidden])').innerText())).toBe(expected.augment);
+  await page.keyboard.press('Escape'); await page.tap('.augment-list .augment-row[data-anomaly]'); expect(await page.locator('[data-debug="hover:text"]:not([hidden])').innerText()).toContain(expected.anomaly);
   expect(await page.locator('.augment-strip [title]').count()).toBe(0);
 });
 it('HUD G cards show current level/XP, population, HP, streak and gold; gold pins', async () => {
