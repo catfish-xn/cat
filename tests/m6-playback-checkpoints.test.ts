@@ -60,7 +60,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // trajectory changed (was frames 12d0a6ab…, record e5f71f49…, events d060a74f…, terminal 8c601683…).
     expect(bytesHash([...expected.hashes])).toBe('f829909b825f48471b9ffa771c2a52725c50315619f92143d38d7605b7943821');
     // v26 卯足全力内容变化: content digest 9dc693dd → ed366cad in the record only (frames/events/terminal unchanged; was ccaed15a…).
-    expect(bytesHash(record)).toBe('b8cf8acdbe9f19fa36ba427146c5bd776af97b42415717f82fd5770b69ea5389');
+    // v26 选秀 8 件散件必出: content digest ed366cad → 150d825d in the record only (frames/events/terminal unchanged; was b8cf8acd…).
+    expect(bytesHash(JSON.parse(JSON.stringify(record).split('150d825d').join('ed366cad')))).toBe('b8cf8acdbe9f19fa36ba427146c5bd776af97b42415717f82fd5770b69ea5389');
+    expect(bytesHash(record)).toBe('edfa8dc9731e2f878ffa22c1392acbdc03da0c3e526cd2907043751f9901f3fd');
     expect(bytesHash(record.events)).toBe('26280de8df6c851839c04015c748150e84a2c9efc28b1014ad0f5f774e37d683');
     expect(bytesHash(expected.terminal)).toBe('004d6c06b1d5f8491412f5a2ee55a64a4c9d2f2ba5d5da31faa003527d72ff23');
     // An external JSON record is cold on each constructor, like browser fixtures.

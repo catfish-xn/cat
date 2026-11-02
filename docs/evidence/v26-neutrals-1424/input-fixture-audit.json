@@ -8,7 +8,7 @@
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/m5-route-hash.cjs": "bdc279df8a1a3953638c1df7e347681aee3b6ffa32b75ba3434d81b0951ec1cf",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
-    "scripts/record-v26-neutrals-1424-battle-start.cjs": "0b928066f3d3848fd7820f1e98faa9759803527c74ae1272cb628655641db042",
+    "scripts/record-v26-neutrals-1424-battle-start.cjs": "f30ae29342e18bb5737b8a1adcfcc66c2a39d7d3558071d1db112efa20b6c7c4",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
     "scripts/record-v26-neutrals-1424-live-reveal.cjs": "31947ea0d22495b9898817d2b05ee18b6077c636763626c0a7345111a84ff3d3",
     "scripts/record-v26-neutrals-1424-release.cjs": "53483a8413a460a51e1782556464b1e23fff55c617631ab3d0c850b8e5b3a7dc",
@@ -158,10 +158,10 @@
     "src/simulation/bot/preflight.ts": "7eaec472cc5a23b99a896bcfcd7400bd2a0119f759ea96bc1b3be1b5fadebfaa",
     "src/simulation/bot/types.ts": "9aa6dffaf870c09aeb719d727fca86ad5bb860a65dba7d6181366bd09975234b",
     "src/simulation/bound-unit-identity.ts": "b29581bbe362758ca232ebdd10a14af29ddabe9b79820b42550d4c6bb67e2fa2",
-    "src/simulation/carousel-policy.ts": "30696876e9b1726cb303322a78ec76331936ed9a5313f4efea9827799742e230",
+    "src/simulation/carousel-policy.ts": "1b410b3f2fbe1dbc2386fb178a6818a4789195584b567a49b2a4401b90bfe687",
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
-    "src/simulation/carousel.ts": "3aee02dcdc95afa6e6da898b2b1a057da349c692cf2e94cdd3f04fd5fe39a63b",
+    "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -306,7 +306,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "402a6f50335acbf9b25da0f629ac2db6ed7ab6798dd8c05cd6094fa7c84b2b9a",
+    "src/simulation/content/identity-constants.ts": "3d5f608fe81c4be2143efe2776a2910bc873162e953eaff2932fd9d308de2094",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -657,13 +657,13 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:ed366cad",
+  "contentDigest": "fnv1a32-utf16:150d825d",
   "files": {
     "tests/fixtures/v26-neutrals-1424-c19-seed-9-minimal.json": {
       "previousBytes": 32276,
       "currentBytes": 32276,
       "previousSha256": "391b99e10aaafdc17b9ec1498a80726d7503baa482b5383547cba1f3e6ad67fa",
-      "currentSha256": "311a457847bd0e8d17abbe601584c145e040d7bbe9d456017d3c3409977c2826",
+      "currentSha256": "33119c63053adf94860350d5145e7e582e957f4937e23ce617d245123842eef9",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v26-neutrals-1424-b8-fingerprints.json": {
@@ -677,49 +677,49 @@
       "previousBytes": 180985,
       "currentBytes": 293133,
       "previousSha256": "a2a1dadae43bec9c4b921eef603effb03b6cf6e9892f9f7a9bf8726df041cfd3",
-      "currentSha256": "4a1120b0622884ea90cd05786e09137bd5f3665eea317f195f6b78bee8c6d344",
+      "currentSha256": "b32a8575c4b0a48e226081dd49f859e339e731362920c2f6d2784470ea0e5356",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
       "previousBytes": 181029,
       "currentBytes": 293134,
       "previousSha256": "0045d02b81a54cd16901692e87c59552c31e3aebcf7fbc13d0d318f296414174",
-      "currentSha256": "3a10977b7f0bc4aa7f4e6b7e9e58defefe129bc5086845f693e96d61c86788cc",
+      "currentSha256": "a9c1bf74d4ed718ea10496a12bc0aafc392b6041daf84a44f60bd1022502acff",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 181021,
       "currentBytes": 293219,
       "previousSha256": "593b4d6e19f5412a3478057401aa75bc73c320c1a4fd745a0a3335152a5300ff",
-      "currentSha256": "0eeae0bb9700d13353bb61d9db05edc3530fea3e0c8f75ca2b892d7479d12a23",
+      "currentSha256": "410de1eae829ff6eb146527d9e6bad042e1e753e742576065bea7ef57174da52",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
       "previousBytes": 181033,
       "currentBytes": 293142,
       "previousSha256": "73ffe3ed81f5b3e51a7a52c6f9ccd06924334f55339166c851fa1631749d6869",
-      "currentSha256": "8c0080d50ad64f4c72935f091baf9fc6b2e0d8fdbcf46b04485677bb40df7504",
+      "currentSha256": "ba9c3ec081dede3d481ea93e52145f4c73598f57f2894608b91b44cfe40c946a",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/edge-of-night.json": {
       "previousBytes": 181037,
       "currentBytes": 294101,
       "previousSha256": "8af029aa7ba1ce7296e779a257893f8f8ba2fa9397db8611ebba9aa3c80e438e",
-      "currentSha256": "de35dada7de3132b3cc1c122b451ea308ec433853b2d48833ebc203b8be9f3f9",
+      "currentSha256": "d4977e7a7087f9607f16030bb35c5d0d639ded7854f8d0a8b7a808bdc1f3b677",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
       "previousBytes": 66919,
       "currentBytes": 69382,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "286d04643476a7143216d415257f7b632db4b6be0a1458c95f54420637dd0db7",
+      "currentSha256": "6c7381174b14d840f291dabf16d4b1beb4779a347b3a67eceecf910aface8aac",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
       "previousBytes": 328556,
       "currentBytes": 335739,
       "previousSha256": "b031eaa686e577b32a517374fdb9452107679a68d42ba23096b165b4123b19fd",
-      "currentSha256": "1d2d0b92f01f447d1ae7ae64b3a9b264d9fc8837b7ce441c12fda5bb13e00d1b",
+      "currentSha256": "b28a71cfb786d128d748c7ad47cb7f466fee41f317dac58d6db724cd74d0f67f",
       "firstDifferentByte": 42
     }
   },

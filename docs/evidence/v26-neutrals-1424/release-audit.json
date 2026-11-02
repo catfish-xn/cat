@@ -7,7 +7,7 @@
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/m5-route-hash.cjs": "bdc279df8a1a3953638c1df7e347681aee3b6ffa32b75ba3434d81b0951ec1cf",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
-    "scripts/record-v26-neutrals-1424-battle-start.cjs": "0b928066f3d3848fd7820f1e98faa9759803527c74ae1272cb628655641db042",
+    "scripts/record-v26-neutrals-1424-battle-start.cjs": "f30ae29342e18bb5737b8a1adcfcc66c2a39d7d3558071d1db112efa20b6c7c4",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
     "scripts/record-v26-neutrals-1424-live-reveal.cjs": "31947ea0d22495b9898817d2b05ee18b6077c636763626c0a7345111a84ff3d3",
     "scripts/record-v26-neutrals-1424-release.cjs": "53483a8413a460a51e1782556464b1e23fff55c617631ab3d0c850b8e5b3a7dc",
@@ -157,10 +157,10 @@
     "src/simulation/bot/preflight.ts": "7eaec472cc5a23b99a896bcfcd7400bd2a0119f759ea96bc1b3be1b5fadebfaa",
     "src/simulation/bot/types.ts": "9aa6dffaf870c09aeb719d727fca86ad5bb860a65dba7d6181366bd09975234b",
     "src/simulation/bound-unit-identity.ts": "b29581bbe362758ca232ebdd10a14af29ddabe9b79820b42550d4c6bb67e2fa2",
-    "src/simulation/carousel-policy.ts": "30696876e9b1726cb303322a78ec76331936ed9a5313f4efea9827799742e230",
+    "src/simulation/carousel-policy.ts": "1b410b3f2fbe1dbc2386fb178a6818a4789195584b567a49b2a4401b90bfe687",
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
-    "src/simulation/carousel.ts": "3aee02dcdc95afa6e6da898b2b1a057da349c692cf2e94cdd3f04fd5fe39a63b",
+    "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -305,7 +305,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "402a6f50335acbf9b25da0f629ac2db6ed7ab6798dd8c05cd6094fa7c84b2b9a",
+    "src/simulation/content/identity-constants.ts": "3d5f608fe81c4be2143efe2776a2910bc873162e953eaff2932fd9d308de2094",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -659,7 +659,7 @@
   "baseCommit": "e9384c02fe352c7da3e672d2f1a2eb61754e1f5b",
   "baseline": {
     "parentEpoch": "v25-online-rules",
-    "contentDigest": "fnv1a32-utf16:ed366cad",
+    "contentDigest": "fnv1a32-utf16:150d825d",
     "lootReplayDigest": "fnv1a32-utf16:a56b2c4a",
     "rulesVersion": "s13-g2-3-v26-neutrals-1424",
     "contentVersion": "s13-14.24b-g2-3-v26-neutrals-1424",
@@ -671,7 +671,7 @@
     "previousContentDigest": "fnv1a32-utf16:f671ab88",
     "previousLootReplayDigest": "fnv1a32-utf16:36ebfac2",
     "traceHashes": {
-      "state": "6de83386bad1ac07c45789cb301ad233bbddd810f5cb0d744c9698a46dc1f119",
+      "state": "7a691e26a11610cc37364f1e0b27cf28bbc1eba498ebae058f650f0f1360d5f7",
       "events": "2fc5afcb0a7d6165ca37b4f08d4ec42b21662bf8ee29b369fadfa78f880ba663",
       "rng": "6a51e9d56c70d5c04656107c3820eecd28fedfaf4bd83f84a3770c3c8e6245fa"
     },
@@ -709,14 +709,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 904308,
-          "currentBytes": 1158915,
+          "currentBytes": 1158909,
           "previousSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1",
-          "currentSha256": "51e577f18fd4eb56cefdc9f97a0056a314a20f02fa1bf939684ea570cb726e69",
+          "currentSha256": "597ea1d6511b28775afbdc77048b1f2a07fd9ca79575d7d5d727eacf9ac57c21",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "51e577f18fd4eb56cefdc9f97a0056a314a20f02fa1bf939684ea570cb726e69",
-        "stateUtf8Sha256": "a0f90e6937d2d69d0b1ce2edc85f6588f9778d482c586b15950ac5f6efdc2cb2",
+        "gzipSha256": "597ea1d6511b28775afbdc77048b1f2a07fd9ca79575d7d5d727eacf9ac57c21",
+        "stateUtf8Sha256": "916739b861e7ff27ca6f36310f66cf4af1d76830027f15079209e8278137a5d2",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1"
       },
@@ -2295,14 +2295,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 937538,
-          "currentBytes": 1216757,
+          "currentBytes": 1216741,
           "previousSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2",
-          "currentSha256": "dc8227ee81baf285a9492ca63db00dfd65ba1e9096235f213c78098f075441f7",
+          "currentSha256": "a7db453ec546a63ab63108d2e788c9004f22f82cecb1b7d29e3752cbee955407",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "dc8227ee81baf285a9492ca63db00dfd65ba1e9096235f213c78098f075441f7",
-        "stateUtf8Sha256": "794d8a8bfdb5d93792b8320015a92ddd720d461c5d55d8f295d1709cafdc9dda",
+        "gzipSha256": "a7db453ec546a63ab63108d2e788c9004f22f82cecb1b7d29e3752cbee955407",
+        "stateUtf8Sha256": "af5dc8926c753a9fd122680b85293d67405a673d18cba0a7a6dae3143f774e85",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2"
       },
@@ -7008,12 +7008,12 @@
       }
     }
   },
-  "candidateSha256": "0c0a1db2de43aa0286ad4c3923a9883e68b4b3d76a8860d4d2301dabe2a502d5",
+  "candidateSha256": "525b1c138ca1a52aade71c914c178fa8ed3a9680da4fdfd5341442ade601fdb2",
   "goldenByteEvidence": {
     "previousBytes": 110194,
     "currentBytes": 107972,
     "previousSha256": "b6b2508ad17e621aa47b7928db591df3723815df9d183420a7bcea35786c8507",
-    "currentSha256": "0c0a1db2de43aa0286ad4c3923a9883e68b4b3d76a8860d4d2301dabe2a502d5",
+    "currentSha256": "525b1c138ca1a52aade71c914c178fa8ed3a9680da4fdfd5341442ade601fdb2",
     "firstDifferentByte": 15
   }
 }
