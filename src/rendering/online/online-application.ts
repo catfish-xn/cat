@@ -167,7 +167,7 @@ export class OnlineApplication implements SceneApplication {
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.outcome = new BattleOutcome(frame);
     this.elimination = new EliminationCard(document.body, () => this.again());
-    this.opening = new OpeningEncounterHud(frame, true);
+    this.opening = new OpeningEncounterHud(frame, true, this.sidebar.encounterSlot);
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); this.commandSound(change); });
     document.addEventListener('visibilitychange', this.visibility);
@@ -204,6 +204,8 @@ export class OnlineApplication implements SceneApplication {
     const damageBattle = this.session.lastBattle;
     void this.damageFx.then(fx => fx?.state(state, damageBattle));
     const before = this.session.state;
+    // Stage tracker colours: only finished rounds show a result, so this never spoils the battle still playing back.
+    if (state.roundResults !== before.roundResults) this.sidebar.setRoundResults(state.roundResults ?? []);
     if (state.phase === 'gameOver' && before.phase !== 'gameOver') this.leaveScouting();
     // A push I did not cause (no confirmation) that closes my open choice: say what it settled. Usually the room's timeout pick,
     // but a pick of mine whose receipt a reconnect dropped looks the same, so the line stays neutral.

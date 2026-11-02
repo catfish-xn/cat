@@ -28,7 +28,7 @@ describe('toPlayerView', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start();
     const view = toPlayerView(room.state, 's1', clock.now());
-    expect(Object.keys(view).sort()).toEqual(['carousel', 'fault', 'mySeatId', 'openingEncounter', 'opponentCandidates', 'opponentSeatId', 'phase', 'ranking', 'seats']);
+    expect(Object.keys(view).sort()).toEqual(['carousel', 'fault', 'mySeatId', 'openingEncounter', 'opponentCandidates', 'opponentHistory', 'opponentSeatId', 'phase', 'ranking', 'seats']);
     expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
@@ -50,6 +50,7 @@ describe('toPlayerView', () => {
     for (const forbidden of ['rngState', 'seed', 'shop', 'gold', 'pendingChoice', 'streak', 'xp', 'location', 'unit-', 'choiceId']) expect(JSON.stringify(view.seats.map(seat => seat.publicBoard))).not.toContain(forbidden);
     expect(view.opponentSeatId).toBeNull(); expect(view.ranking).toBeNull();
     expect(view.opponentCandidates).toEqual([]); // 1-2 is a PvE round
+    expect(view.opponentHistory).toEqual([]); // no PvP round fought yet
     expect(() => toPlayerView(room.state, 'ghost', 0)).toThrow(RangeError);
   });
   it('maps room phases to client phases and names the pvp opponent', () => {

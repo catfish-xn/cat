@@ -1629,7 +1629,7 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online] :is(.augment-chip, .carousel-item) { display: inline-flex; align-items: center; justify-content: center; }
 }
 
-/* Online 3D encounter: a reserved 80px band above the left rails. Fixed positioning avoids
+/* Online 3D encounter chip (only without a stage-tracker slot). Fixed positioning avoids
    the board frame's clipping/stacking context; progress stays in the tooltip and detail card. */
 body[data-online]:has(> .render3d-layer) .opening-chip {
   position: fixed; left: 64px; right: auto; top: max(52px, calc(20dvh - 80px));
@@ -1643,7 +1643,29 @@ body[data-online]:has(> .render3d-layer) .opening-chip-label,
 body[data-online]:has(> .render3d-layer) .opening-chip-name { grid-column: 2; overflow-wrap: anywhere; }
 body[data-online]:has(> .render3d-layer) .opening-chip-name { font-size: 14px; }
 body[data-online]:has(> .render3d-layer) .opening-chip-progress { display: none; }
-body[data-online]:has(> .render3d-layer) :is(#panels-root, .item-dock) { top: max(144px, 20dvh); }
+/* 14.24 tftstage: left block (encounter slot + stage number) | the stage's rounds | right block (phase icon + timer).
+   Finished rounds take their result's colour (stageicons victory teal / defeat red), the current one gold, upcoming grey. */
+.online-countdown .countdown-encounter { display: flex; align-items: center; justify-content: center; min-width: 28px; }
+.online-countdown .countdown-encounter:empty { display: none; }
+.online-countdown .countdown-phase { margin-right: -8px; display: grid; place-items: center; width: 16px; height: 16px; color: #e6d6a8; }
+.online-countdown .countdown-phase svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.online-countdown .countdown-phase[data-phase="combat"] { color: #f08080; }
+.stage-round[data-state="upcoming"] { color: #7c8a90; }
+.stage-round.done[data-outcome] { opacity: 1; }
+.stage-round.done[data-outcome="win"] { color: #3fb6b0; border-color: #2c6f6c; }
+.stage-round.done[data-outcome="loss"] { color: #c0394a; border-color: #6e2a33; }
+.stage-round.done[data-outcome="draw"] { color: #7c8a90; }
+.stage-round.current { color: #ffd25a; }
+/* The opening encounter's entry, moved from the board corner into the stage tracker's left slot. */
+.opening-chip.stage-encounter, body[data-online]:has(> .render3d-layer) .opening-chip.stage-encounter {
+  position: relative; inset: auto; top: auto; left: auto; right: auto; z-index: auto; display: grid; place-items: center;
+  width: 28px; max-width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; margin: -8px; box-sizing: content-box;
+  border: 8px solid transparent; background: transparent; background-clip: padding-box; border-radius: 50%; color: #ffd782; }
+.opening-chip.stage-encounter:is(:hover, :focus-visible) { background-color: #ffd78226; }
+.opening-chip.stage-encounter .opening-chip-icon, body[data-online]:has(> .render3d-layer) .opening-chip.stage-encounter .opening-chip-icon {
+  display: block; grid-row: auto; font-size: 20px; line-height: 1; }
+.opening-chip.stage-encounter :is(.opening-chip-label, .opening-chip-name, .opening-chip-progress) { display: none !important; }
+.opening-chip.stage-encounter[hidden] { display: none; }
 .opening-tooltip { position: fixed; z-index: 130; width: max-content; max-width: min(360px, calc(100vw - 16px));
   box-sizing: border-box; padding: 12px; border: 1px solid #e8c36a; border-radius: 8px;
   background: #161d26; color: #f6e7bd; font-size: 14px; line-height: 1.5; white-space: pre-line; pointer-events: none; }
