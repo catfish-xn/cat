@@ -99,7 +99,7 @@ export function battleLine(stats: UnitBattleStats, line: HTMLElement = el('p', '
 /** Authoritative per-item counters, including duplicate items; no client counter or cap calculation. */
 export function itemStackLine(stacks: CombatViewUnit['itemStacks'], line: HTMLElement = el('p', '', 'unit-card-text')): HTMLElement {
   line.dataset.debug = 'unit-card:item-stacks';
-  line.textContent = (stacks ?? []).map(row => `${itemDisplayName(row.definitionId)} · 层数 ${row.stacks}/${row.maxStacks}`).join('；');
+  line.textContent = (stacks ?? []).map(row => `${itemDisplayName(row.definitionId)} · 层数 ${row.maxStacks === null ? row.stacks : `${row.stacks}/${row.maxStacks}`}`).join('；');
   line.hidden = !stacks?.length;
   return line;
 }
