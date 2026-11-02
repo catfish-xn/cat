@@ -216,9 +216,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 12128,
+      "currentBytes": 12330,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "c118a4d416285dbbeda3a551fd8d1dc99d36e26493537ea444844a7e66bdcf8a",
+      "currentSha256": "e38557735d886fac8fad9ed8b69c01bed9ee7c93eaf9617980e02c1d4b44d300",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -713,7 +713,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3e1ca4c8ad23abe7044c1be70fb9e86ce38d93bd87ec91b4d5ef5aa626f05bd7",
+      "currentSha256": "86360646828c86321a8f6b1995f72f4478094ac7a4e477d5330131d6ce6b0e66",
       "firstDifferentByte": 0
     },
     "tests/fixtures/epic-loot-oracle.cjs": {
@@ -797,9 +797,9 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17787,
+      "currentBytes": 17786,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "93068d4d374a93c6b771c5900d3456ed507b12bfbce6f9c6b3ec958f7d912f36",
+      "currentSha256": "cd66e294dbe4c00d2fb9f64bdede01e56ee93670e2629883c5c25e944718f0c5",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
@@ -807,7 +807,7 @@
       "previousBytes": 0,
       "currentBytes": 23637,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f9ded7ad4fd0db5e0903fd8f9f37dbf112df7294916d39df2de7f6aacabad6ec",
+      "currentSha256": "e1ecf66069761b615a2618e52d1de2f6c72447e8aa6e651aba7d111bd414983f",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1336,9 +1336,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 8301,
+      "currentBytes": 8447,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "d9faf1dd3f25632798eb90b14a758efa0873ce7dd7f9ce2b935b1bbc518678fe",
+      "currentSha256": "b136a30b9f35d2433f21ef20494158342773bb1b90ca0023356722b60224e2b5",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
