@@ -351,7 +351,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const moveReady = (unit: S13Unit) => canMove(unit, tick) && (unit.mechanics?.some(m => m.mechanic === 'quickstriker')
     ? unit.moveCooldownTicks <= 5 && (unit.v20Traits?.moveTenths ?? 0) >= 10 : unit.moveCooldownTicks <= 0);
   const goalOwner = new Map<string, string>();
+  // A dead body never holds an attack hex: its stale claim would wall the hex off from living allies.
+  const living = (unit: S13Unit) => unit.alive && unit.hp > 0;
   for (const unit of units) {
+    if (!living(unit)) continue;
     const claim = unit.meleeApproach, target = targets.get(unit.id)?.target;
     if (!claim || !target || claim.targetId !== target.id) continue;
     if (!getNeighbors(state.board, target.cell).some(cell => cell.col === claim.cell.col && cell.row === claim.cell.row)) continue;
@@ -365,6 +368,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     goalOwner.set(key(cell), unit.id);
   };
   units.forEach((unit, n) => {
+    if (!living(unit)) { if (unit.meleeApproach) delete unit.meleeApproach; return; }
     let destination = intents[n];
     const decision = targets.get(unit.id), target = decision?.target;
     const melee = !!target && range(unit) === 1 && !isMadChemist(unit) && !isOpeningCrab(unit) && !isAttackProxy(unit);

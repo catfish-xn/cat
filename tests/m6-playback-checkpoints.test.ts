@@ -12,7 +12,7 @@ import { goldenStates } from './fixtures/m8-golden-states.cjs';
 
 // The B9 capacity selector uses v26's recorded public-route preparation (round 32 of the
 // sniper golden, re-recorded by edaa63dd after the D5 2-1 reroll; was v25's 684 ticks /
-// 6760 events). Native stepping yields 610 ticks and 4729 ledger events; its terminal must also
+// 6760 events; 610 ticks / 4729 events before #509). Native stepping yields 602 ticks and 4493 ledger events; its terminal must also
 // equal the recorded v26 settlement. The v24 method is documented in
 // docs/CI_V24_INTEGRATION_FIX.md.
 function fixture(): BattleRecord {
@@ -51,16 +51,18 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // This terminal was already recorded in the v26 public-route fixture.
     const archivedTerminal = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'settlement')!.combat;
     expect(expected.terminal).toEqual(archivedTerminal);
-    expect(record.endTick).toBe(610); expect(record.events).toHaveLength(4729);
-    // Independent native stepping of the v26 input: pin all 611 native frame byte
+    expect(record.endTick).toBe(602); expect(record.events).toHaveLength(4493);
+    // Independent native stepping of the v26 input: pin all 603 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
     // v26 re-pin (edaa63dd sniper golden; v25 values: frames cf8c0c91…, record 64fb5f0a…,
     // events c619dab8…, terminal c4c0d27c…, see docs/V25_STARRY_PINS.md).
-    expect(bytesHash([...expected.hashes])).toBe('12d0a6abc1301d639c2b94f6bb3a220cf515270eb00fc69ee05ed206f713eb1e');
+    // #509 re-pin: dead units stop holding melee attack hexes and walled-off melee retargets, so the B9
+    // trajectory changed (was frames 12d0a6ab…, record e5f71f49…, events d060a74f…, terminal 8c601683…).
+    expect(bytesHash([...expected.hashes])).toBe('f829909b825f48471b9ffa771c2a52725c50315619f92143d38d7605b7943821');
     // v26 卯足全力内容变化: content digest 9dc693dd → ed366cad in the record only (frames/events/terminal unchanged; was ccaed15a…).
-    expect(bytesHash(record)).toBe('e5f71f49c813385e07c10c1e7a0be83cd43032a233a6a4323a93a747bad7defc');
-    expect(bytesHash(record.events)).toBe('d060a74fd71f3610183f558cd393796bf2912a7b7e2de0bf1e306ff3debd00b6');
-    expect(bytesHash(expected.terminal)).toBe('8c6016830cd9a08bdb26b2f801ba1914c0191aba8b54b5639dced51016d5534f');
+    expect(bytesHash(record)).toBe('b8cf8acdbe9f19fa36ba427146c5bd776af97b42415717f82fd5770b69ea5389');
+    expect(bytesHash(record.events)).toBe('26280de8df6c851839c04015c748150e84a2c9efc28b1014ad0f5f774e37d683');
+    expect(bytesHash(expected.terminal)).toBe('004d6c06b1d5f8491412f5a2ee55a64a4c9d2f2ba5d5da31faa003527d72ff23');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);

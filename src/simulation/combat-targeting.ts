@@ -45,6 +45,39 @@ function resolveDistanceTie(tied: readonly S13Unit[], draw: (() => number) | und
   return tied[uniformIndex(draw, tied.length)];
 }
 
+/** Unoccupied cells a walker can reach from its own hex, through unoccupied cells only. */
+function reachableCells(board: Board, from: HexCell, occupied: ReadonlySet<string>): Set<string> {
+  const seen = new Set([combatCellKey(from)]), reached = new Set<string>(), queue = [from];
+  for (let i = 0; i < queue.length; i++) for (const cell of getNeighbors(board, queue[i])) {
+    const key = combatCellKey(cell);
+    if (seen.has(key) || occupied.has(key)) continue;
+    seen.add(key); reached.add(key); queue.push(cell);
+  }
+  return reached;
+}
+
+/** Melee ordinary fallback: when no nearest enemy has a free attack hex the walker can reach,
+ * take the nearest enemies that do. Nobody reachable keeps the plain nearest set (the walker waits). */
+function reachableMeleeTies(board: Board, unit: S13Unit, units: readonly S13Unit[], tick: number,
+  occupied: ReadonlySet<string>, tied: S13Unit[]): S13Unit[] {
+  if (tied.length === 0 || range(unit) !== 1 || !canMove(unit, tick)) return tied;
+  if (tied.some(candidate => hexDistance(unit.cell, candidate.cell) <= 1)) return tied;
+  const reached = reachableCells(board, unit.cell, occupied);
+  const reachable = (candidate: S13Unit) => getNeighbors(board, candidate.cell).some(cell => reached.has(combatCellKey(cell)));
+  const near = tied.filter(reachable);
+  if (near.length > 0) return near;
+  let distance = Infinity;
+  const fallback: S13Unit[] = [];
+  for (const candidate of units) {
+    if (candidate.team === unit.team || !isSelectable(candidate, tick) || !reachable(candidate)) continue;
+    const next = hexDistance(unit.cell, candidate.cell);
+    if (next < distance) { distance = next; fallback.length = 0; fallback.push(candidate); }
+    else if (next === distance) fallback.push(candidate);
+  }
+  if (fallback.length > 1) fallback.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  return fallback.length > 0 ? fallback : tied;
+}
+
 /** Ordinary movement's existing neighbour order; bodies at the barrier remain obstacles.
  * Reservations/cooldowns do not participate in this feasibility query. Losing a
  * reservation still waits, without inventing a second route or a new target. */
@@ -54,7 +87,8 @@ export function chaseStep(board: Board, unit: S13Unit, target: S13Unit, occupied
 }
 
 /** S13 ordinary target: retain an in-range target, chase an engaged target one
- * legal step, otherwise take the nearest enemy. Equal distance uses the combat
+ * legal step, otherwise take the nearest enemy (a movable melee unit takes the nearest
+ * enemy it can reach a free attack hex of, when the nearest ones are walled off). Equal distance uses the combat
  * lcg32 stream once, unless the current target is already in that tie.
  * Hard control freezes the ordinary target; taunt, Betrayal and Cull still run.
  * The release tick passes hardControlled false and uses this same retention. */
@@ -79,6 +113,7 @@ export function decideCombatTarget(board: Board, unit: S13Unit, units: readonly 
     usedNearest = true;
     return nearest;
   });
-  const target = usedNearest ? resolveDistanceTie(ordinaryNearestTies(unit, units, tick), draw, currentId) : selected;
+  const target = usedNearest ? resolveDistanceTie(reachableMeleeTies(board, unit, units, tick, occupied,
+    ordinaryNearestTies(unit, units, tick)), draw, currentId) : selected;
   return { target, engaged: !!target && (hexDistance(unit.cell, target.cell) <= range(unit) || retained && wasEngaged) };
 }

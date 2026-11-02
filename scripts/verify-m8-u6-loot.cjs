@@ -47,6 +47,9 @@ const TERMINAL_SEED = 442;
     // infinity edge). Alone at (2,7) she still cannot finish a 1450 HP bird (seed 460's best was r04 at 656). The
     // route's 2-star Loris at (0,4) holds the flock; Maddie stays at (2,7). They kill exactly r02 then r01
     // (vest, and Corki + 4G) and the board still loses. Old heroes were Ziggs / Swain / Ekko.
+    // #509 (melee retargeting: a walled-off razorbeak takes a reachable enemy) sends the large bird past Loris onto
+    // Maddie at (2,7), and that pair kills nothing. Re-searched every Maddie/Loris cell pair on the same route: Maddie
+    // at (6,7) and Loris at (4,4) kill exactly r04 then r01 (Illaoi + its drop, and the vest) and the board still loses.
     const players = state => state.preparation.units.filter(unit => unit.team === 'player');
     const bench = state => players(state).filter(unit => unit.location.kind === 'bench');
     function reserveExcept(initial, keep) {
@@ -132,8 +135,8 @@ const TERMINAL_SEED = 442;
     const loris = players(terminalState).find(unit => unit.definitionId === 'loris');
     assert(maddie, `seed-${TERMINAL_SEED} public terminal roster keeps Maddie`);
     assert(loris, `seed-${TERMINAL_SEED} public terminal roster keeps Loris`);
-    terminalState = accepted(api.deployMatchUnit(terminalState, maddie.id, { kind: 'board', cell: { col: 2, row: 7 } }));
-    terminalState = accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 0, row: 4 } }));
+    terminalState = accepted(api.deployMatchUnit(terminalState, maddie.id, { kind: 'board', cell: { col: 6, row: 7 } }));
+    terminalState = accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 4, row: 4 } }));
     terminalState = fillBench(terminalState, terminalExcluded);
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);
@@ -158,12 +161,12 @@ const TERMINAL_SEED = 442;
     const terminalEnded = resolve(terminalState);
     assert.equal(terminalEnded.phase, 'gameOver');
     assert.deepEqual(terminalEnded.combat.neutralReceipts.deaths.map(death => death.unitId), [
-      // v25 seed 460 order was r01 then r04. v26 seed 442 kills r02 then r01.
-      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r02']),
+      // v25 seed 460 order was r01 then r04. v26 seed 442 killed r02 then r01; after #509, r04 then r01.
+      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
       JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r01']),
     ]);
     assert.deepEqual(api.readLootView(terminalEnded).revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal', 'granted']);
-    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'corki', passed: true };
+    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'illaoi', passed: true };
 
     /* ---------- the real app ---------- */
     await server.listen();
@@ -314,9 +317,9 @@ const TERMINAL_SEED = 442;
       assert.equal(current.phase, 'gameOver'); assert.equal(view.reason, 'game-over'); assert.equal(dom.block, 'game-over');
       const killed = current.combat.neutralReceipts.deaths.map(death => death.unitId);
       assert.deepEqual(killed, [
-        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r02']),
+        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
         JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r01']),
-      ], 'Maddie and Loris kill the Corki and vest carriers');
+      ], 'Maddie and Loris kill the Illaoi and vest carriers');
       const earned = terminalDrops.filter(drop => killed.includes(drop.sourceUnitId));
       assert.deepEqual(view.revealedDrops.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.status })),
         earned.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.payload.kind === 'unit' ? 'retained-terminal' : 'granted' })), 'exact v17 terminal drops and statuses');
@@ -328,7 +331,7 @@ const TERMINAL_SEED = 442;
       assert.equal(receipts[0].grantedItemIds.length, 1);
       assert(current.items.some(item => item.id === receipts[0].grantedItemIds[0] && item.definitionId === 'vest'), 'receipt creates the actual v17 component');
       assert.deepEqual(api.stepMatch(current), { state: current, events: [] }, 'terminal step cannot grant loot again');
-      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'corki'), 'retained hero shown without receipt');
+      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'illaoi'), 'retained hero shown without receipt');
       assert(view.revealedDrops.filter(drop => drop.status === 'granted').every(drop => drop.receiptId), 'earned drops shown only via their receipts');
     });
     assert.deepEqual(report.errors, []);
