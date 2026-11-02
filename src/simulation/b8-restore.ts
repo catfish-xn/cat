@@ -449,7 +449,9 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
       check(earned === !!death, 'current death qualification');
       if (death) check(equal(evidence.get(slot.dropId)!.death,{combatId:state.combat!.combatId,tick:death.tick,eventSeq:death.eventSeq}), 'current death evidence');
     }
-    check(finished ? status !== 'planned' : status === (earned ? 'revealed' : 'planned'), 'qualification lifecycle');
+    // Multiplayer: an orb claimed while the battle still runs is granted at once (TFT), or waits for bench space.
+    check(finished ? status !== 'planned' : status === (earned ? 'revealed' : 'planned')
+      || earned && !!state.multiplayer && (status === 'granted' || status === 'pending-capacity'), 'qualification lifecycle');
   };
   for (const [index,progress] of loot.direct.entries()) {
     keys(progress,['dropId','status','receiptId']); const slot = direct[index], receipt = receipts.get(slot.dropId);

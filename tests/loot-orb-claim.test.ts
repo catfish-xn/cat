@@ -49,13 +49,6 @@ function finish(pool:SharedPoolState,state:MatchState) {
   while(r.state.phase==='combat'&&budget-->0)r=accept(runSharedMatchCommand(r.pool,r.state,{type:'step'}));
   expect(budget).toBeGreaterThanOrEqual(0);return r;
 }
-function expectQueueOnly(before:MatchState,after:MatchState) {
-  const {sharedPool:_beforePool,m8:beforeM8,...beforeRest}=before;
-  const {sharedPool:_afterPool,m8:afterM8,...afterRest}=after;
-  const {queuedOrbClaims:_beforeQueue,...beforeLoot}=beforeM8.loot;
-  const {queuedOrbClaims:_afterQueue,...afterLoot}=afterM8.loot;
-  expect(afterRest).toEqual(beforeRest);expect({...afterM8,loot:afterLoot}).toEqual({...beforeM8,loot:beforeLoot});
-}
 function expectTerminalForfeitNoop(state:MatchState) {
   const before=structuredClone(state),receipts=state.m8.loot.receipts,seq=state.nextMatchEventSeq;
   const result=forfeitTerminalOrbs(state);
@@ -94,8 +87,8 @@ function pvpReceipt(state:MatchState,loss=false):RoundSettlementReceipt {
 }
 
 describe('multiplayer explicit orb claims',()=>{
-  it.each(['survivor', 'queued survivor', 'gameOver', 'eliminated'] as const)('terminal finalization forfeits only unclaimed earned entries with Match sequence numbers: %s', mode=>{
-    const initial=room(undefined,1),done=mode==='queued survivor'?pvpSeat():fight(initial.pool,initial.states[0]);
+  it.each(['survivor', 'locked survivor', 'gameOver', 'eliminated'] as const)('terminal finalization forfeits only unclaimed earned entries with Match sequence numbers: %s', mode=>{
+    const initial=room(undefined,1),done=mode==='locked survivor'?pvpSeat():fight(initial.pool,initial.states[0]);
     const gifted=gift(done.state,'singed',1,'terminal-first');
     let paid=claim(done.pool,gifted,ids(gifted).at(-1)!);
     let state=gift(paid.state,'singed',2,'terminal-unclaimed');
@@ -103,15 +96,19 @@ describe('multiplayer explicit orb claims',()=>{
     expect(orbs.some(o=>o.source==='pve')).toBe(true);
     expect(orbs.some(o=>o.source==='mechanic')).toBe(true);
     const plans=[...state.m8.loot.frozen.rounds.flatMap(r=>r.orbs),...state.m8.loot.rewardOrbs??[]];
-    const dropIds=plans.flatMap(o=>o.entries).filter(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')).map(e=>e.dropId);
+    let dropIds=plans.flatMap(o=>o.entries).filter(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')).map(e=>e.dropId);
     const planned=state.m8.loot.direct.filter(d=>d.status==='planned');
     expect(dropIds.length).toBeGreaterThan(0);
-    if(mode==='queued survivor'){
+    if(mode==='locked survivor'){
+      // TFT: orbs claimed while the roster fights open at once, so terminal finalization has none of them left to forfeit.
       const locked=lockMatchCombatRoster(state);if(!locked.ok)throw Error(locked.reason);
       state=locked.state;
       for(const orb of orbs){paid=claim(paid.pool,state,orb.orbId);state=paid.state;}
-      expect(state.m8.loot.queuedOrbClaims).toEqual(orbs.map(o=>o.orbId));
+      expect(state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+      expect(readLootView(state).unclaimedOrbs).toEqual([]);
       expect(restoreSharedOrbSnapshot(paid.pool,state)).toEqual(state);
+      dropIds=dropIds.filter(id=>state.m8.loot.direct.some(d=>d.dropId===id&&d.status==='revealed'));
+      expect(dropIds).toEqual([]);
     }
     if(mode==='gameOver'){
       if(state.combat&&state.combat.status!=='finished')throw Error('Terminal fixture requires a finished battle');
@@ -307,91 +304,97 @@ describe('multiplayer explicit orb claims',()=>{
     expect(ids(deadline.state)).toEqual(before);expect(deadline.state.m8.loot.receipts).toEqual([]);
     const next=batch(nextSharedRound(deadline.pool,[deadline.state],1));expect(ids(next.states[0])).toEqual(before);independentConservation(next.pool);
   });
-  it.each([false,true])('combat accepts FIFO intent, then settles using actual capacity (sell during combat: %s)',sell=>{
+  it.each([false,true])('a claim during combat opens at once using the bench it finds then (sell during combat first: %s)',sell=>{
     const full=fullBench(),id=unusedTwoCost(full.state),state=gift(full.state,id,2),orbId=ids(state)[0];
-    const started=accept(runSharedMatchCommand(full.pool,state,{type:'startCombat'})),queued=claim(started.pool,started.state,orbId);
-    expectQueueOnly(started.state,queued.state);
-    for(const key of ['available','pending','holdings','shops','rewards'] as const)expect(queued.pool[key]).toEqual(started.pool[key]);
-    expect(queued.events).toEqual([]);expect(queued.poolEvents).toEqual([]);
-    expect(queued.state.m8.loot.queuedOrbClaims).toEqual([orbId]);
-    expect(toPrivateSeatView(queued.state).unclaimedOrbs).toContainEqual(expect.objectContaining({orbId,queued:true}));
-    expect(readPublicOrbSummary(queued.state)).toEqual(readPublicOrbSummary(started.state));
-    unchanged(queued.pool,queued.state,orbId,'already-claimed');
-    let current=queued;
+    let current=accept(runSharedMatchCommand(full.pool,state,{type:'startCombat'}));
     if(sell)current=accept(sellSharedUnit(current.pool,current.state,current.state.preparation.units.find(u=>u.location.kind==='bench')!.id));
-    const restored=restoreSharedOrbSnapshot(current.pool,JSON.stringify(current.state));
-    expect(restored).toEqual(current.state);unchanged(current.pool,restored,orbId,'already-claimed');
-    const done=finish(current.pool,restored),replay=finish(JSON.parse(JSON.stringify(current.pool)),restored);
-    expect(done).toEqual(replay);expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
+    const before=current,opened=claim(current.pool,current.state,orbId);
+    expect(opened.state.phase).toBe('combat');
+    expect(opened.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    expect(toPrivateSeatView(opened.state).unclaimedOrbs!.some(o=>o.orbId===orbId)).toBe(false);
     const expected=sell?CLAIM_EXPECTATIONS.queued.held:CLAIM_EXPECTATIONS.queued.capacitySale;
-    const receipts=done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId);
+    const receipts=opened.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId);
     expect(receiptTotals(receipts)).toEqual({count:1,gold:expected.gold});
     expect(receipts[0].resolution).toBe(expected.resolution);
-    expect(done.pool.available[id]).toBe(current.pool.available[id]-expected.copies);
-    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+openingCrabGold(done.state)+expected.gold);
-    expect(done.state.preparation.units.some(u=>u.definitionId===id&&u.starLevel===2)).toBe(sell);
+    expect(opened.pool.available[id]).toBe(before.pool.available[id]-expected.copies);
+    expect(opened.state.gold).toBe(before.state.gold+expected.gold);
+    // A held unit lands on the bench; the fighting board is untouched.
+    expect(opened.state.preparation.units.filter(u=>u.location.kind==='board')).toEqual(before.state.preparation.units.filter(u=>u.location.kind==='board'));
+    expect(opened.state.preparation.units.some(u=>u.definitionId===id&&u.starLevel===2&&u.location.kind==='bench')).toBe(sell);
+    unchanged(opened.pool,opened.state,orbId,'already-claimed');
+    const restored=restoreSharedOrbSnapshot(opened.pool,JSON.stringify(opened.state));
+    expect(restored).toEqual(opened.state);unchanged(opened.pool,restored,orbId,'already-claimed');
+    const done=finish(opened.pool,restored),replay=finish(JSON.parse(JSON.stringify(opened.pool)),restored);
+    expect(done).toEqual(replay);
+    expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual(receipts);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+openingCrabGold(done.state));
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));unchanged(done.pool,after,orbId,'already-claimed');
     const retry=accept(runSharedMatchCommand(done.pool,after,{type:'step'}));expect(retry.state).toBe(after);expect(retry.pool).toBe(done.pool);
     independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
   });
-  it('FIFO order wins scarce copies, including after restore; malformed queues are rejected',()=>{
+  it('claims during combat take scarce copies in claim order; malformed queues are rejected',()=>{
     const {pool,states}=room({irelia:1,leona:3},1);
     let state=gift(states[0],'leona',1,'a');state=gift(state,'leona',2,'z');
     const [small,big]=ids(state),started=accept(runSharedMatchCommand(pool,state,{type:'startCombat'}));
     const a=claim(started.pool,started.state,big),b=claim(a.pool,a.state,small);
-    expect(b.state.m8.loot.queuedOrbClaims).toEqual([big,small]);
-    const restored=restoreSharedOrbSnapshot(b.pool,JSON.stringify(b.state));
-    for(const queue of [[big,big],['missing'],[ids(restored)[0],42],null]) {
-      const tampered=structuredClone(restored) as any;tampered.m8.loot.queuedOrbClaims=queue;
-      expect(()=>restoreSharedOrbSnapshot(b.pool,tampered)).toThrow();
-    }
-    const badPhase={...restored,phase:'settlement'} as MatchState;expect(()=>validateMultiplayerOrbLedger(badPhase)).toThrow();
-    const done=finish(b.pool,restored),paid=done.state.m8.loot.receipts;
+    expect(b.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    const paid=b.state.m8.loot.receipts;
     expect(paid.map(r=>JSON.parse(r.dropId)[0])).toEqual([big,small]);
     expect(paid.map(r=>r.resolution)).toEqual(CLAIM_EXPECTATIONS.queued.competition.resolutions);
     expect(receiptTotals(paid)).toEqual({count:2,gold:CLAIM_EXPECTATIONS.queued.competition.gold});
-    expect(done.pool.available.leona).toBe(pool.available.leona-CLAIM_EXPECTATIONS.queued.competition.copies);
-    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+2);independentConservation(done.pool);
+    expect(b.pool.available.leona).toBe(pool.available.leona-CLAIM_EXPECTATIONS.queued.competition.copies);
+    expect(()=>validateMultiplayerOrbLedger(b.state)).not.toThrow();
+    const restored=restoreSharedOrbSnapshot(b.pool,JSON.stringify(b.state));
+    for(const queue of [[big,big],['missing'],[ids(started.state)[0],42],null]) {
+      const tampered=structuredClone(restored) as any;tampered.m8.loot.queuedOrbClaims=queue;
+      expect(()=>restoreSharedOrbSnapshot(b.pool,tampered)).toThrow();
+    }
+    const done=finish(b.pool,restored);
+    expect(done.state.m8.loot.receipts).toEqual(paid);
+    // The claim's gold was already mine when the battle ended: the settlement starts from it.
+    expect(done.state.roundResults.at(-1)!.goldBefore).toBe(b.state.gold);
+    expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win);independentConservation(done.pool);
     assertSharedPoolConservation(done.pool,[done.state]);
   });
-  it.each([false,true])('locked PvP queues; authoritative settlement pays or forfeits exactly once (eliminated: %s)',loss=>{
+  it.each([false,true])('a locked PvP claim opens at once; the settlement pays nothing of it again (eliminated: %s)',loss=>{
     const initial=pvpSeat(),gifted=gift({...initial.state,playerHp:loss?1:100},'leona',2),orbId=ids(gifted).at(-1)!;
     const locked=lockMatchCombatRoster(gifted);if(!locked.ok)throw Error(locked.reason);
-    const queued=claim(initial.pool,locked.state,orbId);expectQueueOnly(locked.state,queued.state);
-    const restored=restoreSharedOrbSnapshot(queued.pool,JSON.stringify(queued.state)),receipt=pvpReceipt(restored,loss);
-    const done=accept(runSharedMatchCommand(queued.pool,restored,{type:'settleRound',receipt}));
-    const paid=done.state.m8.loot.receipts.find(r=>JSON.parse(r.dropId)[0]===orbId)!;
-    const expected=loss?CLAIM_EXPECTATIONS.queued.forfeited:CLAIM_EXPECTATIONS.queued.held;
-    expect(paid).toMatchObject({resolution:expected.resolution,gold:expected.gold});
-    expect(done.pool.available.leona).toBe(queued.pool.available.leona-expected.copies);
-    expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
+    const opened=claim(initial.pool,locked.state,orbId);
+    expect(opened.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    const paid=opened.state.m8.loot.receipts.find(r=>JSON.parse(r.dropId)[0]===orbId)!;
+    expect(paid).toMatchObject({resolution:CLAIM_EXPECTATIONS.queued.held.resolution,gold:CLAIM_EXPECTATIONS.queued.held.gold});
+    expect(opened.pool.available.leona).toBe(initial.pool.available.leona-CLAIM_EXPECTATIONS.queued.held.copies);
+    expect(opened.state.preparation.units.some(u=>u.definitionId==='leona'&&u.starLevel===2&&u.location.kind==='bench')).toBe(true);
+    unchanged(opened.pool,opened.state,orbId,'already-claimed');
+    const restored=restoreSharedOrbSnapshot(opened.pool,JSON.stringify(opened.state)),receipt=pvpReceipt(restored,loss);
+    const done=accept(runSharedMatchCommand(opened.pool,restored,{type:'settleRound',receipt}));
+    expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual([paid]);
+    expect(done.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
     expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win));
-    expect(done.state.preparation.units.some(u=>u.definitionId==='leona'&&u.starLevel===2)).toBe(!loss);
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));
     unchanged(done.pool,after,orbId,loss?'seat-eliminated':'already-claimed');
     if(loss){
       expect(done.state.multiplayer?.status).toBe('eliminated');
       expectTerminalForfeitNoop(done.state);expectTerminalForfeitNoop(after);
-    }
+    } else expect(done.state.preparation.units.some(u=>u.definitionId==='leona'&&u.starLevel===2)).toBe(true);
     const retry=runSharedMatchCommand(done.pool,after,{type:'settleRound',receipt});
     expect(retry).toMatchObject({ok:false,reason:loss?'seat-eliminated':'duplicate-settlement'});expect(retry.state).toBe(after);expect(retry.pool).toBe(done.pool);
     expect(stepMatch(after).state).toBe(after);independentConservation(done.pool);assertSharedPoolConservation(done.pool,[after]);
   });
-  it('PvE damage eliminates before queued rewards can allocate any copies or sale gold',()=>{
+  it('an orb opened during a PvE battle that then eliminates the seat stays paid exactly once',()=>{
     // v22 45s combat + overtime lets the lone opening unit outlast 2-7 krugs, so
     // use the 3-7 wolves, which still beat it and deal real PvE damage.
     const initial=room(undefined,1),round=getCatalogRoundById('3-7');
-    // Isolate the later PvE damage boundary with its real enemies and a real shared holding.
     const advanced=syntheticSharedRound(initial.pool,initial.states,round.ordinal),base=advanced.states[0];
     const state=gift({...base,roundDefinitionId:round.roundId,playerHp:1,m8:{...base.m8,round},
       preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...createRoundEnemies(round.ordinal)]}},'leona',2);
     const orbId=ids(state)[0],started=accept(runSharedMatchCommand(advanced.pool,state,{type:'startCombat'}));
-    const queued=claim(started.pool,started.state,orbId),done=finish(queued.pool,queued.state);
-    expect(done.state.multiplayer?.status).toBe('eliminated');expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
-    expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual([
-      expect.objectContaining({resolution:CLAIM_EXPECTATIONS.queued.forfeited.resolution,gold:0,grantedUnitIds:[]})]);
-    expect(done.pool.available.leona).toBe(queued.pool.available.leona);
-    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win));expect(stepMatch(done.state).state).toBe(done.state);
+    const opened=claim(started.pool,started.state,orbId),paid=opened.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId);
+    expect(paid).toEqual([expect.objectContaining({resolution:CLAIM_EXPECTATIONS.queued.held.resolution,gold:0})]);
+    const done=finish(opened.pool,opened.state);
+    expect(done.state.multiplayer?.status).toBe('eliminated');expect(done.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
+    expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual(paid);
+    expect(stepMatch(done.state).state).toBe(done.state);
     expectTerminalForfeitNoop(done.state);
     independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
   });

@@ -98,9 +98,9 @@ function executeOrbClaim(state: MatchState, orbId: string, expectedRound: number
   if (!unclaimedOrbPlans(state).some(o=>o.orbId===orbId)) return fail('unknown-orb');
   // A shared seat must be executed by runSharedMatchCommand to consume its pool.
   if (state.sharedPool && !policy) return fail('shared-pool-required');
-  if (isCombatRosterLocked(state)) return {ok:true,events:[],state:{...state,m8:{...state.m8,loot:{...state.m8.loot,
-    queuedOrbClaims:[...state.m8.loot.queuedOrbClaims??[],orbId]}}}};
-  const result=grantDirectLoot(state,false,policy,[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal));
+  // TFT: an orb touched while my roster fights (PvE or PvP, up to the settlement) opens at once: a unit to the bench (a
+  // triple with a fighting board unit waits for the settlement, as a shop buy then), an item to the item bench, gold now.
+  const result=grantDirectLoot(state,false,policy,[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal),isCombatRosterLocked(state));
   if(soloRewardOrb(state,orbId)&&result.state.m8.loot.direct.some(d=>orb.entries.some(e=>e.dropId===d.dropId)&&d.status==='pending-capacity'))return {ok:true,state,events:[]};
   return {ok:true,state:result.state,events:result.events};
 }

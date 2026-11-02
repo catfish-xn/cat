@@ -121,7 +121,9 @@ export function commitReceipt(state: MatchState, receipt: LootReceipt): MatchSta
 export type UnitLootPolicy = (drop: FrozenDirectDrop, capacitySold?: boolean) => LootPayload & { readonly resolution?: 'gold' | 'capacity-sold' };
 
 /** No phase, economy or pending-delta changes. Match commits returned upgrades in its final transaction. */
-export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLootPolicy?: UnitLootPolicy, claimedDrops?: readonly FrozenDirectDrop[]): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
+/** `benchOnly`: an orb claimed during the seat's battle (TFT grants it at the touch): a unit lands on the bench and a
+ * triple that would take a fighting board unit waits for the settlement's deferred upgrades, as a shop buy does then. */
+export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLootPolicy?: UnitLootPolicy, claimedDrops?: readonly FrozenDirectDrop[], benchOnly = false): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
   let state = initial;
   const events: MatchEvent[] = [], upgradeEvents: UnitUpgradedEvent[] = [];
   if (state.multiplayer && !claimedDrops) return {state, events, upgradeEvents};
@@ -142,7 +144,7 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
     if (!claimedDrops && state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
     const receiptId = lootReceiptId(drop.dropId);
     const purchase = drop.payload.kind === 'unit' || drop.payload.kind === 'forge' ? planUnitAcquisition(state, drop.payload.definitionId,
-      {kind:'loot',receiptId}, state.resourceProvenance.entries.length, false, drop.payload.kind==='unit'?drop.payload.starLevel??1:1) : null;
+      {kind:'loot',receiptId}, state.resourceProvenance.entries.length, benchOnly, drop.payload.kind==='unit'?drop.payload.starLevel??1:1) : null;
     const decision: ReturnType<UnitLootPolicy> = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop, !!state.multiplayer && !purchase?.ok) : drop.payload;
     const payload: LootPayload = decision.kind === 'gold' ? {kind:'gold',quantity:decision.quantity} : decision;
     const capacityGold = state.multiplayer && drop.payload.kind === 'unit' && !purchase?.ok && payload.kind === 'unit'

@@ -985,7 +985,10 @@ function execute_claimOrb(state: MatchState, orbId: string, expectedRound: numbe
     const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
     if(!result.ok)return result;
     // Queue acceptance must not run resource/equipment/choice hooks during combat.
-    if(isCombatRosterLocked(state)||result.state===state&&soloRewardOrb(state,orbId)&&!result.events.length)return result;
+    if(isCombatRosterLocked(state)&&result.state.m8.loot.queuedOrbClaims?.includes(orbId)
+      ||result.state===state&&soloRewardOrb(state,orbId)&&!result.events.length)return result;
+    // An orb opened during my battle: equipment commits like a shop buy then; mechanic rewards wait for the settlement.
+    if(isCombatRosterLocked(state))return acceptEquipment(result.state,[...result.events]);
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);
