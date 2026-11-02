@@ -698,9 +698,9 @@ export class StrategyPanel {
         this.actions.control(name);
       });
       button.classList.add(className);
-      // As in TFT, free rerolls replace the 2-gold price with 免费, flash the button and show how many are left.
+      // As in TFT, a free reroll prices at 0, the button gets a pale cyan rim and a small count of the free rerolls left.
       if (name === 'reroll' && freeRerolls > 0) {
-        button.textContent = 'D · 刷新 '; button.append(element('span', '免费', 'reroll-free-text'), element('span', String(freeRerolls), 'reroll-free-count'));
+        button.textContent = 'D · 刷新 0'; button.append(element('span', String(freeRerolls), 'reroll-free-count'));
         button.dataset.freeRerolls = String(freeRerolls); button.title = `免费刷新 · 剩 ${freeRerolls} 次`;
       }
       if (name === primary && state.phase !== 'preparation' && name === 'start-combat') button.classList.add('waiting');

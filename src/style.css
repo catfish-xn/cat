@@ -1137,16 +1137,18 @@ body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-l
 body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
 body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
 body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
-/* Free rerolls (TFT): 免费 replaces the price, a count badge sits on the corner and the button glows. The glow is a
-   pseudo-element so the 3D original-art skin (which clears box-shadow) keeps it. */
-[data-debug="mobile:reroll"][data-free-rerolls] { position: relative; overflow: visible; }
-[data-debug="mobile:reroll"][data-free-rerolls]::after { content: ""; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
-  animation: reroll-free-glow 1.4s ease-in-out infinite; }
-@keyframes reroll-free-glow { 0%, 100% { box-shadow: 0 0 0 1px #4fd08a99, 0 0 4px #4fd08a55; } 50% { box-shadow: 0 0 0 2px #7fe8a8, 0 0 14px #4fd08acc; } }
-.reroll-free-text { color: #7fe8a8; font-weight: 700; }
-.reroll-free-count { position: absolute; top: -7px; right: -7px; z-index: 1; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
-  background: #2f8f55; color: #fff; font-size: 11px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 1px #0b151f; }
-@media (prefers-reduced-motion: reduce) { [data-debug="mobile:reroll"][data-free-rerolls]::after { animation: none; box-shadow: 0 0 0 2px #7fe8a8; } }
+/* Free rerolls (TFT): the price reads 0, a static pale cyan rim surrounds the button and a small white count sits
+   inside it, above-left of the refresh arrow. The rim is a pseudo-element so the 3D original-art skin (which clears
+   box-shadow) keeps it; in 3D the art's gold arrow is tinted cyan-white through a backdrop filter. */
+[data-debug="mobile:reroll"][data-free-rerolls] { position: relative; }
+[data-debug="mobile:reroll"][data-free-rerolls]::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px #bfeef2, 0 0 6px #8fdde866; }
+.reroll-free-count { position: absolute; top: 4px; right: 8px; min-width: 18px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: #0b151fb3; color: #f4f4f0; font-size: 12px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+body:has(.render3d-layer) .reroll-free-count { right: 36px; top: 6px; }
+body:has(.render3d-layer) [data-debug="mobile:reroll"][data-free-rerolls]::before { content: ""; position: absolute; right: 4px; top: 50%; width: 38px; height: 38px;
+  transform: translateY(-50%); border-radius: 50%; pointer-events: none; backdrop-filter: hue-rotate(150deg) saturate(.55) brightness(1.25);
+  -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 72%); mask-image: radial-gradient(circle, #000 55%, transparent 72%); }
 body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
 body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap;
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
