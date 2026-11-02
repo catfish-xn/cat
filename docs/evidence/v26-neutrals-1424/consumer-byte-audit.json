@@ -526,6 +526,14 @@
       "currentSha256": "298da8ee5d451b119b04a6acf6d5cde234fff06dad9d5897ec195276dbddef75",
       "firstDifferentByte": 431
     },
+    "tests/bot-free-summon-formation.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2678,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "293f99aa9c6cb0567e95bf1d6e0d3c79e1a8aa44356258285e7402023b92ef08",
+      "firstDifferentByte": 0
+    },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
       "currentBytes": 38061,
@@ -916,7 +924,7 @@
       "previousBytes": 0,
       "currentBytes": 69072,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b756627486e1d8993ab2898494981c2cb83af2e55c66c2a46fb8e9600893a686",
+      "currentSha256": "5458d10e9541eae810fe082d259eb58ca43a6252dfe261e20ae40c2e2c39a2d2",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1788,9 +1796,9 @@
     },
     "tests/presentation/unit-panel.test.ts": {
       "previousBytes": 16261,
-      "currentBytes": 16547,
+      "currentBytes": 17702,
       "previousSha256": "4bcd330a1417a8baba38ec3b976ddf408abbe04a23f9d89d1bc41ad7e428d4da",
-      "currentSha256": "32588363e33ee91df2a1a5ca5be3213f2b57d233444693f50be75661799d0f84",
+      "currentSha256": "bf5360e85459d07dee14371101bce88ee431565c4f14921a0b7e42667d96b370",
       "firstDifferentByte": 1272
     },
     "tests/presentation/v23-anomaly-panel.test.ts": {
@@ -2074,9 +2082,9 @@
     "tests/rendering3d-ui-batch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6055,
+      "currentBytes": 6062,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "139a8d297c985f3fed7a0f4defeb4610b01ecd2e2a4c4925acb03ae8711851f9",
+      "currentSha256": "6d6dcfe154607ad9c44d619e3c9870512e4ebbf44e42abef7a1a463f1ac59821",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-ui-original-assets.test.ts": {
@@ -2473,6 +2481,13 @@
       "previousSha256": "ea236fe3cbffc32790f1b96d307371034b59b60fad5d3f980201c4c0b4b00282",
       "currentSha256": "f4b77e4028cfd8b0a902553b3e6793817ac9560d0824143c3553ed4ac2ab6c85",
       "firstDifferentByte": 2579
+    },
+    "tests/server/e2e/g5-stats-economy.mjs": {
+      "previousBytes": 15434,
+      "currentBytes": 15779,
+      "previousSha256": "8d8aad48334f278268a2756112cf2fd02e4000e838c5bd6de2672dfc41e3f5bc",
+      "currentSha256": "8ee8fe5a7674a74e7aa4816b792b7c9907757d74f2287b894624c9ed64818f63",
+      "firstDifferentByte": 444
     },
     "tests/server/e2e/harness.mjs": {
       "previousBytes": 9335,
