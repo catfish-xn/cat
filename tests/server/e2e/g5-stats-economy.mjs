@@ -17,7 +17,7 @@
  * Nothing on the panels sends a command. Screenshots go to artifacts/g5-stats/ (not committed).
  * G5_WS_PORT / G5_VITE_PORT override the ports.
  */
-import { click, collectErrors, createChecks, joinOnline, launchBrowser, onWire, onlineUrl, outDir, read, sleep, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
+import { click, collectErrors, createChecks, joinOnline, launchBrowser, collectCombatReplays, onlineUrl, outDir, read, sleep, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
 
 const OUT = outDir('g5-stats');
 const WS_PORT = Number(process.env.G5_WS_PORT ?? 8822);
@@ -89,8 +89,8 @@ async function main() {
     const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
     collectErrors(page, errors);
     const wire = trackCommands(page);
-    const replays = new Map(); // round → replay pushed to me
-    onWire(page, { received: m => { if (m.type === 'replay') replays.set(m.round, m.replay); } });
+    const streamed = collectCombatReplays(page); // my battles, rebuilt from the combat stream
+    const replays = { get: round => streamed.ended(round) }; // round → replay pushed to me
     await joinOnline(page, onlineUrl(base, wsPort), '统计');
     await waitRead(page, s => s.m6.mode === 'active', 'match start');
 

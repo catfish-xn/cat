@@ -123,6 +123,42 @@ export function onWire(page, { sent, received } = {}) {
   });
 }
 /**
+ * Rebuilds the replays the server streams (combat-open / combat-chunk / combat-end, see CombatStreamMessage in
+ * src/server/net/messages.ts) into the shape of the old whole `replay` push: { initial, ticks, terminal, round, battleId,
+ * unitIds }. Streams are keyed by battleId + seatId + watch; a new revision (or a re-open) restarts the stream from its
+ * open frame. Ticks are de-duplicated by tick and kept in tick order; one chunk message may carry several battles.
+ * `onOpen(entry)` / `onEnd(replay)` fire as streams open and end. `ended(round)` is the latest finished own (non-watch)
+ * replay of that round, or undefined; `list()` is every finished replay in end order.
+ */
+export function collectCombatReplays(page, { onOpen, onEnd } = {}) {
+  const streams = new Map(), finished = [];
+  const keyOf = m => `${m.battleId}|${m.seatId}|${m.watch ? 'w' : 'o'}`;
+  const addTicks = (stream, ticks) => { for (const frame of ticks) if (!stream.ticks.has(frame.tick)) stream.ticks.set(frame.tick, frame); };
+  onWire(page, { received: m => {
+    if (m.type === 'combat-open') {
+      const stream = { roomId: m.roomId, round: m.round, battleId: m.battleId, revision: m.revision, seatId: m.seatId, watch: m.watch,
+        initial: m.initial, unitIds: m.unitIds, ticks: new Map(), at: Date.now() };
+      addTicks(stream, [m.frame]);
+      streams.set(keyOf(m), stream);
+      onOpen?.(stream);
+    } else if (m.type === 'combat-chunk') {
+      for (const chunk of m.chunks) {
+        const stream = streams.get(keyOf(chunk));
+        if (stream && stream.revision === chunk.revision) addTicks(stream, chunk.ticks);
+      }
+    } else if (m.type === 'combat-end') {
+      const stream = streams.get(keyOf(m));
+      if (!stream || stream.revision !== m.revision) return;
+      const ticks = [...stream.ticks.values()].filter(frame => frame.tick <= m.throughTick).sort((a, b) => a.tick - b.tick);
+      const replay = { initial: stream.initial, ticks, terminal: m.terminal, round: stream.round, battleId: stream.battleId, unitIds: stream.unitIds,
+        seatId: stream.seatId, watch: stream.watch, revision: stream.revision, at: stream.at };
+      finished.push(replay);
+      onEnd?.(replay);
+    }
+  } });
+  return { ended: round => finished.findLast(replay => replay.round === round && !replay.watch), list: () => [...finished] };
+}
+/**
  * The usual command bookkeeping: `sent` maps commandId → command, `receipts` maps commandId → result kind or
  * `refused:<reason>` for the receipts of commands this page sent.
  */

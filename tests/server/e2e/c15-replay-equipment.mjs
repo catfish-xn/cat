@@ -16,7 +16,7 @@
  * path; C15_VITE_PORT (default 5204) and C15_WS_PORT (default 8796) override the ports.
  */
 import { writeFileSync } from 'node:fs';
-import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
+import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, collectCombatReplays, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
 
 const OUT = outDir('c15');
 const VITE_PORT = Number(process.env.C15_VITE_PORT ?? 5204);
@@ -49,7 +49,7 @@ async function openPage(browser, url, name, errors) {
   const page = await context.newPage();
   const replays = [];
   collectErrors(page, errors, name);
-  onWire(page, { received: m => { if (m.type === 'replay') replays.push({ round: m.round, battleId: m.battleId, unitIds: m.unitIds, at: Date.now() }); } });
+  collectCombatReplays(page, { onOpen: m => { if (!m.watch) replays.push({ round: m.round, battleId: m.battleId, unitIds: m.unitIds, at: m.at }); } });
   await joinOnline(page, url, name, { startMatch: false });
   return { name, page, context, replays };
 }
