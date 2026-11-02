@@ -238,3 +238,29 @@ describe('public 2D without a root', () => {
     }
   });
 });
+
+describe('root UI manifest consumable icons', () => {
+  it('fills only consumables without a bundled icon, and the tool mark and reward mark use it', async () => {
+    assets.registerRootUiAssets(ROOT, { assets: [
+      entry('icons/neekoshelp.png', 'TFT_Consumable_NeekosHelp', 'consumable'),
+      entry('icons/lesser.png', 'TFT_Consumable_ChampionDuplicator_III', 'consumable'),
+      entry('icons/unknown.png', 'synthetic-tool', 'consumable'),
+      entry('../escape.png', 'magnetic-remover', 'consumable'),
+    ] });
+    expect(assets.rootConsumableIconUrl('TFT_Consumable_NeekosHelp')).toBe(`${ROOT}icons/neekoshelp.png`);
+    expect(assets.rootConsumableIconUrl('TFT_Consumable_ChampionDuplicator_III')).toBeNull();
+    expect(assets.rootConsumableIconUrl('synthetic-tool')).toBeNull();
+    expect(assets.rootConsumableIconUrl('magnetic-remover')).toBeNull();
+    const { toolMark } = await import('../../src/presentation/orb-loot');
+    const mark = toolMark('TFT_Consumable_NeekosHelp');
+    expect(mark).toContain(`src="${ROOT}icons/neekoshelp.png"`);
+    expect(mark).toContain('data-glyph="复"');
+    expect(toolMark('TFT_Consumable_ChampionDuplicator_III')).not.toContain(ROOT);
+    const { rewardItemMarkHtml } = await import('../../src/presentation/reward-item-mark');
+    expect(rewardItemMarkHtml({ kind: 'item', name: '英雄复制器', source: 'TFT_Consumable_NeekosHelp' } as never, 30)).toContain(`${ROOT}icons/neekoshelp.png`);
+  });
+  it('keeps the one-glyph mark when no root icon is registered', async () => {
+    const { toolMark } = await import('../../src/presentation/orb-loot');
+    expect(toolMark('TFT_Consumable_NeekosHelp')).toBe('<span class="consumable-mark" aria-hidden="true">复</span>');
+  });
+});

@@ -4,7 +4,7 @@ vi.mock('phaser', () => ({ default: {} }));
 const widgets = vi.hoisted(() => {
   class Widget {
     root = { querySelector: () => null, querySelectorAll: () => [] };
-    render() {} update() {} show() {} close() {} dispose() {}
+    render() {} update() {} show() {} close() {} dispose() {} setRoundResults() {}
     createToggle() { return {}; }
   }
   return { Widget };

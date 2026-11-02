@@ -49,8 +49,11 @@ const CAST_LEAD_SECONDS = 0.25, TRAVEL_SECONDS = 1, IMPACT_HOLD_SECONDS = 0.6;
 /** An opponent legend stays this long after a PvP battle left the board, so a settled loss has someone to come from. */
 const OPPONENT_LINGER_SECONDS = 4;
 const BOLT_ARC = 60;
-/** My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of. */
-const ROAM_MARGIN = 2, ORB_REACH = 0.45;
+/**
+ * My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of
+ * (about the carousel's 0.55-cell pickup ring plus the orb's own radius, so brushing an orb is enough).
+ */
+const ROAM_MARGIN = 2, ORB_REACH = 0.6;
 /** Orbs one monster dropped land this many hex widths from where it fell, each further one a little farther out. */
 const DROP_REACH = 0.35, ORB_SPREAD = 0.3;
 /**
@@ -117,7 +120,10 @@ interface OrbView {
   readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number;
   /** Flying out of its monster: not claimable until it lands. */
   drop: OrbDrop | null;
-  /** Claimed in the battle and queued by the rules: it opened at my legend's touch and is no longer drawn. */
+  /**
+   * Opened at my legend's touch and no longer drawn: shown at once while the claim is on its way (TFT feel), and kept for
+   * a claim the rules queued until after the battle. A refused claim draws it again.
+   */
   opened: boolean;
 }
 interface Burst { expiresAt?: number; fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
@@ -255,6 +261,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
    * refusal of it (the dock put it back); forgotten when the orb leaves.
    */
   let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
+  /** Orbs my legend touched and opened before the room answered, with the refusal count at that touch. */
+  const claimedHere = new Map<string, number>();
   const sent = new Map<string, number>();
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
     if (!layoutKey || away) return null;
@@ -299,6 +307,11 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const at = sent.get(orb.orbId);
     if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) return;
     sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
+    // Open it now rather than a server round trip later: the receipt fills the bench when it arrives, and a refusal
+    // (a newer refusal count for this orb in a later frame) draws the orb again.
+    if (orb.disposed) return;
+    claimedHere.set(orb.orbId, refusals[orb.orbId] ?? 0);
+    if (!orb.opened) { orb.opened = true; orb.root.visible = false; openOrb(orb); }
   };
   /** A landed orb that my legend stands on, or was sent to and already reached, is claimed now. */
   const landed = (orb: OrbView) => {
@@ -479,7 +492,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
     for (const id of held.keys()) if (!present.has(id)) held.delete(id);
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id) && !view.opened); }
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); claimedHere.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id) && !view.opened); }
     if (frame.fighting && !wasFighting) monsters.clear();
     wasFighting = frame.fighting;
     // Monsters still standing in the shown battle: an orb of theirs waits for them to fall.
@@ -502,10 +515,14 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       }
       const spot = spotFor(orb);
       if (!view.drop) view.root.position.copy(spot ?? orbSlot(column++));
-      // A claim the rules queued until after the battle: TFT opens the orb at the touch, so it opens now and the
-      // contents follow with the settlement (a reload while queued shows nothing more to open).
-      if (orb.queued && !view.opened) { view.opened = true; if (seeded) openOrb(view); }
-      else if (!orb.queued && view.opened) view.opened = false;
+      // TFT opens the orb at the touch: one I touched stays open until the room answers (a refusal draws it again), and
+      // one the rules queued until after the battle opens now, its contents following with the settlement (a reload
+      // while queued shows nothing more to open).
+      const touched = claimedHere.has(orb.orbId) && (refusals[orb.orbId] ?? 0) <= claimedHere.get(orb.orbId)!;
+      if (!touched) claimedHere.delete(orb.orbId);
+      const open = orb.queued || touched;
+      if (open && !view.opened) { view.opened = true; if (seeded) openOrb(view); }
+      else if (!open && view.opened) view.opened = false;
       view.root.visible = !view.opened;
     });
 

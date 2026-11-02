@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toPlayerView } from '../../src/server/room/projection';
+import { recordOpponents } from '../../src/server/room/pairing';
 import type { RoomState } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
 
@@ -41,6 +42,10 @@ describe('G1-P6 room: candidates in preparation, opponent at the freeze', () => 
           expect(candidates.get(seat.seatId)).toContain(opponent);
           expect(toPlayerView(state, seat.seatId, 0).opponentSeatId).toBe(opponent);
           expect(state.pairingHistory[seat.seatId]!.at(-1)).toBe(opponent);
+          // Stage tracker: the view carries this round's opponent, once per round, oldest first.
+          const history = toPlayerView(state, seat.seatId, 0).opponentHistory!;
+          expect(history.at(-1)).toMatchObject({ round: state.round, seatId: opponent });
+          expect(history.map(entry => entry.round)).toEqual([...new Set(history.map(entry => entry.round))].sort((a, b) => a - b));
         }
       }
       if (state.pairingHistory !== lastHistory) { expect(state.roundKind).toBe('pvp'); lastHistory = state.pairingHistory; }
@@ -80,4 +85,19 @@ describe('G1-P6 room: candidates in preparation, opponent at the freeze', () => 
     };
     expect(run()).toEqual(run());
   }, 60_000);
+});
+
+describe('stage tracker opponent log', () => {
+  it('records each round once, a mirror under its source, and leaves PvE rounds out', () => {
+    let log = recordOpponents({}, 3, [
+      { battleId: 'b1', seatId: 'a', opponent: { kind: 'seat', seatId: 'b' } },
+      { battleId: 'b1', seatId: 'b', opponent: { kind: 'seat', seatId: 'a' } },
+      { battleId: 'b2', seatId: 'c', opponent: { kind: 'mirror', sourceSeatId: 'a' } },
+    ]);
+    expect(recordOpponents(log, 4, [])).toBe(log);
+    log = recordOpponents(log, 5, [{ battleId: 'b3', seatId: 'a', opponent: { kind: 'seat', seatId: 'c' } }]);
+    log = recordOpponents(log, 5, [{ battleId: 'b3', seatId: 'a', opponent: { kind: 'seat', seatId: 'c' } }]);
+    expect(log.a).toEqual([{ round: 3, seatId: 'b' }, { round: 5, seatId: 'c' }]);
+    expect(log.c).toEqual([{ round: 3, seatId: 'a', mirror: true }]);
+  });
 });

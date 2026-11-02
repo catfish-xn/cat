@@ -45,7 +45,7 @@ describe('3D scouting shop availability', () => {
     // Unrelated HUD widgets are passive: keep the application, minimap, scout panel and board-feed real.
     class Widget {
       root = new Node(); showing = false; isCollapsed = false; isMuted = true; played: string[] = [];
-      render() {} live() {} show() {} hide() {} dispose() {} setViewing() {} connection() {} tick() {} secondsLeft() { return null; }
+      render() {} live() {} show() {} hide() {} dispose() {} setViewing() {} setRoundResults() {} connection() {} tick() {} secondsLeft() { return null; }
       play() {} createToggle() { return new Node(); } debug() { return {}; } clear() {}
     }
     vi.doMock('../src/rendering/online/lobby', () => ({ Lobby: Widget }));
