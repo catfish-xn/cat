@@ -69,6 +69,7 @@ import {grantAnomalyAcquisition} from './anomaly-acquisition';
 import { sampleD11CombatGold } from './d11-fill';
 import { grantAugmentAcquisition,  openAugmentForge } from './augment-acquisition';
 import { readAugmentIncome } from './augment-income';
+import {drainBatch5G5Gold} from './augment-pool-batch5-g5';
 import {claimG23Atom,openG23Choice,finishG23Choice,mechanicGrantEvents,drainG23Rewards} from './g2-3-runtime';
 import {drainP2Gifts} from './s13-augments-p2-grants';
 import {updateG23Cells} from './g2-3-state';
@@ -987,8 +988,12 @@ function execute_claimOrb(state: MatchState, orbId: string, expectedRound: numbe
     // Queue acceptance must not run resource/equipment/choice hooks during combat.
     if(isCombatRosterLocked(state)&&result.state.m8.loot.queuedOrbClaims?.includes(orbId)
       ||result.state===state&&soloRewardOrb(state,orbId)&&!result.events.length)return result;
-    // An orb opened during my battle: equipment commits like a shop buy then; mechanic rewards wait for the settlement.
-    if(isCombatRosterLocked(state))return acceptEquipment(result.state,[...result.events]);
+    // An orb opened during my battle: equipment commits like a shop buy then. Augment gold it makes due (Prismatic
+    // Pipeline's bonus) is paid at once; its unit and item gifts wait for the settlement, as for any locked roster.
+    if(isCombatRosterLocked(state)){
+      const paid=drainBatch5G5Gold(result.state);
+      return acceptEquipment(paid,[...result.events,...mechanicGrantEvents(result.state,paid)]);
+    }
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);

@@ -34,6 +34,14 @@ const ids=(state:MatchState)=>readLootView(state).unclaimedOrbs!.map(o=>o.orbId)
 function claim(pool:SharedPoolState,state:MatchState,orbId=ids(state)[0]) {
   return accept(runSharedMatchCommand(pool,state,{type:'claimOrb',round:state.round,orbId}));
 }
+/**
+ * A save written before battle claims opened at once (v26 integration up to 2db1fc85) can still hold a battle queue of
+ * loot orbs; restore accepts it and the settlement drains it in FIFO order. Built by restoring such a snapshot.
+ */
+function legacyQueue(pool:SharedPoolState,state:MatchState,orbIds:readonly string[]) {
+  const queued={...state,m8:{...state.m8,loot:{...state.m8.loot,queuedOrbClaims:[...orbIds]}}};
+  return {pool,state:restoreSharedOrbSnapshot(pool,JSON.stringify(queued))};
+}
 function unchanged(pool:SharedPoolState,state:MatchState,orbId:string,reason:string,round=state.round) {
   const before=JSON.stringify({pool,state}),r=runSharedMatchCommand(pool,state,{type:'claimOrb',round,orbId});
   expect(r).toEqual({ok:false,pool,state,reason});expect(r.pool).toBe(pool);expect(r.state).toBe(state);
@@ -395,6 +403,45 @@ describe('multiplayer explicit orb claims',()=>{
     expect(done.state.multiplayer?.status).toBe('eliminated');expect(done.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
     expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual(paid);
     expect(stepMatch(done.state).state).toBe(done.state);
+    expectTerminalForfeitNoop(done.state);
+    independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
+  });
+  it('a legacy battle queue: FIFO order wins scarce copies, including after restore; malformed queues are rejected',()=>{
+    const {pool,states}=room({irelia:1,leona:3},1);
+    let state=gift(states[0],'leona',1,'a');state=gift(state,'leona',2,'z');
+    const [small,big]=ids(state),started=accept(runSharedMatchCommand(pool,state,{type:'startCombat'}));
+    const b=legacyQueue(started.pool,started.state,[big,small]);
+    expect(b.state.m8.loot.queuedOrbClaims).toEqual([big,small]);
+    unchanged(b.pool,b.state,big,'already-claimed');
+    const restored=restoreSharedOrbSnapshot(b.pool,JSON.stringify(b.state));
+    for(const queue of [[big,big],['missing'],[ids(restored)[0],42],null]) {
+      const tampered=structuredClone(restored) as any;tampered.m8.loot.queuedOrbClaims=queue;
+      expect(()=>restoreSharedOrbSnapshot(b.pool,tampered)).toThrow();
+    }
+    const badPhase={...restored,phase:'settlement'} as MatchState;expect(()=>validateMultiplayerOrbLedger(badPhase)).toThrow();
+    const done=finish(b.pool,restored),paid=done.state.m8.loot.receipts;
+    expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
+    expect(paid.map(r=>JSON.parse(r.dropId)[0])).toEqual([big,small]);
+    expect(paid.map(r=>r.resolution)).toEqual(CLAIM_EXPECTATIONS.queued.competition.resolutions);
+    expect(receiptTotals(paid)).toEqual({count:2,gold:CLAIM_EXPECTATIONS.queued.competition.gold});
+    expect(done.pool.available.leona).toBe(pool.available.leona-CLAIM_EXPECTATIONS.queued.competition.copies);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+2);independentConservation(done.pool);
+    assertSharedPoolConservation(done.pool,[done.state]);
+  });
+  it('a legacy battle queue: PvE damage eliminates before queued rewards can allocate any copies or sale gold',()=>{
+    // v22 45s combat + overtime lets the lone opening unit outlast 2-7 krugs, so
+    // use the 3-7 wolves, which still beat it and deal real PvE damage.
+    const initial=room(undefined,1),round=getCatalogRoundById('3-7');
+    const advanced=syntheticSharedRound(initial.pool,initial.states,round.ordinal),base=advanced.states[0];
+    const state=gift({...base,roundDefinitionId:round.roundId,playerHp:1,m8:{...base.m8,round},
+      preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...createRoundEnemies(round.ordinal)]}},'leona',2);
+    const orbId=ids(state)[0],started=accept(runSharedMatchCommand(advanced.pool,state,{type:'startCombat'}));
+    const queued=legacyQueue(started.pool,started.state,[orbId]),done=finish(queued.pool,queued.state);
+    expect(done.state.multiplayer?.status).toBe('eliminated');expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
+    expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual([
+      expect.objectContaining({resolution:CLAIM_EXPECTATIONS.queued.forfeited.resolution,gold:0,grantedUnitIds:[]})]);
+    expect(done.pool.available.leona).toBe(queued.pool.available.leona);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win));expect(stepMatch(done.state).state).toBe(done.state);
     expectTerminalForfeitNoop(done.state);
     independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
   });

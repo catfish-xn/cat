@@ -49,7 +49,7 @@ it('creates exactly one next-PvE orb with the existing independently sampled sta
 it('earns the orb from a real PvE death, adds 8 gold only when opened, and rejects repeat/stale claims atomically', () => {
   const orbId = pipelineExtraOrbs(mine())[0].orbId;
   runUntil(room, clock, s => readLootView(s.seats.find(x => x.seatId === route.seatId)!.match).unclaimedOrbs?.some(o => o.orbId === orbId) === true);
-  // Claiming during a live battle is an intent, then the common settlement path opens it once.
+  // The common claim path opens it once (during a battle too, TFT), and its bonus is owed from that opening.
   const before = mine();
   expect(before.m8.loot.earnedEvidence.some(e => pipelineExtraOrbs(before)[0].entries.some(d => d.dropId === e.dropId))).toBe(true);
   const queued = room.handle(route.seatId, { type: 'claimOrb', round: before.round, orbId }); expect(queued).toMatchObject({ ok: true });
@@ -139,7 +139,7 @@ describe('2-7 orb queued in the next 3-1 battle', () => {
     runUntil(session.room, session.clock, s => s.roundId === '3-1' && s.phase === 'preparation');
     expect(readLootView(current()).unclaimedOrbs).toEqual(expect.arrayContaining([expect.objectContaining({ orbId, queued: false })]));
   });
-  it('opens it at once during the locked 3-1 battle (TFT), recording the pipeline opening there', () => {
+  it('opens it at once during the locked 3-1 battle (TFT), recording the opening and paying its bonus gold there', () => {
     runUntil(session.room, session.clock, s => s.roundId === '3-1' && s.phase === 'battle');
     const preClaim = current();
     expect(preClaim.multiplayer?.combatRosterLocked).toBe(true);
@@ -153,6 +153,14 @@ describe('2-7 orb queued in the next 3-1 battle', () => {
     expect(claimEvents.some(e => e.type === 'lootGranted' && JSON.parse(e.receipt.dropId)[0] === orbId)).toBe(true);
     expect(before.augmentHistory!.facts.filter((f: any) => f.kind === 'orb-opened').map((f: any) => f.orbId)).toContain(orbId);
     expect(() => oracle.validatePipelineClaim(preClaim, before, command, claimEvents)).not.toThrow();
+    // Its bonus gold is paid at the touch; any unit or item gift would wait for the settlement.
+    const bonus = oracle.pipelineBonuses(before);
+    expect(bonus).toEqual([expect.objectContaining({ gold: 8 })]);
+    expect(before.seatMechanics!.receipts.slice(preClaim.seatMechanics!.receipts.length).filter(r => r.source === 'augment-pool-batch5-g5'))
+      .toEqual([expect.objectContaining({ receiptId: bonus[0].receiptId, kind: 'gold', amount: 8 })]);
+    expect(() => validateRewards(preClaim, before, command, claimEvents, {
+      ...m5Oracle, lootReceipts: before.m8.loot.receipts.slice(preClaim.m8.loot.receipts.length),
+    })).not.toThrow();
     const alteredEvents = structuredClone(claimEvents);
     const grant = alteredEvents.find(e => e.type === 'lootGranted' && JSON.parse(e.receipt.dropId)[0] === orbId);
     expect(grant).toBeDefined(); grant.receipt.payload.quantity++;
@@ -161,14 +169,16 @@ describe('2-7 orb queued in the next 3-1 battle', () => {
     bad.augmentHistory.facts.find((f: any) => f.kind === 'orb-opened' && f.orbId === orbId).orbId += '-forged';
     expect(() => oracle.validatePipelineClaim(preClaim, bad, command, claimEvents)).toThrow();
   });
-  it('pays the pipeline bonus with the settlement and grants nothing of the orb again', () => {
+  it('the settlement pays neither the orb nor its pipeline bonus again', () => {
     runUntil(session.room, session.clock, s => s.roundId === '3-1' && s.phase === 'settlement');
     const seat = session.room.state.seats.find(s => s.seatId === reviewRoute.seatId)!, after = seat.match, events = seat.serverEvents!.events;
     expect(events).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'roundSettled', round: before.round })]));
     expect(after.m8.loot.queuedOrbClaims ?? []).toEqual([]);
     expect(events.filter((e: any) => e.type === 'lootGranted' && JSON.parse(e.receipt.dropId)[0] === orbId)).toEqual([]);
     expect(oracle.pipelineBonuses(after)).toEqual([expect.objectContaining({ round: before.round, gold: 8 })]);
-    expect(after.seatMechanics?.receipts).toContainEqual(expect.objectContaining({ receiptId: oracle.pipelineBonuses(after)[0].receiptId, kind: 'gold', amount: 8 }));
+    expect(after.seatMechanics?.receipts.filter(r => r.receiptId === oracle.pipelineBonuses(after)[0].receiptId))
+      .toEqual([expect.objectContaining({ kind: 'gold', amount: 8 })]);
+    expect(after.seatMechanics!.receipts.slice(before.seatMechanics!.receipts.length).filter(r => r.source === 'augment-pool-batch5-g5')).toEqual([]);
     const checkRewards = (state: MatchState, ev = events) => validateRewards(before, state, null, ev, {
       ...m5Oracle, lootReceipts: state.m8.loot.receipts.slice(before.m8.loot.receipts.length),
     });
