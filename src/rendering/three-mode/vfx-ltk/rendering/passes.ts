@@ -4,7 +4,7 @@
  */
 /** Bare host for upstream Passes.tsx phase ordering. Restores host state even when a draw fails. */
 import type { Camera, Material, Mesh, Object3D, Scene, WebGLRenderer } from 'three';
-import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER } from './utils/frame';
+import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER, sealCanvasAlpha } from './utils/frame';
 
 /** Visit `node` and its descendants, skipping bone hierarchies under skinned units. */
 function walkDrawable(node: Object3D, visit: (node: Object3D) => void): void {
@@ -54,6 +54,8 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           draw([SCENE_LAYER]); grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); draw(first, true);
         } else draw([SCENE_LAYER, ...first]);
         if (needs.late) { grabFrame(gl); draw([DISTORTION_LAYER], true); draw([PARTICLE_LAYER], true); }
+        // A subtract (and every mode that writes alpha down) leaves holes in the canvas's alpha.
+        sealCanvasAlpha(gl);
       } finally {
         for (const [node, mask] of masks) node.layers.mask = mask;
         for (const [one, state] of ground) Object.assign(one, state);

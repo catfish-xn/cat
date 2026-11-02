@@ -551,7 +551,8 @@ export interface OrbitalFieldModel {
  *
  * The effects quality culls an `importance` by its mask. The default palette culls a
  * colourblind-only emitter, and `never` is a `colorblindVisibility` no palette shows. A
- * preview is no spectator, and a HUD-layer system drops its simple emitters. `noRate` is an
+ * preview is no spectator and supplies no skin keyword, and a HUD-layer system drops its
+ * simple emitters. `noRate` is an
  * emitter that can never emit, which the engine drops as it prepares the definition.
  */
 export type EmitterCull =
@@ -559,6 +560,7 @@ export type EmitterCull =
   | "colorblind"
   | "never"
   | "spectator"
+  | "keywords"
   | "hudLayer"
   | "noRate";
 

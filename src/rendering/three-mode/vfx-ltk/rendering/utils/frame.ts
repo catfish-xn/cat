@@ -308,3 +308,28 @@ export function grabDepth(gl: WebGLRenderer, scene: Scene, camera: Camera): void
   }
   SCENE_DEPTH.sourceTexture = glTextureOf(gl, depth.depthTexture);
 }
+
+/**
+ * Fill the canvas's alpha back to whole, leaving its colour as drawn.
+ *
+ * ThreeJS asks every canvas for an alpha channel, and the page composites the canvas over
+ * what lies behind it by that alpha. Several blend modes write the target's alpha down: a
+ * subtract scales it by `1 - a`, so a darkening decal drawn at a whole alpha leaves a hole
+ * the page's light background shows through, and the board reads brighter where the engine
+ * darkens it. The engine's back buffer is never composited, so the alpha it leaves is
+ * sealed once the frame is done.
+ */
+export function sealCanvasAlpha(gl: WebGLRenderer): void {
+  if (gl.getRenderTarget() !== null) return;
+  /* A host with no GL context behind it has no canvas to seal. */
+  const context = typeof gl.getContext === "function" ? gl.getContext() : null;
+  if (context === null || context.isContextLost()) return;
+  const clear = context.getParameter(context.COLOR_CLEAR_VALUE) as Float32Array;
+  context.colorMask(false, false, false, true);
+  context.clearColor(0, 0, 0, 1);
+  context.clear(context.COLOR_BUFFER_BIT);
+  context.colorMask(true, true, true, true);
+  context.clearColor(clear[0], clear[1], clear[2], clear[3]);
+  /* The raw calls bypass three's cache, so its colour buffer state is dropped and reissued. */
+  gl.state.buffers.color.reset();
+}
