@@ -205,13 +205,13 @@
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "1380a434541a475a614b7932a5de8ab09eb1acf5ffa496cacbbbf392cd4470f4",
     "src/simulation/combat-s13-state.ts": "79839b1df406583f40f4b3cc3db20e4a5fccbc9c3c090586bfdac1a267c71680",
-    "src/simulation/combat-s13.ts": "44968b590d8fa027dd2f5c95a96be88af8b664e8f6cc5aec913a0171283740e9",
+    "src/simulation/combat-s13.ts": "6005f035cfdc4c8cff02eae2cc667cf0d6d570a4f0b27aa1c8d9a79e8187d1a3",
     "src/simulation/combat-six-cost.ts": "0eaae8ef1bbe29ea9ea834142d58e9ce5528628e7064dc46112f4788c857b523",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
-    "src/simulation/combat-targeting.ts": "9fcefc64b911340f682b42ba708bad90e644f92a969af9b4890ba8e9dafbc60e",
+    "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
     "src/simulation/combat-types.ts": "0f7cc62ce96889d42bcc2b75484788f5db6efcce87e510dd027c2f5b1d41d3be",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
@@ -641,9 +641,9 @@
     "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d"
   },
   "previousBytes": 4979457,
-  "currentBytes": 7723232,
+  "currentBytes": 7739688,
   "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-  "currentSha256": "1b3741b196fe7822b6617ce2e2e05fba10da4d4daab7d04d8267fb15f9170ce3",
+  "currentSha256": "be613216eb756e93b3a365a67d961a01c431071b2085a9bdc8365754f35abc71",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
@@ -666,8 +666,8 @@
     {
       "round": 9,
       "time": 425350,
-      "initialHash": "5f9ca729ac06a01bfc729efc3aa800bda8a09aa094974941a4da886fdbacb83a",
-      "firstHash": "f9c95550cf6d1077e36ec2cf13b98f8360544998d521f664ca3e7d6cdfc65aa6",
+      "initialHash": "0d4c17b5f8b16eceed405e336dd7dafbb8bca9ef2e6e00b1542d752037bdf4bf",
+      "firstHash": "d49edd3c16c4ec9c89739817ece3b1976a3479e657692552f2e8715327c89358",
       "boardCounts": [
         3,
         5,
@@ -682,13 +682,13 @@
     },
     {
       "round": 23,
-      "time": 1276500,
-      "initialHash": "58389ce44872e972d5431808c132a377947981d59c8bc42d9d74061a177be61f",
-      "firstHash": "64e132db06b61d11e6f9603af0cf0b5a4d07ce6bc472b2f837ce159b7aff554c",
+      "time": 1280850,
+      "initialHash": "badb8745e52ee15bd8690baed607eb8744bf519f3d25dcdf5bb793778ce07522",
+      "firstHash": "d0026dc3140646b0eb3661241c25c64ea6e69840ec9911d51d710f3e241a1062",
       "boardCounts": [
         8,
         7,
-        8,
+        7,
         7,
         8,
         8,
