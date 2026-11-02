@@ -30,6 +30,13 @@
       "currentSha256": "5e92c345c5e20987f46e142f8eef0d873793e304d5cbc9df546eb453de52a1af",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-boards-alignment.test.ts": {
+      "previousBytes": 8832,
+      "currentBytes": 3045,
+      "previousSha256": "8e08cd05e07115df61d82c6599896ed1fd541b5a488000153e59bdf713d43f24",
+      "currentSha256": "564c32fed2ee164570837a580f77e6bb47f14ca51c05d033ea4fa81156814db1",
+      "firstDifferentByte": 56
+    },
     "tests/assets3d-neutrals.test.ts": {
       "previousBytes": 5474,
       "currentBytes": 5630,
@@ -2329,9 +2336,9 @@
     "tests/server-match-log.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1883,
+      "currentBytes": 2754,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0eb244ae6f463aebb7a58172b8836f6fdfcf4f36d9262795254dcc54a221cc4a",
+      "currentSha256": "4aef7f3244f1c017ff96515f89d7c7224ac092efed7e17f17f2dbe34dd2e2846",
       "firstDifferentByte": 0
     },
     "tests/server/augment-clock-progression.test.ts": {
