@@ -111,15 +111,20 @@ describe('real-export feature paths with tiny synthetic assets', () => {
 it('renders depth, early warp, under, late warp, over in order and restores renderer state on errors', () => {
   const camera = new PerspectiveCamera(45, 1, 4.4, 440), scene = new Scene(), calls: [number, boolean][] = [];
   let target: unknown = null;
+  // The canvas alpha is sealed after the last pass, once the frame is back on the canvas.
+  const context = { TEXTURE0: 0, COLOR_BUFFER_BIT: 0x4000, COLOR_CLEAR_VALUE: 0x0c22, isContextLost: () => false,
+    getParameter: () => new Float32Array(4), colorMask: vi.fn(), clearColor: vi.fn(),
+    clear: vi.fn(() => { calls.push([-1, target !== null]); }) };
   const gl = { autoClear: true, outputColorSpace: '', properties: { has: () => false },
-    state: { activeTexture: vi.fn(), buffers: { color: { setMask: vi.fn(), setLocked: vi.fn() } } },
-    getContext: () => ({ TEXTURE0: 0 }), copyFramebufferToTexture: vi.fn(),
+    state: { activeTexture: vi.fn(), buffers: { color: { setMask: vi.fn(), setLocked: vi.fn(), reset: vi.fn() } } },
+    getContext: () => context, copyFramebufferToTexture: vi.fn(),
     getDrawingBufferSize: (out: InstanceType<typeof Vector2>) => out.set(128, 64), getRenderTarget: () => target,
     setRenderTarget: (value: unknown) => { target = value; }, render: vi.fn(() => { calls.push([camera.layers.mask, target !== null]); }),
   };
   const passes = createVfxPasses(gl as never), before = camera.layers.mask;
   passes.render(scene, camera, { soft: true, early: true, late: true });
-  expect(calls).toEqual([[1, true], [1, false], [32, false], [16, false], [2, false], [4, false]]);
+  expect(calls).toEqual([[1, true], [1, false], [32, false], [16, false], [2, false], [4, false], [-1, false]]);
+  expect(context.colorMask).toHaveBeenNthCalledWith(1, false, false, false, true);
   expect(VIEWPORT.toArray()).toEqual([128, 64]); expect(DEPTH_RANGE.x).toBeCloseTo(10); expect(DEPTH_RANGE.y).toBeCloseTo(1000);
   expect(camera.layers.mask).toBe(before); expect(gl.autoClear).toBe(true); expect(target).toBeNull();
   gl.render.mockImplementationOnce(() => { throw new Error('GPU failed'); });

@@ -654,22 +654,21 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
 body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 .carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
-/* ?render=3d: the 3D layer draws the carousel; the panel shrinks to one strip at the top (title, my line, countdown, the
-   way to my board), as TFT keeps only its stage bar. The release order folds into a list that opens on hover or focus. */
-.carousel-panel[data-ring-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
-  border-radius: 999px; background: rgba(14, 24, 33, .82); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+/* ?render=3d: the 3D layer draws the carousel. As in S13 only the stage bar (round icons, countdown) stays on top: the panel
+   keeps just the way to my board (Space); title, my line, its own timer and the release order are not shown. */
+.carousel-panel[data-ring-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 0;
+  border-radius: 0; background: none; box-shadow: none; border: 0; }
+.carousel-panel[data-ring-3d] :is(.carousel-title, .carousel-status, .carousel-ring, .carousel-order) { display: none !important; }
+.carousel-panel[data-ring-3d]::after { display: none !important; }
+.carousel-shop-tab { display: none; }
+body[data-online-carousel="carousel"]:has(> .render3d-layer):has(.carousel-panel[data-ring-3d]:not([hidden])) .carousel-shop-tab {
+  display: block; position: absolute; z-index: 31; left: 50%; bottom: 10px; width: 132px; height: 44px; transform: translateX(-50%);
+  border: 2px solid #8a7341; background: #0e2a33 linear-gradient(#123640, #0a1d24); cursor: not-allowed; opacity: .9; }
+body[data-online-carousel="carousel"]:has(> .render3d-layer):has(.carousel-panel[data-ring-3d]:not([hidden])) .carousel-shop-tab::before {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 30px; height: 25px; background: #7fb6c9;
+  clip-path: polygon(25% 0, 75% 0, 100% 100%, 0 100%); }
 .carousel-panel[data-ring-3d] :is(.carousel-head, .carousel-body) { display: contents; }
-.carousel-panel[data-ring-3d] .carousel-title { order: 0; font-size: 14px; white-space: nowrap; }
-.carousel-panel[data-ring-3d] .carousel-status { order: 1; flex: 0 1 auto; min-width: 0; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.carousel-panel[data-ring-3d] .carousel-ring { order: 2; --size: 34px; width: 34px; height: 34px; flex: none; background: none; animation: none; }
-.carousel-panel[data-ring-3d] .carousel-ring .carousel-slot, .carousel-panel[data-ring-3d] .carousel-timer-unit { display: none; }
-.carousel-panel[data-ring-3d] .carousel-centre { width: 34px; height: 34px; }
-.carousel-panel[data-ring-3d] .carousel-timer { font-size: 18px; font-variant-numeric: tabular-nums; }
-.carousel-panel[data-ring-3d]::after { content: '放行顺序 ▾'; order: 3; font-size: 12px; color: #7e95a4; white-space: nowrap; cursor: default; }
 .carousel-panel[data-ring-3d] .carousel-switch { order: 4; margin-left: 0; }
-.carousel-panel[data-ring-3d] .carousel-order { position: absolute; top: calc(100% - 2px); right: 0; width: 260px; max-height: 260px; padding: 6px; border-radius: 8px;
-  background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
-.carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
 body[data-online-carousel="carousel"]:has(> .render3d-layer) .shop-dock,
 /* TFT: on another player's board my shop is closed (it comes back with my board). */
@@ -1137,6 +1136,18 @@ body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-l
 body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
 body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
 body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
+/* Free rerolls (TFT): the price reads 0, a static pale cyan rim surrounds the button and a small white count sits
+   inside it, above-left of the refresh arrow. The rim is a pseudo-element so the 3D original-art skin (which clears
+   box-shadow) keeps it; in 3D the art's gold arrow is tinted cyan-white through a backdrop filter. */
+[data-debug="mobile:reroll"][data-free-rerolls] { position: relative; }
+[data-debug="mobile:reroll"][data-free-rerolls]::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px #bfeef2, 0 0 6px #8fdde866; }
+.reroll-free-count { position: absolute; top: 4px; right: 8px; min-width: 18px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: #0b151fb3; color: #f4f4f0; font-size: 12px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+body:has(.render3d-layer) .reroll-free-count { right: 36px; top: 6px; }
+body:has(.render3d-layer) [data-debug="mobile:reroll"][data-free-rerolls]::before { content: ""; position: absolute; right: 4px; top: 50%; width: 38px; height: 38px;
+  transform: translateY(-50%); border-radius: 50%; pointer-events: none; backdrop-filter: hue-rotate(150deg) saturate(.55) brightness(1.25);
+  -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 72%); mask-image: radial-gradient(circle, #000 55%, transparent 72%); }
 body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
 body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap;
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -1459,7 +1470,7 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
 /* 3D augment cards: the extra notes sit under a rule in a smaller face; the lettered badge (inline 56px) fills the 112px icon slot. */
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: 12px; padding-top: 8px; border-top: 1px solid #ffffff1f;
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: auto; width: 100%; padding-top: 8px; border-top: 1px solid #ffffff1f;
   font-size: 12px; line-height: 1.5; color: #93a8b4; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra-line { display: block; white-space: normal; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-badge { width: 112px !important; height: 112px !important; font-size: 56px !important; }

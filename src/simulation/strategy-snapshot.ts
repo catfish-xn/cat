@@ -297,8 +297,9 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     // Batch-3 hero augments: the strongest copy's ability costs ManaReduction less mana and Vladimir gains range.
     const hero = (resolved.mechanics ?? []).find(m => m.mechanic === 'heroCarryLive');
-    if (hero && (hero.values.manaReduction || hero.values.rangeBonus)) {
-      const maxMana = Math.max(1, resolved.stats.maxMana - hero.values.manaReduction);
+    // 卯足全力: the hero spell costs HEROManaIncrease more (content/gloves-off.ts).
+    if (hero && (hero.values.manaReduction || hero.values.rangeBonus || hero.values.manaIncrease)) {
+      const maxMana = Math.max(1, resolved.stats.maxMana - hero.values.manaReduction + (hero.values.manaIncrease ?? 0));
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana), attackRange: resolved.stats.attackRange + hero.values.rangeBonus } };
     }
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');

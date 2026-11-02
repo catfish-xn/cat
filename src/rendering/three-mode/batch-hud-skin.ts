@@ -39,15 +39,18 @@ const targets: Readonly<Record<string, string>> = {
   'ranking.panel': '.ranking-card,.elimination-card',
   'ranking.header': '.ranking-card h2,.elimination-card h2',
   'generic.panel': '.render3d-notice,.online-spectate,.online-connection,.lobby-card,.help-dialog',
-  'generic.button': '.render3d-bar button,.legend-picker-head button,.help-button,.help-dialog button,.left-panel-toggle,.fullscreen-toggle,.sound-toggle,.lobby-card button',
+  'generic.button': '.carousel-panel[data-ring-3d] .carousel-switch,.carousel-bar .carousel-switch,.render3d-bar button,.legend-picker-head button,.help-button,.help-dialog button,.left-panel-toggle,.fullscreen-toggle,.sound-toggle,.lobby-card button',
   'loading.track': '.render3d-progress',
   'loading.fill': '.render3d-progress i',
   'stage.track': '.stage-track',
+  // S13 carousel: the shop folds to this tab (shop unavailable while drafting).
+  'hud.shop-toggle': '.carousel-shop-tab::before',
 };
 const icons: Readonly<Record<string, string>> = {
   'stage.pvp': '.stage-round[data-icon="pvp"]',
   'stage.pve': '.stage-round[data-icon="pve"]',
   'stage.augment': '.stage-round[data-icon="augment"]',
+  'stage.carousel': '.stage-round[data-icon="carousel"]',
   'streak.win': '.economy-streak[data-kind="win"]',
   'streak.loss': '.economy-streak[data-kind="loss"]',
   'streak.none': '.economy-streak[data-kind="none"]',
@@ -60,7 +63,8 @@ export const BATCH_UI_SPRITES: readonly string[] = [
   ...Object.keys(targets).flatMap(id => [id, ...Object.keys(states).map(state => `${id}.${state}`)]),
   ...Object.keys(icons), 'player.avatar', 'player.avatar.me', 'player.hp-icon', 'item.column',
   ...['inactive', 'bronze', 'silver', 'gold', 'prismatic', 'unique'].map(tier => `trait.${tier}`),
-  'world.countdown', 'world.label', 'star.1', 'star.2', 'star.3', 'star.4',
+  'world.countdown', 'world.label',
+  'carousel.inspect', 'carousel.inspect.hover', 'carousel.inspect.disabled', 'carousel.inspect.selected', 'star.1', 'star.2', 'star.3', 'star.4',
 ];
 function paint(sprite: ReadyUiSprite): string {
   const url = `url(${JSON.stringify(sprite.url)})`;

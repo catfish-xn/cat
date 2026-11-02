@@ -125,7 +125,7 @@ describe('carousel leash display', () => {
     expect(legend.position.x).toBeCloseTo(before.x, 8); expect(legend.position.z).toBeCloseTo(before.z, 8);
     expect(offered.position.y).toBeCloseTo(pendingHeight);
     expect(stage.debug().units.find(unit => unit.slot === 8)!.cue).toBe('pending');
-    expect(offered.getObjectByName('render3d-carousel-quality')!.visible).toBe(true);
+    expect(offered.getObjectByName('render3d-carousel-inspect')!.visible).toBe(true);
     expect(stage.scene.getObjectByName('render3d-carousel-takable')).toBeUndefined();
     expect(stage.scene.getObjectByName('render3d-carousel-cost')).toBeUndefined();
     tick(500); stage.update(0.5);

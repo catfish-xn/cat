@@ -312,6 +312,8 @@ interface PieceView {
   facing: string | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
   readonly turn: HeadingTurn;
+  /** It stands in (or glides to) a bench cell this frame: it keeps its rest heading and never turns (unit-facing.ts). */
+  onBench: boolean;
   /** 家人团聚 easter egg in planning: its model's dance clip ('clip') or, without one, a hop in place ('hop'). */
   dance: 'clip' | 'hop' | null;
   /** A cast drawn as a dash toward its target (cast-lunge.ts): only the body is offset, never the root. */
@@ -891,7 +893,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
+      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
@@ -1276,8 +1278,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
       if (shown) flushRise(view);
-      const slot = benchSlots ? (piece.id !== frame.dragging && piece.benchSlot !== undefined
-        ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
+      // Its bench cell (with or without the arena's raised strip), or -1 on the board.
+      const slot = piece.id !== frame.dragging && piece.benchSlot !== undefined
+        ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y);
+      view.onBench = slot >= 0;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
@@ -1732,7 +1736,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
         const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
         view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
-          alive: view.alive, fighting: !!fighting, position: { x: view.root.position.x, z: view.root.position.z },
+          alive: view.alive, fighting: !!fighting, onBench: view.onBench, position: { x: view.root.position.x, z: view.root.position.z },
           destination: { x: view.target.x, z: view.target.z }, target }), seconds);
         view.root.position.addScaledVector(step, follow);
         if (view.alive && id === lastFrame?.selectedId) view.root.position.y += SELECT_LIFT;

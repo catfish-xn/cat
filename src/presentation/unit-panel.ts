@@ -4,7 +4,8 @@ import { orbCardBody } from '../rendering/online/orb-dock';
 /** Lazy inspect UI. All numbers are content/display projections; no planning bonus rules live here. */
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { getUnitStats } from '../simulation/unit-stats';
-import { abilityDisplayValues } from '../simulation/ability-display';
+import { abilityDisplayValues, glovesOffDisplayValues } from '../simulation/ability-display';
+import { HERO_ABILITY_MANA_INCREASE } from './hero-ability';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import type { CombatViewUnit } from './combat-display';
 import type { UnitBattleStats } from './battle-ranking';
@@ -23,6 +24,8 @@ export interface UnitPanelData {
   id: string; definitionId: string; starLevel: number; team: 'player' | 'enemy';
   items?: readonly string[]; notes?: readonly string[]; battle?: UnitBattleStats | null;
   combat?: CombatViewUnit | null;
+  /** 卯足全力: this is the strongest Vander, whose ability the rules replace with the hero spell. */
+  heroAbility?: boolean;
 }
 /** Future rules-side planning projection. Never reconstruct item/trait bonuses in the UI. */
 export function planningBonusProjection(_unit: UnitPanelData): null { return null; }
@@ -31,13 +34,14 @@ const node = (tag: string, text = '', className = '') => {
 };
 
 /** Token substitution first, then the existing plain-text sanitizer. Markers preserve safe emphasis without HTML input. */
-export function abilityRanks(definitionId: string, star: number): HTMLElement {
+export function abilityRanks(definitionId: string, star: number, heroAbility = false): HTMLElement {
   const out = node('p', '', 'unit-card-text');
   if (star === 4) { out.textContent = abilityText(definitionId, 4)?.text ?? '无主动技能说明'; return out; }
   const def = UNIT_DEFINITIONS[definitionId], data = S13_ABILITY_DATA[def.abilityId];
   if (!data) { out.textContent = '无主动技能说明'; return out; }
-  const values = ([1, 2, 3] as const).map(rank => abilityDisplayValues(definitionId, rank));
-  const template = readTooltipText()?.ABILITY_ZH[data.id]?.text ?? '';
+  const hero = heroAbility && definitionId === 'vander' ? readTooltipText()?.HERO_ABILITY_ZH[data.id] : undefined;
+  const values = ([1, 2, 3] as const).map(rank => hero ? glovesOffDisplayValues(rank) : abilityDisplayValues(definitionId, rank));
+  const template = hero?.text ?? readTooltipText()?.ABILITY_ZH[data.id]?.text ?? '';
   const marked = template.replace(/@([^@<>\s]+)@/g, (token, key: string) => {
     const ranks = values.map(row => row[key]);
     if (ranks.some(value => value === undefined)) return token;
@@ -83,7 +87,8 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
     const label = node('span', '', 'inspect-bar-text'); label.dataset.value = kind; bar.append(label); bars.append(bar);
   }
   const base = (star === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, neutral ? 1 : Math.min(3, data.starLevel) as StarLevel);
-  const abilityName = abilityText(data.definitionId, star)?.name ?? '无主动技能';
+  const heroAbility = Boolean(data.heroAbility) && star !== 4;
+  const abilityName = abilityText(data.definitionId, star, undefined, heroAbility)?.name ?? '无主动技能';
   const row = node('div', '', 'inspect-row');
   const button = node('button', '', 'inspect-ability') as HTMLButtonElement; button.type = 'button';
   button.setAttribute('aria-label', `技能：${abilityName}`); button.setAttribute('aria-expanded', 'false');
@@ -96,7 +101,8 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   row.append(button, items);
   const tip = node('div', '', 'inspect-ability-card'); tip.setAttribute('role', 'tooltip');
   const ability = node('div', '', 'unit-card-ability');
-  ability.append(abilityLabel(data.definitionId, `${abilityName} · 法力 ${base.initialMana}/${base.maxMana}`), abilityRanks(data.definitionId, data.starLevel));
+  const maxMana = base.maxMana + (heroAbility ? HERO_ABILITY_MANA_INCREASE : 0);
+  ability.append(abilityLabel(data.definitionId, `${abilityName} · 法力 ${base.initialMana}/${maxMana}`), abilityRanks(data.definitionId, data.starLevel, heroAbility));
   tip.append(ability);
   const role = roleSection(data.definitionId); if (role) tip.append(role);
   const toggle = (open: boolean) => { tip.classList.toggle('open', open); button.setAttribute('aria-expanded', String(open)); };
@@ -127,7 +133,7 @@ export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   const base = (data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
   const live = data.combat ?? planningBonusProjection(data);
   const hp = live?.hp ?? base.health, maxHp = live?.maxHp ?? base.health, shield = live?.shield ?? 0;
-  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? base.maxMana;
+  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? base.maxMana + (data.heroAbility && data.starLevel !== 4 ? HERO_ABILITY_MANA_INCREASE : 0);
   // The replay's interval is already the rules' current speed projection (including temporary effects).
   const speed = live ? 20 / live.attackIntervalTicks : base.baseAttackSpeedBps !== undefined ? base.baseAttackSpeedBps / 10000 : 20 / base.attackIntervalTicks;
   const crit = live as (CombatViewUnit & { baseCritChanceBps?: number; baseCritMultiplierBps?: number }) | null;
