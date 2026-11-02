@@ -184,7 +184,7 @@
     "src/simulation/combat-movement.ts": "65d2e21f9908422b13e59f36d1eb4560a36eeaba48fa321db85a08261b0ea2df",
     "src/simulation/combat-opening-crabs.ts": "c1d00a0a86a411c35a744f45587a89dd350dddfd5ee8d801247ab1e15c8c793f",
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
-    "src/simulation/combat-replay-view.ts": "bc101b144cc075729d5ec7f44d79ec3788711ae381e7a57f390318b18e37262b",
+    "src/simulation/combat-replay-view.ts": "22d9b7af95e4cdf613a0c470d3b1ba9ef4b5961a2e641463aa792d99d1795aac",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "986c46261130ceaca5a34e93e15cf55d59f7b3460cbc994a06b0d46e2c0d524a",
     "src/simulation/combat-s13-state.ts": "79839b1df406583f40f4b3cc3db20e4a5fccbc9c3c090586bfdac1a267c71680",
