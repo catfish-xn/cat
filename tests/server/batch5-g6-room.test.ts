@@ -18,8 +18,8 @@ const id='im-the-carry-now';
 
 describe('B5-83 real online room',()=>{
   // v26 D5 (7953c99a) registered four augments and stage bans, drifting the seed-0 (old value) 2-1 draws: no seat sees
-  // I'm the Carry Now within three rerolls. Seed 47 offers it to s3 in the real initial 2-1 draw, and s3's later 3-2/4-2
-  // first offers (Trifecta II, Scrap Crown) need no augment-history replay on restore.
+  // I'm the Carry Now within three rerolls. Seed 47 offered it to s3 in the real initial 2-1 draw (until #509, below); the
+  // test finds the offered seat itself, so the seed only has to offer the card and keep that seat alive through 6-1.
   // #509 (melee retargeting) shortens seed 47's lobby: it ends at round 31, before the 6-1 entry check. Seeds 48–56 either
   // do not offer the card at 2-1 or also end early; seed 57 is the first that offers it and keeps the seat alive through 6-1.
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:57});
