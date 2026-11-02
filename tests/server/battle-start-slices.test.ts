@@ -189,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 7, 8, 7, 8, 8, 7]); // v26 recording (battle-start.json checkpoint round 23)
+        .toEqual([8, 7, 7, 7, 8, 8, 7]); // v26 recording (battle-start.json checkpoint round 23); the third seat went 8 -> 7 after #509 stopped dead units holding melee attack hexes
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;
