@@ -13,8 +13,10 @@ import type { BoardScreenBox } from '../board-feed';
  * are drawn mirrored on the far side.
  */
 import {
-  Box3, ConeGeometry, Group, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, type Camera, type Object3D, type Scene,
+  Box3, ConeGeometry, Group, Mesh, MeshStandardMaterial, RingGeometry, SphereGeometry, Vector3, type Camera, type Object3D, type Scene,
 } from 'three';
+/** Must stay aligned with vfx-ltk/particles FX_SCALE (0.44); not imported here to keep tabletop free of the LTK bundle. */
+const FX_SCALE = 0.44;
 import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
@@ -36,8 +38,41 @@ const ORB_OPEN: Record<BoardOrb['tier'], string> = { gray: 'orb-gray-open', blue
 /** Playback bounds (seconds) as tft-extras action-bindings.json gives them; an idle that reaches its bound is rebuilt. */
 const ORB_IDLE_SECONDS = 30, PRISMATIC_IDLE_SECONDS = 3600, OPEN_SECONDS = 3, TRAVEL_EFFECT_SECONDS = 1, IMPACT_SECONDS = 3;
 const ORB_COLOR: Record<BoardOrb['tier'], string> = { gray: '#a8b0ba', blue: '#4fb7ff', gold: '#ffc94a', prismatic: '#e7a8ff' };
-/** Stand-in orb (no asset root, or its effect is missing): radius and float height in board units. */
-const ORB_RADIUS = 9, ORB_FLOAT = 16;
+/** S13 trait orb stand/halo tints (取自原版 review 截图，近似). */
+const ORB_VARIANT_COLOR: Record<NonNullable<BoardOrb['variant']>, string> = { warband: '#f05838', crime: '#e060d0' };
+const orbTint = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => variant ? ORB_VARIANT_COLOR[variant] : ORB_COLOR[tier];
+/**
+ * Loot orb particles are not scaled like skill VFX. tft-extras review at FX_SCALE=0.44 (docs/ASSETS3D_TFT_EXTRAS.md):
+ * gray idle ≈0.37 cell; blue/gold/prismatic ≈0.5 cell; warband/crime cores ≈0.92 / ≈0.97 cell (special-orbs review).
+ * Target visible core ≈0.5 cell for every variant.
+ */
+const ORB_GRAY_IDLE_CELLS_AT_FX = 0.37;
+const ORB_BLUE_IDLE_CELLS_AT_FX = 0.5;
+const ORB_WARBAND_IDLE_CELLS_AT_FX = 0.92;
+const ORB_CRIME_IDLE_CELLS_AT_FX = 0.97;
+const ORB_TARGET_CORE_CELLS = 0.5;
+const orbIdleCellsAtFx = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) =>
+  variant === 'warband' ? ORB_WARBAND_IDLE_CELLS_AT_FX
+    : variant === 'crime' ? ORB_CRIME_IDLE_CELLS_AT_FX
+      : tier === 'gray' ? ORB_GRAY_IDLE_CELLS_AT_FX
+        : ORB_BLUE_IDLE_CELLS_AT_FX;
+const orbParticleScale = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) =>
+  FX_SCALE * (ORB_TARGET_CORE_CELLS / orbIdleCellsAtFx(tier, variant));
+/** Dominant idle emitter position.y in extras JSON × orbParticleScale (review probe, 约); lowers FX so the core sits on the stand. */
+const ORB_IDLE_SOURCE_Y: Record<BoardOrb['tier'] | 'warband' | 'crime', number> = {
+  gray: 32, blue: 27, gold: 32, prismatic: 0, warband: 15, crime: 45,
+};
+const orbIdleFxYOffset = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+  const key = variant ?? (tier === 'prismatic' ? 'prismatic' : tier);
+  const sourceY = ORB_IDLE_SOURCE_Y[key as keyof typeof ORB_IDLE_SOURCE_Y];
+  return Math.round(sourceY * orbParticleScale(tier, variant));
+};
+/** Stand-in core when the effect is missing: radius ≈ half a cell at hexRadius 34 (√3×34 ≈ 59 board units per cell). */
+const ORB_RADIUS = 14.5, ORB_FLOAT = 16;
+/** Idle vertical bob (approximate; extracted orb bindings have no dedicated motion curve). */
+const ORB_BOB = 3;
+/** Ground halo under the core (approximate; parent orb systems also carry ground-facing particles). */
+const ORB_GROUND_RING_INNER = 12, ORB_GROUND_RING_OUTER = 24;
 /** Orbs are clicked within this many CSS pixels of their drawn center (at least). */
 const ORB_PICK_PX = 16;
 /** Stand-in orb opening: it swells and fades over this long. */
@@ -117,7 +152,8 @@ interface Path { from: Vector3; to: Vector3; start: number; end: number }
 interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
 interface OrbDrop { readonly from: Vector3; readonly to: Vector3; elapsed: number }
 interface OrbView {
-  readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number;
+  readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; readonly halo: Mesh; fx: ParticleEffect | null;
+  left: number; loading: boolean; disposed: boolean; phase: number;
   /** Flying out of its monster: not claimable until it lands. */
   drop: OrbDrop | null;
   /**
@@ -134,8 +170,27 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   const { scene, own } = ctx;
   const legendHeight = ctx.championHeight * 0.5;
   const orbGeometry = own(new SphereGeometry(ORB_RADIUS, 20, 14));
-  const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier,
-    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.55, roughness: 0.3, transparent: true }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  const orbHaloGeometry = own(new RingGeometry(ORB_GROUND_RING_INNER, ORB_GROUND_RING_OUTER, 32));
+  const orbStandMaterial = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+    const color = orbTint(tier, variant);
+    return own(new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: variant ? 0.65 : 0.85, roughness: 0.28,
+      transparent: true, opacity: variant ? 0.48 : 0.72, depthWrite: false }));
+  };
+  const orbHaloMaterialFor = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+    const color = orbTint(tier, variant);
+    return own(new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.55, transparent: true,
+      opacity: variant ? 0.34 : 0.42, depthWrite: false }));
+  };
+  const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbStandMaterial(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  const orbHaloMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbHaloMaterialFor(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  // Trait orb tints ignore the tier, so each variant's materials are made once, not per orb.
+  const variantMaterials = new Map<string, MeshStandardMaterial>();
+  const variantMaterial = (kind: 'stand' | 'halo', tier: BoardOrb['tier'], variant: NonNullable<BoardOrb['variant']>) => {
+    const key = `${kind}:${variant}`;
+    let material = variantMaterials.get(key);
+    if (!material) { material = kind === 'stand' ? orbStandMaterial(tier, variant) : orbHaloMaterialFor(tier, variant); variantMaterials.set(key, material); }
+    return material;
+  };
   const boltGeometry = own(new SphereGeometry(7, 16, 12));
   const boltMaterial = own(new MeshStandardMaterial({ color: '#ffe3a1', emissive: '#ffb347', emissiveIntensity: 1, transparent: true }));
   const flashMaterial = own(new MeshStandardMaterial({ color: '#ff9b6b', emissive: '#ff6a3d', emissiveIntensity: 1, transparent: true, opacity: 0.8 }));
@@ -326,11 +381,11 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   // --- effects -----------------------------------------------------------------------------------------------------
   const bursts = new Set<Burst>();
-  const effectAt = (id: string, seconds: number, point: Vector3, owner: () => boolean): Promise<ParticleEffect | null> => {
+  const effectAt = (id: string, seconds: number, point: Vector3, owner: () => boolean, scale = ctx.effectScale): Promise<ParticleEffect | null> => {
     if (!ctx.loadEffect) return Promise.resolve(null);
     return ctx.loadEffect(id, seconds).then(fx => {
       if (!owner()) { fx.dispose(); return null; }
-      fx.object.scale.setScalar(ctx.effectScale); fx.object.position.copy(point);
+      fx.object.scale.setScalar(scale); fx.object.position.copy(point);
       scene.add(fx.object);
       return fx;
     }).catch(() => null);
@@ -339,12 +394,12 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
    * A one-shot effect at `point`; the stand-in mesh (when given) swells and fades if the effect is not available.
    * `fallback` is tried first when `id` cannot load (a trait orb's own open effect → the generic tier's).
    */
-  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null, fallback?: string) => {
+  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null, fallback?: string, scale = ctx.effectScale) => {
     const entry: Burst = { fx: null, mesh: null, left: seconds, total: ORB_POP_SECONDS };
     bursts.add(entry);
     const live = () => bursts.has(entry);
-    void effectAt(id, seconds, point, live)
-      .then(fx => fx || !fallback || !live() ? fx : effectAt(fallback, seconds, point, live)).then(fx => {
+    void effectAt(id, seconds, point, live, scale)
+      .then(fx => fx || !fallback || !live() ? fx : effectAt(fallback, seconds, point, live, scale)).then(fx => {
       if (fx) { entry.fx = fx; disposeStand(stand); return; }
       if (!bursts.has(entry) || !stand) { bursts.delete(entry); disposeStand(stand); return; }
       stand.position.copy(point); scene.add(stand); entry.mesh = stand; entry.left = ORB_POP_SECONDS;
@@ -382,25 +437,35 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   /** Orbs revealed while their monster still stands in the shown battle, by orb id, with that monster's id. */
   const held = new Map<string, string>();
   const idleSeconds = (tier: BoardOrb['tier']) => tier === 'prismatic' ? PRISMATIC_IDLE_SECONDS : ORB_IDLE_SECONDS;
+  const orbAnchorY = (bob: number) => ORB_FLOAT + bob;
+  const orbFxY = (view: OrbView, bob: number) => orbAnchorY(bob) - orbIdleFxYOffset(view.tier, view.variant);
+  /** Idle particles share the stand anchor at the orb root; dominant emitter y is compensated (see ORB_IDLE_SOURCE_Y). */
+  const alignIdleFx = (view: OrbView, fx: ParticleEffect) => {
+    fx.object.scale.setScalar(orbParticleScale(view.tier, view.variant));
+    view.root.add(fx.object);
+    fx.object.position.set(0, orbFxY(view, 0), 0);
+  };
   const startIdle = (view: OrbView) => {
     if (!ctx.loadEffect || view.loading) return;
     view.loading = true;
-    const point = new Vector3(0, ORB_FLOAT, 0);
     // A trait orb (S13 Warband/Crime) uses its own idle effect; if that cannot load, the generic tier's.
     const generic = () => ctx.loadEffect!(ORB_IDLE[view.tier], idleSeconds(view.tier));
     const load = view.variant ? ctx.loadEffect(`orb-${view.variant}`, idleSeconds(view.tier)).catch(generic) : generic();
     void load.then(fx => {
       view.loading = false;
       if (view.disposed) { fx.dispose(); return; }
-      fx.object.scale.setScalar(ctx.effectScale); fx.object.position.copy(point);
-      view.root.add(fx.object); view.fx = fx; view.left = idleSeconds(view.tier); view.stand.visible = false;
+      alignIdleFx(view, fx);
+      view.fx = fx; view.left = idleSeconds(view.tier);
     }).catch(() => { view.loading = false; });
   };
   const createOrb = (orb: BoardOrb, index: number): OrbView => {
     const root = new Group(); root.name = `render3d-orb-${orb.tier}`;
-    const stand = new Mesh(orbGeometry, orbMaterial[orb.tier]); stand.position.y = ORB_FLOAT;
-    root.add(stand); root.position.copy(orbSlot(index)); scene.add(root);
-    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
+    const halo = new Mesh(orbHaloGeometry, orb.variant ? variantMaterial('halo', orb.tier, orb.variant) : orbHaloMaterial[orb.tier]);
+    halo.rotation.x = -Math.PI / 2; halo.position.y = 1;
+    const stand = new Mesh(orbGeometry, orb.variant ? variantMaterial('stand', orb.tier, orb.variant) : orbMaterial[orb.tier]);
+    stand.position.y = ORB_FLOAT; stand.renderOrder = -1;
+    root.add(halo, stand); root.position.copy(orbSlot(index)); scene.add(root);
+    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, halo, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
     startIdle(view);
     return view;
   };
@@ -411,7 +476,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
   /** The tier's (or trait skin's) opening where the orb lies. */
   const openOrb = (view: OrbView) => burst(view.variant ? `orb-${view.variant}-open` : ORB_OPEN[view.tier], OPEN_SECONDS,
-    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, orbMaterial[view.tier].clone()), ORB_OPEN[view.tier]);
+    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, (view.variant ? variantMaterial('stand', view.tier, view.variant) : orbMaterial[view.tier]).clone()), ORB_OPEN[view.tier],
+    orbParticleScale(view.tier, view.variant));
   /** Drawn, landed and not already opened by a queued claim: my legend may walk onto it. */
   const reachable = (view: OrbView) => !view.opened && view.root.visible;
   /** Bursts out of the corpse at `from`: a flash of the tier's color there, then the hop to `to`. */
@@ -553,12 +619,15 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     }
     for (const view of orbs.values()) {
       if (view.drop) flyDrop(view, seconds);
-      view.stand.position.y = ORB_FLOAT + Math.sin(clock * 2 + view.phase) * 2;
+      const bob = Math.sin(clock * 2 + view.phase) * ORB_BOB;
+      const y = orbAnchorY(bob);
+      view.stand.position.y = y;
+      view.fx?.object.position.set(0, orbFxY(view, bob), 0);
       if (!view.fx) continue;
       view.fx.update(seconds, ctx.camera);
       view.left -= seconds;
       // Bounded idle: when the effect has played out, it is rebuilt rather than assumed to run forever.
-      if (view.fx.finished || view.left <= 0) { view.fx.dispose(); view.fx = null; view.stand.visible = true; startIdle(view); }
+      if (view.fx.finished || view.left <= 0) { view.fx.dispose(); view.fx = null; startIdle(view); }
     }
     for (const entry of bursts) {
       if (entry.expiresAt !== undefined && now() >= entry.expiresAt) { endBurst(entry); continue; }

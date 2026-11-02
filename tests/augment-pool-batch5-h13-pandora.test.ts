@@ -25,12 +25,18 @@ it('B5-23 offers all nodes and grants exactly one radiant directly, without an a
  expect(AUGMENT_TIERS['pandoras-items-iii']).toBe('prismatic');for(const node of ['2-1','3-2','4-2']){expect(augmentOfferAllowed('pandoras-items-iii',[],{node,fieldedTraits:[],blocked:[]})).toBe(true);expect(augmentPool('prismatic',[],[],`round:${node}:augment`,[]).includes('pandoras-items-iii')).toBe(true);}
  const rs=acquired.seatMechanics!.receipts.filter(r=>r.receiptId.includes('pandoras-items-iii'));expect(rs).toHaveLength(1);expect(rs[0].kind).toBe('item');expect(acquired.pendingChoice).toBeNull();expect(acquired.items.filter(i=>ITEM_DEFINITIONS[i.definitionId].kind==='radiant')).toHaveLength(1);trip(acquired);
 });
-it('B5-23 category matrix excludes special items, allows unchanged results and leaves live RNG untouched',()=>{
+it('B5-23 category matrix rerolls same-class pools, keeps Tactician/radiant/set items, allows unchanged results and leaves live RNG untouched',()=>{
+ const emblems=Object.keys(ITEM_DEFINITIONS).filter(id=>/^TFT13_Item_\w+EmblemItem$/.test(id)).sort();expect(emblems).toHaveLength(22);
  for(const item of Object.values(ITEM_DEFINITIONS)){
   const ordinary=ORDINARY[item.id];
-  const expected=ordinary?.kind==='component'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:ordinary?.recipe?G24_FORGE_POOLS.TFT_ArmoryKeyCompleted:null;
+  const expected=item.id==='spatula'||item.id==='frying-pan'?['frying-pan','spatula']
+   :ordinary?.kind==='component'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:ordinary?.recipe?G24_FORGE_POOLS.TFT_ArmoryKeyCompleted
+   :emblems.includes(item.id)?emblems:G24_FORGE_POOLS.TFT_ArmoryKeyOrnn.includes(item.id)?G24_FORGE_POOLS.TFT_ArmoryKeyOrnn
+   :G24_FORGE_POOLS.TFT_ArmoryKeySupport.includes(item.id)?G24_FORGE_POOLS.TFT_ArmoryKeySupport:null;
   expect(h13RoundItemPool('pandoras-items-iii',item.id),item.id).toEqual(expected);
  }
+ for(const kept of ['TFT_Item_ForceOfNature','TFT_Item_TacticiansRing','TFT_Item_TacticiansScepter'])expect(h13RoundItemPool('pandoras-items-iii',kept),kept).toBeNull();
+ expect(Object.values(ITEM_DEFINITIONS).filter(d=>d.kind==='radiant').every(d=>h13RoundItemPool('pandoras-items-iii',d.id)===null)).toBe(true);
  const owner=acquired.augments.find(a=>a.definitionId==='pandoras-items-iii')!,before=structuredClone(acquired);
  const pool=G24_FORGE_POOLS.TFT_ArmoryKeyComponent,draw=h13ItemDraw(acquired,owner.choiceId,'item-1',pool);
  expect(h13RoundItemPool('pandoras-items-iii',draw)).toContain(draw);
