@@ -10,7 +10,7 @@ import type { S13Unit } from './combat-s13-state';
  * Forced displacement from enemy skills (pull / grab / knockback). Instant, same tick, no RNG.
  * Every move is an ordinary `movement` event with a reason, so ledger, replay and both PvP seats see it.
  */
-export type DisplacementReason = 'mordekaiser-pull' | 'sett-grab' | 'sevika-knockback';
+export type DisplacementReason = 'mordekaiser-pull' | 'sett-grab' | 'sevika-knockback' | 'vander-knockback';
 
 /** 14.24b map22 `HexToRangeMap` (raw units → hexes); see docs/evidence/five-cost-3star/source-excerpts.md. */
 const HEX_TO_RANGE = [180, 420, 610, 890, 1130, 1370, 1610, 1850, 2090, 2330] as const;
@@ -82,18 +82,21 @@ function roundCube(q: number, r: number, s: number): HexCell {
   return { col: rq + Math.floor(rr / 2), row: rr };
 }
 
-/** Push the target along the straight line from the source through it, one hex at a time. */
-export function knockAway(ctx: AbilityContext, source: S13Unit, target: S13Unit, hexes: number, reason: DisplacementReason): void {
-  if (!movable(ctx, target)) return;
+/** Push the target along the straight line from the source through it, one hex at a time. Returns the cells it occupied,
+ * start first and landing last (just the start when it does not move). */
+export function knockAway(ctx: AbilityContext, source: S13Unit, target: S13Unit, hexes: number, reason: DisplacementReason): HexCell[] {
+  const passed: HexCell[] = [{ ...target.cell }];
+  if (!movable(ctx, target)) return passed;
   const a = cube(source.cell), b = cube(target.cell), n = hexDistance(source.cell, target.cell);
-  if (n === 0) return;
+  if (n === 0) return passed;
   const taken = blocked(ctx, target);
   let landing = target.cell;
   for (let k = 1; k <= hexes; k++) {
     // Fixed nudge keeps exact half-way rounding deterministic and orientation-independent of iteration order.
     const t = (n + k) / n, next = roundCube(a.q + (b.q - a.q) * t + 1e-6, a.r + (b.r - a.r) * t + 2e-6, a.s + (b.s - a.s) * t - 3e-6);
     if (!contains(ctx.board, next) || hexDistance(landing, next) !== 1 || taken.has(key(next))) break;
-    landing = next;
+    landing = next; passed.push({ ...next });
   }
   displace(ctx, target, landing, reason);
+  return passed;
 }

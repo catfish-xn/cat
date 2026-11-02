@@ -47,9 +47,11 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // v26 identity-only refresh (ec1ce026, v26-neutrals-1424 epoch): the save bytes differ from the D5 pin
   // 14cc123e20bea6891bfefb28e78d78c8fbae55b9d2328d391acb837964cc00dc only in contentDigest
   // bbfbe0dd->9dc693dd and the frozen loot replayDigest 10ece6a9->a56b2c4a; history order and all other bytes unchanged.
+  // v26 卯足全力内容变化 (2026-11-02): contentDigest 9dc693dd->ed366cad only; substituting it back gives the previous pin
+  // a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a.
   const save=serializeMatch(started);
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a');
+    .toBe('35a972ba540d179b4502dfa0805ed27120f666f7f2ee9ee73497661b3ec13283');
   expect(restoreMatch(save)).toEqual(started);
 });
 

@@ -25,7 +25,7 @@ export const CONTROL_3D = {
  * Forced moves the rules tag on their movement event (pulled, grabbed, knocked back): drawn as a short hop along the
  * slide instead of a run, the unit being moved rather than walking. Tags from the displacement rules (莫德凯撒/瑟提/赛维卡).
  */
-export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback']);
+export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback', 'vander-knockback']);
 export const DISPLACEMENT_HOP = { seconds: 0.3, liftShare: 0.15 } as const;
 /** Hop share (0..1) `elapsed` seconds into a displacement hop: one arc, 0 once over. */
 export const displacementHop = (elapsed: number, seconds = DISPLACEMENT_HOP.seconds): number =>

@@ -2,6 +2,7 @@ import type { MultiplayerCommandResult } from '../simulation/round-settlement';
 import { usableBenchSlots, isOverflowUnit } from '../simulation/bench-capacity';
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
+import { glovesOffUnitId } from '../presentation/hero-ability';
 import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
@@ -1367,11 +1368,17 @@ export class BoardScene extends Phaser.Scene {
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
     const star = displayStarLevel(this.session.state, unit), notes = [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])];
     const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}`,
-      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks)!);
+    const heroAbility = this.heroAbilityOf(unit);
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}:${heroAbility}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks, heroAbility)!);
     this.unitCardOpen = true;
   }
   private inspect?: ReturnType<typeof installUnitInspect>;
+  /** 卯足全力: my strongest board Vander shows the hero spell (never a scouted or watched seat's unit). */
+  private heroAbilityOf(unit: { id: string; team: string }): boolean {
+    const remote = this.session instanceof RemoteSession ? this.session : null;
+    return unit.team === 'player' && remote?.watchedSeat == null && glovesOffUnitId(this.session.state) === unit.id;
+  }
   private inspectData(id: string): UnitPanelData | null {
     if (document.body.dataset.m6Mode === 'startup') return null;
     if (id.startsWith('scout:')) {
@@ -1391,7 +1398,7 @@ export class BoardScene extends Phaser.Scene {
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const view = this.views.get(id);
     return { id, definitionId: unit.definitionId, starLevel: displayStarLevel(this.session.state, unit), team: remote?.watchedSeat != null ? 'enemy' : unit.team,
-      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [],
+      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [], heroAbility: this.heroAbilityOf(unit),
       notes: [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])],
       battle: history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null };
   }
