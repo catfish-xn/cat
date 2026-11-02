@@ -138,8 +138,7 @@ interface LegendView { readonly id: string; readonly model: string; readonly roo
 interface OrbDrop { readonly from: Vector3; readonly to: Vector3; elapsed: number }
 interface OrbView {
   readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; readonly halo: Mesh; fx: ParticleEffect | null;
-  /** Local offset so the effect's bounds center sits on the stand anchor (particles often emit off-origin). */
-  fxLocal: Vector3 | null; left: number; loading: boolean; disposed: boolean; phase: number;
+  left: number; loading: boolean; disposed: boolean; phase: number;
   /** Flying out of its monster: not claimable until it lands. */
   drop: OrbDrop | null;
   /** Claimed in the battle and queued by the rules: it opened at my legend's touch and is no longer drawn. */
@@ -155,9 +154,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   const orbGeometry = own(new SphereGeometry(ORB_RADIUS, 20, 14));
   const orbHaloGeometry = own(new RingGeometry(ORB_GROUND_RING_INNER, ORB_GROUND_RING_OUTER, 32));
   const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier,
-    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.55, roughness: 0.3, transparent: true, opacity: 0.38, depthWrite: false }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.85, roughness: 0.28, transparent: true, opacity: 0.72, depthWrite: false }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
   const orbHaloMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier,
-    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.45, transparent: true, opacity: 0.35, depthWrite: false }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.55, transparent: true, opacity: 0.42, depthWrite: false }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
   const boltGeometry = own(new SphereGeometry(7, 16, 12));
   const boltMaterial = own(new MeshStandardMaterial({ color: '#ffe3a1', emissive: '#ffb347', emissiveIntensity: 1, transparent: true }));
   const flashMaterial = own(new MeshStandardMaterial({ color: '#ff9b6b', emissive: '#ff6a3d', emissiveIntensity: 1, transparent: true, opacity: 0.8 }));
@@ -397,19 +396,15 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   /** Orbs revealed while their monster still stands in the shown battle, by orb id, with that monster's id. */
   const held = new Map<string, string>();
   const idleSeconds = (tier: BoardOrb['tier']) => tier === 'prismatic' ? PRISMATIC_IDLE_SECONDS : ORB_IDLE_SECONDS;
+  /** Idle particles share the stand anchor at the orb root; no runtime bounds centering (world-space boxes drift with the board). */
   const alignIdleFx = (view: OrbView, fx: ParticleEffect) => {
-    const scale = orbParticleScale(view.tier, view.variant);
-    fx.object.scale.setScalar(scale);
+    fx.object.scale.setScalar(orbParticleScale(view.tier, view.variant));
     view.root.add(fx.object);
-    const box = new Box3().setFromObject(fx.object);
-    const center = box.getCenter(new Vector3());
-    view.fxLocal = new Vector3(-center.x, -center.y, -center.z);
-    fx.object.position.copy(view.fxLocal).setY(view.fxLocal.y + ORB_FLOAT);
+    fx.object.position.set(0, ORB_FLOAT, 0);
   };
   const startIdle = (view: OrbView) => {
     if (!ctx.loadEffect || view.loading) return;
     view.loading = true;
-    view.fxLocal = null;
     // A trait orb (S13 Warband/Crime) uses its own idle effect; if that cannot load, the generic tier's.
     const generic = () => ctx.loadEffect!(ORB_IDLE[view.tier], idleSeconds(view.tier));
     const load = view.variant ? ctx.loadEffect(`orb-${view.variant}`, idleSeconds(view.tier)).catch(generic) : generic();
@@ -425,7 +420,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const halo = new Mesh(orbHaloGeometry, orbHaloMaterial[orb.tier]); halo.rotation.x = -Math.PI / 2; halo.position.y = 1;
     const stand = new Mesh(orbGeometry, orbMaterial[orb.tier]); stand.position.y = ORB_FLOAT; stand.renderOrder = -1;
     root.add(halo, stand); root.position.copy(orbSlot(index)); scene.add(root);
-    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, halo, fx: null, fxLocal: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
+    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, halo, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
     startIdle(view);
     return view;
   };
@@ -576,8 +571,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     for (const view of orbs.values()) {
       if (view.drop) flyDrop(view, seconds);
       const bob = Math.sin(clock * 2 + view.phase) * ORB_BOB;
-      view.stand.position.y = ORB_FLOAT + bob;
-      if (view.fx && view.fxLocal) view.fx.object.position.copy(view.fxLocal).setY(view.fxLocal.y + ORB_FLOAT + bob);
+      const y = ORB_FLOAT + bob;
+      view.stand.position.y = y;
+      view.fx?.object.position.set(0, y, 0);
       if (!view.fx) continue;
       view.fx.update(seconds, ctx.camera);
       view.left -= seconds;
