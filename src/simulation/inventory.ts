@@ -90,14 +90,23 @@ export function validateEquip(
     // Reuse the recipe validator on detached inputs; neither preview nor failure allocates anything.
     const recipe = validateCombine([item, { ...target, location: { kind: 'inventory' } }], itemId, target.id);
     if (!recipe.allowed) return { ...recipe, conflictingItemIds: [] };
-    if (!itemRestrictionAllows(ITEM_DEFINITIONS[recipe.resultDefinitionId].restriction,unit.definitionId)) return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
+    const combination = { resultDefinitionId: recipe.resultDefinitionId, consumedItemIds: recipe.consumedItemIds };
+    // 14.24: crafting on a unit is never refused because the finished item cannot stay there.
+    // An emblem of the holder's own trait is crafted and pops back to the inventory.
+    if (!itemRestrictionAllows(ITEM_DEFINITIONS[recipe.resultDefinitionId].restriction,unit.definitionId)) {
+      return { allowed: true, reason: null, occupiedSlots: [], conflictingItemIds: [], combination: { ...combination, resultReturned: true } };
+    }
     const remaining = items.filter(other => other.id !== itemId && other.id !== target.id);
     const resultDefinition=angerIssues&&isAngerIssuesConvertibleItem(recipe.resultDefinitionId)?'rageblade':recipe.resultDefinitionId;
     const placement = checkEquipmentPlacement(remaining,
       { ...item, definitionId: resultDefinition }, unitId, slot);
-    return placement.allowed ? { ...placement, combination: {
-      resultDefinitionId: recipe.resultDefinitionId, consumedItemIds: recipe.consumedItemIds,
-    } } : placement;
+    if (placement.allowed) return { ...placement, combination };
+    // 14.24: a three-slot result (Thief's Gloves) crafted on a unit returns every other worn item.
+    if (placement.reason === 'exclusive-slots' && ITEM_DEFINITIONS[resultDefinition].slotCost === 3) {
+      return { allowed: true, reason: null, occupiedSlots: [0, 1, 2], conflictingItemIds: [],
+        combination: { ...combination, returnedItemIds: placement.conflictingItemIds } };
+    }
+    return placement;
   }
   if (target && ITEM_DEFINITIONS[target.definitionId]?.kind === 'component') {
     const placement = checkEquipmentPlacement(items, item, unitId, slot);
@@ -115,16 +124,21 @@ export function planEquip(
   const placement = validateEquip(items, preparation, itemId, unitId, slot,angerIssues);
   if (!placement.allowed) return { ok: false, reason: placement.reason };
   // Three-slot parents always occupy slot 0; slots 1/2 are reserved for children.
-  slot = placement.occupiedSlots[0];
+  slot = placement.occupiedSlots[0] ?? slot;
   if (placement.combination) {
     const consumed = placement.combination.consumedItemIds;
     const inputs = items.map(item => consumed.includes(item.id) ? { ...item, location: { kind: 'inventory' as const } } : item);
     const combined = planCombine(inputs, nextItemSerial, consumed[0], consumed[1]);
     if (!combined.ok) return combined;
+    if (placement.combination.resultReturned) return combined;
     const createdId = `item-${nextItemSerial}`;
+    const returned = new Set(placement.combination.returnedItemIds ?? []);
     return { ok: true, nextItemSerial: combined.nextItemSerial,
-      items: combined.items.map(item => item.id === createdId ? { ...item, location: { kind: 'unit' as const, unitId, slot } } : item),
-      events: [...combined.events, { type: 'itemEquipped', itemId: createdId, unitId, slot }],
+      items: combined.items.map(item => item.id === createdId ? { ...item, location: { kind: 'unit' as const, unitId, slot } }
+        : returned.has(item.id) ? { ...item, location: { kind: 'inventory' as const } } : item),
+      events: [...combined.events,
+        ...(returned.size ? [{ type: 'itemsReturned' as const, itemIds: [...returned].sort(), unitId }] : []),
+        { type: 'itemEquipped', itemId: createdId, unitId, slot }],
     };
   }
   return {

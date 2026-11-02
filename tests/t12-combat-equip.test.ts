@@ -122,8 +122,9 @@ describe('T12 in-place recipes and atomic failures', () => {
     rejected({...base,items:[stock('item-1','sword'),held('item-2','deathblade')]}, s=>equipItem(s,'item-1','unit-1',0),'item-slot-occupied');
     rejected({...base,items:[stock('item-1','deathblade'),stock('item-2','sword')]}, s=>combineItems(s,'item-1','item-2'),'invalid-recipe');
     rejected({...base,items:[stock('item-1','deathblade'),held('item-2','sword')]}, s=>equipItem(s,'item-1','unit-1',0),'invalid-recipe');
-    rejected({...base,nextItemSerial:4,items:[stock('item-1','gloves'),held('item-2','gloves'),held('item-3','sword','unit-1',1)]},
-      s=>equipItem(s,'item-1','unit-1',0),'exclusive-slots');
+    // 14.24: Thief's Gloves crafted on a unit return the other worn items instead of refusing (equip-craft-returns).
+    expect(accepted(equipItem({...base,nextItemSerial:4,items:[stock('item-1','gloves'),held('item-2','gloves'),held('item-3','sword','unit-1',1)]},
+      'item-1','unit-1',0)).items).toEqual([stock('item-3','sword'),held('item-4','thiefs-gloves')]);
     rejected({...base,nextItemSerial:4,items:[stock('item-1','tear'),held('item-2','tear'),held('item-3','blue-buff','unit-1',1)]},
       s=>equipItem(s,'item-1','unit-1',0),'unique-conflict');
     const tg = accepted(equipItem({...base,items:[stock('item-1','thiefs-gloves'),stock('item-2','sword')]},'item-1','unit-1',0));
