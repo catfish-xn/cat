@@ -132,7 +132,7 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(grantedOrbIds([receipt(lootEntryId(orbA, 0)), receipt(lootEntryId(orbA, 1)), receipt(lootEntryId(orbB, 0), 'forfeited')])).toEqual([orbA]);
   });
 
-  it('anchors idle orb particles on the orb root with the stand (no world-space bounds recentering)', async () => {
+  it('anchors idle orb particles on the orb root with the stand (dominant emitter y compensated)', async () => {
     const loadEffect = vi.fn(async () => fakeEffect());
     const { scene, tabletop, step } = setup({ loadEffect });
     tabletop.frame(frame({ orbs: [orb('a', 'blue')] }));
@@ -141,12 +141,12 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     const fx = root.children.find(child => child.type === 'Group' && child !== root.children[0] && child !== root.children[1]);
     expect(fx?.position.x).toBe(0);
     expect(fx?.position.z).toBe(0);
-    expect(fx?.position.y).toBe(16);
+    expect(fx?.position.y).toBe(16 - 12);
     step(0.25);
     expect(fx?.position.x).toBe(0);
     expect(fx?.position.z).toBe(0);
-    expect(fx?.position.y).toBeGreaterThan(13);
-    expect(fx?.position.y).toBeLessThan(19);
+    expect(fx?.position.y).toBeGreaterThan(1);
+    expect(fx?.position.y).toBeLessThan(7);
   });
 
   it('gives a trait orb its own idle and open effects, and falls back to the generic tier when they are missing', async () => {
