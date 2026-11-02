@@ -18,9 +18,10 @@ async function main() {
   const dir = path.resolve('artifacts/v26-neutrals-1424-recording'); fs.mkdirSync(dir, { recursive: true });
   const bundle = path.join(dir, 'battle-start.cjs'); fs.writeFileSync(bundle, built.outputFiles[0].contents);
   const { Room, ROOM_TIMING_DEFAULTS, ManualClock, BotDriver, TwoSidedBattleResolver, CAROUSEL_RULES_BINDING } = require(bundle);
+  // (2026-11-02 carousel all-components: re-searched from 20261012, 20261013 no longer has a mirror.)
   // First seed from 20261012 whose real round-23 checkpoint has an odd alive
   // roster and at least seven fielded units per survivor (mirror and full-board tests).
-  const seed = 20261013, clock = new ManualClock();
+  const seed = 20261016, clock = new ManualClock();
   const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: i ? `bot-${i}` : 'seat-1', name: `s${i}`, kind: i ? 'bot' : 'human' }));
   const options = clock => ({ ...ROOM_TIMING_DEFAULTS, roomId: 'room-1', seed, clock,
     resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,

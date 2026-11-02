@@ -1,6 +1,6 @@
 import { freezeContent } from './content/freeze';
 /** Fixed champion composition approved 2026-10-29; equipment/timing remain P7 policy. */
-export const CAROUSEL_RULES = freezeContent({ version: 'carousel-v1', revision:'v26-fixed-costs-1', rounds:['2-4','3-4','4-4','5-4','6-4'], sharedPoolVersion: 'shared-pool-v3', batchSize: 2, firstBatchMs: 6000, batchIntervalMs: 6000, tailMs: 6000, departureMs: 2000, seedXor: 0x4341524f, slots: 9, opening: { gold: 0, level: 1, xp: 0, hp: 100, units: 1, components: 0 }, openingMode: 'free-irelia-portal-select', placement:'bench-then-board-then-held-v1', upgrades:'next-preparation-unique-receipt-v1', itemPolicy: 'eight-components-through-4-4-then-36-completed-v1', autoPolicy: 'upgrade-then-cost-then-slot-v1' } as const);
+export const CAROUSEL_RULES = freezeContent({ version: 'carousel-v1', revision:'v26-all-components-1', rounds:['2-4','3-4','4-4','5-4','6-4'], sharedPoolVersion: 'shared-pool-v3', batchSize: 2, firstBatchMs: 6000, batchIntervalMs: 6000, tailMs: 6000, departureMs: 2000, seedXor: 0x4341524f, slots: 9, opening: { gold: 0, level: 1, xp: 0, hp: 100, units: 1, components: 0 }, openingMode: 'free-irelia-portal-select', placement:'bench-then-board-then-held-v1', upgrades:'next-preparation-unique-receipt-v1', itemPolicy: 'all-eight-components-plus-extra-through-4-4-then-36-completed-v2', autoPolicy: 'upgrade-then-cost-then-slot-v1' } as const);
 
 /** Counts are indexed by cost 1..6, not independent per-slot probabilities. */
 export const CAROUSEL_COST_POLICY = freezeContent({
@@ -18,6 +18,17 @@ export const CAROUSEL_COST_POLICY = freezeContent({
     // late-stage group, leaving all nine champion/item words in their old positions.
     rng: { words: 27, groupWordIndex: 24, costs: 'remaining-counts-without-replacement-v1' },
     fallback: 'nearest-stocked-cost-1-through-6-lower-first-v1',
+} as const);
+
+/** Component rounds (2-4/3-4/4-4): each of the 8 base components once + 1 extra.
+ *  The extra is Spatula or Frying Pan (half each) with the 14.24 per-round chance
+ *  (map22 CarouselItemPercentages2/3/4: OneOfAll + SpatsAndRandom = 12% / 15% / 12%), else a random component.
+ *  Approved by the user 2026-11-02; original 25% all-random and 3-spatula templates intentionally dropped. */
+export const CAROUSEL_COMPONENT_ITEM_POLICY = freezeContent({
+    version: 'carousel-all-components-v1',
+    spatulaOrPanBps: { '2-4': 1200, '3-4': 1500, '4-4': 1200 },
+    spatulaId: 'spatula',
+    panId: 'frying-pan',
 } as const);
 
 /** @deprecated Legacy server-entry export; now aliases the fixed composition policy. */

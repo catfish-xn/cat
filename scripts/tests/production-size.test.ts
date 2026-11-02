@@ -110,7 +110,8 @@ describe('production representation preserves runtime semantics', () => {
     expect(parsed.content).toBe(parsed.CONTENT_DIGEST);
     expect(parsed.loot).toBe(parsed.LOOT_REPLAY_DIGEST);
     // v26 卯足全力内容变化 (2026-11-02): 9dc693dd → ed366cad.
-    expect(parsed.content).toBe('fnv1a32-utf16:ed366cad');
+    // v26 选秀 8 件散件必出 (2026-11-02): ed366cad → 150d825d.
+    expect(parsed.content).toBe('fnv1a32-utf16:150d825d');
     expect(parsed.loot).toBe('fnv1a32-utf16:a56b2c4a');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

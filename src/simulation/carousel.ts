@@ -15,6 +15,7 @@ import { mechanicGrantEvents } from './g2-3-runtime';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS as ALL_ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { getCatalogRoundById } from './round-selectors';
@@ -23,7 +24,7 @@ import type { SharedPoolState } from './shared-pool-types';
 import type { MatchState } from './match-types';
 import type { CostTier, UnitUpgradedEvent } from './unit-types';
 import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, CarouselReceipt, CarouselState, CarouselFailure, CarouselEvent, CarouselResult } from './carousel-types';
-import { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY, carouselCostCounts } from './carousel-policy';
+import { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY, carouselCostCounts, CAROUSEL_COMPONENT_ITEM_POLICY } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
 import { releaseSeatOnElimination } from './shared-pool';
 import { appendResourceProvenance } from './resource-provenance';
@@ -33,7 +34,7 @@ import { draftPool, returnHolding, reconcileHoldings } from './shared-pool-ledge
 import { carouselPriorityChoice, tableScrapsPick } from './augment-pool-batch5-h5';
 import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
 export type * from './carousel-types';
-export { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY };
+export { CAROUSEL_RULES, CAROUSEL_COST_ODDS, CAROUSEL_COST_POLICY, CAROUSEL_COMPONENT_ITEM_POLICY };
 const rounds: readonly CarouselRoundId[] = ['2-4', '3-4', '4-4', '5-4', '6-4'];
 const completed = Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'completed').sort();
 const integer = (n: number, min = 0) => Number.isSafeInteger(n) && n >= min;
@@ -94,6 +95,22 @@ export function prepareCarouselParticipants(pool: SharedPoolState, states: reado
     participants.sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
     return { ok: true, pool: { ...pool, carouselParticipants: participants } };
 }
+/** Component rounds: all eight base components once plus one extra, shuffled over the nine slots.
+ *  Uses the same nine item words as before (slot*3+2): the last word picks the extra item,
+ *  the first eight drive a Fisher-Yates shuffle. */
+export function componentCarouselItems(roundId: CarouselRoundId, words: readonly number[]): string[] {
+    const policy = CAROUSEL_COMPONENT_ITEM_POLICY, extraWord = words[8 * 3 + 2], bps = policy.spatulaOrPanBps[roundId as '2-4' | '3-4' | '4-4'] ?? 0;
+    const roll = Math.floor(extraWord * 10000 / 4294967296);
+    let extra: string;
+    if (roll < bps) extra = roll * 2 < bps ? policy.spatulaId : policy.panId;
+    else extra = COMPONENT_IDS[Math.min(COMPONENT_IDS.length - 1, Math.floor((roll - bps) * COMPONENT_IDS.length / (10000 - bps)))];
+    const items = [...COMPONENT_IDS, extra];
+    for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(words[(items.length - 1 - i) * 3 + 2] * (i + 1) / 4294967296);
+        [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+}
 function drawSlots(initial: Readonly<Record<string, number>>, roundId: CarouselRoundId, rngState: number, id: string) {
     const available = { ...initial }, slots: CarouselSlot[] = [];
     let wordState = rngState;
@@ -115,8 +132,12 @@ function drawSlots(initial: Readonly<Record<string, number>>, roundId: CarouselR
         const definitionId = catalog.find(d => { if (member < available[d])
             return true; member -= available[d]; return false; })!;
         available[definitionId]--;
-        const items = roundId === '5-4' || roundId === '6-4' ? completed : COMPONENT_IDS, itemId = items[Math.floor(words[slot * 3 + 2] * items.length / 4294967296)];
+        const itemId = roundId === '5-4' || roundId === '6-4' ? completed[Math.floor(words[slot * 3 + 2] * completed.length / 4294967296)] : '';
         slots.push({ slot, definitionId, itemId, reservationId: `${id}:slot:${slot}`, pickedBy: null });
+    }
+    if (roundId !== '5-4' && roundId !== '6-4') {
+        const items = componentCarouselItems(roundId, words);
+        for (let slot = 0; slot < 9; slot++) slots[slot] = { ...slots[slot], itemId: items[slot] };
     }
     return { available, slots, wordState };
 }
@@ -180,7 +201,7 @@ export function validateCarousel(state: CarouselState): void {
     if (state.rngBefore.algorithm !== 'lcg32-v1' || state.rngAfter.algorithm !== 'lcg32-v1' || state.rngAfter.state !== seed || !equal(state.receipts, state.pool.carouselReceipts.filter(r => r.carouselId === state.id)))
         throw Error('invalid-carousel');
     for (const [i, s] of state.slots.entries()) {
-        if (s.slot !== i || s.reservationId !== `${state.id}:slot:${i}` || !Object.hasOwn(state.pool.initial, s.definitionId) || !ITEM_DEFINITIONS[s.itemId] || s.pickedBy !== null && !state.releaseOrder.includes(s.pickedBy))
+        if (s.slot !== i || s.reservationId !== `${state.id}:slot:${i}` || !Object.hasOwn(state.pool.initial, s.definitionId) || !ALL_ITEM_DEFINITIONS[s.itemId] || s.pickedBy !== null && !state.releaseOrder.includes(s.pickedBy))
             throw Error('invalid-carousel');
         const r = state.receipts.find(r => r.slot === i), reservation = state.pool.carouselReservations.find(r => r.reservationId === s.reservationId);
         if (s.pickedBy === null ? !!r : !r || r.seatId !== s.pickedBy || r.definitionId !== s.definitionId || r.itemId !== s.itemId)

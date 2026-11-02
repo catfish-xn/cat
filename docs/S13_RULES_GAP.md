@@ -1667,3 +1667,9 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - **价值暴击（约定）：** 成功掉落后先按阶段抽基础档，再独立以相同击杀者暴击率判定一次；命中档位+1，最高6，不递归、不按1.75倍或两倍发放。每个真实死亡事件独立判定；复活后再死沿既有 combatId＋death eventSeq 区分，不按英雄实例永久去重。
 - **时序与认证（约定）：** 所有奖励在实际战斗结束后，经过现有 mechanic 金币／装备收据发放；取得英雄沿现有共享奖励法球与有限池领取。私有 `augment-history-v1` 的 deaths 行只增加可选 `lootExplosion` 击杀观察（击杀者战斗/原始ID、席位、暴击率），不是自报奖励。服务器只把真实事件和双边映射交入领域结算；客户端不上传计数。规则用种子、席位、选择ID、轮次、战斗ID、死亡eventSeq派生 `lcg32-v1` 子流，重复结算、恢复和继续不会重抽或重发；不增加公共命令／战斗事件字段／外层保存版本。
 - 阶段按上述用户决定在 **2-1／3-2 开放、4-2 禁出**；3-2 保留原AssociatedTraits过滤，与卓尔不群的互斥继续生效。独立M5 oracle用自有整数权重、BigInt RNG及死亡观察重建预期，不读取生产收据来决定奖励。数值与典型阵容的条件期望估算单列于根目录 `-o`，不是实测原服收益。
+
+## 选秀装备：8 件散件必出 + 小概率金铲铲／金锅锅（2026-11-02，用户批准）
+
+- 原版来源：14.24 `game/data/maps/shipping/map22/map22.bin.json` 的 `CarouselItemPercentages1..6` 与 `CarouselItemPattern_*`。2-4、4-4：Opening（8 件各一＋1 随机散件）88%、OneOfAll（8 件各一＋1 个铲或锅）11%、SpatsAndRandom（3 个铲／锅＋6 随机）1%；3-4：Opening 60%、Default（9 随机）25%、OneOfAll 12%、SpatsAndRandom 3%。编号→轮次（2..6 对应 2-4..6-4）与 SPATorPAN 中铲／锅比例数据未写明，为推断。
+- 项目做法（偏离原版，用户决定）：2-4／3-4／4-4 固定 8 件散件各一个，第 9 件在 2-4、4-4 以 12%、3-4 以 15% 为金铲铲或金锅锅（各半），否则随机散件；打乱分布在 9 格。不做原版 25% 全随机与三铲模板。5-4／6-4 仍为随机成装，原版的纹章模板未做。
+- 实现：`src/simulation/carousel-policy.ts` `CAROUSEL_COMPONENT_ITEM_POLICY`，`src/simulation/carousel.ts` `componentCarouselItems`；沿用原 9 个装备随机字，27 字随机流与英雄抽取不变。
