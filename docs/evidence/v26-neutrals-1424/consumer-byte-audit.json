@@ -1942,15 +1942,15 @@
       "previousBytes": 0,
       "currentBytes": 16058,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "99b69198e6dd4624658cbc7eff2f7b600c6a45b33dce5ab271ef9be5d5682076",
+      "currentSha256": "cb7479e9d4a519a52da0a4c860de37a3d65702e6166a3c3ca1a6784674511589",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-carousel.test.ts": {
       "previousBytes": 36098,
-      "currentBytes": 40269,
+      "currentBytes": 43288,
       "previousSha256": "6bf6b4c0e10f4fef73c5ea74c45cce1a447840f54824399d8d8bcefffda4cafa",
-      "currentSha256": "b253f8d3f31d3908189ffcfbd6376adbc65ef63920c3beab1f3de3ac11ae3084",
-      "firstDifferentByte": 123
+      "currentSha256": "9af40f7f3a28046677c275b1f461f4e013076f2220f33d8f6fbf7cec3eddbd78",
+      "firstDifferentByte": 145
     },
     "tests/rendering3d-cast-sequence.test.ts": {
       "previousBytes": 9546,
