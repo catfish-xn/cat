@@ -43,7 +43,7 @@ import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_UNIT_PICK_RADIUS, ca
 import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
-import { DEFAULT_PAIRING_POLICY, findPairing, planCandidates, planPairings, recordPairings, type PairingPolicy } from './pairing';
+import { DEFAULT_PAIRING_POLICY, findPairing, planCandidates, planPairings, recordOpponents, recordPairings, type PairingPolicy } from './pairing';
 import {
   DEFAULT_BATTLE_MAX_STEPS, ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleInput, type BattleResult, type PvpMode, type RankEntry,
   type RoomCommandResult, type RoomFault, type RoomNotice, type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
@@ -1186,7 +1186,8 @@ export class Room {
     let rngState = plan.rngState;
     const battleSeeds: Record<string, number> = {};
     for (const battleId of battleIds) { const draw = nextRandom(rngState); rngState = draw.state; battleSeeds[battleId] = draw.word >>> 0; }
-    this.replace({ ...state, pairings: plan.pairings, battleSeeds, rngState, pairingHistory: recordPairings(state.pairingHistory, plan.pairings) });
+    this.replace({ ...state, pairings: plan.pairings, battleSeeds, rngState, pairingHistory: recordPairings(state.pairingHistory, plan.pairings),
+      ...(plan.pairings.length > 0 ? { opponentLog: recordOpponents(state.opponentLog ?? {}, state.round, plan.pairings) } : {}) });
   }
 
   /** Every alive seat has left the choice phase: decide what the round needs next. */
