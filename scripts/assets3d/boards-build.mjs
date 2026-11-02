@@ -20,8 +20,6 @@ import { convertParticleMesh } from './particle-mesh.mjs';
 import { convertParticles } from './particles.mjs';
 import { contracts } from './runtime.mjs';
 import { createPrecache } from './merge-manifests.mjs';
-import { boardGroundSpan, alignBoardGroundXZ } from './boards-alignment.mjs';
-
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
 const json = boardPlanJson;
@@ -141,17 +139,10 @@ export async function buildBoards({keys}={}) {
     const locator = locators.find(v => binField(v, 'name') === 'BoardLocator');
     const centerLocator = locators.find(v => binField(v, 'name') === 'BoardCenterLocator');
     const matrix = locator && binField(locator, 'transform');
-    // Locator-only placement is a legacy estimate, not recovered cell centres.
-    // For the base arena, fit both full envelopes to actual ground/wall sections.
+    // Default and extra boards: place from BoardLocator (first cell) and BoardCenterLocator (56-cell average).
     scene.locators = locators;
     if(!matrix || !centerLocator)throw new Error('missing-board-grid-locators');
     scene.alignment = boardAlignment(matrix.slice(12,15),binField(centerLocator,'transform').slice(12,15));
-    if (pick.key === 'board-default') {
-      const center = binField(centerLocator, 'transform').slice(12,15);
-      scene.alignment = alignBoardGroundXZ(scene.alignment, {
-        x: boardGroundSpan(geometry, center, 'x'), z: boardGroundSpan(geometry, center),
-      }, scene.grid.columns, scene.grid.rows);
-    }
     report.alignment = scene.alignment;
 
     const propObjects = nestedBoardObjects(entries, 'MapAnimatedProp');
