@@ -50,7 +50,7 @@ describe('approved carousel champion composition (2026-10-29)', () => {
         const items = Number(roundId[0]) >= 5
             ? Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'completed').sort() : COMPONENT_IDS;
         const totals = [0, 0, 0, 0, 0, 0];
-        let sixCostGroups = 0;
+        let sixCostGroups = 0, extraSpatOrPan = 0;
         for (let seed = 0; seed < 1000; seed++) {
             const initial = seedFor(seed), words = wordsFor(initial), carousel = create(pool, roundId, initial);
             const lateSix = Math.floor(words[24] * 10000 / 4294967296) < 2000;
@@ -61,8 +61,18 @@ describe('approved carousel champion composition (2026-10-29)', () => {
             if (actual[5]) sixCostGroups++;
             expect(carousel.rngBefore.state).toBe(initial);
             expect(carousel.rngAfter.state).toBe(words[26]);
-            expect(carousel.slots.map(s => s.itemId)).toEqual(Array.from({ length: 9 }, (_, i) =>
-                items[Math.floor(words[i * 3 + 2] * items.length / 4294967296)]));
+            if (Number(roundId[0]) >= 5) {
+                expect(carousel.slots.map(s => s.itemId)).toEqual(Array.from({ length: 9 }, (_, i) =>
+                    items[Math.floor(words[i * 3 + 2] * items.length / 4294967296)]));
+            } else {
+                const ids = carousel.slots.map(s => s.itemId);
+                for (const component of COMPONENT_IDS) expect(ids).toContain(component);
+                const rest = [...ids];
+                for (const component of COMPONENT_IDS) rest.splice(rest.indexOf(component), 1);
+                expect(rest).toHaveLength(1);
+                expect([...COMPONENT_IDS, 'spatula', 'frying-pan']).toContain(rest[0]);
+                if (rest[0] === 'spatula' || rest[0] === 'frying-pan') extraSpatOrPan++;
+            }
             expect(listCarouselSlots(carousel).map(s => s.starLevel)).toEqual(Array(9).fill(1));
             if (seed < 10) {
                 expect(create(pool, roundId, initial)).toEqual(carousel);
@@ -75,7 +85,10 @@ describe('approved carousel champion composition (2026-10-29)', () => {
             assertSharedPoolConservation(carousel.pool, [state]);
         }
         expect(pool).toEqual(before);
-        console.info(JSON.stringify({ roundId, seeds: 1000, totals, sixCostGroups }));
+        // Approved 2026-11-02 (14.24 map22 CarouselItemPercentages): Spatula/Frying Pan extra 12% at 2-4/4-4, 15% at 3-4.
+        const spatTarget = roundId === '3-4' ? 150 : Number(roundId[0]) >= 5 ? 0 : 120;
+        expect(Math.abs(extraSpatOrPan - spatTarget)).toBeLessThanOrEqual(40);
+        console.info(JSON.stringify({ roundId, seeds: 1000, totals, sixCostGroups, extraSpatOrPan }));
     });
 
     it.each([[6, 2000], [7, 5000], [8, 10000], [9, 10000], [20, 10000]])(
