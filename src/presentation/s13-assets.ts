@@ -6,7 +6,8 @@
 import type Phaser from 'phaser';
 import { S13_ASSETS, type S13Asset } from './s13-asset-manifest';
 import { heroEmblemSvg } from './hero-identity';
-import { g23ChampionAssets, g23IconUrl } from './g23-display';
+import { g23ChampionAssets, g23IconUrl, lootEntry } from './g23-display';
+import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import { EMBLEM_ITEMS } from '../simulation/content/emblems';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { neutralPortrait, neutralPortraitAssets, neutralPortraitPath } from './s13-neutral-assets';
@@ -48,10 +49,13 @@ export function registerRootUiAssets(base: string, manifest: unknown): boolean {
   const assets = (manifest as { assets?: unknown } | null)?.assets;
   if (!Array.isArray(assets)) return false;
   for (const entry of assets as { kind?: unknown; id?: unknown; path?: unknown }[]) {
-    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment' && entry?.kind !== 'ability' && entry?.kind !== 'item') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
+    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment' && entry?.kind !== 'ability' && entry?.kind !== 'item' && entry?.kind !== 'consumable') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
       || !/^[\w-]+(\/[\w.-]+)*$/.test(entry.path) || entry.path.split('/').includes('..')) continue;
     // Item art only fills content items the bundle has no icon for (静止法衣 and the other G2-4b mechanism items); a bundled icon always wins.
     if (entry.kind === 'item' && (!Object.hasOwn(ITEM_DEFINITIONS, entry.id) || s13AssetUrl('item', entry.id))) continue;
+    // Tool art likewise only fills consumables the bundle has no icon for (英雄复制器 TFT_Consumable_NeekosHelp).
+    if (entry.kind === 'consumable' && (!Object.hasOwn(CONSUMABLE_DEFINITIONS, entry.id)
+      || lootEntry(CONSUMABLE_DEFINITIONS[entry.id as keyof typeof CONSUMABLE_DEFINITIONS].apiName)?.iconUrl)) continue;
     rootAssets.set(`${entry.kind}:${entry.id}`, new URL(entry.path, base).href);
   }
   return true;
@@ -59,6 +63,8 @@ export function registerRootUiAssets(base: string, manifest: unknown): boolean {
 
 /** An augment icon carried by the asset root (augments missing from the bundled manifest), or null. */
 export const rootAugmentIconUrl = (id: string): string | null => rootAssets.get(`augment:${id}`) ?? null;
+/** A consumable (tool) icon carried by the asset root for tools without a bundled icon, by content id, or null. */
+export const rootConsumableIconUrl = (id: string): string | null => rootAssets.get(`consumable:${id}`) ?? null;
 /** Ability art is supplied only by the optional deployed root. */
 export const abilityIconUrl = (id: string): string | null => rootAssets.get(`ability:${id}`) ?? null;
 

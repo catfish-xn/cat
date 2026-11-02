@@ -1,10 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
+import type { MatchState } from '../src/simulation/match-types';
 import { G23_CONQUEROR_CHESTS } from '../src/simulation/content/g2-3-policy';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { toDisplayMatch, type DisplayMatch } from '../src/rendering/online/seat-view-adapter';
-import { conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime, traitCardBody } from '../src/rendering/trait-column';
+import { boardTraitRows, conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime, renderTraitRows, traitCardBody } from '../src/rendering/trait-column';
 import { activateFamily, familyDisplay } from '../src/simulation/family-heist';
 import { g23RewardLines } from '../src/presentation/g23-reward-text';
 import { G23_BLACK_MARKETS } from '../src/simulation/content/g2-3-policy';
@@ -43,16 +44,54 @@ it('shows nothing without G2-3 progress', () => {
   expect(g23TraitRuntime({ ...createMatch(7), seatMechanics: undefined })).toBeUndefined();
 });
 
-it('gives the 3D chest and flask the same counters, only once gathered (or the trait is fielded)', () => {
+/** My board holds exactly these heroes (one-star, row 4), so the trait rows count them and nothing else. */
+const field = (state: MatchState, heroes: readonly string[]): MatchState => ({ ...state, items: [], preparation: { ...state.preparation,
+  units: heroes.map((definitionId, i) => ({ id: `field-${i + 1}`, definitionId, team: 'player' as const, starLevel: 1 as const, location: { kind: 'board' as const, cell: { col: i, row: 4 } } })) } });
+const CONQUERORS = ['darius', 'draven'], CHEM_BARONS = ['singed', 'renata', 'renni'];
+
+it('gives the 2D/3D standard and the 3D flask the same counters, only while the trait is active', () => {
   expect(g23BoardMechanics(createMatch(7))).toBeUndefined();
   const first = G23_CONQUEROR_CHESTS[0]!.threshold, second = G23_CONQUEROR_CHESTS[1]!.threshold;
-  expect(g23BoardMechanics(withProgress(5, 1, 0))).toEqual({ conquest: { stacks: 5, opened: 1, from: first, next: second } });
-  expect(g23BoardMechanics(withProgress(0, 0, 230))).toEqual({ shimmer: { value: 230, next: 300, offer: false } });
-  expect(g23BoardMechanics(withProgress(900, 15, 800))).toEqual({ conquest: { stacks: 900, opened: 15, from: G23_CONQUEROR_CHESTS[14]!.threshold, next: null },
+  // Gathered stacks, 微光 or a waiting black market show nothing without the trait active.
+  expect(g23BoardMechanics(withProgress(5, 1, 0))).toBeUndefined();
+  expect(g23BoardMechanics(withProgress(0, 0, 230))).toBeUndefined();
+  const offered = withProgress(0, 0, 100), op = readG23Progress(offered)!;
+  const withOffer = writeG23Progress(offered, { ...op, chem: { ...op.chem, offer: {} as never } });
+  expect(g23BoardMechanics(withOffer)).toBeUndefined();
+  // One fielded Conqueror and two Chem-Barons are below their first breakpoints (2 and 3): still nothing.
+  expect(g23BoardMechanics(field(withProgress(5, 1, 230), [CONQUERORS[0]!, ...CHEM_BARONS.slice(0, 2)]))).toBeUndefined();
+  // Active traits show their counters.
+  expect(g23BoardMechanics(field(withProgress(5, 1, 0), CONQUERORS))).toEqual({ conquest: { stacks: 5, opened: 1, from: first, next: second } });
+  expect(g23BoardMechanics(field(withProgress(0, 0, 230), CHEM_BARONS))).toEqual({ shimmer: { value: 230, next: 300, offer: false } });
+  expect(g23BoardMechanics(field(withProgress(900, 15, 800), [...CONQUERORS, ...CHEM_BARONS]))).toEqual({ conquest: { stacks: 900, opened: 15, from: G23_CONQUEROR_CHESTS[14]!.threshold, next: null },
     shimmer: { value: 800, next: null, offer: false } });
-  const state = withProgress(0, 0, 100), p = readG23Progress(state)!;
-  expect(g23BoardMechanics(writeG23Progress(state, { ...p, chem: { ...p.chem, offer: {} as never } }))?.shimmer?.offer).toBe(true);
-  expect(g23BoardMechanics(toDisplayMatch(toPrivateSeatView(withProgress(12, 2, 75)) as never))).toEqual(g23BoardMechanics(withProgress(12, 2, 75)));
+  expect(g23BoardMechanics(field(withOffer, CHEM_BARONS))?.shimmer?.offer).toBe(true);
+  // Only one active: the other part stays hidden.
+  expect(g23BoardMechanics(field(withProgress(12, 1, 75), [...CONQUERORS, CHEM_BARONS[0]!]))).toEqual({ conquest: { stacks: 12, opened: 1, from: first, next: second } });
+  const both = field(withProgress(12, 2, 75), [...CONQUERORS, ...CHEM_BARONS]);
+  expect(g23BoardMechanics(both)).toMatchObject({ conquest: { stacks: 12 }, shimmer: { value: 75 } });
+  expect(g23BoardMechanics(toDisplayMatch(toPrivateSeatView(both) as never))).toEqual(g23BoardMechanics(both));
+});
+
+it('puts the counter line only on an active trait row; the hover card keeps it', () => {
+  class Node {
+    children: Node[] = []; dataset: Record<string, string> = {}; textContent = ''; className = ''; tabIndex = 0;
+
+    append(...nodes: Node[]) { this.children.push(...nodes); }
+    insertAdjacentHTML() {}
+    setAttribute() {}
+  }
+  vi.stubGlobal('document', { createElement: () => new Node() });
+  const runtime = (state: MatchState) => {
+    const rows = boardTraitRows(state.preparation, state.items), list = renderTraitRows(rows, 'traits', '', g23TraitRuntime(state)) as unknown as Node;
+    return (traitId: string) => list.children.find(n => n.dataset.trait === traitId)!.children.filter(n => n.className === 'trait-runtime').map(n => n.textContent);
+  };
+  const inactive = runtime(field(withProgress(5, 1, 40), [CONQUERORS[0]!, CHEM_BARONS[0]!]));
+  expect(inactive('conqueror')).toEqual([]);
+  expect(inactive('chem-baron')).toEqual([]);
+  const active = runtime(field(withProgress(5, 1, 40), [...CONQUERORS, ...CHEM_BARONS]));
+  expect(active('conqueror')).toEqual([`征服层数 5/${G23_CONQUEROR_CHESTS[1]!.threshold}`]);
+  expect(active('chem-baron')).toEqual(['微光 40/100']);
 });
 
 it('ladders the 15 chests: opened, the next with the stacks still missing, then later ones', () => {
