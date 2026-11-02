@@ -1470,7 +1470,7 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
 /* 3D augment cards: the extra notes sit under a rule in a smaller face; the lettered badge (inline 56px) fills the 112px icon slot. */
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: 12px; padding-top: 8px; border-top: 1px solid #ffffff1f;
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: auto; width: 100%; padding-top: 8px; border-top: 1px solid #ffffff1f;
   font-size: 12px; line-height: 1.5; color: #93a8b4; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra-line { display: block; white-space: normal; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-badge { width: 112px !important; height: 112px !important; font-size: 56px !important; }
