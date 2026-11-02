@@ -107,22 +107,24 @@ describe('terminal orb server integration', () => {
           .toEqual({ ok: false, state: before, reason: 'wrong-phase' });
       } else expect(before.pendingCombatTerminal!.neutralReceipts!.deaths.some(d => d.tick === before.pendingCombatTerminal!.tick)).toBe(true);
       expect(room.handle('s0', { type: 'claimOrb', round, orbId: orb.orbId })).toMatchObject({ ok: true });
+      // TFT: an orb claimed in the terminal gap opens at once (every entry receipted), before the settlement.
       const queued = room.state.seats[0].match;
-      expect(queued.items).toEqual(before.items);
-      expect(queued.m8.loot.receipts).toEqual(before.m8.loot.receipts);
+      const opened = (state: typeof queued) => state.m8.loot.receipts.filter(r => JSON.parse(r.dropId)[0] === orb.orbId);
+      expect(opened(before)).toEqual([]);
+      expect(opened(queued)).toHaveLength(orb.entries.length);
       expect(() => validateMultiplayerOrbLedger(queued)).not.toThrow();
       expect(() => validateB8Loot(queued)).not.toThrow();
       const restored = restoreSharedOrbSnapshot(room.state.pool, json(queued), room.augmentHistoryAuthority('s0'));
       expect(toSeatPrivateView(restored)).toEqual(toSeatPrivateView(queued));
       room.setConnected('s0', false); room.setConnected('s0', true);
-      expect(toSeatPrivateView(room.state.seats[0].match).unclaimedOrbs!.find(o => o.orbId === orb.orbId)?.queued).toBe(true);
+      expect(toSeatPrivateView(room.state.seats[0].match).unclaimedOrbs!.some(o => o.orbId === orb.orbId)).toBe(false);
       expect(room.handle('s0', { type: 'claimOrb', round, orbId: orb.orbId })).toMatchObject({ ok: false });
       runUntil(room, clock, s => s.settlements.length === round, 20_000);
       expect(room.state.fault).toBeNull();
       const paid = room.state.seats[0].match;
       const entries = paid.m8.loot.frozen.rounds.flatMap(r => r.orbs).find(o => o.orbId === orb.orbId)!.entries;
       for (const entry of entries) expect(paid.m8.loot.receipts.filter(r => r.dropId === entry.dropId)).toHaveLength(1);
-      expect(paid.m8.loot.queuedOrbClaims).toEqual([]);
+      expect(paid.m8.loot.queuedOrbClaims ?? []).toEqual([]);
       expect(paid).not.toHaveProperty('pendingCombatTerminal');
       expect(json(toCombatReplayFor(room.state, 's0')!.replay)).toBe(json({ initial: stream.initial, ticks: stream.ticks, terminal: stream.terminal }));
       const check = startReplaySpotCheck(room.state.battles, round, true, room.state.battleSeeds)!;

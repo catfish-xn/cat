@@ -51,10 +51,12 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
     state=accepted(lockMatchCombatRoster(state));
     const before=state;
     for(const orb of giftOrbs){
-      const queued=claimOrb(state,orb.orbId,state.round);if(!queued.ok)throw Error(queued.reason);state=queued.state;
+      const opened=claimOrb(state,orb.orbId,state.round);if(!opened.ok)throw Error(opened.reason);state=opened.state;
     }
-    expect(state.preparation).toBe(before.preparation);expect(state.gold).toBe(before.gold);
-    expect(toPrivateSeatView(state).unclaimedOrbs!.filter(o=>o.queued)).toHaveLength(2);
+    // TFT: claimed during the locked battle, each gift orb opens at once onto the bench; the fighting board is untouched.
+    expect(state.preparation.units.filter(u=>u.location.kind==='board')).toEqual(before.preparation.units.filter(u=>u.location.kind==='board'));
+    expect(state.preparation.units.length).toBe(before.preparation.units.length+2);
+    expect(toPrivateSeatView(state).unclaimedOrbs!.filter(o=>o.source==='mechanic')).toEqual([]);
   }
   const battle=resolveTwoSidedBattle(compileBattle(a,b,42,{battleId:'d11:'+id}),1201);
   const owner=battle.initial.units.find(u=>u.id===battle.mapping.find(m=>m.seatId==='A'&&m.kind==='unit'&&m.originalId==='unit-1')!.combatId)!;
@@ -79,7 +81,7 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
   const committed=applyRoundSettlement(state,receipt);if(!committed.ok)throw Error(committed.reason);
   expect(committed.state.multiplayer!.receipts.at(-1)?.g23Facts).toEqual(proposal.g23Facts);
   if(giftOrbs.length){
-    expect(committed.state.m8.loot.queuedOrbClaims).toEqual([]);
+    expect(committed.state.m8.loot.queuedOrbClaims??[]).toEqual([]);
     // reachRound seed 7 already holds 6 PvE orb claims before 2-1: 1-2 vest, 2 gold, reforger; 1-3 bow, powder, trundle.
     // The two d11-fill claims are added on that route, so the view length is 8.
     const claims = toPrivateSeatView(committed.state).orbClaimReceipts!;

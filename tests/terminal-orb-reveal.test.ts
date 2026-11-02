@@ -128,10 +128,13 @@ describe('terminal orb rule boundary', () => {
     const orb = readLootView(revealed.state).unclaimedOrbs!.find(o => !previous.has(o.orbId)
       && plans.find(p => p.orbId === o.orbId)!.entries.some(e => e.payload.kind === 'item'))!;
     expect(orb).toBeDefined();
+    // TFT: an orb claimed before the settlement opens at once; the settlement pays nothing of it again.
     const queued = accept(runSharedMatchCommand(pool, revealed.state, { type: 'claimOrb', round: before.round, orbId: orb.orbId }));
     valid(queued.state);
-    expect(queued.state.items).toEqual(before.items);
-    expect(queued.state.m8.loot.receipts).toEqual(before.m8.loot.receipts);
+    expect(queued.state.m8.loot.queuedOrbClaims ?? []).toEqual([]);
+    const opened = queued.state.m8.loot.receipts.filter(r => JSON.parse(r.dropId)[0] === orb.orbId);
+    expect(opened).toHaveLength(plans.find(p => p.orbId === orb.orbId)!.entries.length);
+    expect(queued.state.items.length).toBeGreaterThan(before.items.length);
     const restored = restoreSharedOrbSnapshot(queued.pool, json(queued.state));
     expect(json(restored)).toBe(json(queued.state));
     const settle = (state: MatchState) => accept(runSharedMatchCommand(queued.pool, state, { type: 'settleCombatStream', terminal }));
@@ -147,7 +150,7 @@ describe('terminal orb rule boundary', () => {
       if (entry.payload.kind === 'item') expect(receipts[0].grantedItemIds).toHaveLength(entry.payload.quantity);
       for (const id of receipts[0].grantedItemIds) expect(paid.state.items.filter(i => i.id === id)).toHaveLength(1);
     }
-    expect(paid.state.m8.loot.queuedOrbClaims).toEqual([]);
+    expect(paid.state.m8.loot.queuedOrbClaims ?? []).toEqual([]);
     expect(runSharedMatchCommand(paid.pool, paid.state, { type: 'claimOrb', round: before.round, orbId: orb.orbId })).toMatchObject({ ok: false, reason: 'already-claimed' });
     expect(runSharedMatchCommand(paid.pool, paid.state, { type: 'settleCombatStream', terminal })).toMatchObject({ ok: false, state: paid.state });
   });
