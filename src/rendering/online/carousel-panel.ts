@@ -128,7 +128,10 @@ export class CarouselPanel {
     back.title = '回到选秀盘（空格）'; back.append(element('kbd', '空格'));
     back.addEventListener('click', () => this.setSide('carousel'));
     this.bar.append(element('strong', '选秀', 'carousel-bar-title'), this.barTimer, element('span', '秒', 'carousel-timer-unit'), this.barStatus, back);
-    host.append(this.root, this.bar);
+    // S13: in 3D the shop folds to a tab at the bottom while drafting (nothing can be bought on the carousel).
+    const shopTab = element('div', '', 'carousel-shop-tab'); shopTab.dataset.debug = 'online:carousel-shop-tab';
+    shopTab.setAttribute('aria-disabled', 'true'); shopTab.title = '选秀中商店不可用';
+    host.append(this.root, this.bar, shopTab);
     this.detach = attachCarouselCards(this.root);
     document.addEventListener('keydown', this.onKey);
   }
@@ -191,7 +194,7 @@ export class CarouselPanel {
   elapsedNow(): number | null { return this.view ? performance.now() - this.clockOffset - this.view.startedAt : null; }
   /** My click still waiting for the server's answer, if any. */
   get pendingSlot(): number | null { return this.pending; }
-  /** True while the 3D layer draws the carousel: the panel keeps its head, countdown and release order but not the ring. */
+  /** True while the 3D layer draws the carousel: as in S13 only the stage bar's countdown stays; the panel keeps just the way to my board. */
   set drawnIn3d(on: boolean) { this.root.toggleAttribute('data-ring-3d', on); }
   private chip(slot: number): HTMLButtonElement | null {
     return this.ring.querySelector<HTMLButtonElement>(`.carousel-slot[data-slot="${slot}"]`);

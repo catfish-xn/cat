@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, RingGeometry, Sprite, Texture, Vector3, type Object3D } from 'three';
+import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, RingGeometry, Sprite, Texture, Vector3, type Object3D } from 'three';
 import { CAROUSEL_CELL, LEGEND_RADIUS, ORBIT_SECONDS, RUN_CELLS, UNIT_RADIUS, createCarouselStage, type CarouselStageContext } from '../src/rendering/three-mode/carousel-stage';
 import {
   boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, subscribeBoardFeed, boardFeed,
@@ -76,12 +76,15 @@ describe('3D carousel stage', () => {
     expect(timers.every(timer => timer.visible && timer.userData.fraction === 1)).toBe(true);
   });
 
-  it('keeps server pickup contact at the same radius without foot rings and never chases a pending unit', () => {
+  it('keeps server pickup contact at the same radius with only the cost quality ring underfoot and never chases a pending unit', () => {
     const { stage, tick } = setup();
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, i) => slot(i, { takable: true, pending: i === 0 })) }));
     const holder = stage.scene.getObjectByName('render3d-carousel-units')!.children[0]!;
-    holder.traverse(child => expect((child as Mesh).geometry).not.toBeInstanceOf(RingGeometry));
-    expect((holder.getObjectByName('render3d-carousel-quality') as Sprite).visible).toBe(true);
+    // The S13 quality ring (its stand-in here) is the only ring; there is no interaction or pickup ring.
+    const rings: Object3D[] = [];
+    holder.traverse(child => { if ((child as Mesh).geometry instanceof RingGeometry) rings.push(child); });
+    expect(rings.map(ring => ring.name)).toEqual(['render3d-carousel-tier']);
+    expect((holder.getObjectByName('render3d-carousel-inspect') as Sprite).visible).toBe(true);
     const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, position = mine.position.clone();
     tick(4000); stage.update(4);
     expect(mine.position.equals(position)).toBe(true);
@@ -141,10 +144,12 @@ describe('3D carousel stage', () => {
     stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { pending: index === 4 })) }));
     expect(stage.debug().units.find(unit => unit.slot === 4)!.cue).toBe('pending');
     expect(holders[4].position.y).toBe(floor + 10);
-    expect((holders[4].getObjectByName('render3d-carousel-quality') as Sprite).material.opacity).toBe(1);
+    const badge = holders[4].getObjectByName('render3d-carousel-inspect') as Sprite;
+    expect(`#${badge.material.color.getHexString()}`).toBe('#e6bc76'); // the selected badge stand-in
     stage.show(carousel()); // refusal clears the pending lift
     expect(holders[4].position.y).toBe(floor);
-    expect((holders[4].getObjectByName('render3d-carousel-quality') as Sprite).visible).toBe(false);
+    expect(`#${badge.material.color.getHexString()}`).toBe('#1b2b30'); // unavailable
+    expect(badge.visible).toBe(true);
     stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
     await flush();
     expect(stage.debug().units.find(unit => unit.slot === 4)!.cue).toBe('none');
@@ -162,7 +167,8 @@ describe('3D carousel stage', () => {
     expect(restraint.every(entry => entry.seconds <= 1.2)).toBe(true);
     expect(effects.some(entry => entry.id === 'carousel-shareddraft-firstdraftwall-galaxy')).toBe(true);
     expect(effects.some(entry => entry.id === 'carousel-shareddraft-playerindicator')).toBe(true);
-    expect(effects.some(entry => /timer|beam|crystal|unittier/.test(entry.id))).toBe(false);
+    expect(effects.some(entry => /timer|beam|crystal/.test(entry.id))).toBe(false);
+    expect(effects.filter(entry => entry.id.startsWith('carousel-shareddraft-unittier'))).toHaveLength(9); // one quality ring per unit
     // My batch is released: my restraint and the wall end, its fade plays once.
     stage.show(carousel({ seats: seats(true).map(seat => seat.me ? { ...seat, releaseAtMs: 0 } : seat) }));
     await flush();
@@ -172,29 +178,61 @@ describe('3D carousel stage', () => {
     expect(stage.debug().legends.filter(entry => entry.endsWith(':locked'))).toHaveLength(7);
   });
 
-  it('replaces looping foot effects with overhead cost marks and releases those marks with their units', async () => {
+  it('plays each unit\'s cost quality ring at its feet under the original badge and item frame, and ends them with the unit', async () => {
     const effects: { id: string; fx: ReturnType<typeof fakeEffect> }[] = [];
     const { stage } = setup({ loadEffect: id => { const fx = fakeEffect(); effects.push({ id, fx }); return Promise.resolve(fx); } });
-    const costs = [1, 2, 3, 4, 5, 9, 0];
+    const costs = [1, 2, 3, 4, 5, 6, 9, 0];
     const slots = costs.map((cost, index) => slot(index, cost ? { cost } : {}));
     stage.show(carousel({ slots }));
     await flush();
-    expect(effects.filter(entry => entry.id.startsWith('carousel-shareddraft-unittier'))).toEqual([]);
+    const tiers = effects.filter(entry => entry.id.startsWith('carousel-shareddraft-unittier'));
+    expect(tiers.map(entry => entry.id)).toEqual(['1', '2', '3', '4', '5', '6', '6', '1'].map(tier => `carousel-shareddraft-unittier${tier}`));
     const holders = stage.scene.getObjectByName('render3d-carousel-units')!.children;
-    const marks = holders.map(holder => holder.getObjectByName('render3d-carousel-quality') as Sprite);
-    expect(marks).toHaveLength(costs.length);
-    marks.forEach((mark, index) => {
-      expect(mark.parent).toBe(holders[index]);
-      expect(mark.position.y).toBeGreaterThan(92);
-      expect(mark.visible).toBe(costs[index] > 0);
-      holders[index].traverse(child => expect((child as Mesh).geometry).not.toBeInstanceOf(RingGeometry));
+    tiers.forEach((entry, index) => {
+      expect(entry.fx.object.parent).toBe(holders[index]); // turns with its unit
+      expect(entry.fx.object.position.y).toBeLessThan(5);
     });
-    const disposed = marks.map(mark => vi.spyOn(mark.material, 'dispose'));
+    const badges = holders.map(holder => holder.getObjectByName('render3d-carousel-inspect') as Sprite);
+    badges.forEach((badge, index) => {
+      const frame = holders[index].getObjectByName('render3d-carousel-item-frame') as Sprite;
+      const item = holders[index].getObjectByName(`render3d-carousel-item-item-${index}`) as Sprite;
+      expect(frame.position.y).toBe(item.position.y);
+      expect(item.position.y).toBeGreaterThan(92);
+      expect(badge.position.y).toBeGreaterThan(item.position.y); // the eye sits over the item
+    });
+    expect(stage.scene.getObjectByName('render3d-carousel-quality')).toBeUndefined();
+    expect(stage.scene.getObjectByName('render3d-original-stars')).toBeUndefined();
+    const disposed = badges.map(badge => vi.spyOn(badge.material, 'dispose'));
     stage.show(carousel({ slots: slots.filter(entry => entry.slot !== 2) }));
     expect(disposed[2]).toHaveBeenCalledTimes(1);
     expect(disposed.filter(spy => spy.mock.calls.length)).toHaveLength(1);
+    expect(tiers[2]!.fx.disposed).toBe(true);
+    expect(tiers.filter(entry => entry.fx.disposed)).toHaveLength(1);
     stage.dispose();
     disposed.forEach(spy => expect(spy).toHaveBeenCalledTimes(1));
+    expect(tiers.every(entry => entry.fx.disposed)).toBe(true);
+  });
+
+  it('paints the original inspect badge states and item frame from the UI sidecar when it is ready', () => {
+    const canvas = (name: string) => ({ id: name, width: 48, height: 42 }) as unknown as HTMLCanvasElement;
+    const ready = new Map<string, HTMLCanvasElement>();
+    let listener: () => void = () => {};
+    const ui = { sprite: (id: string) => ready.has(id) ? { source: ready.get(id)!, url: `blob:${id}`, width: 48, height: 42, dispose() {} } : undefined,
+      subscribe: (next: () => void) => { listener = next; return () => { listener = () => {}; }; } };
+    const { stage } = setup({ ui });
+    stage.show(carousel({ slots: [slot(0, { takable: true }), slot(1)] }));
+    const holders = stage.scene.getObjectByName('render3d-carousel-units')!.children;
+    const badge = (index: number) => holders[index].getObjectByName('render3d-carousel-inspect') as Sprite;
+    expect(badge(0).material.map).toBeNull(); // stand-in until the sidecar arrives
+    for (const id of ['carousel.inspect', 'carousel.inspect.hover', 'carousel.inspect.disabled', 'item.frame']) ready.set(id, canvas(id));
+    listener();
+    const source = (sprite: Sprite) => (sprite.material.map?.image as HTMLCanvasElement | undefined)?.id;
+    expect(source(badge(0))).toBe('carousel.inspect');
+    expect(source(badge(1))).toBe('carousel.inspect.disabled');
+    expect(source(holders[0].getObjectByName('render3d-carousel-item-frame') as Sprite)).toBe('item.frame');
+    stage.hover(0);
+    expect(source(badge(0))).toBe('carousel.inspect.hover');
+    stage.dispose();
   });
   it('loads the platform as one group at the shared scale, keeps the skybox as scenery, and stands legends on the cradle surface', async () => {
     const leases = new Map<string, ReturnType<typeof fakeLease>>();
@@ -379,26 +417,25 @@ describe('3D carousel stage', () => {
     }
   });
 
-  it('keeps cost colors overhead, dims unavailable units and hides the mark on a confirmed take', () => {
+  it('colors the stand-in quality ring by cost, dims unavailable badges and hides badge, frame and ring on a confirmed take', () => {
     const colors: Record<number, string> = { 1: '#808080', 2: '#11aa44', 3: '#2277ee', 4: '#aa33cc', 5: '#ffbb22' };
     const { stage } = setup({ costColor: cost => colors[cost]! });
     const slots = Array.from({ length: 9 }, (_, index) => slot(index, { cost: index % 5 + 1 }));
     stage.show(carousel({ slots }));
-    const marks = () => stage.scene.getObjectByName('render3d-carousel-units')!.children
-      .map(unit => unit.getObjectByName('render3d-carousel-quality') as Sprite);
-    expect(marks().map(mark => `#${mark.material.color.getHexString()}`)).toEqual(slots.map(slot => colors[slot.cost!]));
-    expect(marks().every(mark => mark.visible && mark.position.y > 92 && mark.material.opacity === 0.35)).toBe(true);
-    expect(stage.scene.getObjectByName('render3d-carousel-cost')).toBeUndefined();
-    const { stage: bare } = setup();
-    bare.show(carousel());
-    expect((bare.scene.getObjectByName('render3d-carousel-quality') as Sprite).visible).toBe(false);
+    const units = () => stage.scene.getObjectByName('render3d-carousel-units')!.children;
+    const ring = (unit: Object3D) => unit.getObjectByName('render3d-carousel-tier') as Mesh<RingGeometry, MeshStandardMaterial>;
+    expect(units().map(unit => `#${ring(unit).material.color.getHexString()}`)).toEqual(slots.map(slot => colors[slot.cost!]));
+    const badges = () => units().map(unit => unit.getObjectByName('render3d-carousel-inspect') as Sprite);
+    expect(badges().every(badge => badge.visible && `#${badge.material.color.getHexString()}` === '#1b2b30')).toBe(true);
     stage.show(carousel({ slots: slots.map(entry => ({ ...entry, takable: true })) }));
-    expect(marks().every(mark => mark.material.opacity === 1)).toBe(true);
+    expect(badges().every(badge => `#${badge.material.color.getHexString()}` === '#2f7b7f')).toBe(true);
     stage.show(carousel({ slots: slots.map(entry => ({ ...entry, pickedBy: entry.slot === 4 ? 's5' : null })) }));
-    const taken = stage.scene.getObjectByName('render3d-carousel-taken')!.getObjectByName('render3d-carousel-quality')!;
-    expect(taken.visible).toBe(false);
-    expect(stage.scene.getObjectByName('render3d-carousel-cost')).toBeUndefined();
-    stage.dispose(); bare.dispose();
+    const taken = stage.scene.getObjectByName('render3d-carousel-taken')!;
+    expect(taken.getObjectByName('render3d-carousel-inspect')!.visible).toBe(false);
+    expect(taken.getObjectByName('render3d-carousel-item-frame')!.visible).toBe(false);
+    expect(taken.getObjectByName('render3d-carousel-tier')).toBeUndefined();
+    expect(stage.debug().effects.filter(entry => entry.startsWith('carousel-shareddraft-unittier'))).toHaveLength(8);
+    stage.dispose();
   });
 
   it('attaches a confirmed pick without pulling the legend toward it or sending it home', () => {
