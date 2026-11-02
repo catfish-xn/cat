@@ -43,14 +43,16 @@ body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augm
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .choice-cards { gap: 3vw; margin: 3dvh 0 2dvh; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-slot { gap: 14px; justify-items: center; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-slot > button:first-child, body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .choice-cards > button {
-  width: 100%; min-height: min(56dvh, 500px); padding: 6dvh 20px 20px; border: 2px solid var(--aug-edge); border-radius: 6px; color: #c8d6dc; font-size: 15px; line-height: 1.6;
+  width: 100%; min-height: min(56dvh, 500px); padding: 7dvh 20px 20px; border: 2px solid var(--aug-edge); border-radius: 6px; color: #c8d6dc; font-size: 15px; line-height: 1.6;
   background: radial-gradient(ellipse at 50% 18%, #2a3d4f, #0d1720 70%); box-shadow: 0 8px 30px #000c, inset 0 0 24px #0008; transition: transform .12s, box-shadow .12s; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; white-space: normal; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-augment-tier="prismatic"] :is(.augment-slot > button:first-child, .choice-cards > button) { border-image: linear-gradient(160deg, #ff7ad9, #7af0ff, #ffe27a, #d58cff) 1; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] :is(.augment-slot > button:first-child, .choice-cards > button):is(:hover, :focus-visible) {
   transform: translateY(-4px); box-shadow: 0 10px 34px #000c, 0 0 18px color-mix(in srgb, var(--aug-edge) 55%, transparent), inset 0 0 24px #0008; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-name { display: block; margin-bottom: 10px; font-size: 22px; color: #f0e6d2; }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: -1.6em; }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-icon { width: 112px; height: 112px; margin: 0 auto 4dvh; border-radius: 16px; box-shadow: 0 0 0 2px var(--aug-edge), 0 0 22px color-mix(in srgb, var(--aug-edge) 45%, transparent); }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: 0; white-space: normal; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-icon { flex: none; width: 112px; height: 112px; margin: 0 0 3dvh; border-radius: 16px; box-shadow: 0 0 0 2px var(--aug-edge), 0 0 22px color-mix(in srgb, var(--aug-edge) 45%, transparent); }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { box-sizing: border-box; width: auto; min-width: 0; height: clamp(44px, 5.6dvh, 60px); min-height: 44px; aspect-ratio: 118 / 60; padding: 0 6px; border: 1px solid #785a28; border-radius: 999px; background: #0b151fe6; color: #f0e6d2; font-size: 13px; line-height: 1; white-space: nowrap; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll:disabled { opacity: .45; }
