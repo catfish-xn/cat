@@ -12,7 +12,8 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { readEconomyPreview, readProjectedAnomalyTargetIds, readRevealedLoot, readSixCostBps } from './online/seat-view-adapter';
+import { readEconomyPreview, readFreeRerollsAvailable, readProjectedAnomalyTargetIds, readRevealedLoot, readSixCostBps } from './online/seat-view-adapter';
+import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { economyIncomeText } from './online/economy-hint';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
@@ -677,6 +678,8 @@ export class StrategyPanel {
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
     const labels: Record<ControlName, string> = { reroll: 'D · 刷新 2', 'buy-xp': 'F · 经验 4', sell: 'E · 出售', 'start-combat': state.phase === 'combat' ? '战斗进行中…' : state.phase === 'choice' ? '请先完成选择' : round.kind === 'supply' ? '领取补给' : '开始战斗', continue: '继续', 'new-match': '新局' };
+    // Online reads only the projected count; an unknown count shows the plain price.
+    const freeRerolls = (online ? readFreeRerollsAvailable(state) : freeRerollsAvailable(state)) ?? 0;
     const actions = element('div', '', 'action-bar');
     const controlButton = (name: ControlName, className: string) => {
       const button = this.button(`mobile:${name}`, labels[name], () => {
@@ -695,6 +698,11 @@ export class StrategyPanel {
         this.actions.control(name);
       });
       button.classList.add(className);
+      // As in TFT, a free reroll prices at 0, the button gets a pale cyan rim and a small count of the free rerolls left.
+      if (name === 'reroll' && freeRerolls > 0) {
+        button.textContent = 'D · 刷新 0'; button.append(element('span', String(freeRerolls), 'reroll-free-count'));
+        button.dataset.freeRerolls = String(freeRerolls); button.title = `免费刷新 · 剩 ${freeRerolls} 次`;
+      }
       if (name === primary && state.phase !== 'preparation' && name === 'start-combat') button.classList.add('waiting');
       // Continue is usable exactly when the domain's LootView says so; the command still re-checks.
       if (name === 'continue' && !lootView.canContinue) {
