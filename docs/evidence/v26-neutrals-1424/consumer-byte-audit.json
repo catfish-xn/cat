@@ -1848,9 +1848,9 @@
     },
     "tests/presentation/s13-root-ui-assets.test.ts": {
       "previousBytes": 13691,
-      "currentBytes": 14774,
+      "currentBytes": 16514,
       "previousSha256": "10f29b95995125a55352497218b2e6d6030beb1e489f669a1fe6b7e2bf4dc07b",
-      "currentSha256": "6dde70f99251375c3e8e35fc4f487e79c70a413d605af3cf790a25228c43c782",
+      "currentSha256": "815788594d41d3219f8dc5ae14f2c9b486f279d213437479789f9544d8f524f4",
       "firstDifferentByte": 5958
     },
     "tests/presentation/sidebar.test.ts": {
@@ -2148,10 +2148,10 @@
     },
     "tests/rendering3d-tabletop.test.ts": {
       "previousBytes": 22852,
-      "currentBytes": 24961,
+      "currentBytes": 25757,
       "previousSha256": "80bfe7e92399123a65f71b952f22f13643677fcebf64ad76e95a3b804df01cb2",
-      "currentSha256": "04f8275aed326e0cab208780fcce0ddf227bbbc0fc77dd75c97c64d62c6fa5b9",
-      "firstDifferentByte": 16109
+      "currentSha256": "ab51c5dfced50a1d7af73ebb8eba77e66cdb7520db45868c98f92464c8463839",
+      "firstDifferentByte": 8446
     },
     "tests/rendering3d-trait-props.test.ts": {
       "previousBytes": 9391,
@@ -2315,9 +2315,9 @@
     "tests/server-match-log.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1883,
+      "currentBytes": 2754,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0eb244ae6f463aebb7a58172b8836f6fdfcf4f36d9262795254dcc54a221cc4a",
+      "currentSha256": "4aef7f3244f1c017ff96515f89d7c7224ac092efed7e17f17f2dbe34dd2e2846",
       "firstDifferentByte": 0
     },
     "tests/server/augment-clock-progression.test.ts": {
@@ -3017,6 +3017,13 @@
       "previousSha256": "9e5d2d8dfd409c24e50e90c577a9443daee34b6e439bb94567d510426e7a713b",
       "currentSha256": "dc88659e9943493ae3b8460be3bae0f86ddabb610f7956ce42c6c5d3a90978f0",
       "firstDifferentByte": 8599
+    },
+    "tests/trait-runtime-g23.test.ts": {
+      "previousBytes": 11206,
+      "currentBytes": 14103,
+      "previousSha256": "428e665ad91b568f80c44d1d8fbe618a4df07de73b106b2fde12a092f7f4f832",
+      "currentSha256": "bc1af03edfe1eda95fcb7075b730392ac2e2890d6ab00ce24ce64dd2c5dea966",
+      "firstDifferentByte": 196
     },
     "tests/ur-i3-combat-statuses.test.ts": {
       "previousBytes": 13806,

@@ -26,7 +26,7 @@
     "src/server/room/live-bank.ts": "6b42bf2a36cac00baae7654232a223e27a9936d630e84bbf153fd7f7bf613e62",
     "src/server/room/lobby.ts": "d50cdfce48c8a655da556d4842539c285dc1790a02e0fbef3de411afe6a8d042",
     "src/server/room/logged-shared-pool.ts": "9905a778dbec0d6d4cd637b9cb88333f76ad8bbcb9b1096c99b04261bc7f5507",
-    "src/server/room/match-log.ts": "f554e9c182e9b4600e766e393e128016f959b9c872606a379ffac46662936c03",
+    "src/server/room/match-log.ts": "d5dd323a0568ad41e5b63890e70143d67b0a18c65c791447687914206ca10955",
     "src/server/room/pairing.ts": "ea73a85f74b52050e1e70c4c28e09b451b327cbadb630681c57cb15e5a7d43d9",
     "src/server/room/projection.ts": "ea4a5642657d5a293d64e8c845696efbf1f9e7646703c94bed5986093c609aa6",
     "src/server/room/real-clock.ts": "daa6d6f911eb4d971807ebf44041310cd93ae306bc482820b4217ec51c49d7c3",
