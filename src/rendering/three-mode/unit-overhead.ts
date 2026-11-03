@@ -22,7 +22,7 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  * tall; `top` is its first row and `fill` the first column right of the emblem, in the region's pixels. Narrower
  * regions (an older sidecar that cut only the emblem) are not used.
  */
-const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8;
+const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8, TIER_LIFT = 8;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
   1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
@@ -30,7 +30,7 @@ const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
 const RENDER_ORDER = 1001;
 
 export interface UnitOverhead {
-  /** Scene child: the host moves it to the piece's head each frame. Its origin is the bar's bottom edge. */
+  /** Scene child: the host moves it to the piece's head each frame. Its origin is the bottom of the item row (bar above it). */
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
   set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean, anomalies?: BoardPiece['anomalies'], nonCombat?: boolean): void;
@@ -68,7 +68,9 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const barMaterial = new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
   const bar = new Sprite(barMaterial); bar.name = 'render3d-overhead-bar';
   bar.scale.set(BAR_WIDTH, BAR_HEIGHT, 1); bar.position.y = BAR_HEIGHT / 2; bar.renderOrder = RENDER_ORDER; bar.visible = false;
-  object.add(bar);
+  // The bar row (plain or tier bar) sits over the item row, as in the client: bar on top, worn items right under it.
+  const barRow = new Group(); barRow.name = 'render3d-overhead-bar-row'; object.add(barRow);
+  barRow.add(bar);
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
   const confiscation = createConfiscationStamp(); object.add(confiscation.sprite);
@@ -78,7 +80,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   if (tierTexture) { tierTexture.colorSpace = SRGBColorSpace; tierTexture.minFilter = LinearFilter; tierTexture.generateMipmaps = false; }
   const tierMaterial = new SpriteMaterial({ map: tierTexture, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
   const tier = new Sprite(tierMaterial); tier.name = 'render3d-overhead-tier'; tier.renderOrder = RENDER_ORDER; tier.visible = false;
-  object.add(tier);
+  barRow.add(tier);
   let tierLevel: number | null = null, tierKey = '';
   const anomaly = new Mesh(new OctahedronGeometry(4), new MeshBasicMaterial({ color: '#c6a0ff', depthTest: false, depthWrite: false }));
   anomaly.name = 'render3d-overhead-anomaly'; anomaly.visible = false; anomaly.renderOrder = RENDER_ORDER; object.add(anomaly);
@@ -191,7 +193,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const unsubscribeUi = ctx.ui?.subscribe(() => {
     if (disposed) return;
     if (shown) drawBar(shown.team, shown.meters);
-    drawTier(); bar.visible = Boolean(shown) && !tier.visible;
+    drawTier(); bar.visible = Boolean(shown) && !tier.visible; layout();
     const font = ctx.font?.() ?? 'sans-serif';
     if (font !== itemFont) { itemFont = font; for (const draw of badgeDrawers) draw(); }
   });
@@ -232,13 +234,24 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     });
   };
 
+  /** Item row at the origin, the bar row right over it, tags above the bar (or the items when no bar shows). */
+  const layout = () => {
+    // A tier bar keeps a clear gap over the head like the client (playtest 11-03: it sat on the head).
+    const base = tier.visible ? TIER_LIFT : 0;
+    const items = icons.children.length ? ITEM_SIZE + ITEM_GAP : 0, barShown = bar.visible || tier.visible;
+    icons.position.y = base; badges.position.y = base; barRow.position.y = base + items;
+    const top = base + items + (barShown ? BAR_HEIGHT : 0);
+    anomaly.position.set(BAR_WIDTH / 2 + 5, base + (items ? ITEM_SIZE / 2 : BAR_HEIGHT / 2), 0);
+    confiscation.sprite.position.y = top + 8;
+    wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);
+  };
   return {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
     get tiered() { return tier.visible; },
     setTier(level) {
       if (disposed || level === tierLevel) return;
-      tierLevel = level; drawTier(); bar.visible = Boolean(shown) && !tier.visible;
+      tierLevel = level; drawTier(); bar.visible = Boolean(shown) && !tier.visible; layout();
     },
     get drawn() { return bar.visible || tier.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
     set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies, nonCombat = false) {
@@ -248,11 +261,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       if (nextBar !== barKey) { barKey = nextBar; if (meters) drawBar(team, meters); drawTier(); bar.visible = Boolean(meters) && !tier.visible; }
       const nextItems = (items ?? []).map(item => `${item.id}@${item.icon ?? ''}:${item.stacks ?? ''}/${item.maxStacks ?? ''}`).join(',');
       if (nextItems !== itemKey) { itemKey = nextItems; shownItems = items ?? []; placeItems(shownItems); }
-      // Icons sit above the bar while it shows, in its place otherwise.
-      icons.position.y = bar.visible || tier.visible ? BAR_HEIGHT + ITEM_GAP : 0;
-      badges.position.y = icons.position.y;
       anomaly.visible = Boolean(anomalies?.length);
-      anomaly.position.set(BAR_WIDTH / 2 + 5, icons.position.y + ITEM_SIZE / 2, 0);
       const tag = nonCombat ? '暂留不参战' : '通缉';
       if(tag !== tagKey && label?.fillText) {
         tagKey=tag;label.clearRect(0,0,128,40);label.fillStyle='#291b0a';label.fillRect(0,0,128,40);
@@ -262,8 +271,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       wanted.scale.set(nonCombat?72:42,14,1);
       wanted.visible = nonCombat || enforcerWanted && Boolean(meters);
       confiscation.sprite.visible = itemsConfiscated && Boolean(meters);
-      confiscation.sprite.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
-      wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);
+      layout();
     },
     flashMana(on) {
       if (disposed || flashing === on) return;
