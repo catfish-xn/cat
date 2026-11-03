@@ -9,6 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
+import { cueOverride } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -143,8 +144,13 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (Object.hasOwn(assets, name.toLowerCase())) throw new VfxLoadError('invalid', 'duplicate-asset');
     assets[name.toLowerCase()] = path as string;
   }
-  return { version: 1, systems: raw.systems as Record<string, string>, assets,
-    skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] },
+  const skills: VfxIndex['skills'] = { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] };
+  // Reviewed in-repo replacements win over the exported timeline (cue-overrides.ts).
+  for (const champion of Object.keys(skills)) {
+    const override = cueOverride(champion, raw.systems as Record<string, string>);
+    if (override) skills[champion] = override;
+  }
+  return { version: 1, systems: raw.systems as Record<string, string>, assets, skills,
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
