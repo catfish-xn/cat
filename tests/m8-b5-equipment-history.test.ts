@@ -11,6 +11,7 @@ import { BattleHistory, validateBattleCollection } from '../src/replay';
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { installAugmentReplayCommandCache } from './fixtures/augment-replay-command-cache';
 import { validateEnvelope } from '../src/persistence/format';
+import { clearContentReplays } from '../src/simulation/battle-record-validation';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { accepted, emptyBoard } from './match-helpers';
@@ -235,6 +236,8 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
         runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: structuredClone(archivedState),
         battles: archiveHistory.completedRecords, currentBattle: null };
       // Fully validate the shared control before exercising the forged copy.
+      // Start cold: an identical battle validated by another file in this worker must not count here.
+      clearContentReplays();
       replayCache.resetBattleCounts();
       const priorHits = replayCache.counts.hits;
       const mutable = mutableObjects(envelope.match);

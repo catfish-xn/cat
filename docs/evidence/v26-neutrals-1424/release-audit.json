@@ -149,7 +149,7 @@
     "src/simulation/b8-restore.ts": "b9b8ed98ee2bb37e8974b80bb64c3bcd96bd526322a1938e417767ab8b55e9e9",
     "src/simulation/battle-equipment.ts": "7f9749bebca208af289d17a014a968c6f77588848259435823875983594c161b",
     "src/simulation/battle-input-log.ts": "33b5e48d58c69c294f1a0f7c7426905dac536a2243ce711efbfc996033984fcd",
-    "src/simulation/battle-record-validation.ts": "621c17e1c589696838ea5c46c283b33cba0932ec0545857a7ca01e13ca0ba3a8",
+    "src/simulation/battle-record-validation.ts": "5534edc32dca8bec11e0c4d8f599dc2bc3a8007850f3f5ac00462b0972efef58",
     "src/simulation/bench-capacity.ts": "184e26b8ab7a888851c4640721d2932c01a1702e48f32bf0685cf69a0e20d82f",
     "src/simulation/board.ts": "7712e502a393e6dd54340dabb2738907775f14288f38ec60a568b4be12bfe77c",
     "src/simulation/bot/formation.ts": "bc6c3cd60cf4f44b252751da52d3ce8650c51a4d8a2f53993a7eb5b4cdd161e0",
