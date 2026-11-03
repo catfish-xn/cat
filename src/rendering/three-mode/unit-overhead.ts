@@ -17,6 +17,8 @@ export const DEFAULT_METER_COLORS: MeterColors = { hp: '#5fd68a', hpEnemy: '#f08
 export const BAR_WIDTH = 52;
 const BAR_CANVAS = { width: 128, height: 26 }, BAR_HEIGHT = BAR_WIDTH * BAR_CANVAS.height / BAR_CANVAS.width;
 const ITEM_SIZE = 13, ITEM_GAP = 2;
+/** An item icon's share of its slot; the rest is its dark frame. */
+const ITEM_ICON = 0.86;
 /**
  * The client's whole unit bars (tfthealthbaratlas regions `health.tier-1..4`, emblem + track): each track is 13 pixels
  * tall; `top` is its first row and `fill` the first column right of the emblem, in the region's pixels. Narrower
@@ -24,7 +26,7 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  */
 const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8, TIER_LIFT = 14;
 /** Playtest 11-03: the tier bar a little smaller than the plain bar; worn items start this share of its width in. */
-const TIER_SCALE = 0.85, TIER_ITEM_START = 0.12, TIER_ITEM_FILL = 1.05;
+const TIER_SCALE = 0.85, TIER_ITEM_START = 0.12, TIER_ITEM_FILL = 0.98;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
   1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
@@ -98,9 +100,12 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const badgeTextures: CanvasTexture[] = [];
   const badgeDrawers: (() => void)[] = [];
   const badges = new Group(); badges.name = 'render3d-item-stacks'; object.add(badges);
+  // A dark frame behind each worn item, as the client separates its item icons (one shared material).
+  const frames = new Group(); frames.name = 'render3d-item-frames'; object.add(frames);
+  const frameMaterial = new SpriteMaterial({ color: '#05080c', depthTest: false, depthWrite: false, toneMapped: false });
   const clearItems = () => {
     for (const sprite of [...icons.children, ...badges.children] as Sprite[]) sprite.material.dispose();
-    icons.clear(); badges.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
+    icons.clear(); badges.clear(); frames.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
     badgeDrawers.length = 0;
   };
   let tagKey = '通缉', barKey = '', itemKey = '', disposed = false, flashing = false;
@@ -206,7 +211,9 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     items.forEach((item, index) => {
       const material = new SpriteMaterial({ color: '#8a96a3', depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
       const sprite = new Sprite(material); sprite.name = `render3d-overhead-item-${item.id}`;
-      sprite.scale.set(ITEM_SIZE, ITEM_SIZE, 1); sprite.renderOrder = RENDER_ORDER;
+      sprite.scale.set(ITEM_SIZE * ITEM_ICON, ITEM_SIZE * ITEM_ICON, 1); sprite.renderOrder = RENDER_ORDER;
+      const frame = new Sprite(frameMaterial); frame.name = `render3d-item-frame-${index}`;
+      frame.scale.set(ITEM_SIZE, ITEM_SIZE, 1); frame.renderOrder = RENDER_ORDER - 1; frames.add(frame);
       sprite.position.set((index - (items.length - 1) / 2) * (ITEM_SIZE + ITEM_GAP), ITEM_SIZE / 2, 0);
       icons.add(sprite);
       if (item.stacks !== undefined && item.maxStacks !== undefined) {
@@ -249,14 +256,17 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     // Under a tier bar the items touch (no gap); the last one just passes the bar's right end (playtest 11-03).
     const tiered = tier.visible && count > 0, gap = tiered ? 0 : ITEM_GAP;
     const size = tiered ? (tierRight - start) / 3 * TIER_ITEM_FILL : ITEM_SIZE, scale = size / ITEM_SIZE;
-    icons.children.forEach((icon, index) => { icon.position.x = (index - (count - 1) / 2) * (ITEM_SIZE + gap); });
+    icons.children.forEach((icon, index) => {
+      icon.position.x = (index - (count - 1) / 2) * (ITEM_SIZE + gap);
+      frames.children[index]?.position.set(icon.position.x, icon.position.y, 0);
+    });
     for (const badge of badges.children) {
       const index = Number(badge.name.slice('render3d-item-stack-'.length));
       badge.position.x = (index - (count - 1) / 2) * (ITEM_SIZE + gap) + 3;
     }
     const rowWidth = count * ITEM_SIZE + (count - 1) * gap;
     const x = tiered ? start + rowWidth * scale / 2 : 0;
-    for (const row of [icons, badges]) { row.scale.setScalar(scale); row.position.set(x, base, 0); }
+    for (const row of [icons, badges, frames]) { row.scale.setScalar(scale); row.position.set(x, base, 0); }
     const items = count ? size + ITEM_GAP : 0;
     // Under a tier bar the items sit right below its track (the emblem's lower half beside the first one, as in the client).
     barRow.position.y = base + items - (tier.visible && count ? tierTrackBottom : 0);
@@ -305,7 +315,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       unsubscribeUi?.();
       clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
-      tierMaterial.dispose(); tierTexture?.dispose();
+      tierMaterial.dispose(); tierTexture?.dispose(); frameMaterial.dispose();
       confiscation.dispose();
       anomaly.geometry.dispose(); anomaly.material.dispose();
     },
