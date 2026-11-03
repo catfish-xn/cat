@@ -42,11 +42,12 @@ export const CAROUSEL_SCENERY = ['carousel-skybox'] as const;
 /** Feet land on these surfaces (a ray from above), never on a whole-model bounding box. */
 const LEGEND_SURFACE = ['carousel-llplatforms'], UNIT_SURFACE = ['carousel-glassdome-a', 'carousel-center'];
 /**
- * Doc's proposed layout, in cells: legends on the cradles, units on a ring inside the glass; feet without a surface. The
+ * Layout, in cells: legends on the cradles (their centers in the 14.24 S13 map), units on a ring inside the glass; feet
+ * without a surface. The
  * room aims walks by the same numbers (tests/rendering3d-carousel.test.ts pins them equal). Pickup remains authoritative
  * in legend-motion.ts; the stage draws no persistent pickup ring.
  */
-export const LEGEND_RADIUS = 7.1, UNIT_RADIUS = 2.5, FEET = 0.25;
+export const LEGEND_RADIUS = 6.7, UNIT_RADIUS = 2.5, FEET = 0.25;
 /** One turn of the unit ring takes this long; the angle runs from the carousel's own start. */
 export const ORBIT_SECONDS = 48;
 /**
@@ -80,10 +81,10 @@ const ITEM_SIZE = 16, ITEM_FRAME = 20, ITEM_GAP = 12, BADGE_SIZE = 18, BADGE_GAP
 /** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
 const PICK_HALF_WIDTH = 0.65;
 /**
- * Carousel champions stand this much larger than on the board (their body, overhead marks and pick box), so each draft
- * unit reads at a glance (playtest 10-22: "make the pieces bigger, easier to tell apart").
+ * Carousel champions stand at this multiple of their board size (their body, overhead marks and pick box). TFT draws them
+ * at board size inside the original quality ring (2026-11-03 user-approved; the 10-22 1.7x enlargement is gone).
  */
-const UNIT_SIZE = 1.7;
+const UNIT_SIZE = 1;
 /** Lightweight hover/pending feedback, in board units; availability shows on the inspect badge. */
 const HOVER_LIFT = 5, PENDING_LIFT = 10;
 /** Original inspect badge states (UI sidecar sprite ids) and their flat stand-in colors. */

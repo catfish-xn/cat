@@ -86,7 +86,7 @@ const OPPONENT_LINGER_SECONDS = 4;
 const BOLT_ARC = 60;
 /**
  * My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of
- * (about the carousel's 0.55-cell pickup ring plus the orb's own radius, so brushing an orb is enough).
+ * (about a quality ring's radius plus the orb's own, so brushing an orb is enough).
  */
 const ROAM_MARGIN = 2, ORB_REACH = 0.6;
 /** Orbs one monster dropped land this many hex widths from where it fell, each further one a little farther out. */

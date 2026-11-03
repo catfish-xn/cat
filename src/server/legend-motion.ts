@@ -25,8 +25,11 @@ export interface LegendWalk {
 
 /** Half the first pace (playtest 10-21: legends moved too fast to watch a carousel scramble), on the board too. */
 export const LEGEND_CELLS_PER_SECOND = 2.5;
-/** Carousel layout in cells: legends on cradles around the ring, units on a ring inside the glass turning once per ORBIT_MS. */
-export const CAROUSEL_LEGEND_RADIUS = 7.1, CAROUSEL_UNIT_RADIUS = 2.5, CAROUSEL_ORBIT_MS = 48_000, CAROUSEL_SEATS = 8;
+/**
+ * Carousel layout in cells: legends on cradles around the ring, units on a ring inside the glass turning once per ORBIT_MS.
+ * The cradles sit 6.7 cells out, where the 14.24 S13 carousel map puts their centers (2026-11-03 user-approved).
+ */
+export const CAROUSEL_LEGEND_RADIUS = 6.7, CAROUSEL_UNIT_RADIUS = 2.5, CAROUSEL_ORBIT_MS = 48_000, CAROUSEL_SEATS = 8;
 /** A board walk stays within this many cells of the board origin (the room's sanity bound; the layer keeps it nearer). */
 export const BOARD_WALK_LIMIT = 20;
 
@@ -70,8 +73,11 @@ export function interceptCarouselUnit(from: CellPoint, index: number, count: num
   return { to, ms: walkMs(from, to) };
 }
 
-/** v26 approved pickup circle: the legend's center enters this radius, in cells. Shared with the 3D ring. */
-export const CAROUSEL_UNIT_PICK_RADIUS = 0.55;
+/**
+ * Approved pickup circle (2026-11-03): the legend's center enters this radius, in cells, so a legend's body reaching the
+ * unit's quality ring counts, as TFT's body collision does. Shared with the 3D stage.
+ */
+export const CAROUSEL_UNIT_PICK_RADIUS = 1;
 /** First contact while walking, then while standing at the destination through `untilAt`.
  * Moving segments retain the 10 ms sampling and entry refinement; idle orbit contact is solved analytically.
  * Ownership and grants still go through the carousel rules. No real clock is read here.
