@@ -52,7 +52,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
@@ -132,12 +132,6 @@ const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly l
 const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
-/**
- * A champion's drawn size by star level, over its one-star official scale (2026-11-03: same unit before and after a
- * merge in 1080p ranked footage, castcmp-1103/star-scale.json: 2★ 1.15–1.22, 3★ 1.29–1.38). A promoted 4 draws as 3.
- */
-const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
-const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
