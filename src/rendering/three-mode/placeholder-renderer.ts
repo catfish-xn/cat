@@ -52,8 +52,8 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, type Envelope } from './model-fit';
-import { updateModelGrounding } from './model-grounding';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
@@ -308,6 +308,8 @@ interface PieceView {
    * effects (on its bones or launched from them) then share it, as the skin scale sizes the whole character.
    */
   modelScale: number | null;
+  /** The star factor (STAR_BODY_SCALE) the attached champion body carries now; 1 on a pawn or a monster. */
+  starScale: number;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
   facing: string | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
@@ -788,7 +790,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const revision = ++view.bodyRevision;
     cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
-    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
+    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; view.starScale = 1; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     view.body.scale.multiplyScalar(view.model.scale);
@@ -861,6 +863,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       lease.scene.scale.multiplyScalar(view.model.scale); lease.scene.position.multiplyScalar(view.model.scale);
       view.starHeight = (view.starHeight - STAR_GAP) * view.model.scale + STAR_GAP;
       if (view.modelScale !== null) view.modelScale *= view.model.scale;
+      if (!monster) applyStarScale(view, lease.scene);
       // Remove the pawn only after fitting succeeded; a malformed model must not leave an invisible piece.
       stand?.removeFromParent();
       view.root.add(lease.scene);
@@ -878,6 +881,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
+  /** Rescales an attached champion body from the star factor it carries to its current star level's (feet stay put). */
+  const applyStarScale = (view: PieceView, body: Object3D) => {
+    const next = starBodyScale(view.starLevel), ratio = next / view.starScale;
+    if (ratio === 1) return;
+    body.scale.multiplyScalar(ratio); body.position.multiplyScalar(ratio); rescaleModelGrounding(body, ratio);
+    view.starHeight = (view.starHeight - STAR_GAP) * ratio + STAR_GAP;
+    if (view.modelScale !== null) view.modelScale *= ratio;
+    view.starScale = next;
+  };
   // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get
   // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
@@ -894,7 +906,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
-      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
+      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null, starScale: 1 };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1250,6 +1262,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const created = !view;
       if (!view) { view = createPiece(piece, model); pieces.set(piece.id, view); if (frame.fighting && (combatBegan || rising.has(piece.id))) view.rise = true; }
       view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
+      if (view.lease && !view.lease.placeholder && view.body === view.lease.scene && !monsterFit(view.model.id ?? view.definitionId)) applyStarScale(view, view.body);
       // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
       if (piece.form || !frame.fighting || combatStarted || created) {
         const previousForm = view.form;

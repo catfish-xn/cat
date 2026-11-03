@@ -14,7 +14,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { fitModel, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
@@ -151,7 +151,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let roam: { minX: number; maxX: number; minZ: number; maxZ: number; speed: number } | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
-    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel, drawn?: (height: number) => void): Piece => {
+    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel, drawn?: (height: number) => void, starLevel = 1): Piece => {
     const root = new Group(); root.name = 'render3d-scout-piece';
     const body = stand(); root.add(body);
     const piece: Piece = { root, lease: null, mixer: null, state: new UnitActionState(`scout:${key}`), stars: null,
@@ -163,7 +163,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
-        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
+        // A 2- or 3-star unit is drawn larger, as on the board (STAR_BODY_SCALE); its stars and items follow the height.
+        piece.height = fitModel(lease.scene, { height, width, unitScale: unitScale * starBodyScale(starLevel), sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));
@@ -186,7 +187,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.root.getObjectByName('render3d-scout-anomaly')?.position.setY(height + STAR_GAP);
       piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     };
-    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height));
+    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height),
+      unit.summon ? 1 : unit.effectiveStarLevel ?? unit.starLevel);
     piece.root.userData.inspectId = `scout:${current!.seatId}:${key.startsWith('bench:') ? `bench-${key.slice(6)}` : key.slice(6)}:${unit.definitionId}:${unit.effectiveStarLevel ?? unit.starLevel}`;
     piece.root.position.copy(at); piece.root.rotation.y = Math.PI; // models face +z; the owner's side looks up the board
     if (!unit.summon) {

@@ -10,6 +10,13 @@
 import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
 import { createSupportSampler, registerModelGrounding, supportRotation, supportVertexSteps, MESH_PENETRATION_RATIO, type ModelSupport } from './model-grounding';
 
+/**
+ * A champion's drawn size by star level, over its one-star official scale (2026-11-03: same unit before and after a
+ * merge in 1080p ranked footage, castcmp-1103/star-scale.json: 2★ 1.15–1.22, 3★ 1.29–1.38). A promoted 4 draws as 3.
+ */
+export const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
+export const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
+
 /** The manifest's unitScale for a model when it is a positive finite number, else null (JSON from an asset root). */
 export function readUnitScale(models: Readonly<Record<string, unknown>> | undefined, id: string): number | null {
   const entry = models && Object.hasOwn(models, id) ? models[id] : undefined;
