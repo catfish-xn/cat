@@ -22,7 +22,7 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  * tall; `top` is its first row and `fill` the first column right of the emblem, in the region's pixels. Narrower
  * regions (an older sidecar that cut only the emblem) are not used.
  */
-const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60;
+const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
   1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
@@ -153,10 +153,11 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     if (key !== tierKey) {
       tierKey = key; tierCanvas.width = sprite.width * k; tierCanvas.height = sprite.height * k;
       // Track height = the plain bar's height; the emblem keeps its own proportions and sticks out of the track.
-      const px = BAR_HEIGHT / TIER_TRACK;
-      tier.scale.set(sprite.width * px, sprite.height * px, 1);
+      // Playtest 11-03: drawn a little flatter than the atlas (TIER_FLATTEN), the width as it is.
+      const px = BAR_HEIGHT / TIER_TRACK, py = px * TIER_FLATTEN;
+      tier.scale.set(sprite.width * px, sprite.height * py, 1);
       // The whole bar (emblem and track) centred over the unit, as the client draws it; the track at the plain bar's height.
-      tier.position.set(0, BAR_HEIGHT / 2 + (layout.top + TIER_TRACK / 2 - sprite.height / 2) * px, 0);
+      tier.position.set(0, BAR_HEIGHT / 2 + (layout.top + TIER_TRACK / 2 - sprite.height / 2) * py, 0);
     }
     const c = ctx.colors(), m = shown?.meters, team = shown?.team ?? 'player';
     g.clearRect(0, 0, tierCanvas.width, tierCanvas.height);
