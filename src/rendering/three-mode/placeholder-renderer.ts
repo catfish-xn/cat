@@ -1803,9 +1803,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.stars.object.visible = view.root.visible && !view.overhead.tiered;
       }
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
-      // Above the star row; a monster has none (and an emblemed bar needs none), so its bar takes the stars' place.
+      // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.copy(view.root.position)
-        .setY(view.root.position.y + view.starHeight + lift + (view.stars && !view.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+        .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
       // The star ring circles just over the head, under the star row.
       if (view.halo) {
         view.halo.update(seconds);
