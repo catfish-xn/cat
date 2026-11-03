@@ -155,8 +155,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       // Track height = the plain bar's height; the emblem keeps its own proportions and sticks out of the track.
       const px = BAR_HEIGHT / TIER_TRACK;
       tier.scale.set(sprite.width * px, sprite.height * px, 1);
-      // The track's centre where the plain bar's centre is.
-      tier.position.set(-layout.fill / 2 * px, BAR_HEIGHT / 2 + (layout.top + TIER_TRACK / 2 - sprite.height / 2) * px, 0);
+      // The whole bar (emblem and track) centred over the unit, as the client draws it; the track at the plain bar's height.
+      tier.position.set(0, BAR_HEIGHT / 2 + (layout.top + TIER_TRACK / 2 - sprite.height / 2) * px, 0);
     }
     const c = ctx.colors(), m = shown?.meters, team = shown?.team ?? 'player';
     g.clearRect(0, 0, tierCanvas.width, tierCanvas.height);
