@@ -23,6 +23,14 @@ export interface TimelineCue {
   readonly targetLimit?: number;
   /** A beam keeps its source bone while aiming at the actual target; it does not fly. */
   readonly stationary?: boolean;
+  /**
+   * Uniform size of this system about its anchor. Omitted means 1.
+   *
+   * Multiplies the system's own offsets, particle size and velocity. It does not move the
+   * anchor, a hanger, a projectile's endpoints or its flight path, and it does not change
+   * `FX_SCALE`.
+   */
+  readonly scale?: number;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint }

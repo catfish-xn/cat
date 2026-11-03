@@ -12,6 +12,7 @@ import { flickerInto, integratedInto, sampleCurveInto } from "../utils/sampleCur
 import { instanceScaleOf } from "./flex";
 import type { EmitterState, World } from "./integrate";
 import { FRAME_SLOTS, NOT_LINGERING, type Pool } from "./pool";
+import { cueScale } from "./systemScale";
 
 export { emitterPhase };
 
@@ -50,6 +51,8 @@ export interface DrawFrame {
   readonly orientation: Float32Array;
   /** The definition's own `transform`, the last factor of a particle's own matrix. */
   readonly world: World;
+  /** Cue scale about the anchor. 1 keeps an authored world-acceleration offset. */
+  readonly scale: number;
 }
 
 /**
@@ -71,6 +74,11 @@ export interface Source {
   readonly orientation: Float32Array;
   /** The definition's own `transform`. */
   readonly world: World;
+  /**
+   * Cue scale about the anchor. Omitted means 1. Particle positions are already stored
+   * scaled; this reaches draws that add a further world-space offset, and beam ends.
+   */
+  readonly scale?: number;
 }
 
 /** A DrawFrame whose fields a hot path overwrites instead of allocating. */
@@ -81,6 +89,7 @@ export interface FrameSlot {
   origin: Point;
   orientation: Float32Array;
   world: World;
+  scale: number;
 }
 export function frameInto(source: Source, emitter: EmitterModel, out: FrameSlot): DrawFrame {
   out.emitter = emitter;
@@ -89,11 +98,13 @@ export function frameInto(source: Source, emitter: EmitterModel, out: FrameSlot)
   out.origin = source.origin;
   out.orientation = source.orientation;
   out.world = source.world;
+  out.scale = cueScale(source.scale);
   return out;
 }
 export function frameOf(source: Source, emitter: EmitterModel): DrawFrame {
   return frameInto(source, emitter, {
     emitter, now: 0, phase: 0, origin: source.origin, orientation: source.orientation, world: source.world,
+    scale: cueScale(source.scale),
   });
 }
 
@@ -211,7 +222,11 @@ export function drawnPlaceInto(pool: Pool, index: number, frame: DrawFrame, out:
 
   PUSHED.fill(0);
   integratedInto(emitter.worldAcceleration, age01(pool, index, frame.now), 2, PUSHED, 0);
-  for (let axis = 0; axis < 3; axis += 1) out.place[axis] += PUSHED[axis] * lifetime * lifetime;
+  const cue = cueScale(frame.scale);
+  for (let axis = 0; axis < 3; axis += 1) {
+    const gained = PUSHED[axis] * lifetime * lifetime;
+    out.place[axis] += cue === 1 ? gained : gained * cue;
+  }
 }
 
 /**

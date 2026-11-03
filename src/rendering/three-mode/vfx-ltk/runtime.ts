@@ -226,13 +226,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fixed = snapshot ?? spawn.point;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone);
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
+        const scale = spawn.scale ?? 1;
         const nextOptions = { anchor, attachment,
           target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
           duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
-          stopAfter: spawn.stopAfter, seed: seed++ };
+          stopAfter: spawn.stopAfter, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
-        const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}`;
+        // Scale is part of it too: a parked system must not be replayed at another size.
+        const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {

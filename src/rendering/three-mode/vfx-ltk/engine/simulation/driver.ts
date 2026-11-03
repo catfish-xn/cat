@@ -253,6 +253,12 @@ export interface Driver extends Source {
   /** Carry the system on `next`, restarting the run where the motion itself changed. */
   steer(next: RigModel): void;
   /**
+   * Cue scale about the anchor for every later birth of this run, children included.
+   * 1 keeps authored lengths. Call it before the run steps; a parked system is not reused
+   * across two scales.
+   */
+  setScale(scale: number): void;
+  /**
    * The live children of the child definition at `path`.
    *
    * The driver keeps the list current in place, so a draw holds it and reads it every frame.
@@ -345,6 +351,7 @@ export function createDriver(
           (rig.stopAt != null && reached >= rig.stopAt) || landed(rig.motion, reached, rig.height),
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
+        scale: lineage.scale,
       };
 
       stepEmitters(pool, system, placed, rng, states);
@@ -458,6 +465,7 @@ export function createDriver(
         stopped: false,
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
+        scale: lineage.scale,
       };
       stepEmitters(pool, system, placed, rng, states);
       children.step(driver, system, SEEK_STEP, now);
@@ -516,6 +524,12 @@ export function createDriver(
     },
     get world() {
       return world;
+    },
+    get scale() {
+      return lineage.scale;
+    },
+    setScale(next) {
+      lineage.scale = next;
     },
     histogram: lanes,
     advance: run,

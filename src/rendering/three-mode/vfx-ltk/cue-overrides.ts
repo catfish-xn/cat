@@ -4,7 +4,8 @@
  * on the wrong host, too early or late, or from another spell. A row replaces that champion's whole cue list (attack
  * and cast); it applies only when every system it names is present in the loaded index, else the exported list stays.
  * Cue fields as in timeline.ts: `cast-start` plays on the caster (at `bone`), `hit` on each target (at `bone`),
- * `projectile` flies caster → target over `travelSeconds`.
+ * `projectile` flies caster → target over `travelSeconds`. `scale` (default 1) shrinks that one
+ * system about its anchor and does not move the anchor or the flight.
  */
 import type { TimelineCue } from './timeline';
 
@@ -24,14 +25,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '37f7cb35', action: 'cast', event: 'hit', delay: 1.2, duration: 1, bone: ground, primary: true },
   ],
   // R: shield on Garen, then one sky beam and one impact on his own ground. Not one copy per target.
+  // The landing burst is authored about 2.2× the reference diameter (castcmp-1103); 0.45 keeps it on his feet.
   garen: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
-    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground },
+    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: 0.45 },
   ],
   // E: the vine meshes only read when they stay on her ground. Plant flashes are the part that shows on the targets.
-  // There is no directional vine missile in the index, and the timeline cannot scale a system.
+  // There is no directional vine missile in the index.
   zyra: [
     { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
