@@ -431,7 +431,7 @@
     "src/simulation/free-rerolls.ts": "7dcebaf35000b523f487fbf5dba91f94c35db32d608aa56c21652861b4350c3d",
     "src/simulation/g2-2-pvp-history.ts": "c498804852c30ea08b76c2fccccf377f0f40b60805ee9f31a4954992fbc45354",
     "src/simulation/g2-3-combat.ts": "a08a210818550d789172e8fd416f48b231af3a36de9e292999d2b0a73ed8a509",
-    "src/simulation/g2-3-economy.ts": "8fe039bdbbe9b3c1690274f9d88f300047ed43f8fafadb2acd0353c105834960",
+    "src/simulation/g2-3-economy.ts": "6278df733ce87483f09583b0c6a98656ba54f2c85b8d0b24c460eebf1aae84aa",
     "src/simulation/g2-3-experiment.ts": "9071b340d493bbc2fab9c8963fa51664e017b9ff4bc519405d5826a457310093",
     "src/simulation/g2-3-forms.ts": "70053b00690e8813a09085dd99ec67fb5a6ef7a7b834b5c9877fef0dba47fb63",
     "src/simulation/g2-3-grant-evidence.ts": "167122ad4f2b97aea38a373b60287441e25118967d9fd7aa037afc9ab0931124",
@@ -443,7 +443,7 @@
     "src/simulation/g2-3-restore.ts": "7a87db3c527610d0798ed3ea8a66ea97b17313534b1379c4cefe263b01981050",
     "src/simulation/g2-3-rewards.ts": "bb2481e265011496c7f17ed330714db680854a2a8da8902a0dfd25df7a35112d",
     "src/simulation/g2-3-runtime.ts": "c7ecb1db1eab77b56be5ab82a1e2c194a66c8b10b7756eff67346aca2afaf0a0",
-    "src/simulation/g2-3-settlement.ts": "eaf75659af6e9b51648e89002d7d01d4bd5c1a7a393592ab8fc2871d3f8a674b",
+    "src/simulation/g2-3-settlement.ts": "a6e559f53cc01e9f9543ed079cf4cc9ad7866da4e963ed3397525b01189066df",
     "src/simulation/g2-3-state.ts": "c4bfc05e48c58480802cce039f83ad9cf957c21e69a48bce8f7a54743d2447ca",
     "src/simulation/g2-3-summons.ts": "503572c4cde7ff064247967315d331fb6243900aae4cee54bf94056cb8800797",
     "src/simulation/g2-3-view.ts": "91eda25e2b7522f533fea41a9fe887bfd013120b256fba9d439b5e8d8190e31a",
@@ -641,9 +641,9 @@
     "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d"
   },
   "previousBytes": 4979457,
-  "currentBytes": 4109353,
+  "currentBytes": 4133910,
   "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-  "currentSha256": "0135e7e94fd3c30f4eceaf6290784b108f4df4dec9444d2f8808dbec4ad5bef9",
+  "currentSha256": "1840fc4a30257e66d4431adf4f8d6080b0cc3082802cd2d3ac7449eb0937d503",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
@@ -682,15 +682,15 @@
     },
     {
       "round": 23,
-      "time": 1298850,
-      "initialHash": "9dfe876734350ceddf6c093696e717f54219d389e054be21a7c73b636e5e7285",
-      "firstHash": "d1670136112862f1b1fa6d8dbf44e8af6035997cd0c5604aa5a2f3ea13d8ee2b",
+      "time": 1310400,
+      "initialHash": "95852c2c7a30fe6c6c994598aa897c0ad9f79df7f76b83ff885f5148e0d6b850",
+      "firstHash": "cfad041509b8ff119721cc2d438324399d756c5e19afe4ed4be68b1c9591db35",
       "boardCounts": [
         8,
         8,
         8,
-        7,
         8,
+        9,
         8,
         8
       ],
