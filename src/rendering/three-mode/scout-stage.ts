@@ -185,7 +185,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     const place = (height: number) => {
       piece.stars?.object.position.copy(at).setY(height + STAR_GAP);
       piece.root.getObjectByName('render3d-scout-anomaly')?.position.setY(height + STAR_GAP);
-      piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars && !piece.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     };
     const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height),
       unit.summon ? 1 : unit.effectiveStarLevel ?? unit.starLevel);
@@ -201,7 +201,10 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       gem.position.set(STAR_SIZE * 2.2, ctx.championHeight + STAR_GAP, 0); piece.root.add(gem);
     }
     piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined, false, false, undefined, unit.nonCombat);
-    piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+    // The original star emblem on the bar end replaces the star row when the client atlas has it.
+    if (!unit.summon) piece.overhead.setTier(unit.effectiveStarLevel ?? unit.starLevel);
+    if (piece.stars) piece.stars.object.visible = !piece.overhead.tiered;
+    piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars && !piece.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     piece.overhead.object.visible = piece.overhead.drawn;
     return piece;
   };

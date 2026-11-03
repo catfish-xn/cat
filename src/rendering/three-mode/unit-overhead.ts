@@ -25,6 +25,13 @@ export interface UnitOverhead {
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
   set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean, anomalies?: BoardPiece['anomalies'], nonCombat?: boolean): void;
+  /**
+   * The original game's star mark: a bronze / silver / gold (teal: promoted 4) emblem on the bar's left end, from the
+   * client health-bar atlas (`health.tier-N`). Null hides it (monsters, structures). It shows without meters too.
+   */
+  setTier(level: number | null): void;
+  /** True while the original tier emblem is drawn; the host then draws no star row over the head. */
+  readonly tiered: boolean;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
@@ -55,6 +62,11 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
   const confiscation = createConfiscationStamp(); object.add(confiscation.sprite);
+  // The tier emblem: its own sprite on the bar's left end, cut from the client atlas (one texture per level shown).
+  const tierMaterial = new SpriteMaterial({ depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
+  const tier = new Sprite(tierMaterial); tier.name = 'render3d-overhead-tier'; tier.renderOrder = RENDER_ORDER + 1; tier.visible = false;
+  object.add(tier);
+  let tierLevel: number | null = null, tierTexture: CanvasTexture | null = null, tierKey = '';
   const anomaly = new Mesh(new OctahedronGeometry(4), new MeshBasicMaterial({ color: '#c6a0ff', depthTest: false, depthWrite: false }));
   anomaly.name = 'render3d-overhead-anomaly'; anomaly.visible = false; anomaly.renderOrder = RENDER_ORDER; object.add(anomaly);
   const wantedCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
@@ -112,8 +124,27 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     }
     if (texture) texture.needsUpdate = true;
   };
+  /** Rebuilds the emblem for the current level and atlas; hidden when either is missing. */
+  const drawTier = () => {
+    const level = tierLevel === null ? null : Math.max(1, Math.min(4, Math.trunc(tierLevel)));
+    const sprite = level === null ? undefined : ctx.ui?.sprite(`health.tier-${level}`);
+    const key = sprite ? `${level}|${sprite.url}` : '';
+    if (key === tierKey) return;
+    tierKey = key; tierTexture?.dispose(); tierTexture = null; tierMaterial.map = null; tier.visible = false;
+    if (!sprite || typeof document === 'undefined') return;
+    const crop = document.createElement('canvas'); crop.width = sprite.width; crop.height = sprite.height;
+    crop.getContext('2d')?.drawImage(sprite.source, 0, 0);
+    tierTexture = new CanvasTexture(crop); tierTexture.colorSpace = SRGBColorSpace; tierTexture.minFilter = LinearFilter; tierTexture.generateMipmaps = false;
+    tierMaterial.map = tierTexture; tierMaterial.needsUpdate = true;
+    // As tall as the bar plus a little, its right edge tucked a quarter-height into the bar's left end (as in the client).
+    const height = BAR_HEIGHT * 1.15 * sprite.height / 13, width = height * sprite.width / sprite.height;
+    tier.scale.set(width, height, 1); tier.visible = true; placeTier();
+  };
+  /** On the bar's left end while meters show; alone (no bar, e.g. in planning) it sits centered where the bar would be. */
+  const placeTier = () => tier.position.set(bar.visible ? -BAR_WIDTH / 2 - tier.scale.x / 2 + BAR_HEIGHT * 0.25 : 0, BAR_HEIGHT / 2, 0);
   const unsubscribeUi = ctx.ui?.subscribe(() => {
     if (disposed) return;
+    drawTier();
     if (shown) drawBar(shown.team, shown.meters);
     const font = ctx.font?.() ?? 'sans-serif';
     if (font !== itemFont) { itemFont = font; for (const draw of badgeDrawers) draw(); }
@@ -158,16 +189,18 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   return {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
-    get drawn() { return bar.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
+    get tiered() { return tier.visible; },
+    setTier(level) { if (disposed || level === tierLevel) return; tierLevel = level; drawTier(); },
+    get drawn() { return bar.visible || tier.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
     set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies, nonCombat = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
-      if (nextBar !== barKey) { barKey = nextBar; bar.visible = Boolean(meters); if (meters) drawBar(team, meters); }
+      if (nextBar !== barKey) { barKey = nextBar; bar.visible = Boolean(meters); if (meters) drawBar(team, meters); placeTier(); }
       const nextItems = (items ?? []).map(item => `${item.id}@${item.icon ?? ''}:${item.stacks ?? ''}/${item.maxStacks ?? ''}`).join(',');
       if (nextItems !== itemKey) { itemKey = nextItems; shownItems = items ?? []; placeItems(shownItems); }
       // Icons sit above the bar while it shows, in its place otherwise.
-      icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
+      icons.position.y = bar.visible || tier.visible ? BAR_HEIGHT + ITEM_GAP : 0;
       badges.position.y = icons.position.y;
       anomaly.visible = Boolean(anomalies?.length);
       anomaly.position.set(BAR_WIDTH / 2 + 5, icons.position.y + ITEM_SIZE / 2, 0);
@@ -194,6 +227,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       unsubscribeUi?.();
       clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
+      tierMaterial.dispose(); tierTexture?.dispose();
       confiscation.dispose();
       anomaly.geometry.dispose(); anomaly.material.dispose();
     },

@@ -81,6 +81,8 @@ export const BATCH_UI_SPRITES: readonly string[] = [
   ...['inactive', 'bronze', 'silver', 'gold', 'prismatic', 'unique'].map(tier => `trait.${tier}`),
   'world.countdown', 'world.label',
   'carousel.inspect', 'carousel.inspect.hover', 'carousel.inspect.disabled', 'carousel.inspect.selected', 'star.1', 'star.2', 'star.3', 'star.4',
+  // A unit bar's star emblem (tfthealthbaratlas, unit-overhead.ts): bronze 1★, silver 2★, gold 3★, teal promoted 4★.
+  'health.tier-1', 'health.tier-2', 'health.tier-3', 'health.tier-4',
 ];
 function paint(sprite: ReadyUiSprite): string {
   const url = `url(${JSON.stringify(sprite.url)})`;

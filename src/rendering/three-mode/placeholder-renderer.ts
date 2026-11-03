@@ -893,8 +893,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get
   // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
-    if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
+    if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; view.overhead.setTier(null); return; }
     const level = starUps.level(piece.id, piece.effectiveStarLevel ?? piece.starLevel);
+    view.overhead.setTier(level);
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createOriginalStarMark({ effectiveStarLevel: level, colorFor: starColorFor, ui: originalUi });
     view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
@@ -1788,11 +1789,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.stars.setLevel(starUps.level(id, view.starLevel));
         view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
-        view.stars.object.visible = view.root.visible;
+        // The original star emblem on the bar replaces the star row (as in the client); the row stays as a fallback.
+        view.stars.object.visible = view.root.visible && !view.overhead.tiered;
       }
-      // Above the star row; a monster has none, so its bar takes the stars' place.
+      view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
+      // Above the star row; a monster has none (and an emblemed bar needs none), so its bar takes the stars' place.
       view.overhead.object.position.copy(view.root.position)
-        .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+        .setY(view.root.position.y + view.starHeight + lift + (view.stars && !view.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
       // The star ring circles just over the head, under the star row.
       if (view.halo) {
         view.halo.update(seconds);
