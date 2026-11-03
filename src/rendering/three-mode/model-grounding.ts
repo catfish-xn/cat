@@ -220,6 +220,16 @@ export function registerModelGrounding(body: Object3D, support: ModelSupport, fl
   }).filter(entry => entry.contacts.length), offset: 0, floor, allowance: support.height * scale * MESH_PENETRATION_RATIO, elapsed: 0, from: 0 });
 }
 
+/**
+ * After `body` (scale and position) was multiplied by `ratio` about its parent's origin: the registered floor, allowance
+ * and the offset already on its position scale with it, so the feet keep standing on the cell.
+ */
+export function rescaleModelGrounding(body: Object3D, ratio: number): void {
+  const entry = grounded.get(body);
+  if (!entry) return;
+  entry.floor *= ratio; entry.allowance *= ratio; entry.offset *= ratio; entry.from *= ratio;
+}
+
 /** After posing: follow idle, blend both entry and release over 120 ms, preserving external lifts/parent transforms. */
 export function updateModelGrounding(body: Object3D, idle: boolean, seconds: number): void {
   const entry = grounded.get(body);
