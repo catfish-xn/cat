@@ -2202,6 +2202,14 @@
       "currentSha256": "a7bc4631edeccd5682652dbfc808a002246d96c2c703f4c01ac7f1d89edd24ae",
       "firstDifferentByte": 0
     },
+    "tests/rendering3d-star-body-scale.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1811,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "c3c0623fdf91eebdfaee0fd6a5095ede87fc28eebc733a50c0a1582c670889b1",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-star-up.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
