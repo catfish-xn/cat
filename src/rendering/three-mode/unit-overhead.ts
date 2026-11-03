@@ -24,7 +24,7 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  */
 const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
-  1: { top: 0, fill: 14 }, 2: { top: 5, fill: 20 }, 3: { top: 4, fill: 34 }, 4: { top: 8, fill: 41 },
+  1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
 /** Above the star row (1000) so a bar is never hidden behind stars of a piece in front. */
 const RENDER_ORDER = 1001;
