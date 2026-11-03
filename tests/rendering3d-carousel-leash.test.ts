@@ -83,7 +83,7 @@ describe('carousel leash display', () => {
       const rope = ropes[i]!; rope.updateWorldMatrix(true, false);
       expect(rope.visible).toBe(true);
       expect(ringCenter(rope, 0).distanceTo(legends[i]!.position.clone().add(new Vector3(0, 92 * 0.5 * 0.55, 0)))).toBeLessThan(1e-4);
-      expect(ringCenter(rope, 12).distanceTo(holder.position.clone().add(new Vector3(0, 92 * 1.7 * 0.45, 0)))).toBeLessThan(1e-4);
+      expect(ringCenter(rope, 12).distanceTo(holder.position.clone().add(new Vector3(0, 92 * 1 * 0.45, 0)))).toBeLessThan(1e-4);
     });
     const atTurn = holders[2]!.position.clone();
     stage.walk(walk(legends[2]!, 2, { x: legends[2]!.position.x / CELL - 1, y: legends[2]!.position.z / CELL }, 200));

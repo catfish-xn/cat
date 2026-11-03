@@ -2043,7 +2043,7 @@ v26（2026-10-28 用户批准，取代原直接选取约定）：客户端只能
 
 `Room.handlePlayer(seatId:string,command:SeatCommand):RoomCommandResult` 是 WebSocket `handleCommand` 和 `LocalRoomClient.send` 共用的玩家入口：旧 `carousel-pick`（即使 id/revision 正确）返回现有 `wrong-phase`，未知座位返回 `unknown-seat`，不推进规则时钟、不改 state/pool/RNG/账本；其余命令转给 `handle`。旧消息仍可解析以返回明确拒绝，不变协议版本。`Room.handle` 是服务器内部的可信测试/编排入口，不得用作玩家传输入口；`arriveCarousel` 调用私有 `pickCarousel` 及 `pickCarouselForSeat` 原子发布。机器人、托管和超时继续经 `catchUpCarousel` → `autoPickCarouselForSeat`，评分和领取规则不另实现。
 
-共享判定常量 `CAROUSEL_UNIT_PICK_RADIUS = 0.55`（格）位于 `src/server/legend-motion.ts`，服务器接触规划、到达复核和 3D 可选圈都读取它。小小英雄中心到槽中心距离 ≤ 此半径即接触；9 槽、转盘半径 2.5 格的相邻圈间隙约 0.6101007166 格。依据为本项目现有圈尺寸及上述用户批准值，不声称是拳头公开碰撞参数。步行中接触沿用 10 ms 采样和 24 次二分；停止后的旋转进入用圆周几何求最早时刻，排到同一 `LegendWalkBook.contacts`，截止前站着也能拿。重定向、成功领取、场景清理或 dispose 取消旧接触；领取不修改目的地，领取后仍可地面走路。
+共享判定常量 `CAROUSEL_UNIT_PICK_RADIUS = 1`（格）位于 `src/server/legend-motion.ts`，服务器接触规划和到达复核都读取它。小小英雄中心到槽中心距离 ≤ 此半径即接触；9 槽、转盘半径 2.5 格时相邻两圈重叠约 0.29 格，没有不碰的通道。依据（2026-11-03 用户批准）：按原版小小英雄与英雄的碰撞大小换算到选秀场景约 1 格；原版没有单独的选秀拾取半径。同时托架半径改为原版地图实测的 6.7 格（`CAROUSEL_LEGEND_RADIUS`），选秀英雄不再放大（3D `UNIT_SIZE = 1`）。步行中接触沿用 10 ms 采样和 24 次二分；停止后的旋转进入用圆周几何求最早时刻，排到同一 `LegendWalkBook.contacts`，截止前站着也能拿。重定向、成功领取、场景清理或 dispose 取消旧接触；领取不修改目的地，领取后仍可地面走路。
 
 `Room.walkLegend(seatId:string,request:LegendWalkRequest)` 返回 `{ok:true,walk:LegendWalk}` 或 `{ok:false,reason:string}`。失败原因为 `settlement-pending | unknown-seat | seat-eliminated | seat-controlled | rate-limited | wrong-phase | carousel-closed | carousel-locked | already-picked | invalid-walk | slot-taken`；沿用 80 ms 节流，不加新真实计时 API。`carouselWalkContact(walk,index,count,openedAt,untilAt=walk.arriveAt):number|null` 返回服务器绝对时钟的最早接触时刻（包含起点/圈边界），`untilAt` 覆盖终点后的静止时间。真人直接选的失败和走路失败都不生成领域事件。
 

@@ -2,7 +2,7 @@
   "baseCommit": "e9384c02fe352c7da3e672d2f1a2eb61754e1f5b",
   "sourceDigests": {
     "scripts/record-v26-neutrals-1424-battle-start.cjs": "f30ae29342e18bb5737b8a1adcfcc66c2a39d7d3558071d1db112efa20b6c7c4",
-    "src/server/legend-motion.ts": "d70a7cdebcfef83517ef46d3a75e5516b838fc8696da10849ca5215ddb288da6",
+    "src/server/legend-motion.ts": "995b1ba9703e9132178b48f3dc4d07e9f747fbf3aa782dce1b877e8bb4acf53c",
     "src/server/log.ts": "848e09e00096ba6d2fb8b7608f4d381e1233f2a3c83aeaa03bd0f59457308e47",
     "src/server/main.ts": "7a4394a0b064e2614b172c28bdbc707d7d18b727ff76de3482b053bf6303c47c",
     "src/server/net/dedupe.ts": "0bcf9b26928013348fda01376d0d411b5964ee25432d56c3140c2f536dfeb2a5",

@@ -108,7 +108,7 @@ describe('3D carousel stage', () => {
     const { stage } = setup();
     stage.show(carousel());
     const seatsGroup = stage.scene.getObjectByName('render3d-carousel-seats')!, unitsGroup = stage.scene.getObjectByName('render3d-carousel-units')!;
-    for (const seat of seatsGroup.children) expect(Math.hypot(seat.position.x, seat.position.z) / CAROUSEL_CELL).toBeCloseTo(7.1, 5);
+    for (const seat of seatsGroup.children) expect(Math.hypot(seat.position.x, seat.position.z) / CAROUSEL_CELL).toBeCloseTo(6.7, 5);
     for (const unit of unitsGroup.children) expect(Math.hypot(unit.position.x, unit.position.z) / CAROUSEL_CELL).toBeCloseTo(2.5, 5);
     // Legends face the center (models face +z).
     const seat = seatsGroup.children[0]!, forward = new Vector3(0, 0, 1).applyEuler(seat.rotation);
@@ -337,7 +337,10 @@ describe('3D carousel stage', () => {
         // Cradle/legend feet span about 1.25 NDC vertically; 1.2 leaves rounding/fixture margin while rejecting a distant, tiny arena.
         // A square viewport is width-limited (about 1.184 vertically); mainstream ratios must still span 1.2.
         // Span is measured in the un-offset board viewport; the host's larger canvas adds surrounding UI space.
-        if (!withOffset) expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(aspect === 1 ? 1.15 : 1.2);
+        // These budgets were set with the cradles 7.1 cells out; the camera still frames the same pedestal rim, so the feet
+        // span is compared per 7.1-cell ring now that the cradles sit at the S13 map's 6.7 (2026-11-03).
+        const perRing = (Math.max(...ys) - Math.min(...ys)) * 7.1 / LEGEND_RADIUS;
+        if (!withOffset) expect(perRing).toBeGreaterThanOrEqual(aspect === 1 ? 1.15 : 1.2);
       }
     } finally {
       stage.dispose();

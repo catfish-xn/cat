@@ -2027,16 +2027,16 @@
     "tests/rendering3d-carousel-leash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16058,
+      "currentBytes": 16056,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cb7479e9d4a519a52da0a4c860de37a3d65702e6166a3c3ca1a6784674511589",
+      "currentSha256": "e162fc1a7126e994774cd31c20f7bbbc98360536196011a6b92dba72e1eaf684",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-carousel.test.ts": {
       "previousBytes": 36098,
-      "currentBytes": 43288,
+      "currentBytes": 43576,
       "previousSha256": "6bf6b4c0e10f4fef73c5ea74c45cce1a447840f54824399d8d8bcefffda4cafa",
-      "currentSha256": "9af40f7f3a28046677c275b1f461f4e013076f2220f33d8f6fbf7cec3eddbd78",
+      "currentSha256": "73f7c7b55da9761cc2f60d869fd57e17ce58898daf93f36583ac1681a89dea38",
       "firstDifferentByte": 145
     },
     "tests/rendering3d-cast-sequence.test.ts": {
@@ -2715,9 +2715,9 @@
     },
     "tests/server/legend-walk.test.ts": {
       "previousBytes": 17078,
-      "currentBytes": 23152,
+      "currentBytes": 23899,
       "previousSha256": "9f1d05bbfc11274e2f6e12da78ea16205c2f26837335c666510952c12dfbc3a4",
-      "currentSha256": "8b78f75a1abd7b196a1f5afce7295d2dda2ddf3252ce98034c307ebd906828a3",
+      "currentSha256": "e1b6f2fb2e62100fd0290f391f7d511d4b99da7bb767c79d45884c6b1661ac5b",
       "firstDifferentByte": 430
     },
     "tests/server/live-bank.test.ts": {

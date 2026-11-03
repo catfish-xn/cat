@@ -62,13 +62,16 @@ describe('little-legend walks on the carousel (room)', () => {
     const { room, clock } = toCarousel();
     const [a, b] = humansByRelease(room), state = room.state.carousel!.state;
     advanceTo(room, clock, Math.max(state.releaseAtMs[a!]!, state.releaseAtMs[b!]!));
-    // b walks to the middle first; the slot whose unit is nearest b's new spot then favours b even though a asks first.
-    const centre = room.walkLegend(b!, { scene: 'carousel', to: { x: 0, y: 0 } }) as { ok: true; walk: LegendWalk };
+    // b walks in first, stopping 3.7 cells out so it touches nothing on the way; the slot whose unit is nearest b's new
+    // spot then favours b even though a asks first.
+    const homeB = carouselHome(room.state.seats.findIndex(seat => seat.seatId === b), room.state.seats.length);
+    const spot = { x: homeB.x * 3.7 / Math.hypot(homeB.x, homeB.y), y: homeB.y * 3.7 / Math.hypot(homeB.x, homeB.y) };
+    const centre = room.walkLegend(b!, { scene: 'carousel', to: spot }) as { ok: true; walk: LegendWalk };
     clock.advance(centre.walk.arriveAt - clock.now());
     const all = rules.listCarouselSlots(room.state.carousel!.state), at = elapsed(room, clock);
     const homeA = carouselHome(room.state.seats.findIndex(seat => seat.seatId === a), room.state.seats.length);
     const meet = (from: { x: number; y: number }, slot: number) => interceptCarouselUnit(from, slotIndex(room, slot), all.length, at).ms;
-    const slot = all.filter(entry => entry.pickedBy === null).map(entry => entry.slot).find(candidate => meet(homeA, candidate) > meet({ x: 0, y: 0 }, candidate) + 300)!;
+    const slot = all.filter(entry => entry.pickedBy === null).map(entry => entry.slot).find(candidate => meet(homeA, candidate) > meet(spot, candidate) + 300)!;
     expect(slot).toBeDefined();
     const ofA = room.walkLegend(a!, { scene: 'carousel', slot }) as { ok: true; walk: LegendWalk };
     clock.advance(LEGEND_WALK_MIN_GAP_MS);
@@ -212,7 +215,8 @@ describe('ground-walk contact geometry', () => {
     const walk = (x: number): LegendWalk => ({ seatId: 's0', scene: 'carousel', from: { x, y: 4 }, to: { x, y: 1 }, startedAt: 0, arriveAt: 1200, slot: null });
     const near = walk(0.6);
     expect(carouselWalkContact(near, 0, 9, 0)).not.toBeNull(); // old 0.25-circle miss is inside the approved circle
-    expect(carouselWalkContact(walk(1.0), 0, 9, 0)).toBeNull();
+    expect(carouselWalkContact(walk(1.0), 0, 9, 0)).not.toBeNull(); // the 0.55-circle miss is inside the 1-cell circle
+    expect(carouselWalkContact(walk(1.5), 0, 9, 0)).toBeNull();
     const crossing = walk(0), at = carouselWalkContact(crossing, 0, 9, 0);
     expect(at).not.toBeNull();
     expect(at!).toBeLessThan(crossing.arriveAt);
@@ -224,27 +228,29 @@ describe('ground-walk contact geometry', () => {
 
 
 describe('v26 pickup circle and idle orbit', () => {
-  it('uses exactly 0.55 cells, includes the boundary and leaves a 0.61-cell lane between nine units', () => {
-    expect(CAROUSEL_UNIT_PICK_RADIUS).toBe(0.55);
+  it('uses exactly 1 cell, includes the boundary, and neighbouring circles of nine units overlap (no lane)', () => {
+    expect(CAROUSEL_UNIT_PICK_RADIUS).toBe(1);
     const gap = 2 * 2.5 * Math.sin(Math.PI / 9) - 2 * CAROUSEL_UNIT_PICK_RADIUS;
-    expect(gap).toBeCloseTo(0.6101007166, 8);
-    expect(2 * CAROUSEL_UNIT_PICK_RADIUS).toBeLessThan(1.71);
+    expect(gap).toBeCloseTo(-0.2898992834, 8);
+    expect(2 * CAROUSEL_UNIT_PICK_RADIUS).toBeGreaterThan(1.71);
     const idle = (y: number): LegendWalk => ({ seatId: 's0', scene: 'carousel', from: { x: 0, y }, to: { x: 0, y }, startedAt: 0, arriveAt: 0, slot: null });
-    expect(carouselWalkContact(idle(2.5 + 0.55), 0, 9, 0)).toBe(0);
-    expect(carouselWalkContact(idle(2.5 + 0.550001), 0, 9, 0, 48_000)).toBeNull();
-    const waiting = idle(2.5), openedAt = -3000;
+    expect(carouselWalkContact(idle(2.5 + 1), 0, 9, 0)).toBe(0);
+    expect(carouselWalkContact(idle(2.5 + 1.000001), 0, 9, 0, 48_000)).toBeNull();
+    const waiting = idle(2.5), openedAt = -4000; // unit 0 starts 30 degrees on, outside the 1-cell circle
     const at = carouselWalkContact(waiting, 0, 9, openedAt, 48_000)!;
     expect(at).toBeGreaterThan(0);
     expect(carouselWalkContact(waiting, 0, 9, openedAt, at - 0.001)).toBeNull();
     const unit = carouselUnitPoint(0, 9, at - openedAt);
-    expect(Math.hypot(unit.x, unit.y - 2.5)).toBeCloseTo(0.55, 8);
+    expect(Math.hypot(unit.x, unit.y - 2.5)).toBeCloseTo(1, 8);
   });
 
-  it('crosses the moving gap without a pick when the legend center stays outside both circles', () => {
+  it('cannot cross between two neighbours without touching one: the 1-cell circles overlap there', () => {
     const midAt = 400, angle = Math.PI / 9 + midAt / 48_000 * Math.PI * 2;
     const point = (r: number) => ({ x: Math.sin(angle) * r, y: Math.cos(angle) * r });
     const walk: LegendWalk = { seatId: 's0', scene: 'carousel', from: point(3.5), to: point(1.5), startedAt: 0, arriveAt: 800, slot: null };
-    for (let index = 0; index < 9; index++) expect(carouselWalkContact(walk, index, 9, 0)).toBeNull();
+    const touched = Array.from({ length: 9 }, (_, index) => carouselWalkContact(walk, index, 9, 0) !== null);
+    expect(touched.filter(Boolean)).toHaveLength(2); // only the two neighbours either side of the midline
+    expect(touched[0] && touched[1]).toBe(true);
   });
 
   it('grants an idle collision after arrival, and a redirect cancels that standing collision', () => {
@@ -254,9 +260,10 @@ describe('v26 pickup circle and idle orbit', () => {
       advanceTo(room, clock, room.state.carousel!.state.releaseAtMs[first]!);
       const startedAt = clock.now(), openedAt = room.state.carousel!.startedAt, end = openedAt + room.state.carousel!.state.deadlineMs;
       const from = carouselHome(room.state.seats.findIndex(seat => seat.seatId === first), 8), slots = rules.listCarouselSlots(room.state.carousel!.state);
-      // Find a genuine gap to stand in: no contact in transit, then a rotating free unit enters it.
+      // Find a genuine gap to stand in: no contact in transit, then a rotating free unit enters it. The 1-cell circles
+      // overlap on the 2.5-cell ring itself, so the gap is 3.4 cells out, still within a circle's reach of the ring.
       const candidate = Array.from({ length: 360 }, (_, i) => {
-        const angle = i * Math.PI / 180, to = { x: Math.sin(angle) * 2.5, y: Math.cos(angle) * 2.5 };
+        const angle = i * Math.PI / 180, to = { x: Math.sin(angle) * 3.4, y: Math.cos(angle) * 3.4 };
         const walk: LegendWalk = { seatId: first, scene: 'carousel', from, to, startedAt, arriveAt: startedAt + Math.hypot(to.x - from.x, to.y - from.y) / 2.5 * 1000, slot: null };
         const contacts = slots.flatMap((slot, index) => {
           if (slot.pickedBy !== null) return [];
