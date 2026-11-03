@@ -144,6 +144,10 @@ export function openContentReplayAdmission(): () => void {
   contentReplayAdmission++;
   return () => { contentReplayAdmission--; };
 }
+/** Forget every reusable admitted-copy proof. The cache is process-wide, so a test that counts
+ * cold battle replays calls this first; otherwise another file in the same worker may have
+ * already validated an identical battle and the count would depend on file placement. */
+export function clearContentReplays(): void { contentReplays.clear(); }
 /** Certify one admitted archive into the content replay cache without cloning its record graph. */
 export function sealContentReplayAdmission(record: BattleRecord): void {
   const verified = pendingContentReplays.get(record);
