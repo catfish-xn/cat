@@ -20,8 +20,10 @@ export interface AssetManifest {
   /**
    * `unitScale` (optional): the unit's official model scale from the client's skin data (1 = its mesh as authored);
    * the 3D layer draws a champion at that scale instead of fitting every one to the same height.
+   * `selfIllumination` (optional): the skin's own light term for the champion lighting of a board (BoardEntry.lighting);
+   * a model without it keeps the generic lit material.
    */
-  models: Record<string, { path: string; animations?: AnimationNames; unitScale?: number } & CastMetadata>;
+  models: Record<string, { path: string; animations?: AnimationNames; unitScale?: number; selfIllumination?: number } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;
@@ -42,7 +44,22 @@ export interface BoardAlignment {
    */
   bench?: readonly Vec3[];
 }
-export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number } }
+/**
+ * `lighting` (optional): a ChampionLighting JSON beside the manifest. Champions with `selfIllumination` are then lit by
+ * it instead of the scene lights; without it (or on older roots) every model keeps the generic lit material.
+ */
+export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string } }
+/**
+ * Champion light for one board, built offline from the board's light data: six colours along the world axes
+ * (+X, −X, +Y, −Y, +Z, −Z; display-encoded 0..1), blended by the squared world normal, scaled by `ambientScale`, plus the
+ * model's selfIllumination × `selfScale`; the sum is clamped to [0, 1] and multiplies the model's texture.
+ */
+export interface ChampionLighting {
+  schemaVersion: 1;
+  ambientCube: readonly [Vec3, Vec3, Vec3, Vec3, Vec3, Vec3];
+  ambientScale: number;
+  selfScale: number;
+}
 export type Vec3 = readonly [number, number, number];
 export type Curve = readonly { time: number; value: number }[];
 export type ColorCurve = readonly { time: number; value: Vec3 }[];
@@ -111,6 +128,9 @@ export function assetUrl(root: string, path: string): string {
 }
 /** Accepted `models[id].unitScale` (official skin scale; 1 = the mesh as authored). Anything else rejects the manifest. */
 export const UNIT_SCALE_RANGE = { min: 0.2, max: 3 } as const;
+/** Accepted `models[id].selfIllumination` and ChampionLighting scales. */
+export const LIGHT_TERM_RANGE = { min: 0, max: 4 } as const;
+const lightTerm = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= LIGHT_TERM_RANGE.min && v <= LIGHT_TERM_RANGE.max;
 export function assertManifest(value: unknown): asserts value is AssetManifest {
   if (!value || typeof value !== 'object') throw new Error('invalid-manifest');
   const m = value as AssetManifest;
@@ -120,6 +140,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     assetUrl('', entry.path);
     if (entry.unitScale !== undefined && !(typeof entry.unitScale === 'number' && Number.isFinite(entry.unitScale)
       && entry.unitScale >= UNIT_SCALE_RANGE.min && entry.unitScale <= UNIT_SCALE_RANGE.max)) throw new Error('invalid-unit-scale');
+    if (entry.selfIllumination !== undefined && !lightTerm(entry.selfIllumination)) throw new Error('invalid-self-illumination');
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
@@ -173,7 +194,18 @@ function assertBoards(value: unknown, manifest: AssetManifest): void {
     const a = entry?.alignment, target = a?.target;
     if (!a || !vec3(a.scale) || !vec3(a.offset) || !target || !finite(target.radius) || target.radius <= 0
       || !finite(target.origin?.x) || !finite(target.origin?.y)) throw new Error('invalid-board-alignment');
+    if (entry.lighting !== undefined) {
+      if (!entry.lighting || typeof entry.lighting.path !== 'string' || !/\.json$/i.test(entry.lighting.path)) throw new Error('invalid-board-lighting');
+      assetUrl('', entry.lighting.path);
+    }
   }
+}
+
+export function assertChampionLighting(value: unknown): asserts value is ChampionLighting {
+  const v = value as ChampionLighting | null;
+  const colour = (c: unknown) => vec3(c) && (c as number[]).every(n => n >= 0 && n <= 1);
+  if (!v || typeof v !== 'object' || v.schemaVersion !== 1 || !Array.isArray(v.ambientCube) || v.ambientCube.length !== 6
+    || !v.ambientCube.every(colour) || !lightTerm(v.ambientScale) || !lightTerm(v.selfScale)) throw new Error('invalid-champion-lighting');
 }
 
 /** Also accepts build-report.actionEffects, but the host must deliberately select
