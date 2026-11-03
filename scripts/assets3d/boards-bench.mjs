@@ -6,11 +6,14 @@ import sharp from 'sharp';
 import { readBoardGeometry } from './boards-geometry.mjs';
 import { carouselPoint } from './carousel-geometry.mjs';
 import { readGlb } from './glb.mjs';
-import { boardRoot, boardPlanJson } from './boards-plan.mjs';
+import { boardRoot, boardPlanJson, mergeBoardPick } from './boards-plan.mjs';
 import { binField } from './bin.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 import { packageFiles, verifyBoardPackage } from './boards-package.mjs';
 import { safeInputPath, writeOutputFileAtomic } from './safe-path.mjs';
+import { measureWalkableWidth, alignmentScaleFromWalkable, inferWalkableCellsFromDefaultRatio } from './boards-ground-measure.mjs';
+import { nestedBoardObjects } from './boards-build.mjs';
+import { binIs } from './bin.mjs';
 
 const check = (ok, reason) => { if (!ok) throw new Error(reason); };
 const hash = b => createHash('sha256').update(b).digest('hex');
@@ -271,9 +274,88 @@ export async function locateBoardBenches(evidencePath) {
   return results;
 }
 
+/** Write reproducible walkable-width evidence for every planned board (local only). */
+export async function measureBoardWalkables({ outputDir = 'assets3d-local/boards/bench' } = {}) {
+  const base = resolve('assets3d-local/boards');
+  const out = resolve(outputDir);
+  const plan = JSON.parse(await readFile(join(base, 'boards-plan.json')));
+  const documents = JSON.parse(await readFile(join(base, 'scene-objects.json')));
+  const results = [];
+  for (const rawPick of plan.picks) {
+    const pick = mergeBoardPick(rawPick);
+    const report = { key: pick.key, status: 'unresolved' };
+    try {
+      const materialDoc = documents.find(d => d.path.endsWith(`/${pick.stems[0]}.materials.bin`));
+      check(materialDoc, 'missing-board-materials-doc');
+      const locators = nestedBoardObjects(materialDoc.entries, 'MapLocator');
+      const locator = locators.find(v => binField(v, 'name') === 'BoardLocator');
+      const centerLocator = locators.find(v => binField(v, 'name') === 'BoardCenterLocator');
+      check(locator && centerLocator, 'missing-board-grid-locators');
+      const first = binField(locator, 'transform').slice(12, 15);
+      const center = binField(centerLocator, 'transform').slice(12, 15);
+      let geoBytes;
+      try {
+        const buildReport = JSON.parse(await readFile(join(base, 'reports', `${pick.key}.json`)));
+        const src = buildReport.sourceFiles.find(f => f.path.endsWith('.mapgeo'));
+        geoBytes = await readFile(await safeInputPath(base, join(base, src.path)));
+      } catch {
+        const { readdir } = await import('node:fs/promises');
+        const files = await readdir(join(base, 'sources', pick.key)).catch(() => []);
+        const hit = files.find(f => f.endsWith('.mapgeo'));
+        check(hit, 'missing-local-mapgeo');
+        geoBytes = await readFile(join(base, 'sources', pick.key, hit));
+      }
+      const geometry = readBoardGeometry(geoBytes);
+      let measurement;
+      if (pick.alignmentEvidence?.method === 'inferred-from-default-inner-walls') {
+        const implied = inferWalkableCellsFromDefaultRatio(
+          pick.alignmentEvidence.defaultImpliedCells,
+          pick.alignmentEvidence.defaultScreenshotCells,
+          pick.alignmentEvidence.skinScreenshotCells);
+        measurement = {
+          schemaVersion: 1,
+          method: pick.alignmentEvidence.method,
+          measureMode: 'inferred-from-default-inner-walls',
+          impliedWalkableCellsAtLocatorScale: implied,
+          alignmentTargetWalkableCells: pick.alignmentTargetWalkableCells,
+          alignmentScale: alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, pick.alignmentTargetWalkableCells),
+          alignmentEvidence: pick.alignmentEvidence,
+        };
+      } else {
+        const wm = pick.walkableMeasure ?? {};
+        measurement = measureWalkableWidth(geometry, first, center, {
+          measureMode: wm.measureMode,
+          runtimeFrontRow: wm.runtimeFrontRow,
+          walkableMaterials: { ground: wm.ground, wall: wm.wall },
+        });
+        if (pick.alignmentTargetWalkableCells != null) {
+          measurement.alignmentTargetWalkableCells = pick.alignmentTargetWalkableCells;
+          measurement.alignmentScale = alignmentScaleFromWalkable(measurement, pick.alignmentTargetWalkableCells);
+        } else {
+          measurement.alignmentTargetWalkableCells = null;
+          measurement.alignmentScale = null;
+        }
+      }
+      report.measurement = measurement;
+      report.status = 'measured';
+      await writeOutputFileAtomic(join(out, `${pick.key}.json`), Buffer.from(boardPlanJson(measurement)), { force: true });
+    } catch (error) {
+      report.reason = error.message;
+    }
+    results.push(report);
+  }
+  return results;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  check(process.argv[2] === '--evidence' && process.argv.length === 4, 'usage: boards-bench.mjs --evidence <local-json>');
-  const results = await locateBoardBenches(process.argv[3]);
-  console.log(JSON.stringify(results, null, 2));
-  if (results.some(r => r.status !== 'geometry-verified')) process.exitCode = 1;
+  if (process.argv[2] === '--measure-walkable') {
+    const results = await measureBoardWalkables();
+    console.log(JSON.stringify(results, null, 2));
+    if (results.some(r => r.status !== 'measured')) process.exitCode = 1;
+  } else {
+    check(process.argv[2] === '--evidence' && process.argv.length === 4, 'usage: boards-bench.mjs --evidence <local-json> | --measure-walkable');
+    const results = await locateBoardBenches(process.argv[3]);
+    console.log(JSON.stringify(results, null, 2));
+    if (results.some(r => r.status !== 'geometry-verified')) process.exitCode = 1;
+  }
 }

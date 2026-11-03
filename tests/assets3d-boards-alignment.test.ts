@@ -54,6 +54,25 @@ describe('board locator alignment (synthetic only)', () => {
     expect(() => boardAlignment([0, 0, 0], [0, 0, -1], target)).toThrow('invalid-board-locators');
   });
 
+  it('applies optional per-board alignmentScale uniformly to locator-aligned axes', () => {
+    const base = boardAlignment(first, center, target);
+    const scaled = boardAlignment(first, center, target, { alignmentScale: 1.25, alignmentEvidence: { method: 'synthetic' } });
+    expect(scaled.alignmentScale).toBe(1.25);
+    expect(scaled.scale[0]).toBeCloseTo(base.scale[0] * 1.25);
+    expect(scaled.scale[2]).toBeCloseTo(base.scale[2] * 1.25);
+    expect(scaled.sourceSteps).toEqual(base.sourceSteps);
+    expect(scaled.status).toBe('locator-aligned');
+  });
+
+  it('defaults alignmentScale manifest field to literal default when omitted', () => {
+    const a = boardAlignment(first, center, target);
+    expect(a.alignmentScale).toBe('default');
+  });
+
+  it('rejects non-positive alignmentScale', () => {
+    expect(() => boardAlignment(first, center, target, { alignmentScale: 0 })).toThrow('invalid-board-alignment-scale');
+  });
+
   it('does not reintroduce ground-span fitting in boards-build', async () => {
     const source = await readFile(resolve('scripts/assets3d/boards-build.mjs'), 'utf8');
     expect(source).not.toMatch(/alignBoardGround/);

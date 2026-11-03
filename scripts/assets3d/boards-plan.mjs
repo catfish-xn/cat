@@ -13,12 +13,62 @@ import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-pat
 // Names are editorial picks, not a measured popularity ranking. Availability is
 // established by the pinned client's WAD index, never the newer hash dictionary.
 export const BOARD_PICKS = [
-  { key: 'board-default', name: '通用默认棋盘', stems: ['base'], selection: 'pinned-client-base-arena' },
-  { key: 'board-dragon-bathhouse', name: '神龙温泉', stems: ['dragonbathhouse'] },
-  { key: 'board-club-two', name: '二号俱乐部', stems: ['lunarrevel_club2'] },
-  { key: 'board-kda', name: 'K/DA 演出舞台', stems: ['set10_kda'] },
-  { key: 'board-spirit-blossom', name: '灵魂莲华·神明', stems: ['spiritblossom_kami'] },
+  { key: 'board-default', name: '通用默认棋盘', stems: ['base'], selection: 'pinned-client-base-arena',
+    alignmentTargetWalkableCells: 7.2,
+    alignmentScale: 1.2596877928960302,
+    walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
+      ground: /\/BattleField_A_MAT$/i, wall: /\/Bench_A_MAT$/i },
+    alignmentEvidence: {
+      method: 'inner-walls',
+      materials: 'BattleField_A_MAT floor ray + Bench_A_MAT inner side walls',
+      runtimeFrontRow: 3,
+      impliedWalkableCellsAtLocatorScale: 9.069752108851418,
+      targetWalkableCells: 7.2,
+      formula: 'impliedWalkableCellsAtLocatorScale / targetWalkableCells',
+    } },
+  { key: 'board-dragon-bathhouse', name: '神龙温泉', stems: ['dragonbathhouse'],
+    walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
+      ground: /DragonBathHouse_Board_MAT$/i, wall: /DragonBathHouse_Bench_MAT$/i },
+    alignmentEvidence: {
+      method: 'inner-walls',
+      materials: 'DragonBathHouse_Board_MAT + DragonBathHouse_Bench_MAT',
+      impliedWalkableCellsAtLocatorScale: 9.185,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-club-two', name: '二号俱乐部', stems: ['lunarrevel_club2'],
+    walkableMeasure: { measureMode: 'ground-floor-slice', runtimeFrontRow: 3,
+      ground: /Board_Club2_A_MAT$/i },
+    alignmentEvidence: {
+      method: 'ground-floor-slice',
+      materials: 'Board_Club2_A_MAT front-row floor slice (no bench wall MAT)',
+      impliedWalkableCellsAtLocatorScale: 9.73,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-kda', name: 'K/DA 演出舞台', stems: ['set10_kda'],
+    walkableMeasure: { measureMode: 'ground-floor-slice', runtimeFrontRow: 3,
+      ground: /Board_KDA_A_MAT$/i },
+    alignmentEvidence: {
+      method: 'ground-floor-slice',
+      materials: 'Board_KDA_A_MAT front-row floor slice (no bench wall MAT)',
+      impliedWalkableCellsAtLocatorScale: 9.411,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-spirit-blossom', name: '灵魂莲华·神明', stems: ['spiritblossom_kami'],
+    alignmentTargetWalkableCells: 8.8,
+    alignmentScale: 1.142376225490196,
+    alignmentEvidence: {
+      method: 'inferred-from-default-inner-walls',
+      reason: 'Board_Kami_MAT has no continuous front-row floor slice for inner-wall ray cast',
+      defaultImpliedCells: 9.069752108851418,
+      defaultScreenshotCells: 8.48,
+      skinScreenshotCells: 9.4,
+      formula: 'defaultImplied × (skinScreenshot / defaultScreenshot) / targetCells',
+    } },
 ];
+export function mergeBoardPick(pick) {
+  const meta = BOARD_PICKS.find(p => p.key === pick.key);
+  return meta ? { ...pick, ...meta } : pick;
+}
 export function boardRoot(key) {
   if (!/^board-[a-z]+(?:-[a-z]+)*$/.test(key)) throw new Error('invalid-board-key');
   return key === 'board-default' ? 'default' : `extra/${key}`;
