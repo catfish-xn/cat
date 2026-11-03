@@ -24,7 +24,7 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  */
 const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8, TIER_LIFT = 8;
 /** Playtest 11-03: the tier bar a little smaller than the plain bar; worn items start this share of its width in. */
-const TIER_SCALE = 0.85, TIER_ITEM_START = 0.12;
+const TIER_SCALE = 0.85, TIER_ITEM_START = 0.12, TIER_ITEM_FILL = 0.8;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
   1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
@@ -246,9 +246,16 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     // Three item slots fill the bar from a little inside the emblem's left tip to the track's right end (playtest 11-03).
     const tierLeft = tier.position.x - tier.scale.x / 2, tierRight = tier.position.x + tier.scale.x / 2;
     const start = tierLeft + tier.scale.x * TIER_ITEM_START;
-    const size = tier.visible && count ? (tierRight - start) / (3 + 2 * ITEM_GAP / ITEM_SIZE) : ITEM_SIZE, scale = size / ITEM_SIZE;
-    const rowWidth = count * ITEM_SIZE + (count - 1) * ITEM_GAP;
-    const x = tier.visible && count ? start + rowWidth * scale / 2 : 0;
+    // Under a tier bar the items touch (no gap) and are a little smaller than a third of that span (playtest 11-03).
+    const tiered = tier.visible && count > 0, gap = tiered ? 0 : ITEM_GAP;
+    const size = tiered ? (tierRight - start) / 3 * TIER_ITEM_FILL : ITEM_SIZE, scale = size / ITEM_SIZE;
+    icons.children.forEach((icon, index) => { icon.position.x = (index - (count - 1) / 2) * (ITEM_SIZE + gap); });
+    for (const badge of badges.children) {
+      const index = Number(badge.name.slice('render3d-item-stack-'.length));
+      badge.position.x = (index - (count - 1) / 2) * (ITEM_SIZE + gap) + 3;
+    }
+    const rowWidth = count * ITEM_SIZE + (count - 1) * gap;
+    const x = tiered ? start + rowWidth * scale / 2 : 0;
     for (const row of [icons, badges]) { row.scale.setScalar(scale); row.position.set(x, base, 0); }
     const items = count ? size + ITEM_GAP : 0;
     // Under a tier bar the items sit right below its track (the emblem's lower half beside the first one, as in the client).
