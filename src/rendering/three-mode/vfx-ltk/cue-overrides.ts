@@ -43,16 +43,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.15, duration: 0.4, bone: chest, primary: true },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.7, duration: 0.6, bone: chest },
   ],
-  // W is a passive pulse (magic packet), not a cast. The cast rows mirror it so a one-shot capture can show the same pulse.
-  amumu: [
-    { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.36666666666666664, duration: 0.45, stopAfter: 0.1, bone: chest },
-    { action: 'passive', system: '56e6971e', event: 'cast-start', delay: 0, duration: 2, bone: center },
-    { action: 'passive', system: 'f2b3f090', event: 'projectile', delay: 0, duration: 0.22, travelSeconds: 0.16, bone: center, targetBone: chest, targetLimit: 8 },
-    { action: 'passive', system: '0b982f9a', event: 'hit', delay: 0.24, duration: 0.4, bone: chest },
-    { action: 'cast', system: '56e6971e', event: 'cast-start', delay: 0, duration: 2, bone: center },
-    { action: 'cast', system: 'f2b3f090', event: 'projectile', delay: 0, duration: 0.22, travelSeconds: 0.16, bone: center, targetBone: chest, targetLimit: 8 },
-    { action: 'cast', system: '0b982f9a', event: 'hit', delay: 0.24, duration: 0.4, bone: chest },
-  ],
   // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
@@ -126,17 +116,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Every 3rd attack is the spark. The beam system is a stretch ribbon; a flying projectile has no length.
-  // Combat plays the empowered attack. The same two systems are also on cast so a cast-only preview can show them.
-  // Bounce between later targets needs a new link from enemy to enemy; one cue cannot stagger per target.
-  zeri: [
-    { system: '215abe6e', action: 'attack', event: 'projectile', delay: 0.26666666666666666, duration: 0.3, travelSeconds: 0.3, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.5666666666666667, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
-    { system: 'd160dfa9', action: 'attack', variant: 'empowered', event: 'projectile', stationary: true, delay: 0.25, duration: 0.45, travelSeconds: 0.3, stopAfter: 0.3, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'c4b3f285', action: 'attack', variant: 'empowered', event: 'hit', delay: 0.32, duration: 0.6, stopAfter: 0.15, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
-    { system: 'd160dfa9', action: 'cast', event: 'projectile', stationary: true, delay: 0.25, duration: 0.45, travelSeconds: 0.3, stopAfter: 0.3, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'c4b3f285', action: 'cast', event: 'hit', delay: 0.32, duration: 0.6, stopAfter: 0.15, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
-  ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   urgot: [
@@ -172,13 +151,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 3, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-  ],
-  // Cast harness only sends `cast`; end/passive cues folded into cast timing. AOE ring on self ground at ~1.8s.
-  leona: [
-    { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.36666666666666664, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '8d9a4ccc', event: 'cast-start', delay: 0, duration: 0.55, stopAfter: 0.45, bone: 'C_Buffbone_Glb_Center_Loc' },
-    { action: 'cast', system: 'dda108d2', event: 'cast-start', delay: 0.1, duration: 0.5, stopAfter: 0.35, bone: 'C_Buffbone_Glb_Center_Loc' },
-    { action: 'cast', system: '6f29051a', event: 'cast-start', delay: 1.8, duration: 1, stopAfter: 0.85, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
   // Asset root only ships WeaponSmoke + BA hit; q_tar / slam systems lack JSON files.
   renni: [

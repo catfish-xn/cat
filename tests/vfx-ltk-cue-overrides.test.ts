@@ -1,7 +1,7 @@
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -16,8 +16,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
   it('replaces a champion\'s exported list only when every overriding system was exported', () => {
     (CUE_OVERRIDES as Record<string, readonly TimelineCue[]>).probe = fixed;
     try {
-      expect(parseIndex(index({ aa: 'aa.json', bb: 'bb.json' })).skills.probe).toEqual(fixed);
-      expect(parseIndex(index({ aa: 'aa.json' })).skills.probe).toEqual(exported);
+      expect(withCueOverrides(parseIndex(index({ aa: 'aa.json', bb: 'bb.json' }))).skills.probe).toEqual(fixed);
+      expect(withCueOverrides(parseIndex(index({ aa: 'aa.json' }))).skills.probe).toEqual(exported);
+      // parseIndex itself returns the exported timeline untouched.
+      expect(parseIndex(index({ aa: 'aa.json', bb: 'bb.json' })).skills.probe).toEqual(exported);
       expect(cueOverride('probe', { aa: 'x' })).toBeUndefined();
     } finally { delete (CUE_OVERRIDES as Record<string, readonly TimelineCue[]>).probe; }
   });

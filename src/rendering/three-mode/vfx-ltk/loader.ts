@@ -145,14 +145,19 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (Object.hasOwn(assets, name.toLowerCase())) throw new VfxLoadError('invalid', 'duplicate-asset');
     assets[name.toLowerCase()] = path as string;
   }
-  const skills: VfxIndex['skills'] = { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] };
-  // Reviewed in-repo replacements win over the exported timeline (cue-overrides.ts).
-  for (const champion of Object.keys(skills)) {
-    const override = cueOverride(champion, raw.systems as Record<string, string>);
-    if (override) skills[champion] = override;
-  }
-  return { version: 1, systems: raw.systems as Record<string, string>, assets, skills,
+  return { version: 1, systems: raw.systems as Record<string, string>, assets,
+    skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] },
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
+}
+
+/** The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines. */
+export function withCueOverrides(index: VfxIndex): VfxIndex {
+  let skills: VfxIndex['skills'] | null = null;
+  for (const champion of Object.keys(index.skills)) {
+    const override = cueOverride(champion, index.systems);
+    if (override) (skills ??= { ...index.skills })[champion] = override;
+  }
+  return skills ? { ...index, skills } : index;
 }
 
 export interface VfxLibraryOptions { groundPass?: boolean; directory?: string }
@@ -275,7 +280,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     });
     documents.set(id, held); return held;
   }
-  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
+  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(withCueOverrides).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
   return {
     ready, load, get: (id: string) => prepared.get(id), get index() { return current; },
     async champion(id: string): Promise<VfxLibrary | null> {
