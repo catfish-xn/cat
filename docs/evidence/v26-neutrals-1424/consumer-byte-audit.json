@@ -2159,9 +2159,9 @@
     },
     "tests/rendering3d-overhead.test.ts": {
       "previousBytes": 3630,
-      "currentBytes": 12936,
+      "currentBytes": 13166,
       "previousSha256": "9721722651354866558f7eb67cb4b7363d87c07b0dd052fd6fb5f3338521a891",
-      "currentSha256": "c14972aa79a300d9b501c3e4fe55fe5716a76d15d0c34d9828f74715ba13212a",
+      "currentSha256": "52af0d5575030f5b28572831fc165885a9bbb824ba7b5a3afad0bad2f720825e",
       "firstDifferentByte": 732
     },
     "tests/rendering3d-particles-v2.test.ts": {
