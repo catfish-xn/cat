@@ -703,9 +703,9 @@
     "tests/equip-craft-returns.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3789,
+      "currentBytes": 4388,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "48d5a0c0495d841f424ea7c1ee6e7edd7fa9a810d54ff72a44184ef7e0fb4950",
+      "currentSha256": "8bc9dfc6dfac95138e70489eaaa08918bbdfcfb72f22a63bf9a77ca92710b48e",
       "firstDifferentByte": 0
     },
     "tests/five-cost-fixes.test.ts": {
@@ -995,7 +995,7 @@
       "previousBytes": 0,
       "currentBytes": 69382,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6c7381174b14d840f291dabf16d4b1beb4779a347b3a67eceecf910aface8aac",
+      "currentSha256": "dbc6aa21e53c5e565fcd3c0c46998222d94a4bdfa62dae7767234a71e691c201",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -2963,9 +2963,9 @@
     },
     "tests/t12-combat-equip.test.ts": {
       "previousBytes": 34644,
-      "currentBytes": 35240,
+      "currentBytes": 35256,
       "previousSha256": "361a48581d1dc5683290862479102da4f541973e22cc7f473115aeb77c19a3e1",
-      "currentSha256": "cb88db767c9d3a0f80dca0a1a3d7c47283b6fd910da816246a68a84bd8bffef7",
+      "currentSha256": "9fe0f14267036b062886eb55387b674618a21fce8683aaa950635651c8d24101",
       "firstDifferentByte": 8788
     },
     "tests/t12-offline-transfer.test.ts": {

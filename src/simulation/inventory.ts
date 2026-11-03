@@ -101,10 +101,10 @@ export function validateEquip(
     const placement = checkEquipmentPlacement(remaining,
       { ...item, definitionId: resultDefinition }, unitId, slot);
     if (placement.allowed) return { ...placement, combination };
-    // 14.24: a three-slot result (Thief's Gloves) crafted on a unit returns every other worn item.
+    // 14.24: Thief's Gloves crafted on a unit that wears other items pop back to the inventory;
+    // the items already worn stay where they are.
     if (placement.reason === 'exclusive-slots' && ITEM_DEFINITIONS[resultDefinition].slotCost === 3) {
-      return { allowed: true, reason: null, occupiedSlots: [0, 1, 2], conflictingItemIds: [],
-        combination: { ...combination, returnedItemIds: placement.conflictingItemIds } };
+      return { allowed: true, reason: null, occupiedSlots: [], conflictingItemIds: [], combination: { ...combination, resultReturned: true } };
     }
     return placement;
   }
@@ -132,13 +132,9 @@ export function planEquip(
     if (!combined.ok) return combined;
     if (placement.combination.resultReturned) return combined;
     const createdId = `item-${nextItemSerial}`;
-    const returned = new Set(placement.combination.returnedItemIds ?? []);
     return { ok: true, nextItemSerial: combined.nextItemSerial,
-      items: combined.items.map(item => item.id === createdId ? { ...item, location: { kind: 'unit' as const, unitId, slot } }
-        : returned.has(item.id) ? { ...item, location: { kind: 'inventory' as const } } : item),
-      events: [...combined.events,
-        ...(returned.size ? [{ type: 'itemsReturned' as const, itemIds: [...returned].sort(), unitId }] : []),
-        { type: 'itemEquipped', itemId: createdId, unitId, slot }],
+      items: combined.items.map(item => item.id === createdId ? { ...item, location: { kind: 'unit' as const, unitId, slot } } : item),
+      events: [...combined.events, { type: 'itemEquipped', itemId: createdId, unitId, slot }],
     };
   }
   return {
