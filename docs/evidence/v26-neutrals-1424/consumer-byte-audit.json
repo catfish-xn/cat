@@ -1003,7 +1003,7 @@
       "previousBytes": 0,
       "currentBytes": 69382,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dbc6aa21e53c5e565fcd3c0c46998222d94a4bdfa62dae7767234a71e691c201",
+      "currentSha256": "63d2e20a5293f0c81ba450b7a87af49cb34c5473a71970943274770ac12a3acc",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1464,10 +1464,10 @@
     },
     "tests/m8-b5-equipment-history.test.ts": {
       "previousBytes": 20393,
-      "currentBytes": 21344,
+      "currentBytes": 21558,
       "previousSha256": "6fcd98ef718be6bf923a330967cba67e5dae602f2f001fc97c10bde398fccdfc",
-      "currentSha256": "077f66af10bda317866ad96c98c52ed811937bbed16c1c614305c0e9fba0e11e",
-      "firstDifferentByte": 1586
+      "currentSha256": "09eb7bca7f0775ab27902f1aa2dbc004aa39af55f54b1377fb691d514231be49",
+      "firstDifferentByte": 1072
     },
     "tests/m8-b5-grant-upgrade.test.ts": {
       "previousBytes": 18080,
