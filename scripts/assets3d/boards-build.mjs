@@ -23,9 +23,10 @@ import { createPrecache } from './merge-manifests.mjs';
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
 const json = boardPlanJson;
-/** Legacy locator estimate, retained for boards without measured ground evidence.
- * The first-cell interpretation is an assumption, not native grid metadata.
- * GLBs already reflect X. Callers apply this scale and offset to their group. */
+/** Place every board, including board-default, from BoardLocator (first cell) and
+ * BoardCenterLocator (mean of the 56 cells: 3.25 columns and 3.5 rows from the first).
+ * X and Z source steps scale independently. GLBs already reflect X.
+ * Callers apply this scale and offset to their group. */
 export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}) {
   const sourceStepX=(center[0]-first[0])/3.25,sourceStepZ=(center[2]-first[2])/3.5;
   if(!(sourceStepX>0&&sourceStepZ>0))throw new Error('invalid-board-locators');

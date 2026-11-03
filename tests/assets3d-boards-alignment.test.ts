@@ -59,5 +59,11 @@ describe('board locator alignment (synthetic only)', () => {
     expect(source).not.toMatch(/alignBoardGround/);
     expect(source).not.toMatch(/boardGroundSpan/);
     expect(source).not.toMatch(/boards-alignment\.mjs/);
+    expect(source).not.toMatch(/legacy estimate/i);
+    expect(source).not.toMatch(/measured ground evidence/);
+    const summary = await readFile(resolve('scripts/assets3d/boards-summary.mjs'), 'utf8');
+    expect(summary).toMatch(/deformation:scene\.alignment\.deformation\?\?null/);
+    expect(summary).not.toMatch(/full hex envelopes/);
+    expect(summary).not.toMatch(/ground\/wall sections/);
   });
 });
