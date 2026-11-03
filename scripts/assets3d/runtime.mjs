@@ -3,9 +3,9 @@ import { readFile } from 'node:fs/promises';
 register('./ts-loader.mjs', import.meta.url);
 // Dynamic imports occur after registration (static imports would run too early).
 export async function contracts() {
-    const { assertManifest, assetUrl } = await import('../../src/rendering3d/contracts.ts');
+    const { assertManifest, assetUrl, assertChampionLighting } = await import('../../src/rendering3d/contracts.ts');
     const { parseParticleDocument } = await import('../../src/rendering3d/particles.ts');
-    return { assertManifest, assetUrl, parseParticleDocument };
+    return { assertManifest, assetUrl, assertChampionLighting, parseParticleDocument };
 }
 export function mergeUnitDefinitions(definitions, extras) {
     const merged = { ...definitions };

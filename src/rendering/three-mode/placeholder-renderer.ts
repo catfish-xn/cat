@@ -44,6 +44,7 @@ import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
+import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
 // Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
 // so the 2D entry statically imports all of three.js (rendering3d-isolation). Mirrors ../online/mutation-cell.
@@ -358,7 +359,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     (url, readMs, parseMs) => loadReport.read(modelByUrl.get(url) ?? url, readMs, parseMs));
   if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
   const shopSkin = installShopOriginalSkin(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
+  // The board's champion light (champion-lighting.ts) is read alongside; without it champions keep the scene lights.
+  const championLight = models.cache ? loadChampionLighting(models.cache.manifest, options.assetBase, DEFAULT_BOARD,
+    readQuality3d(typeof location === 'undefined' ? '' : location.search)) : Promise.resolve(null);
   const actionEffects = await openActionEffects(models, options.assetBase);
+  const championLighting = await championLight;
   // Optional sidecar shares the model root/cache but never holds up mounting or model readiness.
   // Do not import a shared HUD component here: that would make the 2D entry pull Three.js in.
   const originalUi = startOriginalUi(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
@@ -395,6 +400,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pinned = (id: string) => isLegendModel(id) || !!feed?.warmHints?.()?.ids.includes(id);
   const retention = models.cache ? createModelRetention(models.cache, { pinned, onEvict: id => warmup?.forget(id) }) : null;
   const loadModel = retention ? (id: string) => retention.load(id) : null;
+  // Champions take the board's light on their (shared) template materials before any upload or draw; the board's own
+  // pieces patch synchronously when their model attaches (attachBody), the warm-up and the stages through this.
+  const loadLit = loadModel && championLighting
+    ? (id: string) => loadModel(id).then(lease => { championLighting.apply(lease.scene, id); return lease; }) : loadModel;
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
   const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
@@ -433,7 +442,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!envelopes.has(id)) envelopes.set(id, envelope);
     return true;
   };
-  const warmup = retention ? createModelWarmup({ load: id => retention.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
+  const warmup = retention ? createModelWarmup({ load: id => loadLit!(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
     upload: uploadModel, prepare: prepareEnvelope, busy: () => !!fighting }) : null;
   const warmList = () => {
     const legends = feed?.legends?.();
@@ -463,7 +472,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     font: canvasFont, ui: originalUi,
-    loadModel, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
+    loadModel: loadLit, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
     loadEffect, hasEffect: id => !!models.cache?.manifest.effects?.[id], starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
   // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
@@ -699,7 +708,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // surroundings and effects are hidden meanwhile and the board takes no input.
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
-    loadModel, legendModel: legend => {
+    loadModel: loadLit, legendModel: legend => {
       if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
       const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
       return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
@@ -815,6 +824,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (closed || view.disposed || view.definitionId !== originalId || attaching.get(view) !== request) { lease.release(); return; }
         if (measured) envelopes.set(definitionId, measured);
       }
+      championLighting?.apply(lease.scene, definitionId);
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
