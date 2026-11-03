@@ -23,6 +23,8 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
  * regions (an older sidecar that cut only the emblem) are not used.
  */
 const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8, TIER_LIFT = 8;
+/** Playtest 11-03: the tier bar a little smaller than the plain bar; worn items under it are this share of its width. */
+const TIER_SCALE = 0.85, TIER_ITEM_SHARE = 0.2;
 const TIER_LAYOUT: Readonly<Record<number, { top: number; fill: number }>> = {
   1: { top: 0, fill: 13 }, 2: { top: 5, fill: 19 }, 3: { top: 4, fill: 22 }, 4: { top: 8, fill: 28 },
 };
@@ -81,7 +83,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const tierMaterial = new SpriteMaterial({ map: tierTexture, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
   const tier = new Sprite(tierMaterial); tier.name = 'render3d-overhead-tier'; tier.renderOrder = RENDER_ORDER; tier.visible = false;
   barRow.add(tier);
-  let tierLevel: number | null = null, tierKey = '';
+  let tierLevel: number | null = null, tierKey = '', tierTrackBottom = 0;
   const anomaly = new Mesh(new OctahedronGeometry(4), new MeshBasicMaterial({ color: '#c6a0ff', depthTest: false, depthWrite: false }));
   anomaly.name = 'render3d-overhead-anomaly'; anomaly.visible = false; anomaly.renderOrder = RENDER_ORDER; object.add(anomaly);
   const wantedCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
@@ -156,10 +158,11 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       tierKey = key; tierCanvas.width = sprite.width * k; tierCanvas.height = sprite.height * k;
       // Track height = the plain bar's height; the emblem keeps its own proportions and sticks out of the track.
       // Playtest 11-03: drawn a little flatter than the atlas (TIER_FLATTEN), the width as it is.
-      const px = BAR_HEIGHT / TIER_TRACK, py = px * TIER_FLATTEN;
+      const px = BAR_HEIGHT / TIER_TRACK * TIER_SCALE, py = px * TIER_FLATTEN;
       tier.scale.set(sprite.width * px, sprite.height * py, 1);
       // The whole bar (emblem and track) centred over the unit, as the client draws it; the track at the plain bar's height.
       tier.position.set(0, BAR_HEIGHT / 2 + (layout.top + TIER_TRACK / 2 - sprite.height / 2) * py, 0);
+      tierTrackBottom = BAR_HEIGHT / 2 - TIER_TRACK * py / 2;
     }
     const c = ctx.colors(), m = shown?.meters, team = shown?.team ?? 'player';
     g.clearRect(0, 0, tierCanvas.width, tierCanvas.height);
@@ -237,11 +240,18 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   /** Item row at the origin, the bar row right over it, tags above the bar (or the items when no bar shows). */
   const layout = () => {
     // A tier bar keeps a clear gap over the head like the client (playtest 11-03: it sat on the head).
-    const base = tier.visible ? TIER_LIFT : 0;
-    const items = icons.children.length ? ITEM_SIZE + ITEM_GAP : 0, barShown = bar.visible || tier.visible;
-    icons.position.y = base; badges.position.y = base; barRow.position.y = base + items;
-    const top = base + items + (barShown ? BAR_HEIGHT : 0);
-    anomaly.position.set(BAR_WIDTH / 2 + 5, base + (items ? ITEM_SIZE / 2 : BAR_HEIGHT / 2), 0);
+    const base = tier.visible ? TIER_LIFT : 0, count = icons.children.length, barShown = bar.visible || tier.visible;
+    // Under a tier bar the items run left to right from the emblem's left tip, a little larger (as in the client);
+    // otherwise they stay centred at their own size.
+    const size = tier.visible && count ? tier.scale.x * TIER_ITEM_SHARE : ITEM_SIZE, scale = size / ITEM_SIZE;
+    const rowWidth = count * ITEM_SIZE + (count - 1) * ITEM_GAP;
+    const x = tier.visible && count ? tier.position.x - tier.scale.x / 2 + rowWidth * scale / 2 : 0;
+    for (const row of [icons, badges]) { row.scale.setScalar(scale); row.position.set(x, base, 0); }
+    const items = count ? size + ITEM_GAP : 0;
+    // Under a tier bar the items sit right below its track (the emblem's lower half beside the first one, as in the client).
+    barRow.position.y = base + items - (tier.visible && count ? tierTrackBottom : 0);
+    const top = barRow.position.y + (barShown ? BAR_HEIGHT : 0);
+    anomaly.position.set(BAR_WIDTH / 2 + 5, base + (items ? size / 2 : BAR_HEIGHT / 2), 0);
     confiscation.sprite.position.y = top + 8;
     wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);
   };
