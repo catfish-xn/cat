@@ -2143,9 +2143,9 @@
     },
     "tests/rendering3d-legends.test.ts": {
       "previousBytes": 7605,
-      "currentBytes": 8575,
+      "currentBytes": 8604,
       "previousSha256": "af25d075603d832b2f377e7912a1185f530b96edcfb0b214a0d1c163e8e6b47a",
-      "currentSha256": "517fdfa319fbed6f8e1ffc475bef08089fd0953c5b82c820968391a8d93b9393",
+      "currentSha256": "7a6829069f056eaaea335b1b5b966bff008f901cbe6fc51f853848625b462bcf",
       "firstDifferentByte": 174
     },
     "tests/rendering3d-monster-grounding.test.ts": {
