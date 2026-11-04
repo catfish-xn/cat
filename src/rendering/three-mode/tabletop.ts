@@ -22,6 +22,7 @@ import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
 import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+import { LEGEND_HEIGHT_RATIO } from './model-fit';
 import { createPlayerDamage } from './player-damage';
 import type { PvpDamage } from '../../presentation/pvp-damage';
 export { LEGEND_MODEL };
@@ -168,7 +169,7 @@ interface HitPlan { key: string; at: number; cast: boolean; bolt: Bolt | null; d
 
 export function createTabletop(ctx: TabletopContext): Tabletop {
   const { scene, own } = ctx;
-  const legendHeight = ctx.championHeight * 0.5;
+  const legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
   const orbGeometry = own(new SphereGeometry(ORB_RADIUS, 20, 14));
   const orbHaloGeometry = own(new RingGeometry(ORB_GROUND_RING_INNER, ORB_GROUND_RING_OUTER, 32));
   const orbStandMaterial = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {

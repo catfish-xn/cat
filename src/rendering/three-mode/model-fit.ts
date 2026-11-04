@@ -17,6 +17,9 @@ import { createSupportSampler, registerModelGrounding, supportRotation, supportV
 export const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
 export const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
 
+/** Little-legend body height as a fraction of a one-star champion (carousel, scout, tabletop). */
+export const LEGEND_HEIGHT_RATIO = 0.6;
+
 /** The manifest's unitScale for a model when it is a positive finite number, else null (JSON from an asset root). */
 export function readUnitScale(models: Readonly<Record<string, unknown>> | undefined, id: string): number | null {
   const entry = models && Object.hasOwn(models, id) ? models[id] : undefined;

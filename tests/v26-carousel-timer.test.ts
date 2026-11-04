@@ -25,7 +25,8 @@ describe('v26 carousel release ring', () => {
     const fallback = createCarouselTimerRing(40, 0.44, refused);
     fallback.update(4_000, 6_000, 0, camera); await Promise.resolve(); await Promise.resolve();
     fallback.update(3_000, 6_000, 0, camera);
-    expect(refused).toHaveBeenCalledTimes(1); expect(fallback.object.visible).toBe(true); fallback.dispose();
+    expect(refused).toHaveBeenCalledTimes(1); expect(fallback.object.visible).toBe(true);
+    expect(fallback.object.children.filter(child => child.type === 'Mesh')).toHaveLength(2); fallback.dispose();
     let resolve!: (fx: ParticleEffect) => void;
     const late = createCarouselTimerRing(40, 0.44, () => new Promise(done => { resolve = done; }));
     late.update(5_000, 6_000, 0, camera); late.dispose(); const fx = effect(); resolve(fx); await Promise.resolve();
