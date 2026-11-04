@@ -14,7 +14,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
@@ -233,7 +233,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (spot) pieces.push(unitPiece(unit, `bench:${unit.slot}`, new Vector3(spot.x, 0, spot.y)));
     }
     // The owner's 河灵 where mine stands, facing the board; its orbs in two columns beside it, by tier only.
-    const spot = legendSpot(frame), legendHeight = ctx.championHeight * 0.5;
+    const spot = legendSpot(frame), legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
     const loadModel = ctx.loadModel;
     const legendPiece = (role: 'legend' | 'visitor', code: string | null, at: Vector3) => {
       const model = ctx.legendModel(code);

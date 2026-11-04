@@ -29,7 +29,7 @@ import type { OriginalUi } from './ui-original-assets';
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
-import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { CarouselLeash } from './carousel-leash';
 
@@ -56,7 +56,7 @@ export const ORBIT_SECONDS = 48;
  * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
  */
-const STAGE_RADIUS = 8.6, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 7.9, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
 /** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
  * (the pedestal ring's own slab, never the struts hanging under the platform). */
 const RIM_BAND = 0.85, STRUT_DEPTH = 3;
@@ -202,7 +202,7 @@ interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; to
 
 export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const cell = CAROUSEL_CELL, now = ctx.now ?? (() => performance.now());
-  const legendHeight = ctx.championHeight * 0.5;
+  const legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
   const scene = new Scene();
   scene.background = new Color('#101923');
   scene.add(new AmbientLight(0xffffff, 0.75));
