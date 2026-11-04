@@ -141,8 +141,8 @@ export function inferWalkableCellsFromDefaultRatio(defaultImplied, defaultScreen
   return defaultImplied * (skinScreenshotCells / defaultScreenshotCells);
 }
 
-/** alignmentScale multiplies locator-aligned sx/sz so implied cells match targetCells. */
+/** alignmentScale multiplies locator-aligned sx/sz so impliedWalkableCells × f ≈ targetCells. */
 export function alignmentScaleFromWalkable(measurement, targetCells) {
   check(targetCells > 0, 'invalid-alignment-target');
-  return measurement.impliedWalkableCellsAtLocatorScale / targetCells;
+  return targetCells / measurement.impliedWalkableCellsAtLocatorScale;
 }

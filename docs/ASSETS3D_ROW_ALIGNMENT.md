@@ -14,7 +14,7 @@
 - `sourceStepX = (center.x − first.x) / 3.25`
 - `sourceStepZ = (center.z − first.z) / 3.5`
 
-`boards-build.mjs` 对所有棋盘调用 `boardAlignment`（locator 锚点不变）。若 `boards-plan.mjs` 的 `BOARD_PICKS` 条目含 **`alignmentScale`**（由本机 mapgeo 可走区几何实测 ÷ 目标格数），构建时将该系数**均匀乘到** `scale[0]`、`scale[1]`、`scale[2]`，并写入 manifest 的 `alignment.alignmentScale` 与 `alignmentEvidence`；缺省棋盘为字面量 `'default'`。
+`boards-build.mjs` 对所有棋盘调用 `boardAlignment`（locator 锚点不变）。若 `boards-plan.mjs` 的 `BOARD_PICKS` 条目含 **`alignmentScale`**（`f = 目标可走格数 ÷ 前排 implied 格宽`；locator 基准下可走区宽 = `implied × f`），构建时将该系数**均匀乘到** `scale[0]`、`scale[1]`、`scale[2]`，并写入 manifest 的 `alignment.alignmentScale` 与 `alignmentEvidence`；缺省棋盘为字面量 `'default'`。
 
 - `scale[0] = √3 · target.radius / sourceStepX · alignmentScale`
 - `scale[2] = −1.5 · target.radius / sourceStepZ`（负号与 GLB 内 x 反射一致）

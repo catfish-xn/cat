@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { Vector3 } from 'three';
 // @ts-expect-error Offline Node module.
 import { boardAlignment } from '../scripts/assets3d/boards-build.mjs';
+// @ts-expect-error Offline Node module.
+import { alignmentScaleFromWalkable } from '../scripts/assets3d/boards-ground-measure.mjs';
 import { arenaTransform } from '../src/rendering/three-mode/board-arena';
 import { hexCenter } from '../src/rendering3d/picking';
 
@@ -71,6 +73,14 @@ describe('board locator alignment (synthetic only)', () => {
 
   it('rejects non-positive alignmentScale', () => {
     expect(() => boardAlignment(first, center, target, { alignmentScale: 0 })).toThrow('invalid-board-alignment-scale');
+  });
+
+  it('alignmentScaleFromWalkable sets f so implied cells times f matches target', () => {
+    const implied = 9.07;
+    const targetCells = 7.2;
+    const f = alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, targetCells);
+    expect(f).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * f - targetCells)).toBeLessThan(0.05);
   });
 
   it('does not reintroduce ground-span fitting in boards-build', async () => {

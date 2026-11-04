@@ -11,9 +11,8 @@ import { binField } from './bin.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 import { packageFiles, verifyBoardPackage } from './boards-package.mjs';
 import { safeInputPath, writeOutputFileAtomic } from './safe-path.mjs';
-import { measureWalkableWidth, alignmentScaleFromWalkable, inferWalkableCellsFromDefaultRatio } from './boards-ground-measure.mjs';
+import { measureWalkableWidth, alignmentScaleFromWalkable } from './boards-ground-measure.mjs';
 import { nestedBoardObjects } from './boards-build.mjs';
-import { binIs } from './bin.mjs';
 
 const check = (ok, reason) => { if (!ok) throw new Error(reason); };
 const hash = b => createHash('sha256').update(b).digest('hex');
@@ -307,18 +306,16 @@ export async function measureBoardWalkables({ outputDir = 'assets3d-local/boards
       }
       const geometry = readBoardGeometry(geoBytes);
       let measurement;
-      if (pick.alignmentEvidence?.method === 'inferred-from-default-inner-walls') {
-        const implied = inferWalkableCellsFromDefaultRatio(
-          pick.alignmentEvidence.defaultImpliedCells,
-          pick.alignmentEvidence.defaultScreenshotCells,
-          pick.alignmentEvidence.skinScreenshotCells);
+      if (pick.alignmentEvidence?.kind === 'estimate' && pick.alignmentTargetWalkableCells != null) {
         measurement = {
           schemaVersion: 1,
-          method: pick.alignmentEvidence.method,
-          measureMode: 'inferred-from-default-inner-walls',
-          impliedWalkableCellsAtLocatorScale: implied,
+          method: pick.alignmentEvidence.method ?? 'estimate',
+          measureMode: 'estimate',
+          impliedWalkableCellsAtLocatorScale: pick.alignmentEvidence.impliedWalkableCellsAtLocatorScale,
           alignmentTargetWalkableCells: pick.alignmentTargetWalkableCells,
-          alignmentScale: alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, pick.alignmentTargetWalkableCells),
+          alignmentScale: pick.alignmentScale ?? alignmentScaleFromWalkable(
+            { impliedWalkableCellsAtLocatorScale: pick.alignmentEvidence.impliedWalkableCellsAtLocatorScale },
+            pick.alignmentTargetWalkableCells),
           alignmentEvidence: pick.alignmentEvidence,
         };
       } else {

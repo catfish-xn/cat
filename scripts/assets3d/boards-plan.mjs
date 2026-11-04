@@ -15,16 +15,18 @@ import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-pat
 export const BOARD_PICKS = [
   { key: 'board-default', name: '通用默认棋盘', stems: ['base'], selection: 'pinned-client-base-arena',
     alignmentTargetWalkableCells: 7.2,
-    alignmentScale: 1.2596877928960302,
+    alignmentScale: 0.7938414613691263,
+    // RegExp fields are overwritten by mergeBoardPick; JSON plan snapshots show {} unless re-serialized from code.
     walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
       ground: /\/BattleField_A_MAT$/i, wall: /\/Bench_A_MAT$/i },
     alignmentEvidence: {
+      kind: 'measured',
       method: 'inner-walls',
       materials: 'BattleField_A_MAT floor ray + Bench_A_MAT inner side walls',
       runtimeFrontRow: 3,
       impliedWalkableCellsAtLocatorScale: 9.069752108851418,
       targetWalkableCells: 7.2,
-      formula: 'impliedWalkableCellsAtLocatorScale / targetWalkableCells',
+      formula: 'targetWalkableCells / impliedWalkableCellsAtLocatorScale',
     } },
   { key: 'board-dragon-bathhouse', name: '神龙温泉', stems: ['dragonbathhouse'],
     walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
@@ -55,18 +57,21 @@ export const BOARD_PICKS = [
     } },
   { key: 'board-spirit-blossom', name: '灵魂莲华·神明', stems: ['spiritblossom_kami'],
     alignmentTargetWalkableCells: 8.8,
-    alignmentScale: 1.142376225490196,
+    alignmentScale: 0.9462365591397849,
     alignmentEvidence: {
-      method: 'inferred-from-default-inner-walls',
-      reason: 'Board_Kami_MAT has no continuous front-row floor slice for inner-wall ray cast',
-      defaultImpliedCells: 9.069752108851418,
-      defaultScreenshotCells: 8.48,
-      skinScreenshotCells: 9.4,
-      formula: 'defaultImplied × (skinScreenshot / defaultScreenshot) / targetCells',
+      kind: 'estimate',
+      method: 'screenshot-walkable-at-locator-scale',
+      reason: 'mapgeo 无前排连续 Board_Kami 地面切片或石栏 MAT（Board_Kami_MAT 仅包络顶点），无法用 inner-walls / floor-slice 射线',
+      impliedWalkableCellsAtLocatorScale: 9.3,
+      targetWalkableCells: 8.8,
+      originalReference: '8.8 格（step1 原版对照）',
+      screenshotReference: 'board-spirit-blossom-step1.png 可走区宽 ÷ 脚本 hex 格尺',
+      formula: 'targetWalkableCells / impliedWalkableCellsAtLocatorScale',
     } },
 ];
 export function mergeBoardPick(pick) {
   const meta = BOARD_PICKS.find(p => p.key === pick.key);
+  // walkableMeasure.ground/wall are RegExp in code; JSON.stringify(plan) turns them into {} until mergeBoardPick runs.
   return meta ? { ...pick, ...meta } : pick;
 }
 export function boardRoot(key) {
