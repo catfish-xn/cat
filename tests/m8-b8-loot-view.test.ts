@@ -1,5 +1,8 @@
 import {readFileSync} from 'node:fs';
+import path from 'node:path';
 import {gunzipSync} from 'node:zlib';
+// @ts-expect-error Recorder script is native ESM JavaScript.
+import {resolveFixtureTarget} from '../scripts/record-m8-b8-terminal-prefix.mjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
@@ -142,5 +145,23 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const restored=restoreMatch(serializeMatch(s));expect(api.stepMatch(restored)).toEqual({state:restored,events:[]});expect(api.nextRound(restored,restored.round)).toEqual({ok:false,state:restored,reason:'wrong-phase'});
   expect(v.revealedDrops.every(d=>d.allowedActions.length===0)).toBe(true);
   if(!deaths)hiddenIndependent(s,raw=>{for(const d of raw.m8.loot.frozen.rounds.at(-1).encounterPlan.drops)d.payload={kind:'gold',quantity:99};});
+ });
+ it('record-m8-b8 logs an overridden fixture directory to stderr in write mode only',()=>{
+  const defaultDir=path.resolve('tests/fixtures'),customDir=path.resolve('artifacts/custom-fixtures');
+  const stderr=vi.spyOn(console,'error').mockImplementation(()=>{});
+  try{
+   expect(resolveFixtureTarget([],{})).toEqual({check:false,fixtureDir:defaultDir,overridden:false});
+   expect(resolveFixtureTarget(['--check'],{})).toEqual({check:true,fixtureDir:defaultDir,overridden:false});
+   expect(resolveFixtureTarget(['--check',`--fixture-dir=${customDir}`],{})).toEqual({check:true,fixtureDir:customDir,overridden:true});
+   expect(resolveFixtureTarget(['--check'],{M8_B8_TERMINAL_FIXTURE_DIR:customDir})).toEqual({check:true,fixtureDir:customDir,overridden:true});
+   expect(stderr).not.toHaveBeenCalled();
+   expect(resolveFixtureTarget([`--fixture-dir=${customDir}`],{})).toEqual({check:false,fixtureDir:customDir,overridden:true});
+   expect(stderr).toHaveBeenLastCalledWith(`record-m8-b8: writing fixtures to ${customDir} (overridden)`);
+   expect(resolveFixtureTarget([],{M8_B8_TERMINAL_FIXTURE_DIR:'artifacts/env-fixtures'})).toEqual({check:false,fixtureDir:path.resolve('artifacts/env-fixtures'),overridden:true});
+   expect(stderr).toHaveBeenLastCalledWith(`record-m8-b8: writing fixtures to ${path.resolve('artifacts/env-fixtures')} (overridden)`);
+   expect(stderr).toHaveBeenCalledTimes(2);
+  }finally{
+   stderr.mockRestore();
+  }
  });
 });
