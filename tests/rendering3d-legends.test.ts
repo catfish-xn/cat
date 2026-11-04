@@ -5,6 +5,7 @@ import { createCarouselStage } from '../src/rendering/three-mode/carousel-stage'
 import { loadLegendLease } from '../src/rendering/three-mode/legend-load';
 import { boardFeed, setBoardLegends, type BoardCarousel, type BoardFrame } from '../src/rendering/board-feed';
 import type { ModelLease } from '../src/rendering3d';
+import { readLegendChoice, writeLegendChoice } from '../src/rendering/legend-choice';
 
 /** Synthetic data only: models are plain boxes keyed by made-up ids; the choice logic is production code. */
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -26,6 +27,16 @@ const frame = (changes: Partial<BoardFrame> = {}): BoardFrame => ({
 const enemy = { id: 'e', definitionId: 'unit-a', team: 'enemy' as const, starLevel: 1, x: 150, y: 80, alive: true, visible: true };
 
 describe('little legends in the 3D layer', () => {
+  it('shows pengu until a legend is picked, and keeps an explicit 河灵 pick', () => {
+    const store = new Map<string, string>();
+    const previous = (globalThis as { localStorage?: Storage }).localStorage;
+    (globalThis as { localStorage?: unknown }).localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+    try {
+      expect(readLegendChoice()).toBe('pengu');
+      writeLegendChoice('default'); expect(readLegendChoice()).toBe('default');
+    } finally { (globalThis as { localStorage?: unknown }).localStorage = previous; }
+  });
+
   it('stands each side\'s own legend on the tabletop and rebuilds one whose legend changed', async () => {
     const { loaded, leases, loadModel } = recorder();
     const sides: Record<'me' | 'opponent', string> = { me: 'little-legend-a', opponent: 'little-legend-b' };
@@ -66,11 +77,11 @@ describe('little legends in the 3D layer', () => {
     stage.dispose();
   });
 
-  it('board-feed hands the layer the online legends, and this browser\'s pick (default here) without a view', () => {
+  it('board-feed hands the layer the online legends, and this browser\'s pick (unset: pengu) without a view', () => {
     setBoardLegends({ me: 'a', opponent: 'b' });
     expect(boardFeed.legends?.()).toEqual({ me: 'a', opponent: 'b' });
     setBoardLegends(null);
-    expect(boardFeed.legends?.()).toEqual({ me: 'default', opponent: null });
+    expect(boardFeed.legends?.()).toEqual({ me: 'pengu', opponent: null });
   });
 
   it('falls back to the default legend when the picked one is refused or a placeholder, releasing the broken lease', async () => {
