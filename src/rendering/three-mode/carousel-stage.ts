@@ -55,8 +55,10 @@ export const ORBIT_SECONDS = 48;
  * platform's lowest point up) and the legends' heads on the cradles inside FRAME_FILL of the view, so the near pedestal
  * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
+ * STAGE_RADIUS 6.05 (2026-11-04 r2): golden outer ring ~66% screen width at 1920 (was 7.9 / ~57%); FRAME_FILL 1.065
+ * replaces 0.975 so the bisection can sit closer without clipping loaded meshes; 4:3 stand-in regression bound 1.31 NDC.
  */
-const STAGE_RADIUS = 7.9, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 6.05, FRAME_FILL = 1.065, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
 /** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
  * (the pedestal ring's own slab, never the struts hanging under the platform). */
 const RIM_BAND = 0.85, STRUT_DEPTH = 3;
