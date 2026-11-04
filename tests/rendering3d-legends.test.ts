@@ -97,14 +97,15 @@ describe('little legends in the 3D layer', () => {
     expect((await loadLegendLease(both.loadModel, 'little-legend-x')).placeholder).toBe(true);
   });
 
-  it('draws the default 河灵 on the tabletop and the carousel when a seat\'s legend fails to load', async () => {
+  it('draws the default pengu on the tabletop and the carousel when a seat\'s legend fails to load', async () => {
     const { loaded, loadModel } = recorder({ 'little-legend-a': 'reject', 'little-legend-b': 'placeholder' });
     const tabletop = createTabletop({ scene: new Scene(), camera: new PerspectiveCamera(), championHeight: 92, effectScale: 0.44, loadModel, loadEffect: null,
       own: resource => resource, legendModel: side => side === 'me' ? 'little-legend-a' : 'little-legend-b' });
     tabletop.frame(frame({ fighting: true, pieces: [enemy] }));
     await flush(); await flush();
     expect(tabletop.debug().legends).toEqual(['legend:me:model', 'legend:opponent:model']);
-    expect(loaded.filter(id => id === LEGEND_MODEL || id === LEGEND_FALLBACK_MODEL).length).toBeGreaterThanOrEqual(2);
+    expect(loaded.filter(id => id === LEGEND_MODEL)).toHaveLength(2);
+    expect(loaded.filter(id => id === LEGEND_FALLBACK_MODEL)).toHaveLength(0);
     tabletop.dispose();
 
     const carousel = recorder({ 'little-legend-a': 'placeholder' });
