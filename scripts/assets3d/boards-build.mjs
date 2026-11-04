@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { BOARD_PICKS, boardRoot, boardPlanJson, placedPropReferences, resolveBoardReference } from './boards-plan.mjs';
+import { BOARD_PICKS, boardRoot, boardPlanJson, placedPropReferences, resolveBoardReference, mergeBoardPick } from './boards-plan.mjs';
 import { readRman } from './rman.mjs';
 import { offlineArchiveReader } from './global-vfx.mjs';
 import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-path.mjs';
@@ -26,16 +26,22 @@ const json = boardPlanJson;
 /** Place every board, including board-default, from BoardLocator (first cell) and
  * BoardCenterLocator (mean of the 56 cells: 3.25 columns and 3.5 rows from the first).
  * X and Z source steps scale independently. GLBs already reflect X.
- * Callers apply this scale and offset to their group. */
-export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}) {
+ * Optional alignmentScale uniformly scales sx/sz so walkable width matches a target cell count. */
+export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}, options = {}) {
   const sourceStepX=(center[0]-first[0])/3.25,sourceStepZ=(center[2]-first[2])/3.5;
   if(!(sourceStepX>0&&sourceStepZ>0))throw new Error('invalid-board-locators');
-  const sx=Math.sqrt(3)*target.radius/sourceStepX,sz=1.5*target.radius/sourceStepZ;
+  const factor=options.alignmentScale??1;
+  if(!(factor>0&&Number.isFinite(factor)))throw new Error('invalid-board-alignment-scale');
+  const sx=Math.sqrt(3)*target.radius/sourceStepX*factor,sz=1.5*target.radius/sourceStepZ*factor;
   const targetCenter=[target.origin.x+Math.sqrt(3)*target.radius*3.25,0,target.origin.y+1.5*target.radius*3.5];
-  return {status:'locator-aligned',reflectX:true,scale:[sx,sx,-sz],offset:[targetCenter[0]+sx*center[0],-sx*first[1],targetCenter[2]+sz*center[2]],
+  const alignment={status:'locator-aligned',reflectX:true,scale:[sx,sx,-sz],offset:[targetCenter[0]+sx*center[0],-sx*first[1],targetCenter[2]+sz*center[2]],
     sourceFirstCell:first,sourceCenter:center,sourceSteps:[sourceStepX,sourceStepZ],target,
     gridMapping:'native (col,row) -> runtime (6-col,7-row); odd-row offset',
-    policy:'Place root at offset with scale; source X reflection is baked in GLBs. Retarget using radius and origin from BoardFrame.'};
+    policy:'Place root at offset with scale; source X reflection is baked in GLBs. Per-board alignmentScale adjusts uniform cell size without ground-span refit. Retarget using BoardFrame.'};
+  if(options.alignmentScale!=null)alignment.alignmentScale=factor;
+  else alignment.alignmentScale='default';
+  if(options.alignmentEvidence)alignment.alignmentEvidence=options.alignmentEvidence;
+  return alignment;
 }
 export function nestedBoardObjects(entries, type) {
   const result = [], stack = [...entries];
@@ -102,7 +108,8 @@ export async function buildBoards({keys}={}) {
   }
   const { parseParticleDocument } = await contracts();
   const results = [];
-  for (const pick of plan.picks) {
+  for (const rawPick of plan.picks) {
+    const pick = mergeBoardPick(rawPick);
     if(keys && !keys.includes(pick.key))continue;
     console.log('boards: build', pick.key);
     const root = join(output, boardRoot(pick.key)), payloads = new Map();
@@ -143,7 +150,10 @@ export async function buildBoards({keys}={}) {
     // Default and extra boards: place from BoardLocator (first cell) and BoardCenterLocator (56-cell average).
     scene.locators = locators;
     if(!matrix || !centerLocator)throw new Error('missing-board-grid-locators');
-    scene.alignment = boardAlignment(matrix.slice(12,15),binField(centerLocator,'transform').slice(12,15));
+    const first=matrix.slice(12,15),centerPt=binField(centerLocator,'transform').slice(12,15);
+    const alignOpts={};
+    if(pick.alignmentScale!=null){alignOpts.alignmentScale=pick.alignmentScale;alignOpts.alignmentEvidence=pick.alignmentEvidence;}
+    scene.alignment=boardAlignment(first,centerPt,undefined,alignOpts);
     report.alignment = scene.alignment;
 
     const propObjects = nestedBoardObjects(entries, 'MapAnimatedProp');
