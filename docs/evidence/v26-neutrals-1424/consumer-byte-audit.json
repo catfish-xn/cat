@@ -2141,6 +2141,13 @@
       "currentSha256": "07f496e5bce803c2b8b99180e31b3dcfe3f16c384aaa80d8b3167ae2deb5a5a7",
       "firstDifferentByte": 0
     },
+    "tests/rendering3d-legends.test.ts": {
+      "previousBytes": 7605,
+      "currentBytes": 8575,
+      "previousSha256": "af25d075603d832b2f377e7912a1185f530b96edcfb0b214a0d1c163e8e6b47a",
+      "currentSha256": "517fdfa319fbed6f8e1ffc475bef08089fd0953c5b82c820968391a8d93b9393",
+      "firstDifferentByte": 174
+    },
     "tests/rendering3d-monster-grounding.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2233,9 +2240,9 @@
     },
     "tests/rendering3d-scout.test.ts": {
       "previousBytes": 13330,
-      "currentBytes": 14076,
+      "currentBytes": 14157,
       "previousSha256": "0b40231a96e8292087bce64fbcb52b8bd4edc5c75248106a40560cc4865cef90",
-      "currentSha256": "cb9b99469a1b06afa4926be59fa32843fd1c3c17bb799323e805c34f4d19f5d3",
+      "currentSha256": "58a6321ae1ac9a169defc1df8008545244d0d4b7a8968b5fd6582f90ea06e81a",
       "firstDifferentByte": 476
     },
     "tests/rendering3d-shop-original-skin.test.ts": {
