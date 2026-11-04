@@ -16,6 +16,8 @@
 
 `boards-build.mjs` 对所有棋盘调用 `boardAlignment`（locator 锚点不变）。若 `boards-plan.mjs` 的 `BOARD_PICKS` 条目含 **`alignmentScale`**（`f = 目标可走格数 ÷ 前排 implied 格宽`；locator 基准下可走区宽 = `implied × f`），构建时将该系数**均匀乘到** `scale[0]`、`scale[1]`、`scale[2]`，并写入 manifest 的 `alignment.alignmentScale` 与 `alignmentEvidence`；缺省棋盘为字面量 `'default'`。
 
+**board-default** 的 implied 取 **截图石栏内沿**（`report.md` / r2 量法，locator 基准 **8.48 格**），目标 **7.2 格** → **f = 7.2/8.48 ≈ 0.849**（`alignmentEvidence.kind: screenshot`）。mapgeo **内墙射线**约 **9.07 格**（`rayInnerWallCells`，仅参考；缩放后在同一截图格尺下约 **7.7 格**，与石栏边不是同一条线）。
+
 - `scale[0] = √3 · target.radius / sourceStepX · alignmentScale`
 - `scale[2] = −1.5 · target.radius / sourceStepZ`（负号与 GLB 内 x 反射一致）
 - y 缩放沿用 x 缩放；offset 把源中心映射到 `target` 网格（默认 `radius: 34`，`origin: {35, 50}`）。

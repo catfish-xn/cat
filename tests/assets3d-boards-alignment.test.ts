@@ -6,6 +6,8 @@ import { Vector3 } from 'three';
 import { boardAlignment } from '../scripts/assets3d/boards-build.mjs';
 // @ts-expect-error Offline Node module.
 import { alignmentScaleFromWalkable } from '../scripts/assets3d/boards-ground-measure.mjs';
+// @ts-expect-error Offline Node module.
+import { BOARD_PICKS } from '../scripts/assets3d/boards-plan.mjs';
 import { arenaTransform } from '../src/rendering/three-mode/board-arena';
 import { hexCenter } from '../src/rendering3d/picking';
 
@@ -81,6 +83,17 @@ describe('board locator alignment (synthetic only)', () => {
     const f = alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, targetCells);
     expect(f).toBeCloseTo(targetCells / implied);
     expect(Math.abs(implied * f - targetCells)).toBeLessThan(0.05);
+  });
+
+  it('board-default uses screenshot stone-rail implied width for alignmentScale', () => {
+    const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
+    const implied = 8.48;
+    const targetCells = 7.2;
+    expect(pick?.alignmentEvidence?.kind).toBe('screenshot');
+    expect(pick?.alignmentEvidence?.impliedWalkableCellsAtLocatorScale).toBe(implied);
+    expect(pick?.alignmentScale).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * pick!.alignmentScale! - targetCells)).toBeLessThan(0.05);
+    expect(pick?.alignmentEvidence?.rayInnerWallCells).toBeCloseTo(9.07, 2);
   });
 
   it('does not reintroduce ground-span fitting in boards-build', async () => {
