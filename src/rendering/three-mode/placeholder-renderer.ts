@@ -469,9 +469,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (preloaded) warmup?.want(warmList());
     } else warmup?.cancel();
   };
-  const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number) => {
+  const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number, maxParticles?: number) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
-    return effects.load(id, maxDuration);
+    return effects.load(id, maxDuration, maxParticles);
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: defaultLegendId(),
     font: canvasFont, ui: originalUi,
