@@ -296,7 +296,7 @@ describe('3D carousel stage', () => {
       hasModel: id => id === 'carousel-llplatforms',
       loadModel: async () => {
         const scene = new Group();
-        const pedestal = new Mesh(new CylinderGeometry(6.05 * CAROUSEL_CELL, 6.05 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
+        const pedestal = new Mesh(new CylinderGeometry(7.9 * CAROUSEL_CELL, 7.9 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
         pedestal.position.y = -0.1 * CAROUSEL_CELL;
         scene.add(pedestal);
         return { scene, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease;
@@ -348,7 +348,7 @@ describe('3D carousel stage', () => {
   });
 
   it('frames the entire two-cell pedestal slab across aspect ratios without fitting its deep strut', async () => {
-    const radius = 6.05 * CAROUSEL_CELL;
+    const radius = 7.9 * CAROUSEL_CELL;
     const scene = new Group(), material = new MeshBasicMaterial();
     const slab = new Mesh(new CylinderGeometry(radius, radius, 2 * CAROUSEL_CELL, 128), material);
     slab.position.y = -CAROUSEL_CELL;

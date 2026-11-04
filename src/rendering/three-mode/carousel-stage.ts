@@ -55,10 +55,12 @@ export const ORBIT_SECONDS = 48;
  * platform's lowest point up) and the legends' heads on the cradles inside FRAME_FILL of the view, so the near pedestal
  * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
- * STAGE_RADIUS 6.05 (2026-11-04 r2): golden outer ring ~66% screen width at 1920 (was 7.9 / ~57%); FRAME_FILL 1.065
- * replaces 0.975 so the bisection can sit closer without clipping loaded meshes; 4:3 stand-in regression bound 1.31 NDC.
+ * STAGE_RADIUS 7.9 (2026-11-04 r3): revert r2's 6.05/1.065 pull-in; the fit samples the golden outer ring again. Shallow
+ * VIEW and a lower look-at (LOOK_AT_Y) plus RIM_PAD below the ring floor keep the top cradles and the near pedestal in
+ * frame at 1920; target outer ring ~66–70% screen width without cropping the arena vertically.
  */
-const STAGE_RADIUS = 6.05, FRAME_FILL = 1.065, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 7.9, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 0.93, 1).normalize();
+const LOOK_AT_Y = 0.36, RIM_PAD = 0.35;
 /** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
  * (the pedestal ring's own slab, never the struts hanging under the platform). */
 const RIM_BAND = 0.85, STRUT_DEPTH = 3;
@@ -381,9 +383,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const top = box.isEmpty() ? 0 : Math.max(0, Math.min(box.max.y, surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight));
     const head = surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight;
     rim.length = 0;
+    const floor = bottom - RIM_PAD * cell;
     for (let i = 0; i < RIM_POINTS; i++) {
       const angle = i / RIM_POINTS * Math.PI * 2, x = Math.sin(angle), z = Math.cos(angle);
-      rim.push(new Vector3(x * radius, bottom, z * radius), new Vector3(x * radius, top, z * radius),
+      rim.push(new Vector3(x * radius, floor, z * radius), new Vector3(x * radius, top, z * radius),
         new Vector3(x * LEGEND_RADIUS * cell, head, z * LEGEND_RADIUS * cell));
     }
   };
@@ -399,7 +402,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const frameCamera = () => {
     if (!rim.length) measureRim();
     const direction = VIEW.clone().applyAxisAngle(new Vector3(0, 1, 0), azimuth);
-    const target = new Vector3(0, legendHeight * 0.5, 0);
+    const target = new Vector3(0, legendHeight * LOOK_AT_Y, 0);
     // The nearest distance that still fits the rim, by bisection (the fit only gets easier farther out), in the projection
     // as drawn: the host sets its view offset after resize(), so each update re-checks. Kept until the view's shape or
     // offset, its side or the platform changes.
