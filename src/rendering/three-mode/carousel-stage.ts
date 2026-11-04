@@ -475,7 +475,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
       releaseAtMs: Infinity, locked: false, goal: null, speed: 0, path: null, carry: null, tether, countdown: null, timer };
     // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
-    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
+    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id) : null);
     return view;
   };
   const dropCountdown = (view: SeatView) => {

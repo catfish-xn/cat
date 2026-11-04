@@ -4,6 +4,7 @@ import { createScoutStage, readScout } from '../src/rendering/three-mode/scout-s
 import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
+import { LEGEND_MODEL } from '../src/rendering/three-mode/tabletop';
 import { unitAnomalies } from '../src/presentation/anomaly-display';
 
 /** Synthetic seats only: no asset files, no real players. */
@@ -151,14 +152,14 @@ describe('3D scouting: the seat\'s little legend', () => {
         const body = new Group(), release = vi.fn(); fallbackBodies.push(body); releases.push(release);
         return Promise.resolve({ scene: body, animations: [], animationNames: {}, placeholder: false, release } as unknown as ModelLease);
       },
-      legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default', myLegend: () => 'pengu',
+      legendModel: legend => legend ? `little-legend-${legend}` : LEGEND_MODEL, myLegend: () => 'pengu',
       starColor: () => '#ffd34d', itemIcon: () => null,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => resource });
     stage.show(scoutOf({ legend: 'ao-shin', board: { units: [] } }), frame);
     await new Promise(resolve => setTimeout(resolve, 0));
     // Theirs (falling back to the default) and mine, which came along to their board.
-    expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu']);
+    expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu', 'little-legend-pengu']);
     expect(stage.debug().legend).toBe('model:little-legend-ao-shin');
     expect(stage.debug().visitor).toBe('model:little-legend-pengu');
     expect(fallbackBodies).toHaveLength(2);

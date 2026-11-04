@@ -38,7 +38,7 @@ import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader, type ModelTiming } from './asset-reader';
-import { LEGEND_MODEL, createTabletop } from './tabletop';
+import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, createTabletop, resolveDefaultLegend } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
@@ -404,6 +404,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // pieces patch synchronously when their model attaches (attachBody), the warm-up and the stages through this.
   const loadLit = loadModel && championLighting
     ? (id: string) => loadModel(id).then(lease => { championLighting.apply(lease.scene, id); return lease; }) : loadModel;
+  const hasLegendModel = (id: string) => !!models.cache && Object.hasOwn(models.cache.manifest.models, id);
+  const defaultLegendId = () => resolveDefaultLegend(hasLegendModel);
+  const legendModelsAvailable = () => hasLegendModel(LEGEND_MODEL) || hasLegendModel(LEGEND_FALLBACK_MODEL);
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
   const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
@@ -446,7 +449,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     upload: uploadModel, prepare: prepareEnvelope, busy: () => !!fighting }) : null;
   const warmList = () => {
     const legends = feed?.legends?.();
-    return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels,
+    return [defaultLegendId(), LEGEND_MODEL, LEGEND_FALLBACK_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels,
       ...Object.keys(models.cache?.manifest.models ?? {}).filter(id => id.startsWith('pve-'))];
   };
   let preloaded = false, hintVersion = 0;
@@ -470,7 +473,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
     return effects.load(id, maxDuration);
   } : null;
-  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
+  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: defaultLegendId(),
     font: canvasFont, ui: originalUi,
     loadModel: loadLit, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
@@ -487,11 +490,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
   // Each side's own little legend (board-feed legends) when the root has it, else the default 河灵.
   const legendModel = (side: 'me' | 'opponent') => {
-    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : LEGEND_MODEL;
-    return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : defaultLegendId();
+    return hasLegendModel(id) ? id : defaultLegendId();
   };
   const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
-    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? loadModel : null,
+    loadModel: legendModelsAvailable() ? loadModel : null,
     loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
   // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
   const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
@@ -709,9 +712,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
     loadModel: loadLit, legendModel: legend => {
-      if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
-      const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
-      return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+      if (!legendModelsAvailable()) return null;
+      const id = legend ? `little-legend-${legend}` : defaultLegendId();
+      return hasLegendModel(id) ? id : defaultLegendId();
     },
     myLegend: () => feed?.legends?.().me ?? null,
     starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), hasAnomaly: (native, items) => hasAnomalyFor(native, items), own });
