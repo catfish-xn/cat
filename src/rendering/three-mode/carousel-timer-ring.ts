@@ -6,7 +6,7 @@ const SEGMENTS = 128;
 /** Fallback ring radius when `radius` is the legacy 0.72-cell logical size (see carousel-stage seat timer). */
 const FALLBACK_RADIUS_SCALE = 0.45 / 0.72;
 
-/** Authoritative release countdown at a locked seat: optional 6s particle ring; thin procedural arc only without assets. */
+/** Authoritative release countdown at a locked seat: optional 6s particle ring; thin procedural arc when that asset is absent or fails to load. */
 export function createCarouselTimerRing(radius: number, sourceScale: number,
   loadEffect?: (id: string, seconds: number) => Promise<ParticleEffect>) {
   const object = new Group(); object.name = 'render3d-carousel-timer'; object.visible = false;
@@ -14,7 +14,8 @@ export function createCarouselTimerRing(radius: number, sourceScale: number,
   let arcGeometry: RingGeometry | null = null;
   let trackMaterial: MeshBasicMaterial | null = null;
   let arcMaterial: MeshBasicMaterial | null = null;
-  if (!loadEffect) {
+  const addFallback = () => {
+    if (arcGeometry) return;
     const fallbackRadius = radius * FALLBACK_RADIUS_SCALE;
     trackGeometry = new RingGeometry(fallbackRadius * 0.89, fallbackRadius, SEGMENTS);
     arcGeometry = trackGeometry.clone();
@@ -23,7 +24,8 @@ export function createCarouselTimerRing(radius: number, sourceScale: number,
     const track = new Mesh(trackGeometry, trackMaterial), arc = new Mesh(arcGeometry, arcMaterial);
     track.rotation.x = arc.rotation.x = -Math.PI / 2; arc.rotation.z = Math.PI / 2; arc.position.y = 0.2;
     object.add(track, arc);
-  }
+  };
+  if (!loadEffect) addFallback();
   let effect: ParticleEffect | null = null, pending = false, requested = false, disposed = false;
   return {
     object,
@@ -41,7 +43,7 @@ export function createCarouselTimerRing(radius: number, sourceScale: number,
           pending = false;
           if (disposed || !object.visible) { fx.dispose(); return; }
           effect = fx; fx.object.scale.setScalar(sourceScale); object.add(fx.object);
-        }).catch(() => { pending = false; });
+        }).catch(() => { pending = false; if (!disposed) addFallback(); });
       }
       effect?.update(seconds, camera);
       if (effect?.finished) { effect.dispose(); effect = null; }
