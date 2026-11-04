@@ -1675,9 +1675,9 @@
     },
     "tests/m8-b8-loot-view.test.ts": {
       "previousBytes": 11022,
-      "currentBytes": 13052,
+      "currentBytes": 14672,
       "previousSha256": "b6806a50501dcd0906d6c34fab291b7d9097311da05899c5023945da60bf6f0d",
-      "currentSha256": "5ccd35dc6645ce1a0585aab6838667c9ef5f8169f04b4913d4ae839df1c56362",
+      "currentSha256": "29b9fe0a2576d111a64098debd9db341f258bcefb0be3483175a3fbc3314796a",
       "firstDifferentByte": 8
     },
     "tests/m8-b8-oracle.test.ts": {
