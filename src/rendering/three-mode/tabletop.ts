@@ -21,11 +21,11 @@ import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffe
 import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
-import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, loadLegendLease, resolveDefaultLegend } from './legend-load';
 import { LEGEND_HEIGHT_RATIO } from './model-fit';
 import { createPlayerDamage } from './player-damage';
 import type { PvpDamage } from '../../presentation/pvp-damage';
-export { LEGEND_MODEL };
+export { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, resolveDefaultLegend, loadLegendLease };
 /** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
 export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
