@@ -30,9 +30,11 @@ describe('owner-only default arena gold mines', () => {
   it.each([true, false])('maps original locators through reflection=%s and live-grid scaling once', reflectX => {
     const board = { ...frame(), hexRadius: 68, origin: { x: 100, y: 200 } };
     const placed = goldMinePlacement({ ...alignment, reflectX }, board);
-    expect(placed.scale.toArray()).toEqual([reflectX ? -4 : 4, 6, -8]);
+    // The drawn arena is mirrored about the grid's centre line (board-arena.ts arenaDrawTransform).
+    const mirrorX = 2 * (100 + Math.sqrt(3) * 68 * 3.25) - 50;
+    expect(placed.scale.toArray()).toEqual([reflectX ? 4 : -4, 6, -8]);
     GOLD_MINE_HOME.forEach(([x, y, z], i) => {
-      expect(placed.points[i]!.toArray()).toEqual([50 + (reflectX ? -4 : 4) * x, 40 + 6 * y, 160 - 8 * z]);
+      expect(placed.points[i]!.toArray()).toEqual([mirrorX + (reflectX ? 4 : -4) * x, 40 + 6 * y, 160 - 8 * z]);
     });
     expect(placed.points[0]!.z).toBeGreaterThan(placed.points[4]!.z);
   });

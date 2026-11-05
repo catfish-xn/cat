@@ -2,7 +2,7 @@
 import { AnimationMixer, Group, LoopOnce, LoopRepeat, Vector3 } from 'three';
 import type { BoardAlignment, ModelLease } from '../../rendering3d';
 import type { BoardFrame } from '../board-feed';
-import { arenaTransform } from './board-arena';
+import { arenaDrawTransform } from './board-arena';
 
 export const GOLD_MINE_MODEL = 'board-default-prop-b9428eae4ae8c07c91ed';
 /** The default arena's GoldMine locators in original map space; Home1 is nearest the bench. Only DEFAULT_BOARD uses these. */
@@ -11,9 +11,9 @@ export interface GoldMineAlignment extends BoardAlignment { readonly reflectX?: 
 export type MineAction = 'hidden' | 'idle' | 'spawn' | 'death' | 'gain';
 const CLIPS = { idle: 'GoldMine_Idle', spawn: 'GoldMine_Spawn', death: 'GoldMine_Death', gain: 'GoldMine_Gain_Gold' } as const;
 
-/** Reflect original map X just as the arena converter did, then apply the arena's live-grid transform. */
+/** Reflect original map X just as the arena converter did, then apply the drawn arena's live-grid transform. */
 export function goldMinePlacement(alignment: GoldMineAlignment, frame: BoardFrame) {
-  const transform = arenaTransform(alignment, frame);
+  const transform = arenaDrawTransform(alignment, frame);
   const scale = transform.scale.clone();
   if (alignment.reflectX) scale.x *= -1;
   return { scale, points: GOLD_MINE_HOME.map(point => new Vector3(...point).multiply(scale).add(transform.position)) };

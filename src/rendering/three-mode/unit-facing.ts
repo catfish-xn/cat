@@ -4,8 +4,9 @@
  *
  * A piece that moves looks where it goes; standing in combat it looks at the unit it last attacked or cast on while
  * that unit is alive and drawn; with no such target (or dead itself) it keeps the way it already looks. Outside combat it
- * rests looking across the board at the other side. A piece on the bench (or gliding into a bench cell after a drop or a
- * swap) always rests that way: it never turns to where it slides. Every change is a TURN_SECONDS turn the short way round, never a jump.
+ * rests facing the camera, as the client shows pieces in planning (both sides: the far side's rest heading is toward us
+ * too). A piece on the bench (or gliding into a bench cell after a drop or a swap) always rests that way: it never turns
+ * to where it slides. Every change is a TURN_SECONDS turn the short way round, never a jump.
  */
 
 /** Board units a piece must still have to go this frame to count as moving (the renderer's glide step). */
@@ -17,8 +18,8 @@ const RETARGET = 0.05;
 
 export interface PlanarPoint { readonly x: number; readonly z: number }
 
-/** Rest heading: the player's side looks up the board (-z), the enemy's down it (+z). */
-export const restHeading = (team: 'player' | 'enemy'): number => team === 'player' ? Math.PI : 0;
+/** Rest heading: every piece faces the camera (+z) outside combat, whichever side it stands on. */
+export const restHeading = (_team: 'player' | 'enemy'): number => 0;
 
 /** The heading that looks from `from` to `to`, or null when the two points are (nearly) the same. */
 export function headingToward(from: PlanarPoint, to: PlanarPoint): number | null {
