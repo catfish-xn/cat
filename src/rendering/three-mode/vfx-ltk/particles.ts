@@ -71,9 +71,11 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
+  scale?: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const spec = { ...options };
+  const spec = { ...options, scale: options.scale ?? 1 };
   const rigFor = (): RigModel => {
     const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
@@ -82,8 +84,10 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
+  // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
   const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
   const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  driver.setScale(spec.scale);
   let rig = rigFor();
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
@@ -140,6 +144,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed;
+      spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },

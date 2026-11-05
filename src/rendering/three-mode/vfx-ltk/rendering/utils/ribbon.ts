@@ -20,6 +20,7 @@ import type { BeamModel, UvLayer } from "../../engine/model/model";
 import type { Point } from "../../engine/model/rig";
 import type { Source } from "../../engine/simulation/particleRead";
 import { turnInto } from "../../engine/utils/basis";
+import { cueScale, scaleAxes } from "../../engine/simulation/systemScale";
 import { sampleCurve } from "../../engine/utils/sampleCurve";
 import { written } from "./buffers";
 import type { UvDraw } from "./uvTransform";
@@ -397,11 +398,14 @@ export function beamEndsInto(
   from: [number, number, number],
   to: [number, number, number],
 ): void {
+  const cue = cueScale(source.scale);
   OFFSET.set(beam.sourceOffset);
+  if (cue !== 1) scaleAxes(OFFSET, 0, cue);
   turnInto(source.orientation, OFFSET, 0);
   for (let axis = 0; axis < 3; axis += 1) from[axis] = source.origin[axis] + OFFSET[axis];
 
   OFFSET.set(beam.targetOffset);
+  if (cue !== 1) scaleAxes(OFFSET, 0, cue);
   turnInto(source.orientation, OFFSET, 0);
   for (let axis = 0; axis < 3; axis += 1) to[axis] = source.target[axis] + OFFSET[axis];
 }

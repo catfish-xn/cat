@@ -9,6 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
+import { cueOverride } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -126,6 +127,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
+        || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
@@ -146,6 +148,16 @@ export function parseIndex(raw: unknown): VfxIndex {
   return { version: 1, systems: raw.systems as Record<string, string>, assets,
     skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] },
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
+}
+
+/** The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines. */
+export function withCueOverrides(index: VfxIndex): VfxIndex {
+  let skills: VfxIndex['skills'] | null = null;
+  for (const champion of Object.keys(index.skills)) {
+    const override = cueOverride(champion, index.systems);
+    if (override) (skills ??= { ...index.skills })[champion] = override;
+  }
+  return skills ? { ...index, skills } : index;
 }
 
 export interface VfxLibraryOptions { groundPass?: boolean; directory?: string }
@@ -268,7 +280,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     });
     documents.set(id, held); return held;
   }
-  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
+  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(withCueOverrides).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
   return {
     ready, load, get: (id: string) => prepared.get(id), get index() { return current; },
     async champion(id: string): Promise<VfxLibrary | null> {

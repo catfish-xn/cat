@@ -30,6 +30,7 @@ import {
   worldOf,
 } from "./integrate";
 import { type DrawFrame, frameInto, type FrameSlot, type Source } from "./particleRead";
+import { cueScale } from "./systemScale";
 import {
   copyRows,
   FLEX_CHANNELS,
@@ -124,6 +125,8 @@ export interface Lineage {
   joints: Joints | null;
   /** The chance the reader pins every birth of the run at, null for a run left to its draws. */
   pinned: number | null;
+  /** Cue scale shared by the opened system and every child it spawns. */
+  scale: number;
 }
 
 /** A lineage with no children in it, seeded off the viewport's own seed, riding no skeleton. */
@@ -139,6 +142,7 @@ export function createLineage(seed: number, budget = CHILD_BUDGET, maxChildren =
     live: 0,
     joints: null,
     pinned: null,
+    scale: 1,
     surfaces: new Map(),
     meshJoints: new Map(),
     flex: new Float32Array(FLEX_CHANNELS),
@@ -212,6 +216,8 @@ export interface Child extends Source {
   /** The joint a bone child rides, re-sampled every step it follows, and null off a bone. */
   readonly anchor: Anchor | null;
   readonly children: Children;
+  /** Cue scale, copied from the lineage so a child's own draw and births read it. */
+  scale: number;
 }
 
 /** One live child as a value: its pool's live rows, its own state, and its own children. */
@@ -340,6 +346,7 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
       inheritance: set.inheritance,
       anchor,
       children: createChildren(lineage, childPrefix(path), depth + 1),
+      scale: lineage.scale,
     };
     standAt(child, bearing, now);
     child.from[0] = child.origin[0];
@@ -390,7 +397,7 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
       const frameAt = (index: number): DrawFrame => {
         const slot = frameSlots[index] ?? (frameSlots[index] = {
           emitter: emitters[index], now: parent.time, phase: 0, origin: parent.origin,
-          orientation: parent.orientation, world: parent.world,
+          orientation: parent.orientation, world: parent.world, scale: cueScale(parent.scale),
         });
         return frameInto(parent, emitters[index], slot);
       };
@@ -542,6 +549,7 @@ function copyChild(child: Child): ChildCopy {
     inheritance: child.inheritance,
     anchor: child.anchor,
     children: child.children.snapshot(),
+    scale: child.scale,
   };
 }
 
@@ -576,6 +584,7 @@ function standChild(lineage: Lineage, copy: ChildCopy, depth: number): Child {
     inheritance: copy.inheritance,
     anchor: copy.anchor,
     children,
+    scale: lineage.scale,
   };
 
   feedOf(lineage, copy.path).push(child);
@@ -623,6 +632,7 @@ function boneChildCount(set: ChildSetModel): number {
 function advance(child: Child, dt: number, now: number, lineage: Lineage): void {
   child.time = now;
   child.elapsed = now - child.bornAt;
+  child.scale = lineage.scale;
   if (child.stopAt !== null && now >= child.stopAt) child.stopped = true;
 
   const step: SystemStep = {
@@ -639,6 +649,7 @@ function advance(child: Child, dt: number, now: number, lineage: Lineage): void 
     stopped: child.stopped,
     pinned: lineage.pinned,
     surfaces: lineage.surfaces.get(child.path),
+    scale: lineage.scale,
   };
   stepEmitters(child.pool, child.system, step, child.rng, child.states);
   child.children.step(child, child.system, dt, now);
