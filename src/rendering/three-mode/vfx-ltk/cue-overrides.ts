@@ -15,12 +15,13 @@ const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
+  // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
   vex: [
     { system: '85788d2c', action: 'attack', event: 'projectile', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5666666666666667, duration: 1.5 },
     { system: 'c173eb0c', action: 'cast', event: 'projectile', delay: 0, duration: 0.35, travelSeconds: 0.28, bone: 'R_Buffbone_Glb_Hand_Loc', targetBone: ground },
-    { system: '8682c9ee', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true },
-    { system: 'eb9da1d5', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true },
+    { system: '8682c9ee', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true, scale: 0.68 },
+    { system: 'eb9da1d5', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true, scale: 0.68 },
     { system: 'c4da788c', action: 'cast', event: 'hit', delay: 1.2, duration: 0.9, bone: ground, primary: true },
     { system: '37f7cb35', action: 'cast', event: 'hit', delay: 1.2, duration: 1, bone: ground, primary: true },
   ],
@@ -156,6 +157,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   renni: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
+  ],
+  // R: exported cues unchanged. The full explosion's green cloud is authored about 1.5× the reference (≥6.7 vs ≥4.4 cells, no clear edge).
+  nunu: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'Spine2_Wil' },
+    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 1.2, duration: 1.5, bone: 'Spine2_Wil', scale: 0.66 },
   ],
 };
 

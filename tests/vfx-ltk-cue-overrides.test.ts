@@ -30,6 +30,11 @@ describe('reviewed vfx-ltk cue overrides', () => {
       expect(() => parseIndex({ version: 1, systems, assets: {}, skills: { [champion]: cues } }), champion).not.toThrow();
     }
     expect(CUE_OVERRIDES.garen.find(cue => cue.system === '5bbccb8c')?.scale).toBe(0.45);
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(0.68);
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(0.68);
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.66);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBeUndefined();
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {
