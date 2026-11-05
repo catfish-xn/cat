@@ -6,6 +6,7 @@ import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { getUnitStats } from '../simulation/unit-stats';
 import { abilityDisplayValues, glovesOffDisplayValues } from '../simulation/ability-display';
 import { HERO_ABILITY_MANA_INCREASE } from './hero-ability';
+import { planningBase, planningMeters } from './planning-meters';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import type { CombatViewUnit } from './combat-display';
 import type { UnitBattleStats } from './battle-ranking';
@@ -129,11 +130,10 @@ export function applyUnitSplash(body: HTMLElement, skin: UnitPanelSkin | null): 
 /** Text and widths only: combat refresh never replaces the header, slots, bars or stat nodes. */
 export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   if (body.classList.contains('unit-card-anvil')) return;
-  const def = UNIT_DEFINITIONS[data.definitionId];
-  const base = (data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
+  const base = planningBase(data.definitionId, data.starLevel);
   const live = data.combat ?? planningBonusProjection(data);
   const hp = live?.hp ?? base.health, maxHp = live?.maxHp ?? base.health, shield = live?.shield ?? 0;
-  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? base.maxMana + (data.heroAbility && data.starLevel !== 4 ? HERO_ABILITY_MANA_INCREASE : 0);
+  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? planningMeters(data.definitionId, data.starLevel, data.heroAbility).maxMana;
   // The replay's interval is already the rules' current speed projection (including temporary effects).
   const speed = live ? 20 / live.attackIntervalTicks : base.baseAttackSpeedBps !== undefined ? base.baseAttackSpeedBps / 10000 : 20 / base.attackIntervalTicks;
   const crit = live as (CombatViewUnit & { baseCritChanceBps?: number; baseCritMultiplierBps?: number }) | null;

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Texture, type Sprite } from 'three';
 import { BAR_WIDTH, DEFAULT_METER_COLORS, createUnitOverhead } from '../src/rendering/three-mode/unit-overhead';
+import { planningMeters } from '../src/presentation/planning-meters';
+import { getUnitStats } from '../src/simulation/unit-stats';
+import { HERO_ABILITY_MANA_INCREASE } from '../src/presentation/hero-ability';
 
 /** A recording 2D context: no real canvas in the node test environment. */
 function fakeCanvas() {
@@ -162,6 +165,53 @@ describe('3D overhead meters and items', () => {
     const painted = map.version; update(); expect(map.version).toBe(painted);
     overhead.dispose();
     expect(dropMaterial).toHaveBeenCalledTimes(1); expect(dropBadge).toHaveBeenCalledTimes(1); expect(dropMap).toHaveBeenCalledTimes(1);
+  });
+
+  it('planning meters split the tier bar at full HP and show starting mana', () => {
+    const barFake = fakeCanvas(), tierFake = fakeCanvas();
+    vi.stubGlobal('document', { createElement: vi.fn(() => fakeCanvas().canvas).mockReturnValueOnce(barFake.canvas).mockReturnValueOnce(fakeCanvas().canvas).mockReturnValueOnce(tierFake.canvas) });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null,
+      ui: { sprite: id => id === 'health.tier-1' ? { source: {} as CanvasImageSource, url: 'blob:test', width: 80, height: 20, dispose() {} } : undefined,
+        subscribe: () => () => {} } });
+    overhead.setTier(1);
+    overhead.set('player', { hp: 900, maxHp: 900, mana: 30, maxMana: 60, shield: 0 }, undefined);
+    expect(tierFake.rects.filter(rect => rect.fill === 'rgb(2, 18, 35)')).toHaveLength(2);
+    const mana = tierFake.rects.filter(rect => rect.fill === DEFAULT_METER_COLORS.mana);
+    expect(mana).toHaveLength(1);
+    expect(mana[0]!.w).toBeGreaterThan(0);
+    overhead.dispose();
+  });
+
+  it('hides both bars while benched in combat and restores them', () => {
+    const barFake = fakeCanvas(), tierFake = fakeCanvas();
+    vi.stubGlobal('document', { createElement: vi.fn(() => fakeCanvas().canvas).mockReturnValueOnce(barFake.canvas).mockReturnValueOnce(fakeCanvas().canvas).mockReturnValueOnce(tierFake.canvas) });
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null,
+      ui: { sprite: id => id === 'health.tier-1' ? { source: {} as CanvasImageSource, url: 'blob:test', width: 80, height: 20, dispose() {} } : undefined,
+        subscribe: () => () => {} } });
+    const tier = overhead.object.getObjectByName('render3d-overhead-tier')!;
+    const bar = overhead.object.getObjectByName('render3d-overhead-bar')!;
+    overhead.setTier(1);
+    overhead.set('player', { hp: 600, maxHp: 600, mana: 0, maxMana: 60, shield: 0 }, undefined);
+    expect(tier.visible).toBe(true); expect(overhead.tiered).toBe(true);
+    overhead.setBarsHidden(true);
+    expect(tier.visible).toBe(false); expect(bar.visible).toBe(false); expect(overhead.tiered).toBe(false);
+    overhead.set('player', { hp: 900, maxHp: 900, mana: 20, maxMana: 60, shield: 0 }, undefined);
+    expect(tier.visible).toBe(false); expect(bar.visible).toBe(false); expect(overhead.tiered).toBe(false);
+    overhead.setBarsHidden(false);
+    expect(tier.visible).toBe(true); expect(bar.visible).toBe(false); expect(overhead.tiered).toBe(true);
+    overhead.setTier(null);
+    expect(tier.visible).toBe(false); expect(bar.visible).toBe(true);
+    overhead.setBarsHidden(true);
+    expect(bar.visible).toBe(false);
+    overhead.setBarsHidden(false);
+    expect(bar.visible).toBe(true);
+    overhead.dispose();
+  });
+
+  it('planningMeters takes full HP and starting mana from the unit stats', () => {
+    const stats = getUnitStats('vander', 2);
+    expect(planningMeters('vander', 2)).toEqual({ hp: stats.health, maxHp: stats.health, mana: stats.initialMana, maxMana: stats.maxMana, shield: 0 });
+    expect(planningMeters('vander', 2, true).maxMana).toBe(stats.maxMana + HERO_ABILITY_MANA_INCREASE);
   });
 });
 
