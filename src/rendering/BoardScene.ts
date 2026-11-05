@@ -5,6 +5,7 @@ import type { UnitPanelData } from '../presentation/unit-panel';
 import { glovesOffUnitId } from '../presentation/hero-ability';
 import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
+import { planningMetersFor } from '../presentation/planning-meters';
 import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { readFreeRerollsAvailable } from './online/seat-view-adapter';
@@ -1637,15 +1638,21 @@ export class BoardScene extends Phaser.Scene {
     for (const id of [...this.orbRefusals.keys()]) if (!present.has(id)) this.orbRefusals.delete(id);
     return Object.fromEntries(this.orbRefusals);
   }
+  /** ?render=3d: outside combat the 3D bar still shows the piece's full HP blocks and starting mana (2D keeps its bars hidden). */
+  private planningMetersOf(id: string) {
+    const unit = this.state.units.find(entry => entry.id === id) ?? this.summonOf(id)?.unit;
+    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
+  }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated' | 'anomalies'> {
     const view = this.views.get(id);
     if (!view) return {};
+    const planning = view.hp.visible || this.session.combatView ? undefined : this.planningMetersOf(id);
     const hp = view.meter('hp'), mana = view.meter('mana');
     const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
     const ids = [...view.equipped, ...view.extras.temporary];
     const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
-    return { ...(view.anomalies.length ? { anomalies: view.anomalies } : {}), ...(view.confiscationTag?.visible ? { itemsConfiscated: true } : {}), ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    return { ...(view.anomalies.length ? { anomalies: view.anomalies } : {}), ...(view.hp.visible && view.confiscationTag?.visible ? { itemsConfiscated: true } : {}), ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : planning ? { meters: planning } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
         ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };

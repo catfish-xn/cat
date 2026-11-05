@@ -148,6 +148,21 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     arrive(late); await vi.waitFor(() => expect(dispose).toHaveBeenCalled());
   });
 
+  it('shows nothing over a dying piece and restores the head on revival', async () => {
+    const lease = model(); vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+    await mount();
+    const meters = { hp: 300, maxHp: 600, mana: 0, maxMana: 50, shield: 0 }, items = [{ id: 'sword', icon: null }];
+    await publish([piece({ meters, items })]); advance(16);
+    const overhead = scene.getObjectByName('render3d-overhead')!;
+    const stars = scene.children.find(object => (object.children[0]?.children[0] as import('three').Mesh | undefined)?.geometry instanceof three.ShapeGeometry)!;
+    expect(overhead.visible).toBe(true); expect(stars).toBeDefined(); expect(stars.visible).toBe(true);
+    await publish([piece({ alive: false, items })]); advance(16);
+    expect(root(lease).visible).toBe(true);
+    expect(overhead.visible).toBe(false); expect(stars.visible).toBe(false);
+    await publish([piece({ meters, items })]); advance(16);
+    expect(overhead.visible).toBe(true); expect(stars.visible).toBe(true);
+  });
+
   it('plays death while visible, hides, revives with a fresh action, and times a second death independently', async () => {
     const lease = model(); vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
     await mount(); await publish([piece()]);
