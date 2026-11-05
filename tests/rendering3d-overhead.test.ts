@@ -71,7 +71,7 @@ describe('3D overhead meters and items', () => {
     expect(bar.visible).toBe(false); expect(overhead.drawn).toBe(false);
   });
 
-  it('shows worn items with their icon texture, above the bar while it shows, and releases them', async () => {
+  it('shows worn items with their icon texture, under the bar while it shows (11-03, as the client), and releases them', async () => {
     vi.stubGlobal('document', { createElement: () => fakeCanvas().canvas });
     const icon = new Texture();
     const itemTexture = vi.fn(async (url: string) => (url === 'icon-a.png' ? icon : null));
@@ -85,7 +85,10 @@ describe('3D overhead meters and items', () => {
     expect((row.children[1] as Sprite).material.map).toBeNull();
     expect(itemTexture).toHaveBeenCalledTimes(1);
     overhead.set('player', { hp: 1, maxHp: 1, mana: 0, maxMana: 0, shield: 0 }, [{ id: 'a', icon: 'icon-a.png' }, { id: 'b', icon: null }]);
-    expect(row.position.y).toBeGreaterThan(0);
+    // The item row stays at the origin; the bar row sits right over it.
+    expect(row.position.y).toBe(0);
+    const barRow = overhead.object.getObjectByName('render3d-overhead-bar-row')!;
+    expect(barRow.position.y).toBeGreaterThan(row.position.y);
     expect(row.children).toHaveLength(2); // same items: not rebuilt
     const material = (row.children[0] as Sprite).material, dispose = vi.spyOn(material, 'dispose');
     overhead.dispose();

@@ -157,14 +157,15 @@ describe('3D carousel stage', () => {
   });
 
   it('holds locked seats with the restraint (early part only) and plays the first-draft wall until my release', async () => {
-    const effects: { id: string; seconds: number; fx: ReturnType<typeof fakeEffect> }[] = [];
-    const { stage } = setup({ loadEffect: (id, seconds) => { const fx = fakeEffect(); effects.push({ id, seconds, fx }); return Promise.resolve(fx); } });
+    const effects: { id: string; seconds: number; maxParticles?: number; fx: ReturnType<typeof fakeEffect> }[] = [];
+    const { stage } = setup({ loadEffect: (id, seconds, maxParticles) => { const fx = fakeEffect(); effects.push({ id, seconds, maxParticles, fx }); return Promise.resolve(fx); } });
     stage.show(carousel());
     await flush();
     const restraint = effects.filter(entry => entry.id.startsWith('carousel-shareddraftplayerrestraint'));
     expect(restraint).toHaveLength(8);
     expect(restraint.filter(entry => entry.id === 'carousel-shareddraftplayerrestraint')).toHaveLength(1); // mine
-    expect(restraint.every(entry => entry.seconds <= 1.2)).toBe(true);
+    expect(restraint.every(entry => entry.seconds === 3)).toBe(true);
+    expect(restraint.every(entry => entry.maxParticles === 150)).toBe(true);
     expect(effects.some(entry => entry.id === 'carousel-shareddraft-firstdraftwall-galaxy')).toBe(true);
     expect(effects.some(entry => entry.id === 'carousel-shareddraft-playerindicator')).toBe(true);
     expect(effects.some(entry => /timer|beam|crystal/.test(entry.id))).toBe(false);
@@ -179,18 +180,22 @@ describe('3D carousel stage', () => {
   });
 
   it('plays each unit\'s cost quality ring at its feet under the original badge and item frame, and ends them with the unit', async () => {
-    const effects: { id: string; fx: ReturnType<typeof fakeEffect> }[] = [];
-    const { stage } = setup({ loadEffect: id => { const fx = fakeEffect(); effects.push({ id, fx }); return Promise.resolve(fx); } });
+    const effects: { id: string; maxParticles?: number; fx: ReturnType<typeof fakeEffect> }[] = [];
+    const { stage } = setup({ loadEffect: (id, _seconds, maxParticles) => { const fx = fakeEffect(); effects.push({ id, maxParticles, fx }); return Promise.resolve(fx); } });
     const costs = [1, 2, 3, 4, 5, 6, 9, 0];
     const slots = costs.map((cost, index) => slot(index, cost ? { cost } : {}));
     stage.show(carousel({ slots }));
     await flush();
     const tiers = effects.filter(entry => entry.id.startsWith('carousel-shareddraft-unittier'));
     expect(tiers.map(entry => entry.id)).toEqual(['1', '2', '3', '4', '5', '6', '6', '1'].map(tier => `carousel-shareddraft-unittier${tier}`));
+    expect(tiers.every(entry => entry.maxParticles === 60)).toBe(true);
     const holders = stage.scene.getObjectByName('render3d-carousel-units')!.children;
     tiers.forEach((entry, index) => {
       expect(entry.fx.object.parent).toBe(holders[index]); // turns with its unit
       expect(entry.fx.object.position.y).toBeLessThan(5);
+      const ring = holders[index].getObjectByName('render3d-carousel-tier') as Mesh;
+      expect(ring.visible).toBe(true);
+      expect((ring.material as MeshStandardMaterial).opacity).toBe(0.3);
     });
     const badges = holders.map(holder => holder.getObjectByName('render3d-carousel-inspect') as Sprite);
     badges.forEach((badge, index) => {
@@ -296,7 +301,7 @@ describe('3D carousel stage', () => {
       hasModel: id => id === 'carousel-llplatforms',
       loadModel: async () => {
         const scene = new Group();
-        const pedestal = new Mesh(new CylinderGeometry(8.6 * CAROUSEL_CELL, 8.6 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
+        const pedestal = new Mesh(new CylinderGeometry(7.9 * CAROUSEL_CELL, 7.9 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
         pedestal.position.y = -0.1 * CAROUSEL_CELL;
         scene.add(pedestal);
         return { scene, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease;
@@ -348,7 +353,7 @@ describe('3D carousel stage', () => {
   });
 
   it('frames the entire two-cell pedestal slab across aspect ratios without fitting its deep strut', async () => {
-    const radius = 8.6 * CAROUSEL_CELL;
+    const radius = 7.9 * CAROUSEL_CELL;
     const scene = new Group(), material = new MeshBasicMaterial();
     const slab = new Mesh(new CylinderGeometry(radius, radius, 2 * CAROUSEL_CELL, 128), material);
     slab.position.y = -CAROUSEL_CELL;

@@ -4,6 +4,10 @@ import { resolve } from 'node:path';
 import { Vector3 } from 'three';
 // @ts-expect-error Offline Node module.
 import { boardAlignment } from '../scripts/assets3d/boards-build.mjs';
+// @ts-expect-error Offline Node module.
+import { alignmentScaleFromWalkable } from '../scripts/assets3d/boards-ground-measure.mjs';
+// @ts-expect-error Offline Node module.
+import { BOARD_PICKS } from '../scripts/assets3d/boards-plan.mjs';
 import { arenaTransform } from '../src/rendering/three-mode/board-arena';
 import { hexCenter } from '../src/rendering3d/picking';
 
@@ -54,10 +58,54 @@ describe('board locator alignment (synthetic only)', () => {
     expect(() => boardAlignment([0, 0, 0], [0, 0, -1], target)).toThrow('invalid-board-locators');
   });
 
+  it('applies optional per-board alignmentScale uniformly to locator-aligned axes', () => {
+    const base = boardAlignment(first, center, target);
+    const scaled = boardAlignment(first, center, target, { alignmentScale: 1.25, alignmentEvidence: { method: 'synthetic' } });
+    expect(scaled.alignmentScale).toBe(1.25);
+    expect(scaled.scale[0]).toBeCloseTo(base.scale[0] * 1.25);
+    expect(scaled.scale[2]).toBeCloseTo(base.scale[2] * 1.25);
+    expect(scaled.sourceSteps).toEqual(base.sourceSteps);
+    expect(scaled.status).toBe('locator-aligned');
+  });
+
+  it('defaults alignmentScale manifest field to literal default when omitted', () => {
+    const a = boardAlignment(first, center, target);
+    expect(a.alignmentScale).toBe('default');
+  });
+
+  it('rejects non-positive alignmentScale', () => {
+    expect(() => boardAlignment(first, center, target, { alignmentScale: 0 })).toThrow('invalid-board-alignment-scale');
+  });
+
+  it('alignmentScaleFromWalkable sets f so implied cells times f matches target', () => {
+    const implied = 9.07;
+    const targetCells = 7.2;
+    const f = alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, targetCells);
+    expect(f).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * f - targetCells)).toBeLessThan(0.05);
+  });
+
+  it('board-default uses screenshot stone-rail implied width for alignmentScale', () => {
+    const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
+    const implied = 8.48;
+    const targetCells = 7.2;
+    expect(pick?.alignmentEvidence?.kind).toBe('screenshot');
+    expect(pick?.alignmentEvidence?.impliedWalkableCellsAtLocatorScale).toBe(implied);
+    expect(pick?.alignmentScale).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * pick!.alignmentScale! - targetCells)).toBeLessThan(0.05);
+    expect(pick?.alignmentEvidence?.rayInnerWallCells).toBeCloseTo(9.07, 2);
+  });
+
   it('does not reintroduce ground-span fitting in boards-build', async () => {
     const source = await readFile(resolve('scripts/assets3d/boards-build.mjs'), 'utf8');
     expect(source).not.toMatch(/alignBoardGround/);
     expect(source).not.toMatch(/boardGroundSpan/);
     expect(source).not.toMatch(/boards-alignment\.mjs/);
+    expect(source).not.toMatch(/legacy estimate/i);
+    expect(source).not.toMatch(/measured ground evidence/);
+    const summary = await readFile(resolve('scripts/assets3d/boards-summary.mjs'), 'utf8');
+    expect(summary).toMatch(/deformation:scene\.alignment\.deformation\?\?null/);
+    expect(summary).not.toMatch(/full hex envelopes/);
+    expect(summary).not.toMatch(/ground\/wall sections/);
   });
 });

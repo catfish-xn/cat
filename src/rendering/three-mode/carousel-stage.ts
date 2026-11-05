@@ -29,7 +29,7 @@ import type { OriginalUi } from './ui-original-assets';
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
-import { fitModel, standingFeet, standingSupport, type Envelope } from './model-fit';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { CarouselLeash } from './carousel-leash';
 
@@ -55,8 +55,12 @@ export const ORBIT_SECONDS = 48;
  * platform's lowest point up) and the legends' heads on the cradles inside FRAME_FILL of the view, so the near pedestal
  * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
+ * STAGE_RADIUS 7.9 (2026-11-04 r3): revert r2's 6.05/1.065 pull-in; the fit samples the golden outer ring again. Shallow
+ * VIEW and a lower look-at (LOOK_AT_Y) plus RIM_PAD below the ring floor keep the top cradles and the near pedestal in
+ * frame at 1920; target outer ring ~66–70% screen width without cropping the arena vertically.
  */
-const STAGE_RADIUS = 8.6, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 7.9, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 0.93, 1).normalize();
+const LOOK_AT_Y = 0.36, RIM_PAD = 0.35;
 /** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
  * (the pedestal ring's own slab, never the struts hanging under the platform). */
 const RIM_BAND = 0.85, STRUT_DEPTH = 3;
@@ -73,7 +77,10 @@ const FX = {
 /** The quality ring a unit on offer stands in, by its cost (1–6), as in TFT; bounded and rebuilt while it stands. */
 export const carouselTierEffect = (cost: number) => `carousel-shareddraft-unittier${Math.max(1, Math.min(6, Math.trunc(cost) || 1))}`;
 const TIER_SECONDS = 4;
-const RESTRAINT_EARLY_SECONDS = 1.2, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SELECTED_SECONDS = 1.5, INDICATOR_SECONDS = 30;
+/** Early restraint loop: long enough for the grey-brown continuous layer (~2s+) but not the full 30s manifest. */
+const RESTRAINT_EARLY_SECONDS = 3, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SELECTED_SECONDS = 1.5, INDICATOR_SECONDS = 30;
+/** Per-effect live-particle caps on the shared library budget (carousel-stage only). */
+const RESTRAINT_MAX_PARTICLES = 150, TIER_MAX_PARTICLES = 60;
 /** Stand-in feedback when an effect is missing: a ring that swells and fades this long. */
 const POP_SECONDS = 0.5;
 /** Overhead, from the head up: the carried item in its frame, then the inspect badge (board units). */
@@ -119,7 +126,7 @@ export interface CarouselStageContext {
   readonly unitScale?: (id: string) => number | null;
   /** The board's animation envelope for an official-scale model (model-fit.ts): width cap and idle feet; undefined if none. */
   readonly envelope?: (id: string, lease: ModelLease) => Envelope | undefined;
-  readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
+  readonly loadEffect: ((id: string, maxDuration: number, maxParticles?: number) => Promise<ParticleEffect>) | null;
   readonly hasEffect?: (id: string) => boolean;
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
@@ -197,12 +204,12 @@ interface SeatView extends Body {
 }
 /** A bounded effect rebuilt while wanted, or its stand-in mesh. */
 /** `parent`: carry the effect with a moving object (a unit on the turning ring); `point` is then local to it. */
-interface Loop { id: string; seconds: number; point: Vector3; fx: ParticleEffect | null; stand: Mesh | null; left: number; loading: boolean; disposed: boolean; parent?: Object3D }
+interface Loop { id: string; seconds: number; maxParticles?: number; point: Vector3; fx: ParticleEffect | null; stand: Mesh | null; left: number; loading: boolean; disposed: boolean; parent?: Object3D }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number; disposed: boolean }
 
 export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const cell = CAROUSEL_CELL, now = ctx.now ?? (() => performance.now());
-  const legendHeight = ctx.championHeight * 0.5;
+  const legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
   const scene = new Scene();
   scene.background = new Color('#101923');
   scene.add(new AmbientLight(0xffffff, 0.75));
@@ -379,9 +386,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const top = box.isEmpty() ? 0 : Math.max(0, Math.min(box.max.y, surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight));
     const head = surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight;
     rim.length = 0;
+    const floor = bottom - RIM_PAD * cell;
     for (let i = 0; i < RIM_POINTS; i++) {
       const angle = i / RIM_POINTS * Math.PI * 2, x = Math.sin(angle), z = Math.cos(angle);
-      rim.push(new Vector3(x * radius, bottom, z * radius), new Vector3(x * radius, top, z * radius),
+      rim.push(new Vector3(x * radius, floor, z * radius), new Vector3(x * radius, top, z * radius),
         new Vector3(x * LEGEND_RADIUS * cell, head, z * LEGEND_RADIUS * cell));
     }
   };
@@ -397,7 +405,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const frameCamera = () => {
     if (!rim.length) measureRim();
     const direction = VIEW.clone().applyAxisAngle(new Vector3(0, 1, 0), azimuth);
-    const target = new Vector3(0, legendHeight * 0.5, 0);
+    const target = new Vector3(0, legendHeight * LOOK_AT_Y, 0);
     // The nearest distance that still fits the rim, by bisection (the fit only gets easier farther out), in the projection
     // as drawn: the host sets its view offset after resize(), so each update re-checks. Kept until the view's shape or
     // offset, its side or the platform changes.
@@ -470,7 +478,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
       releaseAtMs: Infinity, locked: false, goal: null, speed: 0, path: null, carry: null, tether, countdown: null, timer };
     // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
-    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
+    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id) : null);
     return view;
   };
   const dropCountdown = (view: SeatView) => {
@@ -516,15 +524,20 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const startLoop = (loop: Loop) => {
     if (!ctx.loadEffect || loop.loading || loop.disposed) return;
     loop.loading = true;
-    void ctx.loadEffect(loop.id, loop.seconds).then(fx => {
+    void ctx.loadEffect(loop.id, loop.seconds, loop.maxParticles).then(fx => {
       loop.loading = false;
       if (loop.disposed) { fx.dispose(); return; }
       placeEffect(fx, loop.point, loop.parent); loop.fx = fx; loop.left = loop.seconds;
-      if (loop.stand) loop.stand.visible = false;
+      if (loop.stand) {
+        if (loop.id.startsWith('carousel-shareddraft-unittier')) {
+          const mat = loop.stand.material as MeshStandardMaterial;
+          mat.opacity = 0.3;
+        } else loop.stand.visible = false;
+      }
     }).catch(() => { loop.loading = false; });
   };
-  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null, parent?: Object3D, load = true): Loop => {
-    const entry: Loop = { id, seconds, point: point.clone(), fx: null, stand, left: 0, loading: false, disposed: false, ...(parent ? { parent } : {}) };
+  const loop = (id: string, seconds: number, point: Vector3, stand: Mesh | null, parent?: Object3D, load = true, maxParticles?: number): Loop => {
+    const entry: Loop = { id, seconds, maxParticles, point: point.clone(), fx: null, stand, left: 0, loading: false, disposed: false, ...(parent ? { parent } : {}) };
     if (stand) { stand.position.copy(point); (parent ?? scene).add(stand); }
     loops.add(entry); if (load) startLoop(entry);
     return entry;
@@ -597,7 +610,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       emissive: data.cost ? ctx.costColor?.(data.cost) ?? '#9aa4ae' : '#9aa4ae', emissiveIntensity: 0.7, transparent: true, opacity: 0.85, depthWrite: false }));
     ring.name = 'render3d-carousel-tier'; ring.rotation.x = -Math.PI / 2;
     const tierId = carouselTierEffect(data.cost ?? 1);
-    view.tier = loop(tierId, TIER_SECONDS, new Vector3(0, 0.02 * cell, 0), ring, holder, !ctx.hasEffect || ctx.hasEffect(tierId));
+    view.tier = loop(tierId, TIER_SECONDS, new Vector3(0, 0.02 * cell, 0), ring, holder, !ctx.hasEffect || ctx.hasEffect(tierId), TIER_MAX_PARTICLES);
     units.add(holder);
     attach(view, data.definitionId, ctx.championHeight, ctx.championWidth);
     return view;
@@ -654,7 +667,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       const locked = entry.releaseAtMs > elapsed && !pickedBy(entry.seatId);
       if (locked && !entry.lock) {
         const stand = new Mesh(geometry.lock, materials.lock); stand.rotation.x = -Math.PI / 2;
-        entry.lock = loop(entry.me ? FX.restraint : FX.restraintEnemy, RESTRAINT_EARLY_SECONDS, entry.anchor.clone().setY(entry.anchor.y + 1), stand);
+        entry.lock = loop(entry.me ? FX.restraint : FX.restraintEnemy, RESTRAINT_EARLY_SECONDS, entry.anchor.clone().setY(entry.anchor.y + 1), stand, undefined, true, RESTRAINT_MAX_PARTICLES);
       } else if (!locked && entry.lock) {
         endLoop(entry.lock); entry.lock = null;
         if (!first && entry.locked) { pop(entry.root.position.clone().setY(entry.root.position.y + 1), COLOR.lock); if (entry.me) ctx.onReleased?.(); }

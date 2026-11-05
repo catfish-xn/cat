@@ -21,10 +21,11 @@ import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffe
 import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
-import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, loadLegendLease, resolveDefaultLegend } from './legend-load';
+import { LEGEND_HEIGHT_RATIO } from './model-fit';
 import { createPlayerDamage } from './player-damage';
 import type { PvpDamage } from '../../presentation/pvp-damage';
-export { LEGEND_MODEL };
+export { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, resolveDefaultLegend, loadLegendLease };
 /** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
 export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
@@ -168,7 +169,7 @@ interface HitPlan { key: string; at: number; cast: boolean; bolt: Bolt | null; d
 
 export function createTabletop(ctx: TabletopContext): Tabletop {
   const { scene, own } = ctx;
-  const legendHeight = ctx.championHeight * 0.5;
+  const legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
   const orbGeometry = own(new SphereGeometry(ORB_RADIUS, 20, 14));
   const orbHaloGeometry = own(new RingGeometry(ORB_GROUND_RING_INNER, ORB_GROUND_RING_OUTER, 32));
   const orbStandMaterial = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {

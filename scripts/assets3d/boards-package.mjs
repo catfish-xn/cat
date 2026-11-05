@@ -13,7 +13,14 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 export function verifyBoardPackage(manifest, precache, files, effects) {
   boardRoot(manifest.boardKey);
   if(Object.keys(manifest.boards??{}).join()!==manifest.boardKey)throw new Error('invalid-board-manifest-key');
-  if(!manifest.models[manifest.boardKey])throw new Error('missing-board-model-key');
+  if(!manifest.models[manifest.boardKey]){
+    const scenePath=manifest.boards?.[manifest.boardKey]?.path;
+    const sceneRaw=scenePath?files.get(scenePath):null;
+    if(!sceneRaw)throw new Error('missing-board-model-key');
+    const scene=JSON.parse(sceneRaw);
+    const ids=new Set((scene.models??[]).map(m=>m.id).filter(Boolean));
+    if(!ids.size||![...ids].every(id=>manifest.models[id]))throw new Error('missing-board-model-key');
+  }
   const indexed = new Map(precache.files.map(f=>[f.path,f]));
   if(indexed.size!==precache.files.length)throw new Error('duplicate-board-precache-path');
   for(const p of boardReferences(manifest,effects))if(!indexed.has(p))throw new Error('incomplete-board-precache');

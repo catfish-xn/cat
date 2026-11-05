@@ -58,7 +58,8 @@ export function naturalForgeStates():Map<number,MatchState>{
    recruited=true;
   }
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)&&isSellableUnit(u.definitionId)))state=accepted(sellUnit(state,u.id));
-  if(state.round===6)tier4Preparation=state;
+  // P-CONQ-PVE-01: PvE takedowns no longer grant Conquest, so seed 24 crosses the 100-stack tier 4 at 2-6 (round 9), not 2-3.
+  if(state.round===9)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }
  throw Error('Natural forge fixture budget');

@@ -14,7 +14,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
@@ -185,7 +185,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     const place = (height: number) => {
       piece.stars?.object.position.copy(at).setY(height + STAR_GAP);
       piece.root.getObjectByName('render3d-scout-anomaly')?.position.setY(height + STAR_GAP);
-      piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars && !piece.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     };
     const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height),
       unit.summon ? 1 : unit.effectiveStarLevel ?? unit.starLevel);
@@ -204,7 +204,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     // The original star emblem on the bar end replaces the star row when the client atlas has it.
     if (!unit.summon) piece.overhead.setTier(unit.effectiveStarLevel ?? unit.starLevel);
     if (piece.stars) piece.stars.object.visible = !piece.overhead.tiered;
-    piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars && !piece.overhead.tiered ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+    piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     piece.overhead.object.visible = piece.overhead.drawn;
     return piece;
   };
@@ -233,7 +233,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (spot) pieces.push(unitPiece(unit, `bench:${unit.slot}`, new Vector3(spot.x, 0, spot.y)));
     }
     // The owner's 河灵 where mine stands, facing the board; its orbs in two columns beside it, by tier only.
-    const spot = legendSpot(frame), legendHeight = ctx.championHeight * 0.5;
+    const spot = legendSpot(frame), legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
     const loadModel = ctx.loadModel;
     const legendPiece = (role: 'legend' | 'visitor', code: string | null, at: Vector3) => {
       const model = ctx.legendModel(code);
