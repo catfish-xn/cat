@@ -2060,6 +2060,13 @@
       "currentSha256": "c9a3df74793d2f29126b884d18cba2a6f933972af979b5bc26faf9fb9a6b33d7",
       "firstDifferentByte": 7653
     },
+    "tests/rendering3d-board-arena.test.ts": {
+      "previousBytes": 6182,
+      "currentBytes": 6742,
+      "previousSha256": "4ea4803c554c59ac5459f49aec5b9fc4b85fbb8f8d33a51773f35cab7e6302d0",
+      "currentSha256": "55737597df2896e4e8c78acf7aaa952f231505de45cfde614acb061acc79d30f",
+      "firstDifferentByte": 101
+    },
     "tests/rendering3d-carousel-leash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2106,10 +2113,10 @@
     },
     "tests/rendering3d-facing.test.ts": {
       "previousBytes": 9973,
-      "currentBytes": 10788,
+      "currentBytes": 10881,
       "previousSha256": "7ec7b45359a732688dea3449c29ea2b4d239878ed1f2646f66d03e5d279da9d8",
-      "currentSha256": "b95cbaecd982e9b9b87c2944eb0386ac12f3d7bf73f357081f92bbc68a267713",
-      "firstDifferentByte": 1963
+      "currentSha256": "7f3ef077ed3d8aff39e517262427913d2f139f607fddb6d2a1464de5bf2abceb",
+      "firstDifferentByte": 1539
     },
     "tests/rendering3d-foot-support.test.ts": {
       "previousExists": false,
@@ -2118,6 +2125,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "ca4858e3f3033a27add7541cf59a7869722d5ab65708518c53c5adad5392a5e5",
       "firstDifferentByte": 0
+    },
+    "tests/rendering3d-gold-mines.test.ts": {
+      "previousBytes": 5489,
+      "currentBytes": 5658,
+      "previousSha256": "d04a319af190cc99fe667ac8dcf161e44635504cf4beb56001130e539db225e3",
+      "currentSha256": "b9c3f6c5c87465239630038ef2a41b70154278fec54bba5fe74a86f599b46f5e",
+      "firstDifferentByte": 2369
     },
     "tests/rendering3d-isolation.test.ts": {
       "previousBytes": 11507,
