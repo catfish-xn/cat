@@ -25,6 +25,23 @@ export function arenaTransform(alignment: BoardAlignment, frame: HexFrame): { po
   };
 }
 
+/** The live grid's centre line (x of its 56 cells' mean, as boardAlignment's target centre). */
+export const gridCenterX = (frame: HexFrame): number => frame.origin.x + Math.sqrt(3) * frame.hexRadius * 3.25;
+
+/**
+ * The drawn arena's transform: `arenaTransform` mirrored about the grid's centre line. The offline alignment reflects
+ * source X (baked into the GLBs) and Z (its negative z scale): together a half turn, which drew every arena as the
+ * client's mirror image (the big rock beside the bench on the wrong side). Only what is drawn from the arena's own
+ * space takes this (the model, the gold mines); the bench cells keep `arenaTransform`, since the bench strip is
+ * symmetric and slot 0 stays on the left. The source's odd-row hex offset then sits half a cell from the live grid's,
+ * which the arena ground does not mark.
+ */
+export function arenaDrawTransform(alignment: BoardAlignment, frame: HexFrame): { position: Vector3; scale: Vector3 } {
+  const { position, scale } = arenaTransform(alignment, frame);
+  position.x = 2 * gridCenterX(frame) - position.x; scale.x = -scale.x;
+  return { position, scale };
+}
+
 /**
  * The arena's nine bench cells on a live grid (world = position + scale × source), or null without usable ones: the
  * manifest is JSON from an asset root, so anything but nine arrays of three finite numbers leaves the 2D bench places.
@@ -55,7 +72,7 @@ export function createBoardArena(parent: Group, alignment: BoardAlignment, load:
   const apply = () => {
     root.visible = compatible();
     if (!frame) return;
-    const { position, scale } = arenaTransform(alignment, frame);
+    const { position, scale } = arenaDrawTransform(alignment, frame);
     root.position.copy(position); root.scale.copy(scale);
   };
   const start = () => {

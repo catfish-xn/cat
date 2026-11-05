@@ -22,10 +22,11 @@ describe('unit facing rule', () => {
     expect(desiredHeading({ ...base, target: { x: 0.1, z: 0 } })).toBeNull(); // standing on it: no heading
   });
 
-  it('a dead piece never turns; outside combat a standing piece rests facing the other side', () => {
+  it('a dead piece never turns; outside combat a standing piece rests facing the camera, on either side', () => {
     expect(desiredHeading({ ...base, alive: false, destination: { x: 10, z: 0 }, target: { x: 0, z: 10 } })).toBeNull();
     near(desiredHeading({ ...base, fighting: false, target: { x: 10, z: 0 } })!, restHeading('player'));
     near(desiredHeading({ ...base, team: 'enemy', fighting: false })!, restHeading('enemy'));
+    expect(restHeading('player')).toBe(0); expect(restHeading('enemy')).toBe(0);
     expect(headingToward({ x: 0, z: 0 }, { x: 0.2, z: 0.2 })).toBeNull();
   });
 
