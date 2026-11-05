@@ -2,15 +2,13 @@ import { unitHoverCard } from './hover-card';
 import { ORB_TIER_TEXT } from './orb-loot';
 import { orbCardBody } from '../rendering/online/orb-dock';
 /** Lazy inspect UI. All numbers are content/display projections; no planning bonus rules live here. */
-import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
-import { getUnitStats } from '../simulation/unit-stats';
+import { UNIT_DEFINITIONS } from '../simulation/units';
 import { abilityDisplayValues, glovesOffDisplayValues } from '../simulation/ability-display';
-import { HERO_ABILITY_MANA_INCREASE } from './hero-ability';
+import { planningBase, planningMeters } from './planning-meters';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import type { CombatViewUnit } from './combat-display';
 import type { UnitBattleStats } from './battle-ranking';
 import { abilityText, fillAbilityTemplate } from './ability-text';
-import { fourStarBaseStats } from './d14-display';
 import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
 import { catalogEntry, itemCardBody, itemMarkHtml } from './item-codex';
@@ -86,7 +84,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
     if (kind === 'hp') { const shield = node('span', '', 'inspect-shield'); shield.dataset.fill = 'shield'; bar.append(shield); }
     const label = node('span', '', 'inspect-bar-text'); label.dataset.value = kind; bar.append(label); bars.append(bar);
   }
-  const base = (star === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, neutral ? 1 : Math.min(3, data.starLevel) as StarLevel);
+  const base = planningBase(data.definitionId, star);
   const heroAbility = Boolean(data.heroAbility) && star !== 4;
   const abilityName = abilityText(data.definitionId, star, undefined, heroAbility)?.name ?? '无主动技能';
   const row = node('div', '', 'inspect-row');
@@ -101,7 +99,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   row.append(button, items);
   const tip = node('div', '', 'inspect-ability-card'); tip.setAttribute('role', 'tooltip');
   const ability = node('div', '', 'unit-card-ability');
-  const maxMana = base.maxMana + (heroAbility ? HERO_ABILITY_MANA_INCREASE : 0);
+  const maxMana = planningMeters(data.definitionId, star, data.heroAbility).maxMana;
   ability.append(abilityLabel(data.definitionId, `${abilityName} · 法力 ${base.initialMana}/${maxMana}`), abilityRanks(data.definitionId, data.starLevel, heroAbility));
   tip.append(ability);
   const role = roleSection(data.definitionId); if (role) tip.append(role);
@@ -129,11 +127,10 @@ export function applyUnitSplash(body: HTMLElement, skin: UnitPanelSkin | null): 
 /** Text and widths only: combat refresh never replaces the header, slots, bars or stat nodes. */
 export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   if (body.classList.contains('unit-card-anvil')) return;
-  const def = UNIT_DEFINITIONS[data.definitionId];
-  const base = (data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
+  const base = planningBase(data.definitionId, data.starLevel);
   const live = data.combat ?? planningBonusProjection(data);
   const hp = live?.hp ?? base.health, maxHp = live?.maxHp ?? base.health, shield = live?.shield ?? 0;
-  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? base.maxMana + (data.heroAbility && data.starLevel !== 4 ? HERO_ABILITY_MANA_INCREASE : 0);
+  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? planningMeters(data.definitionId, data.starLevel, data.heroAbility).maxMana;
   // The replay's interval is already the rules' current speed projection (including temporary effects).
   const speed = live ? 20 / live.attackIntervalTicks : base.baseAttackSpeedBps !== undefined ? base.baseAttackSpeedBps / 10000 : 20 / base.attackIntervalTicks;
   const crit = live as (CombatViewUnit & { baseCritChanceBps?: number; baseCritMultiplierBps?: number }) | null;

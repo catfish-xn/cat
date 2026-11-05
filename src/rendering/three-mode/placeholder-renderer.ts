@@ -1798,12 +1798,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
+      // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
+      const benchedInCombat = !!fighting && view.onBench;
+      view.overhead.setBarsHidden(benchedInCombat);
       if (view.stars) {
         view.stars.setLevel(starUps.level(id, view.starLevel));
         view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
         view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
         // The original star emblem on the bar replaces the star row (as in the client); the row stays as a fallback.
-        view.stars.object.visible = view.root.visible && !view.overhead.tiered;
+        view.stars.object.visible = view.root.visible && !view.overhead.tiered && !benchedInCombat && view.alive;
       }
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
@@ -1815,7 +1818,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight - STAR_GAP / 2 + lift);
         view.halo.object.visible = view.root.visible;
       }
-      view.overhead.object.visible = view.root.visible && view.overhead.drawn;
+      // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).
+      view.overhead.object.visible = view.root.visible && view.overhead.drawn && view.alive;
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); goldMines?.update(seconds); stage.update(seconds); scout.update(seconds); followBox();

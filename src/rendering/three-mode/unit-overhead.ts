@@ -44,6 +44,8 @@ export interface UnitOverhead {
    * too (full HP, as the client does). Null (monsters, structures) or no such atlas region: the plain bar.
    */
   setTier(level: number | null): void;
+  /** Hides the plain and tier bars (a benched piece during combat, as in the client); items and tags stay. */
+  setBarsHidden(hidden: boolean): void;
   /** True while the original tier bar is drawn; the host then draws no star row over the head. */
   readonly tiered: boolean;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
@@ -108,7 +110,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     icons.clear(); badges.clear(); frames.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
     badgeDrawers.length = 0;
   };
-  let tagKey = '通缉', barKey = '', itemKey = '', disposed = false, flashing = false;
+  let tagKey = '通缉', barKey = '', itemKey = '', disposed = false, flashing = false, barsHidden = false;
   let shownItems: NonNullable<BoardPiece['items']> = [], itemFont = ctx.font?.() ?? 'sans-serif';
   let shown: { team: BoardPiece['team']; meters: BoardMeters } | null = null;
 
@@ -155,7 +157,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   /** Draws the tier bar for the shown values (full HP, no mana in planning); hides it when there is none. */
   const drawTier = () => {
     const found = tierSprite(), g = tierCanvas?.getContext('2d');
-    tier.visible = Boolean(found && g && tierCanvas);
+    tier.visible = Boolean(found && g && tierCanvas) && !barsHidden;
     if (!found || !g || !tierCanvas) { tierKey = ''; return; }
     const { sprite, layout } = found, k = TIER_PIXEL;
     const key = `${found.level}|${sprite.url}`;
@@ -201,7 +203,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const unsubscribeUi = ctx.ui?.subscribe(() => {
     if (disposed) return;
     if (shown) drawBar(shown.team, shown.meters);
-    drawTier(); bar.visible = Boolean(shown) && !tier.visible; layout();
+    drawTier(); bar.visible = Boolean(shown) && !tier.visible && !barsHidden; layout();
     const font = ctx.font?.() ?? 'sans-serif';
     if (font !== itemFont) { itemFont = font; for (const draw of badgeDrawers) draw(); }
   });
@@ -281,14 +283,18 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     get tiered() { return tier.visible; },
     setTier(level) {
       if (disposed || level === tierLevel) return;
-      tierLevel = level; drawTier(); bar.visible = Boolean(shown) && !tier.visible; layout();
+      tierLevel = level; drawTier(); bar.visible = Boolean(shown) && !tier.visible && !barsHidden; layout();
+    },
+    setBarsHidden(hidden) {
+      if (disposed || hidden === barsHidden) return;
+      barsHidden = hidden; drawTier(); bar.visible = Boolean(shown) && !tier.visible && !barsHidden; layout();
     },
     get drawn() { return bar.visible || tier.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
     set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies, nonCombat = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
-      if (nextBar !== barKey) { barKey = nextBar; if (meters) drawBar(team, meters); drawTier(); bar.visible = Boolean(meters) && !tier.visible; }
+      if (nextBar !== barKey) { barKey = nextBar; if (meters) drawBar(team, meters); drawTier(); bar.visible = Boolean(meters) && !tier.visible && !barsHidden; }
       const nextItems = (items ?? []).map(item => `${item.id}@${item.icon ?? ''}:${item.stacks ?? ''}/${item.maxStacks ?? ''}`).join(',');
       if (nextItems !== itemKey) { itemKey = nextItems; shownItems = items ?? []; placeItems(shownItems); }
       anomaly.visible = Boolean(anomalies?.length);
