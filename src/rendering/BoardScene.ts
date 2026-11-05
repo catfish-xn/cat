@@ -4,8 +4,8 @@ import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
 import { glovesOffUnitId } from '../presentation/hero-ability';
 import { ECONOMY_RULES } from '../simulation/match-rules';
-import { anvilInfo, anvilSellHint, isAnvilUnit as isAnvilPiece } from '../presentation/anvil-display';
-import { planningMeters } from '../presentation/planning-meters';
+import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
+import { planningMetersFor } from '../presentation/planning-meters';
 import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { readFreeRerollsAvailable } from './online/seat-view-adapter';
@@ -1641,8 +1641,7 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d: outside combat the 3D bar still shows the piece's full HP blocks and starting mana (2D keeps its bars hidden). */
   private planningMetersOf(id: string) {
     const unit = this.state.units.find(entry => entry.id === id) ?? this.summonOf(id)?.unit;
-    if (!unit || unit.team !== 'player' || !UNIT_DEFINITIONS[unit.definitionId] || UNIT_DEFINITIONS[unit.definitionId].unitKind === 'neutral' || unit.definitionId === 'g23-forge' || isAnvilPiece(unit.definitionId)) return undefined;
-    return planningMeters(unit.definitionId, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
+    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated' | 'anomalies'> {

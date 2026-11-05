@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Texture, type Sprite } from 'three';
 import { BAR_WIDTH, DEFAULT_METER_COLORS, createUnitOverhead } from '../src/rendering/three-mode/unit-overhead';
-import { planningMeters } from '../src/presentation/planning-meters';
+import { isAnvilUnit } from '../src/presentation/anvil-display';
+import { planningMeters, planningMetersFor } from '../src/presentation/planning-meters';
+import { ANVIL_KINDS } from '../src/simulation/content/anvils';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { HERO_ABILITY_MANA_INCREASE } from '../src/presentation/hero-ability';
 
@@ -212,6 +215,30 @@ describe('3D overhead meters and items', () => {
     const stats = getUnitStats('vander', 2);
     expect(planningMeters('vander', 2)).toEqual({ hp: stats.health, maxHp: stats.health, mana: stats.initialMana, maxMana: stats.maxMana, shield: 0 });
     expect(planningMeters('vander', 2, true).maxMana).toBe(stats.maxMana + HERO_ABILITY_MANA_INCREASE);
+  });
+
+  it('gives no planning meters to enemies, monsters, the forge or anvils', () => {
+    expect(planningMetersFor({ definitionId: 'vander', team: 'player' }, 2)).toEqual(planningMeters('vander', 2));
+    expect(planningMetersFor({ definitionId: 'vander', team: 'enemy' }, 2)).toBeUndefined();
+    const neutral = Object.values(UNIT_DEFINITIONS).find(def => def.unitKind === 'neutral');
+    expect(neutral).toBeDefined();
+    expect(planningMetersFor({ definitionId: neutral!.id, team: 'player' }, 1)).toBeUndefined();
+    expect(planningMetersFor({ definitionId: 'g23-forge', team: 'player' }, 1)).toBeUndefined();
+    const [anvilId] = Object.keys(ANVIL_KINDS);
+    expect(isAnvilUnit(anvilId!)).toBe(true);
+    expect(planningMetersFor({ definitionId: anvilId!, team: 'player' }, 1)).toBeUndefined();
+    expect(planningMetersFor({ definitionId: 'no-such-unit', team: 'player' }, 1)).toBeUndefined();
+  });
+
+  it('planning meters alone raise neither the wanted tag nor the confiscation stamp', () => {
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const wanted = overhead.object.getObjectByName('render3d-enforcer-wanted')!;
+    const stamp = overhead.object.getObjectByName('render3d-confiscated-items')!;
+    overhead.set('player', planningMeters('vander', 2), undefined, false, false);
+    expect(wanted.visible).toBe(false); expect(stamp.visible).toBe(false);
+    overhead.set('player', planningMeters('vander', 2), undefined);
+    expect(wanted.visible).toBe(false); expect(stamp.visible).toBe(false);
+    overhead.dispose();
   });
 });
 
