@@ -2106,9 +2106,9 @@
     },
     "tests/rendering3d-death.test.ts": {
       "previousBytes": 20672,
-      "currentBytes": 21880,
+      "currentBytes": 22873,
       "previousSha256": "7b1026bafdf309a3286359dc24aa563bff905179b0c8fa9a94c045db13c5dac3",
-      "currentSha256": "d23f86d83d93668d31d335ef44ec22d7828a1ae954ef156294ac8630fda07068",
+      "currentSha256": "6f1f731c0419b4ad1ff96eac9a6ffd0eaf3e7e289dcbb9bb300a60e279ed9be0",
       "firstDifferentByte": 8419
     },
     "tests/rendering3d-facing.test.ts": {
@@ -2237,6 +2237,14 @@
       "previousSha256": "4ad9fc9351cbc16fd11264a3e40e995ba1a629d1efcb6453666961a4ab2656db",
       "currentSha256": "56a02f7f0e24f85113f67c82bbee3c3e7c3aa5ccceefce2261695356c79433d0",
       "firstDifferentByte": 3368
+    },
+    "tests/rendering3d-render-quality.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6836,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "77f70c310f830f282c66f388c2abd5ab2fb8c6507243e3f40b4c417c88b24fb3",
+      "firstDifferentByte": 0
     },
     "tests/rendering3d-scout-input.test.ts": {
       "previousBytes": 14336,
