@@ -112,11 +112,25 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); expect(scene.children).toHaveLength(0); runtime.dispose();
   });
   it('shares the existing fallback particle budget and releases every reservation once', async () => {
-    const budget = { live: 1251, max: 1500 }, { runtime, camera } = await setup(budget);
-    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(1251);
-    budget.live = 1200; runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
+    // A plain attack still waits for shared room; skills are covered by the next test.
+    const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', action: 'attack' as const, event: 'hit' as const, delay: 0, duration: 1 }] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 1251, max: 1500 };
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined, { budget });
+    await library.load('sample');
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(1251);
+    budget.live = 1200; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(1); expect(budget.live).toBe(1450);
     runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
+  });
+  it('starts a skill system beside a budget the fallback particles filled, up to the LTK reservations alone (11-06 field drops)', async () => {
+    const budget = { live: 1499, max: 1500 }, { runtime, camera } = await setup(budget);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    // The LTK reservations alone still stop at the cap: six systems of 250 fill 1500.
+    for (let i = 0; i < 10; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.clear(); expect(budget.live).toBe(1499); runtime.dispose();
   });
   it('bounds simultaneous particle reservations and cancels deaths before delayed spawn', async () => {
     const { runtime, camera } = await setup();

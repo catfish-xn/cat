@@ -219,7 +219,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
         // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
         const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
-        const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget && options.budget.live + slots > options.budget.max);
+        // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
+        // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
+        // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
+        // other LTK reservations; fallback then stops spawning until it drains. A plain attack still waits for shared room.
+        const shared = importance === 'attack';
+        const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
+          && (shared ? options.budget.live : running.size * slots) + slots > options.budget.max);
         while (blocked()) {
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true);
           if (!decision.admit) break;
