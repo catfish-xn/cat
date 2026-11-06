@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
-import { createTabletop, LEGEND_MODEL, type TabletopContext } from '../src/rendering/three-mode/tabletop';
+import { createTabletop, farLegendSpot, LEGEND_MODEL, legendSpot, type TabletopContext } from '../src/rendering/three-mode/tabletop';
 import type { BoardFrame, BoardLegendWalk, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
@@ -32,13 +32,18 @@ function setup(overrides: Partial<TabletopContext> = {}) {
 }
 
 describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
-  it('stands my legend beside the board, outside every deployable cell, and keeps it in the camera box', () => {
+  it('stands my legend on the near-left platform, outside every deployable cell, and keeps it in the camera box', () => {
     const { tabletop } = setup();
     const points = tabletop.layout(frame());
     tabletop.frame(frame());
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
-    const width = Math.sqrt(3) * 34, rightmost = 35 + width * 6.5;
-    expect(points[0]!.x).toBeGreaterThan(rightmost + width);
+    // TFT: my legend stands bottom left beside the bench (the un-mirrored arena's stone platform), the opponent's top right.
+    const width = Math.sqrt(3) * 34, leftmost = 35, rightmost = 35 + width * 6.5;
+    expect(points[0]!.x).toBeLessThan(leftmost - width);
+    expect(points[1]!.x).toBeGreaterThan(rightmost + width);
+    const center = (leftmost + rightmost) / 2;
+    expect(legendSpot(frame()).x + farLegendSpot(frame()).x).toBeCloseTo(2 * center, 6);
+    expect(legendSpot(frame()).x).toBeCloseTo(leftmost - width * 1.6, 6);
   });
 
   it('shows an opponent legend only while a battle against another board is shown', () => {

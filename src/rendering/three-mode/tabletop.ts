@@ -26,10 +26,21 @@ import { LEGEND_HEIGHT_RATIO } from './model-fit';
 import { createPlayerDamage } from './player-damage';
 import type { PvpDamage } from '../../presentation/pvp-damage';
 export { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, resolveDefaultLegend, loadLegendLease };
-/** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
-export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
+type LegendFrame = Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>;
+/** The x of a grid's right edge cell centre (odd rows sit half a cell right); the grid's left edge is origin.x. */
+const gridRightX = (frame: LegendFrame) => frame.origin.x + Math.sqrt(3) * frame.hexRadius * (frame.columns - 0.5);
+/**
+ * Where the board owner's 河灵 stands: on the arena's near-left stone platform (TFT: the bottom-left corner beside the
+ * bench), about one and a half cells left of the nearest deployable cell, never on one. The arena is drawn un-mirrored
+ * (board-arena.ts arenaDrawTransform), so this is the old right-hand spot reflected about the grid's centre line.
+ */
+export function legendSpot(frame: LegendFrame): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
-  return new Vector3(frame.origin.x + width * (frame.columns - 0.5) + width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+  return new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+}
+/** The far corner across the board from `legendSpot` (top right): a PvP opponent's or a scouting visitor's legend. */
+export function farLegendSpot(frame: LegendFrame): Vector3 {
+  return new Vector3(gridRightX(frame) + Math.sqrt(3) * frame.hexRadius * 1.6, 0, frame.origin.y);
 }
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
@@ -211,15 +222,15 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      const left = frame.origin.x;
+      const right = gridRightX(frame);
       const bottom = frame.origin.y + step * (frame.rows - 1), top = frame.origin.y;
       anchors.me.copy(legendSpot(frame));
-      anchors.opponent.set(left - width * 1.6, 0, top);
+      anchors.opponent.copy(farLegendSpot(frame));
       anchors.enemySide.set(frame.origin.x + width * (frame.columns - 1) / 2, 0, top);
       anchors.center.set(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, (top + bottom) / 2);
       board.x = frame.origin.x; board.z = frame.origin.y; board.width = width;
       const margin = ROAM_MARGIN * width;
-      board.bounds = { minX: left - margin, maxX: anchors.me.x + margin * 0.5, minZ: top - margin, maxZ: bottom + margin };
+      board.bounds = { minX: anchors.me.x - margin * 0.5, maxX: right + margin, minZ: top - margin, maxZ: bottom + margin };
       for (const view of legends.values()) { view.walked = false; view.path = null; }
       // Two columns of orbs rising from beside my legend toward the board's middle.
       anchors.orbs = Array.from({ length: MAX_ORBS }, (_, index) => new Vector3(
@@ -228,7 +239,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       [...orbs.values()].filter(view => !spots.has(view.orbId)).forEach((view, index) => view.root.position.copy(orbSlot(index)));
     }
     const pad = legendHeight;
-    return [anchors.me.clone().add(new Vector3(pad, 0, pad)), anchors.opponent.clone().add(new Vector3(-pad, 0, -pad)),
+    return [anchors.me.clone().add(new Vector3(-pad, 0, pad)), anchors.opponent.clone().add(new Vector3(pad, 0, -pad)),
       anchors.orbs[MAX_ORBS - 1]!.clone()];
   };
   const orbSlot = (index: number) => anchors.orbs[Math.min(index, MAX_ORBS - 1)] ?? anchors.me;

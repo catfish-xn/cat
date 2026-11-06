@@ -2195,9 +2195,9 @@
     "tests/rendering3d-player-damage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 13356,
+      "currentBytes": 13491,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9dd4b12f34402481ffc20b445509688bcdbfe45eea59b529805bf93641ab86cd",
+      "currentSha256": "908a6b12b65bafa10679e88798664fefe066d9f29f66a28ba4d284bddb99b008",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-playtest-effects.test.ts": {
@@ -2293,16 +2293,16 @@
     },
     "tests/rendering3d-tabletop.test.ts": {
       "previousBytes": 22852,
-      "currentBytes": 25757,
+      "currentBytes": 26201,
       "previousSha256": "80bfe7e92399123a65f71b952f22f13643677fcebf64ad76e95a3b804df01cb2",
-      "currentSha256": "ab51c5dfced50a1d7af73ebb8eba77e66cdb7520db45868c98f92464c8463839",
-      "firstDifferentByte": 8446
+      "currentSha256": "ff23c0733736d1e15846d6a3b64da3e48ea7a81c036f72c3abc914ab4d8ef38b",
+      "firstDifferentByte": 142
     },
     "tests/rendering3d-trait-props.test.ts": {
       "previousBytes": 9391,
-      "currentBytes": 11757,
+      "currentBytes": 11776,
       "previousSha256": "bdf687d6d39470783a820ee3922e63c4a285c506a662dfd24d88761fef64ebec",
-      "currentSha256": "26f3c95c7adb89c55eac02f7c7346d1f08b0e5462f7bb78af2c98f1458b35dfc",
+      "currentSha256": "805675e8773973e9e4336751673b837de55e5fb558b104d03c69a70f5d17ec51",
       "firstDifferentByte": 1669
     },
     "tests/rendering3d-ui-assets.test.ts": {

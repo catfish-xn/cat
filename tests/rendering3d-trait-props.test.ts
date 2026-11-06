@@ -63,7 +63,7 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
     props.update(0.1); expect(drawn).toHaveLength(4); expect(props.debug().bursts).toBe(0); props.dispose();
   });
 
-  it('stays hidden without counters, with the banner right of the board and the flask left, off every cell', () => {
+  it('stays hidden without counters, with the banner left of the board (beside my legend) and the flask right, off every cell', () => {
     const { scene, props } = setup();
     const board = frame();
     const [chestPoint, flaskPoint] = props.layout(board);
@@ -74,10 +74,10 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
     const width = Math.sqrt(3) * board.hexRadius;
     const leftEdge = board.origin.x - width / 2;
     const rightEdge = board.origin.x + width * board.columns;
-    expect(chestPoint!.x).toBeGreaterThan(rightEdge);
-    expect(scene.getObjectByName('render3d-conqueror-chest')!.position.x).toBeGreaterThan(rightEdge);
-    expect(flaskPoint!.x).toBeLessThan(leftEdge);
-    expect(scene.getObjectByName('render3d-shimmer-flask')!.position.x).toBeLessThan(leftEdge);
+    expect(chestPoint!.x).toBeLessThan(leftEdge);
+    expect(scene.getObjectByName('render3d-conqueror-chest')!.position.x).toBeLessThan(leftEdge);
+    expect(flaskPoint!.x).toBeGreaterThan(rightEdge);
+    expect(scene.getObjectByName('render3d-shimmer-flask')!.position.x).toBeGreaterThan(rightEdge);
   });
 
   it('glows toward the next chest and opens only when the opened count grows after mount', () => {

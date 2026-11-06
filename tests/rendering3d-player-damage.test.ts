@@ -115,8 +115,9 @@ describe('3D PvP survivor damage volley', () => {
   });
   it('maps terminal hex cells to board points, targets the proper legend and deduplicates the legacy HP feed', () => {
     const scene = new Scene();
+    // A fixed clock: the bolt's first step is then exactly update(0.001), not that plus however long the cold run took.
     const table = createTabletop({ scene, camera: new PerspectiveCamera(), championHeight: 92, effectScale: 0.44,
-      loadModel: null, loadEffect: null, own: value => value });
+      loadModel: null, loadEffect: null, own: value => value, now: () => 0 });
     table.frame(frame); table.damage(hit()); table.update(0.001);
     expect(table.debug().volley).toMatchObject({ target: 'opponent', count: 2 });
     const core = scene.children.find(node => node.name === 'render3d-player-damage-bolt')!.children[0]!;

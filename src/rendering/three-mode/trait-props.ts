@@ -190,18 +190,18 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      // The banner right of my half, one cell beyond my legend's orb columns (the tabletop's legend spot); the flask on
-      // the left (the opponent's legend stands top left).
-      const left = frame.origin.x - width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
-      const right = frame.origin.x + width * (frame.columns - 0.5) + width * 2.65;
-      spots.chest.set(right, 0, bottom - step * 1.4);
-      spots.flask.set(left, 0, bottom - step * 2.1);
+      // The banner left of my half, one cell beyond my legend's orb columns (the tabletop's legend spot, on the arena's
+      // near-left platform); the flask on the right (the opponent's legend stands top right).
+      const right = frame.origin.x + width * (frame.columns - 0.5) + width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
+      const left = frame.origin.x - width * 2.65;
+      spots.chest.set(left, 0, bottom - step * 1.4);
+      spots.flask.set(right, 0, bottom - step * 2.1);
       chestRoot.position.copy(spots.chest); flaskRoot.position.copy(spots.flask);
       // Each turned a little toward the board so its front (lock, label side) faces the player's camera.
-      chestRoot.rotation.y = -0.45; flaskRoot.rotation.y = 0.45;
+      chestRoot.rotation.y = 0.45; flaskRoot.rotation.y = -0.45;
     }
     const pad = 34;
-    return [spots.chest.clone().add(new Vector3(pad, CHEST_MODEL_HEIGHT + 26, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
+    return [spots.chest.clone().add(new Vector3(-pad, CHEST_MODEL_HEIGHT + 26, pad)), spots.flask.clone().add(new Vector3(pad, FLASK_HEIGHT, 0))];
   };
 
   // --- bursts ------------------------------------------------------------------------------------------------------
