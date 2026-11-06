@@ -18,6 +18,7 @@ import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
+import { createRenderQuality, pixelRatioFor } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
 import { startOriginalUi } from './ui-original-assets';
 import { startAugmentStripSkin } from './augment-strip-skin';
@@ -349,7 +350,8 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   installHudStyle();
-  const renderer = new WebGLRenderer({ antialias: true, stencil: true });
+  // A laptop with two GPUs draws the board on the faster one (browsers may otherwise pick the integrated one).
+  const renderer = new WebGLRenderer({ antialias: true, stencil: true, powerPreference: 'high-performance' });
   // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
   // One report per match: a new match (body[data-m6-mode] turning active) starts it again.
   let loadReport = createLoadReport(), timeUpload = false, reported = false;
@@ -368,7 +370,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Do not import a shared HUD component here: that would make the 2D entry pull Three.js in.
   const originalUi = startOriginalUi(options.assetBase, models.preloader ? path => models.preloader!.read(path) : undefined);
   const canvasFont = () => originalUi.font('title') === 'system-ui' ? 'sans-serif' : 'Render3dBeaufort, sans-serif';
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // 画质档位 (render-quality.ts): the drawing resolution, auto by default (steps down while the frame rate stays low).
+  const storage = (() => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } })();
+  const renderQuality = createRenderQuality({ storage, start: performance.now(), hidden: () => typeof document !== 'undefined' && document.hidden === true });
+  const applyQuality = () => renderer.setPixelRatio(pixelRatioFor(renderQuality.level, window.devicePixelRatio || 1));
+  applyQuality();
   renderer.domElement.className = 'render3d-canvas';
   host.append(renderer.domElement);
 
@@ -1572,6 +1578,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const clearDescription = () => { hoverPoint = null; touchLook = null; showDescription(null); };
   const onPointerDown = (event: PointerEvent) => {
+    clearSelection();
     if (event.pointerType === 'touch' && event.button === 0 && (stage.active || visiting() || ['orb', 'item'].includes(describeAt({ x: event.clientX, y: event.clientY })?.target.kind ?? ''))) {
       clearDescription();
       touchLook = { event, started: performance.now(), shown: false };
@@ -1677,19 +1684,31 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
   // A right click walks my legend (board and carousel), and as in TFT it opens no browser menu over the game (the 3D
-  // view and the panels on it) while the 3D view is up. Links, text fields and selected text keep theirs; the page
-  // outside the game root is untouched.
+  // view and the panels on it) while the 3D view is up. Links and text fields keep theirs; the page outside the game
+  // root is untouched. Selected text does not: a stray double-click on a HUD name used to leave a selection that no
+  // board click cleared, and every later right-click then opened the browser menu until a reload.
+  const editable = 'a[href], input, textarea, select, [contenteditable="true"]';
   const onContextMenu = (event: Event) => {
     const target = event.target as Element | null;
-    if (target?.closest?.('a[href], input, textarea, [contenteditable="true"]')) return;
-    if (typeof getSelection === 'function' && getSelection()?.toString()) return;
+    if (target?.closest?.(editable)) return;
     event.preventDefault();
+  };
+  // Nor does the browser drag text or images out of the game: a native drag takes the mouse until the button is let go.
+  const onDragStart = (event: Event) => {
+    const target = event.target as Element | null;
+    if (target?.closest?.('input, textarea, [contenteditable="true"]')) return;
+    event.preventDefault();
+  };
+  // Pressing on the board lets go of any text selection on the page (a canvas press does not clear it by itself).
+  const clearSelection = () => {
+    const selection = typeof getSelection === 'function' ? getSelection() : null;
+    if (selection && !selection.isCollapsed && selection.toString()) selection.removeAllRanges?.();
   };
   // The game root (#app: panels, shop, sidebars) and the canvas itself, which online moves out of it onto <body>.
   const app = typeof document === 'undefined' ? null : document.getElementById('app');
   const menuRoots: EventTarget[] = app ? [app, canvas] : [canvas];
   const legend = () => feed?.legendControls?.() ?? null;
-  for (const root of menuRoots) root.addEventListener('contextmenu', onContextMenu);
+  for (const root of menuRoots) { root.addEventListener('contextmenu', onContextMenu); root.addEventListener('dragstart', onDragStart); }
 
   let width = 0, height = 0, frameId = 0, last = performance.now();
   // Online the layer fills the window behind the panels (style.css L12), so it moves from #board-root to <body>: inside
@@ -1729,6 +1748,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // TFT's FPS readout in the top-right corner, refreshed once a second.
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
+  // The 画质 button sits in the online top bar beside 音效 (placed once the bar is there), else on the 3D layer.
+  const qualityButton = typeof document === 'undefined' ? null : document.createElement('button');
+  const syncQualityButton = () => { if (qualityButton) { qualityButton.textContent = renderQuality.label(); qualityButton.title = renderQuality.title(); } };
+  if (qualityButton) {
+    qualityButton.type = 'button'; qualityButton.className = 'render3d-quality-toggle'; qualityButton.dataset.debug = 'render3d-quality';
+    qualityButton.addEventListener?.('click', () => { renderQuality.cycle(performance.now()); applyQuality(); syncQualityButton(); });
+    syncQualityButton();
+  }
+  const placeQualityButton = () => {
+    if (!qualityButton || qualityButton.isConnected && qualityButton.parentElement !== host) return;
+    const bar = document.querySelector?.('.online-topbar');
+    if (bar?.insertBefore) bar.insertBefore(qualityButton, bar.querySelector?.('.online-connection') ?? null);
+    else if (!qualityButton.isConnected) host.append(qualityButton);
+  };
+  placeQualityButton();
   let fpsFrames = 0, fpsSince = 0;
   // Unused models, effect resources and KTX2 workers are let go (model-memory.ts, effect-library.ts, asset-reader.ts),
   // looked at every few seconds and never during a combat, whose effects come and go too quickly to tell idle.
@@ -1745,7 +1779,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
-    if (fpsLabel && ++fpsFrames && now - fpsSince >= 1000) { if (fpsSince) fpsLabel.textContent = `FPS: ${Math.round(fpsFrames * 1000 / (now - fpsSince))}`; fpsFrames = 0; fpsSince = now; }
+    if (++fpsFrames && now - fpsSince >= 1000) {
+      if (fpsSince) {
+        const fps = fpsFrames * 1000 / (now - fpsSince);
+        if (fpsLabel) fpsLabel.textContent = `FPS: ${Math.round(fps)}`;
+        if (renderQuality.reading(fps, now - fpsSince, now)) { applyQuality(); syncQualityButton(); }
+        placeQualityButton();
+      }
+      fpsFrames = 0; fpsSince = now;
+    }
     followMatch();
     if (!fighting && now - sweptAt >= SWEEP_MS) { sweptAt = now; retention?.sweep(); effects?.sweep(); models.reader?.trim?.(); }
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
@@ -1876,13 +1918,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       closed = true; shopSkin.dispose();
       portal.dispose(); lighting.dispose();
       if (typeof window !== 'undefined' && (window as unknown as { __render3d?: unknown }).__render3d === debug) delete (window as unknown as { __render3d?: unknown }).__render3d;
-      cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
+      cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove(); qualityButton?.remove?.();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
+      for (const root of menuRoots) { root.removeEventListener('contextmenu', onContextMenu); root.removeEventListener('dragstart', onDragStart); }
       withdrawPicker(); starUps.dispose(); clearEffects(); ltk?.dispose(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); clearBoard();

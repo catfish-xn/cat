@@ -331,7 +331,7 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     expect(controls.select).toHaveBeenCalledTimes(1);
   });
 
-  it('opens no browser menu over the game root or the canvas (links, text fields and selected text keep it), and right-click walks my legend', async () => {
+  it('opens no browser menu over the game root or the canvas (links and text fields keep it, selected text does not), and right-click walks my legend', async () => {
     const app = new Canvas();
     vi.stubGlobal('document', { getElementById: (id: string) => (id === 'app' ? app : null), body: null, createElement: () => ({ getContext: () => null, dataset: {}, style: {}, classList: { add() {}, remove() {} }, append() {}, remove() {}, textContent: '' }) });
     const walk = vi.fn(() => true);
@@ -341,11 +341,21 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     const plain = menu({ closest: () => null }), link = menu({ closest: (selector: string) => (selector.includes('a[href]') ? {} : null) });
     app.fire('contextmenu', plain as unknown as Event); app.fire('contextmenu', link as unknown as Event);
     expect(plain.preventDefault).toHaveBeenCalled(); expect(link.preventDefault).not.toHaveBeenCalled();
-    vi.stubGlobal('getSelection', () => ({ toString: () => '选中的字' }));
+    // A selection left on the HUD (a stray double-click) no longer hands right-clicks to the browser; pressing on the
+    // board lets go of it.
+    const removeAllRanges = vi.fn();
+    vi.stubGlobal('getSelection', () => ({ isCollapsed: false, toString: () => '选中的字', removeAllRanges }));
     const selected = menu({ closest: () => null });
     canvas.fire('contextmenu', selected as unknown as Event);
-    expect(selected.preventDefault).not.toHaveBeenCalled();
-    vi.stubGlobal('getSelection', () => ({ toString: () => '' }));
+    expect(selected.preventDefault).toHaveBeenCalled();
+    canvas.pointer('pointerdown', screen(100, 0, 100), 2);
+    expect(removeAllRanges).toHaveBeenCalledTimes(1);
+    walk.mockClear();
+    // No native drag of text or images out of the game either; a text field keeps its own.
+    const drag = menu({ closest: () => null }), fieldDrag = menu({ closest: (selector: string) => (selector.includes('input') ? {} : null) });
+    app.fire('dragstart', drag as unknown as Event); app.fire('dragstart', fieldDrag as unknown as Event);
+    expect(drag.preventDefault).toHaveBeenCalled(); expect(fieldDrag.preventDefault).not.toHaveBeenCalled();
+    vi.stubGlobal('getSelection', () => ({ isCollapsed: true, toString: () => '', removeAllRanges }));
     const onCanvas = menu({ closest: () => null });
     canvas.fire('contextmenu', onCanvas as unknown as Event);
     expect(onCanvas.preventDefault).toHaveBeenCalled();
@@ -355,5 +365,7 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     expect(controls.select).not.toHaveBeenCalled();
     mounted!.dispose(); mounted = undefined;
     expect(app.has('contextmenu')).toBe(false); expect(canvas.has('contextmenu')).toBe(false);
+    expect(app.has('dragstart')).toBe(false); expect(canvas.has('dragstart')).toBe(false);
+    expect(removeAllRanges).toHaveBeenCalledTimes(1);
   });
 });
