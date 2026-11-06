@@ -27,6 +27,22 @@ describe('upstream simulation in the bare Three.js host', () => {
     expect(unitAnchor(root, body, 'R_Hand').originAt(0)[0]).toBeCloseTo(-120);
     const basis = unitAnchor(root, body).basisInto(0, new Float32Array(9)); expect([...basis].map(n => n || 0)).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   });
+  it('faces a ground or centre locator the way the unit faces, while other bones keep their own axes', () => {
+    const root = new Group(), body = new Group(), ground = new Group(), center = new Group(), hand = new Group();
+    ground.name = 'Buffbone_Glb_Ground_Loc'; center.name = 'C_BuffBone_Glb_Center_Loc'; hand.name = 'R_Hand';
+    body.add(ground, center, hand); root.add(body);
+    root.rotation.y = Math.PI / 2;
+    // Irelia's skeleton: both locators point +Z behind the model.
+    ground.rotation.y = Math.PI; center.rotation.y = Math.PI; hand.rotation.y = Math.PI;
+    ground.position.set(0, 0, 3);
+    const basis = (bone?: string) => [...unitAnchor(root, body, bone).basisInto(0, new Float32Array(9))].map(n => Math.round(n) || 0);
+    expect(basis('Buffbone_Glb_Ground_Loc')).toEqual(basis());
+    expect(basis('BUFFBONE_GLB_GROUND_LOC')).toEqual(basis());
+    expect(basis('C_BuffBone_Glb_Center_Loc')).toEqual(basis());
+    expect(basis('R_Hand')).not.toEqual(basis());
+    // Still placed at the locator.
+    expect(unitAnchor(root, body, 'Buffbone_Glb_Ground_Loc').originAt(0)).not.toEqual(unitAnchor(root, body).originAt(0));
+  });
   it('pools quad GPU buffers when the same system is played again after dispose', async () => {
     const { library, prepared: system } = await prepared(), root = new Group();
     const options = { anchor: unitAnchor(root, null), target: null, joints: unitJoints(root, null), duration: 0.2, seed: 3 };
