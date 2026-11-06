@@ -2128,10 +2128,10 @@
     },
     "tests/rendering3d-gold-mines.test.ts": {
       "previousBytes": 5489,
-      "currentBytes": 5658,
+      "currentBytes": 9976,
       "previousSha256": "d04a319af190cc99fe667ac8dcf161e44635504cf4beb56001130e539db225e3",
-      "currentSha256": "b9c3f6c5c87465239630038ef2a41b70154278fec54bba5fe74a86f599b46f5e",
-      "firstDifferentByte": 2369
+      "currentSha256": "f45843eb5e6c7f5bde7c182013052adc595913bda60a16f8797e185bb14cade5",
+      "firstDifferentByte": 75
     },
     "tests/rendering3d-isolation.test.ts": {
       "previousBytes": 11507,
@@ -2869,10 +2869,10 @@
     },
     "tests/server/projection.test.ts": {
       "previousBytes": 11774,
-      "currentBytes": 15233,
+      "currentBytes": 16076,
       "previousSha256": "e1d7596192566bab0c441f771d078568494c8e8816579415087fdb3b9f45ec52",
-      "currentSha256": "95705f98e66e2de708bfd97e9f96d05ee518cc158d7615911df1da4aa43c0f94",
-      "firstDifferentByte": 2054
+      "currentSha256": "4a633e7075f232848bf509962c2983160fbb4cdf24c11fabc6f08922ad072188",
+      "firstDifferentByte": 1652
     },
     "tests/server/pve-loot-carryover.test.ts": {
       "previousExists": false,

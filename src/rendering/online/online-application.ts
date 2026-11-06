@@ -483,7 +483,7 @@ export class OnlineApplication implements SceneApplication {
     const combat = view?.phase.kind === 'combat', wantsBattle = !!seat && combat && !!this.client.watch;
     if (!wantsBattle || this.session.watchedSeat !== seat.seatId) this.session.stopWatching();
     const watching = !!seat && this.session.watchedSeat === seat.seatId;
-    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}),
+    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}), ...(seat.interest !== undefined ? { interest: seat.interest } : {}),
       ...(watching ? { watching: true as const } : {}) } : null) && !!seat;
     this.opponentBoard.drawnIn3d = drawn;
     this.syncShopInert();
