@@ -2241,9 +2241,9 @@
     "tests/rendering3d-render-quality.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4398,
+      "currentBytes": 6836,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "bb24253caf54010c60b0eae6b021c28352aa087ed9bec82ef08da397629ce8be",
+      "currentSha256": "77f70c310f830f282c66f388c2abd5ab2fb8c6507243e3f40b4c417c88b24fb3",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-scout-input.test.ts": {
