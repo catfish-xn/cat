@@ -154,6 +154,19 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
+  it('drops an optional hit on a recipient this cast already killed and keeps the caster cues', async () => {
+    const { runtime, scene, units, camera } = await setup({ darius: [
+      { system: 'deco', event: 'cast-start' as const, delay: 0, duration: 1 },
+      { system: 'blow', event: 'hit' as const, delay: 0, duration: 1, optional: true },
+    ] });
+    units.set('dead', { root: new Group(), body: null, alive: false });
+    expect(runtime.play('darius', 'darius-0', ['dead'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).toEqual(['deco']);
+    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(false);
+    runtime.dispose();
+  });
+
   it('parks finished systems oldest-out, and stopUnit drops a removed unit\'s spares', async () => {
     const { runtime, scene, gone, camera } = await setup();
     const objects = new Map<string, unknown>();
