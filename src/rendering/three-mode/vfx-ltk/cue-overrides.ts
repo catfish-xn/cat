@@ -158,12 +158,34 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
-  // R: exported cues unchanged. The full explosion's green cloud is authored about 1.5× the reference (≥6.7 vs ≥4.4 cells, no clear edge).
+  // R: 14.24 is a 3 s gas cloud that then detonates (11-06 field review: ours burst at 1.2 s, white and about 3.8 cells).
+  // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'Spine2_Wil' },
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 1.2, duration: 1.5, bone: 'Spine2_Wil', scale: 0.66 },
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.2, stopAfter: 2.8, bone: 'Spine2_Wil' },
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.5 },
+    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7 },
+  ],
+  // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
+  // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).
+  ezreal: [
+    { system: 'bdceb760', action: 'attack', event: 'projectile', bone: 'L_hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6166666666666667, duration: 1.5 },
+    { system: '11416b6c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Cstm_Buffbone_Cast_FX' },
+    { system: '9cb99eb2', action: 'cast', event: 'projectile', delay: 0.05, duration: 0.4, travelSeconds: 0.25, bone: 'Cstm_Buffbone_Cast_FX', targetBone: chest },
+    { system: 'd887e7a6', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true },
+    { system: '79219c1e', action: 'cast', event: 'hit', delay: 0.3, duration: 0.8, bone: chest, targetLimit: 3 },
+    { system: 'bc884cd6', action: 'cast', event: 'cast-start', delay: 0.7, duration: 0.5, bone: 'Cstm_Buffbone_Cast_FX' },
+    { system: 'd7fee2d8', action: 'cast', event: 'projectile', delay: 0.75, duration: 0.45, travelSeconds: 0.2, bone: 'Cstm_Buffbone_Cast_FX', targetBone: chest },
+    { system: 'e4979a04', action: 'cast', event: 'hit', delay: 0.95, duration: 0.8, bone: chest, primary: true },
+  ],
+  // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
+  morgana: [
+    { system: 'cbd8e1cc', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.23333333333333334, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5333333333333333, duration: 1.5 },
+    { system: '809dc7ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'Buffbone_Glb_Weapon_1', targetBone: chest },
+    { system: '9d79232b', action: 'cast', event: 'hit', delay: 0.6, duration: 1.5, primary: true },
+    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true },
   ],
 };
 
