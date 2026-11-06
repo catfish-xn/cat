@@ -3377,10 +3377,10 @@
     },
     "tests/vfx-ltk-particles.test.ts": {
       "previousBytes": 5436,
-      "currentBytes": 6034,
+      "currentBytes": 8039,
       "previousSha256": "1b209ea8e6d949df2a2cee76f043afeea326bc0b881406a9aaadff76339c665d",
-      "currentSha256": "9fee78c62eacc54e52eb2c5aa069f08e6efbfa4aac75edf570a765c856664710",
-      "firstDifferentByte": 2186
+      "currentSha256": "8f186d357efa1630711a18ca4c9a2c814ae9e794018136065c8317c1e798b366",
+      "firstDifferentByte": 37
     },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
