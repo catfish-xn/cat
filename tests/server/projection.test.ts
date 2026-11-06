@@ -21,6 +21,13 @@ describe('immutable projection reuse', () => {
     expect(toSeatPrivateView(nextMatch)).toBe(next);
     expect(toSeatPublic({ ...seat, match: nextMatch })).not.toBe(publicView);
   });
+  it('publishes only the 0–5 interest step of a seat\'s gold (TFT gold mines), never the gold', () => {
+    const { room } = makeRoom(new DamageResolver(() => 0)); room.start();
+    const seat = room.state.seats[0]!;
+    const at = (gold: number) => toSeatPublic({ ...seat, match: { ...seat.match, gold } });
+    expect([0, 9, 10, 19, 20, 49, 50, 51, 99].map(gold => at(gold).interest)).toEqual([0, 0, 1, 1, 2, 4, 5, 5, 5]);
+    expect(Object.values(at(37)).filter(value => value === 37)).toEqual([]);
+  });
 });
 
 describe('toPlayerView', () => {
@@ -33,7 +40,7 @@ describe('toPlayerView', () => {
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
     for (const entry of view.seats) {
-      expect(Object.keys(entry).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'legend', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId', 'streak']);
+      expect(Object.keys(entry).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'interest', 'kind', 'legend', 'level', 'name', 'orbs', 'publicBoard', 'rank', 'seatId', 'streak']);
       expect(Object.keys(entry.streak!).sort()).toEqual(['count', 'kind']);
       expect(entry.streak).toEqual(room.state.seats.find(seat => seat.seatId === entry.seatId)!.streak);
       expect(Number.isSafeInteger(entry.streak!.count) && entry.streak!.count >= 0).toBe(true);

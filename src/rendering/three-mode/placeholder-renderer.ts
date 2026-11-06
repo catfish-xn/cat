@@ -1325,7 +1325,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
-    tabletop.frame(frame); traitProps.frame(frame); goldMines?.frame(frame, !!arena?.ready, visiting());
+    tabletop.frame(frame); traitProps.frame(frame); syncMines(frame);
     portal.frame(frame, pieces, combatBegan, arrivalsEnabled());
   };
   const face = (sourceId: string, targetId: string | undefined) => {
@@ -1440,8 +1440,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (lastFrame) buildBoard(lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active || carouselOngoing, carouselOngoing);
-    goldMines?.away(!!view);
+    if (lastFrame) syncMines(lastFrame);
   };
+  /** TFT: the gold mines belong to the board on show, mine or the scouted/watched seat's (its public 0–5 interest step). */
+  const syncMines = (frame: BoardFrame) => goldMines?.frame(scoutView ? { ...frame, goldMines: scoutView.interest, goldMineIncomeKey: null } : frame,
+    !!arena?.ready, scoutView?.seatId ?? null);
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
   const visiting = () => scout.active || scoutView?.watching === true;
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };

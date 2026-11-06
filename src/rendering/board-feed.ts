@@ -194,6 +194,8 @@ export interface BoardScout {
   readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null;
   /** The seat's little legend (SeatPublic.legend, cosmetic); absent means the default. */
   readonly legend?: string;
+  /** Its interest gold mines (SeatPublic.interest, 0–5); absent from an older server, which then draws none. */
+  readonly interest?: number;
   /** Its battle of this round is playing on my board (my frames carry it): nothing static is drawn, the board still takes no input. */
   readonly watching?: true;
 }

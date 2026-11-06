@@ -1,4 +1,4 @@
-/** The default arena's owner-only interest props; frames supply counts and paid-income keys, never economy rules. */
+/** The default arena's interest props for the board on show (mine, or a scouted seat's); frames supply counts and paid-income keys, never economy rules. */
 import { AnimationMixer, Group, LoopOnce, LoopRepeat, Vector3 } from 'three';
 import type { BoardAlignment, ModelLease } from '../../rendering3d';
 import type { BoardFrame } from '../board-feed';
@@ -36,7 +36,7 @@ export function createGoldMines(parent: Group, alignment: GoldMineAlignment, loa
     const node = new Group(); node.name = `render3d-gold-mine-Home${index + 1}`; node.visible = false; root.add(node);
     return { node, lease: null as ModelLease | null, mixer: null as AnimationMixer | null, action: 'hidden' as MineAction, left: 0 };
   });
-  let disposed = false, started = false, count: number | null = null, incomeKey: string | null = null;
+  let disposed = false, started = false, count: number | null = null, incomeKey: string | null = null, owner: string | null = null;
   const play = (mine: typeof mines[number], action: MineAction) => {
     mine.action = action; mine.left = 0; mine.mixer?.stopAllAction();
     mine.node.visible = action !== 'hidden' && !!mine.lease;
@@ -48,8 +48,10 @@ export function createGoldMines(parent: Group, alignment: GoldMineAlignment, loa
     mine.left = action === 'idle' ? 0 : clip.duration;
   };
   return {
-    frame(frame: BoardFrame, ready: boolean, away: boolean) {
-      root.visible = ready && !away && frame.goldMines !== undefined;
+    /** `seat` is whose board is on show (null: mine); a different seat's mines stand at once, without Spawn/Death replay. */
+    frame(frame: BoardFrame, ready: boolean, seat: string | null = null) {
+      if (seat !== owner) { owner = seat; count = null; incomeKey = null; }
+      root.visible = ready && frame.goldMines !== undefined;
       if (!ready || frame.goldMines === undefined) { count = null; incomeKey = null; return; }
       const placement = goldMinePlacement(alignment, frame);
       mines.forEach((mine, index) => { mine.node.position.copy(placement.points[index]!); mine.node.scale.copy(placement.scale); });
@@ -69,7 +71,6 @@ export function createGoldMines(parent: Group, alignment: GoldMineAlignment, loa
         }).catch(() => { /* missing model draws nothing */ });
       });
     },
-    away(on: boolean) { root.visible = !on && count !== null; },
     update(seconds: number) {
       for (const mine of mines) {
         mine.mixer?.update(seconds);

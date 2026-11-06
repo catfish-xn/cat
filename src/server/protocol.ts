@@ -69,6 +69,11 @@ export interface SeatPublic {
    * `publicBoard`; the room always fills it.
    */
   readonly orbs?: PublicOrbSummary;
+  /**
+   * TFT's interest gold mines beside a board: min(5, floor(gold / 10)), what anyone scouting the board sees.
+   * Only this 0–5 step is public, never the gold itself. Optional for older views; the room always fills it.
+   */
+  readonly interest?: number;
 }
 export interface PublicOrbSummary { readonly count: number; readonly tiers: readonly OrbTier[] }
 export interface PublicBoardUnit {

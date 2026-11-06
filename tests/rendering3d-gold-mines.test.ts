@@ -20,7 +20,7 @@ function setup(placeholder = false) {
   const mines = createGoldMines(parent, alignment, load);
   return { parent, load, mines, releases, scenes };
 }
-describe('owner-only default arena gold mines', () => {
+describe('default arena gold mines for the board on show', () => {
   it('seeds without spawn, raises lowest first, sinks highest first, and gives count changes priority over income', () => {
     expect(goldMineActions(null, 3, true)).toEqual(['idle', 'idle', 'idle', 'hidden', 'hidden']);
     expect(goldMineActions(2, 4, true)).toEqual(['gain', 'gain', 'spawn', 'spawn', null]);
@@ -40,38 +40,57 @@ describe('owner-only default arena gold mines', () => {
   });
   it('uses independent leases/mixers, interrupts death with spawn, deduplicates income and returns to idle/hide', async () => {
     const { mines, scenes, releases } = setup();
-    mines.frame(frame(3, 'paid-1'), true, false); await flush();
+    mines.frame(frame(3, 'paid-1'), true, null); await flush();
     expect(mines.debug().map(m => m.action)).toEqual(['idle', 'idle', 'idle', 'hidden', 'hidden']);
-    mines.frame(frame(2, 'paid-1'), true, false); mines.update(0.4);
+    mines.frame(frame(2, 'paid-1'), true, null); mines.update(0.4);
     expect(mines.debug()[2]!.action).toBe('death');
-    mines.frame(frame(3, 'paid-1'), true, false); mines.update(0.2);
+    mines.frame(frame(3, 'paid-1'), true, null); mines.update(0.2);
     expect(mines.debug()[2]!.action).toBe('spawn');
     expect(scenes[2]!.position.y).toBeCloseTo(2);
     expect(scenes[0]!.position.y).toBeCloseTo(6);
-    mines.update(1); mines.frame(frame(3, 'paid-2'), true, false);
+    mines.update(1); mines.frame(frame(3, 'paid-2'), true, null);
     expect(mines.debug().slice(0, 3).every(m => m.action === 'gain')).toBe(true);
-    mines.update(0.4); mines.frame(frame(3, 'paid-2'), true, false); mines.update(0.7);
+    mines.update(0.4); mines.frame(frame(3, 'paid-2'), true, null); mines.update(0.7);
     expect(mines.debug().slice(0, 3).every(m => m.action === 'idle')).toBe(true);
-    mines.frame(frame(0, 'paid-2'), true, false); mines.update(1.1);
+    mines.frame(frame(0, 'paid-2'), true, null); mines.update(1.1);
     expect(mines.debug().every(m => !m.shown)).toBe(true);
     mines.dispose(); releases.forEach(release => expect(release).toHaveBeenCalledOnce());
   });
-  it('draws nothing offline, before arena readiness, while scouting, or with missing/placeholder models', async () => {
+  it('draws nothing offline, before arena readiness, or with missing/placeholder models', async () => {
     const { mines, load } = setup();
-    mines.frame(frame(), true, false); mines.frame(frame(5), false, false); expect(load).not.toHaveBeenCalled();
-    mines.frame(frame(5), true, true); await flush(); expect(mines.debug().every(m => !m.shown)).toBe(true);
-    mines.away(false); expect(mines.debug().every(m => m.shown)).toBe(true);
-    mines.frame(frame(5), false, false); mines.away(false); expect(mines.debug().every(m => !m.shown)).toBe(true);
+    mines.frame(frame(), true, null); mines.frame(frame(5), false, null); expect(load).not.toHaveBeenCalled();
+    mines.frame(frame(5), true, null); await flush(); expect(mines.debug().every(m => m.shown)).toBe(true);
+    mines.frame(frame(5), false, null); expect(mines.debug().every(m => !m.shown)).toBe(true);
     mines.dispose();
-    const empty = setup(true); empty.mines.frame(frame(5), true, false); await flush();
+    const empty = setup(true); empty.mines.frame(frame(5), true, null); await flush();
     expect(empty.mines.debug().every(m => !m.shown)).toBe(true); empty.releases.forEach(release => expect(release).toHaveBeenCalledOnce()); empty.mines.dispose();
     const missing = createGoldMines(new Group(), alignment, () => Promise.reject(Error('missing')));
-    missing.frame(frame(5), true, false); await flush(); expect(missing.debug().every(m => !m.shown)).toBe(true); missing.dispose();
+    missing.frame(frame(5), true, null); await flush(); expect(missing.debug().every(m => !m.shown)).toBe(true); missing.dispose();
+  });
+  it('shows the scouted seat\'s own count, seeded without Spawn/Death, live while scouting, and mine again on return', async () => {
+    const { mines } = setup();
+    mines.frame(frame(4, 'paid-1'), true, null); await flush();
+    expect(mines.debug().map(m => m.action)).toEqual(['idle', 'idle', 'idle', 'idle', 'hidden']);
+    // Scouting s3 (interest 1): its board's mines stand at once, no Death on my three extra mines.
+    mines.frame(frame(1, null), true, 's3');
+    expect(mines.debug().map(m => m.action)).toEqual(['idle', 'hidden', 'hidden', 'hidden', 'hidden']);
+    expect(mines.debug().map(m => m.shown)).toEqual([true, false, false, false, false]);
+    // Its gold rises while I watch: the next mine spawns.
+    mines.frame(frame(2, null), true, 's3');
+    expect(mines.debug()[1]!.action).toBe('spawn');
+    // Another seat, then back home: each seeds standing, and my old income key replays no Gain_Gold.
+    mines.frame(frame(5, null), true, 's5');
+    expect(mines.debug().map(m => m.action)).toEqual(['idle', 'idle', 'idle', 'idle', 'idle']);
+    mines.frame(frame(4, 'paid-1'), true, null);
+    expect(mines.debug().map(m => m.action)).toEqual(['idle', 'idle', 'idle', 'idle', 'hidden']);
+    // A seat an older server sent without interest draws none.
+    mines.frame(frame(undefined), true, 's2'); expect(mines.debug().every(m => !m.shown)).toBe(true);
+    mines.dispose();
   });
   it('releases late loads after disposal and seeds a remount without replaying old income', async () => {
-    const { mines, releases } = setup(); mines.frame(frame(5, 'old'), true, false); mines.dispose(); await flush();
+    const { mines, releases } = setup(); mines.frame(frame(5, 'old'), true, null); mines.dispose(); await flush();
     releases.forEach(release => expect(release).toHaveBeenCalledOnce());
-    const next = setup(); next.mines.frame(frame(3, 'old'), true, false); await flush();
+    const next = setup(); next.mines.frame(frame(3, 'old'), true, null); await flush();
     expect(next.mines.debug().slice(0, 3).every(m => m.action === 'idle')).toBe(true); next.mines.dispose();
   });
 });
