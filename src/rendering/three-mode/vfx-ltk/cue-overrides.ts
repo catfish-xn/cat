@@ -189,6 +189,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
+  // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
+  irelia: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
+    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, stopAfter: 1.4, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc' },
+  ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
   morgana: [
     { system: 'cbd8e1cc', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.23333333333333334, duration: 1.5, travelSeconds: 0.3, targetBone: chest },

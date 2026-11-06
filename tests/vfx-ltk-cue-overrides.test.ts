@@ -44,6 +44,9 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')?.primary).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')!.delay).toBeLessThan(ezreal.find(cue => cue.system === 'e4979a04')!.delay);
+    // Irelia: the swipe waits for the guard's end; Darius: the hit spark is optional.
+    expect(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')?.delay).toBeGreaterThanOrEqual(1.4);
+    expect(CUE_OVERRIDES.darius.find(cue => cue.system === 'a5373796')?.optional).toBe(true);
     // Morgana: the curse stays on its one target for the 8 pulses.
     expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
   });

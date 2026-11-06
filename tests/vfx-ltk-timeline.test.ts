@@ -80,6 +80,20 @@ describe('cast timeline replacement and fallback', () => {
     expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
     expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
   });
+  it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
+    const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
+    const doc = syntheticSystem();
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0],
+      value: { type: 'container', items: [
+        ...((doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+        ...((meshless.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+      ] } }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => new Texture() });
+    const prepared = await library.load('sample');
+    expect(prepared.model.emitters).toHaveLength(2);
+    expect(prepared.drawn).toHaveLength(1);
+    expect(prepared.empty).toBeFalsy();
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);

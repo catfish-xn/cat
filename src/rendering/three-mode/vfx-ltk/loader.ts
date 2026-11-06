@@ -11,7 +11,7 @@ import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { cueOverride } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
-import { RENDER_PHASE } from './engine/model/enums';
+import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
 import { readMeshBuffer } from './assets/meshBuffer';
 import { meshEmission } from './assets/emission';
@@ -194,15 +194,18 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const model = readVfxSystem(raw), drawn = drawnEmitters(model, true);
-      if (drawn.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
+      const model = readVfxSystem(raw), listed = drawnEmitters(model, true);
+      // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
+      // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
+      const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet));
+      if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes
       // and a transparent arena grid. Only a host providing the separate floor,
       // ground and character passes opts in; other consumers keep legacy intact.
       // The host has no particle shadow-map pass either; a shadow-only system must
       // not become a successful but invisible replacement (or leak into colour).
-      for (const { emitter: e } of drawn) {
+      for (const { emitter: e } of listed) {
         if (e.disabled) continue;
         if (!options.groundPass && (e.groundLayer || e.renderPhaseOverride === RENDER_PHASE.groundLayer)) throw new VfxLoadError('unsupported', 'ground-layer');
         if (e.renderPhaseOverride === RENDER_PHASE.shadow) throw new VfxLoadError('unsupported', 'shadow-only');
