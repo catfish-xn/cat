@@ -140,7 +140,7 @@ export function releaseRibbonBuffers(buffers: RibbonBuffers, vertices: number): 
   give(ribbonSpare, vertices, buffers, resetRibbon, disposeRibbon);
 }
 
-/** `meshKey` is stable for one authored mesh (e.g. a prepared draw definition key). */
+/** `meshKey` names one loaded mesh across every system and champion (its geometry uuid), never an emitter's index. */
 export function borrowMeshBuffers(meshKey: string, geometry: BufferGeometry): MeshBuffers {
   const held = meshSpare.get(meshKey)?.pop();
   if (held !== undefined) {

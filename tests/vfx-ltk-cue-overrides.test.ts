@@ -49,6 +49,13 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.darius.find(cue => cue.system === 'a5373796')?.optional).toBe(true);
     // Morgana: the curse stays on its one target for the 8 pulses.
     expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
+    // Renata: the export has no cast timeline; the override flies the missile before the blast and keeps the attack.
+    const renata = CUE_OVERRIDES.renata;
+    expect(renata.filter(cue => cue.action === 'attack').map(cue => cue.system)).toEqual(['06e90178', '0f2af66b']);
+    const missile = renata.find(cue => cue.system === 'faf1aeac')!;
+    expect(missile.event).toBe('projectile');
+    expect(missile.delay + missile.travelSeconds!).toBeLessThanOrEqual(renata.find(cue => cue.system === 'f9926ae8')!.delay);
+    expect(mapSkillTimeline(renata.filter(cue => cue.action === 'cast'), 'renata', ['a', 'b']).unsupported).toEqual([]);
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {
