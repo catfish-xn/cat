@@ -43,7 +43,7 @@ import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, createTabletop, resolveDefaultLege
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
-import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
+import { createGoldMines, GOLD_MINE_MODEL, minesFrameFor } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
@@ -1325,7 +1325,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
-    tabletop.frame(frame); traitProps.frame(frame); goldMines?.frame(frame, !!arena?.ready, visiting());
+    tabletop.frame(frame); traitProps.frame(frame); syncMines(frame);
     portal.frame(frame, pieces, combatBegan, arrivalsEnabled());
   };
   const face = (sourceId: string, targetId: string | undefined) => {
@@ -1440,8 +1440,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (lastFrame) buildBoard(lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active || carouselOngoing, carouselOngoing);
-    goldMines?.away(!!view);
+    if (lastFrame) syncMines(lastFrame);
   };
+  const syncMines = (frame: BoardFrame) => goldMines?.frame(minesFrameFor(frame, scoutView), !!arena?.ready, scoutView?.seatId ?? null);
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
   const visiting = () => scout.active || scoutView?.watching === true;
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };

@@ -15,7 +15,7 @@ import {
 import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { d14PublicUnitMark, listCarouselSlots, readItemSummons, isSummonPreparation, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
+import { d14PublicUnitMark, getInterestGold, listCarouselSlots, readItemSummons, isSummonPreparation, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatChoiceDeadline, SeatPublic, SeatState } from './types';
 
@@ -26,12 +26,14 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
 // Room snapshots are immutable. A single changed seat is broadcast to several recipients;
 // project unchanged seats once, with weak ownership so old rounds can be collected.
 const publicSeats = new WeakMap<SeatState, SeatPublic>();
+/** A cosmetic public step: a bad gold value draws no mines here instead of failing the whole view (getInterestGold throws on it). */
+const publicInterest = (gold: number) => Number.isSafeInteger(gold) && gold >= 0 ? getInterestGold(gold) : 0;
 export function toSeatPublic(seat: SeatState): SeatPublic {
   const cached = publicSeats.get(seat);
   if (cached) return cached;
   const view: SeatPublic = { seatId: seat.seatId, name: seat.name, kind: seat.kind, legend: seat.legend, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
     streak: { kind: seat.streak.kind, count: seat.streak.count },
-    publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match) };
+    publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match), interest: publicInterest(seat.match.gold) };
   publicSeats.set(seat, view);
   return view;
 }
