@@ -203,6 +203,17 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '9d79232b', action: 'cast', event: 'hit', delay: 0.6, duration: 1.5, primary: true },
     { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true },
   ],
+  // The export carries Renata's attack only, so every cast fell back to the procedural shot (11-06 field: 4/4 no-cues).
+  // Order and timing follow the system names and the handwritten shot: canisters fire, the missile flies 0.3–0.9 s,
+  // then the blast pool on the primary and a hit on each enemy struck. The ally shield stays on its own receipt path.
+  renata: [
+    { system: '06e90178', action: 'attack', event: 'projectile', bone: 'Muzzle', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BuffBone_Glb_Center_Loc' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.5666666666666667, duration: 1.5 },
+    { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'C_Canister' },
+    { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
+    { system: 'f9926ae8', action: 'cast', event: 'hit', delay: 0.9, duration: 2, bone: ground, primary: true },
+    { system: 'd5579768', action: 'cast', event: 'hit', delay: 0.9, duration: 1, bone: chest, targetLimit: 3, optional: true },
+  ],
 };
 
 /** The override for `champion` when every system it names is present in `systems`. */
