@@ -33,8 +33,19 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(0.68);
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(0.68);
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.66);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBeUndefined();
+    // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.5);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(0.7);
+    // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
+    const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
+    expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
+    expect(ezreal.find(cue => cue.system === 'd887e7a6')?.primary).toBe(true);
+    expect(ezreal.find(cue => cue.system === 'd887e7a6')!.delay).toBeLessThan(ezreal.find(cue => cue.system === 'e4979a04')!.delay);
+    // Morgana: the curse stays on its one target for the 8 pulses.
+    expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {
