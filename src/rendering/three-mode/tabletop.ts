@@ -30,17 +30,29 @@ type LegendFrame = Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>
 /** The x of a grid's right edge cell centre (odd rows sit half a cell right); the grid's left edge is origin.x. */
 const gridRightX = (frame: LegendFrame) => frame.origin.x + Math.sqrt(3) * frame.hexRadius * (frame.columns - 0.5);
 /**
- * Where the board owner's 河灵 stands: on the arena's near-left stone platform (TFT: the bottom-left corner beside the
- * bench), about one and a half cells left of the nearest deployable cell, never on one. The arena is drawn un-mirrored
- * (board-arena.ts arenaDrawTransform), so this is the old right-hand spot reflected about the grid's centre line.
+ * Where the board owner's 河灵 stands: on the middle of the arena's near-left stone platform (TFT: the bottom-left
+ * corner beside the bench), LEGEND_INSET_CELLS hex widths left of the grid's left edge, never on a deployable cell.
+ * The playtest server's 6b353a0f capture showed the plain mirror of the old right-hand spot (1.6 widths out) on the
+ * platform's outer rim, about 0.8 widths left of its middle.
  */
+export const LEGEND_INSET_CELLS = 0.8;
 export function legendSpot(frame: LegendFrame): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
-  return new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+  return new Vector3(frame.origin.x - width * LEGEND_INSET_CELLS, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
 }
 /** The far corner across the board from `legendSpot` (top right): a PvP opponent's or a scouting visitor's legend. */
 export function farLegendSpot(frame: LegendFrame): Vector3 {
   return new Vector3(gridRightX(frame) + Math.sqrt(3) * frame.hexRadius * 1.6, 0, frame.origin.y);
+}
+/**
+ * The ten orb slots of a board owner's legend: two columns rising from beside it toward the board's middle, both on the
+ * legend's outer (left) side. Centred on the legend, the inner column would sit on the left column's cells now that the
+ * legend stands 0.8 widths out, and a left click there would take the orb instead of lifting the unit (orbAt is asked first).
+ */
+export function legendOrbSlots(frame: LegendFrame, count = 10): Vector3[] {
+  const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5, spot = legendSpot(frame);
+  return Array.from({ length: count }, (_, index) => new Vector3(
+    spot.x - (index % 2 ? 1.26 : 0.42) * width, 0, spot.z - (1 + Math.floor(index / 2)) * step * 0.9));
 }
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
@@ -230,11 +242,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       anchors.center.set(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, (top + bottom) / 2);
       board.x = frame.origin.x; board.z = frame.origin.y; board.width = width;
       const margin = ROAM_MARGIN * width;
-      board.bounds = { minX: anchors.me.x - margin * 0.5, maxX: right + margin, minZ: top - margin, maxZ: bottom + margin };
+      board.bounds = { minX: anchors.me.x - margin * 0.75, maxX: right + margin, minZ: top - margin, maxZ: bottom + margin };
       for (const view of legends.values()) { view.walked = false; view.path = null; }
       // Two columns of orbs rising from beside my legend toward the board's middle.
-      anchors.orbs = Array.from({ length: MAX_ORBS }, (_, index) => new Vector3(
-        anchors.me.x + (index % 2 ? 0.42 : -0.42) * width, 0, anchors.me.z - (1 + Math.floor(index / 2)) * step * 0.9));
+      anchors.orbs = legendOrbSlots(frame, MAX_ORBS);
       for (const view of legends.values()) placeLegend(view);
       [...orbs.values()].filter(view => !spots.has(view.orbId)).forEach((view, index) => view.root.position.copy(orbSlot(index)));
     }

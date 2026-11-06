@@ -16,7 +16,7 @@ import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
 import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
-import { farLegendSpot, legendSpot } from './tabletop';
+import { farLegendSpot, legendOrbSlots, legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
 type OrbTier = 'gray' | 'blue' | 'gold' | 'prismatic';
@@ -253,10 +253,11 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     // Mine came along: the visitor's corner, across the board from the owner's (where a PvP opponent's legend stands).
     visitor = legendPiece('visitor', ctx.myLegend(), farLegendSpot(frame));
     // Where it may walk: the board and its rim out to both legends' corners (as on my own board).
-    roam = { minX: spot.x - width * 0.5, maxX: frame.origin.x + width * (frame.columns - 0.5) + width * 2, minZ: frame.origin.y - width, maxZ: spot.z + width, speed: VISITOR_WIDTHS * width };
+    roam = { minX: spot.x - width * 1.5, maxX: frame.origin.x + width * (frame.columns - 0.5) + width * 2, minZ: frame.origin.y - width, maxZ: spot.z + width, speed: VISITOR_WIDTHS * width };
+    const slots = legendOrbSlots(frame, MAX_ORBS);
     view.orbs.tiers.slice(0, MAX_ORBS).forEach((tier, index) => {
       const orb = new Mesh(orbGeometry, orbMaterial[tier]); orb.name = `render3d-scout-orb-${tier}`;
-      orb.position.set(spot.x + (index % 2 ? 0.42 : -0.42) * width, ORB_FLOAT, spot.z - (1 + Math.floor(index / 2)) * step * 0.9);
+      orb.position.copy(slots[index]!).setY(ORB_FLOAT);
       group.add(orb); orbs.push(orb);
     });
   };

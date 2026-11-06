@@ -193,7 +193,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       // The banner left of my half, one cell beyond my legend's orb columns (the tabletop's legend spot, on the arena's
       // near-left platform); the flask on the right (the opponent's legend stands top right).
       const right = frame.origin.x + width * (frame.columns - 0.5) + width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
-      const left = frame.origin.x - width * 2.65;
+      // A little beyond the outer orb column (tabletop legendOrbSlots: legend 0.8 widths out, columns 0.42 and 1.26 left of it).
+      const left = frame.origin.x - width * 2.7;
       spots.chest.set(left, 0, bottom - step * 1.4);
       spots.flask.set(right, 0, bottom - step * 2.1);
       chestRoot.position.copy(spots.chest); flaskRoot.position.copy(spots.flask);

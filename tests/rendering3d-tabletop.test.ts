@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
-import { createTabletop, farLegendSpot, LEGEND_MODEL, legendSpot, type TabletopContext } from '../src/rendering/three-mode/tabletop';
+import { createTabletop, farLegendSpot, LEGEND_MODEL, legendOrbSlots, legendSpot, type TabletopContext } from '../src/rendering/three-mode/tabletop';
+import { hexCenter } from '../src/rendering3d/picking';
 import type { BoardFrame, BoardLegendWalk, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
@@ -41,9 +42,23 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     const width = Math.sqrt(3) * 34, leftmost = 35, rightmost = 35 + width * 6.5;
     expect(points[0]!.x).toBeLessThan(leftmost - width);
     expect(points[1]!.x).toBeGreaterThan(rightmost + width);
-    const center = (leftmost + rightmost) / 2;
-    expect(legendSpot(frame()).x + farLegendSpot(frame()).x).toBeCloseTo(2 * center, 6);
-    expect(legendSpot(frame()).x).toBeCloseTo(leftmost - width * 1.6, 6);
+    // Mine on the near-left platform's middle (playtest capture 6b353a0f), the far one in the top-right corner.
+    expect(legendSpot(frame()).x).toBeCloseTo(leftmost - width * 0.8, 6);
+    expect(farLegendSpot(frame()).x).toBeCloseTo(rightmost + width * 1.6, 6);
+  });
+
+  it('keeps all ten orb slots off every deployable cell, so a left click there still lifts the unit', () => {
+    const { tabletop } = setup();
+    const board = frame(), width = Math.sqrt(3) * board.hexRadius;
+    const grid = { rows: board.rows, columns: board.columns, radius: board.hexRadius, origin: board.origin };
+    const slots = legendOrbSlots(board);
+    expect(slots).toHaveLength(10);
+    // The camera box reaches the last (outermost, highest) slot the tabletop draws.
+    expect(tabletop.layout(board)[2]!.distanceTo(slots[9]!)).toBeCloseTo(0, 6);
+    for (const slot of slots) for (let row = 0; row < board.rows; row++) for (let col = 0; col < board.columns; col++) {
+      const cell = hexCenter({ col, row }, grid);
+      expect(Math.hypot(slot.x - cell.x, slot.z - cell.z)).toBeGreaterThanOrEqual(0.75 * width);
+    }
   });
 
   it('shows an opponent legend only while a battle against another board is shown', () => {

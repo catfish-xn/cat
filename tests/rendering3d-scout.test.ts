@@ -5,6 +5,7 @@ import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame,
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
 import { LEGEND_MODEL } from '../src/rendering/three-mode/tabletop';
+import { hexCenter } from '../src/rendering3d/picking';
 import { unitAnomalies } from '../src/presentation/anomaly-display';
 
 /** Synthetic seats only: no asset files, no real players. */
@@ -93,6 +94,15 @@ describe('3D scouting stage', () => {
     expect(debug.units.sort()).toEqual(['board:1,5:standin', 'board:2,6:standin', 'board:5,7:standin']);
     expect(debug.bench).toEqual(['bench:4']);
     expect(debug.orbs).toEqual(['gold', 'blue']);
+    // Its orbs stand off every deployable cell (beside the legend, on its outer side).
+    const width = Math.sqrt(3) * frame.hexRadius, grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
+    const drawnOrbs: Group[] = [];
+    scene.traverse(node => { if (node.name.startsWith('render3d-scout-orb-')) drawnOrbs.push(node as Group); });
+    expect(drawnOrbs).toHaveLength(2);
+    for (const drawn of drawnOrbs) for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
+      const cell = hexCenter({ col, row }, grid);
+      expect(Math.hypot(drawn.position.x - cell.x, drawn.position.z - cell.z)).toBeGreaterThanOrEqual(0.75 * width);
+    }
     expect(debug.legend).toBe('standin');
     expect(icons.sort()).toEqual(['item-1', 'item-2', 'item-3']);
     expect(scene.getObjectByName('render3d-scout-anomaly')).toBeDefined();
