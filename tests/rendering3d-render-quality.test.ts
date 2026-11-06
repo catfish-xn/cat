@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRenderQuality, LOW_READINGS, pixelRatioFor, QUALITY_STORAGE_KEY, readQualityChoice, SETTLE_MS, WARMUP_MS } from '../src/rendering/three-mode/render-quality';
+import { createRenderQuality, LOW_READINGS, pixelRatioFor, placeQualityButton, QUALITY_STORAGE_KEY, readQualityChoice, SETTLE_MS, WARMUP_MS } from '../src/rendering/three-mode/render-quality';
 
 const memory = (initial?: string) => {
   const values = new Map<string, string>(initial ? [[QUALITY_STORAGE_KEY, initial]] : []);
@@ -74,5 +74,43 @@ describe('3D 画质档位', () => {
     // A storage that refuses writes still switches for this visit.
     const refusing = createRenderQuality({ storage: { getItem: () => null, setItem: () => { throw new Error('quota'); } }, start: 0 });
     refusing.cycle(0); expect(refusing.level).toBe('high');
+  });
+
+  it('places the button beside 音效 online, else in the 3D bar before 切回 2D so the two never overlap', () => {
+    class Node {
+      parentElement: Node | null = null; children: Node[] = [];
+      constructor(readonly selector = '') {}
+      get isConnected(): boolean { return !!this.parentElement; }
+      insertBefore(node: Node, before: Node | null) {
+        node.parentElement?.children.splice(node.parentElement.children.indexOf(node), 1);
+        const at = before ? this.children.indexOf(before) : -1;
+        this.children.splice(at < 0 ? this.children.length : at, 0, node); node.parentElement = this;
+      }
+      append(node: Node) { this.insertBefore(node, null); }
+      querySelector(selector: string): Node | null {
+        for (const child of this.children) { if (child.selector === selector) return child; const hit = child.querySelector(selector); if (hit) return hit; }
+        return null;
+      }
+    }
+    // Offline 3D: the layer's own bar holds 切回 2D; the button goes in that bar, right before it.
+    const layer = new Node(), bar = new Node('.render3d-bar'), status = new Node('status'), exit = new Node('[data-debug="render3d-exit"]');
+    layer.append(bar); bar.append(status); bar.append(exit);
+    const button = new Node('button');
+    placeQualityButton(button, layer, { querySelector: () => null });
+    expect(button.parentElement).toBe(bar);
+    expect(bar.children).toEqual([status, button, exit]);
+    expect(layer.children).toEqual([bar]); // never loose on the layer, where it covered 切回 2D
+    placeQualityButton(button, layer, { querySelector: () => null });
+    expect(bar.children).toEqual([status, button, exit]);
+    // Online: the top bar appears later; the button moves beside 音效, before the connection badge.
+    const topbar = new Node('.online-topbar'), sound = new Node('sound'), connection = new Node('.online-connection');
+    topbar.append(sound); topbar.append(connection);
+    placeQualityButton(button, layer, { querySelector: (selector: string) => (selector === '.online-topbar' ? topbar : null) });
+    expect(topbar.children).toEqual([sound, button, connection]);
+    expect(bar.children).toEqual([status, exit]);
+    // A layer with no bar at all (unit mounts) still gets the button.
+    const bare = new Node(), alone = new Node('button');
+    placeQualityButton(alone, bare, null);
+    expect(bare.children).toEqual([alone]);
   });
 });

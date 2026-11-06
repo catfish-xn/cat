@@ -86,3 +86,29 @@ export function createRenderQuality(options: {
     },
   };
 }
+
+interface PlaceTarget {
+  readonly parentElement?: unknown;
+  readonly isConnected?: boolean;
+}
+interface PlaceParent {
+  insertBefore?(node: never, child: unknown): unknown;
+  querySelector?(selector: string): unknown;
+  append?(node: never): void;
+}
+/**
+ * Where the 画质 button goes: online, the top bar beside 音效 (before the connection badge); otherwise into the 3D
+ * layer's own tool bar beside 切回 2D, so the two never sit on top of each other (PR #535 review); only a layer with
+ * no bar at all gets it on its own. Called again once a second: the online bar may appear after the mount.
+ */
+export function placeQualityButton(button: PlaceTarget, layer: PlaceParent, doc: { querySelector?(selector: string): unknown } | null): void {
+  const topbar = doc?.querySelector?.('.online-topbar') as PlaceParent | null | undefined;
+  if (topbar?.insertBefore) {
+    if (button.parentElement !== topbar) topbar.insertBefore(button as never, topbar.querySelector?.('.online-connection') ?? null);
+    return;
+  }
+  if (button.isConnected) return;
+  const tools = layer.querySelector?.('.render3d-bar') as PlaceParent | null | undefined;
+  if (tools?.insertBefore) tools.insertBefore(button as never, tools.querySelector?.('[data-debug="render3d-exit"]') ?? null);
+  else layer.append?.(button as never);
+}

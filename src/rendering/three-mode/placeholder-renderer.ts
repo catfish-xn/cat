@@ -18,7 +18,7 @@ import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
-import { createRenderQuality, pixelRatioFor } from './render-quality';
+import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
 import { startOriginalUi } from './ui-original-assets';
 import { startAugmentStripSkin } from './augment-strip-skin';
@@ -1748,7 +1748,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // TFT's FPS readout in the top-right corner, refreshed once a second.
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
-  // The 画质 button sits in the online top bar beside 音效 (placed once the bar is there), else on the 3D layer.
+  // The 画质 button sits in the online top bar beside 音效, else in the 3D layer's bar beside 切回 2D (render-quality.ts).
   const qualityButton = typeof document === 'undefined' ? null : document.createElement('button');
   const syncQualityButton = () => { if (qualityButton) { qualityButton.textContent = renderQuality.label(); qualityButton.title = renderQuality.title(); } };
   if (qualityButton) {
@@ -1756,12 +1756,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     qualityButton.addEventListener?.('click', () => { renderQuality.cycle(performance.now()); applyQuality(); syncQualityButton(); });
     syncQualityButton();
   }
-  const placeQualityButton = () => {
-    if (!qualityButton || qualityButton.isConnected && qualityButton.parentElement !== host) return;
-    const bar = document.querySelector?.('.online-topbar');
-    if (bar?.insertBefore) bar.insertBefore(qualityButton, bar.querySelector?.('.online-connection') ?? null);
-    else if (!qualityButton.isConnected) host.append(qualityButton);
-  };
+  const placeQualityButton = () => { if (qualityButton) placeQuality(qualityButton, host, typeof document === 'undefined' ? null : document); };
   placeQualityButton();
   let fpsFrames = 0, fpsSince = 0;
   // Unused models, effect resources and KTX2 workers are let go (model-memory.ts, effect-library.ts, asset-reader.ts),

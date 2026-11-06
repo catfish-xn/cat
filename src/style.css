@@ -1360,6 +1360,7 @@ body[data-online]:has(> .render3d-layer) .online-countdown[data-phase="combat"]:
 .render3d-fps:empty { display: none; }
 .render3d-quality-toggle { justify-self: end; min-width: 0; min-height: 26px; padding: 2px 8px; font-size: 11px; border-radius: 999px; background: #203440; border-color: #34505f; color: #9aaeb9; pointer-events: auto; }
 body[data-online]:has(> .render3d-layer) .online-topbar :is(.sound-toggle, .render3d-quality-toggle) { white-space: nowrap; flex-shrink: 0; }
+.render3d-bar .render3d-quality-toggle { min-height: 44px; white-space: nowrap; }
 .render3d-layer > .render3d-quality-toggle { position: absolute; z-index: 2; top: 20px; right: 8px; min-height: 44px; }
 body[data-online] > .render3d-layer .render3d-fps { position: fixed; z-index: 3; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { margin-top: 14px; }
