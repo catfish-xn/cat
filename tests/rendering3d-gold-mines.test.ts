@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AnimationClip, Group, NumberKeyframeTrack } from 'three';
-import { createGoldMines, goldMineActions, goldMinePlacement, GOLD_MINE_HOME, type GoldMineAlignment } from '../src/rendering/three-mode/gold-mines';
+import { AnimationClip, BoxGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, NumberKeyframeTrack, Texture } from 'three';
+import { createGoldMines, goldMineActions, goldMinePlacement, GOLD_MINE_GLOW, GOLD_MINE_HOME, lightGoldMine, minesFrameFor, type GoldMineAlignment } from '../src/rendering/three-mode/gold-mines';
 import type { BoardFrame } from '../src/rendering/board-feed';
 import type { ModelLease } from '../src/rendering3d';
 const alignment: GoldMineAlignment = { reflectX: true, scale: [2, 3, -4], offset: [10, 20, 30], target: { radius: 34, origin: { x: 35, y: 50 } } };
@@ -86,6 +86,46 @@ describe('default arena gold mines for the board on show', () => {
     // A seat an older server sent without interest draws none.
     mines.frame(frame(undefined), true, 's2'); expect(mines.debug().every(m => !m.shown)).toBe(true);
     mines.dispose();
+  });
+  it('takes the frame for the board on show: mine untouched, a scouted seat\'s interest without my income key, none from an older server', () => {
+    const mine = frame(3, 'paid-1');
+    expect(minesFrameFor(mine, null)).toBe(mine);
+    expect(minesFrameFor(mine, undefined)).toBe(mine);
+    expect(minesFrameFor(mine, { interest: 5 })).toEqual({ ...mine, goldMines: 5, goldMineIncomeKey: null });
+    expect(minesFrameFor(mine, { interest: 0 })).toEqual({ ...mine, goldMines: 0, goldMineIncomeKey: null });
+    const older = minesFrameFor(mine, {});
+    expect(older.goldMines).toBeUndefined();
+    expect(older.goldMineIncomeKey).toBeNull();
+    expect(mine).toEqual(frame(3, 'paid-1'));
+  });
+  it('lights only black-emissive textured materials, through one clone per source, and leaves the template untouched', () => {
+    const map = new Texture(), source = new MeshStandardMaterial({ map }), geometry = new BoxGeometry();
+    const plain = new MeshStandardMaterial(), already = new MeshStandardMaterial({ map, emissive: '#ff0000' }), basic = new MeshBasicMaterial({ map });
+    const scene = (material: Mesh['material']) => { const root = new Group(); root.add(new Mesh(geometry, material)); return root; };
+    const clones = new Map(), first = scene(source), second = scene(source), others = scene([plain, already, basic]);
+    lightGoldMine(first, clones); lightGoldMine(second, clones); lightGoldMine(others, clones);
+    const lit = (first.children[0] as Mesh).material as MeshStandardMaterial;
+    expect(lit).not.toBe(source);
+    expect((second.children[0] as Mesh).material).toBe(lit);
+    expect(lit.emissiveMap).toBe(map);
+    expect(lit.emissive.getHexString()).toBe(GOLD_MINE_GLOW.color.slice(1));
+    expect(lit.emissiveIntensity).toBe(GOLD_MINE_GLOW.intensity);
+    expect(source.emissive.getHex()).toBe(0);
+    expect(source.emissiveMap).toBeNull();
+    expect((others.children[0] as Mesh).material).toEqual([plain, already, basic]);
+  });
+  it('disposes its glowing clones with the mines, never the shared template material', async () => {
+    const parent = new Group(), source = new MeshStandardMaterial({ map: new Texture() }), sourceDispose = vi.fn();
+    source.addEventListener('dispose', sourceDispose);
+    const load = async (): Promise<ModelLease> => { const scene = new Group(); scene.add(new Mesh(new BoxGeometry(), source));
+      return { scene, release: vi.fn(), placeholder: false, animationNames: {}, animations: [] }; };
+    const mines = createGoldMines(parent, alignment, load), cloneDispose = vi.fn();
+    mines.frame(frame(1), true, null); await flush();
+    const lit = (parent.getObjectByName('render3d-gold-mine-Home1')!.children[0]!.children[0] as Mesh).material as MeshStandardMaterial;
+    lit.addEventListener('dispose', cloneDispose);
+    mines.dispose();
+    expect(cloneDispose).toHaveBeenCalledOnce();
+    expect(sourceDispose).not.toHaveBeenCalled();
   });
   it('releases late loads after disposal and seeds a remount without replaying old income', async () => {
     const { mines, releases } = setup(); mines.frame(frame(5, 'old'), true, null); mines.dispose(); await flush();

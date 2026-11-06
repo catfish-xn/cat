@@ -43,7 +43,7 @@ import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, createTabletop, resolveDefaultLege
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
-import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
+import { createGoldMines, GOLD_MINE_MODEL, minesFrameFor } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
@@ -1442,9 +1442,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     tabletop.away(scout.active || carouselOngoing, carouselOngoing);
     if (lastFrame) syncMines(lastFrame);
   };
-  /** TFT: the gold mines belong to the board on show, mine or the scouted/watched seat's (its public 0–5 interest step). */
-  const syncMines = (frame: BoardFrame) => goldMines?.frame(scoutView ? { ...frame, goldMines: scoutView.interest, goldMineIncomeKey: null } : frame,
-    !!arena?.ready, scoutView?.seatId ?? null);
+  const syncMines = (frame: BoardFrame) => goldMines?.frame(minesFrameFor(frame, scoutView), !!arena?.ready, scoutView?.seatId ?? null);
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
   const visiting = () => scout.active || scoutView?.watching === true;
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };

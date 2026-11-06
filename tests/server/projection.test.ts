@@ -28,6 +28,11 @@ describe('immutable projection reuse', () => {
     expect([0, 9, 10, 19, 20, 49, 50, 51, 99].map(gold => at(gold).interest)).toEqual([0, 0, 1, 1, 2, 4, 5, 5, 5]);
     expect(Object.values(at(37)).filter(value => value === 37)).toEqual([]);
   });
+  it.each([-1, 1.5, Number.NaN])('gives interest 0 for an invalid gold value (%s) instead of throwing', gold => {
+    const { room } = makeRoom(new DamageResolver(() => 0)); room.start();
+    const seat = room.state.seats[0]!;
+    expect(toSeatPublic({ ...seat, match: { ...seat.match, gold } }).interest).toBe(0);
+  });
 });
 
 describe('toPlayerView', () => {

@@ -676,6 +676,8 @@ body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock,
 /* TFT: once eliminated the shop is gone; the board, traits, player list and minimap stay for watching. */
 body[data-online-spectating]:has(> .render3d-layer) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
 .shop-dock { transition: transform .25s ease, opacity .25s ease; }
+/* The interest/income tag is my own economy: it goes with my shop while another player's board is on show in 3D. */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .online-countdown .economy-hint { display: none; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
 .carousel-holding { position: absolute; z-index: 30; right: 2px; bottom: calc(var(--online-dock-h, 0px) + var(--online-gap, 8px) + 10px); width: 80px; display: grid; gap: 4px;
