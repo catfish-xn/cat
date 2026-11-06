@@ -1,9 +1,9 @@
-import { BoxGeometry, Camera, Group, Texture } from 'three';
+import { BoxGeometry, Camera, Group, Mesh, SphereGeometry, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkParticles, FX_SCALE, staticMeshGeometry, unitAnchor, unitJoints, ROOT_PARTICLES } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { drawnEmitters } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/definitions';
-import { syntheticIndex, syntheticSystem, num } from './vfx-ltk-synthetic';
+import { syntheticIndex, syntheticSystem, num, struct } from './vfx-ltk-synthetic';
 import type { SystemModel } from '../src/rendering/three-mode/vfx-ltk/engine/model/model';
 
 async function prepared() {
@@ -37,6 +37,32 @@ describe('upstream simulation in the bare Three.js host', () => {
     expect(second.draws[0].object.geometry).toBe(geometry);
     second.dispose();
     library.dispose();
+  });
+  it('never lends one system\'s pooled mesh to another system\'s emitter at the same place (Ezreal W, 11-06)', async () => {
+    // Both systems draw their mesh from emitter 0; the pool used to key buffers by that index, so B drew A's mesh.
+    const meshed = (file: string) => syntheticSystem({ lifetime: num(5), primitive: struct('VfxPrimitiveMesh', {
+      mMesh: struct('VfxMeshDefinitionData', { mSimpleMeshName: { type: 'asset', path: file, asset: {} } as never }) }) });
+    const box = new BoxGeometry(), sphere = new SphereGeometry(1, 12, 8);
+    const index = { ...syntheticIndex(), systems: { a: 'systems/a.json', b: 'systems/b.json' }, skills: {},
+      assets: { 'synthetic.tex': 'textures/sample.png', 'a.scb': 'meshes/a.glb', 'b.scb': 'meshes/b.glb' } };
+    const library = createVfxLibrary('/root/', {
+      readJson: async url => url.endsWith('index.json') ? index : meshed(url.endsWith('a.json') ? 'a.scb' : 'b.scb'),
+      readTexture: async () => new Texture(),
+      readMesh: async url => (url.endsWith('a.glb') ? box : sphere).clone(),
+    });
+    const root = new Group(), options = { anchor: unitAnchor(root, null), target: null, joints: unitJoints(root, null), duration: 0.2, seed: 3 };
+    const [a, b] = [await library.load('a'), await library.load('b')];
+    const vertices = (effect: ReturnType<typeof createLtkParticles>) => (effect.draws[0].object as Mesh).geometry.getAttribute('position').count;
+    const first = createLtkParticles(a, options);
+    expect(vertices(first)).toBe(box.getAttribute('position').count);
+    first.dispose();
+    const second = createLtkParticles(b, options);
+    expect(vertices(second)).toBe(sphere.getAttribute('position').count);
+    second.dispose();
+    // The same system still takes its own buffers back.
+    const again = createLtkParticles(a, options);
+    expect(vertices(again)).toBe(box.getAttribute('position').count);
+    again.dispose(); library.dispose(); box.dispose(); sphere.dispose();
   });
   it('simulates seeded particles, writes original GPU rows, stops emission and disposes once', async () => {
     const { library, prepared: system } = await prepared(), root = new Group(), camera = new Camera();
