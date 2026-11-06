@@ -31,6 +31,11 @@ export interface TimelineCue {
    * `FX_SCALE`.
    */
   readonly scale?: number;
+  /**
+   * A target cue the cast can do without: with no living recipient it is left out instead of
+   * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
+   */
+  readonly optional?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint }
@@ -52,8 +57,9 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       continue;
     }
     if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId }); continue; }
-    if (!unique.length) { unsupported.push({ cue, reason: 'missing-target' }); continue; }
+    if (!unique.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     if (cue.event === 'projectile' && unique[0] === sourceId) {
+      if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
     for (const targetId of cue.primary ? unique.slice(0, 1) : cue.targetLimit ? unique.slice(0, cue.targetLimit) : cue.event === 'projectile' ? unique.slice(0, 1) : unique) {

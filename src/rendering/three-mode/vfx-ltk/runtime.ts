@@ -139,7 +139,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues) return false;
-      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board);
+      const mapped = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board), { unsupported } = mapped;
+      // An optional target cue whose recipient is already gone (often killed by this very cast) is dropped, not fatal.
+      const spawns = mapped.spawns.filter(spawn => {
+        if (!spawn.optional || spawn.targetId === undefined || context.snapshotTargets) return true;
+        const target = findUnit(spawn.targetId);
+        return !!target && !target.disposed && target.alive;
+      });
       if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
       const independent = spawns.every(s => s.point && s.event !== 'projectile');
       // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.

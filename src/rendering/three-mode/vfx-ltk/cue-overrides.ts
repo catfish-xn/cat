@@ -164,7 +164,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.2, stopAfter: 2.8, bone: 'Spine2_Wil' },
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.5 },
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7 },
+    // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
+    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7, optional: true },
   ],
   // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
   // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).
@@ -178,6 +179,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'bc884cd6', action: 'cast', event: 'cast-start', delay: 0.7, duration: 0.5, bone: 'Cstm_Buffbone_Cast_FX' },
     { system: 'd7fee2d8', action: 'cast', event: 'projectile', delay: 0.75, duration: 0.45, travelSeconds: 0.2, bone: 'Cstm_Buffbone_Cast_FX', targetBone: chest },
     { system: 'e4979a04', action: 'cast', event: 'hit', delay: 0.95, duration: 0.8, bone: chest, primary: true },
+  ],
+  // Q: exported cues, with the hit spark optional: a spin with nobody adjacent, or one that kills its targets, still shows
+  // the ring, the spin and the heal (11-06 field: both casts refused and fell back to the plain charge ring).
+  darius: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.36666666666666664, duration: 1.5 },
+    { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
+    { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
   morgana: [

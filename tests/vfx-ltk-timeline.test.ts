@@ -70,6 +70,16 @@ describe('cast timeline replacement and fallback', () => {
     expect(selectTimeline(champion, undefined, () => true)).toBeNull();
     expect(selectTimeline('renata', cues, () => true)).toBeNull();
   });
+  it('leaves out an optional target cue with no recipient instead of refusing the cast', () => {
+    const optional: TimelineCue[] = [cues[0], { ...cues[2], optional: true }, { ...cues[1], optional: true }];
+    const none = mapSkillTimeline(optional, 'caster', []);
+    expect(none.unsupported).toEqual([]);
+    expect(none.spawns.map(spawn => spawn.system)).toEqual(['cast']);
+    expect(mapSkillTimeline(optional, 'caster', ['caster']).spawns.map(spawn => spawn.system)).toEqual(['cast', 'impact']);
+    // A required one still refuses.
+    expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);
