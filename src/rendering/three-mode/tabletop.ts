@@ -30,13 +30,15 @@ type LegendFrame = Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>
 /** The x of a grid's right edge cell centre (odd rows sit half a cell right); the grid's left edge is origin.x. */
 const gridRightX = (frame: LegendFrame) => frame.origin.x + Math.sqrt(3) * frame.hexRadius * (frame.columns - 0.5);
 /**
- * Where the board owner's 河灵 stands: on the arena's near-left stone platform (TFT: the bottom-left corner beside the
- * bench), about one and a half cells left of the nearest deployable cell, never on one. The arena is drawn un-mirrored
- * (board-arena.ts arenaDrawTransform), so this is the old right-hand spot reflected about the grid's centre line.
+ * Where the board owner's 河灵 stands: on the middle of the arena's near-left stone platform (TFT: the bottom-left
+ * corner beside the bench), LEGEND_INSET_CELLS hex widths left of the grid's left edge, never on a deployable cell.
+ * The playtest server's 6b353a0f capture showed the plain mirror of the old right-hand spot (1.6 widths out) on the
+ * platform's outer rim, about 0.8 widths left of its middle.
  */
+export const LEGEND_INSET_CELLS = 0.8;
 export function legendSpot(frame: LegendFrame): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
-  return new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+  return new Vector3(frame.origin.x - width * LEGEND_INSET_CELLS, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
 }
 /** The far corner across the board from `legendSpot` (top right): a PvP opponent's or a scouting visitor's legend. */
 export function farLegendSpot(frame: LegendFrame): Vector3 {

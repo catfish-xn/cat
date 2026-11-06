@@ -2293,9 +2293,9 @@
     },
     "tests/rendering3d-tabletop.test.ts": {
       "previousBytes": 22852,
-      "currentBytes": 26201,
+      "currentBytes": 26256,
       "previousSha256": "80bfe7e92399123a65f71b952f22f13643677fcebf64ad76e95a3b804df01cb2",
-      "currentSha256": "ff23c0733736d1e15846d6a3b64da3e48ea7a81c036f72c3abc914ab4d8ef38b",
+      "currentSha256": "fa3281e1c86b49edd4e826cd41e2fa0d04066981f3506b65fb85f28cefb9701c",
       "firstDifferentByte": 142
     },
     "tests/rendering3d-trait-props.test.ts": {
