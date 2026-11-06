@@ -43,6 +43,9 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
     basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
 }
+/** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: +Z faces
+ * forward on Zyra but backward on Irelia, Kog'Maw and Akali), while bins author "in front" as the unit's facing. */
+const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center)_loc$/i;
 export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
   const point = new Vector3(), matrix = new Matrix4();
   let attachment: Object3D | undefined;
@@ -51,7 +54,9 @@ export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string)
   return {
     originAt() { node().getWorldPosition(point); return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
-      const held = node(); held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
+      // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
+      const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
+      held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
       const e = matrix.elements;
       for (let column = 0; column < 3; column++) {
         const length = Math.hypot(e[column * 4], e[column * 4 + 1], e[column * 4 + 2]) || 1;
