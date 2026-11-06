@@ -47,6 +47,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
   const reviving = new Set<string>();
   const poses = new Map<string, SionAnimation>();
   const ended = new Map<string, number>();
+  const blasts = new Map<string, number>();
   const summons = new Map<string, PendingSummon>();
   const ascension = new Map<string, { lastTick: number }>();
   const channels = new Set<string>();
@@ -69,7 +70,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
   const stopUnit = (id: string) => {
     for (const rec of [...summons.values()]) if (rec.owner === id) dropSummon(rec);
     for (const [key, held] of loops) if (held.owner === id) stop(key);
-    shields.delete(id); last.delete(id); ended.delete(id); cohorts.delete(id); reviving.delete(id);
+    shields.delete(id); last.delete(id); ended.delete(id); blasts.delete(id); cohorts.delete(id); reviving.delete(id);
     ascension.delete(id); channels.delete(id); proxies.stopUnit(id);
   };
   const sionPose = (id: string) => { let pose = poses.get(id); if (!pose) poses.set(id, pose = new SionAnimation()); return pose; };
@@ -157,7 +158,6 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             if (event.remaining > 0 && ['granted', 'absorbed', 'decayed'].includes(event.reason)) keys.add(event.key); else keys.delete(event.key);
             if (keys.size && current) loop(event.targetId, `${unit.definitionId}-shield`);
             else if (!keys.size) stop(`${event.targetId}:${unit.definitionId}-shield`);
-            if (unit.definitionId === 'loris' && event.reason === 'expired') ended.set(event.targetId, event.tick);
           }
         }
         if (event.type === 'cast') {
@@ -208,7 +208,11 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
           if (source.definitionId === 'swain' && source.form === 'front' && event.damageType === 'magic' && ability && ascension.has(event.sourceId)) {
             play(event.sourceId, 'swain-pulse', [event.targetId]);
           }
-          if (source.definitionId === 'loris' && event.damageType === 'magic' && ability && ended.get(event.sourceId) === event.tick) play(event.sourceId, 'loris-retaliation', [event.targetId]);
+          // Loris's only magic ability damage is the shield-end blast. It lands whether the shield ran out or broke early
+          // (11-06: keyed to the 'expired' tick it never showed in the field). One shockwave per blast, at its first recipient.
+          if (source.definitionId === 'loris' && event.damageType === 'magic' && ability && blasts.get(event.sourceId) !== event.tick) {
+            blasts.set(event.sourceId, event.tick); play(event.sourceId, 'loris-retaliation', [event.targetId]);
+          }
           if (source.definitionId === 'silco' && event.damageType === 'magic' && ability) {
             const held = cohorts.get(event.sourceId)?.find(c => c.castTick < event.tick && c.ids.some(id => proxies.find(id)));
             if (held?.ids.length) { const id = held.ids[held.index++ % held.ids.length]; proxies.attack(id, event.targetId); }
@@ -254,7 +258,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
     clear() {
       for (const rec of [...summons.values()]) dropSummon(rec);
       for (const key of loops.keys()) stop(key);
-      proxies.clear(); shields.clear(); unbound.clear(); last.clear(); ended.clear(); cohorts.clear(); reviving.clear(); poses.clear();
+      proxies.clear(); shields.clear(); unbound.clear(); last.clear(); ended.clear(); blasts.clear(); cohorts.clear(); reviving.clear(); poses.clear();
       ascension.clear(); channels.clear();
     },
     get proxyCount() { return proxies.count; },

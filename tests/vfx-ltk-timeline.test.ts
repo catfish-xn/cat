@@ -70,6 +70,30 @@ describe('cast timeline replacement and fallback', () => {
     expect(selectTimeline(champion, undefined, () => true)).toBeNull();
     expect(selectTimeline('renata', cues, () => true)).toBeNull();
   });
+  it('leaves out an optional target cue with no recipient instead of refusing the cast', () => {
+    const optional: TimelineCue[] = [cues[0], { ...cues[2], optional: true }, { ...cues[1], optional: true }];
+    const none = mapSkillTimeline(optional, 'caster', []);
+    expect(none.unsupported).toEqual([]);
+    expect(none.spawns.map(spawn => spawn.system)).toEqual(['cast']);
+    expect(mapSkillTimeline(optional, 'caster', ['caster']).spawns.map(spawn => spawn.system)).toEqual(['cast', 'impact']);
+    // A required one still refuses.
+    expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
+  });
+  it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
+    const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
+    const doc = syntheticSystem();
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0],
+      value: { type: 'container', items: [
+        ...((doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+        ...((meshless.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+      ] } }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => new Texture() });
+    const prepared = await library.load('sample');
+    expect(prepared.model.emitters).toHaveLength(2);
+    expect(prepared.drawn).toHaveLength(1);
+    expect(prepared.empty).toBeFalsy();
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);

@@ -165,6 +165,11 @@ describe('batch 3 display lifecycle', () => {
     expect(loris.runtime.playVariant.mock.calls.filter(c => c[1] === 'loris-retaliation')).toHaveLength(0);
     loris.controller.event(magic(2, 'ability', 'loris-ability', 'ability-direct'), true);
     expect(loris.runtime.playVariant).toHaveBeenCalledWith('loris', 'loris-retaliation', 's', ['t'], undefined);
+    // The blast plays whether or not the shield ran out (it may break first), once per blast tick.
+    const broken = fixture('loris');
+    broken.controller.event(magic(80, 'ability', 'loris-ability', 'ability-direct'), true);
+    broken.controller.event(magic(80, 'ability', 'loris-ability', 'ability-direct'), true);
+    expect(broken.runtime.playVariant.mock.calls.filter(c => c[1] === 'loris-retaliation')).toHaveLength(1);
   });
   it('keeps a caught-up ascension and summon that are still running, and drops ones that already ended', async () => {
     const swain = fixture('swain');

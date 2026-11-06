@@ -33,8 +33,29 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(0.68);
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(0.68);
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.66);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBeUndefined();
+    // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.5);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(0.7);
+    // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
+    const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
+    expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
+    expect(ezreal.find(cue => cue.system === 'd887e7a6')?.primary).toBe(true);
+    expect(ezreal.find(cue => cue.system === 'd887e7a6')!.delay).toBeLessThan(ezreal.find(cue => cue.system === 'e4979a04')!.delay);
+    // Irelia: the swipe waits for the guard's end; Darius: the hit spark is optional.
+    expect(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')?.delay).toBeGreaterThanOrEqual(1.4);
+    expect(CUE_OVERRIDES.darius.find(cue => cue.system === 'a5373796')?.optional).toBe(true);
+    // Morgana: the curse stays on its one target for the 8 pulses.
+    expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
+    // Renata: the export has no cast timeline; the override flies the missile before the blast and keeps the attack.
+    const renata = CUE_OVERRIDES.renata;
+    expect(renata.filter(cue => cue.action === 'attack').map(cue => cue.system)).toEqual(['06e90178', '0f2af66b']);
+    const missile = renata.find(cue => cue.system === 'faf1aeac')!;
+    expect(missile.event).toBe('projectile');
+    expect(missile.delay + missile.travelSeconds!).toBeLessThanOrEqual(renata.find(cue => cue.system === 'f9926ae8')!.delay);
+    expect(mapSkillTimeline(renata.filter(cue => cue.action === 'cast'), 'renata', ['a', 'b']).unsupported).toEqual([]);
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {

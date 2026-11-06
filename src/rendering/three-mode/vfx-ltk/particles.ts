@@ -118,10 +118,12 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const geometry = prepared.meshes.get(definition.key);
         if (geometry) {
           const pose = prepared.poses?.get(definition.key);
+          // definition.key is only the emitter's place inside its own system, so other systems share it.
+          // Pooled buffers carry their mesh, so they are keyed by the loaded geometry itself (Ezreal W blobs, 11-06).
           draw = createMeshes({
             ...props,
-            meshKey: definition.key,
-            buffers: { ...borrowMeshBuffers(definition.key, staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) },
+            meshKey: geometry.uuid,
+            buffers: { ...borrowMeshBuffers(geometry.uuid, staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) },
           });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);

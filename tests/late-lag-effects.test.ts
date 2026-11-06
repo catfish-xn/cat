@@ -12,6 +12,10 @@ describe('late-game effect budget', () => {
     expect(admitEffect(['critical', 'critical'], 'decorative', true)).toEqual({ admit: false, evict: -1 });
     expect(admitEffect(['critical', 'decorative', 'critical'], 'critical', true)).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['critical', 'critical'], 'critical', true)).toEqual({ admit: false, evict: -1 });
+    // A plain basic-attack visual is the lowest rank: any skill visual replaces it, and it never displaces one.
+    expect(admitEffect(['critical', 'attack', 'attack'], 'decorative', true)).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['decorative', 'attack'], 'critical', true)).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['decorative', 'critical'], 'attack', true)).toEqual({ admit: false, evict: -1 });
   });
 
   it('rearms a missile onto a new flight without disposing its material', () => {
@@ -126,6 +130,40 @@ describe('late-game effect budget', () => {
     runtime.update(0.01, camera);
     expect(shown(scene)).toContain('save'); expect(shown(scene)).toContain('slam'); expect(shown(scene)).toContain('blow');
     expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS - 3);
+    runtime.dispose();
+  });
+
+  it('lets a caster flourish replace a basic-attack hit on a full board, never the other way round', async () => {
+    const { runtime, scene, camera } = await setup({ vi: [
+      { system: 'blow', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 1 },
+      { system: 'blow', event: 'hit' as const, delay: 0, duration: 1 },
+    ] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `hitter-${i}`, [`victim-${i}`], 0, 'attack')).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene).filter(name => name === 'blow')).toHaveLength(MAX_LTK_SYSTEMS);
+    expect(runtime.play('jinx', 'caster-0', [])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).toContain('deco');
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.clear();
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(runtime.play('vi', 'hitter-0', ['victim-0'], 0, 'attack')).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).not.toContain('blow');
+    runtime.dispose();
+  });
+
+  it('drops an optional hit on a recipient this cast already killed and keeps the caster cues', async () => {
+    const { runtime, scene, units, camera } = await setup({ darius: [
+      { system: 'deco', event: 'cast-start' as const, delay: 0, duration: 1 },
+      { system: 'blow', event: 'hit' as const, delay: 0, duration: 1, optional: true },
+    ] });
+    units.set('dead', { root: new Group(), body: null, alive: false });
+    expect(runtime.play('darius', 'darius-0', ['dead'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).toEqual(['deco']);
+    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(false);
     runtime.dispose();
   });
 
