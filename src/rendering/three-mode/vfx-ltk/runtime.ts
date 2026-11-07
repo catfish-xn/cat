@@ -17,6 +17,8 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
+/** LTK slots a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+const ATTACK_FREE_SLOTS = 3;
 /**
  * At this many live systems the extra depth and distortion passes are skipped.
  * Colour particles still draw in the single board pass.
@@ -204,7 +206,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
-        const { at: when, spawn, library: catalog, snapshot, persistent, group } = waiting[at];
+        const row = waiting[at], { at: when, spawn, library: catalog, snapshot, persistent, group } = row;
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
@@ -223,7 +225,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
         // other LTK reservations; fallback then stops spawning until it drains. A plain attack still waits for shared room.
-        const shared = importance === 'attack';
+        // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
+        // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
+        const shared = importance === 'attack' && running.size >= ATTACK_FREE_SLOTS;
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : running.size * slots) + slots > options.budget.max);
         while (blocked()) {
@@ -233,7 +237,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!victim) break;
           release(victim); running.delete(victim);
         }
-        if (blocked()) continue;
+        if (blocked()) {
+          // Six damage/projectile runs fill the board: a critical cue waits in line instead of being dropped (11-07 brawl:
+          // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The 0.3 s overdue
+          // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
+          if (importance === 'critical') { waiting.splice(at, 0, row); at++; }
+          continue;
+        }
         const host = spawn.event === 'hit' ? target : source;
         const fixed = snapshot ?? spawn.point;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone);
