@@ -1,5 +1,5 @@
 import { Camera, Group } from 'three';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   borrowQuadBuffers,
   drawBufferPoolStats,
@@ -17,6 +17,11 @@ import {
 import type { WebGLRenderer } from 'three';
 
 describe('LTK draw buffer pool', () => {
+  beforeEach(() => {
+    flushDrawBufferPool();
+    resetDrawBufferPoolStats();
+    flushFrameTargetPool();
+  });
   it('reuses quad buffers of the same capacity after release', () => {
     resetDrawBufferPoolStats();
     const first = borrowQuadBuffers(150);
