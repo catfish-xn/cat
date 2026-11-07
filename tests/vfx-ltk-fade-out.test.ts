@@ -4,6 +4,7 @@ import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-lt
 import { createLtkParticles, fadeAt, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CAST_BODY_SECONDS, effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 
 // Zyra's roots in the d650fcf2 field: long-lived particles that linger past a stop at full alpha, in a 1.4 s cue.
@@ -57,6 +58,26 @@ describe('a fading cue eases its lingering particles out by its end (Zyra E, 11-
     const zyra = CUE_OVERRIDES.zyra.filter(cue => cue.fadeOut);
     expect(zyra.map(cue => cue.system)).toEqual(['7ce6b652', '7ce6b652', 'b888a24f']);
     for (const cue of Object.values(CUE_OVERRIDES).flat()) if (cue.fadeOut) expect(cue.stopAfter).toBeLessThan(cue.duration);
+  });
+});
+
+describe('a skill body on its caster ranks with impacts (Nunu R, d650fcf2 field)', () => {
+  it('ranks sustained cast-start bodies and main cues critical while short windups and non-cast actions stay decorative', () => {
+    const nunu = CUE_OVERRIDES.nunu;
+    for (const system of ['78d04f27', '8c256426']) expect(effectImportance(nunu.find(cue => cue.system === system)!)).toBe('critical');
+    expect(effectImportance({ event: 'cast-start', action: 'cast' })).toBe('decorative');
+    expect(effectImportance({ event: 'cast-start', action: 'cast', duration: CAST_BODY_SECONDS })).toBe('critical');
+    expect(effectImportance({ event: 'cast-start', action: 'cast', duration: 2.2 })).toBe('critical');
+    expect(effectImportance({ event: 'cast-start', duration: 2.2 })).toBe('critical');
+    expect(effectImportance({ event: 'cast-start', action: 'cast', duration: 0.35 })).toBe('decorative');
+    expect(effectImportance({ event: 'cast-start', action: 'passive', duration: 3 })).toBe('decorative');
+    expect(effectImportance({ event: 'cast-start', action: 'end', duration: 3 })).toBe('decorative');
+    expect(effectImportance({ event: 'cast-start', action: 'attack', variant: 'empowered', duration: 3 })).toBe('decorative');
+    const cloud = nunu.find(cue => cue.system === '78d04f27')!;
+    expect(effectImportance({ ...cloud, main: undefined })).toBe('critical');
+    const index = (cue: Record<string, unknown>) => ({ ...syntheticIndex(), skills: { jinx: [{ system: 'sample', event: 'cast-start', delay: 0, duration: 1, ...cue }] } });
+    expect(() => parseIndex(index({ main: true }))).not.toThrow();
+    expect(() => parseIndex(index({ main: 'yes' }))).toThrow();
   });
 });
 

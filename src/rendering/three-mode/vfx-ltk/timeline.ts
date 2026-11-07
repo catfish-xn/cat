@@ -22,6 +22,8 @@ export interface TimelineCue {
    * off at full strength (11-07: Zyra's long-lived single-particle roots never reach their own authored fade).
    */
   readonly fadeOut?: boolean;
+  /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
+  readonly main?: boolean;
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
