@@ -31,7 +31,7 @@ describe('3D scouting input boundary', () => {
     return { x: (ndc.x + 1) * 400, y: (1 - ndc.y) * 300 };
   };
   beforeEach(async () => {
-    vi.resetModules(); handlers = new Map(); now = performance.now();
+    vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.resetModules(); handlers = new Map(); now = 0;
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     vi.stubGlobal('window', { devicePixelRatio: 1 });
     vi.stubGlobal('location', { search: '?debug3d' });
