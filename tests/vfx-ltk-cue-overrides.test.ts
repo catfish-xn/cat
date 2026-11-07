@@ -65,15 +65,19 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(renata.find(cue => cue.system === 'fdf79734')).toMatchObject({ action: 'passive', duration: 3 });
     // A full board keeps it: it ranks with receipt feedback, not with caster flourishes.
     expect(effectImportance(renata.find(cue => cue.system === 'fdf79734')!)).toBe('critical');
-    // Zyra E: a ground vine crawls to the primary target, then to up to three others; each lands as its root shows.
+    // Zyra E: a ground vine crawls to the primary target, then short ones to up to two others; the root binds the primary.
     const zyra = mapSkillTimeline(CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast'), 'zyra', ['a', 'b', 'c', 'd']);
     expect(zyra.unsupported).toEqual([]);
     const vines = zyra.spawns.filter(spawn => spawn.system === '857fe049');
-    expect(vines.map(spawn => [spawn.event, spawn.targetId])).toEqual([['projectile', 'a'], ['projectile', 'a'], ['projectile', 'b'], ['projectile', 'c']]);
+    expect(vines.map(spawn => [spawn.event, spawn.targetId])).toEqual([['projectile', 'a'], ['projectile', 'b'], ['projectile', 'c']]);
     const [main] = vines, root = zyra.spawns.find(spawn => spawn.system === 'b888a24f')!;
     expect(root).toMatchObject({ event: 'hit', targetId: 'a' });
     expect(Math.abs(main!.delay + main!.travelSeconds! - root.delay)).toBeLessThanOrEqual(0.05);
     expect(vines.every(spawn => effectImportance(spawn) === 'critical')).toBe(true);
+    // Alone, the short vines have nobody else to reach and are left out without refusing the cast.
+    const alone = mapSkillTimeline(CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast'), 'zyra', ['a']);
+    expect(alone.unsupported).toEqual([]);
+    expect(alone.spawns.filter(spawn => spawn.system === '857fe049').map(spawn => spawn.targetId)).toEqual(['a']);
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {

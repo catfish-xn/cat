@@ -162,15 +162,16 @@ describe('cast timeline replacement and fallback', () => {
     // Below half: a hit takes a free LTK slot even when fallback particles fill the shared budget.
     runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
     runtime.clear(); expect(budget.live).toBe(1499);
-    budget.live = 0;
-    for (let i = 0; i < 3; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
-    expect(runtime.active).toBe(3); budget.live += 501;
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(3); expect(budget.live).toBe(1251);
-    budget.live = 1200; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
-    expect(runtime.active).toBe(4); expect(budget.live).toBe(1450);
-    runtime.clear(); expect(budget.live).toBe(450); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(450);
+    // From half the systems on (six), it waits for shared room; a larger shared budget lets six first plays in.
+    budget.live = 0; budget.max = 3000;
+    for (let i = 0; i < 6; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(6); budget.live += 1251;
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
+    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(7); expect(budget.live).toBe(2950);
+    runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
   });
-  it('queues a critical cue for up to 0.3 s while six runs fill the board, instead of dropping it (11-07 brawl)', async () => {
+  it('queues a critical cue for up to 0.3 s while critical runs fill the board, instead of dropping it (11-07 brawl)', async () => {
     const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 0.2 }],
       vi: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 1 }],
       ezreal: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 0.15 }] } };
@@ -178,17 +179,17 @@ describe('cast timeline replacement and fallback', () => {
     const source = { root: new Group(), body: null, alive: true }, camera = new Camera();
     const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined);
     await library.load('sample');
-    // Six hits (critical, nothing evictable) fill the board for a second.
-    for (let i = 0; i < 6; i++) { runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); }
+    // Hits (critical, nothing evictable) fill the board for a second.
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); }
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
-    // A seventh hit waits; a decorative flourish is dropped as before.
+    // One more hit waits; a decorative flourish is dropped as before.
     runtime.play('vi', 'caster', ['target']); runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.queued).toBe(1);
     // Past 0.3 s the waiting hit is dropped too.
     runtime.update(0.35, camera); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     runtime.clear();
     // Slots that end within the wait let the queued hit in.
-    for (let i = 0; i < 6; i++) { runtime.play('ezreal', 'caster', ['target']); runtime.update(0.01, camera); }
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('ezreal', 'caster', ['target']); runtime.update(0.01, camera); }
     runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); expect(runtime.queued).toBe(1);
     runtime.update(0.12, camera); runtime.update(0.01, camera);
     expect(runtime.queued).toBe(0); expect(runtime.active).toBeGreaterThanOrEqual(1);
@@ -198,10 +199,21 @@ describe('cast timeline replacement and fallback', () => {
     const budget = { live: 1499, max: 1500 }, { runtime, camera } = await setup(budget);
     runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
     expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
-    // The LTK reservations alone still stop at the cap: six systems of 250 fill 1500.
+    // The LTK reservations alone still stop at the cap: six first plays of 250 fill 1500.
     for (let i = 0; i < 10; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
-    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.active).toBe(6);
     runtime.clear(); expect(budget.live).toBe(1499); runtime.dispose();
+  });
+  it('reserves what a system was seen to need once it has played to its end, so more small systems fit (11-07 brawl)', async () => {
+    const budget = { live: 0, max: 1500 }, { runtime, camera } = await setup(budget);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(budget.live).toBe(250);
+    runtime.update(1.2, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // The synthetic system peaks at a few particles: later plays reserve the floor, not 250 each.
+    for (let i = 0; i < 20; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(budget.live).toBeLessThan(MAX_LTK_SYSTEMS * 250);
+    expect(budget.live).toBeLessThanOrEqual(budget.max);
+    // A play cut short (cleared before its end) does not lower the reservation further, and every slot comes back.
+    runtime.clear(); expect(budget.live).toBe(0); runtime.dispose();
   });
   it('bounds simultaneous particle reservations and cancels deaths before delayed spawn', async () => {
     const { runtime, camera } = await setup();
