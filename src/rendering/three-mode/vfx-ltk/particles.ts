@@ -99,11 +99,14 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
+  /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
+  fadeFrom?: number;
   /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
   scale?: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const spec = { ...options, scale: options.scale ?? 1 };
+  const resolveFadeFrom = (next: typeof options) => 'fadeFrom' in next ? next.fadeFrom : next.fadeOut ? next.stopAfter : undefined;
+  const spec = { ...options, scale: options.scale ?? 1, fadeFrom: resolveFadeFrom(options) };
   const rigFor = (): RigModel => {
     const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
@@ -178,7 +181,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut;
+      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -193,7 +196,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
-      const fade = spec.fadeOut ? fadeAt(elapsed, spec.duration, spec.stopAfter) : 1;
+      const fade = spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1;
       withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
