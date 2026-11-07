@@ -21,6 +21,8 @@ export interface TimelineCue {
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
   readonly targetLimit?: number;
+  /** Only the receipt targets after the primary one (Zyra's short vines reach the others, not the one already rooted). */
+  readonly others?: boolean;
   /** A beam keeps its source bone while aiming at the actual target; it does not fly. */
   readonly stationary?: boolean;
   /**
@@ -66,7 +68,9 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
-    for (const targetId of cue.primary ? unique.slice(0, 1) : cue.targetLimit ? unique.slice(0, cue.targetLimit) : cue.event === 'projectile' ? unique.slice(0, 1) : unique) {
+    const pool = cue.others ? unique.slice(1) : unique;
+    if (!pool.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
+    for (const targetId of cue.primary ? pool.slice(0, 1) : cue.targetLimit ? pool.slice(0, cue.targetLimit) : cue.event === 'projectile' ? pool.slice(0, 1) : pool) {
       spawns.push({ ...cue, sourceId, targetId });
     }
   }

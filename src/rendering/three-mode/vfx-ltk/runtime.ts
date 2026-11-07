@@ -15,10 +15,17 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
   return !(spawn.point && spawn.event !== 'projectile');
 }
 
-/** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
-export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
-/** LTK slots a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
-const ATTACK_FREE_SLOTS = 3;
+/**
+ * At most 12 systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what it was
+ * seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The shared
+ * budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07 brawl:
+ * every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen particles).
+ */
+export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
+/** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+const ATTACK_FREE_SLOTS = 6;
+/** The fewest slots a system reserves, whatever its measured peak. */
+const MIN_RESERVE = 24;
 /**
  * At this many live systems the extra depth and distortion passes are skipped.
  * Colour particles still draw in the single board pass.
@@ -48,7 +55,7 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
-interface Running { stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null } = {}) {
@@ -57,13 +64,19 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const claimBuf: (StencilClaim & { material: Material })[] = [];
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
+  /** Slots each system was seen to need, from its last finished play. */
+  const needs = new Map<string, number>();
+  const reserveFor = (system: string) => needs.get(system) ?? slots;
+  const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
   const spareFx: LtkParticles[] = [];
   const SPARE_FX = 8;
   const release = (run: Running, retire = false) => {
     run.fx.object.removeFromParent();
-    if (options.budget) options.budget.live -= slots;
+    if (options.budget) options.budget.live -= run.reserved;
+    // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet.
+    if (run.fx.finished) needs.set(run.system, Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(run.fx.peak * 1.25) + (run.fx.children ? CHILD_PARTICLES : 0))));
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
@@ -230,8 +243,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
         const shared = importance === 'attack' && running.size >= ATTACK_FREE_SLOTS;
+        const need = reserveFor(spawn.system);
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
-          && (shared ? options.budget.live : running.size * slots) + slots > options.budget.max);
+          && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         while (blocked()) {
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true);
           if (!decision.admit) break;
@@ -273,8 +287,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.ltkSystem = spawn.system;
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
-          if (options.budget) options.budget.live += slots;
-          running.add({ source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          if (options.budget) options.budget.live += need;
+          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       claimBuf.length = 0;

@@ -64,7 +64,7 @@ describe('late-game effect budget', () => {
     expect(scene.children[0]).toBe(first);
     runtime.update(5, camera);
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
-    runtime.update(0.01, camera);
+    runtime.update(0.01, camera); runtime.update(0.01, camera); // at most six start in one frame
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
     runtime.update(0.01, camera);
@@ -111,21 +111,22 @@ describe('late-game effect budget', () => {
   it('never evicts a persistent board run or a board-located area for a hit at the cap', async () => {
     const { runtime, scene, camera } = await setup();
     const board: [number, number, number] = [0, 0, 0];
-    for (let i = 0; i < 3; i++) expect(runtime.play('mel', `mel-${i}`, [], 0, 'cast', { board, persistAcrossPhase: true })).toBe(true);
-    for (let i = 0; i < 3; i++) expect(runtime.play('viktor', `viktor-${i}`, [], 0, 'cast', { board })).toBe(true);
-    runtime.update(0.01, camera);
+    const half = MAX_LTK_SYSTEMS / 2;
+    for (let i = 0; i < half; i++) expect(runtime.play('mel', `mel-${i}`, [], 0, 'cast', { board, persistAcrossPhase: true })).toBe(true);
+    for (let i = 0; i < half; i++) expect(runtime.play('viktor', `viktor-${i}`, [], 0, 'cast', { board })).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera); // at most six start in one frame
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
     runtime.update(0.01, camera);
-    expect(shown(scene).filter(name => name === 'save')).toHaveLength(3);
-    expect(shown(scene).filter(name => name === 'slam')).toHaveLength(3);
+    expect(shown(scene).filter(name => name === 'save')).toHaveLength(half);
+    expect(shown(scene).filter(name => name === 'slam')).toHaveLength(half);
     expect(shown(scene)).not.toContain('blow');
     // A flourish beside them is still the one a hit replaces.
     runtime.clear();
     expect(runtime.play('mel', 'mel-0', [], 0, 'cast', { board, persistAcrossPhase: true })).toBe(true);
     expect(runtime.play('viktor', 'viktor-0', [], 0, 'cast', { board })).toBe(true);
     for (let i = 0; i < MAX_LTK_SYSTEMS - 2; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
-    runtime.update(0.01, camera);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
     runtime.update(0.01, camera);
     expect(shown(scene)).toContain('save'); expect(shown(scene)).toContain('slam'); expect(shown(scene)).toContain('blow');
@@ -139,7 +140,7 @@ describe('late-game effect budget', () => {
       { system: 'blow', event: 'hit' as const, delay: 0, duration: 1 },
     ] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `hitter-${i}`, [`victim-${i}`], 0, 'attack')).toBe(true);
-    runtime.update(0.01, camera);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
     expect(shown(scene).filter(name => name === 'blow')).toHaveLength(MAX_LTK_SYSTEMS);
     expect(runtime.play('jinx', 'caster-0', [])).toBe(true);
     runtime.update(0.01, camera);
@@ -147,7 +148,7 @@ describe('late-game effect budget', () => {
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     runtime.clear();
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
-    runtime.update(0.01, camera);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
     expect(runtime.play('vi', 'hitter-0', ['victim-0'], 0, 'attack')).toBe(true);
     runtime.update(0.01, camera);
     expect(shown(scene)).not.toContain('blow');

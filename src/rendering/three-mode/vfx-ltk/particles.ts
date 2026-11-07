@@ -153,17 +153,21 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
-  let elapsed = 0, closed = false;
+  let elapsed = 0, closed = false, peak = 0;
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
+    /** Most root particles live at once in this play, which the runtime reserves for the system's next play. */
+    get peak() { return peak; },
+    /** It runs child systems, whose room (CHILD_PARTICLES) the root count does not show. */
+    children: prepared.drawn.some(definition => !!definition.path),
     /** Play the same prepared system again. The caller only does this for the same attachment. */
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed;
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
@@ -172,6 +176,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       elapsed += seconds;
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
       driver.advance(Math.min(seconds, 0.1));
+      peak = Math.max(peak, driver.pool.count);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
