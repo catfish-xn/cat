@@ -118,6 +118,20 @@ describe('cast timeline replacement and fallback', () => {
     expect(prepared.drawn).toHaveLength(1);
     expect(prepared.empty).toBeFalsy();
   });
+  it('leaves the muted white flashes of Nunu\'s stretched R_Cas undrawn and keeps its other emitters (11-07)', async () => {
+    const named = (name: string) => syntheticSystem({ emitterName: { type: 'string', value: name } });
+    const items = (doc: ReturnType<typeof syntheticSystem>) => (doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items;
+    const doc = named('Dark glow');
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: unknown[] }).fields[0] as object,
+      value: { type: 'container', items: [...items(named('Dark glow')), ...items(named('Explosion_Flash_ground')), ...items(named('Explosion_Flash_ground1'))] } }];
+    const index = { ...syntheticIndex(), systems: { '78d04f27': 'systems/r_cas.json', other: 'systems/other.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
+    const pool = await library.load('78d04f27');
+    expect(pool.model.emitters).toHaveLength(3);
+    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['Dark glow']);
+    // The same emitters in another system are drawn.
+    expect((await library.load('other')).drawn).toHaveLength(3);
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);

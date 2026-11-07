@@ -33,16 +33,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
     { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: 0.45 },
   ],
-  // E: the vine meshes only read when they stay on her ground. Plant flashes are the part that shows on the targets.
-  // There is no directional vine missile in the index.
+  // E (14.24 field: cast 13.9 s, main root 14.4 s, second roots 14.9 s): the outer vines stay on her ground, facing the
+  // target. E_Sequence_Impact is the index's own ground missile (travel 0.3): one crawls to the primary target, then
+  // short ones reach the others. E_Sequence_Root binds where each vine lands. The index has no E_Mis or E_Mis_Child.
   zyra: [
     { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
-    { system: 'b888a24f', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.7, bone: ground },
     { system: '7ce6b652', action: 'cast', event: 'cast-start', delay: 0.12, duration: 0.8, bone: ground },
-    { system: '857fe049', action: 'cast', event: 'cast-start', delay: 0.15, duration: 0.9, bone: ground },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.15, duration: 0.4, bone: chest, primary: true },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.7, duration: 0.6, bone: chest },
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true },
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, targetLimit: 3, optional: true },
+    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.2, bone: ground, primary: true },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest },
   ],
   // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
@@ -230,3 +232,14 @@ export function cueOverride(champion: string, systems: Readonly<Record<string, s
   const cues = Object.hasOwn(CUE_OVERRIDES, champion) ? CUE_OVERRIDES[champion] : undefined;
   return cues?.length && cues.every(cue => Object.hasOwn(systems, cue.system)) ? cues : undefined;
 }
+
+/**
+ * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
+ * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
+ */
+export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
+  // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
+  // of the pool the whole time; in 14.24 the channel is a dim green mist and only the blast (R_full_explo) flares
+  // (11-07 field batches f544/c4a).
+  '78d04f27': ['Explosion_Flash_ground', 'Explosion_Flash_ground1'],
+};
