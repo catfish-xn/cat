@@ -42,7 +42,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
       effects: { flash: { path: 'flash.json' } },
       actionEffects: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])) };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -95,6 +95,23 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     listener.frame({ ...board, fighting: false }); expect(debug().ltk.queued).toBe(0); expect(debug().ltk.active).toBe(0);
     listener.frame(board); listener.events([{ ...events[0], eventSeq: 0 }]); await advance(250); await advance(30);
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['215abe6e']);
+  });
+
+  it('shows Renata\'s shield as her rocket reaches the ally, not with the cast (11-07 field: a frame before the cast)', async () => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], id: 'r', definitionId: 'renata' },
+      { ...frame.pieces[0], id: 's', x: 200 }, { ...frame.pieces[0], id: 'f', team: 'enemy', x: 250 }] };
+    listener.frame(board); await flush();
+    const play = vi.spyOn(debug().ltk, 'play');
+    const shield = (targetId: string) => ({ type: 'shieldLayerChanged', tick: 1, eventSeq: 2, reason: 'granted', remaining: 10, targetId,
+      key: JSON.stringify(['combat', 'r', 'ability', 'renata-ability', 'r', 0, null, targetId, 'source']) }) as unknown as DisplayCombatEvent;
+    const renataCast = { ...cast(1), sourceId: 'r', targetIds: ['f'] } as DisplayCombatEvent;
+    const delays = () => play.mock.calls.filter(args => args[0] === 'renata' && args[4] === 'passive').map(args => (args[5] as { delay: number }).delay);
+    // The ally stands halfway along the flight: launch (0.3 s) plus half the 0.6 s flight.
+    listener.events([shield('s'), renataCast]);
+    expect(delays()).toHaveLength(1); expect(delays()[0]).toBeCloseTo(0.6);
+    // Renata herself is where the rocket starts; a shield with no cast in its batch keeps the old timing.
+    play.mockClear(); listener.events([renataCast, shield('r')]); expect(delays()).toEqual([0.3]);
+    play.mockClear(); listener.events([shield('s')]); expect(delays()).toEqual([0]);
   });
 
   it.each(Object.keys(BATCH1_TIMELINES))('batch 1: sequence rollback preserves animation and death cleanup for %s', async champion => {
