@@ -35,7 +35,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(0.68);
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
     // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.5);
+    // Measured 5.8 cells at 0.5 against the cloud's 5 (cdacbcc9): 0.43 lands on it.
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.43);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
     // The pool keeps emitting until the blast starts: no empty gap between them (clean4 frames 58-61).
@@ -74,6 +75,9 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(root).toMatchObject({ event: 'hit', targetId: 'a' });
     expect(Math.abs(main!.delay + main!.travelSeconds! - root.delay)).toBeLessThanOrEqual(0.05);
     expect(vines.every(spawn => effectImportance(spawn) === 'critical')).toBe(true);
+    // The branching vines fade out instead of being cut at their end, and the root cluster draws larger than authored.
+    expect(CUE_OVERRIDES.zyra.filter(cue => cue.system === '7ce6b652').every(cue => cue.stopAfter! < cue.duration - 0.3)).toBe(true);
+    expect(root.scale).toBeGreaterThan(1);
     // The branching vines sprout on the targets the vines reach, never at Zyra's feet.
     expect(zyra.spawns.filter(spawn => spawn.system === '7ce6b652').map(spawn => [spawn.event, spawn.targetId])).toEqual([['hit', 'a'], ['hit', 'b'], ['hit', 'c']]);
     // Alone, the short vines have nobody else to reach and are left out without refusing the cast.

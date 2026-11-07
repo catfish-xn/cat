@@ -40,11 +40,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   zyra: [
     { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 0.9, bone: ground, primary: true },
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 0.9, bone: ground, others: true, targetLimit: 2, optional: true },
+    // Sizes from the cdacbcc9 isolated renders against the 14.24 footage (main wrap about 2.2 cells): E_Outer drew
+    // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, bone: ground, primary: true, scale: 0.5 },
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 1.4, stopAfter: 0.8, bone: ground, others: true, targetLimit: 2, optional: true, scale: 0.5 },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true },
-    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.2, bone: ground, primary: true },
+    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, bone: ground, primary: true, scale: 1.6 },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest },
   ],
@@ -169,8 +171,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
     // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
     // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: 0.5 },
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.5 },
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: 0.43 },
+    // The blast spans the 2-hex cloud, about 5 cells across: at 0.5 it measured 5.8 cells at 3.4 s (cdacbcc9), 16% wide.
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.43 },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7, optional: true },
   ],
