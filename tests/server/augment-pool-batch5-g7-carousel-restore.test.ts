@@ -19,6 +19,7 @@ for (const claimed of [false, true]) describe(`B5-69 gifts at the real carousel,
   afterEach(() => restoreOffers());
   const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 65, carousel: CAROUSEL_RULES_BINDING });
   const own = () => room.state.seats.find(s => s.seatId === SEAT)!.match;
+  let alternative = '';
   afterAll(() => room.dispose());
 
   it('starts the room', () => { room.start(); });
@@ -29,6 +30,11 @@ for (const claimed of [false, true]) describe(`B5-69 gifts at the real carousel,
     const choice = own().pendingChoice!;
     // Fixture self-check under installB1Offers, not evidence of a real-RNG draw.
     expect(choice.offers).toContain(ID);
+    // v26 D5 (7953c99a) moved seed 65's real 2-1 draw: crownguard-spirit (the old forged replacement) is no longer
+    // offered, so the forged save would now fail the earlier offer-history check. Forge with another card actually
+    // offered beside Loot Explosion instead, so the gift-authority / server-facts checks still decide.
+    alternative = choice.offers.find(id => id !== ID)!;
+    expect(alternative).toBeDefined();
     expect(room.handle(SEAT, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: ID })).toMatchObject({ ok: true });
     answerOpenChoices(room);
     if (claimed) claimAllOrbs(room, [SEAT]);
@@ -55,7 +61,7 @@ for (const claimed of [false, true]) describe(`B5-69 gifts at the real carousel,
     expect(restoreCarouselSeat(restoredCarousel, encode(original, form), authority)).toEqual(original);
     for (const rewriteSource of [false, true]) {
       const { augmentHistory: _history, ...rest } = structuredClone(original);
-      const bad = { ...rest, gold: rest.gold + 123, augments: rest.augments.map(a => a.definitionId === ID ? { ...a, definitionId: 'crownguard-spirit' } : a),
+      const bad = { ...rest, gold: rest.gold + 123, augments: rest.augments.map(a => a.definitionId === ID ? { ...a, definitionId: alternative } : a),
         seatMechanics: { ...rest.seatMechanics!, receipts: rest.seatMechanics!.receipts.map(r => rewriteSource && r.receiptId.includes(ID) ? { ...r, source: 'academy' } : r) } };
       const missingAuthority = claimed ? /missing independent server authority/ : /Invalid augment batch1 gift authority/;
       expect(() => restoreSharedOrbSnapshot(pool, encode(bad, form))).toThrow(missingAuthority);

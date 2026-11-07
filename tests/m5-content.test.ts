@@ -36,6 +36,7 @@ import { AUGMENT_BATCH5_R6 } from '../src/simulation/content/augment-pool-batch5
 import { AUGMENT_BATCH5_G1 } from '../src/simulation/content/augment-pool-batch5-g1';
 import { AUGMENT_BATCH5_G6 } from '../src/simulation/content/augment-pool-batch5-g6';
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
+import { AUGMENT_D5 } from '../src/simulation/content/augment-pool-d5';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
 import { AUGMENT_BATCH3_XP } from '../src/simulation/content/augment-pool-batch3-xp';
@@ -111,12 +112,14 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes the integrated catalog: 35 supported traits, 8 components, 36 recipes, 306 augments and 56 anomalies',()=>{
+  it('freezes the integrated catalog: 35 supported traits, 8 components, 36 recipes, 310 augments and 56 anomalies',()=>{
     // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
     // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
     const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
       + [AUGMENT_BATCH1, AUGMENT_BATCH3, AUGMENT_BATCH3_XP, AUGMENT_BATCH4,
-        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5, AUGMENT_BATCH5_H3, AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H5, AUGMENT_BATCH5_H6, AUGMENT_BATCH5_H7, AUGMENT_BATCH5_H8, AUGMENT_BATCH5_H9, AUGMENT_BATCH5_H10, AUGMENT_BATCH5_H11, AUGMENT_BATCH5_H12, AUGMENT_BATCH5_H13, AUGMENT_BATCH5_B5A, AUGMENT_BATCH5_S1A, AUGMENT_BATCH5_S1B, AUGMENT_BATCH5_S3A, AUGMENT_BATCH5_S3B, AUGMENT_BATCH5_S3D, AUGMENT_BATCH5_S6C, AUGMENT_BATCH5_S8A, AUGMENT_BATCH5_S8B, AUGMENT_BATCH5_S8C, AUGMENT_BATCH5_S11A, AUGMENT_BATCH5_R1, AUGMENT_BATCH5_R2, AUGMENT_BATCH5_R3, AUGMENT_BATCH5_R4, AUGMENT_BATCH5_R6, AUGMENT_BATCH5_G1, AUGMENT_BATCH5_G2, AUGMENT_BATCH5_G3, AUGMENT_BATCH5_G4, AUGMENT_BATCH5_G5, AUGMENT_BATCH5_G6, AUGMENT_BATCH5_G7]
+        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5, AUGMENT_BATCH5_H3, AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H5, AUGMENT_BATCH5_H6, AUGMENT_BATCH5_H7, AUGMENT_BATCH5_H8, AUGMENT_BATCH5_H9, AUGMENT_BATCH5_H10, AUGMENT_BATCH5_H11, AUGMENT_BATCH5_H12, AUGMENT_BATCH5_H13, AUGMENT_BATCH5_B5A, AUGMENT_BATCH5_S1A, AUGMENT_BATCH5_S1B, AUGMENT_BATCH5_S3A, AUGMENT_BATCH5_S3B, AUGMENT_BATCH5_S3D, AUGMENT_BATCH5_S6C, AUGMENT_BATCH5_S8A, AUGMENT_BATCH5_S8B, AUGMENT_BATCH5_S8C, AUGMENT_BATCH5_S11A, AUGMENT_BATCH5_R1, AUGMENT_BATCH5_R2, AUGMENT_BATCH5_R3, AUGMENT_BATCH5_R4, AUGMENT_BATCH5_R6, AUGMENT_BATCH5_G1, AUGMENT_BATCH5_G2, AUGMENT_BATCH5_G3, AUGMENT_BATCH5_G4, AUGMENT_BATCH5_G5, AUGMENT_BATCH5_G6, AUGMENT_BATCH5_G7,
+        // v26 D5 (7953c99a): What You Really Are, BRB, Over-Encumbered and Restart Mission are registered.
+        AUGMENT_D5]
         .reduce((sum, source) => sum + Object.keys(source).length, 0)
       + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length
       + Object.values(AUGMENT_BATCH5_H1).filter(row => row.enabled).length
@@ -124,7 +127,8 @@ describe('M5 frozen S13 slice',()=>{
     expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
     // Independent integrated total: 267 previous entries plus 15 H7/H8/H10–H13, Shop Glitch, 2 H9, 2 R1, 2 R2, 2 R3, 1 R4, 2 R6, 2 G1, 2 G2, 2 G3, 2 G4, 2 G5, 1 G6 and 1 G7 entries.
     // Shop Glitch is admitted; Table Scraps is registered but banned at all offer nodes.
-    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(306);
+    // v26 D5 (7953c99a, docs/D5_REGISTERED_AUGMENTS.md) registers four more augments: 306 → 310.
+    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(310);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);
@@ -176,7 +180,7 @@ describe('M5 finite campaign content',()=>{
     expect(createRoundEnemies(getCatalogRoundById('2-1').ordinal)).toHaveLength(3);expect(createRoundEnemies(getCatalogRoundById('2-5').ordinal)).toHaveLength(4);
     expect(createRoundEnemies(getCatalogRoundById('3-1').ordinal)).toHaveLength(5);expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal)).toHaveLength(6);
     expect(createRoundEnemies(getCatalogRoundById('5-1').ordinal)).toHaveLength(7);expect(createRoundEnemies(getCatalogRoundById('6-1').ordinal)).toHaveLength(8);
-    expect(createRoundEnemies(getCatalogRoundById('2-4').ordinal)).toEqual([]);expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(u=>u.definitionId)).toEqual(['pve-rift-herald']);
+    expect(createRoundEnemies(getCatalogRoundById('2-4').ordinal)).toEqual([]);expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(u=>u.definitionId)).toEqual(['pve-elder-dragon']);
     expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal).map(u=>u.starLevel)).toEqual([2,2,2,1,1,1]);
     for(const {ordinal:round} of ROUND_CATALOG) {
       expect(getEnemyGrowthBps(round)).toBe(0);

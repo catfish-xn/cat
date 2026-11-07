@@ -25,7 +25,7 @@ export const CONTROL_3D = {
  * Forced moves the rules tag on their movement event (pulled, grabbed, knocked back): drawn as a short hop along the
  * slide instead of a run, the unit being moved rather than walking. Tags from the displacement rules (莫德凯撒/瑟提/赛维卡).
  */
-export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback']);
+export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback', 'vander-knockback']);
 export const DISPLACEMENT_HOP = { seconds: 0.3, liftShare: 0.15 } as const;
 /** Hop share (0..1) `elapsed` seconds into a displacement hop: one arc, 0 once over. */
 export const displacementHop = (elapsed: number, seconds = DISPLACEMENT_HOP.seconds): number =>
@@ -93,6 +93,8 @@ export interface StunHalo {
   /** Scene child: the host moves it over the piece's head each frame. */
   readonly object: Group;
   update(seconds: number): void;
+  /** Back to the starting angle, so a pooled ring starts like a new one. */
+  reset(): void;
   dispose(): void;
 }
 
@@ -116,6 +118,7 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
   return {
     object,
     update(seconds) { angle = (angle + seconds * spec.turnsPerSecond * Math.PI * 2) % (Math.PI * 2); place(); },
+    reset() { angle = 0; place(); },
     dispose() { object.removeFromParent(); object.clear(); material.dispose(); },
   };
 }

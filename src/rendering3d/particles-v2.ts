@@ -13,6 +13,7 @@ interface Source {
   ordinal: number;
   geometry?: BufferGeometry;
 }
+interface Sample { time: number; world: Vector3 }
 interface Live {
   source: Source;
   mesh: Mesh<BufferGeometry, ShaderMaterial>;
@@ -23,7 +24,7 @@ interface Live {
   origin: Vector3;
   size: Vector3;
   rotation: Quaternion;
-  history: { time: number; world: Vector3 }[];
+  history: Sample[];
 }
 const finite = (n: number) => Number.isFinite(n);
 const ZERO = [0, 0, 0] as const, scratch = new Vector3();
@@ -62,6 +63,28 @@ export class ParticleEffectV2 {
   private closed = false;
   private initializing = true;
   private attempts = 0;
+  /** Meshes constructed for this effect. Quad and ray births reuse them. */
+  builtMeshes = 0;
+  private readonly freeMeshes: Mesh<BufferGeometry, ShaderMaterial>[] = [];
+  private readonly spareVec: Vector3[] = [];
+  private readonly spareQuat: Quaternion[] = [];
+  private readonly spareSamples: Sample[] = [];
+  private readonly spareHistories: Sample[][] = [];
+  private readonly spawnScratch = new Vector3();
+  private readonly spawnEuler = new Euler();
+  private readonly placed = new Vector3();
+  private readonly linear = new Matrix4();
+  private readonly worldQuat = new Quaternion();
+  private readonly cameraQuat = new Quaternion();
+  private readonly rayFrom = new Vector3(0, 1, 0);
+  private readonly rayTo = new Vector3();
+  private readonly trailView = new Vector3();
+  private readonly trailInv = new Matrix4();
+  private readonly trailA = new Vector3();
+  private readonly trailB = new Vector3();
+  private readonly trailTangent = new Vector3();
+  private readonly trailSide = new Vector3();
+  private readonly trailPoints: Vector3[] = [];
   private limit: number;
   private duration: number;
   private random: () => number;
@@ -112,30 +135,73 @@ export class ParticleEffectV2 {
     if (!finite(n) || n < 0 || n >= 1) throw new Error('invalid-random');
     return n;
   }
-  private birthValue(value: BirthValue | undefined, fallback: number, rotation = false): Vector3 {
+  private takeVec(): Vector3 { return this.spareVec.pop() ?? new Vector3(); }
+  private giveVec(value: Vector3): void { this.spareVec.push(value); }
+  private takeQuat(): Quaternion { return this.spareQuat.pop() ?? new Quaternion(); }
+  private giveQuat(value: Quaternion): void { this.spareQuat.push(value); }
+  private takeSample(): Sample {
+    const sample = this.spareSamples.pop();
+    if (sample) return sample;
+    return { time: 0, world: this.takeVec() };
+  }
+  private giveSample(sample: Sample): void { this.spareSamples.push(sample); }
+  private takeHistory(): Sample[] {
+    const history = this.spareHistories.pop();
+    if (history) { history.length = 0; return history; }
+    return [];
+  }
+  private giveHistory(history: Sample[]): void {
+    for (const sample of history) this.giveSample(sample);
+    history.length = 0; this.spareHistories.push(history);
+  }
+  private takeMesh(geometry: BufferGeometry, material: ShaderMaterial, trail: boolean): Mesh<BufferGeometry, ShaderMaterial> {
+    if (!trail) {
+      const pooled = this.freeMeshes.pop();
+      if (pooled) {
+        pooled.geometry = geometry; pooled.material = material;
+        pooled.visible = true; pooled.frustumCulled = true; pooled.matrixAutoUpdate = true;
+        pooled.position.set(0, 0, 0); pooled.quaternion.identity(); pooled.scale.set(1, 1, 1); pooled.rotation.set(0, 0, 0);
+        pooled.matrix.identity(); pooled.matrixWorldNeedsUpdate = true;
+        return pooled;
+      }
+    }
+    this.builtMeshes++;
+    const mesh = new Mesh(geometry, material);
+    if (trail) mesh.frustumCulled = false;
+    return mesh;
+  }
+  private birthValue(value: BirthValue | undefined, fallback: number, out: Vector3, rotation = false): Vector3 {
     let v: number | readonly number[] = value === undefined ? fallback : value as number | readonly number[];
     if (typeof value === 'object' && !Array.isArray(value) && value && 'min' in value) {
       const { min, max } = value;
       const interpolate = (lo: number, hi: number) => { const u = this.draw(); return (1 - u) * lo + u * hi; };
-      v = typeof min === 'number' ? interpolate(min, max as number)
-        : min.map((n, i) => interpolate(n, (max as readonly number[])[i]));
+      if (typeof min === 'number') v = interpolate(min, max as number);
+      else {
+        const hi = max as readonly number[];
+        return out.set(interpolate(min[0], hi[0]), interpolate(min[1], hi[1]), interpolate(min[2], hi[2]));
+      }
     }
-    return typeof v === 'number' ? (rotation ? new Vector3(0, 0, v) : new Vector3(v, v, v)) : new Vector3(...v as [number, number, number]);
+    return typeof v === 'number' ? (rotation ? out.set(0, 0, v) : out.set(v, v, v)) : out.set(v[0], v[1], v[2]);
   }
   private spawn(source: Source, birth: number): void {
     const e = source.emitter;
-    const origin = new Vector3(...(e.position ?? [0, 0, 0]));
-    if (e.shape?.kind === 'box') origin.add(new Vector3(...e.shape.halfExtents.map(n => (this.draw() * 2 - 1) * n) as [number, number, number]));
+    const origin = this.takeVec().set(e.position?.[0] ?? 0, e.position?.[1] ?? 0, e.position?.[2] ?? 0);
+    if (e.shape?.kind === 'box') {
+      const half = e.shape.halfExtents;
+      origin.add(this.spawnScratch.set((this.draw() * 2 - 1) * half[0], (this.draw() * 2 - 1) * half[1], (this.draw() * 2 - 1) * half[2]));
+    }
     if (e.shape?.kind === 'sphere') {
       const z = this.draw() * 2 - 1, phi = this.draw() * Math.PI * 2, r = Math.cbrt(this.draw()) * e.shape.radius;
-      origin.add(new Vector3(Math.sqrt(1 - z * z) * Math.cos(phi), Math.sqrt(1 - z * z) * Math.sin(phi), z).multiplyScalar(r));
+      const ring = Math.sqrt(1 - z * z);
+      origin.add(this.spawnScratch.set(ring * Math.cos(phi), ring * Math.sin(phi), z).multiplyScalar(r));
     }
     if (e.shape?.kind === 'cylinder') {
       const phi = this.draw() * Math.PI * 2, r = Math.sqrt(this.draw()) * e.shape.radius;
-      origin.add(new Vector3(Math.cos(phi) * r, (this.draw() - 0.5) * e.shape.height, Math.sin(phi) * r));
+      origin.add(this.spawnScratch.set(Math.cos(phi) * r, (this.draw() - 0.5) * e.shape.height, Math.sin(phi) * r));
     }
-    const size = this.birthValue(e.size0, 1), degrees = this.birthValue(e.rotation0, 0, true).multiplyScalar(Math.PI / 180);
-    const rotation = new Quaternion().setFromEuler(new Euler(degrees.x, degrees.y, degrees.z, 'XYZ'));
+    const size = this.birthValue(e.size0, 1, this.takeVec());
+    const degrees = this.birthValue(e.rotation0, 0, this.spawnScratch, true).multiplyScalar(Math.PI / 180);
+    const rotation = this.takeQuat().setFromEuler(this.spawnEuler.set(degrees.x, degrees.y, degrees.z, 'XYZ'));
     const texture = e.texture ? this.options.texture?.(e.texture) : undefined;
     let geometry = source.geometry ?? (e.kind === 'ray' ? this.rayPlane : this.plane);
     if (e.kind === 'trail') {
@@ -156,33 +222,38 @@ export class ParticleEffectV2 {
     const key = `v2/${blending}/${vertexColors}`;
     const material = this.options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader: v2VertexShader,
       fragmentShader: v2FragmentShader, vertexColors, transparent: true, depthWrite: false, side: DoubleSide, blending, uniforms });
-    const mesh = new Mesh(geometry, material);
-    if (e.kind === 'trail') mesh.frustumCulled = false;
+    const mesh = this.takeMesh(geometry, material, e.kind === 'trail');
     this.object.add(mesh);
-    this.live.push({ source, mesh, key, birth, origin, size, rotation, history: [],
+    this.live.push({ source, mesh, key, birth, origin, size, rotation, history: this.takeHistory(),
       death: e.lifetime === 'infinite' ? this.duration : birth + e.lifetime });
     if (this.options.budget) this.options.budget.live++;
   }
   private remove(p: Live): void {
     if (this.options.materials) this.options.materials.give(p.key, p.mesh.material); else p.mesh.material.dispose();
     if (this.options.budget) this.options.budget.live--;
-    if (p.source.emitter.kind === 'trail') p.mesh.geometry.dispose();
+    const trail = p.source.emitter.kind === 'trail';
+    if (trail) p.mesh.geometry.dispose();
     p.mesh.removeFromParent();
+    this.giveHistory(p.history); this.giveVec(p.origin); this.giveVec(p.size); this.giveQuat(p.rotation);
+    if (!trail) this.freeMeshes.push(p.mesh);
   }
   private expire(time: number): void {
-    this.live = this.live.filter(p => {
+    let kept = 0;
+    for (let i = 0; i < this.live.length; i++) {
+      const p = this.live[i]!;
       const tail = p.source.emitter.kind === 'trail' ? p.source.emitter.trail.lifetime : 0;
-      if (reached(p.death + tail, time) || reached(this.duration, time)) { this.remove(p); return false; }
-      return true;
-    });
+      if (reached(p.death + tail, time) || reached(this.duration, time)) this.remove(p);
+      else this.live[kept++] = p;
+    }
+    this.live.length = kept;
   }
-  private position(p: Live, age: number): Vector3 {
+  private placeInto(p: Live, age: number, out: Vector3): Vector3 {
     const e = p.source.emitter, drag = e.drag ?? 0;
     const vf = drag === 0 ? age : -Math.expm1(-drag * age) / drag;
     const gf = drag === 0 ? age * age / 2 : (age - vf) / drag;
-    const position = p.origin.clone().addScaledVector(scratch.set(...(e.velocity ?? ZERO)), vf)
-      .addScaledVector(scratch.set(...(e.gravity ?? ZERO)), gf);
-    return e.localTransform ? position.applyMatrix4(new Matrix4().fromArray(e.localTransform)) : position;
+    out.copy(p.origin).addScaledVector(scratch.set((e.velocity ?? ZERO)[0], (e.velocity ?? ZERO)[1], (e.velocity ?? ZERO)[2]), vf)
+      .addScaledVector(scratch.set((e.gravity ?? ZERO)[0], (e.gravity ?? ZERO)[1], (e.gravity ?? ZERO)[2]), gf);
+    return e.localTransform ? out.applyMatrix4(this.linear.fromArray(e.localTransform)) : out;
   }
   private trail(p: Live, time: number, size: number, camera?: Camera): void {
     const e = p.source.emitter;
@@ -191,28 +262,55 @@ export class ParticleEffectV2 {
     // world-space tail at the unattached constructor origin.
     if (this.initializing) return;
     const end = Math.min(time, p.death);
-    if (!p.history.length || !reached(end, p.history[p.history.length - 1].time)) {
-      p.history.push({ time: end, world: this.object.localToWorld(this.position(p, end - p.birth)) });
+    if (!p.history.length || !reached(end, p.history[p.history.length - 1]!.time)) {
+      const sample = this.takeSample();
+      sample.time = end;
+      this.object.localToWorld(this.placeInto(p, end - p.birth, sample.world));
+      p.history.push(sample);
     }
-    p.history = p.history.filter(h => !reached(h.time, time - e.trail.lifetime)).slice(-e.trail.segments - 1);
-    const points = p.history.map(h => this.object.worldToLocal(h.world.clone()));
+    const cutoff = time - e.trail.lifetime;
+    let kept = 0;
+    for (let i = 0; i < p.history.length; i++) {
+      const sample = p.history[i]!;
+      if (!reached(sample.time, cutoff)) p.history[kept++] = sample;
+      else this.giveSample(sample);
+    }
+    p.history.length = kept;
+    const max = e.trail.segments + 1;
+    if (p.history.length > max) {
+      const drop = p.history.length - max;
+      for (let i = 0; i < drop; i++) this.giveSample(p.history[i]!);
+      p.history.copyWithin(0, drop);
+      p.history.length = max;
+    }
     const positions = p.mesh.geometry.getAttribute('position'), uv = p.mesh.geometry.getAttribute('uv');
-    const view = camera ? camera.getWorldDirection(new Vector3()).transformDirection(this.object.matrixWorld.clone().invert()) : new Vector3(0, 0, -1);
+    this.trailInv.copy(this.object.matrixWorld).invert();
+    if (camera) camera.getWorldDirection(this.trailView).transformDirection(this.trailInv);
+    else this.trailView.set(0, 0, -1);
+    const count = p.history.length;
+    for (let i = 0; i < count; i++) {
+      const point = this.trailPoints[i] ?? (this.trailPoints[i] = new Vector3());
+      point.copy(p.history[i]!.world).applyMatrix4(this.trailInv);
+    }
     let distance = 0;
-    for (let i = 0; i < points.length; i++) {
-      const tangent = points[Math.min(i + 1, points.length - 1)].clone().sub(points[Math.max(0, i - 1)]);
-      const side = tangent.cross(view).normalize();
-      if (side.lengthSq() < 1e-10) side.set(1, 0, 0);
-      side.applyQuaternion(p.rotation);
-      const width = sampleCurve(e.trail.width, (time - p.history[i].time) / e.trail.lifetime, 1) * p.size.x * size;
-      const a = points[i].clone().addScaledVector(side, width / 2), b = points[i].clone().addScaledVector(side, -width / 2);
-      positions.setXYZ(i * 2, a.x, a.y, a.z); positions.setXYZ(i * 2 + 1, b.x, b.y, b.z);
-      if (i) distance += points[i].distanceTo(points[i - 1]);
-      const u = e.trail.uvMode === 'repeat' ? distance / e.trail.tileLength! : i / Math.max(1, points.length - 1);
+    for (let i = 0; i < count; i++) {
+      const point = this.trailPoints[i]!;
+      const next = this.trailPoints[Math.min(i + 1, count - 1)]!;
+      const prev = this.trailPoints[Math.max(0, i - 1)]!;
+      this.trailSide.copy(this.trailTangent.copy(next).sub(prev)).cross(this.trailView).normalize();
+      if (this.trailSide.lengthSq() < 1e-10) this.trailSide.set(1, 0, 0);
+      this.trailSide.applyQuaternion(p.rotation);
+      const width = sampleCurve(e.trail.width, (time - p.history[i]!.time) / e.trail.lifetime, 1) * p.size.x * size;
+      this.trailA.copy(point).addScaledVector(this.trailSide, width / 2);
+      this.trailB.copy(point).addScaledVector(this.trailSide, -width / 2);
+      positions.setXYZ(i * 2, this.trailA.x, this.trailA.y, this.trailA.z);
+      positions.setXYZ(i * 2 + 1, this.trailB.x, this.trailB.y, this.trailB.z);
+      if (i) distance += point.distanceTo(prev);
+      const u = e.trail.uvMode === 'repeat' ? distance / e.trail.tileLength! : i / Math.max(1, count - 1);
       uv.setXY(i * 2, u, 0); uv.setXY(i * 2 + 1, u, 1);
     }
     positions.needsUpdate = true; uv.needsUpdate = true;
-    p.mesh.geometry.setDrawRange(0, Math.max(0, points.length - 1) * 6);
+    p.mesh.geometry.setDrawRange(0, Math.max(0, count - 1) * 6);
   }
   update(seconds: number, camera?: Camera): void {
     if (this.closed) return;
@@ -251,29 +349,29 @@ export class ParticleEffectV2 {
       this.expire(target);
       this.object.updateWorldMatrix(true, true);
       // Camera-facing in this effect's space, the same for every quad this frame.
-      const facing = camera ? this.object.getWorldQuaternion(new Quaternion()).invert().multiply(camera.getWorldQuaternion(new Quaternion())) : null;
+      const facing = camera ? this.object.getWorldQuaternion(this.worldQuat).invert().multiply(camera.getWorldQuaternion(this.cameraQuat)) : null;
       for (const p of this.live) {
         const e = p.source.emitter, age = Math.max(0, Math.min(target, p.death) - p.birth);
         const t = e.lifetime === 'infinite' ? 0 : age / e.lifetime;
         const size = sampleCurve(e.size, t, 1);
         if (e.kind === 'trail') this.trail(p, target, size, camera);
         else {
-          p.mesh.position.copy(this.position(p, age));
+          p.mesh.position.copy(this.placeInto(p, age, this.placed));
           p.mesh.scale.copy(p.size).multiplyScalar(size);
           p.mesh.quaternion.identity();
           if (e.kind === 'quad' && facing) p.mesh.quaternion.copy(facing);
           if (e.kind === 'ray') {
-            const length = Math.hypot(...e.direction);
-            p.mesh.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(...e.direction.map(n => n / length) as [number, number, number]));
+            const direction = e.direction, length = Math.hypot(direction[0], direction[1], direction[2]);
+            p.mesh.quaternion.setFromUnitVectors(this.rayFrom, this.rayTo.set(direction[0] / length, direction[1] / length, direction[2] / length));
           }
           p.mesh.quaternion.multiply(p.rotation);
           if (e.localTransform) {
             // Preserve affine orientation, scale and shear without decomposing
             // the matrix. Translation was already applied to position above.
-            const linear = new Matrix4().fromArray(e.localTransform).setPosition(0, 0, 0);
+            this.linear.fromArray(e.localTransform).setPosition(0, 0, 0);
             p.mesh.updateMatrix();
-            const position = p.mesh.position.clone();
-            p.mesh.matrix.setPosition(0, 0, 0).premultiply(linear).setPosition(position);
+            this.placed.copy(p.mesh.position);
+            p.mesh.matrix.setPosition(0, 0, 0).premultiply(this.linear).setPosition(this.placed);
             p.mesh.matrixAutoUpdate = false;
             p.mesh.matrixWorldNeedsUpdate = true;
           }
@@ -295,6 +393,8 @@ export class ParticleEffectV2 {
     if (this.closed) return;
     this.closed = true;
     this.live.forEach(p => this.remove(p)); this.live = []; this.sources = [];
+    this.freeMeshes.length = 0; this.spareVec.length = 0; this.spareQuat.length = 0;
+    this.spareSamples.length = 0; this.spareHistories.length = 0;
     this.plane.dispose(); this.rayPlane.dispose(); this.object.clear(); this.object.removeFromParent();
   }
 }

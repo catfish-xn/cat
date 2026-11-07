@@ -1,5 +1,6 @@
 import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, buyUnit, rerollShop, selectChoice, buyXp, combineItems, deployMatchUnit, equipItem, nextRound, sellUnit, useConsumable, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -537,8 +538,10 @@ describe('M7/S7 combat equipment command replay', () => {
   }
   it.each(['remove','reequip','combine','component','completed'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
+    // v26 re-pin: 14.24 neutrals (568eeea4) and targeting P0/P1 (28fd974a/8106acee) lengthen this 1-3
+    // PvE battle (v25: combine 172, remove/reequip 274).
     if (mode === 'remove' || mode === 'reequip' || mode === 'combine')
-      expect(battles[1]).toMatchObject({endTick:mode === 'combine' ? 172 : 274,result:'playerWin'});
+      expect(battles[1]).toMatchObject({endTick:mode === 'combine' ? 291 : 344,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
   });
@@ -570,7 +573,8 @@ describe('M7/S7 combat equipment command replay', () => {
     expect(validateBattleRecord(prefix,[]).settledMatch).toEqual(live.state);
     expect(prefix.equipmentCommands).toHaveLength(equip ? 2 : 1);
     const {state,battles} = live.finish();
-    expect(battles[0].endTick).toBe(equip ? 103 : 164);
+    // v26 re-pin (568eeea4 14.24 minions, targeting P0/P1): v25 was 103 / 164.
+    expect(battles[0].endTick).toBe(equip ? 172 : 274);
     expect(validateBattleRecord(battles[0],[]).settledMatch).toEqual(state);
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
     const omitted = structuredClone(battles);
@@ -581,7 +585,7 @@ describe('M7/S7 combat equipment command replay', () => {
     const {state,battles} = timedEquipment(kind);
     const fact = state.resourceProvenance.entries.find(entry => (entry.kind === 'item-equipped' || entry.kind === 'item-combined') && entry.tick === 1);
     expect(fact).toBeDefined();
-    if (kind === 'in-place') expect(battles[0].endTick).toBe(103);
+    if (kind === 'in-place') expect(battles[0].endTick).toBe(172); // v26 (568eeea4 minions); v25 103
     for (const tick of [0,2,69]) {
       const forged = structuredClone(battles);
       Object.assign(forged[0].equipmentCommands![0],{tick});
@@ -604,24 +608,34 @@ describe('M7/S7 combat equipment command replay', () => {
     const genuine = timedEquipment('in-place',tick);
     // Tick 0 changes the first hit; tick 69 leaves the hits at 35/69 using
     // the sword. Tick 2 changes no hits, but all three change the combat receipt.
-    expect(genuine.battles[0].endTick).toBe(103);
+    // v26 re-pin (14.24 minions 568eeea4 + targeting P0/P1): the minions survive longer, so the base
+    // battle ends at 172 (v25 103). Ticks 0/2 keep the same event shape (tick 0: the deathblade first hit
+    // and the tick-103 killing blow; v25 indices 8/16). At tick 69 the two weaker sword hits (35/69) now
+    // leave the minion alive past the tick-103 blow, so the battle runs to 240 with a longer ledger
+    // (v25 kept 103 and differed only at indices 16/24/30): pin its exact divergence and full ledger bytes.
+    expect(genuine.battles[0].endTick).toBe(tick === 69 ? 240 : 172);
     expect(genuine.battles[0].result).toBe('playerWin');
-    const expectedEvents = structuredClone(battles[0].events);
-    const damageChanges = tick === 0
-      ? [{index:8,raw:69,mitigated:74,hpDamage:74,overkill:0}, {index:16,raw:69,mitigated:103,hpDamage:36,overkill:67}]
-      : tick === 69
-        ? [{index:16,raw:49,mitigated:68,hpDamage:61,overkill:7}, {index:24,raw:49,mitigated:49,hpDamage:49,overkill:0},
-          // v22 mana rules (docs/COMBAT_MANA_RULES.md): damage mana is pooled per tick, so Irelia's tick-96 hit
-          // now emits a 1-mana 'damage' manaChanged event and the killing blow moves from index 29 to 30. Seed 7296's
-          // combat RNG crits that blow in both runs (103); the 25 HP the weaker tick-69 hit left changes only hp/overkill.
-          {index:30,raw:69,mitigated:103,hpDamage:61,overkill:42}]
+    if (tick === 69) {
+      const events = genuine.battles[0].events;
+      expect(events.slice(0,19)).toEqual(battles[0].events.slice(0,19));
+      for (const index of [19,30]) {
+        const event = events[index];
+        if (event.type !== 'packetDamage') throw new Error('Expected exact damage event');
+        expect(event.outcome).toMatchObject({raw:49,mitigated:44,hpDamage:44,overkill:0,killingPacket:false});
+      }
+      expect(createHash('sha256').update(JSON.stringify(events)).digest('hex')).toBe('8943b83ffed95e67fa1522109ca27b1bcf576ed9c7768ccd929fdd87f7645f39');
+    } else {
+      const expectedEvents = structuredClone(battles[0].events);
+      const damageChanges = tick === 0
+        ? [{index:8,raw:69,mitigated:93,hpDamage:93}, {index:41,hpDamage:25,overkill:41}]
         : [];
-    for (const {index,...outcome} of damageChanges) {
-      const event = expectedEvents[index];
-      if (event.type !== 'packetDamage') throw new Error('Expected exact damage event');
-      Object.assign(event.outcome,outcome);
+      for (const {index,...outcome} of damageChanges) {
+        const event = expectedEvents[index];
+        if (event.type !== 'packetDamage') throw new Error('Expected exact damage event');
+        Object.assign(event.outcome,outcome);
+      }
+      expect(genuine.battles[0].events).toEqual(expectedEvents);
     }
-    expect(genuine.battles[0].events).toEqual(expectedEvents);
     expect(genuine.state.combat!.equipmentReceipts![0].input.effectiveTick).toBe(tick + 1);
     expect(shifted).not.toEqual(genuine.state);
     expect(records).not.toEqual(genuine.battles);
@@ -630,9 +644,13 @@ describe('M7/S7 combat equipment command replay', () => {
       ? '战斗档案无效：内容校验' : '战斗档案无效：事件缺失或内容错误');
     const consistent = structuredClone(shifted);
     Object.assign(consistent.combat!.equipmentReceipts![0].input,{effectiveTick:tick + 1});
-    expect(consistent).toEqual(genuine.state);
+    // v26: at tick 69 the genuine shifted battle is a different (240-tick) battle, so the self-consistent
+    // claim forged on the 172-tick record is not the genuine state; it is still rejected above, and the
+    // genuine save restores exactly (roundTrip). Ticks 0/2 keep the v25 equality.
+    if (tick === 69) expect(consistent).not.toEqual(genuine.state);
+    else expect(consistent).toEqual(genuine.state);
     for (const restored of roundTrip(genuine.state,genuine.battles)) {
-      expect(restored).toEqual(consistent);
+      expect(restored).toEqual(tick === 69 ? genuine.state : consistent);
       nextBattleMatches(genuine.state,restored);
     }
   });

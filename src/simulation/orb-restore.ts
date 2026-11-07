@@ -11,6 +11,7 @@ import { LOOT_POLICY_VERSION } from './content/loot';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { isCombatRosterLocked } from './operation-policy';
 import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
+import { invalidCarryReason } from './pve-loot-carry';
 
 const check=(value:unknown,message:string)=>{if(!value)throw new RangeError(`Invalid multiplayer orb ledger: ${message}`);};
 /** Complements the authoritative shared pool snapshot validator; never admits a solo save as online. */
@@ -58,11 +59,16 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       check(orb.orbId===lootOrbId(orb.roundId,'mechanic',e.sourceUnitId,0)&&e.dropId===lootEntryId(orb.orbId,0),'mechanic identity');
     }
     const statuses=new Set(orb.entries.map(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status));
-    check(statuses.size===1||[...statuses].every(s=>s==='granted'||s==='revealed')&&orb.entries.every(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status!=='revealed'||e.payload.kind==='forge'),'partial anvil orb status');
+    // A claimed orb grants its other entries while a forge waits for bench space: it stays 'revealed', or 'carried'
+    // when a PvE loss parked the orb (8f794062; b8-restore's deferred carried forge). Elimination/terminal
+    // forfeitUnclaimedOrbs later turns either waiting forge into 'forfeited' beside the granted entries.
+    check(statuses.size===1||[...statuses].every(s=>s==='granted'||s==='revealed'||s==='carried'||s==='forfeited')
+      &&orb.entries.every(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status==='granted'||e.payload.kind==='forge'),'partial anvil orb status');
     for(const e of orb.entries) {
       const d=loot.direct.find(d=>d.dropId===e.dropId)!,r=receipts.get(e.dropId),earned=orb.source==='mechanic'||evidence.has(e.dropId);
-      check(['planned','revealed','granted','forfeited'].includes(d.status),'status');
-      check(earned ? d.status!=='planned' : d.status==='planned'||d.status==='forfeited','earned status');
+      const carried=loot.carry?.find(row=>row.dropId===e.dropId);
+      check(['planned','revealed','granted','forfeited','carried'].includes(d.status),'status');
+      check(carried ? !earned && invalidCarryReason(state,e.roundId,e.dropId)===null && d.status!=='planned' && d.status!=='forfeited' : earned ? d.status!=='planned' : d.status==='planned'||d.status==='forfeited','earned status');
       if(orb.source==='pve' && orb.roundId===state.roundDefinitionId) {
         const combat=state.pendingCombatTerminal??state.combat;
         check(!(d.status==='forfeited'&&!earned) || combat?.status==='finished','unearned forfeit lifecycle');
@@ -85,6 +91,10 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
     counters[key]+=ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1;
   }
   check(canonicalContent(counters)===canonicalContent(loot.guaranteeCounters),'counters');
+  for (const choice of loot.choiceEligibility) if (choice.status==='carried'||choice.status==='revealed'&&!evidence.has(choice.dropId)) {
+    const descriptor=loot.frozen.rounds.flatMap(round=>round.choices).find(entry=>entry.dropId===choice.dropId);
+    check(descriptor&&invalidCarryReason(state,descriptor.roundId,choice.dropId)===null,'choice carry');
+  }
   validateResourceReceipts({scheduleReceipts:state.scheduleReceipts,lootReceipts:loot.receipts,
     mechanicReceipts:state.seatMechanics?.receipts,carouselReceipts:state.carousel?.receipts,throughRoundOrdinal:state.round});
 }

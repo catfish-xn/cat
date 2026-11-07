@@ -4,7 +4,7 @@ import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
 let browser: Browser, page: Page, client: CDPSession;
 beforeAll(async () => {
-  const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() }, bundle: true, write: false, format: 'iife', globalName: 'Hover' });
+  const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() }, bundle: true, write: false, format: 'iife', globalName: 'Hover', loader: { '.css': 'empty' } });
   browser = await testBrowser();
   page = await browser.newPage({ hasTouch: true }); client = await page.context().newCDPSession(page);
   await page.setContent('<section id="scope"><button style="width:100px;height:100px" id="action">领取</button></section>');

@@ -2,7 +2,12 @@
  * Online HUD styles that only apply with the 3D layer mounted (item column, augment pick); installed by mountRenderer3d so
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
+import type { ReadyUiSprite } from './ui-original-assets';
+import { batchHudRules } from './batch-hud-skin';
 const STYLE = `
+/* The tabletop owns online PvP survivor volleys (or direct hits without sources) and the legacy solo/PvE HP bolt;
+   hide the shared DOM flight for both while 3D is mounted. */
+body:has(.render3d-layer) .outcome-bolt { display: none; }
 /* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
 body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
 body:has(.render3d-layer) .mel-save-feedback::before {
@@ -38,15 +43,17 @@ body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augm
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .choice-cards { gap: 3vw; margin: 3dvh 0 2dvh; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-slot { gap: 14px; justify-items: center; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-slot > button:first-child, body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .choice-cards > button {
-  width: 100%; min-height: min(56dvh, 500px); padding: 6dvh 20px 20px; border: 2px solid var(--aug-edge); border-radius: 6px; color: #c8d6dc; font-size: 15px; line-height: 1.6;
+  width: 100%; min-height: min(56dvh, 500px); padding: 7dvh 20px 20px; border: 2px solid var(--aug-edge); border-radius: 6px; color: #c8d6dc; font-size: 15px; line-height: 1.6;
   background: radial-gradient(ellipse at 50% 18%, #2a3d4f, #0d1720 70%); box-shadow: 0 8px 30px #000c, inset 0 0 24px #0008; transition: transform .12s, box-shadow .12s; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; white-space: normal; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-augment-tier="prismatic"] :is(.augment-slot > button:first-child, .choice-cards > button) { border-image: linear-gradient(160deg, #ff7ad9, #7af0ff, #ffe27a, #d58cff) 1; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] :is(.augment-slot > button:first-child, .choice-cards > button):is(:hover, :focus-visible) {
   transform: translateY(-4px); box-shadow: 0 10px 34px #000c, 0 0 18px color-mix(in srgb, var(--aug-edge) 55%, transparent), inset 0 0 24px #0008; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-name { display: block; margin-bottom: 10px; font-size: 22px; color: #f0e6d2; }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: -1.6em; }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-icon { width: 112px; height: 112px; margin: 0 auto 4dvh; border-radius: 16px; box-shadow: 0 0 0 2px var(--aug-edge), 0 0 22px color-mix(in srgb, var(--aug-edge) 45%, transparent); }
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { width: 132px; padding: 8px 10px; border: 1px solid #785a28; border-radius: 999px; background: #0b151fe6; color: #f0e6d2; font-size: 14px; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-desc { display: block; margin-top: -1.6em; margin-bottom: 12px; white-space: pre-line; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-icon { flex: none; width: 112px; height: 112px; margin: 0 0 3dvh; border-radius: 16px; box-shadow: 0 0 0 2px var(--aug-edge), 0 0 22px color-mix(in srgb, var(--aug-edge) 45%, transparent); }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { box-sizing: border-box; width: auto; min-width: 0; height: clamp(44px, 5.6dvh, 60px); min-height: 44px; aspect-ratio: 118 / 60; padding: 0 6px; border: 1px solid #785a28; border-radius: 999px; background: #0b151fe6; color: #f0e6d2; font-size: 13px; line-height: 1; white-space: nowrap; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll:disabled { opacity: .45; }
 body[data-online]:has(> .render3d-layer):has(.choice-overlay:not([hidden]) > .choice-dialog[data-choice-source="augment"]) .shop-dock .hud-pop { visibility: hidden; }
@@ -56,4 +63,46 @@ export function installHudStyle(): void {
   if (typeof document === 'undefined' || typeof document.querySelector !== 'function' || !document.head || document.querySelector('style[data-owner="render3d-hud"]')) return;
   const style = document.createElement('style'); style.dataset.owner = 'render3d-hud'; style.textContent = STYLE;
   document.head.append(style);
+}
+
+const UI_SCOPE = 'body:has(.render3d-layer)';
+/** CSS selectors use existing DOM hooks; widths, values, visibility and controls stay with their current owners. */
+const HUD_TARGETS: Readonly<Record<string, string>> = {
+  'hud.panel': '.shop-dock',
+  'hud.level': '.shop-dock .hud-level',
+  'hud.gold': '.shop-dock .hud-gold',
+  'hud.gold-icon': '.shop-dock .hud-gold .hud-label',
+  'hud.xp-track': '.shop-dock .hud-xp-bar',
+  'hud.xp-fill': '.shop-dock .hud-xp-fill',
+  'hud.timer': '#online-countdown.online-countdown',
+};
+export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fonts: ReadonlyMap<string, string>): string {
+  const rules: string[] = [];
+  for (const [id, selector] of Object.entries(HUD_TARGETS)) {
+    const sprite = sprites.get(id); if (!sprite) continue;
+    const url = `url(${JSON.stringify(sprite.url)})`;
+    if (id === 'hud.gold-icon') {
+      // Online owns its circular 13px coin and transparent label in style.css.
+      const label = `body:not([data-online]):has(.render3d-layer) ${selector}`;
+      rules.push(`${label}{display:inline-flex;align-items:center;gap:4px;width:auto;height:auto;overflow:visible;color:inherit;background:none;border-image:none;border-radius:0;box-shadow:none;}`);
+      rules.push(`${label}::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:${url} center / contain no-repeat;}`);
+      continue;
+    }
+    if (id === 'hud.xp-fill' && !sprite.slice) {
+      // cqw measures the full track, so the existing percentage width clips the source from its left edge.
+      rules.push(`${UI_SCOPE} .shop-dock .hud-xp-bar{container-type:inline-size;}`);
+    }
+    // Absolute border-image widths paint the panel without changing its existing
+    // border style/width (none/0 offline, solid/1px online) or its content box.
+    const borderStyle = id === 'hud.panel' ? '' : 'border-style:solid;';
+    const image = sprite.slice
+      ? `${borderStyle}border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
+      : `border-image:none;background:${url} ${id === 'hud.xp-fill' ? 'left center / 100cqw' : 'center / 100%'} 100% no-repeat;`;
+    rules.push(`${UI_SCOPE} ${selector}{${image}border-color:transparent;border-radius:0;box-shadow:none;}`);
+  }
+  // Override only after a face loaded. Each character outside the Latin range uses the same fallback as before.
+  if (fonts.has('body')) rules.push(`${UI_SCOPE} :is(.shop-dock,.online-countdown,#online-sidebar,#panels-root,.hover-card,.choice-overlay,.unit-panel,.render3d-layer),${UI_SCOPE} :is(button,input,select){font-family:Render3dSpiegel,system-ui,sans-serif;}`);
+  if (fonts.has('title')) rules.push(`${UI_SCOPE} :is(.hud-level,.hud-gold,.seat-hp,.countdown-round,.online-timer,h2,h3){font-family:Render3dBeaufort,system-ui,sans-serif;}`);
+  const batch = batchHudRules(sprites); if (batch) rules.push(batch);
+  return rules.join('\n');
 }

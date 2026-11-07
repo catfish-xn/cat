@@ -7,7 +7,9 @@ import {salvageRecipe} from '../src/simulation/augment-pool-batch5-h13-salvage';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {drainBatch1Gifts} from '../src/simulation/augment-pool-grants';
 // v25 catalog (285 cards): seed 30 is the first bounded room route where s0 can acquire salvage-bin-plus at 3-2 via public rerolls.
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:30});
+// v26 re-pin (D5 pool +4 cards 7953c99a, 14.24 neutrals 568eeea4): seed 30's s0 3-2 offer and rerolls no longer hold
+// salvage-bin-plus; seed 15 is the first room seed from 0 where s0 can acquire it at 3-2 (two public slot rerolls).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:15});
 const seatId='s0',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 beforeAll(()=>room.start());
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&(s.phase==='preparation'||s.roundKind==='supply'));});

@@ -13,18 +13,49 @@ import type { BoardScreenBox } from '../board-feed';
  * are drawn mirrored on the far side.
  */
 import {
-  Box3, ConeGeometry, Group, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, type Camera, type Object3D, type Scene,
+  Box3, ConeGeometry, Group, Mesh, MeshStandardMaterial, RingGeometry, SphereGeometry, Vector3, type Camera, type Object3D, type Scene,
 } from 'three';
+/** Must stay aligned with vfx-ltk/particles FX_SCALE (0.44); not imported here to keep tabletop free of the LTK bundle. */
+const FX_SCALE = 0.44;
 import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
-import { LEGEND_MODEL, loadLegendLease } from './legend-load';
-export { LEGEND_MODEL };
-/** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
-export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
+import { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, loadLegendLease, resolveDefaultLegend } from './legend-load';
+import { LEGEND_HEIGHT_RATIO } from './model-fit';
+import { createPlayerDamage } from './player-damage';
+import type { PvpDamage } from '../../presentation/pvp-damage';
+export { LEGEND_FALLBACK_MODEL, LEGEND_MODEL, resolveDefaultLegend, loadLegendLease };
+type LegendFrame = Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>;
+/** The x of a grid's right edge cell centre (odd rows sit half a cell right); the grid's left edge is origin.x. */
+const gridRightX = (frame: LegendFrame) => frame.origin.x + Math.sqrt(3) * frame.hexRadius * (frame.columns - 0.5);
+/**
+ * Where the board owner's 河灵 stands: on the middle of the arena's near-left stone platform (TFT: the bottom-left
+ * corner beside the bench), LEGEND_INSET_CELLS hex widths left of the grid's left edge, never on a deployable cell.
+ * The playtest server's 6b353a0f capture showed the plain mirror of the old right-hand spot (1.6 widths out) on the
+ * platform's outer rim, about 0.8 widths left of its middle.
+ */
+export const LEGEND_INSET_CELLS = 0.8;
+export function legendSpot(frame: LegendFrame): Vector3 {
   const width = Math.sqrt(3) * frame.hexRadius;
-  return new Vector3(frame.origin.x + width * (frame.columns - 0.5) + width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+  return new Vector3(frame.origin.x - width * LEGEND_INSET_CELLS, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+}
+/** The far corner across the board from `legendSpot` (top right): a PvP opponent's or a scouting visitor's legend. */
+export function farLegendSpot(frame: LegendFrame): Vector3 {
+  return new Vector3(gridRightX(frame) + Math.sqrt(3) * frame.hexRadius * 1.6, 0, frame.origin.y);
+}
+/**
+ * The ten orb slots of a board owner's legend: two columns rising from beside it toward the board's middle, both on the
+ * legend's outer (left) side. Centred on the legend, the inner column would sit on the left column's cells now that the
+ * legend stands 0.8 widths out, and a left click there would take the orb instead of lifting the unit (orbAt is asked first).
+ * The gold mines (gold-mines.ts, the arena's own interest locators) rise in a column about 0.22 widths left of the legend on
+ * the live board, so the inner orb column stands clear of them at 0.75 widths (2a4dfaba playtest: it stood at 0.42, on the mines).
+ */
+export const ORB_COLUMN_CELLS = [0.75, 1.3] as const;
+export function legendOrbSlots(frame: LegendFrame, count = 10): Vector3[] {
+  const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5, spot = legendSpot(frame);
+  return Array.from({ length: count }, (_, index) => new Vector3(
+    spot.x - ORB_COLUMN_CELLS[index % 2]! * width, 0, spot.z - (1 + Math.floor(index / 2)) * step * 0.9));
 }
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
@@ -34,8 +65,41 @@ const ORB_OPEN: Record<BoardOrb['tier'], string> = { gray: 'orb-gray-open', blue
 /** Playback bounds (seconds) as tft-extras action-bindings.json gives them; an idle that reaches its bound is rebuilt. */
 const ORB_IDLE_SECONDS = 30, PRISMATIC_IDLE_SECONDS = 3600, OPEN_SECONDS = 3, TRAVEL_EFFECT_SECONDS = 1, IMPACT_SECONDS = 3;
 const ORB_COLOR: Record<BoardOrb['tier'], string> = { gray: '#a8b0ba', blue: '#4fb7ff', gold: '#ffc94a', prismatic: '#e7a8ff' };
-/** Stand-in orb (no asset root, or its effect is missing): radius and float height in board units. */
-const ORB_RADIUS = 9, ORB_FLOAT = 16;
+/** S13 trait orb stand/halo tints (取自原版 review 截图，近似). */
+const ORB_VARIANT_COLOR: Record<NonNullable<BoardOrb['variant']>, string> = { warband: '#f05838', crime: '#e060d0' };
+const orbTint = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => variant ? ORB_VARIANT_COLOR[variant] : ORB_COLOR[tier];
+/**
+ * Loot orb particles are not scaled like skill VFX. tft-extras review at FX_SCALE=0.44 (docs/ASSETS3D_TFT_EXTRAS.md):
+ * gray idle ≈0.37 cell; blue/gold/prismatic ≈0.5 cell; warband/crime cores ≈0.92 / ≈0.97 cell (special-orbs review).
+ * Target visible core ≈0.5 cell for every variant.
+ */
+const ORB_GRAY_IDLE_CELLS_AT_FX = 0.37;
+const ORB_BLUE_IDLE_CELLS_AT_FX = 0.5;
+const ORB_WARBAND_IDLE_CELLS_AT_FX = 0.92;
+const ORB_CRIME_IDLE_CELLS_AT_FX = 0.97;
+const ORB_TARGET_CORE_CELLS = 0.5;
+const orbIdleCellsAtFx = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) =>
+  variant === 'warband' ? ORB_WARBAND_IDLE_CELLS_AT_FX
+    : variant === 'crime' ? ORB_CRIME_IDLE_CELLS_AT_FX
+      : tier === 'gray' ? ORB_GRAY_IDLE_CELLS_AT_FX
+        : ORB_BLUE_IDLE_CELLS_AT_FX;
+const orbParticleScale = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) =>
+  FX_SCALE * (ORB_TARGET_CORE_CELLS / orbIdleCellsAtFx(tier, variant));
+/** Dominant idle emitter position.y in extras JSON × orbParticleScale (review probe, 约); lowers FX so the core sits on the stand. */
+const ORB_IDLE_SOURCE_Y: Record<BoardOrb['tier'] | 'warband' | 'crime', number> = {
+  gray: 32, blue: 27, gold: 32, prismatic: 0, warband: 15, crime: 45,
+};
+const orbIdleFxYOffset = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+  const key = variant ?? (tier === 'prismatic' ? 'prismatic' : tier);
+  const sourceY = ORB_IDLE_SOURCE_Y[key as keyof typeof ORB_IDLE_SOURCE_Y];
+  return Math.round(sourceY * orbParticleScale(tier, variant));
+};
+/** Stand-in core when the effect is missing: radius ≈ half a cell at hexRadius 34 (√3×34 ≈ 59 board units per cell). */
+const ORB_RADIUS = 14.5, ORB_FLOAT = 16;
+/** Idle vertical bob (approximate; extracted orb bindings have no dedicated motion curve). */
+const ORB_BOB = 3;
+/** Ground halo under the core (approximate; parent orb systems also carry ground-facing particles). */
+const ORB_GROUND_RING_INNER = 12, ORB_GROUND_RING_OUTER = 24;
 /** Orbs are clicked within this many CSS pixels of their drawn center (at least). */
 const ORB_PICK_PX = 16;
 /** Stand-in orb opening: it swells and fades over this long. */
@@ -47,8 +111,11 @@ const CAST_LEAD_SECONDS = 0.25, TRAVEL_SECONDS = 1, IMPACT_HOLD_SECONDS = 0.6;
 /** An opponent legend stays this long after a PvP battle left the board, so a settled loss has someone to come from. */
 const OPPONENT_LINGER_SECONDS = 4;
 const BOLT_ARC = 60;
-/** My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of. */
-const ROAM_MARGIN = 2, ORB_REACH = 0.45;
+/**
+ * My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of
+ * (about a quality ring's radius plus the orb's own, so brushing an orb is enough).
+ */
+const ROAM_MARGIN = 2, ORB_REACH = 0.6;
 /** Orbs one monster dropped land this many hex widths from where it fell, each further one a little farther out. */
 const DROP_REACH = 0.35, ORB_SPREAD = 0.3;
 /**
@@ -79,6 +146,8 @@ export interface TabletopContext {
   readonly now?: () => number;
 }
 export interface Tabletop {
+  /** Authoritative PvP total and terminal survivor cells, delivered by the lazy settlement presenter. */
+  damage(hit: PvpDamage): void;
   /** A confirmed Mel save, at my legend; receipt deduplication belongs to BoardScene. */
   saved(): void;
   /** Board-space points the camera should keep in view (legends, the orb column), for this board size. */
@@ -99,9 +168,10 @@ export interface Tabletop {
    * Visiting another board (TFT: my legend goes there): mine leaves this one, its walk dropped and no orb claimed meanwhile;
    * back home it stands at its own spot again.
    */
-  away(on: boolean): void;
+  away(on: boolean, carousel?: boolean): void;
   /** Acceptance read (?debug3d). */
-  debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean; dropping: boolean; opened: boolean }[]; hits: string[]; opening: number; bolt: boolean };
+  debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean; dropping: boolean; opened: boolean }[]; hits: string[]; opening: number; bolt: boolean;
+    volley: ReturnType<ReturnType<typeof createPlayerDamage>['debug']> };
   dispose(): void;
 }
 
@@ -109,10 +179,14 @@ interface Path { from: Vector3; to: Vector3; start: number; end: number }
 interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
 interface OrbDrop { readonly from: Vector3; readonly to: Vector3; elapsed: number }
 interface OrbView {
-  readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number;
+  readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; readonly halo: Mesh; fx: ParticleEffect | null;
+  left: number; loading: boolean; disposed: boolean; phase: number;
   /** Flying out of its monster: not claimable until it lands. */
   drop: OrbDrop | null;
-  /** Claimed in the battle and queued by the rules: it opened at my legend's touch and is no longer drawn. */
+  /**
+   * Opened at my legend's touch and no longer drawn: shown at once while the claim is on its way (TFT feel), and kept for
+   * a claim the rules queued until after the battle. A refused claim draws it again.
+   */
   opened: boolean;
 }
 interface Burst { expiresAt?: number; fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
@@ -121,10 +195,29 @@ interface HitPlan { key: string; at: number; cast: boolean; bolt: Bolt | null; d
 
 export function createTabletop(ctx: TabletopContext): Tabletop {
   const { scene, own } = ctx;
-  const legendHeight = ctx.championHeight * 0.5;
+  const legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
   const orbGeometry = own(new SphereGeometry(ORB_RADIUS, 20, 14));
-  const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier,
-    own(new MeshStandardMaterial({ color: ORB_COLOR[tier], emissive: ORB_COLOR[tier], emissiveIntensity: 0.55, roughness: 0.3, transparent: true }))])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  const orbHaloGeometry = own(new RingGeometry(ORB_GROUND_RING_INNER, ORB_GROUND_RING_OUTER, 32));
+  const orbStandMaterial = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+    const color = orbTint(tier, variant);
+    return own(new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: variant ? 0.65 : 0.85, roughness: 0.28,
+      transparent: true, opacity: variant ? 0.48 : 0.72, depthWrite: false }));
+  };
+  const orbHaloMaterialFor = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => {
+    const color = orbTint(tier, variant);
+    return own(new MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.55, transparent: true,
+      opacity: variant ? 0.34 : 0.42, depthWrite: false }));
+  };
+  const orbMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbStandMaterial(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  const orbHaloMaterial = Object.fromEntries((Object.keys(ORB_COLOR) as BoardOrb['tier'][]).map(tier => [tier, orbHaloMaterialFor(tier)])) as Record<BoardOrb['tier'], MeshStandardMaterial>;
+  // Trait orb tints ignore the tier, so each variant's materials are made once, not per orb.
+  const variantMaterials = new Map<string, MeshStandardMaterial>();
+  const variantMaterial = (kind: 'stand' | 'halo', tier: BoardOrb['tier'], variant: NonNullable<BoardOrb['variant']>) => {
+    const key = `${kind}:${variant}`;
+    let material = variantMaterials.get(key);
+    if (!material) { material = kind === 'stand' ? orbStandMaterial(tier, variant) : orbHaloMaterialFor(tier, variant); variantMaterials.set(key, material); }
+    return material;
+  };
   const boltGeometry = own(new SphereGeometry(7, 16, 12));
   const boltMaterial = own(new MeshStandardMaterial({ color: '#ffe3a1', emissive: '#ffb347', emissiveIntensity: 1, transparent: true }));
   const flashMaterial = own(new MeshStandardMaterial({ color: '#ff9b6b', emissive: '#ff6a3d', emissiveIntensity: 1, transparent: true, opacity: 0.8 }));
@@ -133,6 +226,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     opponent: own(new MeshStandardMaterial({ color: '#e3a08f', roughness: 0.55 })), eye: own(new MeshStandardMaterial({ color: '#1b2230' })) };
 
   const now = ctx.now ?? (() => performance.now());
+  const damage = createPlayerDamage(ctx);
+  let damageFrame: BoardFrame | null = null;
   const anchors = { me: new Vector3(), opponent: new Vector3(), enemySide: new Vector3(), orbs: [] as Vector3[], center: new Vector3() };
   /** Board cells: hex widths from the board origin. `bounds` is where my legend may walk (board-space x/z). */
   const board = { x: 0, z: 0, width: 1, bounds: { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } };
@@ -142,24 +237,23 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      const left = frame.origin.x;
+      const right = gridRightX(frame);
       const bottom = frame.origin.y + step * (frame.rows - 1), top = frame.origin.y;
       anchors.me.copy(legendSpot(frame));
-      anchors.opponent.set(left - width * 1.6, 0, top);
+      anchors.opponent.copy(farLegendSpot(frame));
       anchors.enemySide.set(frame.origin.x + width * (frame.columns - 1) / 2, 0, top);
       anchors.center.set(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, (top + bottom) / 2);
       board.x = frame.origin.x; board.z = frame.origin.y; board.width = width;
       const margin = ROAM_MARGIN * width;
-      board.bounds = { minX: left - margin, maxX: anchors.me.x + margin * 0.5, minZ: top - margin, maxZ: bottom + margin };
+      board.bounds = { minX: anchors.me.x - margin * 0.75, maxX: right + margin, minZ: top - margin, maxZ: bottom + margin };
       for (const view of legends.values()) { view.walked = false; view.path = null; }
       // Two columns of orbs rising from beside my legend toward the board's middle.
-      anchors.orbs = Array.from({ length: MAX_ORBS }, (_, index) => new Vector3(
-        anchors.me.x + (index % 2 ? 0.42 : -0.42) * width, 0, anchors.me.z - (1 + Math.floor(index / 2)) * step * 0.9));
+      anchors.orbs = legendOrbSlots(frame, MAX_ORBS);
       for (const view of legends.values()) placeLegend(view);
       [...orbs.values()].filter(view => !spots.has(view.orbId)).forEach((view, index) => view.root.position.copy(orbSlot(index)));
     }
     const pad = legendHeight;
-    return [anchors.me.clone().add(new Vector3(pad, 0, pad)), anchors.opponent.clone().add(new Vector3(-pad, 0, -pad)),
+    return [anchors.me.clone().add(new Vector3(-pad, 0, pad)), anchors.opponent.clone().add(new Vector3(pad, 0, -pad)),
       anchors.orbs[MAX_ORBS - 1]!.clone()];
   };
   const orbSlot = (index: number) => anchors.orbs[Math.min(index, MAX_ORBS - 1)] ?? anchors.me;
@@ -185,7 +279,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
   /** Set while I visit another board (`away`). */
-  let away = false;
+  let away = false, carousel = false;
   const legend = (side: 'me' | 'opponent'): LegendView => {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
@@ -196,7 +290,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-legend-${side}`;
     view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
-    root.add(standIn(side)); root.visible = !(away && side === 'me');
+    root.add(standIn(side)); root.visible = !carousel && !(away && side === 'me');
     placeLegend(view); scene.add(root);
     if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
     if (side === 'opponent' && before) opponentWalk = before.walk;
@@ -248,6 +342,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
    * refusal of it (the dock put it back); forgotten when the orb leaves.
    */
   let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
+  /** Orbs my legend touched and opened before the room answered, with the refusal count at that touch. */
+  const claimedHere = new Map<string, number>();
   const sent = new Map<string, number>();
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
     if (!layoutKey || away) return null;
@@ -292,6 +388,11 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const at = sent.get(orb.orbId);
     if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) return;
     sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
+    // Open it now rather than a server round trip later: the receipt fills the bench when it arrives, and a refusal
+    // (a newer refusal count for this orb in a later frame) draws the orb again.
+    if (orb.disposed) return;
+    claimedHere.set(orb.orbId, refusals[orb.orbId] ?? 0);
+    if (!orb.opened) { orb.opened = true; orb.root.visible = false; openOrb(orb); }
   };
   /** A landed orb that my legend stands on, or was sent to and already reached, is claimed now. */
   const landed = (orb: OrbView) => {
@@ -306,11 +407,11 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   // --- effects -----------------------------------------------------------------------------------------------------
   const bursts = new Set<Burst>();
-  const effectAt = (id: string, seconds: number, point: Vector3, owner: () => boolean): Promise<ParticleEffect | null> => {
+  const effectAt = (id: string, seconds: number, point: Vector3, owner: () => boolean, scale = ctx.effectScale): Promise<ParticleEffect | null> => {
     if (!ctx.loadEffect) return Promise.resolve(null);
     return ctx.loadEffect(id, seconds).then(fx => {
       if (!owner()) { fx.dispose(); return null; }
-      fx.object.scale.setScalar(ctx.effectScale); fx.object.position.copy(point);
+      fx.object.scale.setScalar(scale); fx.object.position.copy(point);
       scene.add(fx.object);
       return fx;
     }).catch(() => null);
@@ -319,12 +420,12 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
    * A one-shot effect at `point`; the stand-in mesh (when given) swells and fades if the effect is not available.
    * `fallback` is tried first when `id` cannot load (a trait orb's own open effect → the generic tier's).
    */
-  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null, fallback?: string) => {
+  const burst = (id: string, seconds: number, point: Vector3, stand: Mesh | null, fallback?: string, scale = ctx.effectScale) => {
     const entry: Burst = { fx: null, mesh: null, left: seconds, total: ORB_POP_SECONDS };
     bursts.add(entry);
     const live = () => bursts.has(entry);
-    void effectAt(id, seconds, point, live)
-      .then(fx => fx || !fallback || !live() ? fx : effectAt(fallback, seconds, point, live)).then(fx => {
+    void effectAt(id, seconds, point, live, scale)
+      .then(fx => fx || !fallback || !live() ? fx : effectAt(fallback, seconds, point, live, scale)).then(fx => {
       if (fx) { entry.fx = fx; disposeStand(stand); return; }
       if (!bursts.has(entry) || !stand) { bursts.delete(entry); disposeStand(stand); return; }
       stand.position.copy(point); scene.add(stand); entry.mesh = stand; entry.left = ORB_POP_SECONDS;
@@ -362,25 +463,35 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   /** Orbs revealed while their monster still stands in the shown battle, by orb id, with that monster's id. */
   const held = new Map<string, string>();
   const idleSeconds = (tier: BoardOrb['tier']) => tier === 'prismatic' ? PRISMATIC_IDLE_SECONDS : ORB_IDLE_SECONDS;
+  const orbAnchorY = (bob: number) => ORB_FLOAT + bob;
+  const orbFxY = (view: OrbView, bob: number) => orbAnchorY(bob) - orbIdleFxYOffset(view.tier, view.variant);
+  /** Idle particles share the stand anchor at the orb root; dominant emitter y is compensated (see ORB_IDLE_SOURCE_Y). */
+  const alignIdleFx = (view: OrbView, fx: ParticleEffect) => {
+    fx.object.scale.setScalar(orbParticleScale(view.tier, view.variant));
+    view.root.add(fx.object);
+    fx.object.position.set(0, orbFxY(view, 0), 0);
+  };
   const startIdle = (view: OrbView) => {
     if (!ctx.loadEffect || view.loading) return;
     view.loading = true;
-    const point = new Vector3(0, ORB_FLOAT, 0);
     // A trait orb (S13 Warband/Crime) uses its own idle effect; if that cannot load, the generic tier's.
     const generic = () => ctx.loadEffect!(ORB_IDLE[view.tier], idleSeconds(view.tier));
     const load = view.variant ? ctx.loadEffect(`orb-${view.variant}`, idleSeconds(view.tier)).catch(generic) : generic();
     void load.then(fx => {
       view.loading = false;
       if (view.disposed) { fx.dispose(); return; }
-      fx.object.scale.setScalar(ctx.effectScale); fx.object.position.copy(point);
-      view.root.add(fx.object); view.fx = fx; view.left = idleSeconds(view.tier); view.stand.visible = false;
+      alignIdleFx(view, fx);
+      view.fx = fx; view.left = idleSeconds(view.tier);
     }).catch(() => { view.loading = false; });
   };
   const createOrb = (orb: BoardOrb, index: number): OrbView => {
     const root = new Group(); root.name = `render3d-orb-${orb.tier}`;
-    const stand = new Mesh(orbGeometry, orbMaterial[orb.tier]); stand.position.y = ORB_FLOAT;
-    root.add(stand); root.position.copy(orbSlot(index)); scene.add(root);
-    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
+    const halo = new Mesh(orbHaloGeometry, orb.variant ? variantMaterial('halo', orb.tier, orb.variant) : orbHaloMaterial[orb.tier]);
+    halo.rotation.x = -Math.PI / 2; halo.position.y = 1;
+    const stand = new Mesh(orbGeometry, orb.variant ? variantMaterial('stand', orb.tier, orb.variant) : orbMaterial[orb.tier]);
+    stand.position.y = ORB_FLOAT; stand.renderOrder = -1;
+    root.add(halo, stand); root.position.copy(orbSlot(index)); scene.add(root);
+    const view: OrbView = { orbId: orb.orbId, tier: orb.tier, ...(orb.variant ? { variant: orb.variant } : {}), root, stand, halo, fx: null, left: 0, loading: false, disposed: false, phase: index * 1.3, drop: null, opened: false };
     startIdle(view);
     return view;
   };
@@ -391,7 +502,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
   /** The tier's (or trait skin's) opening where the orb lies. */
   const openOrb = (view: OrbView) => burst(view.variant ? `orb-${view.variant}-open` : ORB_OPEN[view.tier], OPEN_SECONDS,
-    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, orbMaterial[view.tier].clone()), ORB_OPEN[view.tier]);
+    view.root.position.clone().setY(ORB_FLOAT), new Mesh(orbGeometry, (view.variant ? variantMaterial('stand', view.tier, view.variant) : orbMaterial[view.tier]).clone()), ORB_OPEN[view.tier],
+    orbParticleScale(view.tier, view.variant));
   /** Drawn, landed and not already opened by a queued claim: my legend may walk onto it. */
   const reachable = (view: OrbView) => !view.opened && view.root.visible;
   /** Bursts out of the corpse at `from`: a flash of the tier's color there, then the hop to `to`. */
@@ -414,6 +526,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   // --- HP-loss bolt ------------------------------------------------------------------------------------------------
   let hit: HitPlan | null = null;
   const hitsPlayed: string[] = [];
+  const damagePlayed: string[] = [];
   const endBolt = (bolt: Bolt) => { bolt.disposed = true; bolt.fx?.dispose(); bolt.fx = null; bolt.mesh?.removeFromParent(); bolt.mesh = null; };
   const startHit = (key: string, fromLegend: boolean) => {
     if (hit?.bolt) endBolt(hit.bolt);
@@ -458,6 +571,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   // --- frames ------------------------------------------------------------------------------------------------------
   let seeded = false, seenHit: string | null = null, pvpLinger = 0, pvpShown = false;
   const onFrame = (frame: BoardFrame) => {
+    damageFrame = frame;
     layout(frame);
     legend('me');
     // A shown battle against another board (no neutral PvE monster among the enemies) has that board's legend on its side.
@@ -470,7 +584,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
     for (const id of held.keys()) if (!present.has(id)) held.delete(id);
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id) && !view.opened); }
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); claimedHere.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id) && !view.opened); }
     if (frame.fighting && !wasFighting) monsters.clear();
     wasFighting = frame.fighting;
     // Monsters still standing in the shown battle: an orb of theirs waits for them to fall.
@@ -493,15 +607,19 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       }
       const spot = spotFor(orb);
       if (!view.drop) view.root.position.copy(spot ?? orbSlot(column++));
-      // A claim the rules queued until after the battle: TFT opens the orb at the touch, so it opens now and the
-      // contents follow with the settlement (a reload while queued shows nothing more to open).
-      if (orb.queued && !view.opened) { view.opened = true; if (seeded) openOrb(view); }
-      else if (!orb.queued && view.opened) view.opened = false;
+      // TFT opens the orb at the touch: one I touched stays open until the room answers (a refusal draws it again), and
+      // one the rules queued until after the battle opens now, its contents following with the settlement (a reload
+      // while queued shows nothing more to open).
+      const touched = claimedHere.has(orb.orbId) && (refusals[orb.orbId] ?? 0) <= claimedHere.get(orb.orbId)!;
+      if (!touched) claimedHere.delete(orb.orbId);
+      const open = orb.queued || touched;
+      if (open && !view.opened) { view.opened = true; if (seeded) openOrb(view); }
+      else if (!open && view.opened) view.opened = false;
       view.root.visible = !view.opened;
     });
 
     const key = frame.hit?.key ?? null;
-    if (seeded && key && key !== seenHit) {
+    if (seeded && key && key !== seenHit && !frame.hit?.pvp) {
       const fromLegend = pvpShown && pvpLinger > 0;
       if (fromLegend) legend('opponent');
       startHit(key, fromLegend);
@@ -513,9 +631,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   let clock = 0;
   const update = (seconds: number) => {
     clock += seconds;
+    damage.update(seconds);
     if (!legends.size && !orbs.size && !hit && !bursts.size) return;
     updateHit(seconds);
-    if (pvpLinger > 0 && !hit) {
+    if (pvpLinger > 0 && !hit && !damage.isActive()) {
       pvpLinger = Math.max(0, pvpLinger - seconds);
       if (pvpLinger === 0) dropLegend('opponent');
     }
@@ -526,12 +645,15 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     }
     for (const view of orbs.values()) {
       if (view.drop) flyDrop(view, seconds);
-      view.stand.position.y = ORB_FLOAT + Math.sin(clock * 2 + view.phase) * 2;
+      const bob = Math.sin(clock * 2 + view.phase) * ORB_BOB;
+      const y = orbAnchorY(bob);
+      view.stand.position.y = y;
+      view.fx?.object.position.set(0, orbFxY(view, bob), 0);
       if (!view.fx) continue;
       view.fx.update(seconds, ctx.camera);
       view.left -= seconds;
       // Bounded idle: when the effect has played out, it is rebuilt rather than assumed to run forever.
-      if (view.fx.finished || view.left <= 0) { view.fx.dispose(); view.fx = null; view.stand.visible = true; startIdle(view); }
+      if (view.fx.finished || view.left <= 0) { view.fx.dispose(); view.fx = null; startIdle(view); }
     }
     for (const entry of bursts) {
       if (entry.expiresAt !== undefined && now() >= entry.expiresAt) { endBurst(entry); continue; }
@@ -563,6 +685,22 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    damage(event) {
+      const frame = damageFrame;
+      const key = `${event.key}:${event.target}`;
+      if (!frame || away || damagePlayed.includes(key)) return;
+      damagePlayed.push(key);
+      if (damagePlayed.length > 64) damagePlayed.shift();
+      if (!hitsPlayed.includes(event.key)) hitsPlayed.push(event.key);
+      pvpLinger = OPPONENT_LINGER_SECONDS;
+      if (hitsPlayed.length > 32) hitsPlayed.shift();
+      legend('opponent');
+      const sources = event.sources.map(cell => new Vector3(
+        frame.origin.x + Math.sqrt(3) * frame.hexRadius * (cell.col + (cell.row % 2) / 2), ctx.championHeight * 0.6,
+        frame.origin.y + frame.hexRadius * 1.5 * cell.row));
+      damage.play(event, sources, () => (legends.get(event.target)?.root.position ?? anchors[event.target]).clone().setY(legendHeight * 0.9),
+        () => act(legends.get(event.target), 'hit'));
+    },
     orbBox(id, area) { const view = orbs.get(id); return view && reachable(view) ? projectedBox(view.root, ctx.camera, area) : undefined; },
     saved() {
       const view = legends.get('me');
@@ -571,13 +709,17 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
         save.expiresAt = now() + 1400; // A dropped frame must not stretch the save past its wall-clock bound.
       }
     },
-    away(on) {
-      if (on === away) return;
+    away(on, inCarousel = false) {
+      const changed = on !== away, wasCarousel = carousel;
+      carousel = inCarousel;
+      for (const [side, view] of legends) view.root.visible = !carousel && !(on && side === 'me');
+      if (!changed) return;
+      if (on) damage.clear();
       away = on; orbTarget = null;
       const view = legends.get('me');
       if (!view) return;
-      view.path = null; view.root.visible = !on;
-      if (!on) { view.walked = false; placeLegend(view); }
+      view.path = null;
+      if (!on) { if (!wasCarousel) view.walked = false; placeLegend(view); }
     },
     walk(walk) {
       if (walk.scene !== 'board' || walk.who !== 'opponent') return;
@@ -587,8 +729,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     },
     debug: () => ({ legends: [...legends.values()].map(view => `${view.id}:${view.lease ? 'model' : 'standin'}${view.path ? ':walk' : ''}`),
       orbs: [...orbs.values()].map(view => ({ orbId: view.orbId, tier: view.tier, effect: view.fx !== null, dropping: view.drop !== null, opened: view.opened })),
-      hits: [...hitsPlayed], opening: bursts.size, bolt: !!hit?.bolt && !hit.bolt.disposed }),
+      hits: [...hitsPlayed], opening: bursts.size, bolt: !!hit?.bolt && !hit.bolt.disposed, volley: damage.debug() }),
     dispose() {
+      damage.dispose();
       if (hit?.bolt) endBolt(hit.bolt);
       hit = null;
       for (const entry of [...bursts]) endBurst(entry);

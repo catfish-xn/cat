@@ -1,3 +1,4 @@
+import { readAnomalyTargetIds } from './anomaly-choice';
 import { readMasterworkOptions } from './masterwork-choice';
 import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
@@ -26,8 +27,10 @@ function revealedLootView(state: MatchState) {
   if (round.kind !== 'pve' || round.roundId !== state.roundDefinitionId || round.ordinal !== state.round) return undefined;
   const plan = state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === round.roundId);
   if (!plan || plan.encounterPlan.encounterId !== round.encounterId) return undefined;
-  const revealedDrops = readLootView(state).revealedDrops
-    .filter(drop => drop.roundId === round.roundId && drop.encounterId === round.encounterId)
+  const lootView = readLootView(state);
+  const carriedOrbs = new Set((lootView.unclaimedOrbs ?? []).map(orb => orb.orbId));
+  const revealedDrops = lootView.revealedDrops
+    .filter(drop => drop.roundId === round.roundId && drop.encounterId === round.encounterId || carriedOrbs.has(drop.orbId))
     .map((drop): RevealedDropView => {
       const payload=payloadView(drop.payload);
       const identity = { ...pick(drop, ['orbId','entryOrdinal','dropId', 'encounterId', 'sourceUnitId', 'roundId']), payload };
@@ -39,7 +42,7 @@ function revealedLootView(state: MatchState) {
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
     });
-  return { roundId: round.roundId, revealedDrops, revealedOrbs:readLootView(state).revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
+  return { roundId: round.roundId, revealedDrops, revealedOrbs:lootView.revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
 }
 
 export type ConsumableTargetView =
@@ -74,6 +77,7 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    anomalyTargetIds: readAnomalyTargetIds(state),
     openingEncounter: readOpeningEncounterView(state),
     openingMelProgress: readOpeningMelProgress(state),
     ...(readOpeningForgeProgress(state) ? {openingForgeProgress: readOpeningForgeProgress(state)} : {}),
@@ -99,6 +103,7 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId', 'starLevel']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
+      ...(state.preparation.usableBenchSlots === undefined ? {} : {usableBenchSlots:state.preparation.usableBenchSlots,overflowUnitIds:[...state.preparation.overflowUnitIds ?? []]}),
       units: [...units, ...enemies].map(u=>({...preparationUnitView(u),...(isD14PromotedUnit(state,u.id)?{effectiveStarLevel:4 as const,sellGold:getUnitSellPrice({definitionId:u.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{})})) },
     items: items.map(itemView),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId
@@ -107,6 +112,7 @@ export function toPrivateSeatView(state: MatchState) {
         && parent.location.unitId === item.holderId)).map(item => pick(item,
       ['temporaryId', 'parentItemInstanceId', 'roundId', 'holderId', 'definitionId', 'slot', 'expiresAfterRoundId'])),
     augments: state.augments.map(augment => pick(augment, ['definitionId', 'choiceId', 'acquiredRound'])),
+    anomalySelection: state.anomalySelection ? pick(state.anomalySelection, ['definitionId', 'championDefinitionId', 'choiceId', 'boundRound']) : null,
     anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId)
       ? pick(state.anomalyBinding, ['definitionId', 'unitId', 'choiceId', 'boundRound']) : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),
@@ -121,7 +127,7 @@ export function toPrivateSeatView(state: MatchState) {
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
       ['round', 'roundId', 'roundKind', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',
-        'playerDamage', 'hpLost', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
+        'playerDamage', 'hpLost', 'damageDealt', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
         'levelBefore', 'levelAfter', 'xpBefore', 'xpAfter']),
       incomeBreakdown: pick(result.incomeBreakdown, ['base', 'win', 'interest', 'streak']) })),
     m8: { round: pick(state.m8.round, ['roundId', 'ordinal', 'stage', 'subround', 'kind', 'encounterId', 'displayName']),

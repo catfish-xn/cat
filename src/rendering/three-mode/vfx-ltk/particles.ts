@@ -10,7 +10,7 @@ import { createTrails } from './rendering/components/Trails';
 import { createBeams } from './rendering/components/Beams';
 import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
-import { meshBuffers } from './rendering/utils/buffers';
+import { borrowMeshBuffers } from './rendering/utils/drawBufferPool';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
@@ -19,10 +19,20 @@ import { meshPose } from './rendering/utils/meshPose';
 import { drawLayersOf } from './rendering/utils/frame';
 import { drawPhases } from './rendering/utils/drawKind';
 import { fades } from './rendering/utils/softParticle';
+import { withDrawFade } from './engine/simulation/particleRead';
 
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
 export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
+/**
+ * A fading cue's alpha at `elapsed` seconds: full until `stopAfter`, then easing to nothing at `duration`, so particles
+ * that outlive the cue leave with it instead of being cut off at full strength. 1 without a soft stop.
+ */
+export function fadeAt(elapsed: number, duration: number, stopAfter: number | undefined): number {
+  if (stopAfter === undefined || !(duration > stopAfter) || elapsed <= stopAfter) return 1;
+  const through = Math.min(1, (elapsed - stopAfter) / (duration - stopAfter));
+  return 1 - through * through * (3 - 2 * through);
+}
 /** Match the upstream mesh decoder's explicit RGBA vertex colour lane. GLB colour is optional. */
 export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   const geometry = source.clone();
@@ -39,15 +49,35 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   return geometry;
 }
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
-export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
-  const point = new Vector3(), matrix = new Matrix4();
+export function pointAnchor(point: readonly [number, number, number]): Anchor {
+  return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
+    basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
+}
+/** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: +Z faces
+ * forward on Zyra but backward on Irelia, Kog'Maw and Akali), while bins author "in front" as the unit's facing. */
+const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center)_loc$/i;
+/**
+ * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
+ * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
+ */
+export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string, aim?: () => Object3D | null): Anchor {
+  const point = new Vector3(), toward = new Vector3(), matrix = new Matrix4();
   let attachment: Object3D | undefined;
   if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
   const node = () => attachment ?? root;
   return {
     originAt() { node().getWorldPosition(point); return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
-      const held = node(); held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
+      // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
+      const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
+      held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
+      const aimed = held === root ? aim?.() : null;
+      if (aimed) {
+        root.getWorldPosition(point); aimed.getWorldPosition(toward);
+        const dx = toward.x - point.x, dz = toward.z - point.z;
+        // Same convention as the root's own heading: rotation.y = atan2(dx, dz) looks along +z.
+        if (dx * dx + dz * dz > 1e-6) matrix.makeRotationY(Math.atan2(dx, dz));
+      }
       const e = matrix.elements;
       for (let column = 0; column < 3; column++) {
         const length = Math.hypot(e[column * 4], e[column * 4 + 1], e[column * 4 + 2]) || 1;
@@ -67,18 +97,30 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
+  fadeOut?: boolean;
+  /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
+  scale?: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
-  const driver = createDriver(options.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
-  const from = options.anchor.originAt(0), to = options.target?.originAt(0) ?? from;
-  const distance = Math.hypot(...from.map((value, index) => value - to[index]));
-  let rig: RigModel = { life: 'once', height: 0, joints: options.joints, stopAt: options.stopAfter,
-    motion: options.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-      flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / options.projectileSeconds } } }
-      : { kind: 'bone', anchor: options.anchor, target: options.target },
+  const spec = { ...options, scale: options.scale ?? 1 };
+  const rigFor = (): RigModel => {
+    const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
+    const distance = Math.hypot(...from.map((value, index) => value - to[index]));
+    // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
+    return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
+      motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
+        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
-  driver.swap(prepared.model); driver.steer(rig);
+  // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
+  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
+  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  driver.setScale(spec.scale);
+  let rig = rigFor();
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };
@@ -95,7 +137,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       const props = { emitter, sources, samplers, rank: definition.rank, hidden: false, room: ROOT_PARTICLES };
       let draw: ParticleDraw | undefined;
       if (drawsTheAttachment(emitter)) {
-        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, options.attachment);
+        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
           draws.push(held); object.add(held.object);
@@ -105,7 +147,13 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const geometry = prepared.meshes.get(definition.key);
         if (geometry) {
           const pose = prepared.poses?.get(definition.key);
-          draw = createMeshes({ ...props, buffers: { ...meshBuffers(staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) } });
+          // definition.key is only the emitter's place inside its own system, so other systems share it.
+          // Pooled buffers carry their mesh, so they are keyed by the loaded geometry itself (Ezreal W blobs, 11-06).
+          draw = createMeshes({
+            ...props,
+            meshKey: geometry.uuid,
+            buffers: { ...borrowMeshBuffers(geometry.uuid, staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) },
+          });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
       else if (drawsAsTrail(emitter)) draw = createTrails(props);
@@ -118,21 +166,35 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
-  let elapsed = 0, closed = false;
+  let elapsed = 0, closed = false, peak = 0;
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
-    get finished() { return closed || elapsed >= options.duration; },
+    /** Most root particles live at once in this play, which the runtime reserves for the system's next play. */
+    get peak() { return peak; },
+    /** It runs child systems, whose room (CHILD_PARTICLES) the root count does not show. */
+    children: prepared.drawn.some(definition => !!definition.path),
+    /** Play the same prepared system again. The caller only does this for the same attachment. */
+    reuse(next: typeof options) {
+      if (closed) return;
+      spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
+      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut;
+      spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
+      elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+    },
+    get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
       driver.advance(Math.min(seconds, 0.1));
+      peak = Math.max(peak, driver.pool.count);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
-      for (const draw of draws) draw.update(state);
+      const fade = spec.fadeOut ? fadeAt(elapsed, spec.duration, spec.stopAfter) : 1;
+      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
   };

@@ -12,7 +12,9 @@ import { drainBatch5H8Deaths } from '../src/simulation/augment-pool-batch5-h8-de
 import { canonicalContent } from '../src/simulation/content';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
 const clock=new ManualClock();
-const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-test-room',seed:9,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+// v26 D5 (7953c99a) pool and route drift: seed 9 (old value) no longer offers Mirrored Monetization at 4-2 within the public
+// slot rerolls; seed 1 is the first room seed from 0 that does (s6, unrerolled).
+const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-test-room',seed:1,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 beforeAll(()=>{room.start();});
 for(let round=2;round<=19;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');});
 afterAll(()=>room.dispose());

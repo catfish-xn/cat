@@ -6,9 +6,12 @@ import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEqui
 import type {MatchState} from '../src/simulation/match-types';
 import {shop as independentShop} from './fixtures/m5/oracle.g2.cjs';
 import {historyFreeAugments} from './fixtures/history-free-augments';
-// Keep the paid seed-24 route; real rerolls avoid history-dependent augments
+// Keep the paid public route; real rerolls avoid history-dependent augments
 // so forged growth reaches the existing current-resource-fold rejection.
-const equipmentOptions={seed:24,augmentPriorities:historyFreeAugments,rerollForAugment:true};
+// v26 D5 pool (7953c99a): seed 235 (was 24). Seed 24's 2-1 offer holds no history-free card after its
+// rerolls and the fixture takes scoreboard-scrapper (augment history). Seeds 0-399 were scanned with this
+// unchanged route; the candidates reaching the 4-7 control were retried with the frontline below, and 235 passes every case.
+const equipmentOptions={seed:235,augmentPriorities:historyFreeAugments,rerollForAugment:true};
 function resolveGrowthChoices(input:MatchState):MatchState {
  let state=input;
  while(state.pendingChoice?.kind==='augment'){
@@ -32,7 +35,7 @@ function once<T>(build:()=>T):()=>T{let value:T|undefined;return ()=>value??=bui
 // a scan of seeds 0-159 with this unchanged route found seed 24 reaching 4-7 with the most HP left (46).
 beforeAll(() => {
  const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],equipmentOptions);
- expect(shared.seed).toBe(24);
+ expect(shared.seed).toBe(235);
 },30_000);
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
@@ -59,7 +62,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
  // The long public route is split into cached stages (one case each) so every case stays inside the default
  // timeout; each stage's assertions run when it is first built.
  const fundingSetup=once(()=>{
-  // Nine paid Tristana cards from the public seed24 acquisition route (seed9 before the xp/batch-3 merge, seed22 before v22)
+  // Nine paid Tristana cards from the public seed235 acquisition route (seed24 before v26, seed9 before the xp/batch-3 merge, seed22 before v22)
   // create the same three-star kill/growth control without relabelling the opening Irelia.
   let state=publicEquipmentPreparation(['sword','rod','sword','sword'],equipmentOptions);
   // Keep the naturally acquired army alive while earning purchase income. The
@@ -153,6 +156,17 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
      :accepted(api.selectChoice(state,c.choiceId,c.generation,c.offers[0]));
    }else if(state.phase==='preparation')state=finishPublicEquipmentBattle(state);
    else state=accepted(api.nextRound(state,state.round));
+  }
+  // v26 14.24 neutrals (568eeea4): the five restored 4-7 razorbeaks kill the lone paid Tristana before her
+  // first lethal bounce on every route scanned. Buy ordinary shop units with the remaining gold and field
+  // them in the front row; only Tristana grows, so the growth assertions are unchanged.
+  for(let slot=0;slot<state.shop.slots.length;slot++){
+   if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
+   const offer=state.shop.slots[slot];if(offer.status!=='available'||offer.definitionId==='tristana')continue;
+   const bought=api.buyUnit(state,slot,state.shop.generation);if(!bought.ok)continue;state=bought.state;
+   const unit=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId===offer.definitionId).at(-1);if(!unit)continue;
+   const col=[3,2,4,1,5,0,6].find(col=>!state.preparation.units.some(x=>x.location.kind==='board'&&x.location.cell.col===col&&x.location.cell.row===4))!;
+   state=accepted(api.deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:4}}));
   }
   return {initial:state,unitId};
  });

@@ -63,6 +63,7 @@ export const combinationResult = (preview: EquipPreview): string | null =>
   preview.allowed && preview.combination ? preview.combination.resultDefinitionId : null;
 /** Preview wording for one allowed slot: "将合成 ⟨成装名⟩" when the domain says the drop combines. */
 export function allowedPreviewText(preview: Extract<EquipPreview, { allowed: true }>, slot: number, name: (definitionId: string) => string): string {
+  if (preview.combination?.resultReturned) return `将合成 ${name(preview.combination.resultDefinitionId)} · 弹回装备栏`;
   if (preview.combination) return `将合成 ${name(preview.combination.resultDefinitionId)}（槽 ${slot + 1}）`;
   return preview.occupiedSlots.length > 1 ? `可装备 · 将占用槽 ${slotList(preview.occupiedSlots)}` : `可装备到槽 ${slot + 1}`;
 }

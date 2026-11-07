@@ -83,6 +83,7 @@ it('the transformed army fights and advances without repeating its acquisition e
 });
 
 describe('carousel ancestry after Recombobulator',()=>{
+ // Keep seed 9; buy the matching board copy explicitly after the fixed-composition pick.
  const localClock=new ManualClock(),localRoom=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,seed:9,roomId:'test-room',clock:localClock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
  const state=()=>localRoom.state.seats[0].match;
  let receipt:CarouselReceipt,mergedId:string,transformed:Extract<ResourceProvenanceEntry,{kind:'unit-transformed'}>;
@@ -93,17 +94,30 @@ describe('carousel ancestry after Recombobulator',()=>{
   const opened=localRoom.state.carousel!;
   localClock.advance(Math.max(0,opened.startedAt+opened.state.releaseAtMs.s0-localClock.now()));
   const carousel=localRoom.state.carousel!.state;
-  const slot=carousel.slots.find(x=>x.pickedBy===null&&COST[x.definitionId]<5&&state().preparation.units.filter(u=>u.definitionId===x.definitionId&&u.starLevel===1).length<2);
+  const slot=carousel.slots.find(x=>x.pickedBy===null&&COST[x.definitionId]===1&&state().preparation.units.filter(u=>u.definitionId===x.definitionId&&u.starLevel===1).length<2);
   expect(slot).toBeDefined();
   expect(localRoom.handle('s0',{type:'carousel-pick',carouselId:carousel.id,revision:carousel.revision,slot:slot!.slot})).toMatchObject({ok:true});
   receipt=state().carousel!.receipts.find(r=>r.carouselId===carousel.id)!;
  });
  beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='2-5'&&s.phase==='preparation'));
  beforeAll(()=>{
-  // The 2-4 pick joins an existing board copy; buying the third copy consumes the pick's ID.
+  // The v25 seed-9 pick matched the opener. Buy and deploy a matching copy through real
+  // commands now, then buy the third: the carousel ID must still be consumed by the merge.
+  const findCopy=()=>{
+   let slot=state().shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===receipt.definitionId);
+   while(slot<0&&state().gold>=2+COST[receipt.definitionId]){
+    expect(localRoom.handle('s0',{type:'reroll'})).toMatchObject({ok:true});
+    slot=state().shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===receipt.definitionId);
+   }
+   expect(slot).toBeGreaterThanOrEqual(0);
+   return slot;
+  };
+  const firstSlot=findCopy(),boughtId=`unit-${state().nextUnitSerial}`;
+  expect(localRoom.handle('s0',{type:'buy',slot:firstSlot,generation:state().shop.generation})).toMatchObject({ok:true});
+  expect(localRoom.handle('s0',{type:'deploy',unitId:boughtId,target:{kind:'board',cell:{col:6,row:6}}})).toMatchObject({ok:true});
+  const slot=findCopy();
   expect(state().preparation.units.some(u=>u.id===receipt.unitId)).toBe(true);
   expect(state().preparation.units.some(u=>u.id!==receipt.unitId&&u.definitionId===receipt.definitionId&&u.location.kind==='board')).toBe(true);
-  const slot=state().shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===receipt.definitionId);
   expect(slot).toBeGreaterThanOrEqual(0);
   expect(localRoom.handle('s0',{type:'buy',slot,generation:state().shop.generation})).toMatchObject({ok:true});
   const merge=state().resourceProvenance.entries.find(e=>e.kind==='unit-upgraded'&&e.event.consumedIds.includes(receipt.unitId!));

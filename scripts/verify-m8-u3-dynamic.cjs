@@ -59,6 +59,11 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
         const api = await import('/src/simulation/match.ts');
         const selectors = await import('/src/simulation/item-selectors.ts');
         const feedback = await import('/src/presentation/equipment-feedback.ts');
+        // The panel's first render lazily imports the augment text and re-renders the whole panel when it lands
+        // (strategy-panel onAugmentTextChanged). On a slow runner that late render fell inside the first check's drag:
+        // it replaced the item button mid-drag or reset .panel-status after the drop. Wait for that load (and its
+        // re-render) here, before the fixture state is installed, so no check races it.
+        await (await import('/src/presentation/augment-text-loader.ts')).loadAugmentText();
         const accepted = result => { if (!result.ok) throw Error(result.reason); return result.state; };
         let state = api.createMatch(42);
         // B6 setup only: real empty-board losses earn v22 2+3+4G plus 0+1+1G streak and reach the

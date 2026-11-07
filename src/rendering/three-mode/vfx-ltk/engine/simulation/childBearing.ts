@@ -18,6 +18,7 @@ import {
   standingFrameInto,
 } from "./particleRead";
 import { FRAME_SLOTS } from "./pool";
+import { cueScale, scaleAxes } from "./systemScale";
 
 /** Where a particle stands for the child it carries: a place, and a turn with its scale taken out. */
 export interface Bearing {
@@ -88,6 +89,7 @@ export function bearingInto(
   const offset = sampleCurve(inheritance.offset, 0);
   for (let axis = 0; axis < 3; axis += 1) OFFSET[axis] = offset[axis] ?? 0;
   if ((mode & INHERIT.ignoreLocalOnOffset) === 0) turnInto(out.yaw, OFFSET, 0);
+  scaleAxes(OFFSET, 0, cueScale(parent.scale));
   for (let axis = 0; axis < 3; axis += 1) out.place[axis] += OFFSET[axis];
 
   if ((mode & INHERIT.ignoreLocalOnChild) === 0) return;

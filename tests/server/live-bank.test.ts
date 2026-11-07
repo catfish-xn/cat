@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
-import { toCombatReplayFor } from '../../src/server/room/projection';
+import { toCombatReplayFor, toPlayerView } from '../../src/server/room/projection';
 import type { Room } from '../../src/server/room/room';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleSeatOutcome, RoomState, SeatState, TwoSidedBattleResult } from '../../src/server/room/types';
@@ -42,6 +42,32 @@ function changeGold(room: Room, seatId: string): void {
 }
 
 describe('D11 live bank: PvE', () => {
+  it('keeps public HP and streak committed when a battle command catches the live PvE run up to its end', () => {
+    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    room.start();
+    runUntil(room, clock, state => state.round === 3 && state.phase === 'preparation');
+    bindAvarice(room, 's0');
+    const before = toPlayerView(room.state, 's1', clock.now()).seats[0]!;
+    runUntil(room, clock, state => state.round === 3 && state.phase === 'battle');
+    const frozen = pveOutcome(room.state, 's0');
+    expect(seat(room.state, 's0').match.phase).toBe('combat');
+    // At the final playback tick, still before the room deadline, pveCatchUp's lead finishes the rules' live run.
+    clock.advance(frozen.combat!.terminal.tick * seat(room.state, 's0').match.tickMs);
+    expect(room.state.phase).toBe('battle');
+    const live = seat(room.state, 's0').match;
+    expect(room.handle('s0', { type: 'shopLock', locked: !live.shop.locked, generation: live.shop.generation })).toMatchObject({ ok: true });
+    const finished = seat(room.state, 's0').match;
+    expect(room.state.phase).toBe('battle');
+    expect(finished.phase).toBe('settlement');
+    expect(finished.roundResults.at(-1)?.round).toBe(3);
+    expect(finished.streak).not.toEqual(before.streak);
+    for (const viewer of ['s0', 's1']) expect(toPlayerView(room.state, viewer, clock.now()).seats[0]).toMatchObject({ hp: before.hp, streak: before.streak });
+    runUntil(room, clock, state => state.round === 3 && state.phase === 'settlement');
+    expect(room.state.fault).toBeNull();
+    for (const viewer of ['s0', 's1']) expect(toPlayerView(room.state, viewer, clock.now()).seats[0]).toMatchObject({ hp: finished.playerHp, streak: finished.streak });
+    room.dispose();
+  }, 60_000);
+
   it('a gold change during a PvE battle settles the live combat it fed, without the frozen-HP fault', () => {
     const { room, clock } = makeRoom(new PlaceholderBattleResolver());
     room.start();

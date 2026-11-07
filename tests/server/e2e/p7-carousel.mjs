@@ -207,21 +207,21 @@ async function main() {
     const free = r.slots.filter(slot => !slot.taken);
     check(r.canPick && free.length > 0 && free.every(slot => slot.takable && !slot.disabled), `my batch: every free unit lights up (${free.length} takable, "${r.status}")`);
     await a.screenshot({ path: `${OUT}/2-4-my-turn.png` });
-    // Under load my view may lag behind a pick another seat made: the server answers slot-taken and I click another one.
-    let target = free[0], before = wire.mark(), receipt = null;
+    // Cards ask the room to walk; no client pick receipt exists. A taken target can be replaced by another card.
+    let target = free[0], before = wire.mark(), walked = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       before = wire.mark();
       await a.click(`[data-debug="online:carousel-slot:${target.slot}"]`);
-      receipt = await wire.receiptSince(before, 'carousel-pick', 5_000);
-      if (receipt !== 'refused:slot-taken') break;
-      console.log(`note slot ${target.slot} was taken before my click reached the server; picking another`);
+      walked = await pollRead(a, s => carouselOf(s)?.pickedSlot === target.slot, 5_000);
+      if (walked) break;
       await sleep(300); r = await ring(a);
       target = r.slots.find(slot => slot.takable) ?? target;
     }
-    check(receipt === 'applied', `clicking slot ${target.slot} sends carousel-pick and the server applies it (${receipt})`);
-    const sent = wire.commandsSince(before, 'carousel-pick')[0];
-    check(sent && sent.carouselId === cv.id && sent.slot === target.slot && !('seatId' in sent), 'the command carries carouselId, revision and slot only');
-    s = await waitRead(a, s => carouselOf(s)?.pickedSlot === target.slot, 'my pick in the view');
+    const sent = wire.commandsSince(before, 'walk')[0];
+    check(Boolean(walked) && sent?.scene === 'carousel', `clicking slot ${target.slot} sends a walk and the server grants on contact`);
+    check(sent && sent.slot === target.slot && !('seatId' in sent) && wire.commandsSince(before, 'carousel-pick').length === 0,
+      'the card sends scene and slot under the authenticated walk envelope, never a direct pick');
+    s = walked ?? await read(a);
     r = await ring(a);
     check(r.slots.find(slot => slot.slot === target.slot)?.mine && !r.canPick, 'my slot shows as mine, nothing else is takable');
     // P7-1: bench and board full → the unit waits in the holding slot; its item is mine at once (my state push may follow the view).

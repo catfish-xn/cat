@@ -10,34 +10,40 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:12,rulesVersion:'s13-g2-3-v25-online-rules',contentVersion:'s13-14.24b-g2-3-v25-online-rules',commandProtocolVersion:7,
+    expect(first).toMatchObject({schemaVersion:12,rulesVersion:'s13-g2-3-v26-neutrals-1424',contentVersion:'s13-14.24b-g2-3-v26-neutrals-1424',commandProtocolVersion:7,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
     expect(first.preparation.units.every(unit=>unit.starLevel===1)).toBe(true);
   });
-  it('concedes an empty deployment at tick zero once, with stage-one base income and fixed PvE failure damage', () => {
+  it('concedes an empty deployment at tick zero once, with stage-one base income and survivor-based PvE failure damage', () => {
     const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-    // B8 forfeits unearned loot; v20-black-market still grants the fixed remover to a surviving loser.
+    // pve-loot-carryover (8f794062, docs/CURSOR_pve-loot-carryover.md, M8B_POLICY D4, user-approved 2026-10-29):
+    // a surviving 1-2 loser carries every unearned drop to the next PvE (1-3) instead of forfeiting it;
+    // v20-black-market still grants the fixed remover to a surviving loser.
     const ids=state.m8.loot.frozen.rounds[0].encounterPlan.drops.map(d=>d.dropId);
+    expect(ids.length).toBeGreaterThan(0);
     expect(result.events).toEqual([
       {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},
-      ...ids.map((dropId,index)=>({type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq+index})),
+      ...ids.map((dropId,index)=>({type:'lootCarried',dropId,deliverRoundId:'1-3',domain:'match',eventSeq:state.nextMatchEventSeq+index})),
       {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',
         round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},
         domain:'match',eventSeq:state.nextMatchEventSeq+ids.length},
       {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+ids.length+1},
     ]);
-    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
+    expect(state.m8.loot.carry).toBeUndefined();
+    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'carried',receiptId:null})),
+      carry:ids.map(dropId=>({dropId,deliverRoundId:'1-3'}))});
+    expect(result.events.some(e=>e.type==='lootForfeited'||e.type==='lootGranted')).toBe(false);
     expect(result.state.preparation).toEqual(state.preparation);
     expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
-    expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:0,level:2,xp:0});
+    expect(result.state).toMatchObject({phase:'settlement',playerHp:98,gold:0,level:2,xp:0});
     // Approved deferred income: no spendable base gold at settlement; pay exactly once on preparation entry.
     expect(result.state.roundResults[0]).toMatchObject({goldAfter:2,incomeBreakdown:{base:2,win:0,interest:0,streak:0}});
     const continued=accepted(nextRound(result.state,result.state.round));
     expect(continued.gold).toBe(2);expect(stepMatch(continued).state.gold).toBe(2);
-    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,playerDamage:3});
+    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,baseDamage:0,survivingEnemyCount:2,playerDamage:2});
     expect(stepMatch(result.state)).toEqual({state:result.state,events:[]});expect(stepMatch(result.state).state).toBe(result.state);expect(state.playerHp).toBe(100);expect(state).toEqual(before);
   });
   it('rejects stale shop and missing enemies atomically', () => {

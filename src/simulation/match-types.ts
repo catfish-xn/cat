@@ -1,7 +1,7 @@
 import type { CombatResult, CombatStartFailure, CombatState } from './combat';
 import type { LedgerCombatEvent } from './combat-types';
 import type { DeploymentFailure, GameState } from './game';
-import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
+import type { ItemInstance, OwnedAugment, AnomalyBinding, AnomalySelection, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
 export type MatchEvent = LedgerCombatEvent | (({readonly type:'openingRewardResolved';readonly receiptId:string;readonly encounterId:string;readonly outcome:string;readonly nodeId:string} | {readonly type:'openingEffectApplied';readonly receipt:import('./opening-encounter').OpeningEffectReceipt} | {readonly type:'playerSaved';readonly battleId:string;readonly playerHp:1;readonly source:'mel'} | {readonly type:'d14Promoted'|'d14Returned';readonly unitId:string;readonly choiceId:string} | import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
@@ -19,6 +19,8 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  /** Online PvP only: opponent's actual HP loss, after overkill/Mel; mirrors are zero. */
+  readonly damageDealt?: number;
   /** Private PvE replay inputs, never included in seat/public projections. */
   readonly bankSamples?: readonly import('./combat-types').CombatBankSample[];
   readonly mechanicReceiptPrefixLength?:number;
@@ -76,10 +78,12 @@ export interface MatchBase {
     readonly magicRoll?: readonly [number,number,number] };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly d14?: import('./d14-runtime').D14Progress;
+  readonly anomalySelection: AnomalySelection | null;
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;
   readonly scheduleReceipts: readonly ScheduleReceipt[]; readonly choiceRngState: number; readonly rewardRngState: number; readonly nextMatchEventSeq: number;
   readonly seed: number; readonly rngState: number; readonly round: number; readonly gold: number;
   readonly level: number; readonly xp: number; readonly playerHp: number;
+  readonly anomalyOfferHistory?: import('./anomaly-history').AnomalyOfferHistory;
   readonly augmentHistory?: import('./augment-history-types').AugmentHistory;
   readonly shopHistory?: import('./shop-history-types').ShopHistory;
   readonly shop: Shop; readonly nextUnitSerial: number; readonly preparation: GameState; readonly roundResults: readonly RoundResult[];

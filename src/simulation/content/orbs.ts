@@ -37,4 +37,4 @@ export function orbBoxId(tier:OrbTier,stage:number):'copper'|'copperPlus'|'silve
   if(tier==='prismatic')return 'ultraPlus';
   return tier==='gray'?(stage<3?'copper':'copperPlus'):tier==='blue'?(stage<4?'silver':'silverPlus'):(stage<4?'gold':'goldPlus');
 }
-export const EPIC_SOURCES = freezeContent({'5-7':'d01','6-7':'h01'} as const);
+export const EPIC_SOURCES = freezeContent({'5-7':'d01','6-7':'d01'} as const);

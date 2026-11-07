@@ -1,5 +1,8 @@
 # B7 current integration handoff — accepted integration merged; cleanup follow-up
 
+> 2026-10-29 用户决定已取代下文旧项目削弱表／25实例／6-7先锋／龙85AD验收向量；现行为24实例、6-7远古龙与900AD。石甲虫缺血200的向量保持134+44，起始HP从200换为1000、最终从378/400换为1178/1200；通用机制不变。完整差异见 [14.24恢复记录](NEUTRALS_14_24_RESTORATION.md)。历史验收数据保留，不作为本轮通过声明。
+
+
 **Current scope supersedes the historical narrowed-subset record below.** All eight fixed encounters, 12 neutral definitions and 25 deployments now run through ordinary Match Start/step. Herald uses the accepted upstream damage-before-control fix; its old lethal characterization is replaced by retained lethal/no-stun and added surviving/damage-before-stun assertions. Nothing in the historical “Herald incomplete” section is a current acceptance claim.
 
 ## Accepted checkpoint and cleanup scope

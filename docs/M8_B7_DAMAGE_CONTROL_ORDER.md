@@ -1,5 +1,8 @@
 # Current status: fixed upstream, B7 regression migrated
 
+> 2026-10-29：用户已将6-7改回远古龙。下文“真实compileNeutralEncounter('6-7')先锋”是历史场景，不再成立；通用伤害后控制顺序与断言保留，纯战斗回归改用 `tests/neutral-helpers.ts` 的显式遗留先锋向量，Match旧先锋存档路线由Claude另行替换／重录。详见 [恢复记录](NEUTRALS_14_24_RESTORATION.md)。
+
+
 2026-10-09: accepted B3 fix from PR22 is included by baseline `947ac7151e180a70446aeece09d8c9e500f2a4b9`, merged into B7 at remote checkpoint `da801827d8fd267fef23c1648f091af4baf4c55c`. B7 does not reimplement the generic damage/control pipeline. Its old characterization now retains the same HP100/maxHP1000/raw150 vector but requires zero applied stun and zero fake cleanup; the added HP1000→850 vector requires packetDamage before the [2,12) stun. See `tests/m8-b7-known-limitations.test.ts` and `docs/evidence/m8-b7/baseline-merge/`.
 
 The original evidence below records the historical defect, not the current implementation. Formal B7 integration/audit remains in progress.

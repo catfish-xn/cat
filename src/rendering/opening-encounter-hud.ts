@@ -5,7 +5,8 @@
  *    per match, never again on a reconnect or a later view.
  *  - Top banner during the opening round: encounter name, champion, description and the status line.
  *  - "本局奇遇" chip, always there while a match shows: reopens the same card at any time, with my own progress lines
- *    (opening forges left, Mel's threshold).
+ *    (opening forges left, Mel's threshold). Online with a `chipHost` (the stage tracker's left slot, 14.24 tftstage
+ *    TFT_Stage_Left_Icon) it is the encounter icon there: hover/focus shows the encounter, a click opens the card.
  *  - Toast for the 3-5 wind-up monkey result the moment the shared fact is revealed.
  * Every text comes from `presentation/opening-encounter-text`; nothing here reads a seed or decides an outcome.
  */
@@ -57,7 +58,7 @@ export class OpeningEncounterHud {
   /** The monkey fact already accounted for in this match (a view that already carries it on first sight shows no toast). */
   private factSeen: string | null = null;
   private input: OpeningHudInput | null = null;
-  constructor(frame: HTMLElement, private readonly online = false) {
+  constructor(frame: HTMLElement, private readonly online = false, private readonly chipHost: HTMLElement | null = null) {
     this.banner.dataset.debug = 'opening:banner'; this.banner.hidden = true; this.banner.setAttribute('role', 'status');
     this.chip.type = 'button'; this.chip.dataset.debug = 'opening:chip'; this.chip.hidden = true;
     this.chip.addEventListener('click', () => { this.tooltip.hidden = true; this.openCard(false); });
@@ -72,7 +73,8 @@ export class OpeningEncounterHud {
     }
     this.card.dataset.debug = 'opening:card'; this.card.hidden = true; this.card.setAttribute('role', 'dialog'); this.card.setAttribute('aria-label', '本局奇遇');
     this.toast.dataset.debug = 'opening:toast'; this.toast.hidden = true; this.toast.setAttribute('role', 'status');
-    frame.append(this.banner, this.chip, this.toast);
+    if (chipHost) { this.chip.classList.add('stage-encounter'); chipHost.append(this.chip); frame.append(this.banner, this.toast); }
+    else frame.append(this.banner, this.chip, this.toast);
     document.body.append(this.card);
   }
 
@@ -156,6 +158,7 @@ export class OpeningEncounterHud {
     const description = `${openingBannerLine(encounter)}\n${text.description}\n${text.status}${lines.length ? `\n${lines.join('\n')}` : ''}\n点击查看说明`;
     this.tooltip.textContent = description;
     this.chip.title = this.online ? '' : description;
+    if (this.chipHost) { this.chip.setAttribute('aria-label', `本局奇遇：${text.title}`); this.chip.dataset.state = input.round <= 1 ? 'current' : 'victory'; }
     this.chip.hidden = false;
   }
   private showTooltip(): void {

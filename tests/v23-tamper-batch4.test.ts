@@ -20,10 +20,14 @@ const levels = ['caretakers-ally', 'lategame-specialist', 'caretakers-favor', 'b
 const xp = ['clear-mind', 'cluttered-mind', 'slammin', 'slammin-plus'];
 const rerolls = ['patience-is-a-virtue', 'invested-plus', 'invested-plus-plus'];
 const combat = ['category-five', 'long-distance-pals', 'sated-spellweaver', 'overheal'];
+// v26 D5 pool (7953c99a): first seeds (0..100; lategame-specialist 0..400, none below 107) whose route
+// below offers the card with no history-proof pick before it: lategame-specialist 107 (was 24),
+// slammin-plus 43 (was 36), invested-plus 29 (was 16), invested-plus-plus 12 (was 29; its 4-1 checkpoint
+// needs no augment/crown history), long-distance-pals 14 (was 49), sated-spellweaver 37 (was 42).
 const late: Record<string, [number, string]> = {
- 'lategame-specialist': [24, '3-2'], 'slammin-plus': [36, '3-2'],
- 'invested-plus': [16, '3-2'], 'invested-plus-plus': [29, '4-2'],
- 'long-distance-pals': [49, '3-2'], 'sated-spellweaver': [42, '3-2'], 'overheal': [11, '3-2'],
+ 'lategame-specialist': [107, '3-2'], 'slammin-plus': [43, '3-2'],
+ 'invested-plus': [29, '3-2'], 'invested-plus-plus': [12, '4-2'],
+ 'long-distance-pals': [14, '3-2'], 'sated-spellweaver': [37, '3-2'], 'overheal': [11, '3-2'],
 };
 const entries = ['JSON', 'object', 'serialized'] as const;
 const read = (s: Json, path: Path): Json => path.reduce((v, k) => v[k], s);
@@ -55,8 +59,8 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
   const [seed, node] = late[id] ?? [firstNodeSeed(id), '2-1'];
   let s = createMatch(seed);
   if (id === 'invested-plus-plus') {
-   // Offline search bounded to 0..100 (task constraint): seed 29, public slot
-   // rerolls 0/1/2. Earlier picks are visionary-crest/academy-crown, so the
+   // Offline search bounded to 0..100 (task constraint): seed 12 (v26 D5 pool 7953c99a; was 29), public slot
+   // rerolls 0/1/2. Earlier picks are all-out/pyromaniac (no history at 4-1), so the
    // existing fieldedRoute 4-1 checkpoint starts a short history proof instead
    // of seed 20's no-scout-no-pivot replay from the opening. Keep each cached
    // leg in its own default-timeout hook; the offer assertion below is real RNG.

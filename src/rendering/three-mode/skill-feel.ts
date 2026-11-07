@@ -78,7 +78,7 @@ function glowTexture(): Texture | null {
   return texture;
 }
 
-interface Pulse { sprite: Sprite; age: number; from: Vector3; to: Vector3 | null; trail: number }
+interface Pulse { sprite: Sprite; age: number; from: Vector3; to: Vector3; trail: number }
 interface Charge { ring: Mesh<RingGeometry, MeshBasicMaterial>; glow: Sprite; age: number; follow: Object3D; height: number; radius: number }
 interface Impact { ring: Mesh<RingGeometry, MeshBasicMaterial>; flash: Sprite; age: number; at: Vector3; radius: number }
 
@@ -104,10 +104,11 @@ export interface SkillFeel {
 export function createSkillFeel(): SkillFeel {
   const object = new Group(); object.name = 'skill-feel';
   const texture = glowTexture();
-  const free: Sprite[] = [], pulses = new Set<Pulse>(), charges = new Set<Charge>(), idleCharges: Charge[] = [];
+  const pulses = new Set<Pulse>(), idlePulses: Pulse[] = [], charges = new Set<Charge>(), idleCharges: Charge[] = [];
   for (let i = 0; i < SPRITES; i++) {
     const sprite = new Sprite(new SpriteMaterial({ map: texture, color: ATTACK_COLOR, transparent: true, depthWrite: false, blending: AdditiveBlending }));
-    sprite.visible = false; object.add(sprite); free.push(sprite);
+    sprite.visible = false; object.add(sprite);
+    idlePulses.push({ sprite, age: 0, from: new Vector3(), to: new Vector3(), trail: 0 });
   }
   const ringGeometry = new RingGeometry(0.82, 1, 48);
   for (let i = 0; i < CHARGES; i++) {
@@ -127,24 +128,29 @@ export function createSkillFeel(): SkillFeel {
   }
   let shakeLeft = 0, shakeStrength = 1, sinceShake = Infinity, disposed = false;
   const at = new Vector3();
-  const release = (pulse: Pulse) => { pulse.sprite.visible = false; free.push(pulse.sprite); pulses.delete(pulse); };
+  const release = (pulse: Pulse) => { pulse.sprite.visible = false; pulses.delete(pulse); idlePulses.push(pulse); };
   return {
     object,
     charge(follow, color, radius, height) {
-      const charge = idleCharges.pop() ?? [...charges][0];
+      const charge = idleCharges.pop() ?? charges.values().next().value;
       if (!charge) return;
       charges.add(charge);
       Object.assign(charge, { age: 0, follow, radius, height });
       charge.ring.material.color.setHex(color); charge.glow.material.color.setHex(color);
     },
     attack(from, to, ranged, delay) {
-      // Ranged: the head and two fading ghosts behind it, then the spark; melee: the spark only.
-      const parts = ranged ? [...Array.from({ length: TRAIL + 1 }, (_, i) => i), -1] : [-1];
-      for (const trail of parts) {
-        const sprite = free.pop();
-        if (!sprite) return; // pool spent: a crowded fight draws fewer attacks, never more objects
-        if (trail < 0) pulses.add({ sprite, age: -delay - (ranged ? TRACER_SECONDS : 0), from: to.clone(), to: null, trail });
-        else pulses.add({ sprite, age: -delay - trail * TRAIL_GAP, from: from.clone(), to: to.clone(), trail });
+      // Ranged: the head and its fading ghosts, then the spark; melee: the spark only.
+      // The sprite pool is fixed: a crowded fight draws fewer attacks, never more objects.
+      const parts = ranged ? TRAIL + 2 : 1;
+      for (let part = 0; part < parts; part++) {
+        const trail = ranged && part <= TRAIL ? part : -1;
+        const pulse = idlePulses.pop();
+        if (!pulse) return;
+        pulse.trail = trail;
+        pulse.age = trail < 0 ? -delay - (ranged ? TRACER_SECONDS : 0) : -delay - trail * TRAIL_GAP;
+        if (trail < 0) pulse.from.copy(to);
+        else { pulse.from.copy(from); pulse.to.copy(to); }
+        pulses.add(pulse);
       }
     },
     impact(at, color, radius) {
@@ -160,7 +166,7 @@ export function createSkillFeel(): SkillFeel {
         pulse.age += seconds;
         const { sprite } = pulse;
         if (pulse.age < 0) { sprite.visible = false; continue; }
-        if (pulse.to) {
+        if (pulse.trail >= 0) {
           const t = pulse.age / TRACER_SECONDS;
           if (t >= 1) { release(pulse); continue; }
           sprite.position.lerpVectors(pulse.from, pulse.to, t);

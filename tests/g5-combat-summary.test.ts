@@ -77,7 +77,12 @@ describe('SR-G5-01 healing attribution and authoritative battle summary', () => 
     for (const event of replay.ticks.flatMap(f=>f.events)) if (event.type==='heal') {
       expect(event.shares.reduce((s,share)=>s+share.actual,0)).toBe(event.actual);
       expect(Object.keys(event).sort()).toEqual(['actual','eventSeq','shares','targetId','tick','type']);
-      for (const share of event.shares) expect(Object.keys(share).sort()).toEqual(['actual','sourceId']);
+      for (const share of event.shares) {
+        expect(Object.keys(share).sort()).toEqual(['actual','definitionId','delivery','sourceId','sourceKind']);
+        expect(['attack','ability','trait','item','augment','anomaly','enemyGrowth']).toContain(share.sourceKind);
+        expect(['basic-attack','ability-direct','ability-periodic','attack-extra','equipment-proc','item-burn']).toContain(share.delivery);
+        expect(typeof share.definitionId).toBe('string');
+      }
     }
   });
   it('mirror keeps both sides of the replay and all attribution symmetric with the real battle', () => {
@@ -102,10 +107,11 @@ describe('SR-G5-01 healing attribution and authoritative battle summary', () => 
     const event = {type:'heal' as const,domain:'combat' as const,combatId:'heal-test',tick:4,eventSeq:8,outcome};
     const projected = toCombatViewEvents([event]);
     expect(projected).toEqual([{type:'heal',tick:4,eventSeq:8,targetId:'target',actual:3,
-      shares:outcome.shares.map(s=>({sourceId:s.source.ownerId,actual:s.actual}))}]);
+      shares:outcome.shares.map(s=>({sourceId:s.source.ownerId,sourceKind:s.source.sourceKind,definitionId:s.source.definitionId,delivery:'ability-direct' as const,actual:s.actual}))}]);
     expect(outcome.shares).toHaveLength(2);
     expect(projected[0]).not.toHaveProperty('contributions');
-    expect(JSON.stringify(projected)).not.toMatch(/sourceKind|definitionId|effectIndex|requested|overheal/);
+    expect(JSON.stringify(projected)).not.toMatch(/effectIndex|instanceId|requested|overheal|parentItemInstanceId/);
+    expect(projected[0] && projected[0].type === 'heal' && projected[0].shares.every(share => share.sourceKind === 'ability' && share.definitionId === 'heal' && share.delivery === 'ability-direct')).toBe(true);
   });
   it.each(['source', 'amount', 'missing', 'duplicate'] as const)('%s heal tampering still fails replay-divergence', kind => {
     const battle = fixtures.get('pvp-42')!;

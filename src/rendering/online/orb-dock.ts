@@ -130,10 +130,20 @@ export function orbOverflowHint(orb: Pick<UnclaimedOrbView, 'source' | 'entries'
   return orb.source === 'family' ? '备战席放不下的英雄留在法球里，腾出位置后可再领取' : '备战席放不下的英雄按原售价自动出售';
 }
 
+/**
+ * The claim line of an orb. Loot and mechanic orbs open at the touch, in battle too (TFT); only family orbs and the
+ * opening-reward orbs (ids `opening-reward:…`, opening-batch-rewards.ts) still queue a battle claim for the settlement.
+ */
+function orbHint(orb: UnclaimedOrbView, context: OrbDockContext): string {
+  if (orb.queued) return '已排队 · 战斗结束后结算';
+  if (context.locked) return '当前不能领取';
+  const queues = orb.source === 'family' || orb.orbId.startsWith('opening-reward:');
+  return context.inBattle && queues ? '点击领取 · 战斗中领取会在战后结算' : '点击领取';
+}
 /** Shared by the dock and the 3D look-only card; private entries come only from my view. */
 export function orbCardBody(orb: UnclaimedOrbView, context: OrbDockContext, dock = true): HTMLElement {
   const tier = ORB_TIER_TEXT[orb.tier] ?? orb.tier, source = orbSourceText(orb);
-  const hint = orb.queued ? '已排队 · 战斗结束后结算' : context.locked ? '当前不能领取' : context.inBattle ? '点击领取 · 战斗中领取会在战后结算' : '点击领取';
+  const hint = orbHint(orb, context);
   const tip = element('span', '', dock ? 'orb-tip' : '');
   if (!dock) tip.style.cssText = 'display:grid;gap:4px';
   tip.setAttribute('role', 'tooltip');
@@ -195,7 +205,7 @@ export class OrbDock {
     if (this.opening.has(orb.orbId)) button.classList.add('orb-opening');
     const tier = ORB_TIER_TEXT[orb.tier] ?? orb.tier, source = orbSourceText(orb);
     button.disabled = orb.queued || context.locked;
-    const hint = orb.queued ? '已排队 · 战斗结束后结算' : context.locked ? '当前不能领取' : context.inBattle ? '点击领取 · 战斗中领取会在战后结算' : '点击领取';
+    const hint = orbHint(orb, context);
     button.setAttribute('aria-label', `${tier} · ${source} · ${orb.entries.map(orbPayloadName).join('、')} · ${hint}`);
     button.append(element('span', '', 'orb-token-gem'));
     if (orb.source === 'mechanic') button.append(element('span', '奖', 'orb-token-mark'));

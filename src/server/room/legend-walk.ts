@@ -2,7 +2,7 @@
  * The room's little-legend walks (src/server/legend-motion.ts): the last walk of each seat per scene, the carousel arrival
  * timers and the publication to every seat. A walk changes no rule state, so it is not a seat command: no receipt, no
  * seatRevision, no room revision. The only rule step it leads to is the carousel pick on arrival, which the room asks the
- * rules for exactly like a clicked pick.
+ * rules for through its internal atomic pick-and-grant transaction. Player commands cannot grant a pick directly.
  */
 import type { Clock, ClockHandle } from './clock';
 import { walkPoint, type CellPoint, type LegendScene, type LegendWalk } from '../legend-motion';

@@ -3,10 +3,10 @@ import { grantMechanicConsumable } from '../src/simulation/seat-mechanics/grants
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
 import { expect, it } from 'vitest';
-import { createMatch, selectChoice, buyUnit, rerollShop, buyXp, sellUnit, useConsumable } from '../src/simulation/match';
-import { accepted, reachRound, freeze } from './match-helpers';
-import { generateChoices } from '../src/simulation/choices';
-import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { createMatch, selectChoice, buyUnit, rerollShop, buyXp, sellUnit, useConsumable, rerollAugment } from '../src/simulation/match';
+import { fieldedRoute, offeredAt } from './augment-stage-helpers';
+import { accepted, freeze } from './match-helpers';
+import { fieldedTraitSnapshot } from '../src/simulation/augment-offers';
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
 import { formSwapperGiftPlan } from '../src/simulation/augment-pool-formswapper';
 import { validateFormSwapperSelection } from '../src/simulation/restore-checks/form-swapper-check';
@@ -14,14 +14,19 @@ import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 
-// v25 batch-5 pool: first public 2-1 route to why-not-both in 0..100 (seed 27).
+// v25 batch-5 pool: first public 2-1 route to why-not-both in 0..100 (seed 27). v26 D5 stage bans (7953c99a) forbid
+// TFT13_Augment_Formswapper at 2-1, and 3-2 is trait-tailored: the first fielded 3-2 route offering it is seed 262
+// (gold, Form Swapper fielded, after rerolling slot 0; no history augment). Shared with augment-pool-batch2.
 let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
  if(acquired)return acquired;
- const seed=27,id='why-not-both',initial=createMatch(seed);
- expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
- const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
- expect(c.offers).toContain(id);
+ const seed=262,id='why-not-both';
+ expect(offeredAt(id,'2-1')).toBe(false);
+ let before=fieldedRoute(seed,'3-2');
+ expect(fieldedTraitSnapshot(before)).toContain('form-swapper');
+ {const c=before.pendingChoice!;expect(c.offers).not.toContain(id);before=accepted(rerollAugment(before,c.choiceId,c.generation,0));}
+ const c=before.pendingChoice!;
+ expect(before.roundDefinitionId).toBe('3-2');expect(c.kind).toBe('augment');expect(c.offers).toContain(id);
  return acquired=freeze(accepted(selectChoice(before,c.choiceId,c.generation,id)));
 }
 const upgrade=(id='swain',toStar=3 as 2|3)=>({type:'unitUpgraded' as const,definitionId:id,survivorId:'a',consumedIds:['b','c'],fromStar:(toStar-1) as 1|2,toStar,location:{kind:'bench' as const,slot:0}});

@@ -65,7 +65,10 @@ beforeAll(() => {
     state = accepted(grantMechanicItem(state, { receiptId: `item-${slot}`, source: 'test', definitionId }));
     state = accepted(equipItem(state, state.items.at(-1)!.id, owner.id, slot));
   }
-  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 4 } }));
+  // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): from (4,4) Lux's first kill at tick 118 is
+  // now single (her double kill comes at 207 after a stack). From (1,7) her first kill is the same exact tick-118,
+  // root-action-18 Luden double kill.
+  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 1, row: 7 } }));
   initial = state = accepted(startMatchCombat(state));
   while (state.phase === 'combat') {
     const r = stepMatch(state);
@@ -110,7 +113,9 @@ describe('Renata public acquisition fixture', () => {
     // v25: seed 84 publicly offers inert Hedge Fund; avoid falling through to Tiniest Titan,
     // whose replay authority conflicts with the later boundary grants. Keep the tick-60 double kill.
     let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['hedge-fund']});
-    for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
+    // v26 pve-loot-carryover (8f794062): carried loot can leave an anvil whose sale opens a forge choice; resolve it publicly
+    // before the next sale, as frontRowRod does.
+    for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=resolveM5Choices(accepted(sellUnit(preparation,u.id)));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));
     granted = freezeContent(structuredClone(preparation));
@@ -119,7 +124,10 @@ describe('Renata public acquisition fixture', () => {
       preparation = accepted(grantMechanicItem(preparation, { receiptId: `renata-item-${slot}`, source: 'test', definitionId }));
       preparation = accepted(equipItem(preparation, preparation.items.at(-1)!.id, owner.id, slot));
     }
-    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 4 } }));
+    // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing; seed 84 now takes Living Forge since D5
+    // 7953c99a): from (4,4) Renata's first kill is a single tick-41 kill. (4,6) is the only cell whose tick-60 root-9 action
+    // kills two: her ability on enemy-r4-2 plus the Luden splash on enemy-r4-1.
+    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 6 } }));
     deployed = freezeContent(structuredClone(preparation));
   });
 
@@ -148,7 +156,7 @@ describe('Renata public acquisition fixture', () => {
         const packets = next.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
         expect(packets).toHaveLength(2);
         expect(packets.map(p => [p.rootActionSeq, p.delivery, p.targetId])).toEqual([
-          [9, 'ability-direct', 'enemy-r4-1'], [9, 'ability-direct', 'enemy-r4-2'],
+          [9, 'ability-direct', 'enemy-r4-2'], [9, 'equipment-proc', 'enemy-r4-1'],
         ]);
         const old = before.combat!.units.find(u => u.id === owner.id)!, current = state.combat!.units.find(u => u.id === owner.id)!;
         expect(current.triggerLedger!.runtimes.filter(r => r.source.definitionId === BRACER).map(r => [r.source.effectIndex, r.triggerCount])).toEqual([[4128, 2]]);
@@ -339,7 +347,9 @@ it.each(['unknown-target', 'duplicate-target', 'old-action-key'] as const)('reje
   else tuple.pop();
   changed[JSON.stringify(tuple)] = 1;
   Object.assign(owner, { triggerLedger: { ...ledger, actionCounts: changed } });
-  for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
+  // v26: seed 1's route now carries a Mirror forge result into this combat, so its input is replay-authenticated and the forged
+  // ledger is rejected by that exact check first (as chest-bracer's tamper case since 02413be4); was 'Invalid Match save'.
+  for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid authoritative Mirror forge replay');
   expect(restoreMatch(serializeMatch(after))).toEqual(after);
 });
 
@@ -397,14 +407,16 @@ describe('dead-holder public combat fixture', () => {
   beforeAll(() => {
     // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) had it at tick 352 after one earlier kill.
     // Later v23 combat changes (Sion rework, short CC/knock-up) let that Zyra survive; seed 28 at (6,7) trades at tick 323.
-    let state = frontRowRod(28);
+    // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): no seed-28 cell trades any more. Seed 44 is
+    // the first seed from 0 with a same-tick trade after exactly one earlier kill: Zyra at (0,4) and enemy-r8-3 at tick 315.
+    let state = frontRowRod(44);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 6, row: 7 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 0, row: 4 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 322) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 314) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -413,13 +425,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 322);
+    const initial = copy.initial, before = stepTo(copy.before, 314);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r8-1';
-    expect(after.combat!.tick).toBe(323);
+    const targetId = 'enemy-r8-3';
+    expect(after.combat!.tick).toBe(315);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 323, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-1' }) }),
-      expect.objectContaining({ type: 'kill', tick: 323, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 315, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-3' }) }),
+      expect.objectContaining({ type: 'kill', tick: 315, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -446,8 +458,12 @@ describe('dead-holder public combat fixture', () => {
 describe.each([
   // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
   // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
-  { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
+  // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): on seeds 5/1 no Morgana cell still gives a
+  // lone Sion attack kill with the required contribution while Morgana is alive and has no bracer stack yet. Seed 2 (first from 0) keeps a clean boundary for both crests with the
+  // same Cassiopeia (0,6) / Vladimir (4,7) cells: Morgana (5,7) without contribution, Sion kills enemy-r8-4 at tick 307;
+  // Morgana (5,6) with contribution, Sion kills enemy-r8-1 at tick 278. (Were seed 5 tick 255 / seed 1 tick 225, enemy-r4-1.)
+  { contribution: false, seed: 2, cells: [{ col: 5, row: 7 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 307, targetId: 'enemy-r8-4' },
+  { contribution: true, seed: 2, cells: [{ col: 5, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 278, targetId: 'enemy-r8-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   // Script only the draw; the following equality checks the fixture, not real-RNG availability.
   let restoreOffers: () => void;

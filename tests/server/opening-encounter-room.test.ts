@@ -215,11 +215,18 @@ describe('PR8 wind-up monkey: openingResolution in the Room', () => {
     expect(seatOf(state, 's2')).toMatchObject({ alive: false, hp: 0, rank: 7 });
     expect(seatOf(state, 's1')).toMatchObject({ alive: false, hp: 0, rank: 6 });
     for (const seatId of ['s3', 's4', 's5', 's6', 's7']) expect(seatOf(state, seatId)).toMatchObject({ alive: true, hp: hp[seatId]! - 10, rank: null });
-    for (const seat of state.seats) expect(seat.hp).toBe(seat.match.playerHp);
+    for (const seat of state.seats) {
+      expect(seat.hp).toBe(seat.match.playerHp);
+      expect(seat.streak).toEqual(seat.match.streak);
+    }
     // The rules released the three seats once inside the batch; the room released nothing more.
     expect(state.pool.seats.filter(seat => seat.released).length).toBe(releasedBefore + 3);
     // Everyone, the eliminated included, sees the shared result.
-    for (const seat of state.seats) expect(toPlayerView(state, seat.seatId, 0).openingEncounter!.revealedFacts).toEqual([{ nodeId: '3-5', outcome: 'damage' }]);
+    for (const seat of state.seats) {
+      const view = toPlayerView(state, seat.seatId, 0);
+      expect(view.openingEncounter!.revealedFacts).toEqual([{ nodeId: '3-5', outcome: 'damage' }]);
+      expect(view.seats.map(({ hp, streak }) => ({ hp, streak }))).toEqual(state.seats.map(seat => ({ hp: seat.hp, streak: seat.streak })));
+    }
     // The next round goes on with the five survivors only.
     runUntil(room, clock, next => next.round === MONKEY_ORDINAL + 1 || next.phase === 'ended', 2_000);
     expect(room.state.fault).toBeNull();
@@ -239,6 +246,11 @@ describe('PR8 wind-up monkey: openingResolution in the Room', () => {
     expectUniqueRanking(state);
     expect(seatOf(state, 's5')).toMatchObject({ alive: true, rank: 1, hp: 1 });
     expect(state.ranking!.map(entry => entry.seatId)).toEqual(['s5', 's2', 's1', 's4', 's3', 's0', 's6', 's7']);
+    for (const entry of toPlayerView(state, 's0', 0).ranking!) {
+      const seat = seatOf(state, entry.seatId);
+      expect(entry).toMatchObject({ hp: seat.match.playerHp, streak: seat.match.streak });
+      expect(entry.streak).toEqual(seat.streak);
+    }
   });
   it('a batch that eliminates every seat still ranks 1–8 and ends the match', () => {
     const { room, advance } = beforeMonkey();

@@ -12,7 +12,7 @@ import type { MatchState } from '../src/simulation/match';
 import type { SharedPoolState } from '../src/simulation/shared-pool';
 import type { AugmentHistoryAuthority } from '../src/simulation/augment-history';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 28, combatStreaming: true });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 138, combatStreaming: true });
 let seatId: string;
 let prepared: { match: MatchState; pool: SharedPoolState; authority: AugmentHistoryAuthority };
 beforeAll(() => room.start());
@@ -29,7 +29,13 @@ for (let round = 2; round <= 12; round++) beforeAll(() => {
   });
 });
 beforeAll(() => {
-  // Seed 28 / s3: re-searched 0..100 after v25 batch-5 pool drift; s3’s real 3-2 offer includes sponging.
+  // Seed 28’s first sponging offer is s4, a bot. autoDeployToCap only fields humans, so the
+  // bench never entered combat and opening copy had no recipient. Seed 16’s first human
+  // is s2 and does field a donor plus recipients, but the three chest combines spend every
+  // component, so round 13 has nothing to live-equip. Seed 138’s first human within one
+  // reroll per slot is s1. The same commands leave one belt in inventory after those
+  // combines, and autoDeploy fields one 3-item donor and four empty recipients
+  // (room seeds 0..139).
   for (const seat of [...room.state.seats].sort((a,b)=>Number(b.seatId==='s3')-Number(a.seatId==='s3')).filter(s => s.alive)) {
     for (let slot = 0; slot < 3; slot++) {
       const c = room.state.seats.find(s => s.seatId === seat.seatId)!.match.pendingChoice!;

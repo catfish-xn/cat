@@ -9,9 +9,11 @@ import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5
 import { offeredAt } from './augment-stage-helpers';
 import { accepted, emptyBoard, resolveM5Choices, reachRound } from './match-helpers';
 const id='diversified-portfolio-plus';
-/** v25 batch-5 pool drift: seed 1 with three public slot rerolls (re-searched 0..100). */
+/** D5 310-card pool: seed 1 no longer offers diversified-portfolio-plus within slot rerolls 0/1/2.
+ * Seed 6 is the first in 0..80 whose reachRound('3-2') route offers it (after public rerolls of slots 0 and 1)
+ * and whose paid shop still fields irelia/rell/draven/vex/morgana as conqueror, sentinel and visionary. */
 function offerPortfolioPlus(): MatchState {
- let state=reachRound('3-2',false,1);
+ let state=reachRound('3-2',false,6);
  for (const slot of [0,1,2]) {
   if (state.pendingChoice!.offers.includes(id)) break;
   const c=state.pendingChoice!; state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));

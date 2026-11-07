@@ -21,6 +21,7 @@ import { S13_P3_SOURCE } from '../simulation/content/s13-p3-source';
 import { D11_FILL_SOURCE } from '../simulation/content/d11-fill-source';
 import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
+import { portableAnomalyId } from '../simulation/content/augment-pool-batch5-r2';
 import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
@@ -164,6 +165,8 @@ export function anomalyIconHtml(size: number, className = 'anomaly-icon'): strin
  */
 export function itemDisplayName(id: string): string {
   const definition = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id] : undefined;
+  const anomaly = definition && portableAnomalyId(id);
+  if (anomaly) return `便携异常点：${anomalyDisplayName(anomaly)}`;
   return (definition?.apiName ? ITEM_NAMES.get(definition.apiName)?.zh : undefined) ?? definition?.name ?? id;
 }
 /**
@@ -189,6 +192,9 @@ export const lootGoldIconUrl = (): string | null => assetUrl('loot', 'TFT_Assist
 export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): string | null {
   if (kind === 'champion') return assetUrl('champions', g23ChampionApiName(id));
   if (kind === 'trait') return assetUrl('traits', g23TraitApiName(id));
+  // 14.24 TFT13_AnotherAnomaly_Item uses the same GoopItem art as the chosen anomaly.
+  // Resolve the instance variant here so DOM, Phaser and the 3D overhead share it.
+  if (Object.hasOwn(ITEM_DEFINITIONS, id) && portableAnomalyId(id)) return anomalyIconUrl();
   const apiName = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id].apiName : undefined;
   return assetUrl('items', apiName) ?? assetUrl('loot', apiName) ?? assetUrl('artifact-items', apiName) ?? assetUrl('support', apiName);
 }

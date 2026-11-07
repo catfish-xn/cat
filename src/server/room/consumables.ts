@@ -4,7 +4,7 @@
  * reforge result itself. A refusal returns the input pool and state references (no event, revision, RNG or ID moved,
  * §18.5); a success is committed by the caller together with the latest live seat, never on a frozen battle copy.
  */
-import { runSharedMatchCommand } from '../../server-entry';
+import { runSharedMatchCommand } from './logged-shared-pool';
 import type { MatchState } from '../../simulation/match-types';
 import type { ConsumableCommand } from '../protocol';
 import type { SharedPoolState } from './types';

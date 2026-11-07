@@ -107,6 +107,12 @@ const MAXIMUM_RATE_BY_VELOCITY = 300;
 /** `VfxEmitterFiltering.spectatorPolicy`, the one field of `Filtering` the preview gates on. */
 const SPECTATOR_POLICY_FIELD = nameHash("spectatorPolicy");
 
+/**
+ * `VfxEmitterFiltering.keywordsRequired`. A skin's own emitters name the skin keyword here,
+ * and the base skin the game plays supplies none, so a non-empty list never instantiates.
+ */
+const KEYWORDS_REQUIRED_FIELD = nameHash("keywordsRequired");
+
 /** The unnamed flag that reverses which winding is the front face. */
 const FLIP_WINDING = "0xd1ee8634";
 
@@ -578,10 +584,15 @@ function readChild(
  * `lowered` is true if the effects quality culls the emitter's `importance`. The preview
  * draws on the default palette and is no spectator. A simple emitter skips the palette
  * gate, and a HUD-layer system drops it.
- * An emitter that can never emit is dropped as its definition is prepared. The keywords of
- * `Filtering` are left ungated, since what supplies an instance's keywords is not
- * established.
+ * An emitter that can never emit is dropped as its definition is prepared. The game plays
+ * the base skin, which supplies no keyword, so an emitter whose `Filtering` requires one
+ * (a skin's own flash riding the base system) is dropped too.
  */
+function requiresKeyword(filtering: VfxValue | null): boolean {
+  const required = field(filtering, KEYWORDS_REQUIRED_FIELD);
+  return required?.type === "container" && required.items.length > 0;
+}
+
 function cullOf(
   node: VfxValue & { type: "struct" },
   simple: boolean,
@@ -595,6 +606,7 @@ function cullOf(
   ) {
     return "spectator";
   }
+  if (requiresKeyword(field(node, FIELD.filtering))) return "keywords";
   if (simple && hudLayer) return "hudLayer";
   if (neverEmits(node)) return "noRate";
 

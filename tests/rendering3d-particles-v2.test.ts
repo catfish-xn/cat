@@ -316,6 +316,15 @@ describe('particle v2 interpreter', () => {
     expect(mesh(effect).geometry.drawRange.count).toBe(6);
     expect(mesh(effect).geometry.getAttribute('position').getX(0)).toBeCloseTo(-1); effect.dispose();
   });
+  it('reuses quad meshes across later births instead of constructing one per particle', () => {
+    const effect = new ParticleEffect(doc(quad({ lifetime: 0.05, emission: { mode: 'continuous', rate: 80, loop: true } })), { scale: 1, maxParticles: 8 });
+    effect.update(0.2);
+    const built = effect.builtMeshes;
+    expect(built).toBeGreaterThan(0); expect(built).toBeLessThanOrEqual(8); expect(effect.particleCount).toBeLessThanOrEqual(8);
+    effect.update(1);
+    expect(effect.builtMeshes).toBe(built); expect(effect.particleCount).toBeLessThanOrEqual(8);
+    effect.dispose(); expect(effect.particleCount).toBe(0);
+  });
   it('releases retired/replaced particles, all live materials and owned shared geometry exactly once', () => {
     const effect = new ParticleEffect(doc(quad({ lifetime: 0.5, emission: { mode: 'continuous', rate: 2, loop: true, burst: 1 } })));
     const first = mesh(effect), md = vi.spyOn(first.material, 'dispose'), gd = vi.spyOn(first.geometry, 'dispose');

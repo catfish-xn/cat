@@ -1,7 +1,7 @@
 /**
  * Presentation-only cast lunges (10-23 playtest: 安蓓萨的技能没有冲出去打). The rules keep the caster on its cell; in the
  * 3D view its model dashes most of the way to the cast's first target, holds a moment and comes back, all within
- * `seconds`. Only the drawn body moves (placeholder-renderer.ts offsets it under the root): the root, its ring, facing,
+ * `seconds`. Only the drawn body moves (placeholder-renderer.ts offsets it under the root): the root, facing,
  * bars and grounding stay on the authoritative cell. Kept apart from the renderer so the curve is testable on numbers.
  */
 

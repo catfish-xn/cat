@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_BOARD, type HexCell } from '../src/simulation/board';
+import { DEFAULT_BOARD, hexDistance, type HexCell } from '../src/simulation/board';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { dashAmbessaChain, settleAmbessaRetreats } from '../src/simulation/combat-ambessa-dash';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { toLedgerEvents } from '../src/simulation/combat-ledger';
 import { applyCombatReplayTick, createCombatReplayRecorder, startCombatReplay, toCombatReplay, toCombatViewState } from '../src/simulation/combat-replay-view';
 import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
+import { ordinaryNearestTies } from '../src/simulation/combat-targeting';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
+import { nextRandom } from '../src/simulation/rng';
 import { battle, unit, freeze } from './combat-helpers';
 
 const c = (col: number, row: number): HexCell => ({ col, row });
@@ -20,7 +22,11 @@ function dummy(cell = c(5, 3), patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('e', 'enemy', cell.col, cell.row, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1),
     hp: 10000, maxHp: 10000, attackDamage: 0, cooldownTicks: 1000, moveCooldownTicks: 1000, ...patch });
 }
-const blockers = (cells: HexCell[]) => cells.map((cell, i) => dummy(cell, { id: `block-${i}`, team: 'player' }));
+const blockers = (cells: readonly HexCell[]) => cells.map((cell, i) => dummy(cell, { id: `block-${i}`, team: 'player' }));
+// Every neighbor is hexDistance 1 from the center, so selectable ring bodies are a P1 tie and the center draws.
+// Invisibility keeps occupiesCell true (the dash still sees a full ring) and drops them from ordinaryNearestTies.
+// 20 is past this cast's decision tick (1). Coordinates of the ring are unchanged.
+const ringBlockers = (cells: readonly HexCell[]) => blockers(cells).map(body => ({ ...body, anomalyState: { invisibleUntilTick: 20 } }));
 const dashes = (events: readonly CombatEvent[]) => events.filter(e => e.type === 'movement' && e.reason);
 const cast = (units: CombatUnit[]) => stepCombat(freeze(battle(units, { strategy: { traits: [], units: [] }, combatId: 'ambessa-vector', rngState: 42 })));
 const player = (state: CombatState) => state.units.find(u => u.id === 'p')!;
@@ -31,11 +37,13 @@ describe('Ambessa P independent hex vectors (col,row)', () => {
     ['nearest/tie E before NE', c(1, 3), c(5, 3), [], c(4, 3)],
     ['already adjacent, stay in the current nearest cell', c(4, 3), c(5, 3), [], c(4, 3)],
     ['target ring full', c(1, 3), c(5, 3), [c(6, 3), c(6, 4), c(5, 4), c(4, 3), c(5, 2), c(6, 2)], c(1, 3)],
-    ['rear occupied is irrelevant', c(1, 3), c(5, 3), [c(2, 4)], c(4, 3)],
+    // (2,4) is hexDistance 4 from the target, tying the caster at (1,3). (0,3) is directly behind the caster and distance 5, so the neutral's nearest enemy is only the caster. Landing stays (4,3).
+    ['rear occupied is irrelevant', c(1, 3), c(5, 3), [c(0, 3)], c(4, 3)],
     ['top/right edge', c(3, 0), c(6, 0), [], c(5, 0)],
     ['enclosed caster cannot cross blockers', c(1, 3), c(5, 3), [c(2, 3), c(2, 4), c(1, 4), c(0, 3), c(1, 2), c(2, 2)], c(1, 3)],
   ] as const)('chains: %s', (_name, from, target, occupied, expected) => {
-    const result = cast([ambessa(from), dummy(target), ...blockers([...occupied])]);
+    const bodies = _name === 'target ring full' ? ringBlockers(occupied) : blockers(occupied);
+    const result = cast([ambessa(from), dummy(target), ...bodies]);
     expect(player(result.state).cell).toEqual(expected);
     expect(result.state.units.find(u => u.id === 'e')!.hp).toBe(9750); // 100 AD × 250%, zero armor.
     expect(result.state.rngState).toBe(42);
@@ -55,7 +63,8 @@ describe('Ambessa P independent hex vectors (col,row)', () => {
     ['no direction both away and homeward', c(3, 4), c(3, 5), [], c(3, 4)],
     ['left edge', c(0, 4), c(0, 3), [], c(0, 5)],
   ] as const)('fists: %s', (_name, from, target, occupied, expected) => {
-    const result = cast([ambessa(from, true), dummy(target), ...blockers([...occupied])]);
+    const bodies = _name === 'target ring full except caster' ? ringBlockers(occupied) : blockers(occupied);
+    const result = cast([ambessa(from, true), dummy(target), ...bodies]);
     expect(player(result.state).cell).toEqual(expected);
     expect(result.state.units.find(u => u.id === 'e')!.hp).toBe(9500); // 100 AD × 500%, zero armor.
     expect(result.state.rngState).toBe(42);
@@ -65,6 +74,18 @@ describe('Ambessa P independent hex vectors (col,row)', () => {
       expect(dash).toMatchObject({ tick: 1, unitId: 'p', from, to: expected, reason: 'ambessa-fist-retreat' });
       expect(result.events.indexOf(dash)).toBeGreaterThan(result.events.findIndex(e => e.type === 'packetDamage'));
     }
+  });
+
+  it('a visible full ring is a 6-way nearest tie and the unchanged dash assertion sees that one draw', () => {
+    const occupied = [c(6, 3), c(6, 4), c(5, 4), c(4, 3), c(5, 2), c(6, 2)];
+    const units = [ambessa(c(1, 3)), dummy(c(5, 3)), ...blockers(occupied)];
+    expect(ordinaryNearestTies(units[1] as S13Unit, units as S13Unit[], 1).map(u => u.id)).toEqual(['block-0', 'block-1', 'block-2', 'block-3', 'block-4', 'block-5']);
+    occupied.forEach(cell => expect(hexDistance(cell, c(5, 3))).toBe(1));
+    const result = cast(units);
+    expect(player(result.state).cell).toEqual(c(1, 3));
+    expect(result.state.units.find(u => u.id === 'e')!.hp).toBe(9750);
+    expect(result.state.rngDraws).toBe(1);
+    expect(result.state.rngState).toBe(nextRandom(42).state);
   });
 
   it('enemy side retreats toward its own upper half', () => {

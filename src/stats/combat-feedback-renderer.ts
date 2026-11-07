@@ -7,7 +7,7 @@ export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent
 type FloatKind = 'physical' | 'magic' | 'true' | 'shield' | 'heal' | 'status';
 type LabelStyle = 'color' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
-interface Float extends Label { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number }
+interface Float extends Label { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number; measured: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -50,7 +50,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const perUnit = floats.filter(item => item.unitId === unitId);
     if (perUnit.length >= 3) { const first = perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= 24) release(floats.shift()!);
-    floats.push({ key, unitId, kind, amount, text, at, ...acquire(kind) });
+    floats.push({ ...acquire(kind), key, unitId, kind, amount, text, at, measured: Number.NaN });
   }
   return {
     push(events, at) {
@@ -64,20 +64,26 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     },
     render(now, anchors, obstacles = []) {
       if (disposed) return;
-      floats = floats.filter(item => { if (now - item.at >= 850) { release(item); return false; } return true; });
-      // Prepare changed content and reveal measurable labels together. New text needs one layout boundary;
-      // never interleave a label's position/opacity writes with the next label's geometry reads.
+      // Drop expired nodes only after this frame's geometry reads, so a removal cannot force layout before them.
+      const expired: Float[] = [], active: Float[] = [];
+      for (const item of floats) (now - item.at >= 850 ? expired : active).push(item);
+      floats = active;
+      // Text and visibility writes finish before any geometry read. A label whose text did not change
+      // keeps its measured half-width, so a steady frame reads the container once and then only writes positions.
       const visible: { item: Float; anchor: FeedbackAnchor }[] = [];
       for (const item of floats) {
         const anchor = anchors.get(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
         const text = item.kind === 'status' ? item.text : `${item.kind === 'heal' ? '+' : item.kind === 'shield' ? '盾 ' : '−'}${item.amount}${SUFFIX[item.kind]}`;
-        if (item.label.textContent !== text) item.label.textContent = text;
+        if (item.label.textContent !== text) { item.label.textContent = text; item.measured = Number.NaN; }
         visible.push({ item, anchor });
       }
-      if (!visible.length) return;
-      // All layout reads precede all placement writes. Remeasure instead of assuming fonts/scale never change.
+      if (!visible.length) { for (const item of expired) release(item); return; }
       const width = root.clientWidth, height = root.clientHeight;
-      const measured = visible.map(({ item, anchor }) => ({ item, anchor, half: Math.max(20, item.label.offsetWidth / 2) }));
+      const measured = visible.map(({ item, anchor }) => {
+        if (Number.isNaN(item.measured)) item.measured = Math.max(20, item.label.offsetWidth / 2);
+        return { item, anchor, half: item.measured };
+      });
+      for (const item of expired) release(item);
       const lanes = new Map<string, number>();
       const occupied: { x: number; y: number; half: number }[] = [];
       const points = [...anchors.values()];

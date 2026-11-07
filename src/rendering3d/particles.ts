@@ -43,6 +43,8 @@ class ParticleEffectV1 {
   private particles: Particle[] = [];
   private elapsed = 0;
   private geometry: PlaneGeometry;
+  private readonly worldQuat = new Quaternion();
+  private readonly cameraQuat = new Quaternion();
   private closed = false;
   private materials?: ParticleMaterialPool;
   private budget?: ParticleBudget;
@@ -94,7 +96,7 @@ class ParticleEffectV1 {
     if (!finite(seconds) || seconds < 0) throw new Error('invalid-delta');
     this.elapsed += seconds;
     // Camera-facing in the effect parent's space, the same for every particle this frame.
-    const facing = camera ? this.object.getWorldQuaternion(new Quaternion()).invert().multiply(camera.getWorldQuaternion(new Quaternion())) : null;
+    const facing = camera ? this.object.getWorldQuaternion(this.worldQuat).invert().multiply(camera.getWorldQuaternion(this.cameraQuat)) : null;
     for (const { emitter: e, mesh, origin } of this.particles) {
       const age = this.elapsed - (e.delay ?? 0);
       mesh.visible = age >= 0 && age < e.lifetime;
@@ -141,6 +143,8 @@ export class ParticleEffect {
   get object(): Group { return this.runtime.object; }
   get skipped(): Record<'mesh' | 'trail' | 'screenDistortion', number> { return this.runtime.skipped; }
   get droppedParticles(): number { return this.runtime instanceof ParticleEffectV2 ? this.runtime.droppedParticles : 0; }
+  /** Meshes constructed by a v2 effect. Quad and ray slots are reused after the first wave. */
+  get builtMeshes(): number { return this.runtime instanceof ParticleEffectV2 ? this.runtime.builtMeshes : 0; }
   /** v1 keeps its allocated burst children; v2 removes expired particles. */
   get particleCount(): number { return this.object.children.length; }
   get finished(): boolean { return this.runtime.finished; }

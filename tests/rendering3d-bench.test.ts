@@ -148,6 +148,51 @@ describe('#351 arena bench placement and drag mapping', () => {
     units.forEach(unit => expect(unit.parent!.position.y).toBe(60));
   });
 
+  it('has no persistent piece rings, lifts the authoritative selection and drag, and restores the floor', async () => {
+    await mount(); await publish(); await publish();
+    const roots = units.map(unit => unit.parent!);
+    for (const root of roots) root.traverse(child => expect((child as import('three').Mesh).geometry).not.toBeInstanceOf(three.RingGeometry));
+    expect(roots.every(root => root.position.y === 60)).toBe(true);
+    await publish({ ...frame, selectedId: 'unit-0' });
+    expect(roots[0].position.y).toBe(65);
+    expect(roots.slice(1).every(root => root.position.y === 60)).toBe(true);
+    await publish({ ...frame, selectedId: 'unit-0', dragging: 'unit-0' });
+    expect(roots[0].position.y).toBe(70);
+    await publish({ ...frame, selectedId: 'unit-0' });
+    expect(roots[0].position.y).toBe(65);
+    await publish({ ...frame, selectedId: 'unit-1' });
+    expect(roots[0].position.y).toBe(60); expect(roots[1].position.y).toBe(65);
+    await publish();
+    expect(roots.every(root => root.position.y === 60)).toBe(true);
+    await publish({ ...frame, selectedId: 'unit-0', pieces: frame.pieces.map(piece => ({ ...piece, alive: false })) });
+    expect(roots.every(root => root.position.y === 60)).toBe(true);
+  });
+
+  it('keeps the allowed/refused drop cell marker while the dragged piece is raised and hides it on cancel', async () => {
+    await mount(); await publish(); await publish();
+    for (let i = 0; i < 30; i++) render();
+    const markers: import('three').Mesh[] = [];
+    scene.traverse(child => {
+      const mesh = child as import('three').Mesh<import('three').RingGeometry>;
+      if (mesh.geometry instanceof three.RingGeometry && mesh.geometry.parameters.thetaSegments === 6) markers.push(mesh);
+    });
+    expect(markers).toHaveLength(1); // hexagonal drop target only; no piece rings
+    const marker = markers[0], material = marker.material as import('three').MeshStandardMaterial;
+    expect(marker.visible).toBe(false);
+    const start = screen(cells[0][0], cells[0][1] + 30, cells[0][2]), target = screen(...cells[8]);
+    vi.mocked(controls.dragMove).mockReturnValue({ allowed: true, target: { kind: 'bench', ...bench[8] } });
+    canvas.pointer('pointerdown', start); canvas.pointer('pointermove', target); render();
+    expect(units[0].parent!.position.y).toBe(70);
+    expect(marker.visible).toBe(true); expect(marker.position.toArray()).toEqual([cells[8][0], 61, cells[8][2]]);
+    expect(material.color.getHexString()).toBe('68ddd0');
+    vi.mocked(controls.dragMove).mockReturnValue({ allowed: false, target: { kind: 'bench', ...bench[8] } });
+    canvas.pointer('pointermove', target);
+    expect(marker.visible).toBe(true); expect(material.color.getHexString()).toBe('f08080');
+    canvas.pointer('pointercancel', target); render();
+    expect(marker.visible).toBe(false); expect(units[0].parent!.position.y).toBe(60);
+    expect(controls.dragCancel).toHaveBeenCalledTimes(1);
+  });
+
   it('maps dragMove and dragEnd over each raised y=60 cell center to its corresponding 2D slot', async () => {
     await mount(); await publish(); await publish();
     for (let i = 0; i < 30; i++) render(); // settle the real FOLLOW_SECONDS movement interpolation

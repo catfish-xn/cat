@@ -8,6 +8,7 @@ import { toCombatReplay } from '../src/simulation/combat-replay-view';
 import { mirrorCombatReplay } from '../src/server/room/projection';
 import { EMPTY_RUNTIME, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
+import { nextRandom } from '../src/simulation/rng';
 import { battle, unit, freeze } from './combat-helpers';
 
 const c = (col: number, row: number): HexCell => ({ col, row });
@@ -68,13 +69,28 @@ describe('Mordekaiser pulls the nearest line-hit enemies 1 hex toward him', () =
 
 describe('Sett grabs two enemies next to himself', () => {
   it('both land adjacent to Sett and beside each other; stun/damage unchanged', () => {
-    const result = run([caster('sett', c(3, 6)), dummy('a', c(1, 4)), dummy('b', c(5, 4)), dummy('far', c(3, 0))]);
+    // (1,4) and (5,4) are both hexDistance 3 from Sett (3,6), so Sett draws one P1 tie.
+    // (2,4) is distance 2, (5,4) stays 3, and far (3,0) stays 6, so the two nearest are unique and still a then b.
+    expect([hexDistance(c(3, 6), c(2, 4)), hexDistance(c(3, 6), c(5, 4)), hexDistance(c(3, 6), c(3, 0))]).toEqual([2, 3, 6]);
+    const result = run([caster('sett', c(3, 6)), dummy('a', c(2, 4)), dummy('b', c(5, 4)), dummy('far', c(3, 0))]);
     const moves = forced(result.events);
     expect(moves.map(m => m.type === 'movement' && [m.unitId, m.reason])).toEqual([['a', 'sett-grab'], ['b', 'sett-grab']]);
     const a = at(result.state, 'a'), b = at(result.state, 'b');
     expect(hexDistance(c(3, 6), a)).toBe(1); expect(hexDistance(c(3, 6), b)).toBe(1); expect(hexDistance(a, b)).toBe(1);
     expect(at(result.state, 'far')).toEqual(c(3, 0));
     expect(result.state.rngState).toBe(42);
+  });
+  it('the old equal-distance pair still grabs both and the no-draw assertion sees that one draw', () => {
+    expect(hexDistance(c(3, 6), c(1, 4))).toBe(hexDistance(c(3, 6), c(5, 4)));
+    const result = run([caster('sett', c(3, 6)), dummy('a', c(1, 4)), dummy('b', c(5, 4)), dummy('far', c(3, 0))]);
+    const moves = forced(result.events);
+    expect(moves.map(m => m.type === 'movement' && [m.unitId, m.reason])).toEqual([['a', 'sett-grab'], ['b', 'sett-grab']]);
+    const a = at(result.state, 'a'), b = at(result.state, 'b');
+    expect(hexDistance(c(3, 6), a)).toBe(1); expect(hexDistance(c(3, 6), b)).toBe(1); expect(hexDistance(a, b)).toBe(1);
+    expect(at(result.state, 'far')).toEqual(c(3, 0));
+    expect(result.state.rngDraws).toBe(1);
+    // One lcg32 step from the combat seed. Size-2 ties accept the first word, so the state is nextRandom(42).state.
+    expect(result.state.rngState).toBe(nextRandom(42).state);
   });
   it('already adjacent stays; full ring stays', () => {
     const s = caster('sett', c(3, 6)) as S13Unit, near = dummy('n', c(3, 5)) as S13Unit, far = dummy('f', c(3, 2)) as S13Unit;

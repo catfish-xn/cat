@@ -5,7 +5,7 @@ export function traceBoundUnitIdentity(originalId:string,facts:readonly Resource
  let unitId:string|null=originalId;
  for(const fact of facts){
   if(unitId===null)break;
-  if(fact.kind==='unit-sold'&&fact.unitId===unitId){unitId=null;continue;}
+  if((fact.kind==='unit-sold'||fact.kind==='unit-removed')&&fact.unitId===unitId){unitId=null;continue;}
   const upgrades=fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat'?[fact.event]
    :fact.kind==='carousel-preparation-settled'||fact.kind==='carousel-unit-claimed'?fact.upgrades:[];
   for(const event of upgrades)if(unitId!==null&&event.consumedIds.includes(unitId))unitId=event.survivorId;

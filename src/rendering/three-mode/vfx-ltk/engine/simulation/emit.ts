@@ -12,6 +12,7 @@ import type { Rng } from "../utils/Rng";
 import { drawChannelsInto, drawCurve, sampleCurve, tableValue } from "../utils/sampleCurve";
 import { addFlexInto, channelOf, flexScaleOf, flexTerm } from "./flex";
 import type { EmitterState, SystemStep } from "./integrate";
+import { cueScale, scaleAxes } from "./systemScale";
 import { scalar } from "./particleRead";
 import { FRAME_SLOTS, type Pool, spawn, UV, UV_LAYERS, uvAt } from "./pool";
 import { birth, sampleShape } from "./spawnShape";
@@ -69,6 +70,7 @@ export function emit(
   rng: Rng,
   dragMotion: DragMotion,
 ): void {
+  const cue = cueScale(step.scale);
   if (emitter.disabled || state.absent) return;
   if (emitter.singleParticle && state.emitted) return;
 
@@ -192,14 +194,15 @@ export function emit(
       const channel = channelOf(pool.flex, translation);
       if (translation !== null && channel !== 0) {
         const moved = sampleCurve(translation.value, phase);
-        for (let axis = 0; axis < 3; axis += 1) BASE[axis] += (moved[axis] ?? 0) * channel;
+        const gain = cue === 1 ? channel : channel * cue;
+        for (let axis = 0; axis < 3; axis += 1) BASE[axis] += (moved[axis] ?? 0) * gain;
       }
     }
     lifetime = offsetLifetime(emitter, lifetime, BORN.raw);
     pool.lifetime[at] = lifetime;
 
     if (surfaces?.mesh?.sample(now, rng, SURFACE_BIRTH)) {
-      const scale = emitter.emissionMesh?.scale ?? 1;
+      const scale = (emitter.emissionMesh?.scale ?? 1) * (cue === 1 ? 1 : cue);
       for (let axis = 0; axis < 3; axis += 1) BASE[axis] += SURFACE_BIRTH.position[axis] * scale;
       if (emitter.emissionMesh?.useNormal) {
         alongNormal(pool.velocity, slot);
@@ -207,7 +210,7 @@ export function emit(
       }
     }
     if (surfaces?.surface?.sample(now, rng, SURFACE_BIRTH)) {
-      const scale = emitter.emissionSurface?.scale ?? 1;
+      const scale = (emitter.emissionSurface?.scale ?? 1) * (cue === 1 ? 1 : cue);
       for (let axis = 0; axis < 3; axis += 1) BASE[axis] += SURFACE_BIRTH.position[axis] * scale;
       if (emitter.emissionSurface?.useNormal) {
         alongNormal(pool.velocity, slot);
@@ -220,6 +223,13 @@ export function emit(
     if (BORN.turned) {
       turnInto(BORN.turn, pool.velocity, slot);
       turnInto(BORN.turn, pool.birthAcceleration, slot);
+    }
+    /* Shape offset, birth velocity, acceleration and size, after the shape's own turn. */
+    if (cue !== 1) {
+      scaleAxes(pool.velocity, slot, cue);
+      scaleAxes(pool.birthAcceleration, slot, cue);
+      scaleAxes(pool.birthScale, slot, cue);
+      scaleAxes(BORN.offset, 0, cue);
     }
     for (let axis = 0; axis < 3; axis += 1) {
       pool.position[slot + axis] = BASE[axis] + BORN.offset[axis];

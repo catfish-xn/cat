@@ -104,10 +104,15 @@ describe('production representation preserves runtime semantics', () => {
     const before = execute(original), after = execute(compact);
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
-    // Current content identities (src/simulation/content/identity-constants.ts;
-    // v25 integrated content + Starry Night levels 1/2 restored to v24 18%, 2026-10-28).
-    expect(parsed.content).toBe('fnv1a32-utf16:f671ab88');
-    expect(parsed.loot).toBe('fnv1a32-utf16:36ebfac2');
+    // The minified bundle recomputes the same digests the server pins in
+    // identity-constants.ts. v26 content replaced the v25 pins
+    // (fnv1a32-utf16:f671ab88 content, fnv1a32-utf16:36ebfac2 loot; 2026-10-28 Starry Night).
+    expect(parsed.content).toBe(parsed.CONTENT_DIGEST);
+    expect(parsed.loot).toBe(parsed.LOOT_REPLAY_DIGEST);
+    // v26 卯足全力内容变化 (2026-11-02): 9dc693dd → ed366cad.
+    // v26 选秀 8 件散件必出 (2026-11-02): ed366cad → 150d825d.
+    expect(parsed.content).toBe('fnv1a32-utf16:150d825d');
+    expect(parsed.loot).toBe('fnv1a32-utf16:a56b2c4a');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

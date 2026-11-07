@@ -1,8 +1,12 @@
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
+export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
+export type TimelineVariant = 'empowered' | 'self';
 export interface TimelineCue {
   readonly system: string;
-  readonly action?: 'cast' | 'attack';
-  readonly event: 'cast-start' | 'projectile' | 'hit';
+  readonly action?: TimelineAction;
+  /** Observed presentation form; untagged cues belong only to the default form. */
+  readonly variant?: TimelineVariant;
+  readonly event: 'cast-start' | 'projectile' | 'hit' | 'link';
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
@@ -13,26 +17,67 @@ export interface TimelineCue {
   readonly travelSeconds?: number;
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
+  /**
+   * With `stopAfter`: from the stop, ease the cue's particles to nothing by `duration` instead of the cue cutting them
+   * off at full strength (11-07: Zyra's long-lived single-particle roots never reach their own authored fade).
+   */
+  readonly fadeOut?: boolean;
+  /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
+  readonly main?: boolean;
+  /** A single world point supplied by the board, never an invented unit target. */
+  readonly location?: 'board';
+  /** Fan out projectiles/impacts only to this many actual receipt targets. */
+  readonly targetLimit?: number;
+  /** Only the receipt targets after the primary one (Zyra's short vines reach the others, not the one already rooted). */
+  readonly others?: boolean;
+  /** A beam keeps its source bone while aiming at the actual target; it does not fly. */
+  readonly stationary?: boolean;
+  /**
+   * Uniform size of this system about its anchor. Omitted means 1.
+   *
+   * Multiplies the system's own offsets, particle size and velocity. It does not move the
+   * anchor, a hanger, a projectile's endpoints or its flight path, and it does not change
+   * `FX_SCALE`.
+   */
+  readonly scale?: number;
+  /**
+   * A target cue the cast can do without: with no living recipient it is left out instead of
+   * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
+   */
+  readonly optional?: boolean;
 }
-export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string }
+export type WorldPoint = readonly [number, number, number];
+export interface TimelineSpawn extends TimelineCue {
+  readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
+  readonly aimId?: string;
+}
 export interface TimelineMapping {
   readonly spawns: readonly TimelineSpawn[];
   /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
-  readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[];
+  readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[];
 }
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
-export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0): TimelineMapping {
+export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0, board?: WorldPoint): TimelineMapping {
   const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
-  const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[] = [];
+  const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[] = [];
   for (const cue of cues) {
     if (cue.phase !== undefined && cue.phase !== castIndex % 3) continue;
-    if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId }); continue; }
-    if (!unique.length) { unsupported.push({ cue, reason: 'missing-target' }); continue; }
+    if (cue.location === 'board') {
+      if (!board || board.some(n => !Number.isFinite(n))) unsupported.push({ cue, reason: 'missing-point' });
+      else spawns.push({ ...cue, sourceId, point: board });
+      continue;
+    }
+    if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId, ...(unique[0] !== undefined && unique[0] !== sourceId ? { aimId: unique[0] } : {}) }); continue; }
+    if (!unique.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     if (cue.event === 'projectile' && unique[0] === sourceId) {
+      if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
-    for (const targetId of cue.event === 'projectile' || cue.primary ? unique.slice(0, 1) : unique) {
+    const pool = cue.others ? unique.slice(1) : unique;
+    if (!pool.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
+    for (const targetId of cue.primary ? pool.slice(0, 1) : cue.targetLimit ? pool.slice(0, cue.targetLimit) : cue.event === 'projectile' ? pool.slice(0, 1) : pool) {
       spawns.push({ ...cue, sourceId, targetId });
     }
   }

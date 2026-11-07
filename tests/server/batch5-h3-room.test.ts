@@ -7,7 +7,9 @@ import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 
 // First integrated-pool seed with the original s3/no-reroll acquisition route (seed 5).
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:5});
+// v26 D5 (7953c99a) pool: seed 5's s3 no longer gets No Scout; seed 9 is the first room seed from 0 whose s3 gets it at 2-1
+// within the public slot rerolls (roomOfferFor rerolls slots 0 and 1).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:9});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s3')!;
 let fighterId:string;
 beforeAll(()=>room.start());

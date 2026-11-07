@@ -36,6 +36,11 @@ const stop=new Error('captured genuine 3-7 preparation');
 // Search restricted to 0..100: seed 3 naturally buys two 1-star Tristanas (4 and 1 prior bounce kills),
 // earns Giant Slayer/Gargoyle and a 3-7 Tristana drop, then earns exactly three current bounce kills.
 // No scripted offers in this growth route; All for One II acquisition is a separate fixture self-check below.
+// v26: 14.24 neutrals (568eeea4, merged e5892c51) and targeting P0/P1 (28fd974a/8106acee) change seed 3's route:
+// its two Tristanas reach 3-7 with one prior bounce kill each, and alone they now lose the 14.24 wolves (no live
+// reward, loot carried). A scan of 375 non-crab seeds up to 7125 with a 3-7 Tristana drop found none whose two
+// isolated Tristanas win 3-7. The battle therefore keeps the route's real board beside the two originals; Tristana is
+// still the only growth source, and the won 3-7 earns exactly one current bounce kill (v25: three, isolated).
 try { await run(api,{seed:3,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
@@ -55,8 +60,10 @@ const OTHER=initial.preparation.units.find(u=>!originals.includes(u.id))!.id;
 const priorBySource=originals.map(unitId=>({unitId,attackDamageBps:priorFacts.filter(f=>f.unitId===unitId).length*GAIN}));
 const STOCK=priorBySource.reduce((n,g)=>n+g.attackDamageBps,0);
 
-// Public deployment isolates both original growth sources and earns a real current-battle delta.
-let prepared = accepted(deployMatchUnit(reserveExcept(initial,originals),SURVIVOR,{kind:'board',cell:{col:3,row:4}}));
+// Public deployment keeps both original growth sources (the only Tristanas) and earns a real current-battle delta.
+const routeBoard=initial.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.id);
+expect(initial.preparation.units.filter(u=>routeBoard.includes(u.id)&&u.definitionId==='tristana').map(u=>u.id).every(id=>originals.includes(id))).toBe(true);
+let prepared = accepted(deployMatchUnit(reserveExcept(initial,[...routeBoard,...originals]),SURVIVOR,{kind:'board',cell:{col:3,row:4}}));
 // A public holder sale releases the genuinely acquired Giant Slayer for this battle.
 const giantSlayer=prepared.items.find(i=>i.definitionId==='giant-slayer')!;
 if(giantSlayer.location.kind==='unit')prepared=accepted(api.sellUnit(prepared,giantSlayer.location.unitId));
@@ -72,7 +79,7 @@ while(probe.phase==='combat'){const next=stepMatch(probe);currentFacts.push(...b
 const DELTA=currentFacts.length*GAIN,TOTAL=STOCK+DELTA;
 expect(priorBySource.every(g=>g.attackDamageBps>0),JSON.stringify({priorBySource,currentFacts})).toBe(true);
 expect(DELTA).toBeGreaterThan(0);
-expect(currentFacts).toHaveLength(3);
+expect(currentFacts).toHaveLength(1); // v25 isolated seed-3 Tristanas: 3
 const result = battle(prepared);
 if(!result.revealed)throw Error('Expected live reveal before natural final tick');
 const live = {...result,revealed:result.revealed,selected:result.ended};

@@ -29,7 +29,7 @@ import type { CellPoint, LegendWalk, LegendWalkRequest } from '../legend-motion'
  * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
  * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
  * until the freeze only means an older client highlights the opponent from the battle on.
- * 3 since G1-P7: the client may send `carousel-pick` (MULTIPLAYER_CONTRACT §21.1), a new command a protocol 2 server would refuse;
+ * 3 since G1-P7: the parser recognizes legacy `carousel-pick` (v26 player ingress refuses it) (MULTIPLAYER_CONTRACT §21.1), a new command a protocol 2 server would refuse;
  * its receipts carry the rules' CarouselFailure reasons plus `stale-carousel`. A protocol 2 client could not take part either:
  * the match then opened on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
  * `PlayerView.carousel` and the `carousel` phase kind alone would have been additive. A protocol 2 client is refused at its

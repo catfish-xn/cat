@@ -1,3 +1,4 @@
+import { AUGMENT_D5_TIERS } from './augment-pool-d5';
 import { AUGMENT_BATCH5_R1_TIERS } from './augment-pool-batch5-r1';
 import { AUGMENT_BATCH5_R2_TIERS } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_R3_TIERS } from './augment-pool-batch5-r3';
@@ -128,6 +129,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
+  ...AUGMENT_D5_TIERS,
   ...AUGMENT_BATCH5_R2_TIERS,
   ...AUGMENT_BATCH1_TIERS,
   ...AUGMENT_BATCH2_TIERS,

@@ -189,16 +189,28 @@ describe('M5 atomic economy and independent ledger', () => {
     const state = phase === 'choice' ? reachRound('2-1',false) : phase === 'combat' ? running : phase === 'settlement' ? finish(running)
       : accepted(startMatchCombat({ ...economyEmptyBoard(), playerHp: 1 }));
     expect(state.phase).toBe(phase);
+    const deploy = (s: MatchState) => deployMatchUnit(s, 'unit-1', { kind: 'bench', slot: 0 });
     const commands = [(s: MatchState) => buyUnit(s, 0, s.shop.generation), (s: MatchState) => sellUnit(s, 'unit-1'),
-      rerollShop, buyXp, startMatchCombat, (s: MatchState) => deployMatchUnit(s, 'unit-1', { kind: 'bench', slot: 0 })];
+      rerollShop, buyXp, startMatchCombat, ...(phase === 'choice' ? [] : [deploy])];
     for (const command of commands) rejects(state, command, 'wrong-phase');
+    if (phase === 'choice') {
+      // v26 D2 (d80a4737, docs/D2_BRB_CONTRACT.md "任意海克斯选择期间布阵"): during an augment choice that returns to
+      // preparation, deployment is accepted; the pending choice, its generation/offers and the choice RNG stay untouched.
+      // Every shop/economy/start command above is still rejected.
+      expect(state.pendingChoice).toMatchObject({ kind: 'augment', returnPhase: 'preparation' });
+      const before = structuredClone(state), moved = accepted(deployMatchUnit(freeze(state), 'unit-1', { kind: 'board', cell: { col: 3, row: 4 } }));
+      expect(state).toEqual(before);
+      expect(moved.phase).toBe('choice'); expect(moved.pendingChoice).toEqual(state.pendingChoice); expect(moved.choiceRngState).toBe(state.choiceRngState);
+      expect(moved.preparation.units.find(u => u.id === 'unit-1')!.location).toEqual({ kind: 'board', cell: { col: 3, row: 4 } });
+      expect(accepted(deploy(freeze(moved))).preparation).toEqual(state.preparation);
+    }
     if (phase === 'gameOver') rejects(state, s => nextRound(s, s.round), 'wrong-phase');
   });
   it('can deliberately abandon an empty board after selling the last deployed unit, paying HP for recovery income', () => {
     let state = ledger(economyEmptyBoard(), { type: 'deploy', id: 'unit-1', target: { kind: 'board', cell: { col: 0, row: 4 } } });
     state = ledger(state, { type: 'sell', id: 'unit-1' });
     const result = accepted(startMatchCombat(freeze(state)));
-    expect(result).toMatchObject({ phase: 'settlement', playerHp: 97, gold: state.gold, xp: 2 });
+    expect(result).toMatchObject({ phase: 'settlement', playerHp: 98, gold: state.gold, xp: 2 });
     expect(result.combat).toMatchObject({ tick: 0, result: 'enemyWin' });
     expect(accepted(nextRound(result,result.round)).gold).toBe(state.gold+2);
   });

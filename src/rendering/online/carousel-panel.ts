@@ -128,7 +128,10 @@ export class CarouselPanel {
     back.title = '回到选秀盘（空格）'; back.append(element('kbd', '空格'));
     back.addEventListener('click', () => this.setSide('carousel'));
     this.bar.append(element('strong', '选秀', 'carousel-bar-title'), this.barTimer, element('span', '秒', 'carousel-timer-unit'), this.barStatus, back);
-    host.append(this.root, this.bar);
+    // S13: in 3D the shop folds to a tab at the bottom while drafting (nothing can be bought on the carousel).
+    const shopTab = element('div', '', 'carousel-shop-tab'); shopTab.dataset.debug = 'online:carousel-shop-tab';
+    shopTab.setAttribute('aria-disabled', 'true'); shopTab.title = '选秀中商店不可用';
+    host.append(this.root, this.bar, shopTab);
     this.detach = attachCarouselCards(this.root);
     document.addEventListener('keydown', this.onKey);
   }
@@ -174,7 +177,7 @@ export class CarouselPanel {
     for (const chip of Array.from(this.ring.querySelectorAll('.carousel-slot.pending'))) chip.classList.remove('pending');
     this.tick();
   }
-  /** A slot click, from its chip or the 3D carousel: taken only while my batch is out, the slot stands and no pick is out. */
+  /** A 2D card click requesting server-planned travel: taken only while my batch is out, the slot stands and no pick is out. */
   pickSlot(slot: number): boolean {
     const current = this.view, chip = this.chip(slot);
     if (!current?.eligible || !chip || chip.disabled || this.pending !== null) return false;
@@ -191,7 +194,7 @@ export class CarouselPanel {
   elapsedNow(): number | null { return this.view ? performance.now() - this.clockOffset - this.view.startedAt : null; }
   /** My click still waiting for the server's answer, if any. */
   get pendingSlot(): number | null { return this.pending; }
-  /** True while the 3D layer draws the carousel: the panel keeps its head, countdown and release order but not the ring. */
+  /** True while the 3D layer draws the carousel: as in S13 only the stage bar's countdown stays; the panel keeps just the way to my board. */
   set drawnIn3d(on: boolean) { this.root.toggleAttribute('data-ring-3d', on); }
   private chip(slot: number): HTMLButtonElement | null {
     return this.ring.querySelector<HTMLButtonElement>(`.carousel-slot[data-slot="${slot}"]`);
@@ -310,8 +313,8 @@ export class CarouselHoldingSlot {
     this.root.setAttribute('aria-label', '临时位 · 不参战');
     host.append(this.root); this.detach = attachCarouselCards(this.root);
   }
-  render(units: readonly HeldCarouselUnitView[], operable: boolean): void {
-    const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
+  render(units: readonly HeldCarouselUnitView[], operable: boolean, refusal = '准备阶段可出售'): void {
+    const key = `${operable}|${refusal}|${units.map(unit => unit.unitId).join(',')}`;
     if (key === this.key) return;
     this.key = key;
     this.root.hidden = units.length === 0;
@@ -325,7 +328,7 @@ export class CarouselHoldingSlot {
       portrait.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40));
       const sell = element('button', `出售 +${cost}`, 'carousel-holding-sell'); sell.type = 'button'; sell.disabled = !operable;
       sell.dataset.debug = `online:carousel-holding-sell:${unit.unitId}`;
-      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : '准备阶段可出售';
+      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : refusal;
       sell.addEventListener('click', () => { if (!sell.disabled) this.onSell(unit.unitId); });
       card.append(portrait, element('span', unitName(unit.definitionId), 'carousel-holding-name'), element('span', '不参战', 'carousel-holding-idle'), sell);
       return card;

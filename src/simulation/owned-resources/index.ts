@@ -1,3 +1,6 @@
+import { reconcileAnomalyResources, resolveAnomalyBinding } from '../anomaly-ownership';
+import { canEquipPortableAnomaly } from '../augment-pool-batch5-r2-anomaly';
+import { usableBenchSlots } from '../bench-capacity';
 import { canonicalContent } from '../content';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { deploymentCapFor } from '../deployment-cap';
@@ -41,7 +44,7 @@ export function createOwnershipState(boundary: OwnershipBoundary): OwnershipStat
     return { seatId: state.sharedPool!.seatId, preparation: state.preparation, items: state.items,
       nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial,
       duplicators: [], nextDuplicatorSerial: 1, deploymentCap: deploymentCapFor(state.level, readG23Progress(state)),
-      gold: state.gold, anomalyBinding: state.anomalyBinding, persistentGrowth: state.persistentGrowth };
+      gold: state.gold, anomalySelection: state.anomalySelection, anomalyBinding: state.anomalyBinding, persistentGrowth: state.persistentGrowth };
   });
   const state: OwnershipState = structuredClone({ pool: boundary.pool, seats, held: [], settledOrdinal,
     acquiredGrantIds: [], transactions: [] });
@@ -67,6 +70,10 @@ export function assertOwnershipConservation(state: OwnershipState): void {
       ...held.flatMap(h => h.kind === 'unit' ? [h.unit] : [])];
     const unitIds = new Set(units.map(u => u.id));
     check(unitIds.size === units.length);
+    if (seat.anomalyBinding) {
+      check(unitIds.has(seat.anomalyBinding.unitId));
+    }
+    if (seat.anomalySelection) check(same(resolveAnomalyBinding(seat.anomalySelection,seat.anomalyBinding,units.filter(u=>seat.preparation.units.some(v=>v.id===u.id)||u.id===seat.anomalyBinding?.unitId)),seat.anomalyBinding));
     const holdings = state.pool.holdings.filter(h => h.seatId === seat.seatId);
     const champions = units.filter(u => !UNIT_DEFINITIONS[u.definitionId]?.summon);
     check(champions.length === holdings.length);
@@ -99,9 +106,11 @@ function updateSeat(state: Draft, seat: OwnershipSeat): void {
 /** Explicit mechanism placement: first empty bench, then a free legal player cell within the frozen cap.
  * No merge, upgrade, sale, carousel convention or reward regeneration is hidden here (Q3/Q5). */
 function freeLocation(seat: OwnershipSeat): UnitLocation | null {
-  for (let slot = 0; slot < seat.preparation.benchSize; slot++) {
+  if (seat.preparation.overflowUnitIds?.length) return null;
+  for (let slot = 0; slot < usableBenchSlots(seat.preparation); slot++) {
     if (!seat.preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === slot)) return { kind: 'bench', slot };
   }
+  if (seat.preparation.usableBenchSlots !== undefined) return null;
   if (getPlayerDeploymentCount(seat.preparation) >= seat.deploymentCap) return null;
   const board = seat.preparation.board;
   for (let row = board.deploymentZones.player.firstRow; row <= board.deploymentZones.player.lastRow; row++) {
@@ -241,6 +250,8 @@ function apply(state: Draft, op: OwnershipOperation, authority: OwnershipAuthori
       anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(seat.persistentGrowth, merged.events) });
     for (const h of [...state.held]) if (h.seatId === seat.seatId && h.kind === 'unit' && h.returnRound <= state.settledOrdinal) claim(state, h.id, seat.seatId, 'hold');
   } else if (op.kind === 'equip') {
+    const item = seat.items.find(i => i.id === op.itemId);
+    check(item && canEquipPortableAnomaly(seat, item, op.unitId), 'invalid-target');
     const plan = planEquip(seat.items, seat.preparation, op.itemId, op.unitId, op.slot, seat.nextItemSerial);
     check(plan.ok, 'invalid-target');
     updateSeat(state, { ...seat, items: plan.items, nextItemSerial: plan.nextItemSerial });
@@ -267,6 +278,11 @@ export function transactOwnership(state: OwnershipState, transaction: OwnershipT
         check(op.full === 'hold' || op.full === 'reject', 'invalid-transaction');
       }
       apply(draft, op, authority, transaction.id);
+      draft.seats = draft.seats.map(seat => {
+        const held = draft.held.flatMap(h => h.seatId === seat.seatId && h.kind === 'unit' && h.unit.id === seat.anomalyBinding?.unitId ? [h.unit] : []);
+        const resources = reconcileAnomalyResources(seat.anomalySelection, seat.anomalyBinding, [...seat.preparation.units.filter(u=>u.team==='player'), ...held], seat.items);
+        return {...seat, anomalyBinding:resources.anomalyBinding, items:resources.items};
+      });
     }
     // Every accepted ID is durable, even when only the command receipt changes.
     const resourcesChanged = !same(draft, state);

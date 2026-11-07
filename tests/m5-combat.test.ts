@@ -173,7 +173,7 @@ describe('M5 independent finite combat rules', () => {
   });
   it('Loris transfers half post-mitigation damage once and uses his shield without a second armor reduction', () => {
     const result = stepCombat(battle([hero('loris', 'p', { armor: 1000 }), dummy('a', 1, 2, { armor: 100 }),
-      dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 200, attackRange: 1 })]));
+      dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 200, attackRange: 1, targetId: 'a' })])); // a/p are tied; keep the pre-P1 target so this case does not draw.
     expect(packets(result.events).filter(p => p.source.ownerId === 'e').map(p => [p.unitId, p.mitigated, p.absorbed, p.hpDamage, p.redirected]))
       .toEqual([['a', 50, 0, 50, false], ['p', 50, 50, 0, true]]);
   });
@@ -313,7 +313,7 @@ describe('M5 independent finite combat rules', () => {
   it('Bulky Buddies grants its one-time sourced shield only after the frozen buddy dies', () => {
     const buddy = { ...mechanic('p', 'bulkyBuddies', { shieldMaxHpBps: 1000, durationTicks: 200 }), targetId: 'a' };
     const result = stepCombat(battle([hero('lux', 'p', { mana: 0, cooldownTicks: 1000, mechanics: [buddy] }),
-      dummy('a', 1, 2, { hp: 10 }), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100 })]));
+      dummy('a', 1, 2, { hp: 10 }), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100, targetId: 'a' })])); // tied with p; pin a so the buddy still dies.
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.buddyTriggered).toBe(true);
     expect(result.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ source: buddy.source, granted: 500, expiresAtTick: 201 })]);
   });
@@ -333,7 +333,7 @@ describe('M5 independent finite combat rules', () => {
   it('Kog passive and Darius initial spin use distinct noncritical magic/physical coefficients', () => {
     const kog = stepCombat(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
-    const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700 }), dummy(), dummy('e2', 1, 2)]));
+    const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700, targetId: 'e' }), dummy(), dummy('e2', 1, 2)])); // e/e2 are tied; pin e.
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
     expect(heals(darius.events)[0]).toMatchObject({ requested: 150, actual: 150 });
     expect(darius.state.units.find(u => u.id === 'p')!.tasks!.map(t => t.targetId)).toEqual(['e', 'e', 'e', 'e']);
@@ -348,7 +348,7 @@ describe('M5 independent finite combat rules', () => {
   });
   it('multiple redirects choose the smallest protector ID and transferred damage cannot redirect again', () => {
     const result = stepCombat(battle([hero('loris', 'p'), hero('loris', 'p2', { cell: { col: 0, row: 2 } }),
-      dummy('a', 1, 2), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100 })]));
+      dummy('a', 1, 2), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100, targetId: 'a' })])); // a/p are tied; pin a so the redirect still lands on p.
     expect(packets(result.events).filter(p => p.redirected).map(p => [p.unitId, p.mitigated])).toEqual([['p', 50]]);
   });
   it('derived AoE packet ordinals are unique and item enumeration cannot choose a different killer', () => {
@@ -407,7 +407,7 @@ describe('M5 independent finite combat rules', () => {
   it('Tristana with Loris redirect cannot create two ricochets, duplicate task keys, or double growth', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), {
+    const result = stepCombat(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 100 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     // 575 incoming splits288 to primary and287 to protector. Only primary overkill188 may ricochet.
@@ -421,7 +421,7 @@ describe('M5 independent finite combat rules', () => {
   it('killing only a damage-sharing protector does not count as Tristana primary-target ricochet', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 1000 }), {
+    const result = stepCombat(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 1000 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     expect(result.state.units.find(u => u.id === 'ea')!.hp).toBe(712);

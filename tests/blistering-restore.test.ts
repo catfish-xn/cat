@@ -4,6 +4,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { validateStatusGroups } from '../src/simulation/m8/status';
 import { accepted, reachRound } from './match-helpers';
 import { withB1Offers } from './fixtures/b1-scripted-offers';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
 
 function start(seed: number, requireBlistering = false): MatchState {
   let s = reachRound('2-1', false, seed);
@@ -12,7 +13,13 @@ function start(seed: number, requireBlistering = false): MatchState {
   // The current and XP pools no longer offer Blistering at 16/648. Keep their
   // real shops/armies and select an actual offer: Powder's ignite is the cause,
   // independently of which augment coexists with it. Never replace either seed.
-  const id = choice.offers.includes('blistering-strikes') ? 'blistering-strikes' : choice.offers[0];
+  // v26 D5 registration (7953c99a, merge 3ce71065) changed seed 16's 2-1 offers to im-the-carry-now/lucky-gloves/
+  // build-a-bud (the v25 offers[0] deployed cleanly). I'm the Carry Now places the Carry Golem structure on the board
+  // cell this route deploys to (invalid-location), and Lucky Gloves owns replay history, so seed 16 takes the first
+  // offer that is neither; every other seed still takes offers[0].
+  const id = choice.offers.includes('blistering-strikes') ? 'blistering-strikes'
+    : choice.offers[0] === 'im-the-carry-now' ? choice.offers.find(offer => offer !== 'im-the-carry-now' && !augmentNeedsHistory(offer))!
+    : choice.offers[0];
   s = accepted(selectChoice(s, choice.choiceId, choice.generation, id));
   const first = s.preparation.units.find(u => u.team === 'player')!;
   const slot = s.shop.slots.findIndex(v => v.status === 'available' && v.definitionId === 'powder');

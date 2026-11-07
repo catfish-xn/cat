@@ -78,8 +78,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
 
     const staticModuleIds = [...staticPaths.keys()].flatMap(name => byName.get(name)!.moduleIds).map(normalize);
     const phaserModules = staticModuleIds.filter(id => id.includes('/node_modules/phaser/src/'));
-    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad)\//.test(id)
-      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower)\.js(?:\?|$)/.test(id)),
+    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad|input\/keyboard\/|cameras\/2d\/effects\/|math\/easing\/(?:back|bounce|circular|elastic|expo|quartic|quintic|stepped)\/|textures\/parsers\/(?:KTX|PVR|SpriteSheet|JSON|Atlas|Unity|Canvas)|utils\/array\/(?:matrix\/|EachInRange|NumberArrayStep|RemoveRandomElement|RotateLeft|RotateRight))/.test(id)
+      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower|textures\/DynamicTexture)\.js(?:\?|$)/.test(id)),
     'unused Phaser subsystems and public utility collections must stay out').toEqual([]);
     for (const module of ['display/color/Color.js', 'display/color/ValueToColor.js',
       'renderer/canvas/CanvasRenderer.js', 'input/InputPlugin.js', 'input/touch/TouchManager.js',
@@ -121,15 +121,38 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
     for (const chunk of uiChunks) {
       expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
-      if (!chunk.moduleIds.some(id => /unit-panel(?:-style)?\.ts$/.test(id))) {
+      if (chunk.moduleIds.some(id => /\/team-planner\//.test(normalize(id)))) {
+        expect(chunk.imports.filter(name => !staticPaths.has(name)),
+          'planner may only import chunks already in the static entry graph').toEqual([]);
+      } else if (!chunk.moduleIds.some(id => /unit-panel(?:-style)?\.ts$/.test(normalize(id)))) {
         expect(chunk.imports, 'UI data must not pull the application or domain back in').toEqual([]);
       }
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
       expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
     }
+    const confiscation = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/src/presentation/confiscation-display.ts')));
+    expect(confiscation, 'confiscation display must be in an on-demand UI chunk').toBeDefined();
+    console.info('2D JS gzip-9:', chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
+      .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
+    console.info('3D JS gzip-9:', output.filter(item => /^assets\/3d\/[^/]+\.js$/.test(item.fileName))
+      .reduce((sum, item) => sum + gzipSync(item.type === 'chunk' ? item.code : item.source, { level: 9 }).length, 0));
+    console.info('confiscation UI JS gzip-9:', gzipSync(confiscation!.code, { level: 9 }).length);
     const inspect = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/unit-panel.ts')));
     expect(inspect, 'inspect panel must be in an on-demand UI chunk').toBeDefined();
     expect(staticPaths.has(inspect!.fileName), 'inspect panel must not enter the static entry graph').toBe(false);
+    const plannerChunks = chunks.filter(chunk => chunk.moduleIds.some(id => /\/src\/presentation\/team-planner\//.test(normalize(id))));
+    expect(plannerChunks.length, 'planner must actually be emitted').toBeGreaterThan(0);
+    for (const chunk of plannerChunks) {
+      expect(chunk.fileName.startsWith('assets/ui/'), 'all planner implementation must stay in on-demand UI chunks').toBe(true);
+      expect(staticPaths.has(chunk.fileName), 'planner, storage and highlights must not enter the static entry graph').toBe(false);
+      expect(allPaths.has(chunk.fileName), 'planner remains reachable on demand').toBe(true);
+    }
+    expect(staticModuleIds.filter(id => /\/src\/presentation\/team-planner\//.test(id))).toEqual([]);
+    console.info('planner JS gzip-9:', plannerChunks.reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
+    const damageChunks = uiChunks.filter(chunk => chunk.moduleIds.some(id => id.endsWith('/pvp-damage.ts')));
+    expect(damageChunks, 'PvP damage presentation must remain in its own on-demand UI chunk').toHaveLength(1);
+    expect(damageChunks[0]!.imports, 'PvP damage UI must have no runtime imports').toEqual([]);
+    expect(damageChunks[0]!.dynamicImports, 'PvP damage UI must not load domain or application code').toEqual([]);
     for (const chunk of threeDChunks) {
       expect(chunk.imports.filter(name => !name.startsWith('assets/3d/')),
         '3D chunks must not import 2D or UI chunks').toEqual([]);
@@ -145,6 +168,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect([...preloads, ...scriptEntries].map(outputPath).filter(path => path.endsWith('.js') && !/^assets\/[^/]+\.js$/.test(path)),
       'HTML must not preload JS excluded by the 2D budget').toEqual([]);
     expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/solo/')), 'HTML must not preload solo code').toEqual([]);
+    expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/ui/')), 'HTML must not preload UI chunks').toEqual([]);
     const threeDNames = new Set(threeDChunks.map(chunk => chunk.fileName));
     expect.soft(preloads.filter(href => threeDNames.has(outputPath(href))), 'HTML must not preload 3D chunks').toEqual([]);
 

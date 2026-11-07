@@ -19,6 +19,7 @@ import { CAROUSEL_RULES_BINDING } from '../../server/room/carousel';
 import type { ClientListeners, GameClient, LittleLegendId, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 import { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
+import type { LegendWalkRequest } from '../../server/legend-motion';
 import type { CombatReplay } from '../../presentation/combat-display';
 
 export { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
@@ -80,7 +81,9 @@ export class LocalRoomClient implements GameClient {
 
   listen(listeners: ClientListeners): () => void {
     this.listeners = listeners; this.emitLobby();
-    if (this.room) { const match = this.myMatch(); if (match) listeners.state(this.display(match)); listeners.view(this.view(this.room.state)); }
+    if (this.room) { const match = this.myMatch(); if (match) listeners.state(this.display(match)); listeners.view(this.view(this.room.state));
+      for (const walk of this.room.walks) listeners.legend?.(walk, this.clock.now());
+    }
     return () => { if (this.listeners === listeners) this.listeners = null; };
   }
 
@@ -121,7 +124,7 @@ export class LocalRoomClient implements GameClient {
     if (!room || seatId === null) return { ok: false, state: this.emittedDisplay ?? createMatch(this.options.seed), reason: 'wrong-phase' };
     this.inCommand = true;
     try {
-      const result = room.handle(seatId, command);
+      const result = room.handlePlayer(seatId, command);
       if (!result.ok) {
         // Room-level refusals (seat/phase) are not MatchFailures; the UI shows them as a phase refusal. Shared-pool reasons
         // (pool-empty, empty-slot, ...) pass through unchanged; the scene has its own text for them (POOL_REFUSAL_TEXT).
@@ -131,6 +134,10 @@ export class LocalRoomClient implements GameClient {
       }
       return { ok: true, state: this.display(result.state), events: result.events };
     } finally { this.inCommand = false; }
+  }
+  /** Same authoritative walk as the WebSocket transport; no pick or animation is synthesized locally. */
+  walk(request: LegendWalkRequest): boolean {
+    return !this.disposed && this.room !== null && this.mySeatId !== null && this.room.walkLegend(this.mySeatId, request).ok;
   }
   /** My room state as the UI sees it: the rules' private seat view through the display adapter, built once per state. */
   private display(match: MatchState): MatchState {
@@ -150,7 +157,8 @@ export class LocalRoomClient implements GameClient {
       if (notice.seatId !== this.mySeatId) return;
       queueMicrotask(() => { if (!this.disposed && this.room === room) this.listeners?.notice?.({ kind: 'orb-claim-refused', orbId: notice.orbId, reason: notice.reason }); });
     });
-    this.unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); };
+    const unsubscribeWalks = room.subscribeWalks(walk => this.listeners?.legend?.(walk, this.clock.now()));
+    this.unsubscribeRoom = () => { unsubscribeState(); unsubscribeLive(); unsubscribeNotices(); unsubscribeWalks(); };
   }
   private detach(): void {
     this.unsubscribeRoom?.(); this.unsubscribeRoom = null;

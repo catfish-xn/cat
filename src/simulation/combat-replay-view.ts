@@ -42,7 +42,8 @@ export interface CombatViewItemStack {
   readonly instanceId: string;
   readonly definitionId: string;
   readonly stacks: number;
-  readonly maxStacks: number;
+  /** null: uncapped growth (鬼索的狂暴之刃 per attack, 大天使之杖 per pulse); the client shows the count without 满. */
+  readonly maxStacks: number | null;
   /** Supplied by the online equipment projection when the held slot is known. */
   readonly slot?: number;
   readonly temporary?: boolean;
@@ -58,6 +59,17 @@ function itemStackView(unit: CombatUnit): { readonly itemStacks?: readonly Comba
       && r.source.parentItemInstanceId === source.parentItemInstanceId && r.counters[counter.id] !== undefined);
     itemStacks.push({ instanceId: source.instanceId, definitionId: source.definitionId,
       stacks: runtime?.counters[counter.id] ?? 0, maxStacks: counter.cap });
+  }
+  // Uncapped growth items read the runtime that already applies the stat: one rageblade stack per counted
+  // attack-growth trigger, one archangel stack per completed periodic pulse. Same source instance, no recount.
+  const same = (a: { readonly sourceKind: string; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number },
+    b: typeof a) => a.sourceKind === b.sourceKind && a.definitionId === b.definitionId && a.instanceId === b.instanceId && a.effectIndex === b.effectIndex;
+  for (const m of unit.mechanics ?? []) {
+    if (m.source.sourceKind !== 'item') continue;
+    if (m.mechanic === 'rageblade') itemStacks.push({ instanceId: m.source.instanceId, definitionId: m.source.definitionId,
+      stacks: unit.triggerLedger?.runtimes.find(r => same(r.source, m.source))?.triggerCount ?? 0, maxStacks: null });
+    if (m.mechanic === 'archangel') itemStacks.push({ instanceId: m.source.instanceId, definitionId: m.source.definitionId,
+      stacks: unit.mechanismState?.periodicTasks.find(t => same(t.source, m.source))?.pulseOrdinal ?? 0, maxStacks: null });
   }
   // Explicit [] clears removed equipment; optional in the wire type for legacy replays.
   return { itemStacks };
@@ -106,9 +118,17 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatFinished': return { ...envelope, ...pick(event, ['type', 'result', 'reason']) };
     case 'packetDamage': return { ...envelope, type: event.type, sourceId: event.outcome.context.source.ownerId,
       targetId: event.outcome.context.targetId, damageType: event.outcome.context.damageType,
+      // Display provenance only: skill vs equipment, not the source object or packet id.
+      sourceKind: event.outcome.context.source.sourceKind,
+      definitionId: event.outcome.context.source.definitionId,
+      delivery: event.outcome.context.delivery,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
-      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId,
+        sourceKind: share.source.sourceKind, definitionId: share.source.definitionId,
+        // The heal ledger has no damage delivery. This only fills PacketOrigin so a share
+        // can be told from an ability heal; it is not a damage context and does not settle.
+        delivery: healShareDelivery(share.source.sourceKind), actual: share.actual })) };
     case 'manaChanged': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'before', 'after']) };
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
@@ -131,7 +151,24 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }
 }
-export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
+type PacketOrigin = {
+  readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth';
+  readonly definitionId: string;
+  readonly delivery: 'basic-attack' | 'ability-direct' | 'ability-periodic' | 'attack-extra' | 'equipment-proc' | 'item-burn';
+};
+/** Older replays omit these. New projections always send them; callers must not treat a missing tag as ability damage. */
+type RelaxPacketOrigin<T> = T extends { readonly type: 'packetDamage' }
+  ? Omit<T, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] }
+  : T extends { readonly type: 'heal'; readonly shares: readonly (infer Share)[] }
+    ? Omit<T, 'shares'> & { readonly shares: readonly (Omit<Share, keyof PacketOrigin> & { readonly [K in keyof PacketOrigin]?: PacketOrigin[K] })[] }
+    : T;
+export type CombatAnimationEvent = RelaxPacketOrigin<NonNullable<ReturnType<typeof animationEvent>>>;
+function healShareDelivery(kind: PacketOrigin['sourceKind']): PacketOrigin['delivery'] {
+  if (kind === 'ability') return 'ability-direct';
+  if (kind === 'item') return 'equipment-proc';
+  if (kind === 'attack') return 'basic-attack';
+  return 'attack-extra';
+}
 export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
   | import('./seat-mechanics/replay-units').ReplayMembershipEvent;

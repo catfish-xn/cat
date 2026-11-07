@@ -76,12 +76,17 @@ describe('P7 carousel rule transactions', () => {
     it('timeout bot strategy is deterministic and all grants conserve the shared bag', () => {
         const a = opening();
         let state = must(advanceCarousel(a.state, 30000)).state;
+        // supplySeats plays real PvE (seed 42+i). Measured HP entering this 2-4:
+        // s0/s4/s6/s7 = 94, s1/s5 = 97, s2/s3 = 98. Release is HP ascending, then seatIndex,
+        // so the completing seat is s3. The close is still only that completing pick.
+        const completing = state.releaseOrder.at(-1)!;
+        expect(completing).toBe('s3');
         for (const seatId of state.releaseOrder) {
             const i = Number(seatId.slice(1)), r = must(autoPickCarouselForSeat(state.pool, state, a.states[i], seatId, 'timeout'));
             state = r.carousel;
             expect(r.events.some(e=>e.type==='carousel-picked')).toBe(true);
             expect(r.events.some(e=>e.type==='carouselGranted')).toBe(true);
-            if (i===7) expect(r.events.some(e=>e.type==='carousel-closed')).toBe(true);
+            expect(r.events.some(e=>e.type==='carousel-closed')).toBe(seatId === completing);
             a.states[i] = r.state;
             assertSharedPoolConservation(state.pool, a.states);
             }
@@ -162,7 +167,8 @@ describe('P7 supply and capacity integration', () => {
         const automatic = must(autoPickFromCarousel(unlocked, 's0', match));
         expect(automatic.state.receipts[0].slot).toBe(0);
         expect(automatic.state.rngAfter).toBe(unlocked.rngAfter);
-        expect([1,2]).toContain(UNIT_DEFINITIONS[sample].cost);
+        expect([1,2,3]).toContain(UNIT_DEFINITIONS[sample].cost);
+        expect([1,2,3].map(cost=>unlocked.slots.filter(s=>UNIT_DEFINITIONS[s.definitionId].cost===cost).length)).toEqual([1,4,4]);
     });
 });
 describe('P7 boundary rejection and recovery authentication', () => {

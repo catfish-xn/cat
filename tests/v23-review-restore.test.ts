@@ -3,11 +3,18 @@ import { startMatchCombat, stepMatch, sellUnit, deployMatchUnit, type MatchState
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { isAbsent } from '../src/simulation/anomalies/availability';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 import { accepted, reachRound } from './match-helpers';
+
+// D5 registration makes seed 42's 2-1 forfeit Sniper's Nest. The solo proof then
+// replays deployMatchUnit for units this test grants, which the proof never acquired.
+// Seed 43, skipping history-owned offers, still opens g23 Sion and — within 250
+// steps — both a knockup stun and a plain stun (probed 42–50, 3, 7 and 11).
+const QUIET_2_1 = Object.keys(AUGMENT_HISTORY_OWNERS);
 
 let opening: MatchState;
 beforeAll(() => {
-  let s = reachRound('2-1', true, 42);
+  let s = reachRound('2-1', true, 43, [], QUIET_2_1);
   for (const u of s.preparation.units.filter(u => u.team === 'player')) s = accepted(sellUnit(s, u.id));
   for (const [i, definitionId] of ['morgana','vladimir','cassiopeia'].entries()) {
     s = accepted(grantMechanicUnit(s, { receiptId: `v23-review-${definitionId}`, source: 'test', definitionId }));
@@ -62,7 +69,7 @@ describe('v23 independent review: Match restore authority for new runtime fields
 
 let knockupSave: MatchState;
 beforeAll(() => {
-  let s = reachRound('2-1', true, 42);
+  let s = reachRound('2-1', true, 43, [], QUIET_2_1);
   for (const u of s.preparation.units.filter(u => u.team === 'player')) s = accepted(sellUnit(s, u.id));
   s = accepted(grantMechanicUnit(s, { receiptId: 'v23-review-vi', source: 'test', definitionId: 'vi' }));
   const vi = s.preparation.units.find(u => u.definitionId === 'vi')!;

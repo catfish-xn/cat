@@ -15,6 +15,7 @@ import {
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
+import type { OriginalUi } from './ui-original-assets';
 
 /**
  * Same text as conqueror-flag.ts's conquestLabel (stacks / next chest, the total once all are open). Kept local: a
@@ -36,6 +37,8 @@ const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
 const GOLD = '#e5b64a', SHIMMER = '#c25bff';
 
 export interface TraitPropsContext {
+  readonly ui?: Pick<OriginalUi, 'sprite' | 'subscribe'>;
+  readonly font?: () => string;
   readonly scene: Scene;
   readonly camera: Camera;
   readonly effectScale: number;
@@ -96,31 +99,36 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
 
   /** A count billboard outside a prop's moving body, so the total stays readable during a payout or a bob. */
-  interface CountLabel { text: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
+  interface CountLabel { text: string; font: string; failed: boolean; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
   const countLabel = (root: Group, name: string, color: string, height: () => number): CountLabel => {
     const entry: CountLabel = {
-      text: '', view: null,
+      text: '', font: '', failed: false, view: null,
       show(text) {
-        const changed = entry.text !== text;
+        const font = ctx.font?.() ?? 'sans-serif', skin = ctx.ui?.sprite('world.label'), paintKey = `${font}|${skin?.url ?? ''}`;
+        const changed = entry.text !== text || entry.font !== paintKey;
+        entry.font = paintKey;
         entry.text = text; // Also available in headless tests without a document/canvas.
+        if (entry.failed) return;
         if (!entry.view) {
           const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
-          if (!canvas?.getContext('2d')) return;
+          if (!canvas?.getContext('2d')) { entry.failed = true; return; }
           canvas.width = 192; canvas.height = 80;
           const texture = new CanvasTexture(canvas);
           const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
           sprite.name = name; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
           root.add(sprite); entry.view = { canvas, texture, sprite };
         } else if (!changed) return;
-        const draw = entry.view.canvas.getContext('2d')!;
+        const draw = entry.view.canvas.getContext('2d');
+        if (!draw) { entry.failed = true; entry.dispose(); return; }
         draw.clearRect(0, 0, 192, 80);
-        draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
-        draw.fillStyle = color; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+        if (skin && typeof draw.drawImage === 'function') draw.drawImage(skin.source, 0, 0, 192, 80);
+        else { draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill(); }
+        draw.fillStyle = color; draw.font = `bold 48px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
         draw.fillText(text, 96, 42, 174); entry.view.texture.needsUpdate = true;
         entry.view.sprite.position.y = height();
       },
       place(y) { if (entry.view) entry.view.sprite.position.y = y; },
-      dispose() { entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
+      dispose() { entry.failed = true; entry.view?.sprite.removeFromParent(); entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
     };
     return entry;
   };
@@ -182,18 +190,19 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      // The banner right of my half, one cell beyond my legend's orb columns (the tabletop's legend spot); the flask on
-      // the left (the opponent's legend stands top left).
-      const left = frame.origin.x - width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
-      const right = frame.origin.x + width * (frame.columns - 0.5) + width * 2.65;
-      spots.chest.set(right, 0, bottom - step * 1.4);
-      spots.flask.set(left, 0, bottom - step * 2.1);
+      // The banner left of my half, one cell beyond my legend's orb columns (the tabletop's legend spot, on the arena's
+      // near-left platform); the flask on the right (the opponent's legend stands top right).
+      const right = frame.origin.x + width * (frame.columns - 0.5) + width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
+      // A little beyond the outer orb column (tabletop legendOrbSlots: legend 0.8 widths out, columns 0.75 and 1.3 left of it, ORB_COLUMN_CELLS).
+      const left = frame.origin.x - width * 2.7;
+      spots.chest.set(left, 0, bottom - step * 1.4);
+      spots.flask.set(right, 0, bottom - step * 2.1);
       chestRoot.position.copy(spots.chest); flaskRoot.position.copy(spots.flask);
       // Each turned a little toward the board so its front (lock, label side) faces the player's camera.
-      chestRoot.rotation.y = -0.45; flaskRoot.rotation.y = 0.45;
+      chestRoot.rotation.y = 0.45; flaskRoot.rotation.y = -0.45;
     }
     const pad = 34;
-    return [spots.chest.clone().add(new Vector3(pad, CHEST_MODEL_HEIGHT + 26, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
+    return [spots.chest.clone().add(new Vector3(-pad, CHEST_MODEL_HEIGHT + 26, pad)), spots.flask.clone().add(new Vector3(pad, FLASK_HEIGHT, 0))];
   };
 
   // --- bursts ------------------------------------------------------------------------------------------------------
@@ -255,6 +264,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const update = (seconds: number) => {
     clock += seconds;
     if (chestRoot.visible) {
+      chestLabel.show(chestLabel.text);
       openHold = Math.max(0, openHold - seconds);
       // Brighter toward the next chest, a slow breath once it is close; full while a chest is paying out.
       const breath = glow > 0.75 ? 0.15 * Math.sin(clock * 4) : 0, shine = openHold > 0 ? 1 : glow * 0.85 + breath;
@@ -270,6 +280,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       }
     }
     if (flaskRoot.visible) {
+      flaskLabel.show(flaskLabel.text);
       fill += (fillTarget - fill) * Math.min(1, seconds * FILL_RATE);
       level.scale.y = Math.max(0.001, fill * (LIQUID_TOP - LIQUID_BOTTOM));
       liquid.emissiveIntensity = offer ? 0.9 + 0.4 * Math.sin(clock * 6) : 0.5;

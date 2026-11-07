@@ -46,13 +46,12 @@ function ownership(state: D14State, commandId: string, operations: readonly Owne
  * then legal board within cap. Full seats retain the exact held instance with no bonus yet. */
 function reconcile(state: D14State, events: D14Event[]): D14State {
   const records = state.records.map((r): D14Record => {
-    if (r.phase === 'retired') return r;
     const seat = state.ownership.seats.find(s => s.seatId === r.selection.seatId)!;
     const binding = seat.anomalyBinding;
     const id = binding?.choiceId === r.selection.choiceId ? binding.unitId : r.unitId;
     const live = seat.preparation.units.find(u => u.id === id && u.team === 'player');
     const held = state.ownership.held.some(h => h.seatId === seat.seatId && h.kind === 'unit' && h.unit.id === id);
-    let phase: D14Record['phase'] = r.phase;
+    let phase: D14Record['phase'] = r.phase === 'retired' && binding ? (r.selection.anomalyId === 'ultimate-hero' ? 'waiting' : 'returned') : r.phase;
     if (!live && !held) phase = 'retired';
     else if (phase === 'waiting' && state.ownership.settledOrdinal >= r.dueOrdinal) phase = 'promoted';
     else if (phase === 'absent' && live) {
@@ -91,7 +90,7 @@ export function transactD14(state: D14State, command: D14Command, authority: D14
         phase: s.anomalyId === 'ultimate-hero' ? 'waiting' : 'absent' };
       check(Number.isSafeInteger(record.dueOrdinal), 'invalid-round');
       next = { ...next, ownership: { ...next.ownership, seats: next.ownership.seats.map(x => x !== seat ? x : {
-        ...seat, anomalyBinding: { definitionId: s.anomalyId, unitId: unit.id, choiceId: s.choiceId, boundRound: s.atOrdinal } }) },
+        ...seat, anomalySelection: {definitionId:s.anomalyId,championDefinitionId:unit.definitionId,choiceId:s.choiceId,boundRound:s.atOrdinal}, anomalyBinding: { definitionId: s.anomalyId, unitId: unit.id, choiceId: s.choiceId, boundRound: s.atOrdinal } }) },
         records: [...next.records, record] };
       if (s.anomalyId === 'into-the-unknown') next = ownership(next, command.id, [{ kind: 'hold-unit', seatId: s.seatId, unitId: s.unitId, rounds: 3 }], authority);
       events.push({ type: 'd14Selected', receiptId: s.choiceId, unitId: s.unitId });

@@ -91,6 +91,16 @@ describe('G2-4b moveItemSummon room gate, dispatch and state push', () => {
       expect(outcome.state).toBe(state);
     }
   });
+  it('v26 projects and moves the same preparation summon while an anomaly is pending', () => {
+    const base=withPortal(createMatch(42));
+    const state:MatchState={...base,phase:'choice',combat:null,pendingChoice:{kind:'anomaly',step:'target',choiceId:'round:4-6:anomaly',
+      eventId:'round:4-6:anomaly',generation:0,offers:[],targetId:null,rerollCount:0,returnPhase:'preparation'}};
+    const [summon]=toSeatPrivateView(state).itemSummons;
+    expect(summon).toBeDefined();
+    const moved=moveItemSummon(state,summon.itemInstanceId,{col:0,row:7});
+    if(!moved.ok)throw Error(moved.reason);
+    expect(toSeatPrivateView(moved.state).itemSummons[0].unit.location).toEqual({kind:'board',cell:{col:0,row:7}});
+  });
   it('sends no summons outside preparation and none for a seat without the item', () => {
     const plain = createMatch(42);
     expect(toSeatPrivateView(plain).itemSummons).toEqual([]);

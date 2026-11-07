@@ -1,3 +1,4 @@
+import { usableBenchSlots } from '../bench-capacity';
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { BATCH5_S3A_SOURCE, batch5InventoryPlan } from '../augment-pool-batch5-s3a';
 import { AUGMENT_BATCH5_S3A } from '../content/augment-pool-batch5-s3a';
@@ -22,8 +23,8 @@ export function validateBatch5Inventory(state:MatchState,plan=batch5InventoryPla
   }
   check(serial===state.nextItemSerial&&[...births].filter(([,b])=>b.kind==='item').every(([key])=>used.has(key)));
  }
-
- if(state.phase!=='combat'&&state.m8.round.kind!=='supply'&&!state.multiplayer?.combatRosterLocked&&state.preparation.units.filter(u=>u.location.kind==='bench').length<state.preparation.benchSize
+ // Deployment can empty slot zero while parked units still block planPurchase.
+ if(state.phase!=='combat'&&state.m8.round.kind!=='supply'&&!state.multiplayer?.combatRosterLocked&&!state.preparation.overflowUnitIds?.length&&state.preparation.units.filter(u=>u.location.kind==='bench').length<usableBenchSlots(state.preparation)
    &&plan.anvils.some(g=>!state.seatMechanics?.receipts.some(r=>r.receiptId===g.receiptId)))throw new RangeError('Missing batch5 inventory anvil');
  for(const r of state.seatMechanics?.receipts??[])if(r.source===BATCH5_S3A_SOURCE||r.receiptId.startsWith(`["${BATCH5_S3A_SOURCE}",`)){
   const gift=plan.anvils.find(g=>g.receiptId===r.receiptId);

@@ -53,3 +53,15 @@ the retained v25 bytes before updating this fixture. Only `contentDigest`,
 identity substitutions restores the old file byte for byte. No gameplay data was
 regenerated; v23/v24 files remain unchanged. Full hashes and the corresponding
 Swarm/B9 proofs are recorded in [V25_STARRY_PINS.md](../../../docs/V25_STARRY_PINS.md).
+
+## v26 neutrals-1424 identity
+
+`pre-spoils-v26-seed42.json` repeats the same isolated pre-Spoils settlement export (module from `808d16ae`) on
+the v26 integration head `707eed25` (`s13-g2-3-v26-neutrals-1424`). `scripts/export-pre-spoils-compat.cjs` was run
+unchanged except that its v24 gameplay-equality check was skipped, because v26 intentionally changes the 1-2 fight.
+Against `pre-spoils-v25-seed42.json` the only differences are: the identity fields (`rulesVersion`, `contentVersion`,
+`contentDigest`, `combatInputBasis.contentDigest`, `m8.loot.frozen.replayDigest` `36ebfac2` → `a56b2c4a`), the new
+null `anomalySelection`, and the 1-2 minion combat outcome (14.24 neutral stats from `568eeea4`, targeting/melee pathing
+from `8106acee`/`34cfbfbb`: deaths at ticks 155/274 instead of 69/164, `combatTicks` 274, `baseDamage` 0). These match
+`tests/v26-anomaly-identity-audit.test.ts`. The v23/v24/v25 files are unchanged. SHA-256:
+`3e1ca4c8ad23abe7044c1be70fb9e86ce38d93bd87ec91b4d5ef5aa626f05bd7`.

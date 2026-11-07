@@ -1,9 +1,9 @@
 import { Camera, Group, Scene, Texture } from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { createLtkRuntime, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
+import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
@@ -70,6 +70,68 @@ describe('cast timeline replacement and fallback', () => {
     expect(selectTimeline(champion, undefined, () => true)).toBeNull();
     expect(selectTimeline('renata', cues, () => true)).toBeNull();
   });
+  it('leaves out an optional target cue with no recipient instead of refusing the cast', () => {
+    const optional: TimelineCue[] = [cues[0], { ...cues[2], optional: true }, { ...cues[1], optional: true }];
+    const none = mapSkillTimeline(optional, 'caster', []);
+    expect(none.unsupported).toEqual([]);
+    expect(none.spawns.map(spawn => spawn.system)).toEqual(['cast']);
+    expect(mapSkillTimeline(optional, 'caster', ['caster']).spawns.map(spawn => spawn.system)).toEqual(['cast', 'impact']);
+    // A required one still refuses.
+    expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
+  });
+  it('aims a cast-start at the primary target, never at the caster itself', () => {
+    const cues: TimelineCue[] = [{ system: 'a', event: 'cast-start', delay: 0, duration: 1 }];
+    expect(mapSkillTimeline(cues, 'caster', ['enemy', 'other']).spawns[0]?.aimId).toBe('enemy');
+    expect(mapSkillTimeline(cues, 'caster', ['caster']).spawns[0]?.aimId).toBeUndefined();
+    expect(mapSkillTimeline(cues, 'caster', []).spawns[0]?.aimId).toBeUndefined();
+  });
+  it('turns a cast on itself toward the nearest foe, and a targeted cast toward its own target (Irelia W, 11-07)', async () => {
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const caster = { root: new Group(), body: null, alive: true }, target = { root: new Group(), body: null, alive: true };
+    const foe = vi.fn((_: string) => new Group());
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await library.load('sample');
+    expect(runtime.play('jinx', 'caster', [])).toBe(true);
+    runtime.update(0.01, new Camera()); runtime.update(0.05, new Camera());
+    expect(foe).toHaveBeenCalledWith('caster');
+    runtime.dispose(); foe.mockClear();
+    const again = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const aimed = createLtkRuntime(again, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await again.load('sample');
+    expect(aimed.play('jinx', 'caster', ['target'])).toBe(true);
+    aimed.update(0.01, new Camera()); aimed.update(0.05, new Camera());
+    expect(foe).not.toHaveBeenCalled();
+    aimed.dispose();
+  });
+  it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
+    const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
+    const doc = syntheticSystem();
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0],
+      value: { type: 'container', items: [
+        ...((doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+        ...((meshless.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items),
+      ] } }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => new Texture() });
+    const prepared = await library.load('sample');
+    expect(prepared.model.emitters).toHaveLength(2);
+    expect(prepared.drawn).toHaveLength(1);
+    expect(prepared.empty).toBeFalsy();
+  });
+  it('leaves the muted white flashes of Nunu\'s stretched R_Cas undrawn and keeps its other emitters (11-07)', async () => {
+    const named = (name: string) => syntheticSystem({ emitterName: { type: 'string', value: name } });
+    const items = (doc: ReturnType<typeof syntheticSystem>) => (doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items;
+    const doc = named('Dark glow');
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: unknown[] }).fields[0] as object,
+      value: { type: 'container', items: [...items(named('Dark glow')), ...items(named('Explosion_Flash_ground')), ...items(named('Explosion_Flash_ground1'))] } }];
+    const index = { ...syntheticIndex(), systems: { '78d04f27': 'systems/r_cas.json', other: 'systems/other.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
+    const pool = await library.load('78d04f27');
+    expect(pool.model.emitters).toHaveLength(3);
+    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['Dark glow']);
+    // The same emitters in another system are drawn.
+    expect((await library.load('other')).drawn).toHaveLength(3);
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);
@@ -88,11 +150,90 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); expect(scene.children).toHaveLength(0); runtime.dispose();
   });
   it('shares the existing fallback particle budget and releases every reservation once', async () => {
-    const budget = { live: 1251, max: 1500 }, { runtime, camera } = await setup(budget);
-    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(1251);
-    budget.live = 1200; runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
-    expect(runtime.active).toBe(1); expect(budget.live).toBe(1450);
+    // A plain attack waits for shared room once half the LTK slots are live; skills are covered by the next test.
+    const index = { ...syntheticIndex(), skills: { jinx: [
+      { system: 'sample', event: 'cast-start' as const, delay: 0, duration: 1 },
+      { system: 'sample', action: 'attack' as const, event: 'hit' as const, delay: 0, duration: 1 },
+    ] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 1499, max: 1500 };
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined, { budget });
+    await library.load('sample');
+    // Below half: a hit takes a free LTK slot even when fallback particles fill the shared budget.
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    runtime.clear(); expect(budget.live).toBe(1499);
+    // From half the systems on (six), it waits for shared room; a larger shared budget lets six first plays in.
+    budget.live = 0; budget.max = 3000;
+    for (let i = 0; i < 6; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(6); budget.live += 1251;
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
+    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(7); expect(budget.live).toBe(2950);
     runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
+  });
+  it('queues a critical cue for up to 0.3 s while critical runs fill the board, instead of dropping it (11-07 brawl)', async () => {
+    const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 0.2 }],
+      vi: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 1 }],
+      ezreal: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 0.15 }] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera();
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined);
+    await library.load('sample');
+    // Hits (critical, nothing evictable) fill the board for a second.
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    // One more hit waits; a decorative flourish is dropped as before.
+    runtime.play('vi', 'caster', ['target']); runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.queued).toBe(1);
+    // Past 0.3 s the waiting hit is dropped too.
+    runtime.update(0.35, camera); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.clear();
+    // Slots that end within the wait let the queued hit in.
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('ezreal', 'caster', ['target']); runtime.update(0.01, camera); }
+    runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); expect(runtime.queued).toBe(1);
+    runtime.update(0.12, camera); runtime.update(0.01, camera);
+    expect(runtime.queued).toBe(0); expect(runtime.active).toBeGreaterThanOrEqual(1);
+    runtime.dispose();
+  });
+  it('starts a skill system beside a budget the fallback particles filled, up to the LTK reservations alone (11-06 field drops)', async () => {
+    const budget = { live: 1499, max: 1500 }, { runtime, camera } = await setup(budget);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    // The LTK reservations alone still stop at the cap: six first plays of 250 fill 1500.
+    for (let i = 0; i < 10; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(6);
+    runtime.clear(); expect(budget.live).toBe(1499); runtime.dispose();
+  });
+  it('reserves what a system was seen to need once it has played to its end, so more small systems fit (11-07 brawl)', async () => {
+    const budget = { live: 0, max: 1500 }, { runtime, camera } = await setup(budget);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(budget.live).toBe(250);
+    runtime.update(1.2, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // The synthetic system peaks at a few particles: later plays reserve the floor, not 250 each.
+    for (let i = 0; i < 20; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(budget.live).toBe(MAX_LTK_SYSTEMS * MIN_RESERVE);
+    // Every slot comes back, and a play cut short (cleared before its end) records nothing.
+    runtime.clear(); expect(budget.live).toBe(0);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(budget.live).toBe(MIN_RESERVE);
+    runtime.dispose();
+  });
+  it('never lowers a system\'s reservation after a play that peaked lower', async () => {
+    // One busy system on two cues: a full second, and a 0.03 s cue that ends before many particles are born.
+    const index = { ...syntheticIndex(), skills: {
+      jinx: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 1 }],
+      vi: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 0.03 }] } };
+    const busy = syntheticSystem({ rate: constant(num(600)), lifetime: num(1), particleLifetime: constant(num(1)) });
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : busy, readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 0, max: 1500 };
+    const runtime = createLtkRuntime(library, new Scene(), () => source, { budget });
+    await library.load('sample');
+    const reserved = (skill: string) => { runtime.play(skill, 'caster', []); runtime.update(0.01, camera); const held = budget.live; runtime.clear(); return held; };
+    const playOut = (skill: string) => { runtime.play(skill, 'caster', []); for (let t = 0; t < 1.2; t += 0.01) runtime.update(0.01, camera); };
+    playOut('jinx');
+    const full = reserved('jinx');
+    expect(full).toBeGreaterThan(MIN_RESERVE);
+    playOut('vi'); // peaks far lower
+    expect(reserved('jinx')).toBe(full);
+    runtime.dispose();
   });
   it('bounds simultaneous particle reservations and cancels deaths before delayed spawn', async () => {
     const { runtime, camera } = await setup();
@@ -101,6 +242,13 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBeLessThanOrEqual(MAX_LTK_SYSTEMS);
     runtime.clear(); runtime.play('jinx', 'caster', []); runtime.stopUnit('caster'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(0); runtime.dispose();
+  });
+  it('drops distortion and soft passes once four systems are live, and keeps them below that', () => {
+    const heavy = { passes: { early: true, late: true, soft: true } };
+    expect(LTK_PASS_DEGRADE_AT).toBe(4);
+    expect(ltkRenderNeeds([heavy, heavy, heavy])).toEqual({ early: true, late: true, soft: true });
+    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([{ passes: { early: false, late: false, soft: true } }])).toEqual({ early: false, late: false, soft: true });
   });
 });
 

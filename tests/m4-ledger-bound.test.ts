@@ -15,12 +15,15 @@ import {run} from '../scripts/generate-m5-route.cjs';
  * Ordinary acquisition and resource conservation live in m5-route.test.ts. */
 async function maximumLoadout():Promise<api.MatchState>{
  let reached:api.MatchState|undefined;
- // Seed 1 has a gold 4-2 offer; seed 42 now activates history authentication,
+ // Seed 1 had a gold 4-2 offer; seed 42 now activates history authentication,
  // which rejects the deliberate synthetic roster before its resource-fold guard.
  // Full seed-42/230 public routes remain covered by m8-b8-oracle.test.ts.
  // Only the legal round-33 prefix is the fixture; later battles are not observed here.
  const captured=new Error('captured maximum-loadout preparation');
- try {await run(api,{build:'cannon',seed:1,onStep(before,_result,command){if(command?.type==='start'&&before.round===33){reached=before;throw captured;}}});}
+ // v26 (D5 pool 7953c99a and route drift): seed 1's cannon route now acquires a history-proof augment before round 33,
+ // so restore replays the history and rejects the synthetic roster with "replayed facts/state mismatch" first. Seed 3 is the
+ // first seed from 1 whose route reaches round 33 with no augment history, three augments and an anomaly binding.
+ try {await run(api,{build:'cannon',seed:3,onStep(before,_result,command){if(command?.type==='start'&&before.round===33){reached=before;throw captured;}}});}
  catch(error){if(error!==captured)throw error;}
  if(!reached)throw Error('Normal route did not reach ordinal 33');
  const base:api.MatchState=restoreMatch(JSON.stringify(reached));

@@ -117,21 +117,24 @@ describe('live room with natural offers and public commands', () => {
   // initial-offer assumption drifted: the eligible 2-1 silver pool grew from 31
   // (a3353895, where this test originated) to 45. generateChoices sorts that pool
   // before drawing, so the same RNG words now choose different cards.
+  // v26 D5 (7953c99a) pool: seed 62 no longer offers s7 naturally (only s0/s1 after rerolls). Seed 31 is the first seed
+  // from 0 with the same shape: s6 (a bot seat, like s7 before) is offered Table Scraps naturally and s0 gets it after
+  // rerolling slots 0, 1. The second holder below is therefore s6 (was s7).
   // This room never runs inside installB1Offers and never adopts the transaction fixture's states.
   const clock = new ManualClock();
-  const room = new Room(SEATS, {...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h5-table',seed:62,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+  const room = new Room(SEATS, {...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h5-table',seed:31,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
   beforeAll(() => {
     expect(vi.isMockFunction(choices.generateChoices)).toBe(false);
     room.start(); runUntil(room,clock,s=>s.roundId==='2-1' && s.phase==='preparation');
   });
   beforeAll(() => {
-    const initial = room.state.seats.find(s=>s.seatId==='s7')!.match.pendingChoice!;
+    const initial = room.state.seats.find(s=>s.seatId==='s6')!.match.pendingChoice!;
     expect(initial.offers).toContain('table-scraps');
     for (const optionIndex of [0,1]) {
       const choice = room.state.seats.find(s=>s.seatId==='s0')!.match.pendingChoice!;
       expect(room.handle('s0',{type:'rerollAugment',choiceId:choice.choiceId,generation:choice.generation,optionIndex})).toMatchObject({ok:true});
     }
-    for (const seatId of ['s0','s7']) {
+    for (const seatId of ['s0','s6']) {
       const seat=room.state.seats.find(s=>s.seatId===seatId)!, choice=seat.match.pendingChoice!;
       expect(choice.offers).toContain('table-scraps');
       expect(room.handle(seatId,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'table-scraps'})).toMatchObject({ok:true});
@@ -148,7 +151,7 @@ describe('live room with natural offers and public commands', () => {
     const holder=room.state.seats.find(s=>s.seatId==='s0')!.match;
     expect(holder.carousel!.receipts.filter(r=>r.carouselId.includes('2-4'))).toHaveLength(2);
     expect(holder.augmentHistory!.facts.filter(f=>f.kind==='carousel'&&f.source==='augment')).toHaveLength(1);
-    const second=room.state.seats.find(s=>s.seatId==='s7')!.match;
+    const second=room.state.seats.find(s=>s.seatId==='s6')!.match;
     expect(second.carousel!.receipts.filter(r=>r.carouselId.includes('2-4'))).toHaveLength(1);
     expect(second.augmentHistory!.facts.filter(f=>f.kind==='carousel'&&f.source==='augment')).toHaveLength(0);
     assertSharedPoolConservation(room.state.pool,room.state.seats.map(s=>s.match));

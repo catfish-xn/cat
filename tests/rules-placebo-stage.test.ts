@@ -4,7 +4,7 @@ import { choiceAcquisitionGold } from '../src/simulation/choice-acquisition';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit, stepMatch, sellUnit, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
-import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { accepted, resolveM5Choices, emptyBoard } from './match-helpers';
 import { augmentGold, openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { firstNodeSeed, offeredAt } from './augment-stage-helpers';
 
@@ -19,7 +19,22 @@ function concede(state: MatchState): MatchState {
   return state;
 }
 function reachChoice(roundId: string, seed: number) {
-  if (roundId !== '4-2') return reachRound(roundId, false, seed);
+  // v26 PvE loot carryover (8f794062, merge c684c3ec) keeps the conceded neutrals' loot heroes, so seed 0's bench
+  // is full by 3-2 and reachRound's emptyBoard cannot bench (invalid-location). The same route as reachRound
+  // (resolveM5Choices, then concede every round) is replayed with concede(), which sells only when no bench slot is free.
+  // D5 (7953c99a) also offers I'm the Carry Now at 2-1 (e.g. seed 16); its Carry Golem board structure can be neither
+  // benched nor sold, so this conceding route excludes that card as it already skips Trainer Golem openings.
+  if (roundId !== '4-2') {
+    let state = createMatch(seed);
+    while (state.roundDefinitionId !== roundId) {
+      state = resolveM5Choices(state, [], ['im-the-carry-now']);
+      if (state.phase === 'preparation') state = accepted(startMatchCombat(concede(state)));
+      state = resolveM5Choices(state, [], ['im-the-carry-now']);
+      if (state.phase !== 'settlement') throw Error(`Cannot reach ${roundId}: ${state.roundDefinitionId}/${state.phase}`);
+      state = accepted(nextRound(state, state.round));
+    }
+    return state;
+  }
   // Win the opening PvE rounds using the supplied opening champion, then concede later
   // rounds. This retains enough real HP to reach 4-2 without injected resources.
   let state = createMatch(seed);

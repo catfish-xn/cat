@@ -1,3 +1,4 @@
+import { combatBenchProjection } from '../bench-capacity';
 import { EMBLEM_ITEMS } from '../content/emblems';
 import type { ItemInstance } from '../strategy-types';
 import type { Team } from '../board';
@@ -39,6 +40,7 @@ const ordinal = (n: number): boolean => Number.isSafeInteger(n) && n >= 1;
  * Native distinct-definition counting remains unchanged. No mutable-state cache. */
 export function projectEffectiveMembership(preparation: GameState, context?: TraitProjectionContext,
   definitions: Readonly<Record<string,TraitDefinition>> = TRAIT_DEFINITIONS, items: readonly ItemInstance[] = []): EffectiveMembership {
+  preparation = combatBenchProjection(preparation);
   const sources = context?.sources ?? [];
   if (context) check(ordinal(context.round) && Array.isArray(sources));
   const ids = new Set<string>();

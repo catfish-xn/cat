@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Group, Vector3 } from 'three';
-import { arenaTransform, createBoardArena } from '../src/rendering/three-mode/board-arena';
+import { arenaDrawTransform, arenaTransform, createBoardArena } from '../src/rendering/three-mode/board-arena';
 import { assertManifest, hexCenter, type BoardAlignment, type ModelLease } from '../src/rendering3d';
 
 /** Synthetic alignment only: a source grid with 10-unit steps mapped onto a reference hex grid of radius 34. */
@@ -33,7 +33,12 @@ describe('3D board arena', () => {
     expect(root.children).toContain(scene);
     arena.place({ rows: 6, columns: 9, hexRadius: 68, origin: { x: 35, y: 50 } });
     expect(arena.ready).toBe(true); // No declared grid: dimensions retain the existing behavior.
-    expect(root.scale.toArray()).toEqual([1, 1, -1]);
+    // Drawn mirrored about the grid's centre line (arenaDrawTransform): x scale negated, x position reflected.
+    expect(root.scale.toArray()).toEqual([-1, 1, -1]);
+    const drawn = arenaDrawTransform(alignment, { hexRadius: 68, origin: { x: 35, y: 50 } }), plain = arenaTransform(alignment, { hexRadius: 68, origin: { x: 35, y: 50 } });
+    expect(root.position.x).toBeCloseTo(drawn.position.x);
+    expect(drawn.position.x + plain.position.x).toBeCloseTo(2 * (35 + Math.sqrt(3) * 68 * 3.25));
+    expect(drawn.position.z).toBe(plain.position.z); expect(drawn.scale.z).toBe(plain.scale.z);
     arena.dispose();
     expect(released).toBe(1); expect(parent.children).toHaveLength(0);
   });

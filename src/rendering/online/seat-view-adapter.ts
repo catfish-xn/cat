@@ -30,7 +30,24 @@ export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSu
   readonly itemSummons?: readonly ItemSummonView[];
   /** v19: the rules' 家人团聚 view of my seat and the six-cost chance per shop slot (basis points). */
   readonly familyReunion?: { readonly eligible: boolean; readonly participantIds: readonly string[] };
-  readonly shopOdds?: { readonly sixCostBps: number } };
+  readonly shopOdds?: { readonly sixCostBps: number };
+  /**
+   * v26: legal anomaly targets in roster order, copied from the private seat view.
+   * Absent on an offline MatchState. Present and empty means there is no legal target.
+   */
+  readonly anomalyTargetIds?: readonly string[];
+};
+
+/**
+ * Legal anomaly targets from the server projection, in the order the server named them.
+ * Null when this state has no projection (an offline MatchState). A present empty list is authoritative:
+ * the roster must not be substituted for it.
+ */
+export function readProjectedAnomalyTargetIds(state: MatchState): readonly string[] | null {
+  if (!Object.hasOwn(state, 'anomalyTargetIds')) return null;
+  const ids = (state as DisplayMatch).anomalyTargetIds;
+  return Array.isArray(ids) && ids.every(id => typeof id === 'string') ? ids : [];
+}
 
 /** The server's 家人团聚 view (eligible + the six unit ids); null when the server did not send one (offline states). */
 export function readFamilyReunion(state: MatchState): { readonly eligible: boolean; readonly participantIds: readonly string[] } | null {

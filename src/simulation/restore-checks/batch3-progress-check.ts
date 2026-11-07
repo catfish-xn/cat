@@ -3,6 +3,7 @@ import { AUGMENT_BATCH3_SOURCE, batch3Events, DUMMY_SOURCE, emblemGifts, forming
 import { AUGMENT_BATCH3 } from '../content/augment-pool-batch3';
 import type { MatchState } from '../match-types';
 import { getMultiplayerRoundById } from '../multiplayer-round';
+import { restartMissionRemovalId } from '../restart-mission';
 
 export function validateBatch3Dummies(state:MatchState):void {
  const fail=(why:string)=>{throw new RangeError('Invalid batch3 dummy authority: '+why);};
@@ -29,6 +30,7 @@ export function validateBatch3Dummies(state:MatchState):void {
  }
  // Forming removals: only under an owned forming augment's receipt, all within its acquisition round.
  const forming=new Map(state.augments.filter(a=>AUGMENT_BATCH3[a.definitionId]?.forming).map(a=>[formingRemovalId(a),a]));
+ for(const a of state.augments.filter(a=>a.definitionId==='restart-mission'))forming.set(restartMissionRemovalId(a),a);
  for(const e of removals.filter(e=>e.definitionId!==undefined)){
   const a=forming.get(e.receiptId);if(!a||getMultiplayerRoundById(e.roundId).ordinal!==a.acquiredRound)fail('unexpected forming removal');
   expected.set(e.receiptId,e.unitId);

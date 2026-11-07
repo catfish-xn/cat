@@ -495,10 +495,10 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v25-online-rules';
-  readonly contentVersion: 's13-14.24b-g2-3-v25-online-rules';
+  readonly rulesVersion: 's13-g2-3-v26-neutrals-1424';
+  readonly contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 8;
+  readonly saveFormatVersion: 9;
   readonly replayFormatVersion: 8;
   readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';

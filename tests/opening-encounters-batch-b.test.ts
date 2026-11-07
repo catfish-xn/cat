@@ -80,7 +80,7 @@ describe('batch B combat and reward vectors',()=>{
    if(Number(node[0])>=5)expect(r).toEqual([]);
   }expect(total).toBe(22);
  });
- it('4-7 sixth old carrier maps to fifth crab without losing the base drop',()=>{const s=syntheticRound('crab-rave','4-7');expect(openingCrabCarrier(s,'4-7','["pve","4-7","razorbeaks-v1","r05"]')).toBe('["pve","4-7","crab-rave/4-7","c4"]');});
+ it('4-7 fifth carrier maps to fifth crab without losing the base drop; removed r05 is not remapped',()=>{const s=syntheticRound('crab-rave','4-7');expect(openingCrabCarrier(s,'4-7','["pve","4-7","razorbeaks-v1","r04"]')).toBe('["pve","4-7","crab-rave/4-7","c4"]');expect(openingCrabCarrier(s,'4-7','["pve","4-7","razorbeaks-v1","r05"]')).toBe('["pve","4-7","razorbeaks-v1","r05"]');});
  it.each(['5-7','6-7'])('%s giant victory: exactly 2 forges + 2 existing silver rolls; loss none',node=>{
   const s=syntheticRound('crab-rave',node),f=factsFor(s,1),settled=settledVector(s,f),rewards=openingBattleRewards(settled,f);
   expect(rewards.filter(r=>r.payload.kind==='forge')).toHaveLength(2);

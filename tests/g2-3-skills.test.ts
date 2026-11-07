@@ -16,7 +16,12 @@ it.each([
 });
 it('Cassiopeia every third cast splashes only two other targets',()=>{
  const r=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
- expect(raw(r.events)).toEqual([230,160,160]);
+ // targeting-p1 (8106acee): e and b are both adjacent, so the equal-distance tie now draws the combat lcg32 stream.
+ // With rngState 42 the draw picks e (v25 always took b, giving [230 on b, 160 on c, 160 on e]). The primary still
+ // takes 230 (ordinal 0) and exactly two other targets 160; events list the packets in target order.
+ expect(r.state.units.find(u=>u.id==='p')!.targetId).toBe('e');
+ expect(packets(r.events).filter(x=>x.source.ownerId==='p').map(x=>[x.unitId,x.raw,x.packetOrdinal])).toEqual([['a',160,1],['b',160,2],['e',230,0]]);
+ expect(raw(r.events)).toEqual([160,160,230]);
 });
 it('Mundo splits the complete 1550 healing without truncation or duplicate pulses',()=>{
  let state=battle([hero('drmundo'),dummy()],{rngState:42});const events:CombatEvent[]=[];

@@ -59,8 +59,11 @@ it('B5-21 converts existing inventory/equipment through the real room choice, th
  expect(components.length).toBeGreaterThanOrEqual(2);
  expect(room.handle('s1',{type:'combine',a:components[0].id,b:components[1].id})).toMatchObject({ok:true});
  const raw=mine();expect(raw.items.some(i=>ITEM_DEFINITIONS[i.definitionId].kind==='completed')).toBe(true);
- const id=raw.items.find(i=>ITEM_DEFINITIONS[i.definitionId].kind==='completed')!.id;
- const unit=raw.preparation.units.find(u=>u.team==='player')!;
+ // v26 D5 (7953c99a) offers: seed 0's s1 now wears a Family emblem (item-3, kind completed) from its 2-1 pick on unit-1 slot 0.
+ // Equip the first ordinary completed item still in inventory (the route's Bloodthirster) to the first player unit with no
+ // worn item, so the converted worn equipment the later cases rely on is still a real equipped item.
+ const id=raw.items.find(i=>i.location.kind==='inventory'&&ITEM_DEFINITIONS[i.definitionId].kind==='completed'&&!i.definitionId.endsWith('EmblemItem'))!.id;
+ const unit=raw.preparation.units.find(u=>u.team==='player'&&!raw.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
  expect(room.handle('s1',{type:'equip',itemId:id,unitId:unit.id,slot:0})).toMatchObject({ok:true});
  const worn=mine();beforeChoice=worn;beforeChoicePool=room.state.pool;
  expect(room.handle('s1',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'anger-issues'})).toMatchObject({ok:true});

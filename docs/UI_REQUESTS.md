@@ -421,6 +421,7 @@
 | --- | --- | --- | --- | --- |
 | `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
 | `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
+| `PlayerView.seats[].streak`、`PlayerView.ranking[].streak` | 可选 `{kind:'win'\|'loss'\|null,count:number}`；当前房间始终填写（V26，2026-10-29 已实现） | 房间已提交 `SeatState.streak` 逐字段复制；创建时取规则初值，结算在 `commitSettlement` / `publishOpeningResolution` 与 `seat.hp` 一起提交；非结算仅同步新获取 Called Shot 所解释的规则 streak 变化；无连胜败为 `{kind:null,count:0}`，count 非负安全整数 | 右栏头像连胜/连败展示；只读取，不按回放或 HP 推算 | 所有接收者含观战公开一致；Called Shot 选择时与公开强化及本人私有 streak 立即一致，普通结算提交时与公开 HP 一起变化；live Match 已结束但房间尚未提交时两者保持旧账本（含空棋盘 PvE、live-bank 追帧）；首帧/更新/重连/终局不重计；仅含 kind/count，无金币/收入/历史/RNG；合同 §27.1 |
 | `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5）；`bench[{definitionId,starLevel,slot,items[]}]`、`looseItems[]`、`augments[]`、单位上的 `anomaly?`（2026-10-20，合同 §27） | 该席场上与备战席单位、所持与未装备的装备定义、单位异常、已有强化（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读（只算棋盘） | 不含连胜/连败、商店、金币、经验、待选强化、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
@@ -907,7 +908,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - 候选：排除最近 `avoidRecentRounds` 轮对手；为空则窗口减 1，直到 0（全部存活席）。若各席候选互不相容、凑不出完整配对，全体同时减 1 再试（2 → 1 → 0），保证开战抽到的对手一定在准备期展示的候选里。不消耗 RNG。
 - 时机：回合进入时只算候选（`RoomState.opponentCandidates`）；配对与全部 `battleSeeds` 挪到准备截止冻结时抽取，抽取顺序仍是"洗牌 → 奇数镜像来源 → 每场种子"。空历史时与原先无约束洗牌逐位相同。配对历史 `RoomState.pairingHistory` 在房间状态里，断线、接管、重连后候选不变。
 - 投影：`PlayerView.opponentCandidates?: string[]`（选择/准备期、PvP 轮，按座位序，只含存活、不含自己；其它时候为空）；`opponentSeatId` 在冻结前为 null。`NET_PROTOCOL_VERSION` 保持 2（只增视图字段，依据写在 `messages.ts`）。
-- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。2026-10-20 起另显示对方强化、异常、备战席和未装备装备，不显示连胜/连败（合同 §27）。
+- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。2026-10-20 起另显示对方强化、异常、备战席和未装备装备；2026-10-29 V26 新增席位顶层 `SeatPublic.streak` 公开连胜/连败（合同 §27.1），不放入 `publicBoard`。
 
 ### SR-G1-01 请 Codex 用 §10 规则替换占位数值（P2，只改参数）
 
@@ -1232,6 +1233,15 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 请求：规则层基于锁定的 14.24b 数值确定冲刺落格/占格冲突/撤离距离与时序，沿用公开 `movement {unitId,from,to,tick,eventSeq}`；若施法与普通走路必须区分，增加公开展示字段（如 movement 的 cause / actionSeq），并同步 combat replay 白名单。客户端不挑落格、不决定命中对象。
 - 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
 - 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
+
+## SR-V26-SIDEBAR 右侧玩家栏公开连胜（2026-10-29，待后端）
+
+- 现状：`src/server/protocol.ts` 的 `SeatPublic` 没有 streak，`src/server/room/projection.ts::toSeatPublic` 也没有投影；`publicBoard` 明确不含连胜/连败。不能根据掉血、胜负回放或其他玩家私有状态补算。
+- 请求字段：`PlayerView.seats[].streak?: { readonly kind: 'win' | 'loss' | null; readonly count: number }`，位置在 **SeatPublic 顶层**，直接逐字段复制本席权威 `match.streak`。count 是非负整数；无连胜/连败时 `{kind:null,count:0}`；不含金币、收入、历史记录或随机流。现有 `publicBoard` 白名单与禁止泄漏断言保持不变。
+- 推送：权威连胜/连败改变时与该席 HP 同一份视图发布；首帧、重连快照及观战视图均包含同样的公开结果，不因本地玩家身份改变。PvE/选秀/重复推送沿用后端权威值，前端不增加计数。
+- 已接入的前端：`PlayersSidebar` 接受这个可选字段；缺字段即不显示，存活且 `kind:'win',count>=4` 时显示头像火焰和连胜提示，连败不显示头像特效，淘汰立即清除。`tests/presentation/sidebar.test.ts` 用其他席位的字段注入验证；本任务未修改 server/simulation。
+- 后端验收：其他玩家的公开 streak 与该席权威状态一致；连续胜负及打断、淘汰、重连均不滞后或重计；允许新增 SeatPublic 顶层字段，但不删除/弱化原有私有数据隔离断言。
+- 排序、素材和版本证据限制见 [V26_SIDEBAR.md](V26_SIDEBAR.md)。火焰的 4 连胜门槛目前是历史实机观察值，未得到 14.24 一手数值确认；不得把它误写成已确认的原版规则。
 - 本轮仅修改表现；未修改 simulation、server。
 
 ### Codex 核查结果（2026-10-23，缺证暂停）
@@ -1275,6 +1285,15 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 
 **2026-10-27 合并更新：**双重目的唯一内容行迁到 `src/simulation/content/augment-pool-batch5.ts`，显示名称/说明保留。权威行为为每次成功买经验强制刷新、保留锁定开关，实际刷新也触发棱彩门票；房间入口已统一共享事务。原八项商店数据需求继续有效，无新增界面接线请求。
 
+## VFX-BATCH1-PROVENANCE（2026-10-29，后续只读投影需求，本批未实现）
+
+vfxb1 用户范围仅允许 rendering 接线，本次未改 simulation/server。当前在线 `packetDamage` 缺少来源定义、动作序号和 delivery，`statusChanged` 缺少到期贡献者身份；只能实现有限的事件关联。详细限制见 [VFX_BATCH1.md](VFX_BATCH1.md)。
+
+- 字段：为伤害显示事件补充既有 `outcome.context` 的 `sourceDefinitionId`、`sourceKind`、`actionSeq`、`delivery`，需要时附 `rootActionSeq`／`triggeringCastActionSeq`。含义：标识这次可见伤害由哪个原有技能／装备／羁绊和动作产生；只投影现有权威事实，不新增结算。
+- 字段：为状态／护盾变化补充所变贡献者的 `key`、`sourceDefinitionId` 与 `sourceId`（多贡献者用数组），供显示仅停止对应技能增益／护盾，不依据同类状态猜来源。
+- 字段：在战斗初始／重连快照提供权威攻击形态或足够的既有攻击／施法计数、剩余强化攻击数、可见增益到期 tick。客户端仅选动画／粒子，不另算伤害或资源。
+- 用途与验收：Amumu 的 W 与同拍普攻／装备包并存时只播真实被动；Twitch 按同一动作的权威主目标／穿透收件人接线；Zeri 弹射与第三击在中途接入后仍正确；Leona 只在自身技能减伤到期时爆炸；Lux 提前破盾只停止该技能对应的盾。完整账本、replay whitelist、镜像、恢复及去重契约一起验收。
+
 ## B5-34-SETTLEMENT-EVENT（2026-10-27，已完成：h4w 用户授权 Codex 接线）
 
 **已完成：**`recordRoomSettlementTable` 改调规则公开入口 `recordAugmentSettlementTable`，由规则层比较 receiptId、生成并编号 `mechanicGranted`，在 `Room.commitSettlement` 的同一次发布中追加到原结算事件。网络 `state.events` 按 session/room/receiptId 去重，成功发送后才记账，重连沿用记录。接口及失败边界见 `MULTIPLAYER_CONTRACT.md` 的 B5-34 结算事件接线节；验收和调用点见 `B5_H4W_REPORT.md`。以下保留原请求。
@@ -1282,3 +1301,18 @@ available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的�
 - `Room.commitSettlement` 调用 `recordRoomSettlementTable` 时，规则层可在该调用中给存活的幸存者持有者写入唯一 60 金收据及金币；当前服务器 `serverEvents` 仍只携带原结算事件，未包含该次新收据的 `mechanicGranted` 事件。
 - 请求服务器流水线在整桌淘汰/排名确定后比较该席位结算表记录前后的机制收据，将新事件按 Match 的事件序号规则与原结算事件一并原子发布；不在服务器重算获奖条件或金币。若需要显式携带已编号事件，请由规则层另提供适配接口，不从客户端状态推断。
 - 验收：三人同轮出局时，存活持有者只收到一次正确编号的 `mechanicGranted`；同时出局的持有者无奖励和事件；重复结算及重连不补发。金币和唯一收据已由规则层发放，此请求仅补事件传递。
+
+## D4 重启任务 → Claude（2026-10-29，规则已实现、D5 待开放）
+
+- 数据：六个二星奖励沿既有 `m8.loot.rewardOrbs`／`unclaimedOrbs`；单位清除、装备返还与资源扣发全部由规则处理，无新增显示字段。
+- 单人现有 `src/rendering/match-session.ts:104` 的 `claimOrb` 固定 blocked，且既有法球展示以线上模式为主。若 D5 同时向单人开放本卡，请让单人 Session 和法球展示沿既有规则 `claimOrb(state,orbId,state.round)` 接线；不得在 UI 直接发单位或合星。D4 保持界面目录未改。
+- 验收：选取后先显示六个灰色法球、棋盘／备战席清空（锻造器保留）；领取才出现二星并合星；满席保留法球，重复领取无额外奖励。线上 2D／3D 已有 choose／claimOrb 回调路径。
+- 规则接口、全部调用点与恢复边界见 [D4 合同](D4_RESTART_MISSION.md)。候选池当前仍未注册，D5 再处理开放与统一证据重录。
+
+## NEUTRALS-1424（2026-10-29，Codex → Claude）
+
+规则按用户已批准表恢复，差异、所有调用点、旧断言替换及重录清单见 [NEUTRALS_14_24_RESTORATION.md](NEUTRALS_14_24_RESTORATION.md)。无新字段或命令；`definitionId / monsterFamily / encounterId / unitId / stats` 的结构不变。4-7为1大鸟+4小鸟；6-7为 `elder-dragon-v1 / d01 / pve-elder-dragon`，实例ID仍含roundId。既有2D名字／头像与3D模型映射自动复用远古龙。
+
+- 静态样例 `src/presentation/loot-preview/fixtures.ts:SAMPLE_SOURCES` 已按本次用户明确指示替换为上述龙身份；`stage-track.ts` 已改按roundId查询，5-7/6-7可共用encounterId。该模块非实际游戏状态，游戏入口不导入它。
+- 3D使用已有 `pve-elder-dragon` manifest key，不增加素材。模型文件已在本机忽略目录只读核对；当前工作树没有完整本地素材包。验收：配置已有素材根时5-7/6-7均显示龙，失败仍走已有占位回退；不根据中文名或回合另造规则。
+- Claude统一重录新纪元的生成digest、golden及存档／路线fixture（三份独立可执行oracle由Codex手写更新）；本轮未运行 `--write`。特别是旧6-7先锋的冲锋、眩晕、控制收据Match场景不能通过仅重录JSON来保留，本轮已改为狼跳、远古龙与鸟buff的真实Match等价覆盖；先锋通用纯战斗回归已保留且独立于旧路线执行。PvE失败扣血仍保持原公式。

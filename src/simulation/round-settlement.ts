@@ -1,3 +1,4 @@
+import { completeOverEncumbered } from './over-encumbered';
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainContestedGold } from './augment-pool-batch5-h6';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
@@ -12,7 +13,8 @@ import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
-import { melCanSave, commitMelSave } from './mel-save';
+import { commitMelSave } from './mel-save';
+import { pvpSettlementHpLost } from './pvp-settlement-health';
 import { reconcileD14 } from './d14-runtime';
 import { pruneForgePositions } from './forge-positions';
 import type {TraitProjectionContext} from './traits/effective-membership';
@@ -44,12 +46,16 @@ export interface MultiplayerProgress {
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly seatId: string;
   readonly combatRosterLocked?: true;
+  /** R5: bench trading may restore a future native holder during a frozen PvP battle. */
+  readonly combatAnomaly?: { readonly binding: import('./strategy-types').AnomalyBinding | null; readonly provenancePrefixLength: number };
   readonly status: 'active' | 'eliminated';
   readonly receipts: readonly RoundSettlementReceipt[];
   readonly forfeitedChoices: readonly string[];
 }
 /** Trusted server receipt; income is calculated from seat resources, never supplied by a client. */
 export interface RoundSettlementReceipt {
+  /** Present on room PvP receipts. Optional for existing direct rules callers. */
+  readonly damageDealt?:number;
   readonly g23Facts?:G23BattleFacts;
   /** Opponent's frozen battle-start health; present exactly when this seat owns Kingslayer for the round. */
   readonly opponentHp?:number;
@@ -111,6 +117,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
     if(openingEncounterId(state)==='warwicks-hunger'&&!r.g23Facts?.openingDeaths)return fail(state,'invalid-receipt');
+    const openingBinding=multiplayer.combatAnomaly ? multiplayer.combatAnomaly.binding : state.anomalyBinding;
     if(r.g23Facts){
       if(r.g23Facts.openingDeaths?.some(d=>d.eventSeq>=r.combatEventCount))return fail(state,'invalid-receipt');
       validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext,state.items);
@@ -125,13 +132,13 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
        // This checks ownership only, not opening equipment eligibility; the trusted battle resolver supplies that evidence.
        ||(facts.crowns??0)>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID).length)return fail(state,'invalid-receipt');
-      const hunter=state.anomalyBinding?.definitionId==='headhunter'?state.anomalyBinding:null;
+      const hunter=openingBinding?.definitionId==='headhunter'?openingBinding:null;
       if(facts.d11Headhunter&&(!hunter||facts.round<hunter.boundRound
         ||facts.d11Headhunter.holderId!==JSON.stringify(['t2',multiplayer.seatId,'unit',hunter.unitId])
         ||facts.d11Headhunter.kills.some(k=>k.eventSeq>=r.combatEventCount)))return fail(state,'invalid-receipt');
       if(hunter&&state.preparation.units.some(u=>u.id===hunter.unitId&&u.location.kind==='board')&&!facts.d11Headhunter)return fail(state,'invalid-receipt');
     }
-    else if(state.anomalyBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===state.anomalyBinding!.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
+    else if(openingBinding?.definitionId==='headhunter'&&state.preparation.units.some(u=>u.id===openingBinding.unitId&&u.location.kind==='board'))return fail(state,'invalid-receipt');
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');
@@ -157,9 +164,14 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
     if(r.opponentHp!==undefined)fields.push('opponentHp');
+    if(Object.hasOwn(r,'damageDealt')){
+      fields.push('damageDealt');
+      if(!integer(r.damageDealt)||r.damageDealt>MAX_SUPPORTED_PLAYER_HP)return fail(state,'invalid-receipt');
+    }
     if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>MAX_SUPPORTED_PLAYER_HP)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
-    const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
+    const hpAfter=state.playerHp-pvpSettlementHpLost(state,r);
+    const saved=hpAfter>Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
       round:r.round,roundId:r.roundId,settlementId:r.settlementId,roundKind:'pvp',result,
       combatTicks:r.combatTicks,combatEventCount:r.combatEventCount,income:plan.income,incomeBreakdown:plan.incomeBreakdown,
@@ -168,13 +180,14 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       levelBefore:state.level,levelAfter:plan.progression.level,xpBefore:state.xp,xpAfter:plan.progression.xp,
       hpBefore:state.playerHp,hpAfter,baseDamage:r.baseDamage,survivingEnemyCount:r.opposingSurvivors,
       playerDamage:r.damage,hpLost:state.playerHp-hpAfter,
+      ...(r.damageDealt!==undefined?{damageDealt:r.damageDealt}:{}),
     };
     const augmentProgress = {
       pumpingRounds:state.augmentProgress.pumpingRounds+(state.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),
       investmentHp:state.augmentProgress.investmentHp,
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
-    const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;
+    const {combatRosterLocked: _combatRosterLocked, combatAnomaly: _combatAnomaly, ...unlockedMultiplayer} = state.multiplayer;
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
       gold:plan.goldAfter-deferredRoundIncome(plan),playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
@@ -195,8 +208,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     settled={...settled,playerHp:batch5S6cSettlementHealth(settled,r.round,settled.playerHp)};
     const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
     hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
+    const over=completeOverEncumbered(settled); settled=over.state; hookEvents.push(...over.events.filter(e=>e.type!=='mechanicGranted'));
     const merged = resolveDeferredUpgrades(settled);
-    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
+    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution'||a.definitionId==='what-you-really-are') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
     const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const inventory=drainBatch5Inventory(forfeited.state);hookEvents.push(...mechanicGrantEvents(forfeited.state,inventory));
