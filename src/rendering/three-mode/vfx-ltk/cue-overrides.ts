@@ -33,14 +33,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
     { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: 0.45 },
   ],
-  // E (14.24 field: cast 13.9 s, main root 14.4 s, second roots 14.9 s): the outer vines stay on her ground, facing the
-  // target. E_Sequence_Impact is the index's own ground missile (travel 0.3): one crawls to the primary target, then
-  // short ones reach up to two others. E_Sequence_Root binds the primary target; the plant flash marks every one.
-  // The index has no E_Mis or E_Mis_Child.
+  // E (14.24 field: cast 13.9 s, main root 14.4 s, second roots 14.9 s): E_Sequence_Impact is the index's own ground
+  // missile (travel 0.3): one crawls to the primary target, then short ones reach up to two others. The brown branching
+  // vines (E_Outer) sprout around each rooted target, not at Zyra's feet (ca23e060: they spread from her toward empty
+  // ground). E_Sequence_Root binds the primary target; the plant flash marks every one. No E_Mis or E_Mis_Child exists.
   zyra: [
     { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
-    { system: '7ce6b652', action: 'cast', event: 'cast-start', delay: 0.12, duration: 0.8, bone: ground },
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 0.9, bone: ground, primary: true },
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 0.9, bone: ground, others: true, targetLimit: 2, optional: true },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true },
     { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.2, bone: ground, primary: true },

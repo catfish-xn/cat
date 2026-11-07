@@ -74,6 +74,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(root).toMatchObject({ event: 'hit', targetId: 'a' });
     expect(Math.abs(main!.delay + main!.travelSeconds! - root.delay)).toBeLessThanOrEqual(0.05);
     expect(vines.every(spawn => effectImportance(spawn) === 'critical')).toBe(true);
+    // The branching vines sprout on the targets the vines reach, never at Zyra's feet.
+    expect(zyra.spawns.filter(spawn => spawn.system === '7ce6b652').map(spawn => [spawn.event, spawn.targetId])).toEqual([['hit', 'a'], ['hit', 'b'], ['hit', 'c']]);
     // Alone, the short vines have nobody else to reach and are left out without refusing the cast.
     const alone = mapSkillTimeline(CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast'), 'zyra', ['a']);
     expect(alone.unsupported).toEqual([]);
