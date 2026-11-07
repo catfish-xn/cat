@@ -162,7 +162,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.2, stopAfter: 2.8, bone: 'Spine2_Wil' },
+    // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
+    // most of the screen once the mesh pool stopped lending other systems' meshes).
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.2, stopAfter: 2.8, bone: 'Spine2_Wil', scale: 0.5 },
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.5 },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7, optional: true },
