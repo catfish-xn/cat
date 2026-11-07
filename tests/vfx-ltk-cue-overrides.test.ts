@@ -1,3 +1,4 @@
+import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
@@ -62,6 +63,17 @@ describe('reviewed vfx-ltk cue overrides', () => {
     // The canister puffs end before the flight starts; the ally shield lasts the ability's 3 s.
     expect(renata.find(cue => cue.system === 'cff69d8a')!.duration).toBeLessThanOrEqual(missile.delay + 0.1);
     expect(renata.find(cue => cue.system === 'fdf79734')).toMatchObject({ action: 'passive', duration: 3 });
+    // A full board keeps it: it ranks with receipt feedback, not with caster flourishes.
+    expect(effectImportance(renata.find(cue => cue.system === 'fdf79734')!)).toBe('critical');
+    // Zyra E: a ground vine crawls to the primary target, then to up to three others; each lands as its root shows.
+    const zyra = mapSkillTimeline(CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast'), 'zyra', ['a', 'b', 'c', 'd']);
+    expect(zyra.unsupported).toEqual([]);
+    const vines = zyra.spawns.filter(spawn => spawn.system === '857fe049');
+    expect(vines.map(spawn => [spawn.event, spawn.targetId])).toEqual([['projectile', 'a'], ['projectile', 'a'], ['projectile', 'b'], ['projectile', 'c']]);
+    const [main] = vines, root = zyra.spawns.find(spawn => spawn.system === 'b888a24f')!;
+    expect(root).toMatchObject({ event: 'hit', targetId: 'a' });
+    expect(Math.abs(main!.delay + main!.travelSeconds! - root.delay)).toBeLessThanOrEqual(0.05);
+    expect(vines.every(spawn => effectImportance(spawn) === 'critical')).toBe(true);
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {
