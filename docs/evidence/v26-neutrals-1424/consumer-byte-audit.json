@@ -3364,9 +3364,9 @@
     "tests/vfx-ltk-fade-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4580,
+      "currentBytes": 5647,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fa4205b9f955264197dee8d9bb44369d847842536e675227519886b509df0ee9",
+      "currentSha256": "291204e41dff4d67e1e5cb28dd9cc0977462e20a9822df346e448bb4bd57afc1",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-features.test.ts": {
