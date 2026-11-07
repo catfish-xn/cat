@@ -3340,9 +3340,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10382,
+      "currentBytes": 10657,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "18e96f91369407e2179be9cd9e6da138a56b793fc9e993d03a7cd32bfdb6de92",
+      "currentSha256": "d1c338c68dda3cd410f7b96078f62a13734b5aef76529b448423a1e5b7398915",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
