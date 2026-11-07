@@ -5,13 +5,11 @@ export type EffectImportance = 'critical' | 'decorative' | 'attack';
  * Damage, projectiles, beams, impacts and ground areas stay. A caster flourish (cast windup
  * on the source) is decorative and is the first thing removed to make room.
  */
-export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string; main?: boolean }): EffectImportance {
+export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string }): EffectImportance {
   // 11-06 field recording: every unit's basic-attack hit filled the board's slots, so skill bodies on the caster never got in.
   // An empowered attack (Nocturne, Twitch) is the skill showing, so it keeps the usual ranks.
   if (cue.action === 'attack' && !cue.variant) return 'attack';
   if (cue.event === 'hit' || cue.event === 'projectile' || cue.event === 'link') return 'critical';
-  // The skill's body on the caster (d650fcf2 field: Nunu's cloud was dropped as a flourish while decorative ones held the slots).
-  if (cue.main) return 'critical';
   if (cue.anchor === 'target' || cue.anchor === 'projectile') return 'critical';
   // A board-located cue is the skill's area on the ground (slam, settlement), not a flourish.
   if (cue.location === 'board') return 'critical';
