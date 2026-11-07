@@ -2248,9 +2248,9 @@
     },
     "tests/rendering3d-scout-input.test.ts": {
       "previousBytes": 14336,
-      "currentBytes": 17555,
+      "currentBytes": 17584,
       "previousSha256": "5fa8f05b025645947c6413b99bb80c82ca047fe3c4c20dcd96d8387c24b96e23",
-      "currentSha256": "8b061d79c7784b077bd8d05663f4e82d1f64a13a51a9c00b897a5d7f72bf5fe2",
+      "currentSha256": "de544b9cca1a5a74ca559154e15c802523e9e9ae341a412420d7d91059c366cb",
       "firstDifferentByte": 189
     },
     "tests/rendering3d-scout-shop.test.ts": {
@@ -3356,9 +3356,9 @@
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3167,
+      "currentBytes": 3293,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8e27cba6c9a2c7f09217a7d16a07eb2cf78eccf3ee04ee4a0a847844834016b7",
+      "currentSha256": "de97a51045cf8a58d7334c15a1fefa6b28e79ce609c777a332c94085fb8fd939",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-emission.test.ts": {
