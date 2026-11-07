@@ -18,10 +18,10 @@ export interface TimelineCue {
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
-   * With `stopAfter`: once emission stops, age the living particles faster so their authored fade finishes by
-   * `duration` instead of the cue cutting them off at full strength (11-07: Zyra's roots froze, then vanished).
+   * With `stopAfter`: from the stop, ease the cue's particles to nothing by `duration` instead of the cue cutting them
+   * off at full strength (11-07: Zyra's long-lived single-particle roots never reach their own authored fade).
    */
-  readonly drain?: boolean;
+  readonly fadeOut?: boolean;
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
