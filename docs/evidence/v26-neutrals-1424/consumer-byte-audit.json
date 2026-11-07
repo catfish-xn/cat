@@ -2293,9 +2293,9 @@
     },
     "tests/rendering3d-tabletop.test.ts": {
       "previousBytes": 22852,
-      "currentBytes": 27172,
+      "currentBytes": 27439,
       "previousSha256": "80bfe7e92399123a65f71b952f22f13643677fcebf64ad76e95a3b804df01cb2",
-      "currentSha256": "aa3c7233a740a593ca2f1b028582f8795d168fef8fdfc5c9c53e8107fa3b766f",
+      "currentSha256": "3b16646569504809a294ee5df8f952230d5b31bef5cc3afefc426c59d5151740",
       "firstDifferentByte": 142
     },
     "tests/rendering3d-trait-props.test.ts": {
@@ -3340,9 +3340,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9917,
+      "currentBytes": 10066,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4e3a0b6097034f729ebd0cbe099c5c1a7b557aea5bad76a7bc65e6035c79af8a",
+      "currentSha256": "d41e843daff2bdc578058508db067e899bbc473c5357cd07adcf394765b543c8",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
