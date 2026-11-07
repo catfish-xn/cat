@@ -163,8 +163,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
-    // most of the screen once the mesh pool stopped lending other systems' meshes).
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.2, stopAfter: 2.8, bone: 'Spine2_Wil', scale: 0.5 },
+    // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
+    // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: 0.5 },
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.5 },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: 0.7, optional: true },
@@ -211,10 +212,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   renata: [
     { system: '06e90178', action: 'attack', event: 'projectile', bone: 'Muzzle', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BuffBone_Glb_Center_Loc' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.5666666666666667, duration: 1.5 },
-    { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'C_Canister' },
+    // The canisters' own launch puffs only: their missiles fly on in a straight line, so past E_Mis's start one crossed the
+    // whole screen (11-07 field). The flight itself is E_Mis.
+    { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 0.35, bone: 'C_Canister' },
     { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
     { system: 'f9926ae8', action: 'cast', event: 'hit', delay: 0.9, duration: 2, bone: ground, primary: true },
     { system: 'd5579768', action: 'cast', event: 'hit', delay: 0.9, duration: 1, bone: chest, targetLimit: 3, optional: true },
+    // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
+    // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline).
+    { system: 'fdf79734', action: 'passive', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.7, bone: chest },
   ],
 };
 

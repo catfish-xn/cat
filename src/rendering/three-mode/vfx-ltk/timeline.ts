@@ -38,7 +38,11 @@ export interface TimelineCue {
   readonly optional?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
-export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint }
+export interface TimelineSpawn extends TimelineCue {
+  readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
+  readonly aimId?: string;
+}
 export interface TimelineMapping {
   readonly spawns: readonly TimelineSpawn[];
   /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
@@ -56,7 +60,7 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       else spawns.push({ ...cue, sourceId, point: board });
       continue;
     }
-    if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId }); continue; }
+    if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId, ...(unique[0] !== undefined && unique[0] !== sourceId ? { aimId: unique[0] } : {}) }); continue; }
     if (!unique.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     if (cue.event === 'projectile' && unique[0] === sourceId) {
       if (cue.optional) continue;

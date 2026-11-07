@@ -1,5 +1,5 @@
 import { Camera, Group, Scene, Texture } from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
@@ -80,6 +80,30 @@ describe('cast timeline replacement and fallback', () => {
     expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
     expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
   });
+  it('aims a cast-start at the primary target, never at the caster itself', () => {
+    const cues: TimelineCue[] = [{ system: 'a', event: 'cast-start', delay: 0, duration: 1 }];
+    expect(mapSkillTimeline(cues, 'caster', ['enemy', 'other']).spawns[0]?.aimId).toBe('enemy');
+    expect(mapSkillTimeline(cues, 'caster', ['caster']).spawns[0]?.aimId).toBeUndefined();
+    expect(mapSkillTimeline(cues, 'caster', []).spawns[0]?.aimId).toBeUndefined();
+  });
+  it('turns a cast on itself toward the nearest foe, and a targeted cast toward its own target (Irelia W, 11-07)', async () => {
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const caster = { root: new Group(), body: null, alive: true }, target = { root: new Group(), body: null, alive: true };
+    const foe = vi.fn((_: string) => new Group());
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await library.load('sample');
+    expect(runtime.play('jinx', 'caster', [])).toBe(true);
+    runtime.update(0.01, new Camera()); runtime.update(0.05, new Camera());
+    expect(foe).toHaveBeenCalledWith('caster');
+    runtime.dispose(); foe.mockClear();
+    const again = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const aimed = createLtkRuntime(again, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await again.load('sample');
+    expect(aimed.play('jinx', 'caster', ['target'])).toBe(true);
+    aimed.update(0.01, new Camera()); aimed.update(0.05, new Camera());
+    expect(foe).not.toHaveBeenCalled();
+    aimed.dispose();
+  });
   it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
     const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
     const doc = syntheticSystem();
@@ -112,16 +136,49 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); expect(scene.children).toHaveLength(0); runtime.dispose();
   });
   it('shares the existing fallback particle budget and releases every reservation once', async () => {
-    // A plain attack still waits for shared room; skills are covered by the next test.
-    const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', action: 'attack' as const, event: 'hit' as const, delay: 0, duration: 1 }] } };
+    // A plain attack waits for shared room once half the LTK slots are live; skills are covered by the next test.
+    const index = { ...syntheticIndex(), skills: { jinx: [
+      { system: 'sample', event: 'cast-start' as const, delay: 0, duration: 1 },
+      { system: 'sample', action: 'attack' as const, event: 'hit' as const, delay: 0, duration: 1 },
+    ] } };
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(), readTexture: async () => new Texture() });
-    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 1251, max: 1500 };
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 1499, max: 1500 };
     const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined, { budget });
     await library.load('sample');
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(1251);
+    // Below half: a hit takes a free LTK slot even when fallback particles fill the shared budget.
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    runtime.clear(); expect(budget.live).toBe(1499);
+    budget.live = 0;
+    for (let i = 0; i < 3; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(3); budget.live += 501;
+    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(3); expect(budget.live).toBe(1251);
     budget.live = 1200; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
-    expect(runtime.active).toBe(1); expect(budget.live).toBe(1450);
-    runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
+    expect(runtime.active).toBe(4); expect(budget.live).toBe(1450);
+    runtime.clear(); expect(budget.live).toBe(450); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(450);
+  });
+  it('queues a critical cue for up to 0.3 s while six runs fill the board, instead of dropping it (11-07 brawl)', async () => {
+    const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 0.2 }],
+      vi: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 1 }],
+      ezreal: [{ system: 'sample', event: 'hit' as const, delay: 0, duration: 0.15 }] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera();
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined);
+    await library.load('sample');
+    // Six hits (critical, nothing evictable) fill the board for a second.
+    for (let i = 0; i < 6; i++) { runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); }
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    // A seventh hit waits; a decorative flourish is dropped as before.
+    runtime.play('vi', 'caster', ['target']); runtime.play('jinx', 'caster', []); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.queued).toBe(1);
+    // Past 0.3 s the waiting hit is dropped too.
+    runtime.update(0.35, camera); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.clear();
+    // Slots that end within the wait let the queued hit in.
+    for (let i = 0; i < 6; i++) { runtime.play('ezreal', 'caster', ['target']); runtime.update(0.01, camera); }
+    runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); expect(runtime.queued).toBe(1);
+    runtime.update(0.12, camera); runtime.update(0.01, camera);
+    expect(runtime.queued).toBe(0); expect(runtime.active).toBeGreaterThanOrEqual(1);
+    runtime.dispose();
   });
   it('starts a skill system beside a budget the fallback particles filled, up to the LTK reservations alone (11-06 field drops)', async () => {
     const budget = { live: 1499, max: 1500 }, { runtime, camera } = await setup(budget);
