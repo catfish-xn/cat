@@ -59,6 +59,9 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
       const cell = hexCenter({ col, row }, grid);
       expect(Math.hypot(slot.x - cell.x, slot.z - cell.z)).toBeGreaterThanOrEqual(0.75 * width);
     }
+    // Both columns stand clear of the gold-mine column, about 0.22 widths left of the legend on the live board.
+    const mineX = legendSpot(board).x - 0.22 * width;
+    for (const slot of slots) expect(Math.abs(slot.x - mineX)).toBeGreaterThanOrEqual(0.5 * width);
   });
 
   it('shows an opponent legend only while a battle against another board is shown', () => {

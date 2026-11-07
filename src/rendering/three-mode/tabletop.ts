@@ -48,11 +48,14 @@ export function farLegendSpot(frame: LegendFrame): Vector3 {
  * The ten orb slots of a board owner's legend: two columns rising from beside it toward the board's middle, both on the
  * legend's outer (left) side. Centred on the legend, the inner column would sit on the left column's cells now that the
  * legend stands 0.8 widths out, and a left click there would take the orb instead of lifting the unit (orbAt is asked first).
+ * The gold mines (gold-mines.ts, the arena's own interest locators) rise in a column about 0.22 widths left of the legend on
+ * the live board, so the inner orb column stands clear of them at 0.75 widths (2a4dfaba playtest: it stood at 0.42, on the mines).
  */
+export const ORB_COLUMN_CELLS = [0.75, 1.3] as const;
 export function legendOrbSlots(frame: LegendFrame, count = 10): Vector3[] {
   const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5, spot = legendSpot(frame);
   return Array.from({ length: count }, (_, index) => new Vector3(
-    spot.x - (index % 2 ? 1.26 : 0.42) * width, 0, spot.z - (1 + Math.floor(index / 2)) * step * 0.9));
+    spot.x - ORB_COLUMN_CELLS[index % 2]! * width, 0, spot.z - (1 + Math.floor(index / 2)) * step * 0.9));
 }
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
