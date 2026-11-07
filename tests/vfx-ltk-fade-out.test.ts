@@ -9,9 +9,10 @@ import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthe
 
 // Zyra's roots in the d650fcf2 field: long-lived particles that linger past a stop at full alpha, in a 1.4 s cue.
 const longLived = () => syntheticSystem({ rate: constant(num(60)), lifetime: num(5), particleLifetime: constant(num(5)), particleLinger: num(5) });
+const unlingered = () => syntheticSystem({ rate: constant(num(60)), lifetime: num(5), particleLifetime: constant(num(5)) });
 /** The drawn strength (red × alpha, as additive emitters premultiply) of the first live quad, and the live count, every 10 ms of a 1.4 s cue that stops at 0.8 s. */
-async function play(fadeOut: boolean) {
-  const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : longLived(), readTexture: async () => new Texture() });
+async function play(fadeOut: boolean, build = longLived) {
+  const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : build(), readTexture: async () => new Texture() });
   const system = await library.load('sample');
   const root = new Group(), body = new Group(); root.add(body);
   const fx = createLtkParticles(system, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body),
@@ -37,8 +38,9 @@ describe('a fading cue eases its lingering particles out by its end (Zyra E, 11-
   });
   it('dims every drawn particle across the tail while the simulation itself is unchanged', async () => {
     const plain = await play(false), faded = await play(true);
-    // The same particles live either way: the fade is drawn, not simulated.
-    expect(faded.live).toEqual(plain.live);
+    // Before stopAfter the simulation is identical; past stopAfter fadeOut keeps emitting instead of stopping the rig.
+    expect(faded.live.slice(0, 79)).toEqual(plain.live.slice(0, 79));
+    for (let step = 79; step < plain.live.length; step++) expect(faded.live[step]).toBeGreaterThanOrEqual(plain.live[step]);
     expect(plain.live[139]).toBeGreaterThan(20);
     // Undrawn by the fade, the oldest particle stays at full alpha to the last frame (the field's hard cut).
     expect(plain.alpha[139]).toBe(plain.alpha[79]);
@@ -47,6 +49,14 @@ describe('a fading cue eases its lingering particles out by its end (Zyra E, 11-
     expect(faded.alpha[109] / plain.alpha[109]).toBeCloseTo(0.5, 1);
     expect(faded.alpha[129]).toBeLessThan(faded.alpha[109]);
     expect(faded.alpha[139] / plain.alpha[139]).toBeLessThan(0.01);
+  });
+  it('keeps an emitter without particleLinger alive past stopAfter and fades it to nothing by duration', async () => {
+    const plain = await play(false, unlingered), faded = await play(true, unlingered);
+    expect(faded.live[84]).toBeGreaterThan(0);
+    for (let step = 80; step < faded.alpha.length; step++) expect(faded.alpha[step]).toBeLessThanOrEqual(faded.alpha[step - 1]);
+    expect(faded.alpha[138]).toBeLessThan(faded.alpha[79] * 0.2);
+    expect(faded.alpha[139]).toBeLessThan(faded.alpha[79] * 0.2);
+    expect(plain.live.slice(79).every(count => count === 0)).toBe(true);
   });
   it('asks for a fade only together with a soft stop', () => {
     const index = (cue: Record<string, unknown>) => ({ ...syntheticIndex(), skills: { jinx: [{ system: 'sample', event: 'cast-start', delay: 0, duration: 1, ...cue }] } });
