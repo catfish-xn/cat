@@ -3345,14 +3345,6 @@
       "currentSha256": "fdc2e0b7384f6f536123165073555974f04cb05feb76d49d88f96b9b789c65bb",
       "firstDifferentByte": 0
     },
-    "tests/vfx-ltk-drain.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 4791,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fb41494ff01580ab6d24e3e3fd95a6f9758dca7ec4203e829eee8c3f77abaf2e",
-      "firstDifferentByte": 0
-    },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3367,6 +3359,14 @@
       "currentBytes": 5271,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "af391160e64226c16ec42d20f19ede618ea38dc0df7761db5036a86267849f32",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-fade-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5037,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "d18e8def98c319c833aef386de03675f04b1689238b9b3009980fae4ec3de9ea",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-features.test.ts": {
