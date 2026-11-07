@@ -34,7 +34,8 @@ describe('late-game effect budget', () => {
 
   it('reuses one finished flourish and drops another so a hit still appears', async () => {
     const skills = {
-      jinx: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 5 }],
+      // A cast windup flash is short; a cast-start of at least 1 s is the skill's body.
+      jinx: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 0.5 }],
       vi: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 1 }],
     };
     const library = createVfxLibrary('/root/', {
@@ -79,7 +80,8 @@ describe('late-game effect budget', () => {
 
   const setup = async (extra: Record<string, unknown> = {}) => {
     const skills = {
-      jinx: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 5 }],
+      // A cast windup flash is short; a cast-start of at least 1 s is the skill's body.
+      jinx: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 0.5 }],
       vi: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 1 }],
       // Mel's save and Viktor's slam: cast-start cues placed on the board.
       mel: [{ system: 'save', event: 'cast-start' as const, location: 'board' as const, delay: 0, duration: 5, stopAfter: .3 }],
@@ -131,6 +133,18 @@ describe('late-game effect budget', () => {
     runtime.update(0.01, camera);
     expect(shown(scene)).toContain('save'); expect(shown(scene)).toContain('slam'); expect(shown(scene)).toContain('blow');
     expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS - 3);
+    runtime.dispose();
+  });
+
+  it('keeps a sustained cast-start body on the caster at the cap instead of evicting it for a hit', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
+    expect(shown(scene)).not.toContain('blow');
     runtime.dispose();
   });
 
