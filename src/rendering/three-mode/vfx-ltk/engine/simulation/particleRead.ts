@@ -137,6 +137,16 @@ const UNIFORMLY_SCALED: ReadonlySet<number | null> = new Set([
  * progress instead, where its emitter switches them in. A table on either curve is read at
  * a fresh draw each step, so it flickers.
  */
+let drawFade = 1;
+/**
+ * Run `draw` with every particle it reads drawn at `fade` of its alpha (1 outside). A host-side fade for a cue whose
+ * particles outlive it: an additive emitter premultiplies alpha into its colour, so this fades every blend mode.
+ */
+export function withDrawFade(fade: number, draw: () => void): void {
+  drawFade = fade;
+  try { draw(); } finally { drawFade = 1; }
+}
+
 export function appearance(
   pool: Pool,
   index: number,
@@ -178,6 +188,7 @@ export function appearance(
   for (let channel = 0; channel < 4; channel += 1) {
     out.color[channel] *= pool.birthColor[index * 4 + channel] * emitter.modulation[channel];
   }
+  out.color[3] *= drawFade;
 }
 
 /**
