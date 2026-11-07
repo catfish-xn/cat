@@ -13,9 +13,9 @@ import { createStarUpFx } from './star-up-fx';
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
-import { createReferenceBurst, createRenataShield, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
+import { createReferenceBurst, createRenataShield, renataShieldCaster, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
 import { prepareRenataModel } from './renata-glass';
-import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
+import { createRenataMissile, RENATA_FLIGHT_SECONDS, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
@@ -1352,6 +1352,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const tickOf = (event: DisplayCombatEvent) => 'tick' in event && typeof event.tick === 'number' ? event.tick : null;
     let latest = -Infinity;
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
+    // The shield is granted with the cast, but it shows as the rocket reaches the ally: launch, then the share of the
+    // flight to the cast's target that the ally stands at (11-07 field: it lit a frame before the cast itself).
+    const renataShieldDelay = (shield: DisplayCombatEvent, batch: readonly DisplayCombatEvent[], ally: { root: Object3D }) => {
+      const casterId = renataShieldCaster(shield), caster = casterId ? pieces.get(casterId) : undefined;
+      const cast = batch.find(event => event.type === 'cast' && event.sourceId === casterId) as { targetIds: readonly string[] } | undefined;
+      const target = cast?.targetIds[0] !== undefined ? pieces.get(cast.targetIds[0]) : undefined;
+      if (!caster || !target) return 0;
+      const whole = caster.root.position.distanceTo(target.root.position);
+      const share = whole > 0 ? Math.min(1, caster.root.position.distanceTo(ally.root.position) / whole) : 0;
+      return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
+    };
     batch2Vfx.begin(events);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
@@ -1364,7 +1375,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
-      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 0, 'passive'))) {
+      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 0, 'passive', { delay: renataShieldDelay(event, events, recipient) }))) {
         const fx = takeShield(grid?.radius ?? 34, reducedMotion());
         recipient.root.add(fx.object); addReference(fx, 'critical');
       }

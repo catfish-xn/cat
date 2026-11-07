@@ -42,11 +42,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
     // Sizes from the cdacbcc9 isolated renders against the 14.24 footage (main wrap about 2.2 cells): E_Outer drew
     // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, bone: ground, primary: true, scale: 0.5 },
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 1.4, stopAfter: 0.8, bone: ground, others: true, targetLimit: 2, optional: true, scale: 0.5 },
+    // Drained (3e90bd1c field: both drew at full strength to the cue's end, then vanished in one frame): their particles live
+    // about 2.5 s, so after emission stops they age faster and fade out on their own authored curve within the cue.
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, drain: true, bone: ground, primary: true, scale: 0.5 },
+    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 1.4, stopAfter: 0.8, drain: true, bone: ground, others: true, targetLimit: 2, optional: true, scale: 0.5 },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true },
-    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, bone: ground, primary: true, scale: 1.6 },
+    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, drain: true, bone: ground, primary: true, scale: 1.6 },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest },
   ],

@@ -19,10 +19,22 @@ import { meshPose } from './rendering/utils/meshPose';
 import { drawLayersOf } from './rendering/utils/frame';
 import { drawPhases } from './rendering/utils/drawKind';
 import { fades } from './rendering/utils/softParticle';
+import { stoppedTail } from './engine/model/systemModel';
 
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
 export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
+/** The fastest a drained tail runs particle time, against the wall clock. */
+export const MAX_DRAIN_RATE = 6;
+/**
+ * How fast a drained cue runs particle time once emission stops, so the particles' `tail` (`stoppedTail`) ends with
+ * the cue and they reach their own authored end-of-life fade rather than being cut off mid-life. 1 means no drain.
+ */
+export function drainRate(tail: number, duration: number, stopAfter: number | undefined): number {
+  const window = stopAfter === undefined ? 0 : duration - stopAfter;
+  if (!(window > 0) || !(tail > window)) return 1;
+  return Math.min(MAX_DRAIN_RATE, tail / window);
+}
 /** Match the upstream mesh decoder's explicit RGBA vertex colour lane. GLB colour is optional. */
 export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   const geometry = source.clone();
@@ -87,6 +99,8 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** After `stopAfter`, run particle time faster so the authored fade plays before `duration` (see `drainRate`). */
+  drain?: boolean;
   /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
   scale?: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
@@ -154,6 +168,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
   let elapsed = 0, closed = false, peak = 0;
+  let tail: number | undefined;
+  const rate = () => spec.drain ? drainRate(tail ??= stoppedTail(prepared.model), spec.duration, spec.stopAfter) : 1;
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
@@ -165,7 +181,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed;
+      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.drain = next.drain;
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -175,7 +191,9 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
-      driver.advance(Math.min(seconds, 0.1));
+      const step = Math.min(seconds, 0.1);
+      // A drained tail: emission has stopped, so only the living particles age faster toward their own fade.
+      driver.advance(spec.stopAfter !== undefined && driver.time >= spec.stopAfter ? step * rate() : step);
       peak = Math.max(peak, driver.pool.count);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;

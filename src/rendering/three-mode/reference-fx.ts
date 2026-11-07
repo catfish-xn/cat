@@ -22,6 +22,13 @@ export function renataShieldTarget(event: DisplayCombatEvent): string | null {
   } catch { return null; }
 }
 
+/** The Renata whose rocket granted this shield (the key's owner unit), or null for any other event. */
+export function renataShieldCaster(event: DisplayCombatEvent): string | null {
+  if (!renataShieldTarget(event) || event.type !== 'shieldLayerChanged') return null;
+  const key: unknown[] = JSON.parse(event.key);
+  return typeof key[1] === 'string' ? key[1] : null;
+}
+
 const vertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
 const fragmentShader = `
 varying vec2 vUv; uniform float age, alpha, mel;
