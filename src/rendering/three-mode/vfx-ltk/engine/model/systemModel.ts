@@ -213,18 +213,6 @@ export function systemSpan(system: SystemModel): number {
   return Math.min(span, SPAN_RANGE.most);
 }
 
-/**
- * The longest a stopped system's particles stay on screen, in system seconds after the stop: each enabled emitter's
- * longest particle life, but no more than the linger it grants once finished (see `lingerSeconds`).
- */
-export function stoppedTail(system: SystemModel): number {
-  let most = 0;
-  for (const emitter of system.emitters) {
-    if (!emitter.disabled) most = Math.max(most, Math.min(longestLife(emitter.particleLifetime), lingerSeconds(emitter)));
-  }
-  return Math.min(most, SPAN_RANGE.most);
-}
-
 /** The system time the last particle of `emitter` is born at. */
 function lastBirth(emitter: EmitterModel): number {
   const start = emitter.timeBeforeFirstEmission;

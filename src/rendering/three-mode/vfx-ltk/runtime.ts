@@ -282,7 +282,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
           duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
-          stopAfter: spawn.stopAfter, drain: spawn.drain, seed: seed++, scale };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         const poolKey = `${spawn.system}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
