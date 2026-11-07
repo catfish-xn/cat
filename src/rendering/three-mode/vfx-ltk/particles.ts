@@ -107,7 +107,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   const rigFor = (): RigModel => {
     const from = spec.anchor.originAt(0), to = spec.target?.originAt(0) ?? from;
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
-    return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.stopAfter,
+    // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
+    return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
         flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
