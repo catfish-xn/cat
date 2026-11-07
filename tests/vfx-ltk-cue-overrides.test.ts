@@ -1,3 +1,4 @@
+import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
@@ -62,6 +63,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     // The canister puffs end before the flight starts; the ally shield lasts the ability's 3 s.
     expect(renata.find(cue => cue.system === 'cff69d8a')!.duration).toBeLessThanOrEqual(missile.delay + 0.1);
     expect(renata.find(cue => cue.system === 'fdf79734')).toMatchObject({ action: 'passive', duration: 3 });
+    // A full board keeps it: it ranks with receipt feedback, not with caster flourishes.
+    expect(effectImportance(renata.find(cue => cue.system === 'fdf79734')!)).toBe('critical');
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {

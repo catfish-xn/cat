@@ -219,8 +219,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f9926ae8', action: 'cast', event: 'hit', delay: 0.9, duration: 2, bone: ground, primary: true },
     { system: 'd5579768', action: 'cast', event: 'hit', delay: 0.9, duration: 1, bone: chest, targetLimit: 3, optional: true },
     // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
-    // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline).
-    { system: 'fdf79734', action: 'passive', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.7, bone: chest },
+    // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline). A hit on the ally
+    // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).
+    { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, bone: chest },
   ],
 };
 
