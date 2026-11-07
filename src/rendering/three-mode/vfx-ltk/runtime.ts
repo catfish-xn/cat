@@ -49,7 +49,9 @@ export interface LtkPlayOptions {
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
 interface Running { stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
-export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[] } = {}) {
+export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
+  /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
+  foe?: (sourceId: string) => Object3D | null } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
@@ -246,7 +248,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         const host = spawn.event === 'hit' ? target : source;
         const fixed = snapshot ?? spawn.point;
-        const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; } : undefined;
+        // A cast faces its primary target; a cast on itself faces the nearest foe, though the model may still look elsewhere
+        // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
+        const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
+          : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
         const scale = spawn.scale ?? 1;

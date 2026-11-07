@@ -671,12 +671,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
+  // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
+  function nearestFoe(sourceId: string): Object3D | null {
+    const source = pieces.get(sourceId); if (!source) return null;
+    const followed = source.facing ? pieces.get(source.facing) : undefined;
+    if (followed?.alive && !followed.disposed && followed.root.visible) return followed.root;
+    let best: Object3D | null = null, distance = Infinity;
+    for (const view of pieces.values()) {
+      if (view.team === source.team || !view.alive || view.disposed || view.onBench || !view.root.visible) continue;
+      const d = view.root.position.distanceToSquared(source.root.position);
+      if (d < distance) { distance = d; best = view.root; }
+    }
+    return best;
+  }
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
-    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')] }) : null;
+    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });

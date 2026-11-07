@@ -1,5 +1,5 @@
 import { Camera, Group, Scene, Texture } from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
@@ -85,6 +85,24 @@ describe('cast timeline replacement and fallback', () => {
     expect(mapSkillTimeline(cues, 'caster', ['enemy', 'other']).spawns[0]?.aimId).toBe('enemy');
     expect(mapSkillTimeline(cues, 'caster', ['caster']).spawns[0]?.aimId).toBeUndefined();
     expect(mapSkillTimeline(cues, 'caster', []).spawns[0]?.aimId).toBeUndefined();
+  });
+  it('turns a cast on itself toward the nearest foe, and a targeted cast toward its own target (Irelia W, 11-07)', async () => {
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const caster = { root: new Group(), body: null, alive: true }, target = { root: new Group(), body: null, alive: true };
+    const foe = vi.fn((_: string) => new Group());
+    const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await library.load('sample');
+    expect(runtime.play('jinx', 'caster', [])).toBe(true);
+    runtime.update(0.01, new Camera()); runtime.update(0.05, new Camera());
+    expect(foe).toHaveBeenCalledWith('caster');
+    runtime.dispose(); foe.mockClear();
+    const again = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const aimed = createLtkRuntime(again, new Scene(), id => id === 'caster' ? caster : id === 'target' ? target : undefined, { foe });
+    await again.load('sample');
+    expect(aimed.play('jinx', 'caster', ['target'])).toBe(true);
+    aimed.update(0.01, new Camera()); aimed.update(0.05, new Camera());
+    expect(foe).not.toHaveBeenCalled();
+    aimed.dispose();
   });
   it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
     const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
