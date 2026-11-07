@@ -18,12 +18,10 @@ export interface TimelineCue {
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
-   * With `stopAfter`: from the stop, ease the cue's particles to nothing by `duration` instead of the cue cutting them
-   * off at full strength (11-07: Zyra's long-lived single-particle roots never reach their own authored fade).
+   * With `stopAfter`: once emission stops, age the living particles faster so their authored fade finishes by
+   * `duration` instead of the cue cutting them off at full strength (11-07: Zyra's roots froze, then vanished).
    */
-  readonly fadeOut?: boolean;
-  /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
-  readonly main?: boolean;
+  readonly drain?: boolean;
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
