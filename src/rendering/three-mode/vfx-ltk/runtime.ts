@@ -25,7 +25,7 @@ export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
 /** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
 const ATTACK_FREE_SLOTS = 6;
 /** The fewest slots a system reserves, whatever its measured peak. */
-const MIN_RESERVE = 24;
+export const MIN_RESERVE = 24;
 /**
  * At this many live systems the extra depth and distortion passes are skipped.
  * Colour particles still draw in the single board pass.
@@ -75,8 +75,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const release = (run: Running, retire = false) => {
     run.fx.object.removeFromParent();
     if (options.budget) options.budget.live -= run.reserved;
-    // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet.
-    if (run.fx.finished) needs.set(run.system, Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(run.fx.peak * 1.25) + (run.fx.children ? CHILD_PARTICLES : 0))));
+    // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet. The need only
+    // grows: a low-peaking seed or a shorter cue on a shared system (Zyra's 857fe049 at 0.6 and 0.7 s) never lowers it.
+    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0,
+      Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(run.fx.peak * 1.25) + (run.fx.children ? CHILD_PARTICLES : 0)))));
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();

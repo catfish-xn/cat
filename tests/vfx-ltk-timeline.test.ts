@@ -2,8 +2,8 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
+import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
@@ -210,10 +210,30 @@ describe('cast timeline replacement and fallback', () => {
     runtime.update(1.2, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
     // The synthetic system peaks at a few particles: later plays reserve the floor, not 250 each.
     for (let i = 0; i < 20; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
-    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(budget.live).toBeLessThan(MAX_LTK_SYSTEMS * 250);
-    expect(budget.live).toBeLessThanOrEqual(budget.max);
-    // A play cut short (cleared before its end) does not lower the reservation further, and every slot comes back.
-    runtime.clear(); expect(budget.live).toBe(0); runtime.dispose();
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(budget.live).toBe(MAX_LTK_SYSTEMS * MIN_RESERVE);
+    // Every slot comes back, and a play cut short (cleared before its end) records nothing.
+    runtime.clear(); expect(budget.live).toBe(0);
+    runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(budget.live).toBe(MIN_RESERVE);
+    runtime.dispose();
+  });
+  it('never lowers a system\'s reservation after a play that peaked lower', async () => {
+    // One busy system on two cues: a full second, and a 0.03 s cue that ends before many particles are born.
+    const index = { ...syntheticIndex(), skills: {
+      jinx: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 1 }],
+      vi: [{ system: 'sample', event: 'cast-start' as const, delay: 0, duration: 0.03 }] } };
+    const busy = syntheticSystem({ rate: constant(num(600)), lifetime: num(1), particleLifetime: constant(num(1)) });
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : busy, readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, camera = new Camera(), budget = { live: 0, max: 1500 };
+    const runtime = createLtkRuntime(library, new Scene(), () => source, { budget });
+    await library.load('sample');
+    const reserved = (skill: string) => { runtime.play(skill, 'caster', []); runtime.update(0.01, camera); const held = budget.live; runtime.clear(); return held; };
+    const playOut = (skill: string) => { runtime.play(skill, 'caster', []); for (let t = 0; t < 1.2; t += 0.01) runtime.update(0.01, camera); };
+    playOut('jinx');
+    const full = reserved('jinx');
+    expect(full).toBeGreaterThan(MIN_RESERVE);
+    playOut('vi'); // peaks far lower
+    expect(reserved('jinx')).toBe(full);
+    runtime.dispose();
   });
   it('bounds simultaneous particle reservations and cancels deaths before delayed spawn', async () => {
     const { runtime, camera } = await setup();
