@@ -1350,7 +1350,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       batch3?.event(event, currentEffect);
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
-      if (recipient?.alive && recipient.root.visible) {
+      // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
+      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [], 0, 'passive'))) {
         const fx = takeShield(grid?.radius ?? 34, reducedMotion());
         recipient.root.add(fx.object); addReference(fx, 'critical');
       }

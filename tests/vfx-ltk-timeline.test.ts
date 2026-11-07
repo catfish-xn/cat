@@ -80,6 +80,12 @@ describe('cast timeline replacement and fallback', () => {
     expect(mapSkillTimeline(cues, 'caster', []).unsupported).toHaveLength(2);
     expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { probe: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, optional: true }] } })).toThrow('timeline-cue');
   });
+  it('aims a cast-start at the primary target, never at the caster itself', () => {
+    const cues: TimelineCue[] = [{ system: 'a', event: 'cast-start', delay: 0, duration: 1 }];
+    expect(mapSkillTimeline(cues, 'caster', ['enemy', 'other']).spawns[0]?.aimId).toBe('enemy');
+    expect(mapSkillTimeline(cues, 'caster', ['caster']).spawns[0]?.aimId).toBeUndefined();
+    expect(mapSkillTimeline(cues, 'caster', []).spawns[0]?.aimId).toBeUndefined();
+  });
   it('leaves a mesh primitive that names no mesh undrawn instead of failing the system (Darius Q_Heal)', async () => {
     const meshless = syntheticSystem({ primitive: struct('VfxPrimitiveMesh', {}) });
     const doc = syntheticSystem();

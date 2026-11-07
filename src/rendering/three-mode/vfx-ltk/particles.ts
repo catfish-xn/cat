@@ -46,8 +46,12 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
 /** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: +Z faces
  * forward on Zyra but backward on Irelia, Kog'Maw and Akali), while bins author "in front" as the unit's facing. */
 const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center)_loc$/i;
-export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
-  const point = new Vector3(), matrix = new Matrix4();
+/**
+ * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
+ * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
+ */
+export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string, aim?: () => Object3D | null): Anchor {
+  const point = new Vector3(), toward = new Vector3(), matrix = new Matrix4();
   let attachment: Object3D | undefined;
   if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
   const node = () => attachment ?? root;
@@ -57,6 +61,13 @@ export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string)
       // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
       const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
       held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
+      const aimed = held === root ? aim?.() : null;
+      if (aimed) {
+        root.getWorldPosition(point); aimed.getWorldPosition(toward);
+        const dx = toward.x - point.x, dz = toward.z - point.z;
+        // Same convention as the root's own heading: rotation.y = atan2(dx, dz) looks along +z.
+        if (dx * dx + dz * dz > 1e-6) matrix.makeRotationY(Math.atan2(dx, dz));
+      }
       const e = matrix.elements;
       for (let column = 0; column < 3; column++) {
         const length = Math.hypot(e[column * 4], e[column * 4 + 1], e[column * 4 + 2]) || 1;

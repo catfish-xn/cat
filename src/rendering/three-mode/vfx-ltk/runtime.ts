@@ -246,7 +246,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         const host = spawn.event === 'hit' ? target : source;
         const fixed = snapshot ?? spawn.point;
-        const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone);
+        const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; } : undefined;
+        const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
         const scale = spawn.scale ?? 1;
         const nextOptions = { anchor, attachment,

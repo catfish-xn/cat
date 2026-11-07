@@ -43,6 +43,19 @@ describe('upstream simulation in the bare Three.js host', () => {
     // Still placed at the locator.
     expect(unitAnchor(root, body, 'Buffbone_Glb_Ground_Loc').originAt(0)).not.toEqual(unitAnchor(root, body).originAt(0));
   });
+  it('faces a cast toward its primary target while the model is still turning (Zyra, 11-07)', () => {
+    const root = new Group(), body = new Group(), ground = new Group(), hand = new Group(), target = new Group();
+    ground.name = 'Buffbone_Glb_Ground_Loc'; hand.name = 'R_Hand'; body.add(ground, hand); root.add(body);
+    // Resting toward the camera (+z) while the target stands to its right (+x).
+    target.position.set(100, 0, 0);
+    const basis = (anchor: ReturnType<typeof unitAnchor>) => [...anchor.basisInto(0, new Float32Array(9))].map(n => Math.round(n) || 0);
+    const facingTarget = new Group(); facingTarget.rotation.y = Math.PI / 2;
+    expect(basis(unitAnchor(root, body, 'Buffbone_Glb_Ground_Loc', () => target))).toEqual(basis(unitAnchor(facingTarget, null)));
+    expect(basis(unitAnchor(root, body, undefined, () => target))).toEqual(basis(unitAnchor(facingTarget, null)));
+    // Without a live target it keeps the unit's own heading; a real bone keeps its own axes.
+    expect(basis(unitAnchor(root, body, 'Buffbone_Glb_Ground_Loc', () => null))).toEqual(basis(unitAnchor(root, body)));
+    expect(basis(unitAnchor(root, body, 'R_Hand', () => target))).toEqual(basis(unitAnchor(root, body, 'R_Hand')));
+  });
   it('pools quad GPU buffers when the same system is played again after dispose', async () => {
     const { library, prepared: system } = await prepared(), root = new Group();
     const options = { anchor: unitAnchor(root, null), target: null, joints: unitJoints(root, null), duration: 0.2, seed: 3 };

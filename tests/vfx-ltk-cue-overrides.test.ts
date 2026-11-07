@@ -57,6 +57,9 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(missile.event).toBe('projectile');
     expect(missile.delay + missile.travelSeconds!).toBeLessThanOrEqual(renata.find(cue => cue.system === 'f9926ae8')!.delay);
     expect(mapSkillTimeline(renata.filter(cue => cue.action === 'cast'), 'renata', ['a', 'b']).unsupported).toEqual([]);
+    // The canister puffs end before the flight starts; the ally shield lasts the ability's 3 s.
+    expect(renata.find(cue => cue.system === 'cff69d8a')!.duration).toBeLessThanOrEqual(missile.delay + 0.1);
+    expect(renata.find(cue => cue.system === 'fdf79734')).toMatchObject({ action: 'passive', duration: 3 });
   });
 
   it('parses a cue scale and rejects values outside 0.05–5', () => {

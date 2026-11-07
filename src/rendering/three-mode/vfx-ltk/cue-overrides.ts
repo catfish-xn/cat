@@ -211,10 +211,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   renata: [
     { system: '06e90178', action: 'attack', event: 'projectile', bone: 'Muzzle', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BuffBone_Glb_Center_Loc' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.5666666666666667, duration: 1.5 },
-    { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'C_Canister' },
+    // The canisters' own launch puffs only: their missiles fly on in a straight line, so past E_Mis's start one crossed the
+    // whole screen (11-07 field). The flight itself is E_Mis.
+    { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 0.35, bone: 'C_Canister' },
     { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
     { system: 'f9926ae8', action: 'cast', event: 'hit', delay: 0.9, duration: 2, bone: ground, primary: true },
     { system: 'd5579768', action: 'cast', event: 'hit', delay: 0.9, duration: 1, bone: chest, targetLimit: 3, optional: true },
+    // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
+    // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline).
+    { system: 'fdf79734', action: 'passive', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.7, bone: chest },
   ],
 };
 
