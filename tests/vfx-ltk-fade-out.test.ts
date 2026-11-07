@@ -1,7 +1,8 @@
-import { Camera, Group, Texture } from 'three';
+import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkParticles, fadeAt, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
@@ -66,5 +67,20 @@ describe('a skill body on its caster ranks with impacts (Nunu R, d650fcf2 field)
     const nunu = CUE_OVERRIDES.nunu;
     for (const system of ['78d04f27', '8c256426']) expect(effectImportance(nunu.find(cue => cue.system === system)!)).toBe('critical');
     expect(effectImportance({ event: 'cast-start', action: 'cast' })).toBe('decorative');
+  });
+});
+
+describe('a board-timed receipt delay', () => {
+  it('shifts every cue of the play by the delay, and refuses one out of range', async () => {
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), camera = new Camera();
+    const runtime = createLtkRuntime(library, scene, () => source);
+    await library.load('sample');
+    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: 3 })).toBe(false);
+    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: -0.1 })).toBe(false);
+    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: 0.5 })).toBe(true);
+    runtime.update(0.45, camera); expect(runtime.active).toBe(0);
+    runtime.update(0.1, camera); expect(runtime.active).toBe(1);
+    runtime.dispose(); library.dispose();
   });
 });
