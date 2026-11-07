@@ -3399,9 +3399,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 20316,
+      "currentBytes": 21852,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "f51292397b77f29c19cf94d054907837ec26f6d2477f34cb835968328db5e7d4",
+      "currentSha256": "fdb89bcee6f297aa011ece6445f6e025e70dee7232df82bf986dd840cb56a51b",
       "firstDifferentByte": 84
     }
   }
