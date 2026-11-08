@@ -224,6 +224,47 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
+  it('lets a hit that is already past its window retire plain attacks for room, but never a skill body', async () => {
+    const { runtime, scene, camera } = await setup({ lucian: [{ system: 'deco', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 2 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('lucian', `a-${i}`, ['victim'], 0, 'attack')).toBe(true);
+    runtime.update(0.005, camera); runtime.update(0.005, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    // One coarse 0.4 s frame: the hit is first examined already overdue, yet it still replaces an attack.
+    runtime.update(0.4, camera);
+    expect(shown(scene)).toContain('blow');
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.dispose();
+  });
+
+  it('keeps yielding skill bodies when the hit that would evict them is already past its window', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
+    runtime.update(0.005, camera); runtime.update(0.005, camera);
+    runtime.update(2.3, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.4, camera);
+    expect(shown(scene)).not.toContain('blow');
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
+    runtime.dispose();
+  });
+
+  it('drops a plain attack that missed its window instead of replaying it late once room frees', async () => {
+    const { runtime, camera } = await setup({
+      ezreal: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 0.35 }],
+      lucian: [{ system: 'deco', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 1 }],
+    });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('ezreal', `c-${i}`, ['victim'])).toBe(true);
+    runtime.update(0.005, camera); runtime.update(0.005, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('lucian', 'a-0', ['victim'], 0, 'attack')).toBe(true);
+    runtime.update(0.36, camera);
+    expect(runtime.active).toBe(0);
+    expect(runtime.queued).toBe(0);
+    runtime.dispose();
+  });
+
   it('still drops an overdue hit when the board stays full', async () => {
     const { runtime, camera } = await setup();
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `c-${i}`, ['victim'])).toBe(true);

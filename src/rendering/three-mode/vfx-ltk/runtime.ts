@@ -240,11 +240,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // One-shots miss their moment after 0.3s (a skill body waits up to half its duration). A grouped cue is a persistent skill
         // the controller still has registered; catch-up must start it while its
         // display duration remains. The 0.3s window and the six-start cap stay.
-        // A cue past its window is dropped only when it still finds no room: it never evicts, but a slot or budget freed this
+        // A critical or body cue past its window is dropped only when it still finds no room: a slot or budget freed this
         // frame by a finished run takes it (9d7cd268 brawl: 33 of 115 critical drops were declared overdue at 0.32–0.36 s
-        // while four runs held 1000 of 1500 slots, because the lateness test ran before the room test).
+        // while four runs held 1000 of 1500 slots, because the lateness test ran before the room test). It may still retire
+        // plain attacks and flourishes that slipped into room it was waiting for, never a skill body (eab51a1e brawl: 247
+        // attack runs were live at critical drops). A late attack or flourish is simply dropped: replayed late, a hit spark
+        // reads as lag (eab51a1e: 0f2af66b replayed 9 times).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue && clock - when >= spawn.duration) continue;
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
@@ -258,9 +261,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const need = reserveFor(spawn.system);
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
-        if (overdue && blocked()) continue;
         while (blocked()) {
-          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true, [...running].map(run => clock - run.started), [...running].map(run => run.span));
+          // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
+          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
+            overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
@@ -270,7 +274,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
-          if (importance === 'critical' || importance === 'body') { waiting.splice(at, 0, row); at++; }
+          if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
