@@ -1,4 +1,6 @@
 import type { TimelineCue } from '../timeline';
+/** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
+const SHIELD_SECONDS = 4;
 export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 }],
   'sevika-flamethrower': [
@@ -25,13 +27,15 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 },
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: .1, duration: .3, travelSeconds: .3 },
     { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
-    { system: '518dee63', event: 'cast-start', delay: .4, duration: 1, stopAfter: .4 },
+    // Jackpot also grants the 4 s shield (14.24 shieldTicks 80); the bubble's main emitters never die on their own.
+    { system: '518dee63', event: 'cast-start', delay: .4, duration: SHIELD_SECONDS },
   ],
   'sevika-rocket': [
     { system: 'dcebd22f', event: 'projectile', delay: 0, duration: .3, travelSeconds: .3 },
     { system: '4e1283b2', event: 'hit', primary: true, delay: .3, duration: .6 },
   ],
-  'sevika-shield': [{ system: '518dee63', event: 'cast-start', delay: 0, duration: 1, stopAfter: .4 }],
+  // The original bubble stays up for the whole shield (11-08 gRcKEl213wk) and only the shared tail fade ends it.
+  'sevika-shield': [{ system: '518dee63', event: 'cast-start', delay: 0, duration: SHIELD_SECONDS }],
   'sevika-coin': [{ system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 }],
 };
 export function sevikaSkill(move: string, outcome: string): string | undefined {
