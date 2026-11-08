@@ -57,7 +57,7 @@ export interface LtkPlayOptions {
   delay?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null } = {}) {
@@ -256,7 +256,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         while (blocked()) {
-          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true, [...running].map(run => clock - run.started));
+          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true, [...running].map(run => clock - run.started), [...running].map(run => run.span));
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
@@ -299,7 +299,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += need;
-          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, span: spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       claimBuf.length = 0;
