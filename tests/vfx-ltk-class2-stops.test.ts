@@ -74,6 +74,7 @@ describe('stops found by the whole-roster audit fade instead of clearing (11-08)
       [S13_TIMELINES.vi, '9614ffb4'],
       [BATCH1_TIMELINES.lux, '33f42cc3'],
       [BATCH1_TIMELINES.zeri, 'c4b3f285'],
+      [BATCH1_TIMELINES.kogmaw, '9765f3d3'],
     ];
     for (const [list, system] of found) {
       const entry = cue(list, system);

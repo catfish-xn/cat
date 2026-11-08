@@ -60,7 +60,7 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
     ...normal('f16dfc56', 'Jaw', .25),
     // 11-06 field: 14.24 keeps the charged-up glow on him well after the cast; ours was gone at 0.87 s.
     { action: 'cast', system: '6889455c', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: 'BUFFBONE_GLB_WEAPON_LOC' },
-    { action: 'cast', system: '9765f3d3', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: 'C_BUFFBONE_GLB_HEAD_LOC' },
+    { action: 'cast', system: '9765f3d3', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, fadeOut: true, bone: 'C_BUFFBONE_GLB_HEAD_LOC' },
     { action: 'cast', system: '9f805f6e', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: chest },
     // The on-attack magic packet exists from the opening attack, independently of cast.
     { action: 'attack', system: '633e1b82', event: 'hit', delay: .55, duration: .6, stopAfter: .1, bone: chest },
