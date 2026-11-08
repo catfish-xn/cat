@@ -16,7 +16,7 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { phase: 2, system: '809da1b1', event: 'hit', delay: frame(20) + 0.6, duration: 2, bone: ground, primary: true },
   ],
   vi: [
-    { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), bone: 'R_Buffbone_Glb_Hand_Loc' },
+    { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
     { system: '0314626c', event: 'cast-start', delay: 0, duration: 1, bone: ground },
     { system: '25afa6a6', event: 'cast-start', delay: 0, duration: 1, bone: ground }, // Original empty event: explicit no-op.
     // Landing owns the debris/impact. Retaining the flight past frame 17 would
@@ -25,7 +25,7 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { system: '18e22631', event: 'cast-start', delay: frame(17), duration: 1.5, bone: ground },
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
     { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
-    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6 },
+    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
   ],
 };
 /** Opt in only to the complete known export. An explicit caller timeline always wins. */

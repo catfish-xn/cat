@@ -104,11 +104,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
     { action: 'cast', system: '54af463f', event: 'cast-start', delay: 0, duration: 0.5, stopAfter: 0.2, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'cast', system: '2beb0657', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, bone: 'Buffbone_Glb_Weapon_1' },
+    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'cast', system: '5938e29d', event: 'projectile', delay: 0.15, duration: 0.8, travelSeconds: 0.55, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '4e7cc3b1', event: 'hit', delay: 0.7, duration: 0.55, stopAfter: 0.15, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'cast', system: '4e7cc3b1', event: 'hit', delay: 0.7, duration: 0.55, stopAfter: 0.15, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '5938e29d', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Blood strands aim at each enemy; the red burst is on them, not on Vladimir's hand.
   vladimir: [
@@ -236,7 +236,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
     // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline). A hit on the ally
     // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).
-    { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, bone: chest },
+    { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, fadeOut: true, bone: chest },
   ],
 };
 

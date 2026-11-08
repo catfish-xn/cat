@@ -2,10 +2,10 @@ import type { TimelineCue } from '../timeline';
 /** Own-skin 14.24 fragments. Script-driven timings are presentation conventions. */
 export const jayceSkills: Record<string, readonly TimelineCue[]> = {
   'jayce-front': [
-    { system: 'a404455c', action: 'attack', event: 'cast-start', bone: 'C_Buffbone_Glb_Center_Loc', delay: 7 / 30, duration: .5, stopAfter: 8 / 30 },
+    { system: 'a404455c', action: 'attack', event: 'cast-start', bone: 'C_Buffbone_Glb_Center_Loc', delay: 7 / 30, duration: .5, stopAfter: 8 / 30, fadeOut: true },
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 },
     { system: '2143d86a', event: 'cast-start', delay: 0, duration: .5 },
-    { system: 'f7fa1af5', event: 'hit', primary: true, delay: .1, duration: 1, stopAfter: .3 },
+    { system: 'f7fa1af5', event: 'hit', primary: true, delay: .1, duration: 1, stopAfter: .3, fadeOut: true },
     { system: '8d9d784b', event: 'cast-start', delay: .2, duration: 1, stopAfter: .3 },
     { system: 'e07c8088', event: 'hit', primary: true, delay: .3, duration: .6 },
     { system: 'b84b5c7b', event: 'hit', delay: .3, duration: .6 },

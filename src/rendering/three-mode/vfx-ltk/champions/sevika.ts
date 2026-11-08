@@ -5,7 +5,7 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 }],
   'sevika-flamethrower': [
     { system: '2ef508db', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: .4 },
-    { system: '5d6a1033', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2 },
+    { system: '5d6a1033', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, fadeOut: true },
     { system: 'e4e1dab4', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
   ],
   'sevika-blue-flamethrower': [

@@ -4,6 +4,8 @@ import { swain } from '../src/rendering/three-mode/vfx-ltk/batch3/swain';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
@@ -56,5 +58,30 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
       expect(bubble.stopAfter).toBeUndefined();
       expect(bubble.fadeOut).toBeUndefined();
     }
+  });
+});
+
+// 11-08 whole-roster audit at 6224095b: these stops still cleared no-linger particles in one frame.
+describe('stops found by the whole-roster audit fade instead of clearing (11-08)', () => {
+  it('fades every remaining one-frame stop from its stopAfter', () => {
+    const found: [readonly TimelineCue[] | undefined, string, string?][] = [
+      [CUE_OVERRIDES.twitch, '900dd2d2'],
+      [CUE_OVERRIDES.renata, 'fdf79734'],
+      [jayceSkills['jayce-front'], 'f7fa1af5'],
+      [jayceSkills['jayce-front'], 'a404455c'],
+      [sevikaSkills['sevika-flamethrower'], '5d6a1033'],
+      [S13_TIMELINES.vi, 'c11e6814'],
+      [S13_TIMELINES.vi, '9614ffb4'],
+      [BATCH1_TIMELINES.lux, '33f42cc3'],
+      [BATCH1_TIMELINES.zeri, 'c4b3f285'],
+    ];
+    for (const [list, system] of found) {
+      const entry = cue(list, system);
+      expect(entry.stopAfter, system).toBeGreaterThan(0);
+      expect(entry.fadeOut, system).toBe(true);
+    }
+    const twitchHits = CUE_OVERRIDES.twitch?.filter(entry => entry.system === '4e7cc3b1') ?? [];
+    expect(twitchHits).toHaveLength(2);
+    for (const hit of twitchHits) expect(hit).toMatchObject({ event: 'hit', fadeOut: true });
   });
 });

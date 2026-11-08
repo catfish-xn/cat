@@ -26,7 +26,8 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
   ],
   zeri: [
     ...normal('215abe6e', 'Buffbone_Glb_Weapon_1', 8 / 30),
-    ...empowered('d160dfa9', 'c4b3f285', 'Buffbone_Glb_Weapon_1', 8 / 30),
+    // The impact has no linger, so its 0.1 s stop cleared it in one frame (11-08 audit): fade it instead.
+    ...empowered('d160dfa9', 'c4b3f285', 'Buffbone_Glb_Weapon_1', 8 / 30).map(c => c.event === 'hit' ? { ...c, fadeOut: true } : c),
   ],
   draven: [
     ...normal('617e850e', 'R_hand', .24),
@@ -40,7 +41,7 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
     { action: 'cast', system: '44c9516a', event: 'hit', delay: .3, duration: 4, stopAfter: 3.7, bone: chest },
     { action: 'cast', variant: 'self', system: '44c9516a', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.7, bone: chest },
     ...empowered('4d0368dc', '106a5167', 'r_hand', .25),
-    { action: 'attack', variant: 'empowered', system: '33f42cc3', event: 'cast-start', delay: 0, duration: .55, stopAfter: .25, bone: 'R_hand' },
+    { action: 'attack', variant: 'empowered', system: '33f42cc3', event: 'cast-start', delay: 0, duration: .55, stopAfter: .25, fadeOut: true, bone: 'R_hand' },
   ],
   leona: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 11 / 30, duration: .45, stopAfter: .1, bone: chest },
