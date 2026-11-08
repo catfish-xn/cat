@@ -287,7 +287,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
         const scale = spawn.scale ?? 1;
         const tail = Math.min(0.25, spawn.duration / 4);
-        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant)) ? spawn.duration - tail : undefined;
+        // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
+        // before it, so the cue stays at full strength up to its stop.
+        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
+          ? Math.max(spawn.duration - tail, spawn.stopAfter ?? 0) : undefined;
         const nextOptions = { anchor, attachment,
           target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
