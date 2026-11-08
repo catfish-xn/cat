@@ -18,6 +18,14 @@ describe('late-game effect budget', () => {
     expect(admitEffect(['decorative', 'critical'], 'attack', true)).toEqual({ admit: false, evict: -1 });
   });
 
+  it('ranks body between critical and decorative, yielding only the oldest body after 1 s', () => {
+    expect(admitEffect(['body', 'body', 'body'], 'critical', true, [0.5, 0.5, 0.5])).toEqual({ admit: false, evict: -1 });
+    expect(admitEffect(['body', 'body', 'body'], 'critical', true, [1.2, 1.8, 0.5])).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['critical', 'decorative', 'body'], 'body', true, [2, 2, 2])).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['critical', 'critical'], 'body', true, [2, 2])).toEqual({ admit: false, evict: -1 });
+    expect(admitEffect(['body', 'decorative', 'attack'], 'attack', true, [2, 2, 2])).toEqual({ admit: false, evict: -1 });
+  });
+
   it('rearms a missile onto a new flight without disposing its material', () => {
     const from = new Vector3(0, 1, 0), to = new Vector3(10, 1, 0);
     const fx = createRenataMissile(from, to, 34);
@@ -145,6 +153,81 @@ describe('late-game effect budget', () => {
     runtime.update(0.01, camera);
     expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
     expect(shown(scene)).not.toContain('blow');
+    runtime.dispose();
+  });
+
+  it('queues a hit behind 12 fresh bodies and drops the hit after 0.3 s while all bodies stay', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(runtime.queued).toBe(1);
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
+    expect(shown(scene)).not.toContain('blow');
+    runtime.update(0.35, camera);
+    expect(runtime.queued).toBe(0);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
+    expect(shown(scene)).not.toContain('blow');
+    runtime.dispose();
+  });
+
+  it('evicts the oldest body for a hit once 12 bodies have played 1.5 s', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
+    runtime.update(0.1, camera);
+    for (let i = 1; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    runtime.update(1.5, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).toContain('blow');
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS - 1);
+    expect(scene.children.map(object => object.userData.poolUnit)).not.toContain('nunu-oldest');
+    runtime.dispose();
+  });
+
+  it('admits a body on a board full of decorative flourishes by evicting one', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('nunu', 'nunu-0', [])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).toContain('save');
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS - 1);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.dispose();
+  });
+
+  it('keeps a 2 s body queued up to 1.0 s on a critical-full board and drops it past 1.0 s', async () => {
+    const { runtime, scene, camera } = await setup({
+      nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: 2 }],
+      ezreal: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 0.8 }],
+      vi: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 3 }],
+    });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('ezreal', `c-${i}`, ['victim'])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('nunu', 'nunu-0', [])).toBe(true);
+    runtime.update(0.5, camera);
+    expect(runtime.queued).toBe(1);
+    expect(shown(scene)).not.toContain('save');
+    runtime.update(0.35, camera);
+    expect(runtime.queued).toBe(0);
+    expect(shown(scene)).toContain('save');
+    runtime.clear();
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `c-${i}`, ['victim'])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    expect(runtime.play('nunu', 'nunu-0', [])).toBe(true);
+    runtime.update(0.95, camera);
+    expect(runtime.queued).toBe(1);
+    runtime.update(0.1, camera);
+    expect(runtime.queued).toBe(0);
+    expect(shown(scene)).not.toContain('save');
     runtime.dispose();
   });
 
