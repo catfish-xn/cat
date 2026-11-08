@@ -3340,9 +3340,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2484,
+      "currentBytes": 3185,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "09c3055303b3badaf23fa501d5679fa1d373f88b787c099d5368edad8b4f2195",
+      "currentSha256": "d4520814c71fe38ce29424cc441484ed1571b2cd84a90acde06b9d5b01305738",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-overrides.test.ts": {
@@ -3416,9 +3416,9 @@
     "tests/vfx-ltk-tail-fade.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8748,
+      "currentBytes": 9245,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dfa1d1a9297b22de79a270cbadf176a1ac289852985dff06584d9610e6aace70",
+      "currentSha256": "5cf715871e21959a64a7aa2cdcfa6a9e93d135941ac2e5862b89ac5e3c76056d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-timeline.test.ts": {

@@ -61,6 +61,14 @@ describe('universal tail fallback fade-out for LTK cues', () => {
     expect(alpha[98]).toBeGreaterThan(0);
   });
 
+  it('never starts the tail fade before a hand-set stop near the end (a deliberate cut)', async () => {
+    const cue: TimelineCue = { system: 'sample', action: 'cast', event: 'cast-start', delay: 0, duration: 2.2, stopAfter: 2.1 };
+    const alpha = await runCue(cue, 219);
+    // A plain tail fade would start at 1.95 s; with the stop at 2.1 s the cue is still at full strength at 2.05 s.
+    expect(alpha[204]).toBeCloseTo(0.5, 5);
+    expect(alpha[218]).toBeLessThan(alpha[204] * 0.3);
+  });
+
   it('uses duration / 4 (0.1 s) as the fade window for a short 0.4 s cue', async () => {
     const cue: TimelineCue = { system: 'sample', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4 };
     const alpha = await runCue(cue, 39);

@@ -38,4 +38,14 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
     expect(cue(elise['elise-back'], '9e530234')).toMatchObject({ delay: 0, duration: 1.8 });
     expect(cue(swain['swain-back'], '2a51ddb9')).toMatchObject({ delay: 0, duration: 1.8 });
   });
+
+  it('fades Nocturne\'s shadow disc from its stop and keeps Irelia\'s stance to its end (3b-2)', () => {
+    const nocturne = CUE_OVERRIDES.nocturne?.filter(entry => entry.system === '3e224f4a') ?? [];
+    expect(nocturne).toHaveLength(2);
+    expect(nocturne.find(entry => entry.action === 'cast')).toMatchObject({ delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true });
+    expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', duration: 0.5, stopAfter: 0.1, fadeOut: true });
+    const stance = cue(CUE_OVERRIDES.irelia, '67665513');
+    expect(stance).toMatchObject({ delay: 0, duration: 1.6 });
+    expect(stance.stopAfter).toBeUndefined();
+  });
 });
