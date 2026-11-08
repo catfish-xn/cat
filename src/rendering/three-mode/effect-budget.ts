@@ -6,6 +6,11 @@ export const CAST_BODY_SECONDS = 1;
 
 /** Seconds a skill body must have played before an incoming critical visual may evict the oldest one. */
 export const BODY_YIELD_SECONDS = 1;
+/**
+ * Share of its own duration a skill body must also have played before it yields (9d7cd268 brawl: a 3.3 s Nunu cloud
+ * and Irelia's stance were cut at 1.06 s). A 1–1.4 s body still yields at `BODY_YIELD_SECONDS`.
+ */
+export const BODY_YIELD_SHARE = 0.7;
 
 /**
  * Damage, projectiles, beams, impacts, ground areas and sustained cast bodies stay. A short caster flourish (cast windup
@@ -28,11 +33,12 @@ export function effectImportance(cue: { event?: string; anchor?: string; locatio
 /**
  * `full` means every live slot is taken. Any skill newcomer first replaces the earliest plain attack;
  * a critical or body one may otherwise replace the earliest decorative slot; a critical one may finally
- * replace the oldest body that has played at least `BODY_YIELD_SECONDS`. A decorative newcomer waits outside:
+ * replace the oldest body that has played at least `BODY_YIELD_SECONDS` and `BODY_YIELD_SHARE` of its `spans` entry
+ * (its duration; omitted means no share is required). A decorative newcomer waits outside:
  * it never displaces damage, control feedback or a skill body.
  * `evict` is an index into `live`, or -1 when nothing is removed.
  */
-export function admitEffect(live: readonly EffectImportance[], incoming: EffectImportance, full: boolean, ages?: readonly number[]): { admit: boolean; evict: number } {
+export function admitEffect(live: readonly EffectImportance[], incoming: EffectImportance, full: boolean, ages?: readonly number[], spans?: readonly number[]): { admit: boolean; evict: number } {
   if (!full) return { admit: true, evict: -1 };
   // A basic-attack visual is the lowest rank: any skill visual replaces the earliest one, and it never displaces anything.
   if (incoming === 'attack') return { admit: false, evict: -1 };
@@ -43,7 +49,8 @@ export function admitEffect(live: readonly EffectImportance[], incoming: EffectI
     for (let i = 0; i < live.length; i++) {
       if (live[i] !== 'body') continue;
       const age = ages?.[i] ?? 0;
-      if (age >= BODY_YIELD_SECONDS && age > oldest) { oldest = age; evict = i; }
+      const due = Math.max(BODY_YIELD_SECONDS, BODY_YIELD_SHARE * (spans?.[i] ?? 0));
+      if (age >= due && age > oldest) { oldest = age; evict = i; }
     }
   }
   return evict < 0 ? { admit: false, evict: -1 } : { admit: true, evict };

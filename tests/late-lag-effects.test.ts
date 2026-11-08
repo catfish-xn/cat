@@ -24,6 +24,10 @@ describe('late-game effect budget', () => {
     expect(admitEffect(['critical', 'decorative', 'body'], 'body', true, [2, 2, 2])).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['critical', 'critical'], 'body', true, [2, 2])).toEqual({ admit: false, evict: -1 });
     expect(admitEffect(['body', 'decorative', 'attack'], 'attack', true, [2, 2, 2])).toEqual({ admit: false, evict: -1 });
+    // A body also has to play BODY_YIELD_SHARE (70%) of its own span: a 3.3 s cloud at 1.06 s stays, at 2.4 s it yields.
+    expect(admitEffect(['body', 'body'], 'critical', true, [1.06, 1.06], [3.3, 1.2])).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['body'], 'critical', true, [1.06], [3.3])).toEqual({ admit: false, evict: -1 });
+    expect(admitEffect(['body'], 'critical', true, [2.4], [3.3])).toEqual({ admit: true, evict: 0 });
   });
 
   it('rearms a missile onto a new flight without disposing its material', () => {
@@ -174,13 +178,28 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('evicts the oldest body for a hit once 12 bodies have played 1.5 s', async () => {
+  it('keeps 3 s bodies that have played 1.5 s (under 70% of their span) when a hit arrives (Nunu cloud, 9d7cd268 brawl)', async () => {
     const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
     expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
     runtime.update(0.1, camera);
     for (let i = 1; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
     runtime.update(0.01, camera); runtime.update(0.01, camera);
     runtime.update(1.5, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(shown(scene)).not.toContain('blow');
+    expect(shown(scene).filter(name => name === 'deco')).toHaveLength(MAX_LTK_SYSTEMS);
+    runtime.dispose();
+  });
+
+  it('evicts the oldest body for a hit once 12 three-second bodies have played 70% of their span', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
+    runtime.update(0.1, camera);
+    for (let i = 1; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
+    runtime.update(0.01, camera); runtime.update(0.01, camera);
+    runtime.update(2.2, camera);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
     runtime.update(0.01, camera);
