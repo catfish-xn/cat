@@ -3405,6 +3405,14 @@
       "currentSha256": "37d7ea8a0745181c25b3b23ae29afbce1de2120bd2c07313fc001ed2dc8f711d",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-tail-fade.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 8748,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "dfa1d1a9297b22de79a270cbadf176a1ac289852985dff06584d9610e6aace70",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
       "currentBytes": 21852,
