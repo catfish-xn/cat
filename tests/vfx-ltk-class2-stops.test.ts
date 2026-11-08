@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
+import { swain } from '../src/rendering/three-mode/vfx-ltk/batch3/swain';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
@@ -30,5 +32,10 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
     expect(cue(jayceSkills['jayce-back'], '508e8c05')).toMatchObject({ duration: .6, stopAfter: .3, fadeOut: true });
     expect(cue(sevikaSkills['sevika-punch'], '0badab98')).toMatchObject({ duration: .6, stopAfter: .5, fadeOut: true });
     expect(cue(viktorSkills.viktor, '37d3ac23')).toMatchObject({ duration: 1.5, stopAfter: 1, fadeOut: true });
+  });
+
+  it('lets the Elise and Swain back-form casts run to their natural end instead of cutting them while rising', () => {
+    expect(cue(elise['elise-back'], '9e530234')).toMatchObject({ delay: 0, duration: 1.8 });
+    expect(cue(swain['swain-back'], '2a51ddb9')).toMatchObject({ delay: 0, duration: 1.8 });
   });
 });
