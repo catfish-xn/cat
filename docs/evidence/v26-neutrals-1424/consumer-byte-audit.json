@@ -1250,9 +1250,9 @@
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 20766,
+      "currentBytes": 23184,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e8cae1dcce864aa7b8f5939c0c8efbd9581830fa5e55354cecebf5d5b9be8ece",
+      "currentSha256": "eb4b056a3c94b4ce458a5247f2a3f8590925c2983b3a534ff0729080cb901e20",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
