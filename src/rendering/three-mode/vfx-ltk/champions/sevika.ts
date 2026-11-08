@@ -12,7 +12,7 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   ],
   'sevika-punch': [
     { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 20 / 30, duration: .7, stopAfter: 20 / 30 },
-    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30, duration: .6, stopAfter: .5 },
+    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30, duration: .6, stopAfter: .5, fadeOut: true },
     { system: '8ccb497d', event: 'hit', primary: true, delay: .8, duration: .8 },
     { system: '95fb90ce', event: 'hit', primary: true, delay: .8, duration: .8 },
   ],
