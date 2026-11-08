@@ -121,8 +121,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   nocturne: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.3, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '3e224f4a', event: 'cast-start', delay: 0.35, duration: 1.1, stopAfter: 0.3, bone: 'BUFFBONE_GLB_GROUND_LOC' },
-    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over about 0.5 s
+    // (11-08 blind recheck of the empowered swing). Both cues of the system fade from their stop.
+    { action: 'cast', system: '3e224f4a', event: 'cast-start', delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
@@ -206,7 +208,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
-    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, stopAfter: 1.4, bone: 'C_Buffbone_Glb_Center_Loc' },
+    // The original stance holds to about 1.6 s and goes almost at once (11-08 blind recheck, ±2 frames): no early stop at
+    // 1.4 s, which cleared it in one frame; the tail fade covers its last 0.25 s.
+    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, bone: 'C_Buffbone_Glb_Center_Loc' },
     { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc' },
   ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
