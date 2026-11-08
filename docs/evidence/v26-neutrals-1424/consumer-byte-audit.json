@@ -3340,9 +3340,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3636,
+      "currentBytes": 5034,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ea96c7e766384ad3dc70cb6c04af194f9fe593201027e6e43f32adbbe477e7db",
+      "currentSha256": "b003823c99cd215fe66671e42c5c6237ae2668f6510a1c0133c0adab13419eec",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-overrides.test.ts": {

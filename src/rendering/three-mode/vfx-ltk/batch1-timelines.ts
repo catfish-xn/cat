@@ -26,7 +26,8 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
   ],
   zeri: [
     ...normal('215abe6e', 'Buffbone_Glb_Weapon_1', 8 / 30),
-    ...empowered('d160dfa9', 'c4b3f285', 'Buffbone_Glb_Weapon_1', 8 / 30),
+    // The impact has no linger, so its 0.1 s stop cleared it in one frame (11-08 audit): fade it instead.
+    ...empowered('d160dfa9', 'c4b3f285', 'Buffbone_Glb_Weapon_1', 8 / 30).map(c => c.event === 'hit' ? { ...c, fadeOut: true } : c),
   ],
   draven: [
     ...normal('617e850e', 'R_hand', .24),
@@ -40,7 +41,7 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
     { action: 'cast', system: '44c9516a', event: 'hit', delay: .3, duration: 4, stopAfter: 3.7, bone: chest },
     { action: 'cast', variant: 'self', system: '44c9516a', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.7, bone: chest },
     ...empowered('4d0368dc', '106a5167', 'r_hand', .25),
-    { action: 'attack', variant: 'empowered', system: '33f42cc3', event: 'cast-start', delay: 0, duration: .55, stopAfter: .25, bone: 'R_hand' },
+    { action: 'attack', variant: 'empowered', system: '33f42cc3', event: 'cast-start', delay: 0, duration: .55, stopAfter: .25, fadeOut: true, bone: 'R_hand' },
   ],
   leona: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 11 / 30, duration: .45, stopAfter: .1, bone: chest },
@@ -59,7 +60,7 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
     ...normal('f16dfc56', 'Jaw', .25),
     // 11-06 field: 14.24 keeps the charged-up glow on him well after the cast; ours was gone at 0.87 s.
     { action: 'cast', system: '6889455c', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: 'BUFFBONE_GLB_WEAPON_LOC' },
-    { action: 'cast', system: '9765f3d3', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: 'C_BUFFBONE_GLB_HEAD_LOC' },
+    { action: 'cast', system: '9765f3d3', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, fadeOut: true, bone: 'C_BUFFBONE_GLB_HEAD_LOC' },
     { action: 'cast', system: '9f805f6e', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.6, bone: chest },
     // The on-attack magic packet exists from the opening attack, independently of cast.
     { action: 'attack', system: '633e1b82', event: 'hit', delay: .55, duration: .6, stopAfter: .1, bone: chest },
