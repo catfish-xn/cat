@@ -197,7 +197,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   darius: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.36666666666666664, duration: 1.5 },
     { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
-    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc' },
+    // Its five emitters already wait 0.75 s before their first particle; a 0.6 s cue delay on top pushed the blade ring to
+    // 1.35 s of a cue ending at 1.40 s (11-08 audit). The original shows it at 0.70 s, fading 0.93–1.13 s.
+    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],

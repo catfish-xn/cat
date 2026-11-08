@@ -13,7 +13,7 @@ export const jayceSkills: Record<string, readonly TimelineCue[]> = {
   'jayce-back': [
     { system: '53b93f82', action: 'attack', event: 'projectile', bone: 'BUFFBONE_CSTM_WEAPON_1', delay: 8 / 30, duration: .3, travelSeconds: .3 },
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 8 / 30 + .3, duration: .5 },
-    { system: '508e8c05', event: 'cast-start', bone: 'Buffbone_Cstm_Weapon_1', delay: 0, duration: .6, stopAfter: .3 },
+    { system: '508e8c05', event: 'cast-start', bone: 'Buffbone_Cstm_Weapon_1', delay: 0, duration: .6, stopAfter: .3, fadeOut: true },
     { system: 'e5c0f9d8', event: 'cast-start', bone: 'Buffbone_Cstm_Weapon_1', delay: .3, duration: .5, stopAfter: .2 },
     { system: 'ee2e840c', event: 'projectile', targetLimit: 3, bone: 'BUFFBONE_CSTM_WEAPON_1', delay: .3, duration: .4, travelSeconds: .4 },
     { system: '1ae6ef1d', event: 'hit', targetLimit: 3, delay: .7, duration: 1 },
