@@ -209,6 +209,35 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
+  it('starts a queued hit that is just past 0.3 s when finished runs free room that frame, and never lets it evict', async () => {
+    const { runtime, camera } = await setup({ ezreal: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 0.35 }] });
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('ezreal', `c-${i}`, ['victim'])).toBe(true);
+    runtime.update(0.005, camera); runtime.update(0.005, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(runtime.queued).toBe(1);
+    // One coarse frame: the 0.35 s hits end and the queued hit is 0.36 s late. It takes the freed room instead of being dropped.
+    runtime.update(0.36, camera);
+    expect(runtime.queued).toBe(0);
+    expect(runtime.active).toBe(1);
+    runtime.dispose();
+  });
+
+  it('still drops an overdue hit when the board stays full', async () => {
+    const { runtime, camera } = await setup();
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `c-${i}`, ['victim'])).toBe(true);
+    runtime.update(0.005, camera); runtime.update(0.005, camera);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('vi', 'caster-x', ['victim'])).toBe(true);
+    runtime.update(0.01, camera);
+    expect(runtime.queued).toBe(1);
+    runtime.update(0.35, camera);
+    expect(runtime.queued).toBe(0);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    runtime.dispose();
+  });
+
   it('admits a body on a board full of decorative flourishes by evicting one', async () => {
     const { runtime, scene, camera } = await setup({ nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: 3 }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);

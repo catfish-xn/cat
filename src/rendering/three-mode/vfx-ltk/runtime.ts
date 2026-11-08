@@ -240,8 +240,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // One-shots miss their moment after 0.3s (a skill body waits up to half its duration). A grouped cue is a persistent skill
         // the controller still has registered; catch-up must start it while its
         // display duration remains. The 0.3s window and the six-start cap stay.
+        // A cue past its window is dropped only when it still finds no room: it never evicts, but a slot or budget freed this
+        // frame by a finished run takes it (9d7cd268 brawl: 33 of 115 critical drops were declared overdue at 0.32–0.36 s
+        // while four runs held 1000 of 1500 slots, because the lateness test ran before the room test).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue) continue;
+        if (overdue && clock - when >= spawn.duration) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
@@ -255,6 +258,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const need = reserveFor(spawn.system);
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
+        if (overdue && blocked()) continue;
         while (blocked()) {
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true, [...running].map(run => clock - run.started), [...running].map(run => run.span));
           if (!decision.admit) break;
