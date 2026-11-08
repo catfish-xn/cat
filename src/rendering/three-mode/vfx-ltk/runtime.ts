@@ -57,7 +57,7 @@ export interface LtkPlayOptions {
   delay?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null } = {}) {
@@ -234,17 +234,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
-        // One-shots miss their moment after 0.3s. A grouped cue is a persistent skill
+        // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
+        // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
+        const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
+        // One-shots miss their moment after 0.3s (a skill body waits up to half its duration). A grouped cue is a persistent skill
         // the controller still has registered; catch-up must start it while its
         // display duration remains. The 0.3s window and the six-start cap stay.
-        const overdue = clock - when > 0.3 && !(group && clock < when + spawn.duration);
+        const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
         if (overdue) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const prepared = catalog.get(spawn.system); if (!prepared || prepared.empty) continue;
-        // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
-        // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
-        const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -256,17 +256,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         while (blocked()) {
-          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true);
+          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true, [...running].map(run => clock - run.started));
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
           release(victim); running.delete(victim);
         }
         if (blocked()) {
-          // Six damage/projectile runs fill the board: a critical cue waits in line instead of being dropped (11-07 brawl:
-          // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The 0.3 s overdue
+          // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
+          // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
-          if (importance === 'critical') { waiting.splice(at, 0, row); at++; }
+          if (importance === 'critical' || importance === 'body') { waiting.splice(at, 0, row); at++; }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -299,7 +299,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += need;
-          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       claimBuf.length = 0;
