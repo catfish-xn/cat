@@ -43,6 +43,21 @@ describe('upstream simulation in the bare Three.js host', () => {
     // Still placed at the locator.
     expect(unitAnchor(root, body, 'Buffbone_Glb_Ground_Loc').originAt(0)).not.toEqual(unitAnchor(root, body).originAt(0));
   });
+  it("faces Kog'Maw's head and chest locators the way the unit faces, while the weapon locator keeps its own axes", () => {
+    const root = new Group(), body = new Group(), head = new Group(), chest = new Group(), weapon = new Group();
+    head.name = 'C_BUFFBONE_GLB_HEAD_LOC'; chest.name = 'C_BUFFBONE_GLB_CHEST_LOC'; weapon.name = 'BUFFBONE_GLB_WEAPON_LOC';
+    body.add(head, chest, weapon); root.add(body);
+    root.rotation.y = Math.PI / 2;
+    // Kog'Maw's skeleton (11-06 measure): head and chest +Z point behind and below the model; the weapon's +Y leans forward.
+    head.rotation.set(-0.6, Math.PI, 0); chest.rotation.set(-0.4, Math.PI, 0); weapon.rotation.set(0.9, 0, 0);
+    head.position.set(0, 6, 1); chest.position.set(0, 4, 0);
+    const basis = (bone?: string) => [...unitAnchor(root, body, bone).basisInto(0, new Float32Array(9))].map(n => Math.round(n) || 0);
+    expect(basis('C_BUFFBONE_GLB_HEAD_LOC')).toEqual(basis());
+    expect(basis('C_BUFFBONE_GLB_CHEST_LOC')).toEqual(basis());
+    expect(basis('C_Buffbone_Glb_Chest_Loc')).toEqual(basis());
+    expect(basis('BUFFBONE_GLB_WEAPON_LOC')).not.toEqual(basis());
+    expect(unitAnchor(root, body, 'C_BUFFBONE_GLB_HEAD_LOC').originAt(0)).not.toEqual(unitAnchor(root, body).originAt(0));
+  });
   it('faces a cast toward its primary target while the model is still turning (Zyra, 11-07)', () => {
     const root = new Group(), body = new Group(), ground = new Group(), hand = new Group(), target = new Group();
     ground.name = 'Buffbone_Glb_Ground_Loc'; hand.name = 'R_Hand'; body.add(ground, hand); root.add(body);
