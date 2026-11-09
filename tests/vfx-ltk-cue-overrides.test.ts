@@ -201,9 +201,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe about 3 cells
     for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
+    // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).
     const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
-    expect(drawn(pistol)).toBeCloseTo(1, 12); // its muzzle flash fits the gun (pr582-report)
-    expect(jinxSkills.jinx.find(c => c.system === '3496e112')!.scale).toBe(pistol.scale);
+    expect(drawn(pistol)).toBe(SKILL_FX_SIZE);
+    expect(jinxSkills.jinx.find(c => c.system === '3496e112')!.scale).toBeUndefined();
     for (const system of ['78d04f27', '8c256426']) expect(drawn(CUE_OVERRIDES.nunu.find(c => c.system === system)!), system).toBeCloseTo(0.43, 12);
   });
 
