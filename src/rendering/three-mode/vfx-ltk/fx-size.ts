@@ -15,18 +15,22 @@ export const FX_SOURCE_SCALE = 0.44; // Must equal particles.ts FX_SCALE.
 export const ARENA_UNIT_SCALE = 0.3306 * (7.2 / 8.48);
 /** Multiplies a cue's scale (see cueSize for the weapon-bone exception). */
 export const SKILL_FX_SIZE = ARENA_UNIT_SCALE / FX_SOURCE_SCALE;
-/** A ground cue's size measured against footage before SKILL_FX_SIZE existed, kept as drawn. Not for body cues. */
+/** A cue size measured against footage before SKILL_FX_SIZE existed, kept as drawn. Not for weapon-held cues. */
 export const measuredAtFxScale = (scale: number): number => scale / SKILL_FX_SIZE;
 /**
- * What lies on the ground takes the arena's scale; what is held on the body follows the body. A cue on a ground bone,
- * on the unit's root (no bone) or on a board point is drawn against the hexes, which is where the 0.44 base drew 1.57×
- * too large (#572). A cue on any other bone (chest, centre, head, hand, weapon) or a missile leaving one is drawn against
- * the model, which keeps the 0.44 body scale: at the arena scale those sank into the body or weapon (pr572-report and
- * its 11-09 14:35 follow-up: Lux's shield 0.83 cells inside her shoulders, her missile and burst, Jinx's muzzle,
- * Twitch's crossbow glow).
+ * What is fitted to a model mesh follows the body; everything else takes the arena's scale.
+ *
+ * A system held on a weapon or hand bone is authored against that mesh (Jinx's muzzle flash, Twitch's crossbow glow,
+ * Vi's glove), and the mesh is drawn at the body scale: at the arena scale those sank into the weapon (pr572-report).
+ * Every other cue (ground rings, board points, but also hits, auras and shields on the chest or centre locators, and
+ * any missile or link that travels) is a world-sized effect: at the body scale those drew 1.57x the arena-scaled size
+ * the follow-ups judged right (pr580-report, 11-09: Garen's shield 1.9 cells, Irelia's W ball 2.2-2.6, Jinx's and Vi's
+ * chest hits, LeBlanc's 5 s marks and her chain). The 11-09 14:40 body rule for every non-ground bone was too broad.
  */
-export const GROUND_BONE = /ground/i;
-/** The size factor for one cue: SKILL_FX_SIZE on the ground, 1 on the body. A cue's own scale multiplies it. */
-export function cueSize(cue: { readonly bone?: string; readonly location?: string }): number {
-  return cue.location === 'board' || cue.bone === undefined || GROUND_BONE.test(cue.bone) ? SKILL_FX_SIZE : 1;
+export const WEAPON_BONE = /weapon|pistol|rocket|launcher|muzzle|barrel|hand|mace|glove|claw|winch|clamp|rotor|engine|canister|backarm|cast_fx/i;
+/** The size factor for one cue: 1 for a cue that stays on a weapon or hand bone, SKILL_FX_SIZE for everything else. */
+export function cueSize(cue: { readonly bone?: string; readonly event: string; readonly stationary?: boolean; readonly location?: string }): number {
+  if (cue.location === 'board') return SKILL_FX_SIZE;
+  const travels = (cue.event === 'projectile' && cue.stationary !== true) || cue.event === 'link';
+  return !travels && cue.bone !== undefined && WEAPON_BONE.test(cue.bone) ? 1 : SKILL_FX_SIZE;
 }

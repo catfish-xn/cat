@@ -291,7 +291,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
-        // Ground systems draw at the arena's own unit scale, body-held ones at the body's (fx-size.ts); a cue scale multiplies that.
+        // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
         const tail = Math.min(0.25, spawn.duration / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
