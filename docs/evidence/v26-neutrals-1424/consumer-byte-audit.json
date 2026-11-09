@@ -3394,9 +3394,9 @@
     "tests/vfx-ltk-draw-order.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2424,
+      "currentBytes": 3698,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0ba9c4e41ebe2e38d57a510adb142da3816a43f26158e4a38e454a6ffb48bf7f",
+      "currentSha256": "72003b8110c85fe9e6ceb6d4bb0b5ea66749e13ea1f3d7ae3b1e5e2e620a0523",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-emission.test.ts": {
