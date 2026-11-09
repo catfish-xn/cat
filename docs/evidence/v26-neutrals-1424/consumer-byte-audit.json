@@ -3451,6 +3451,14 @@
       "currentSha256": "2836354550ea96f77aab1c94cce5c49f2dfd08897bac30a7dda0a5519c867081",
       "firstDifferentByte": 9055
     },
+    "tests/vfx-ltk-sevika-reels.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2949,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "de6eb3ebcc7fdc856a8ea3c41d7f21a50739631520869cb73ca19b9282ab0484",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
