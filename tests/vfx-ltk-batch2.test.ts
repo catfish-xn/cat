@@ -68,6 +68,7 @@ describe('batch 2 exact display stages', () => {
     expect(play.mock.calls.map(x=>x[5].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
     // The spell lands when the slot machine stops (G23 slotTicks 25); the machine itself starts at the pull.
     expect(play.mock.calls.map(x=>x[5].delay)).toEqual([1.25,undefined,undefined]);
+    expect(play.mock.calls[0]?.[5].cancelWithSource).toBe(true);
     expect(SEVIKA_SLOT_SECONDS).toBe(G23_POLICY.highRoller.slotTicks*.05);
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
   });
@@ -245,6 +246,25 @@ describe('batch 2 runtime boundaries', () => {
     runtime.update(.01, new Camera());
     expect(scene.children.map(child => child.userData.ltkSystem)).toEqual([boardSystem]);
     runtime.dispose(); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0);
+  });
+  it('drops a Sevika spell still waiting on the slot machine, target hits included, when she dies first', async () => {
+    const skills = sevikaSkills, systems = Object.fromEntries(Object.values(skills).flatMap(c => c.map(x => [x.system, 'a.json'])));
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems, assets: { 'synthetic.tex': 'a.png' }, skills } : syntheticSystem(), readTexture: async () => new Texture() });
+    const unit = () => ({ root: new Group(), body: null, alive: true, definitionId: 'sevika', form: 'front' as const, starLevel: 1 as const });
+    const units = new Map([['s', unit()], ['target', unit()]]);
+    const runtime = createLtkRuntime(library, new Scene(), id => units.get(id));
+    await runtime.warm('sevika');
+    const hits = skills['sevika-punch'].filter(c => c.event === 'hit').length;
+    expect(hits).toBeGreaterThan(0);
+    // Without the flag a delayed target hit outlives its caster (a projectile already on its way)...
+    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25 })).toBe(true);
+    runtime.stopUnit('s'); expect(runtime.queued).toBe(hits);
+    runtime.clear();
+    // ...but Sevika's rolled spell is never delivered by the rules if she dies during the slot wait.
+    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25, cancelWithSource: true })).toBe(true);
+    runtime.stopUnit('s'); expect(runtime.queued).toBe(0);
+    runtime.dispose();
   });
   it('keeps Viktor slam board and target hits after the caster dies, and still rejects a caster-bound cast', async () => {
     const skills = viktorSkills, systems = Object.fromEntries(Object.values(skills).flatMap(c => c.map(x => [x.system, 'a.json'])));

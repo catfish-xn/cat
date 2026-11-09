@@ -27,7 +27,7 @@ export function createBatch2VfxBridge(host: Host) {
   const attacks = new Set<string>();
   const energyTicks = new Map<string, number>();
   const play = (champion: string, source: string, targets: readonly string[], skill: string, index = 0, action: 'cast' | 'attack' = 'cast', snapshotTargets = false, channelSeconds?: number, boardOnly = false, delay?: number) =>
-    host.play(champion, source, targets, index, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay } : {}) });
+    host.play(champion, source, targets, index, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}) });
   return {
     branch(cast: Cast): string | undefined {
       const outcome = outcomes.get(`${cast.sourceId}:${cast.actionSeq}`);
