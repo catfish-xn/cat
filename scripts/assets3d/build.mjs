@@ -38,6 +38,60 @@ export function makeManifest(models, effects, validate, actionEffects) {
     validate(manifest);
     return manifest;
 }
+export function castReferencedClips(cast, castSequence, castVariants) {
+    const names = new Set();
+    const add = v => {
+        if (typeof v === 'string' && v) names.add(sourceName(v));
+        else if (Array.isArray(v)) for (const item of v) if (typeof item === 'string' && item) names.add(sourceName(item));
+    };
+    const addSequence = seq => {
+        if (!seq || typeof seq !== 'object') return;
+        for (const stage of ['in', 'hold', 'main', 'out']) add(seq[stage]);
+    };
+    add(cast);
+    addSequence(castSequence);
+    if (castVariants && typeof castVariants === 'object') {
+        for (const key of ['star3', 'hero', 'front', 'back']) addSequence(castVariants[key]);
+        add(castVariants.rotate);
+        if (castVariants.branch && typeof castVariants.branch === 'object')
+            for (const seq of Object.values(castVariants.branch)) addSequence(seq);
+    }
+    return names;
+}
+export function resolveUnitClipRanges(animation, clips, animationSources = [], config = {}) {
+    const clipRanges = {}, clipRangeSkips = [];
+    const castClips = castReferencedClips(animation.mapped?.cast, config.castSequence, config.castVariants);
+    for (const [name] of Object.entries(animation.files)) {
+        const graphHashes = Object.values(animation.decisions ?? {})
+            .filter(d => d.path && sourceName(d.path) === name)
+            .flatMap(d => d.graphHashes ?? []);
+        const range = clipRangeFor(clips, name, graphHashes.length ? graphHashes : undefined);
+        if (!range) continue;
+        if (!castClips.has(sourceName(name))) {
+            clipRangeSkips.push({
+                name,
+                reason: 'non-cast-action',
+                ...(range.candidates ? { candidates: range.candidates } : { startFrame: range.startFrame, endFrame: range.endFrame }),
+            });
+            continue;
+        }
+        if (range.skip) {
+            clipRangeSkips.push({ name, reason: range.skip, candidates: range.candidates });
+            continue;
+        }
+        let decoded = null;
+        try { decoded = decodeAnm(animationSources.find(s => s.name === name)?.bytes); } catch {}
+        const fps = decoded?.fps > 0 ? decoded.fps : 30;
+        if (range.endFrame === null && !(decoded?.duration > 0)) {
+            clipRangeSkips.push({ name, reason: 'missing-anm-duration', startFrame: range.startFrame, endFrame: range.endFrame });
+            continue;
+        }
+        const start = Math.max(0, (range.startFrame ?? 0) / fps);
+        const end = range.endFrame !== null ? range.endFrame / fps : decoded.duration;
+        if (start < end) clipRanges[name] = [start, end];
+    }
+    return { clipRanges, clipRangeSkips };
+}
 export async function writeParticleEffects(id, converted, patterns, { write, remove }, effectIds = new Set()) {
     const effects = {}, systems = [], actionEffects = Object.fromEntries(Object.keys(patterns).map(action => [action, []]));
     for (const system of converted.systems) {
@@ -235,28 +289,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        const clipRanges = {}, clipRangeSkips = [];
-        for (const [name] of Object.entries(animation.files)) {
-            const graphHashes = Object.values(animation.decisions)
-                .filter(d => d.path && sourceName(d.path) === name)
-                .flatMap(d => d.graphHashes ?? []);
-            const range = clipRangeFor(clips, name, graphHashes.length ? graphHashes : undefined);
-            if (!range) continue;
-            if (range.skip) {
-                clipRangeSkips.push({ name, reason: range.skip, candidates: range.candidates });
-                continue;
-            }
-            let decoded = null;
-            try { decoded = decodeAnm(animationSources.find(s => s.name === name)?.bytes); } catch {}
-            const fps = decoded?.fps > 0 ? decoded.fps : 30;
-            if (range.endFrame === null && !(decoded?.duration > 0)) {
-                clipRangeSkips.push({ name, reason: 'missing-anm-duration', startFrame: range.startFrame, endFrame: range.endFrame });
-                continue;
-            }
-            const start = Math.max(0, (range.startFrame ?? 0) / fps);
-            const end = range.endFrame !== null ? range.endFrame / fps : decoded.duration;
-            if (start < end) clipRanges[name] = [start, end];
-        }
+        const { clipRanges, clipRangeSkips } = resolveUnitClipRanges(animation, clips, animationSources, config);
         models[id] = { path, animations: animation.mapped, ...(Object.keys(clipRanges).length ? { clipRanges } : {}) };
         const meshPaths = new Map(), meshReasons = new Map(), meshBuffers = new Map(), meshReports = [];
         const stack = [particleSources[id]], meshRefs = new Set();

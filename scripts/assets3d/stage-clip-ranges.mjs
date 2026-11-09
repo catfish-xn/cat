@@ -33,15 +33,42 @@ async function walkFiles(root, dir = root) {
   return out;
 }
 
+export function castClipsFor(modelEntry = {}) {
+  const names = new Set();
+  const add = value => {
+    if (typeof value === 'string' && value) names.add(sourceName(value));
+    else if (Array.isArray(value)) {
+      for (const item of value) if (typeof item === 'string' && item) names.add(sourceName(item));
+    }
+  };
+  const addSequence = seq => {
+    if (!seq || typeof seq !== 'object') return;
+    for (const stage of ['in', 'hold', 'main', 'out']) add(seq[stage]);
+  };
+  add(modelEntry.animations?.cast);
+  addSequence(modelEntry.castSequence);
+  const variants = modelEntry.castVariants;
+  if (variants && typeof variants === 'object') {
+    for (const key of ['star3', 'hero', 'front', 'back']) addSequence(variants[key]);
+    add(variants.rotate);
+    if (variants.branch && typeof variants.branch === 'object') {
+      for (const seq of Object.values(variants.branch)) addSequence(seq);
+    }
+  }
+  return names;
+}
+
 function referencedBy(modelEntry, clipName) {
+  const target = sourceName(clipName);
+  const matches = value => typeof value === 'string' && sourceName(value) === target;
   const refs = [];
   for (const [action, name] of Object.entries(modelEntry.animations ?? {})) {
-    if (name === clipName) refs.push(action);
+    if (matches(name)) refs.push(action);
   }
   const checkSequence = (prefix, seq) => {
     if (!seq || typeof seq !== 'object') return;
     for (const [stage, value] of Object.entries(seq)) {
-      if (value === clipName || (Array.isArray(value) && value.includes(clipName))) {
+      if (matches(value) || (Array.isArray(value) && value.some(matches))) {
         refs.push(`${prefix}.${stage}`);
       }
     }
@@ -52,7 +79,7 @@ function referencedBy(modelEntry, clipName) {
     for (const key of ['star3', 'hero', 'front', 'back']) {
       if (variants[key]) checkSequence(`castVariants.${key}`, variants[key]);
     }
-    if (Array.isArray(variants.rotate) && variants.rotate.includes(clipName)) {
+    if (Array.isArray(variants.rotate) && variants.rotate.some(matches)) {
       refs.push('castVariants.rotate');
     }
     if (variants.branch && typeof variants.branch === 'object') {
@@ -173,6 +200,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
       ? selectAnimations(graphInfo.clips, unitMap.$animationRules, unitMap[id]?.animations).decisions
       : {};
 
+    const castClips = castClipsFor(entry);
     const clipRanges = {};
     for (const clipName of glbClips) {
       const lowerName = clipName.toLowerCase();
@@ -181,13 +209,34 @@ export async function stageClipRanges({ assets, extracted, out }) {
         .flatMap(d => d.graphHashes ?? []);
       const range = clipRangeFor(graphInfo.clips, lowerName, graphHashes.length ? graphHashes : undefined);
       if (!range) continue;
+      const refs = referencedBy(entry, clipName);
+      if (!castClips.has(sourceName(lowerName))) {
+        const candidates = range.candidates ?? graphInfo.clips
+          .filter(c => c.atomic && c.path && sourceName(c.path) === lowerName
+            && (c.startFrame ?? null) === range.startFrame && (c.endFrame ?? null) === range.endFrame)
+          .map(c => ({
+            hash: typeof c.hash === 'number' ? c.hash.toString(16) : String(c.hash ?? ''),
+            startFrame: c.startFrame ?? null,
+            endFrame: c.endFrame ?? null,
+          }));
+        skippedClips.push({
+          id,
+          clipName,
+          reason: 'non-cast-action',
+          startFrame: range.startFrame ?? null,
+          endFrame: range.endFrame ?? null,
+          candidates: candidates.length ? candidates : [{ hash: '—', startFrame: range.startFrame ?? null, endFrame: range.endFrame ?? null }],
+          refs,
+        });
+        continue;
+      }
       if (range.skip) {
         skippedClips.push({
           id,
           clipName,
           reason: range.skip,
           candidates: range.candidates,
-          refs: referencedBy(entry, clipName),
+          refs,
         });
         continue;
       }
@@ -206,7 +255,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
           clipName,
           reason: 'missing-anm-duration',
           candidates: [{ hash: '—', startFrame: range.startFrame, endFrame: range.endFrame }],
-          refs: referencedBy(entry, clipName),
+          refs,
         });
         continue;
       }
@@ -214,6 +263,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
       const start = Math.max(0, (range.startFrame ?? 0) / fps);
       const end = range.endFrame !== null ? range.endFrame / fps : duration;
       if (!(start >= 0 && start < end)) continue;
+      const nonCastRefs = refs.filter(r => r !== 'cast' && !r.startsWith('castSequence.') && !r.startsWith('castVariants.'));
       clipRanges[clipName] = [start, end];
       rows.push({
         id,
@@ -225,7 +275,8 @@ export async function stageClipRanges({ assets, extracted, out }) {
         endFrame: range.endFrame,
         start,
         end,
-        refs: referencedBy(entry, clipName),
+        refs,
+        ...(nonCastRefs.length ? { sharedNonCast: nonCastRefs } : {}),
       });
     }
 
@@ -253,7 +304,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
     '',
     '| 英雄 | 片段名 | anm 时长 (s) | FPS | StartFrame | EndFrame | 裁后秒数区间 | 引用动作 |',
     '| --- | --- | ---: | ---: | ---: | ---: | --- | --- |',
-    ...rows.map(r => `| ${r.id} | \`${r.clipName}\` | ${r.anmDuration.toFixed(4)} | ${ Number.isInteger(Math.round(r.fps * 1000) / 1000) ? Math.round(r.fps) : r.fps.toFixed(4) } | ${r.startFrame ?? '—'} | ${r.endFrame ?? '—'} | \`[${r.start.toFixed(4)}, ${r.end.toFixed(4)}]\` (${r.startFrame ?? 0}/${Math.round(r.fps)}..${r.endFrame !== null ? `${r.endFrame}/${Math.round(r.fps)}` : `${r.anmDuration.toFixed(4)}s`}) | ${r.refs.length ? r.refs.join(', ') : '—'} |`),
+    ...rows.map(r => `| ${r.id} | \`${r.clipName}\` | ${r.anmDuration.toFixed(4)} | ${ Number.isInteger(Math.round(r.fps * 1000) / 1000) ? Math.round(r.fps) : r.fps.toFixed(4) } | ${r.startFrame ?? '—'} | ${r.endFrame ?? '—'} | \`[${r.start.toFixed(4)}, ${r.end.toFixed(4)}]\` (${r.startFrame ?? 0}/${Math.round(r.fps)}..${r.endFrame !== null ? `${r.endFrame}/${Math.round(r.fps)}` : `${r.anmDuration.toFixed(4)}s`}) | ${r.refs.length ? r.refs.join(', ') : '—'}${r.sharedNonCast ? ' (施法优先)' : ''} |`),
     '',
     '## 跳过片段',
     '',
