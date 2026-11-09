@@ -930,6 +930,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.root.add(lease.scene);
       lighting.registerBody(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
+      view.mixer.setForm(view.form);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
@@ -985,6 +986,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
+      view.mixer.setForm(view.form);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
@@ -1331,6 +1333,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const previousForm = view.form;
         const middle = frame.origin.y + (frame.rows - 1) * frame.hexRadius * 1.5 / 2;
         view.form = piece.form ? (piece.form === 'melee' ? 'front' : 'back') : Math.abs(piece.y - middle) < frame.hexRadius * 3 ? 'front' : 'back';
+        view.mixer?.setForm(view.form);
+        if (previousForm !== view.form && view.dance !== 'clip') view.mixer?.apply(view.state.output);
         if (view.definitionId === 'elise' && previousForm !== view.form) attachBody(view);
       }
       if (view.definitionId !== piece.definitionId || view.team !== piece.team || view.model.id !== model.id || view.model.scale !== model.scale) {

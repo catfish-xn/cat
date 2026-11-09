@@ -25,6 +25,30 @@ export async function compressionIO() {
     'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder,
   }).setLogger(new Logger(Logger.Verbosity.WARN));
 }
+export async function compressModelGlb(bytes, io) {
+  io ??= await compressionIO();
+  const doc = await io.readBinary(new Uint8Array(bytes));
+  for (const texture of doc.getRoot().listTextures()) {
+    const image = texture.getImage(); if (!image) continue;
+    const edges = texture.getGraph().listParentEdges(texture);
+    const normal = edges.some(e => /normalTexture/i.test(e.getName()));
+    const color = edges.some(e => /baseColorTexture|emissiveTexture|diffuseTexture|specularColorTexture/i.test(e.getName()));
+    if (texture.getMimeType() !== 'image/ktx2') {
+      const encoded = await encodeToKTX2(image, { imageDecoder, isUASTC: normal, isNormalMap: normal,
+        generateMipmap: true, qualityLevel: 128, compressionLevel: 2,
+        isPerceptual: color && !normal, isSetKTX2SRGBTransferFunc: color && !normal });
+      texture.setImage(encoded).setMimeType('image/ktx2').setURI('');
+      doc.createExtension(KHRTextureBasisu).setRequired(true);
+    }
+  }
+  await doc.transform(resample());
+  const hasVertices = doc.getRoot().listMeshes().some(mesh =>
+    mesh.listPrimitives().some(primitive => (primitive.getAttribute('POSITION')?.getCount() ?? 0) > 0));
+  if (hasVertices) await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+  const result = Buffer.from(await io.writeBinary(doc));
+  await io.readBinary(result);
+  return result;
+}
 /** Write only beneath the validated asset root, with exclusive file creation. */
 async function writeCompressionFile(path, bytes) {
   const target = await realOutput(path, false);

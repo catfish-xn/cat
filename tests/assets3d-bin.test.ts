@@ -7,13 +7,16 @@ import { parseBin, fnv1a, binField } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Pure Node utility.
 import { skinBindings, animationClips, selectAnimations, canonicalAsset, clipRangeFor } from '../scripts/assets3d/bin-bindings.mjs';
 // @ts-expect-error Pure Node utility.
-import { resolveUnitClipRanges } from '../scripts/assets3d/build.mjs';
+import { makeManifest, resolveUnitClipRanges, resolveUnitFormAnimations } from '../scripts/assets3d/build.mjs';
+import { assertManifest } from '../src/rendering3d/contracts';
 // @ts-expect-error Pure Node utility.
 import { writeGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node utility.
 import { characterForPath, propertyReferences } from '../scripts/assets3d/plan-fetch.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
+// @ts-expect-error Pure Node utility.
+import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -465,5 +468,171 @@ describe('initial material and action binding', () => {
     expect(characterForPath('assets/characters/demo_unit/skins/base/vi.tex')).toBe('demo_unit');
     expect(characterForPath('characters/demo_unit_extra')).toBe('demo_unit_extra');
     expect(canonicalAsset('ASSETS/Test.TFT_Set13.tex')).toBe('assets/test.tex');
+  });
+  it('resolves unit map formAnimations into exported animation.files and manifest models without trimming form attacks', async () => {
+    const rules = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8')).$animationRules;
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('Idle1_Ranged') },
+            obj('AtomicClipData', {
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_idle_ranged.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Idle1_Melee') },
+            obj('AtomicClipData', {
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_idle_melee.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Attack1') },
+            obj('AtomicClipData', {
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_attack_melee.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Attack1_Ranged') },
+            obj('AtomicClipData', {
+              EndFrame: 18,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_attack_ranged.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    const animation = selectAnimations(clips, rules, {
+      idle: 'synthetic_idle_ranged',
+      attack: 'synthetic_attack_melee',
+    });
+    const config = {
+      formAnimations: {
+        front: { idle: 'synthetic_idle_melee', attack: 'synthetic_attack_melee', move: 'missing_move_melee' },
+        back: { idle: 'synthetic_idle_ranged', attack: 'synthetic_attack_ranged' },
+      },
+    };
+    const { formAnimations, formAnimationSkips } = resolveUnitFormAnimations(animation, clips, config);
+    expect(formAnimations).toEqual({
+      front: { idle: 'synthetic_idle_melee', attack: 'synthetic_attack_melee' },
+      back: { idle: 'synthetic_idle_ranged', attack: 'synthetic_attack_ranged' },
+    });
+    expect(animation.files).toMatchObject({
+      synthetic_idle_ranged: 'synthetic_idle_ranged.anm',
+      synthetic_idle_melee: 'synthetic_idle_melee.anm',
+      synthetic_attack_melee: 'synthetic_attack_melee.anm',
+      synthetic_attack_ranged: 'synthetic_attack_ranged.anm',
+    });
+    expect(formAnimationSkips).toEqual([
+      {
+        form: 'front',
+        action: 'move',
+        requested: 'missing_move_melee',
+        reason: 'missing-form-animation',
+      },
+    ]);
+    const { clipRanges, clipRangeSkips } = resolveUnitClipRanges(animation, clips, [], config);
+    expect(clipRanges).toEqual({});
+    expect(clipRangeSkips).toContainEqual({
+      name: 'synthetic_attack_ranged',
+      reason: 'non-cast-action',
+      startFrame: null,
+      endFrame: 18,
+    });
+    const manifest = makeManifest(
+      {
+        synthetic_unit: {
+          path: 'models/synthetic_unit/model.glb',
+          animations: animation.mapped,
+          ...(Object.keys(formAnimations).length ? { formAnimations } : {}),
+        },
+      },
+      {},
+      assertManifest,
+    );
+    expect(manifest.models.synthetic_unit.formAnimations).toEqual(formAnimations);
+  });
+  it('stages formAnimations and appends missing clips from an uncompressed donor glb without touching the input root', async () => {
+    const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
+    await mkdir(local, { recursive: true });
+    const dir = await mkdtemp(join(local, 'form-animations-stage-'));
+    try {
+      const assets = join(dir, 'assets');
+      const outDir = join(dir, 'out');
+      const donorPath = join(dir, 'donor.glb');
+      const badDonorPath = join(dir, 'bad-donor.glb');
+      await mkdir(join(assets, 'models/synthetic_unit'), { recursive: true });
+
+      const sampleBinary = Buffer.alloc(16);
+      const makeClipDoc = (nodeName: string, clipNames: string[]) => ({
+        asset: { version: '2.0' },
+        nodes: [{ name: nodeName }],
+        buffers: [{ byteLength: sampleBinary.length }],
+        bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 8 }, { buffer: 0, byteOffset: 8, byteLength: 8 }],
+        accessors: [
+          { bufferView: 0, componentType: 5126, count: 2, type: 'SCALAR', min: [0], max: [1] },
+          { bufferView: 1, componentType: 5126, count: 2, type: 'SCALAR' },
+        ],
+        animations: clipNames.map(name => ({
+          name,
+          samplers: [{ input: 0, output: 1 }],
+          channels: [{ sampler: 0, target: { node: 0, path: 'weights' } }],
+        })),
+      });
+
+      const baseGlb = writeGlb(makeClipDoc('RootJoint', ['idle_ranged', 'attack_melee']), sampleBinary);
+      const donorGlb = writeGlb(
+        makeClipDoc('RootJoint', ['idle_ranged', 'idle_melee', 'attack_melee', 'attack_ranged']),
+        sampleBinary,
+      );
+      const badDonorGlb = writeGlb(
+        makeClipDoc('DifferentJoint', ['idle_ranged', 'idle_melee', 'attack_melee', 'attack_ranged']),
+        sampleBinary,
+      );
+      await writeFile(join(assets, 'models/synthetic_unit/model.glb'), baseGlb);
+      await writeFile(donorPath, donorGlb);
+      await writeFile(badDonorPath, badDonorGlb);
+      await writeFile(
+        join(assets, 'manifest.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          models: {
+            synthetic_unit: {
+              path: 'models/synthetic_unit/model.glb',
+              animations: { idle: 'idle_ranged', attack: 'attack_melee' },
+            },
+          },
+        }),
+      );
+
+      const formAnimations = {
+        back: { idle: 'idle_ranged', attack: 'attack_ranged' },
+        front: { idle: 'idle_melee', attack: 'attack_melee' },
+      };
+      const result = await stageFormAnimations({
+        assets,
+        model: 'synthetic_unit',
+        donor: donorPath,
+        formAnimations: JSON.stringify(formAnimations),
+        outDir,
+      });
+      expect(result.beforeClips).toEqual(['idle_ranged', 'attack_melee']);
+      expect(result.afterClips).toEqual(['idle_ranged', 'attack_melee', 'idle_melee', 'attack_ranged']);
+      expect(result.addedClips).toEqual(['idle_melee', 'attack_ranged']);
+      expect(result.manifest.models.synthetic_unit.formAnimations).toEqual(formAnimations);
+
+      await expect(
+        stageFormAnimations({
+          assets,
+          model: 'synthetic_unit',
+          donor: badDonorPath,
+          formAnimations,
+          outDir: join(dir, 'out-bad'),
+        }),
+      ).rejects.toThrow('cast-rig-mismatch');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
