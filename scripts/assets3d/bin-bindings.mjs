@@ -62,16 +62,63 @@ export function animationClips(documents) {
       const graph = field(e, 'animationGraphData') ?? e;
       for (const [key, clip] of field(graph, 'mClipDataMap')?.entries ?? []) {
         const path = field(field(clip, 'mAnimationResourceData'), 'mAnimationFilePath') ?? field(clip, 'mAnimationFilePath');
+        const startFrame = field(clip, 'StartFrame') ?? null, endFrame = field(clip, 'EndFrame') ?? null;
         clips.push({ hash: typeof key === 'string' ? fnv1a(key) : key.hash,
           ...(typeof key === 'string' ? { name: key } : {}),
           type: clip?.type ?? 0, atomic: binIs(clip, 'AtomicClipData'), flags: field(clip, 'mFlags') ?? 0,
-          path: typeof path === 'string' ? path : null });
+          path: typeof path === 'string' ? path : null,
+          startFrame: typeof startFrame === 'number' ? startFrame : null,
+          endFrame: typeof endFrame === 'number' ? endFrame : null });
       }
     }
   }
   return clips;
 }
-const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm$/i, '').toLowerCase();
+export const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm$/i, '').toLowerCase();
+export function clipRangeFor(clips, name, graphHashes) {
+  const target = sourceName(name);
+  let matched = clips.filter(c => c.atomic && typeof c.path === 'string' && sourceName(c.path) === target);
+  if (graphHashes !== undefined && graphHashes !== null) {
+    const list = typeof graphHashes === 'string' || typeof graphHashes === 'number'
+      ? [graphHashes]
+      : [...graphHashes];
+    if (list.length > 0) {
+      const allowed = new Set(list.map(h => (typeof h === 'number' ? h.toString(16) : String(h)).toLowerCase()));
+      matched = matched.filter(c => c.hash !== undefined && c.hash !== null && allowed.has(c.hash.toString(16).toLowerCase()));
+    }
+  }
+  if (!matched.length) return null;
+  const uniqueRanges = list => {
+    const map = new Map();
+    for (const c of list) {
+      const startFrame = c.startFrame ?? null, endFrame = c.endFrame ?? null;
+      map.set(`${startFrame}:${endFrame}`, { startFrame, endFrame });
+    }
+    return map;
+  };
+  let ranges = uniqueRanges(matched);
+  if (ranges.size > 1) {
+    const stripped = name.replace(/^tft13_[a-z0-9]+_/i, '');
+    const preferred = new Set([fnv1a(stripped), fnv1a(name)]);
+    const byName = matched.filter(c => preferred.has(typeof c.hash === 'number' ? c.hash : Number.parseInt(String(c.hash), 16)));
+    if (byName.length === 1) {
+      matched = byName;
+      ranges = uniqueRanges(matched);
+    }
+  }
+  if (ranges.size === 1) {
+    const only = [...ranges.values()][0];
+    return only.startFrame === null && only.endFrame === null ? null : only;
+  }
+  return {
+    skip: 'ambiguous-clip-range',
+    candidates: matched.map(c => ({
+      hash: typeof c.hash === 'number' ? c.hash.toString(16) : String(c.hash ?? ''),
+      startFrame: c.startFrame ?? null,
+      endFrame: c.endFrame ?? null,
+    })),
+  };
+}
 /** Exact graph aliases first; filename token priorities only when aliases cannot resolve.
  * Equal-priority different paths are ambiguous and omitted. No sequence flattening. */
 export function selectAnimations(clips, rules, explicit = {}) {

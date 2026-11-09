@@ -23,7 +23,13 @@ export interface AssetManifest {
    * `selfIllumination` (optional): the skin's own light term for the champion lighting of a board (BoardEntry.lighting);
    * a model without it keeps the generic lit material.
    */
-  models: Record<string, { path: string; animations?: AnimationNames; unitScale?: number; selfIllumination?: number } & CastMetadata>;
+  models: Record<string, {
+    path: string;
+    animations?: AnimationNames;
+    unitScale?: number;
+    selfIllumination?: number;
+    clipRanges?: Record<string, readonly [number, number]>;
+  } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;
@@ -143,6 +149,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.selfIllumination !== undefined && !lightTerm(entry.selfIllumination)) throw new Error('invalid-self-illumination');
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
+    if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
@@ -172,6 +179,13 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
   if (m.boards !== undefined) assertBoards(m.boards, m);
 }
 
+function assertClipRanges(value: unknown): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) throw new Error('invalid-clip-ranges');
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > 64 || entries.some(([key, range]) => !key.trim() || !Array.isArray(range) || range.length !== 2
+    || !finite(range[0]) || !finite(range[1]) || range[0] < 0 || range[0] >= range[1])) throw new Error('invalid-clip-ranges');
+}
 function assertClipList(value: unknown): void {
   if (!Array.isArray(value) || !value.length || value.length > 64 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) throw new Error('invalid-cast-clips');
 }

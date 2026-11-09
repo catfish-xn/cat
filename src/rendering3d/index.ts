@@ -1,5 +1,6 @@
 /** Optional chunk boundary: hosts use `await import('./rendering3d')`. No 2D entry imports this module. */
 export * from './contracts';
+export * from './clip-range';
 export * from './assets';
 export * from './animation-state';
 export * from './animation-mixer';
