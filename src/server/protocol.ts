@@ -252,6 +252,12 @@ export interface LobbyView {
   readonly joined: boolean;
   readonly canStart: boolean;
   readonly error: string | null;
+  /**
+   * A match holds the room (nobody can queue until it ends): `releaseInMs` is how long until the abandon watchdog frees
+   * it when every human seat is disconnected (the lobby counts it down), null while someone still plays. Absent or
+   * null: the room is free. Optional so older views stay valid.
+   */
+  readonly busy?: { readonly releaseInMs: number | null } | null;
 }
 /*
  * Combat is computed on the server; a seat receives its battle as one compact `replay` message
