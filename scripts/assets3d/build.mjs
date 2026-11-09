@@ -9,6 +9,7 @@ import { contracts, unitDefinitions } from './runtime.mjs';
 import { parseBin } from './bin.mjs';
 import { skinBindings, animationClips, selectAnimations, canonicalAsset } from './bin-bindings.mjs';
 import { inspectSkn } from './inspect-source.mjs';
+import { decodeAnm } from './animation.mjs';
 import { makeModel, validateModel } from './model.mjs';
 import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
@@ -234,7 +235,18 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        models[id] = { path, animations: animation.mapped };
+        const clipRanges = {};
+        for (const [name, clipPath] of Object.entries(animation.files)) {
+            const clip = clips.find(c => c.atomic && c.path === clipPath);
+            if (clip && (clip.startFrame !== null || clip.endFrame !== null)) {
+                const decoded = decodeAnm(animationSources.find(s => s.name === name).bytes);
+                const fps = decoded?.fps > 0 ? decoded.fps : 30;
+                const start = Math.max(0, (clip.startFrame ?? 0) / fps);
+                const end = clip.endFrame !== null ? clip.endFrame / fps : decoded.duration;
+                if (start < end) clipRanges[name] = [start, end];
+            }
+        }
+        models[id] = { path, animations: animation.mapped, ...(Object.keys(clipRanges).length ? { clipRanges } : {}) };
         const meshPaths = new Map(), meshReasons = new Map(), meshBuffers = new Map(), meshReports = [];
         const stack = [particleSources[id]], meshRefs = new Set();
         while (stack.length) {

@@ -132,6 +132,49 @@ describe('initial material and action binding', () => {
     expect(ambiguous.decisions.cast.reason).toBe('ambiguous-action'); expect(ambiguous.mapped.cast).toBeUndefined();
     expect(selectAnimations(clips, rules, { idle: 'unit_idle2' }).mapped.idle).toBe('unit_idle2');
   });
+  it('reads StartFrame and EndFrame from AtomicClipData when present and defaults to null', () => {
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('Spell1') },
+            obj('AtomicClipData', {
+              StartFrame: 4,
+              EndFrame: 20,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_spell.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Idle1') },
+            obj('AtomicClipData', {
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_idle.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    expect(clips).toEqual([
+      {
+        hash: fnv1a('Spell1'),
+        type: fnv1a('AtomicClipData'),
+        atomic: true,
+        flags: 0,
+        path: 'synthetic_spell.anm',
+        startFrame: 4,
+        endFrame: 20,
+      },
+      {
+        hash: fnv1a('Idle1'),
+        type: fnv1a('AtomicClipData'),
+        atomic: true,
+        flags: 0,
+        path: 'synthetic_idle.anm',
+        startFrame: null,
+        endFrame: null,
+      },
+    ]);
+  });
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
     expect(characterForPath('characters/demo_unit')).toBe('demo_unit');
     expect(propertyReferences(prop('Example', field('texture', 16, str('assets/shared/body.tex'))))).toEqual(['assets/shared/body.tex']);

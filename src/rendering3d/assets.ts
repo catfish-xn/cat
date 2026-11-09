@@ -2,6 +2,7 @@ import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata } from './contracts';
+import { trimClip } from './clip-range';
 
 export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
 export interface ModelLease extends ModelTemplate, CastMetadata {
@@ -81,12 +82,25 @@ export class ModelCache {
     if (this.closed) throw new Error('model-cache-disposed');
     let entry = this.entries.get(id);
     if (!entry) {
+      const definition = Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id] : undefined;
       const created: Entry = { refs: 0, retired: false, placeholder: false, promise: Promise.resolve(undefined as never) };
       created.promise = Promise.resolve().then(() => {
-        const definition = Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id] : undefined;
         if (!definition) throw new Error('unknown-model');
         return this.read(assetUrl(this.root, definition.path));
-      }).catch(() => { created.placeholder = true; return placeholder(); }).then(model => { created.model = model; return model; });
+      }).catch(() => { created.placeholder = true; return placeholder(); }).then(model => {
+        const ranges = definition?.clipRanges;
+        if (ranges && model.animations.length) {
+          model = {
+            ...model,
+            animations: model.animations.map(clip => {
+              const range = Object.hasOwn(ranges, clip.name) ? ranges[clip.name] : undefined;
+              return range ? trimClip(clip, range[0], range[1]) : clip;
+            }),
+          };
+        }
+        created.model = model;
+        return model;
+      });
       entry = created;
       this.entries.set(id, entry);
     }

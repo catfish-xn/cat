@@ -369,6 +369,8 @@ initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构
 unit-map.local.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
 
 批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用现有转换实现，本轮不改粒子语义。
+`animationClips` 同时读取 `AtomicClipData` 的 `StartFrame` / `EndFrame`，`build.mjs` 按对应 ANM 的 `fps`（缺省 30）换算成秒区间写入 `models[id].clipRanges`，运行时由 `ModelCache` 调用 `trimClip` 在模型加载后裁切片段。
+已部署的资产根可用 `node scripts/assets3d/stage-clip-ranges.mjs --assets <已部署 assets3d 根> --extracted <解包根> --out <新 manifest 路径>` 直接从解包动画图与 ANM 计算并补齐 `clipRanges`（不重建 GLB、不改动原 manifest），同时向标准输出打印裁切区间报告。
 
 真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。
 

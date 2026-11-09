@@ -62,16 +62,19 @@ export function animationClips(documents) {
       const graph = field(e, 'animationGraphData') ?? e;
       for (const [key, clip] of field(graph, 'mClipDataMap')?.entries ?? []) {
         const path = field(field(clip, 'mAnimationResourceData'), 'mAnimationFilePath') ?? field(clip, 'mAnimationFilePath');
+        const startFrame = field(clip, 'StartFrame') ?? null, endFrame = field(clip, 'EndFrame') ?? null;
         clips.push({ hash: typeof key === 'string' ? fnv1a(key) : key.hash,
           ...(typeof key === 'string' ? { name: key } : {}),
           type: clip?.type ?? 0, atomic: binIs(clip, 'AtomicClipData'), flags: field(clip, 'mFlags') ?? 0,
-          path: typeof path === 'string' ? path : null });
+          path: typeof path === 'string' ? path : null,
+          startFrame: typeof startFrame === 'number' ? startFrame : null,
+          endFrame: typeof endFrame === 'number' ? endFrame : null });
       }
     }
   }
   return clips;
 }
-const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm$/i, '').toLowerCase();
+export const sourceName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm$/i, '').toLowerCase();
 /** Exact graph aliases first; filename token priorities only when aliases cannot resolve.
  * Equal-priority different paths are ambiguous and omitted. No sequence flattening. */
 export function selectAnimations(clips, rules, explicit = {}) {
