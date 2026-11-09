@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseBin } from './bin.mjs';
-import { animationClips, canonicalAsset, skinBindings, sourceName } from './bin-bindings.mjs';
+import { animationClips, canonicalAsset, clipRangeFor, selectAnimations, skinBindings, sourceName } from './bin-bindings.mjs';
 import { decodeAnm } from './animation.mjs';
 import { readGlb } from './glb.mjs';
 import { inspectSkl } from './inspect-source.mjs';
@@ -133,6 +133,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
   }
 
   const rows = [];
+  const skippedClips = [];
   const skipped = [];
 
   for (const [id, entry] of Object.entries(outputManifest.models ?? {})) {
@@ -168,22 +169,50 @@ export async function stageClipRanges({ assets, extracted, out }) {
       continue;
     }
 
+    const decisions = unitMap?.$animationRules
+      ? selectAnimations(graphInfo.clips, unitMap.$animationRules, unitMap[id]?.animations).decisions
+      : {};
+
     const clipRanges = {};
     for (const clipName of glbClips) {
       const lowerName = clipName.toLowerCase();
-      const clip = graphInfo.clips.find(c => c.atomic && c.path && sourceName(c.path) === lowerName);
-      if (!clip || (clip.startFrame === null && clip.endFrame === null)) continue;
-      const anmFile = resolveExtracted(clip.path);
+      const graphHashes = Object.values(decisions)
+        .filter(d => d.path && sourceName(d.path) === lowerName)
+        .flatMap(d => d.graphHashes ?? []);
+      const range = clipRangeFor(graphInfo.clips, lowerName, graphHashes.length ? graphHashes : undefined);
+      if (!range) continue;
+      if (range.skip) {
+        skippedClips.push({
+          id,
+          clipName,
+          reason: range.skip,
+          candidates: range.candidates,
+          refs: referencedBy(entry, clipName),
+        });
+        continue;
+      }
+      const clipPath = graphInfo.clips.find(c => c.atomic && c.path && sourceName(c.path) === lowerName)?.path;
+      const anmFile = resolveExtracted(clipPath);
       if (!anmFile) {
-        skipped.push({ id, reason: `missing-anm-file:${clip.path}` });
+        skipped.push({ id, reason: `missing-anm-file:${clipPath}` });
         continue;
       }
       let decoded = null;
       try { decoded = decodeAnm(await readFile(anmFile)); } catch {}
       const fps = decoded?.fps > 0 ? decoded.fps : 30;
+      if (range.endFrame === null && !(decoded?.duration > 0)) {
+        skippedClips.push({
+          id,
+          clipName,
+          reason: 'missing-anm-duration',
+          candidates: [{ hash: '—', startFrame: range.startFrame, endFrame: range.endFrame }],
+          refs: referencedBy(entry, clipName),
+        });
+        continue;
+      }
       const duration = decoded?.duration ?? 0;
-      const start = Math.max(0, (clip.startFrame ?? 0) / fps);
-      const end = clip.endFrame !== null ? clip.endFrame / fps : duration;
+      const start = Math.max(0, (range.startFrame ?? 0) / fps);
+      const end = range.endFrame !== null ? range.endFrame / fps : duration;
       if (!(start >= 0 && start < end)) continue;
       clipRanges[clipName] = [start, end];
       rows.push({
@@ -192,8 +221,8 @@ export async function stageClipRanges({ assets, extracted, out }) {
         clipName,
         anmDuration: duration,
         fps,
-        startFrame: clip.startFrame,
-        endFrame: clip.endFrame,
+        startFrame: range.startFrame,
+        endFrame: range.endFrame,
         start,
         end,
         refs: referencedBy(entry, clipName),
@@ -217,6 +246,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
     `- 模型总数：${Object.keys(outputManifest.models ?? {}).length}`,
     `- 写入 clipRanges 的模型数：${Object.values(outputManifest.models ?? {}).filter(m => m.clipRanges).length}`,
     `- 裁剪动作片段总数：${rows.length}`,
+    `- 跳过片段数：${skippedClips.length}`,
     `- 跳过模型数：${skipped.length}`,
     '',
     '## 裁剪片段明细',
@@ -225,6 +255,12 @@ export async function stageClipRanges({ assets, extracted, out }) {
     '| --- | --- | ---: | ---: | ---: | ---: | --- | --- |',
     ...rows.map(r => `| ${r.id} | \`${r.clipName}\` | ${r.anmDuration.toFixed(4)} | ${ Number.isInteger(Math.round(r.fps * 1000) / 1000) ? Math.round(r.fps) : r.fps.toFixed(4) } | ${r.startFrame ?? '—'} | ${r.endFrame ?? '—'} | \`[${r.start.toFixed(4)}, ${r.end.toFixed(4)}]\` (${r.startFrame ?? 0}/${Math.round(r.fps)}..${r.endFrame !== null ? `${r.endFrame}/${Math.round(r.fps)}` : `${r.anmDuration.toFixed(4)}s`}) | ${r.refs.length ? r.refs.join(', ') : '—'} |`),
     '',
+    '## 跳过片段',
+    '',
+    '| 英雄 | 片段名 | 原因 | 候选 hash 与范围 | 引用动作 |',
+    '| --- | --- | --- | --- | --- |',
+    ...skippedClips.map(s => `| ${s.id} | \`${s.clipName}\` | \`${s.reason}\` | ${s.candidates.map(c => `\`${c.hash}: [${c.startFrame ?? 'null'}, ${c.endFrame ?? 'null'}]\``).join(', ') || '—'} | ${s.refs.length ? s.refs.join(', ') : '—'} |`),
+    '',
     '## 跳过模型与原因',
     '',
     '| 模型 ID | 原因 |',
@@ -232,7 +268,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
     ...skipped.map(s => `| ${s.id} | \`${s.reason}\` |`),
     '',
   ];
-  return { manifest: outputManifest, rows, skipped, markdown: lines.join('\n') };
+  return { manifest: outputManifest, rows, skippedClips, skipped, markdown: lines.join('\n') };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

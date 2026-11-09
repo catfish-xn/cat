@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 // @ts-expect-error Pure Node utility.
 import { parseBin, fnv1a, binField } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Pure Node utility.
-import { skinBindings, animationClips, selectAnimations, canonicalAsset } from '../scripts/assets3d/bin-bindings.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset, clipRangeFor } from '../scripts/assets3d/bin-bindings.mjs';
 // @ts-expect-error Pure Node utility.
 import { characterForPath, propertyReferences } from '../scripts/assets3d/plan-fetch.mjs';
 
@@ -174,6 +174,55 @@ describe('initial material and action binding', () => {
         endFrame: null,
       },
     ]);
+  });
+  it('resolves shared-anm clip ranges by selected graphHashes or deduplication and reports ambiguous ranges', () => {
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('ClipA') },
+            obj('AtomicClipData', {
+              StartFrame: 5,
+              EndFrame: 28,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_shared.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('ClipB') },
+            obj('AtomicClipData', {
+              StartFrame: 36,
+              EndFrame: 69,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_shared.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    const hashA = fnv1a('ClipA').toString(16);
+    const hashB = fnv1a('ClipB').toString(16);
+
+    expect(clipRangeFor(clips, 'synthetic_shared', [hashA])).toEqual({ startFrame: 5, endFrame: 28 });
+    expect(clipRangeFor(clips, 'synthetic_shared', [hashB])).toEqual({ startFrame: 36, endFrame: 69 });
+    expect(clipRangeFor(clips, 'synthetic_shared')).toEqual({
+      skip: 'ambiguous-clip-range',
+      candidates: [
+        { hash: hashA, startFrame: 5, endFrame: 28 },
+        { hash: hashB, startFrame: 36, endFrame: 69 },
+      ],
+    });
+
+    const sameRangeClips = [
+      { ...clips[0], startFrame: 5, endFrame: 28 },
+      { ...clips[1], startFrame: 5, endFrame: 28 },
+    ];
+    expect(clipRangeFor(sameRangeClips, 'synthetic_shared')).toEqual({ startFrame: 5, endFrame: 28 });
+
+    const noRangeClips = [
+      { ...clips[0], startFrame: null, endFrame: null },
+      { ...clips[1], startFrame: null, endFrame: null },
+    ];
+    expect(clipRangeFor(noRangeClips, 'synthetic_shared')).toBeNull();
   });
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
     expect(characterForPath('characters/demo_unit')).toBe('demo_unit');

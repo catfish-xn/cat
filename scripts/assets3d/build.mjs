@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { safeInputPath, safeOutputPath, writeOutputFile, withinRoot } from './safe-path.mjs';
 import { contracts, unitDefinitions } from './runtime.mjs';
 import { parseBin } from './bin.mjs';
-import { skinBindings, animationClips, selectAnimations, canonicalAsset } from './bin-bindings.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset, sourceName, clipRangeFor } from './bin-bindings.mjs';
 import { inspectSkn } from './inspect-source.mjs';
 import { decodeAnm } from './animation.mjs';
 import { makeModel, validateModel } from './model.mjs';
@@ -235,16 +235,27 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        const clipRanges = {};
-        for (const [name, clipPath] of Object.entries(animation.files)) {
-            const clip = clips.find(c => c.atomic && c.path === clipPath);
-            if (clip && (clip.startFrame !== null || clip.endFrame !== null)) {
-                const decoded = decodeAnm(animationSources.find(s => s.name === name).bytes);
-                const fps = decoded?.fps > 0 ? decoded.fps : 30;
-                const start = Math.max(0, (clip.startFrame ?? 0) / fps);
-                const end = clip.endFrame !== null ? clip.endFrame / fps : decoded.duration;
-                if (start < end) clipRanges[name] = [start, end];
+        const clipRanges = {}, clipRangeSkips = [];
+        for (const [name] of Object.entries(animation.files)) {
+            const graphHashes = Object.values(animation.decisions)
+                .filter(d => d.path && sourceName(d.path) === name)
+                .flatMap(d => d.graphHashes ?? []);
+            const range = clipRangeFor(clips, name, graphHashes.length ? graphHashes : undefined);
+            if (!range) continue;
+            if (range.skip) {
+                clipRangeSkips.push({ name, reason: range.skip, candidates: range.candidates });
+                continue;
             }
+            let decoded = null;
+            try { decoded = decodeAnm(animationSources.find(s => s.name === name)?.bytes); } catch {}
+            const fps = decoded?.fps > 0 ? decoded.fps : 30;
+            if (range.endFrame === null && !(decoded?.duration > 0)) {
+                clipRangeSkips.push({ name, reason: 'missing-anm-duration', startFrame: range.startFrame, endFrame: range.endFrame });
+                continue;
+            }
+            const start = Math.max(0, (range.startFrame ?? 0) / fps);
+            const end = range.endFrame !== null ? range.endFrame / fps : decoded.duration;
+            if (start < end) clipRanges[name] = [start, end];
         }
         models[id] = { path, animations: animation.mapped, ...(Object.keys(clipRanges).length ? { clipRanges } : {}) };
         const meshPaths = new Map(), meshReasons = new Map(), meshBuffers = new Map(), meshReports = [];
@@ -279,6 +290,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             systemCount: converted.systems.length, emitters: converted.emitters, systems, meshes: meshReports }, textures: textureReports.filter(t => t.status === 'converted').length,
             materialTextureMappings: Object.keys(binding.textures).length,
             bindings: binding, actionMapping: animation.mapped, actionDecisions: animation.decisions,
+            clipRangeSkips,
             graphClips: clips.map(c => ({ ...c, hash: c.hash.toString(16) })),
             step2Mapping: Object.keys(config.textures).length ? Object.fromEntries(Object.entries(config.textures).map(([name, path]) => [name, {
                 expected: `${config.base}/${path}`, actual: binding.textures[name] ?? null,
