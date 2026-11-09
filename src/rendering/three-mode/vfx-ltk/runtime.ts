@@ -56,8 +56,10 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
   /** Seconds (0..2) added to every cue's delay: a receipt the board times itself (Renata's shield as her rocket passes). */
   delay?: number;
+  /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
+  cancelWithSource?: boolean;
 }
-interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string }
+interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
@@ -191,7 +193,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const engine = p.originAt(0);
           snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
         }
-        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase });
+        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}) });
       }
       return true;
     },
@@ -209,7 +211,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     stopUnit(id: string) {
       for (let at = waiting.length - 1; at >= 0; at--) {
         const row = waiting[at];
-        if ((needsLivingSource(row.spawn) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
+        if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
         // Its tail still plays, but the finished system belongs to a gone unit: retire, never park.

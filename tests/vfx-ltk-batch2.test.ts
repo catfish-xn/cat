@@ -10,7 +10,8 @@ import { mapSkillTimeline, selectTimeline } from '../src/rendering/three-mode/vf
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
 import { Rng } from '../src/rendering/three-mode/vfx-ltk/engine/utils/Rng';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
-import { sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { SEVIKA_SLOT_SECONDS, sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { G23_POLICY } from '../src/simulation/content/g2-3-policy';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { melSkills } from '../src/rendering/three-mode/vfx-ltk/champions/mel';
@@ -65,6 +66,10 @@ describe('batch 2 exact display stages', () => {
     expect(b.branch(c)).toBe(({flamethrower:'one',punch:'two',chomp:'three'} as Record<string,string>)[move]);
     // The High Roller slot machine rides over the cast with the rolled spell's reels (no mod layer for this outcome).
     expect(play.mock.calls.map(x=>x[5].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
+    // The spell lands when the slot machine stops (G23 slotTicks 25); the machine itself starts at the pull.
+    expect(play.mock.calls.map(x=>x[5].delay)).toEqual([1.25,undefined,undefined]);
+    expect(play.mock.calls[0]?.[5].cancelWithSource).toBe(true);
+    expect(SEVIKA_SLOT_SECONDS).toBe(G23_POLICY.highRoller.slotTicks*.05);
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
   });
   it('shows the rolled mod on the right reel, three of the spell on a Triple, and no layer the catalogue cannot frame', () => {
@@ -241,6 +246,25 @@ describe('batch 2 runtime boundaries', () => {
     runtime.update(.01, new Camera());
     expect(scene.children.map(child => child.userData.ltkSystem)).toEqual([boardSystem]);
     runtime.dispose(); expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0);
+  });
+  it('drops a Sevika spell still waiting on the slot machine, target hits included, when she dies first', async () => {
+    const skills = sevikaSkills, systems = Object.fromEntries(Object.values(skills).flatMap(c => c.map(x => [x.system, 'a.json'])));
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems, assets: { 'synthetic.tex': 'a.png' }, skills } : syntheticSystem(), readTexture: async () => new Texture() });
+    const unit = () => ({ root: new Group(), body: null, alive: true, definitionId: 'sevika', form: 'front' as const, starLevel: 1 as const });
+    const units = new Map([['s', unit()], ['target', unit()]]);
+    const runtime = createLtkRuntime(library, new Scene(), id => units.get(id));
+    await runtime.warm('sevika');
+    const hits = skills['sevika-punch'].filter(c => c.event === 'hit').length;
+    expect(hits).toBeGreaterThan(0);
+    // Without the flag a delayed target hit outlives its caster (a projectile already on its way)...
+    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25 })).toBe(true);
+    runtime.stopUnit('s'); expect(runtime.queued).toBe(hits);
+    runtime.clear();
+    // ...but Sevika's rolled spell is never delivered by the rules if she dies during the slot wait.
+    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25, cancelWithSource: true })).toBe(true);
+    runtime.stopUnit('s'); expect(runtime.queued).toBe(0);
+    runtime.dispose();
   });
   it('keeps Viktor slam board and target hits after the caster dies, and still rejects a caster-bound cast', async () => {
     const skills = viktorSkills, systems = Object.fromEntries(Object.values(skills).flatMap(c => c.map(x => [x.system, 'a.json'])));

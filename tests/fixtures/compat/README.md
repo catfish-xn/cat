@@ -69,3 +69,7 @@ from `8106acee`/`34cfbfbb`: deaths at ticks 155/274 instead of 69/164, `combatTi
 2026-11-09 塞维卡三连/头奖: `pre-spoils-v26-seed42.json` identity-only refresh, `contentDigest` (×2) `150d825d` → `c7f0a2f3`
 and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte changed. SHA-256:
 `8b14766028027050af86186218f274b254a4b258d813a8cc5e136ff646e57167`.
+
+2026-11-09 塞维卡老虎机转完再出手: identity-only refresh again, `contentDigest` (×2) `c7f0a2f3` → `f37c6970` and
+`m8.loot.frozen.replayDigest` `b53841c0` → `9c98c8ef`; no other byte changed. SHA-256:
+`8648179a96e0091283e61cf1e2f1fc8cf13d665df42dc1805f0e54b00d0cbaf8`.
