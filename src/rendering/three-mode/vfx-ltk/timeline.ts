@@ -45,6 +45,11 @@ export interface TimelineCue {
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
    */
   readonly optional?: boolean;
+  /**
+   * Emitters of the system this cue leaves undrawn, by name (at most 8): the same system shown without a part another
+   * cue covers (a Sevika spell's right reel under the rolled mod, which the mod's own layer draws there).
+   */
+  readonly hide?: readonly string[];
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

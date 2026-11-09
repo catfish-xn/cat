@@ -73,13 +73,23 @@ describe('batch 2 exact display stages', () => {
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
   });
   it('shows the rolled mod on the right reel and three of the spell on a Triple, from the mirrored twins', () => {
-    expect(sevikaSlotSkills('punch','shield')).toEqual(['sevika-slots','sevika-slots-punch','sevika-slots-shield']);
+    expect(sevikaSlotSkills('punch','shield')).toEqual(['sevika-slots','sevika-slots-punch-pair','sevika-slots-shield']);
+    expect(sevikaSlotSkills('chomp','coin')).toEqual(['sevika-slots','sevika-slots-thrash-pair','sevika-slots-coin']);
+    expect(sevikaSlotSkills('flamethrower','rocket')).toEqual(['sevika-slots','sevika-slots-flamethrower-pair','sevika-slots-rocket']);
     expect(sevikaSlotSkills('flamethrower','blue-flamethrower')).toEqual(['sevika-slots','sevika-slots-flamethrower']);
     expect(sevikaSlotSkills('chomp','quadruple-chomp')).toEqual(['sevika-slots','sevika-slots-thrash']);
     expect(sevikaSlotSkills('jackpot','jackpot')).toEqual(['sevika-slots','sevika-slots-jackpot']);
-    for (const [name, cues] of Object.entries(sevikaSkills).filter(([n]) => n.startsWith('sevika-slots-')))
+    for (const [name, cues] of Object.entries(sevikaSkills).filter(([n]) => n.startsWith('sevika-slots-') && !n.endsWith('-pair')))
       // Each layer stands 167 units up on its own (EmitterPosition); borrowing the frame's 169-unit transform doubled it.
       expect(cues, name).toEqual([{ system: expect.any(String), event: 'cast-start', delay: 0, duration: 2.3 }]);
+    // Under a mod, the spell layer leaves its right reel to the mod's layer (11-09 e85a856a: the spell's icon showed round it).
+    for (const spell of ['flamethrower','punch','thrash']) {
+      const [pair] = sevikaSkills[`sevika-slots-${spell}-pair`], [whole] = sevikaSkills[`sevika-slots-${spell}`];
+      expect(pair, spell).toEqual({ ...whole, hide: ['Alpha_Right_Slot','Alpha_Right_Slot2','Alpha_Right_Slot3','Add_Right_Slot'] });
+    }
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { sevika: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, hide: [] }] } })).toThrow('timeline-cue');
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { sevika: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, hide: [3] }] } })).toThrow('timeline-cue');
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { sevika: sevikaSkills['sevika-slots-punch-pair'].map(c => ({ ...c, system: 'a' })) } })).not.toThrow();
     // The fnv1a of each _Mirrored path in map22.bin: the twin whose right reel shows on this board's right.
     const fnv = (text: string) => { let h = 0x811c9dc5; for (const b of new TextEncoder().encode(text.toLowerCase())) h = Math.imul(h ^ b, 0x01000193); return (h >>> 0).toString(16).padStart(8, '0'); };
     const path = 'Maps/Shipping/Map22/Particles/set13/TFT13_Lieutenant_Base_Slots';

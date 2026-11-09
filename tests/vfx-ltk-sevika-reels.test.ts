@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { Texture } from 'three';
+import { Camera, Group, Scene, Texture } from 'three';
+import { createLtkRuntime, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { integratedInto } from '../src/rendering/three-mode/vfx-ltk/engine/utils/sampleCurve';
 import type { ValueCurve } from '../src/rendering/three-mode/vfx-ltk/engine/model/model';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { DISABLED_EMITTERS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
-import { syntheticSystem } from './vfx-ltk-synthetic';
+import { constant, num, syntheticSystem } from './vfx-ltk-synthetic';
 
 const curve = (keys: [number, number][]): ValueCurve =>
   ({ constant: [0, keys[0][1]], keys: keys.map(([time, v]) => ({ time, values: [0, v] })), tables: [] }) as unknown as ValueCurve;
@@ -35,5 +36,25 @@ describe('Sevika slot reels (14.24 map22.bin Slots_*_Mirrored, particleUVScrollR
       : syntheticSystem({ emitterName: { type: 'string', value: 'Alpha_Boarder' } }), readTexture: async () => new Texture() });
     expect((await library.load(layers[3])).model.emitters[0].disabled).toBe(true);
     expect((await library.load('other')).model.emitters[0].disabled).toBe(false);
+  });
+  it('leaves a hidden emitter out of the draw for the cue that names it, and only that cue', async () => {
+    const cue = { system: 'a', event: 'cast-start', delay: 0, duration: 1 };
+    const index = { version: 1, systems: { a: 'systems/a.json' }, assets: { 'synthetic.tex': 'textures/a.png' },
+      skills: { jinx: [cue], 'jinx-pair': [{ ...cue, hide: ['Add_Right_Slot'] }] } };
+    const unit: VfxUnit = { root: new Group(), body: new Group(), alive: true }; unit.root.add(unit.body!);
+    // Each run owns its catalogue: disposing a runtime disposes the library it was given.
+    const draws = async (skill: string) => {
+      const library = createVfxLibrary('/r/', { readJson: async (url: string) => url.endsWith('index.json') ? index
+        : syntheticSystem({ emitterName: { type: 'string', value: 'Add_Right_Slot' }, rate: constant(num(30)), lifetime: num(1), particleLifetime: constant(num(1)) }),
+        readTexture: async () => new Texture() });
+      await library.load('a');
+      const scene = new Scene(), runtime = createLtkRuntime(library, scene, () => unit);
+      expect(runtime.play('jinx', 'u', ['u'], 0, 'cast', { skill })).toBe(true);
+      runtime.update(0.1, new Camera());
+      const group = scene.children.find(child => child.name === 'ltk-vfx');
+      const count = group?.children.length ?? -1; runtime.dispose(); return count;
+    };
+    expect(await draws('jinx')).toBeGreaterThan(0);
+    expect(await draws('jinx-pair')).toBe(0);
   });
 });

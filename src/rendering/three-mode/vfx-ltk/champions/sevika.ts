@@ -12,6 +12,8 @@ const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
 export const SEVIKA_SLOT_SECONDS = 1.25;
 const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3c691',
   rocket: '5dbfcb42', shield: 'e9258aa9', coin: 'ba45e98d', jackpot: '066fd22b' } as const;
+/** Each spell layer's right-reel emitters (Flamethrower: Alpha_Right_Slot, Punch: _Slot2, Thrash: _Slot3; all: Add_Right_Slot). */
+const SPELL_RIGHT_REEL = ['Alpha_Right_Slot', 'Alpha_Right_Slot2', 'Alpha_Right_Slot3', 'Add_Right_Slot'];
 export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 }],
   'sevika-flamethrower': [
@@ -53,6 +55,10 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   'sevika-slots': [{ system: SLOTS, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }],
   ...Object.fromEntries(Object.entries(SLOT_LAYERS).map(([result, system]) =>
     [`sevika-slots-${result}`, [{ system, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }] as const])),
+  // A plain roll's spell on the left and middle reels only: the mod's layer draws the right reel (its own back, icon and
+  // flash), and the spell's right icon (50 × 55) showed round the mod's smaller back (45 × 52.5) (11-09 e85a856a recording).
+  ...Object.fromEntries((['flamethrower', 'punch', 'thrash'] as const).map(spell =>
+    [`sevika-slots-${spell}-pair`, [{ system: SLOT_LAYERS[spell], event: 'cast-start', delay: 0, duration: SLOT_SECONDS, hide: SPELL_RIGHT_REEL }] as const])),
 };
 /**
  * The slot layers one cast shows: the rolled spell on the reels; a plain roll's mod replaces the right reel, a Triple is
@@ -62,7 +68,7 @@ export function sevikaSlotSkills(move: string, outcome: string): string[] {
   if (outcome === 'jackpot' || move === 'jackpot') return ['sevika-slots', 'sevika-slots-jackpot'];
   const spell = ({ flamethrower: 'flamethrower', punch: 'punch', chomp: 'thrash' } as Record<string, string>)[move];
   if (!spell) return [];
-  return ['sevika-slots', `sevika-slots-${spell}`, ...(['rocket', 'shield', 'coin'].includes(outcome) ? [`sevika-slots-${outcome}`] : [])];
+  return ['rocket', 'shield', 'coin'].includes(outcome) ? ['sevika-slots', `sevika-slots-${spell}-pair`, `sevika-slots-${outcome}`] : ['sevika-slots', `sevika-slots-${spell}`];
 }
 export function sevikaSkill(move: string, outcome: string): string | undefined {
   // 14.24b Jackpot is its own spell (coins), not one of the three moves plus a bonus.
