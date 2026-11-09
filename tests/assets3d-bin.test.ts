@@ -223,6 +223,49 @@ describe('initial material and action binding', () => {
       { ...clips[1], startFrame: null, endFrame: null },
     ];
     expect(clipRangeFor(noRangeClips, 'synthetic_shared')).toBeNull();
+
+    const namedGraph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            'Spell1_Bar',
+            obj('AtomicClipData', {
+              StartFrame: 10,
+              EndFrame: 32,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'TFT13_Foo_Spell1_Bar.anm' }),
+            }),
+          ],
+          [
+            'Spell1_Other',
+            obj('AtomicClipData', {
+              StartFrame: 123,
+              EndFrame: 142,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'TFT13_Foo_Spell1_Bar.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const namedClips = animationClips([document(namedGraph)]);
+    expect(clipRangeFor(namedClips, 'tft13_foo_spell1_bar')).toEqual({ startFrame: 10, endFrame: 32 });
+
+    const nullNamedClips = [
+      { ...namedClips[0], startFrame: null, endFrame: null },
+      namedClips[1],
+    ];
+    expect(clipRangeFor(nullNamedClips, 'tft13_foo_spell1_bar')).toBeNull();
+
+    const unmatchedNamedClips = [
+      { ...namedClips[0], hash: fnv1a('Spell1_Unrelated') },
+      namedClips[1],
+    ];
+    expect(clipRangeFor(unmatchedNamedClips, 'tft13_foo_spell1_bar')).toEqual({
+      skip: 'ambiguous-clip-range',
+      candidates: [
+        { hash: fnv1a('Spell1_Unrelated').toString(16), startFrame: 10, endFrame: 32 },
+        { hash: fnv1a('Spell1_Other').toString(16), startFrame: 123, endFrame: 142 },
+      ],
+    });
   });
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
     expect(characterForPath('characters/demo_unit')).toBe('demo_unit');

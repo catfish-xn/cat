@@ -88,10 +88,23 @@ export function clipRangeFor(clips, name, graphHashes) {
     }
   }
   if (!matched.length) return null;
-  const ranges = new Map();
-  for (const c of matched) {
-    const startFrame = c.startFrame ?? null, endFrame = c.endFrame ?? null;
-    ranges.set(`${startFrame}:${endFrame}`, { startFrame, endFrame });
+  const uniqueRanges = list => {
+    const map = new Map();
+    for (const c of list) {
+      const startFrame = c.startFrame ?? null, endFrame = c.endFrame ?? null;
+      map.set(`${startFrame}:${endFrame}`, { startFrame, endFrame });
+    }
+    return map;
+  };
+  let ranges = uniqueRanges(matched);
+  if (ranges.size > 1) {
+    const stripped = name.replace(/^tft13_[a-z0-9]+_/i, '');
+    const preferred = new Set([fnv1a(stripped), fnv1a(name)]);
+    const byName = matched.filter(c => preferred.has(typeof c.hash === 'number' ? c.hash : Number.parseInt(String(c.hash), 16)));
+    if (byName.length === 1) {
+      matched = byName;
+      ranges = uniqueRanges(matched);
+    }
   }
   if (ranges.size === 1) {
     const only = [...ranges.values()][0];
