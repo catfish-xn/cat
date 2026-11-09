@@ -1,5 +1,6 @@
 import type { Camera, Material, Object3D, Scene, WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
+import { SKILL_FX_SIZE } from './fx-size';
 import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { VfxLibrary } from './loader';
@@ -285,7 +286,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
-        const scale = spawn.scale ?? 1;
+        // Every system draws at the arena's own unit scale (fx-size.ts); a cue scale multiplies that.
+        const scale = (spawn.scale ?? 1) * SKILL_FX_SIZE;
         const tail = Math.min(0.25, spawn.duration / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
