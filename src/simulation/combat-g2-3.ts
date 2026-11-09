@@ -30,11 +30,12 @@ function chomp(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordi
   hit(ctx,u,t,raw,seq,ordinal,'physical');ctx.packets.at(-1)!.sevikaChomp=true;
   applyStatus(t,origin(u),'stun',0,Math.round(variable(u,'Spell3_StunDuration')*20),ctx.tick,ctx.events);
 }
-function flame(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number):string[]{
-  const targets=enemies(u,ctx.units).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1);
-  hit(ctx,u,t,raw,seq,ordinal,'true');
+/** `rampBps` is Blue Flamethrower's per-second growth; the scheduled follow-up always keeps the unramped base. */
+function flame(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,rampBps=0):string[]{
+  const targets=enemies(u,ctx.units).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1),now=Math.floor(raw*(10000+rampBps)/10000);
+  hit(ctx,u,t,now,seq,ordinal,'true');
   for(const [i,x] of targets.entries())
-    hit(ctx,u,x,Math.floor(raw*(1-variable(u,'Spell1_ReducedDamagePercent'))),seq,ordinal+i+1,'physical',true);
+    hit(ctx,u,x,Math.floor(now*(1-variable(u,'Spell1_ReducedDamagePercent'))),seq,ordinal+i+1,'physical',true);
   later(ctx,u,t,'g23Flame',20,raw,seq,ordinal+1,ordinal+2);
   return [t.id,...targets.map(x=>x.id)];
 }
@@ -155,20 +156,37 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
     case 'sevika':{
-      const initialSpell=Math.floor(ctx.draw()*3/2**32),mod=rollG23HighRoller(ctx.draw,!!teamup(u,'unlikely-duo')),spell=mod.mod==='blue-flamethrower'?0:mod.mod==='knockout-punch'?1:mod.mod==='quadruple-chomp'?2:initialSpell;
+      // 14.24b: roll 1 of 3 spells, then the High Roller mod. Triple enhances (and fixes) the spell;
+      // Jackpot replaces the spell with Spell4 (coins). Enhanced semantics are 约定值 G24-SEVIKA-TRIPLE-01.
+      const initialSpell=Math.floor(ctx.draw()*3/2**32),mod=rollG23HighRoller(ctx.draw,!!teamup(u,'unlikely-duo'));
+      const spell=mod.mod==='jackpot'?3:mod.mod==='blue-flamethrower'?0:mod.mod==='knockout-punch'?1:mod.mod==='quadruple-chomp'?2:initialSpell;
       ctx.events.push({type:'castOutcome',tick:ctx.tick,unitId:u.id,abilityKey:u.ability.id,outcome:mod.mod,subOutcomes:mod.enhanced?[mod.mod]:[],
-        castVariant:{actionSeq:seq,move:spell===0?'flamethrower':spell===1?'punch':'chomp',channelTicks:spell===0?Math.round(v('Spell1_MinDuration'))*20:0,enhanced:mod.enhanced,heroAugmentIds:[]}});
-      g23State(u).highRoller.push({actionSeq:seq,spell,...mod,gold:mod.mod==='coin'||mod.mod==='jackpot'?3:0});
+        castVariant:{actionSeq:seq,move:spell===0?'flamethrower':spell===1?'punch':spell===2?'chomp':'jackpot',channelTicks:spell===0?Math.round(v('Spell1_MinDuration'))*20:0,enhanced:mod.enhanced,heroAugmentIds:[]}});
+      g23State(u).highRoller.push({actionSeq:seq,spell,...mod,gold:mod.mod==='coin'?G23_POLICY.highRoller.gold:0});
       applyStatus(u,origin(u),'damageReduction',G23_POLICY.highRoller.durabilityBps,G23_POLICY.highRoller.durabilityTicks,ctx.tick,ctx.events,true);
       const base=physical('Spell1_ADPercent','APBonusDamage'),scaled=(key:string)=>Math.floor(base*Math.round(v(key)*10000)/10000);
       if(spell===0){
        ids.push(...flame(ctx,u,t,base,seq,0));
        applyStatus(u,origin(u),'channel',0,Math.round(v('Spell1_MinDuration')*20),ctx.tick,ctx.events,true,'',seq);
       }
-      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');knockAway(ctx,u,t,v('Spell2_HexKnockback'),'sevika-knockback');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
-      else {chomp(ctx,u,t,scaled('Spell3_Modifier'),seq,0);ids.push(t.id);}
-      if(mod.mod==='rocket'||mod.mod==='jackpot')for(let i=0;i<G23_POLICY.highRoller.rockets*(mod.enhanced?3:1);i++)strike(t,G23_POLICY.highRoller.rocketPhysicalDamage,'physical');
-      if(mod.mod==='shield'||mod.mod==='jackpot')grantShield(u,origin(u),G23_POLICY.highRoller.shield*(mod.enhanced?3:1),ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);
+      else if(spell===1){
+        strike(t,scaled('Spell2_Modifier'),'physical');knockAway(ctx,u,t,v('Spell2_HexKnockback'),'sevika-knockback');
+        if(mod.mod==='knockout-punch')strike(t,physical('Spell2_Bonus_KnockbackDamage'),'physical');
+        leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
+      else if(spell===2){
+        const bites=mod.mod==='quadruple-chomp'?v('Spell3_BonusNumChomps'):1;
+        for(let i=0;i<bites;i++)chomp(ctx,u,t,scaled('Spell3_Modifier'),seq,i);ids.push(t.id);
+        if(mod.mod==='quadruple-chomp'){const seconds=Math.round(v('Spell3_BleedDuration')),bleed=physical('Spell3_Bonus_BleedADPercent');
+          for(let i=0;i<seconds;i++)later(ctx,u,t,'g23Physical',(i+1)*20,split(bleed,seconds,i),seq,10+i,10+seconds);}
+      }
+      else {
+        // Spell4 Jackpot: coins at random living enemies, one per interval over the High Roller duration; loot is not modelled.
+        const {jackpotCoins:n,jackpotCoinAdBps}=G23_POLICY.highRoller,interval=Math.floor(G23_POLICY.highRoller.durabilityTicks/n);
+        const coin=amount(u,ctx.tick,{ad:jackpotCoinAdBps/10000,ap:v('APBonusDamage')}),pool=[...foes()].sort((a,b)=>compareText(a.id,b.id));
+        for(let i=0;i<n&&pool.length;i++){const x=pool[Math.floor(ctx.draw()*pool.length/2**32)];later(ctx,u,x,'g23Physical',interval*(i+1),coin,seq,20+i,20+n);ids.push(x.id);}
+      }
+      if(mod.mod==='rocket')for(let i=0;i<G23_POLICY.highRoller.rockets;i++)strike(t,G23_POLICY.highRoller.rocketPhysicalDamage,'physical');
+      if(mod.mod==='shield')grantShield(u,origin(u),G23_POLICY.highRoller.shield,ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);
       // Gold is committed by the battle settlement receipt, never by the combat tick.
       break;
     }
@@ -190,7 +208,8 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    u.mechanismState={...u.mechanismState!,activities:u.mechanismState!.activities.map(a=>a.key===activity.key?refreshed:a)};
    u.statuses=u.statuses.map(s=>s.activity?.key===activity.key?{...s,expiresAtTick:refreshed.expiresAtTick,activity:refreshed}:s);
    ctx.events.push({type:'activityChanged',tick:ctx.tick,reason:'refreshed',activity:refreshed});
-   flame(ctx,u,target,task.amount,task.actionSeq,task.ordinal);return;
+   const blue=g23State(u).highRoller.some(r=>r.actionSeq===task.actionSeq&&r.mod==='blue-flamethrower');
+   flame(ctx,u,target,task.amount,task.actionSeq,task.ordinal,blue?Math.round(variable(u,'Spell1_Bonus_DamagePercentPerSecond')*10000)*task.ordinal:0);return;
   }
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;

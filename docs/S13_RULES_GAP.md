@@ -1677,3 +1677,14 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 原版来源：14.24 `game/data/maps/shipping/map22/map22.bin.json` 的 `CarouselItemPercentages1..6` 与 `CarouselItemPattern_*`。2-4、4-4：Opening（8 件各一＋1 随机散件）88%、OneOfAll（8 件各一＋1 个铲或锅）11%、SpatsAndRandom（3 个铲／锅＋6 随机）1%；3-4：Opening 60%、Default（9 随机）25%、OneOfAll 12%、SpatsAndRandom 3%。编号→轮次（2..6 对应 2-4..6-4）与 SPATorPAN 中铲／锅比例数据未写明，为推断。
 - 项目做法（偏离原版，用户决定）：2-4／3-4／4-4 固定 8 件散件各一个，第 9 件在 2-4、4-4 以 12%、3-4 以 15% 为金铲铲或金锅锅（各半），否则随机散件；打乱分布在 9 格。不做原版 25% 全随机与三铲模板。5-4／6-4 仍为随机成装，原版的纹章模板未做。
 - 实现：`src/simulation/carousel-policy.ts` `CAROUSEL_COMPONENT_ITEM_POLICY`，`src/simulation/carousel.ts` `componentCarouselItems`；沿用原 9 个装备随机字，27 字随机流与英雄抽取不变。
+
+## 塞维卡高额赌注：三连强化与头奖（2026-11-09，用户批准）
+
+- 原版来源：14.24 `TFT13_HighRoller` 羁绊文字（"Triple: Enhance her rolled ability!"）与变量；`Spell_TFT13_LieutenantSpell4_Tooltip`（Jackpot：获得 Durability，Duration 秒内朝随机目标射金币，每枚 ADPercent AD + APBonusDamage AP 物理伤害，偶尔掉战利品）；14.24 公告头奖 AD 比例 250%。抽取顺序和概率不变（见 `docs/evidence/g2-3/EXTERNAL_SOURCES.md` §2）。
+- 之前的差异：三连只决定放哪个技能，强化数值全未使用；头奖=随机技能+24 发火箭+1500 护盾+3 金。
+- 现在（强化生效方式为约定值 G24-SEVIKA-TRIPLE-01，原版只有变量无正文）：
+  - 蓝火：喷火每过 1 秒伤害 +`Spell1_Bonus_DamagePercentPerSecond`（20%），按基础值线性叠加。`Spell1_HighrollBonus`(20) 含义未知，不使用。
+  - 重拳：击退后对被打目标额外 `Spell2_Bonus_KnockbackDamage`（400%/400%/1000% AD）物理伤害。
+  - 四连咬：咬 `Spell3_BonusNumChomps`（4）次，每次照常判定处决；另流血 `Spell3_Bonus_BleedADPercent`（400%/400%/1000% AD）物理伤害，分 `Spell3_BleedDuration`（5）秒每秒一跳。`Spell3_Bonus_BleedDuration`(20) 含义未知，不使用。
+  - 头奖（约定值 G24-SEVIKA-JACKPOT-01）：不放三个技能之一；1.5 秒内每 0.25 秒射 1 枚金币（共 6 枚）给随机存活敌人（施法时用战斗随机流选定），每枚 250% AD + `APBonusDamage` AP 物理伤害；不再给火箭、护盾、3 金；战利品不做。80% 耐久 1.5 秒沿用每次施法的羁绊效果，不重复叠加。
+- 实现：`src/simulation/combat-g2-3.ts` `case 'sevika'`、`G23_POLICY.highRoller.jackpotCoins/jackpotCoinAdBps`；`castVariant.move` 新增 `'jackpot'`。

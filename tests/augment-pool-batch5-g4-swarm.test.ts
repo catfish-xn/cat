@@ -50,9 +50,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // v26 卯足全力内容变化 (2026-11-02): contentDigest 9dc693dd->ed366cad only; substituting it back gives the previous pin
   // a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a.
   // v26 选秀 8 件散件必出 (2026-11-02): contentDigest ed366cad->150d825d only (was 35a972ba…).
+  // 塞维卡三连/头奖 (2026-11-09): contentDigest 150d825d->c7f0a2f3, loot replayDigest a56b2c4a->b53841c0 only;
+  // substituting both back gives the previous pin 338bebf5….
   const save=serializeMatch(started);
-  expect(createHash('sha256').update(save).digest('hex'))
+  expect(createHash('sha256').update(save.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
+  expect(createHash('sha256').update(save).digest('hex'))
+    .toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(restoreMatch(save)).toEqual(started);
 });
 

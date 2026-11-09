@@ -65,11 +65,12 @@ describe('batch 2 exact display stages', () => {
     expect(play).toHaveBeenCalledTimes(1);
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
   });
-  it('adds jackpot only for its own cast outcome and keeps it out of other branches', () => {
+  it('plays jackpot alone for its own cast outcome and keeps it out of other branches', () => {
     const { bridge: b, play } = bridge('sevika'), c = cast('s');
-    b.begin([c,{type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'jackpot',subOutcomes:[],castVariant:{actionSeq:1,move:'punch',channelTicks:0,enhanced:true,heroAugmentIds:[]}}]);
+    b.begin([c,{type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'jackpot',subOutcomes:[],castVariant:{actionSeq:1,move:'jackpot',channelTicks:0,enhanced:true,heroAugmentIds:[]}}]);
     b.action('cast','s',['target'],0,c);
-    expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-punch','sevika-jackpot']); expect(b.branch(c)).toBe('four');
+    // 14.24b Jackpot is its own coin spell: no punch/flame/chomp underneath it.
+    expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-jackpot']); expect(b.branch(c)).toBe('four');
   });
   it('maps Jinx W/E/R and central R without making the first enemy its landing point', () => {
     const w = mapSkillTimeline(jinxSkills.jinx.filter(c=>!c.action),'j',['a','b','c'],0,point);
