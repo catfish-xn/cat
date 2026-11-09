@@ -3,11 +3,14 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
+// @ts-expect-error Offline Node module.
+import { BOARD_PICKS } from '../scripts/assets3d/boards-plan.mjs';
 
 describe('reviewed vfx-ltk cue overrides', () => {
   const exported: TimelineCue[] = [{ system: 'aa', action: 'cast', event: 'hit', delay: 0.8, duration: 1 }];
@@ -30,20 +33,20 @@ describe('reviewed vfx-ltk cue overrides', () => {
       const systems = Object.fromEntries(cues.map(cue => [cue.system, `${cue.system}.json`]));
       expect(() => parseIndex({ version: 1, systems, assets: {}, skills: { [champion]: cues } }), champion).not.toThrow();
     }
-    expect(CUE_OVERRIDES.garen.find(cue => cue.system === '5bbccb8c')?.scale).toBe(0.45);
-    expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(0.68);
-    expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(0.68);
+    expect(CUE_OVERRIDES.garen.find(cue => cue.system === '5bbccb8c')?.scale).toBe(measuredAtFxScale(0.45));
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(measuredAtFxScale(0.68));
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
     // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
     // Measured 5.8 cells at 0.5 against the cloud's 5 (cdacbcc9): 0.43 lands on it.
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.43);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(measuredAtFxScale(0.43));
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
     // The pool keeps emitting until the blast starts: no empty gap between them (clean4 frames 58-61).
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')!.delay);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(0.7);
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredAtFxScale(0.7));
     // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
     const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
@@ -157,15 +160,25 @@ describe('reviewed vfx-ltk cue overrides', () => {
     runtime.update(0.05, camera);
     expect(scene.children).toHaveLength(1);
     const first = scene.children[0];
-    expect(String(first.userData.poolKey)).toMatch(/\n1$/);
+    expect(String(first.userData.poolKey).endsWith(`\n${SKILL_FX_SIZE}`)).toBe(true);
     runtime.update(0.12, camera);
     expect(runtime.active).toBe(0);
     runtime.update(0.05, camera);
     expect(scene.children).toHaveLength(1);
     const second = scene.children[0];
     expect(second).not.toBe(first);
-    expect(String(second.userData.poolKey)).toMatch(/\n0\.5$/);
+    expect(String(second.userData.poolKey).endsWith(`\n${0.5 * SKILL_FX_SIZE}`)).toBe(true);
     expect(String(first.userData.poolKey)).not.toBe(String(second.userData.poolKey));
     runtime.dispose();
+  });
+
+  it('draws particles at the default arena unit scale, keeping footage-measured cue sizes as drawn', () => {
+    expect(FX_SOURCE_SCALE).toBe(FX_SCALE);
+    const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
+    expect(ARENA_UNIT_SCALE).toBeCloseTo(0.3306 * pick!.alignmentScale!, 12);
+    expect(SKILL_FX_SIZE).toBeCloseTo(0.638, 3);
+    // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (original footage ≈ 4.5).
+    expect(2 * 485 * FX_SCALE * SKILL_FX_SIZE / (Math.sqrt(3) * 34)).toBeCloseTo(4.6, 1);
+    expect(measuredAtFxScale(0.45) * SKILL_FX_SIZE).toBeCloseTo(0.45, 12);
   });
 });
