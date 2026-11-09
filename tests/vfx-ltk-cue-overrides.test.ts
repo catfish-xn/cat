@@ -3,6 +3,8 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
+import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { ARENA_UNIT_SCALE, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -199,6 +201,9 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe about 3 cells
     for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
+    const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
+    expect(drawn(pistol)).toBeCloseTo(1, 12); // its muzzle flash fits the gun (pr582-report)
+    expect(jinxSkills.jinx.find(c => c.system === '3496e112')!.scale).toBe(pistol.scale);
     for (const system of ['78d04f27', '8c256426']) expect(drawn(CUE_OVERRIDES.nunu.find(c => c.system === system)!), system).toBeCloseTo(0.43, 12);
   });
 
