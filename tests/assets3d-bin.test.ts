@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 // @ts-expect-error Pure Node utility.
 import { parseBin, fnv1a, binField } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Pure Node utility.
-import { skinBindings, animationClips, selectAnimations, canonicalAsset } from '../scripts/assets3d/bin-bindings.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset, clipRangeFor } from '../scripts/assets3d/bin-bindings.mjs';
+// @ts-expect-error Pure Node utility.
+import { resolveUnitClipRanges } from '../scripts/assets3d/build.mjs';
+// @ts-expect-error Pure Node utility.
+import { writeGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node utility.
 import { characterForPath, propertyReferences } from '../scripts/assets3d/plan-fetch.mjs';
+// @ts-expect-error Pure Node utility.
+import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -131,6 +139,323 @@ describe('initial material and action binding', () => {
     const ambiguous = selectAnimations([{ atomic: true, hash: 1, path: 'a_spell.anm' }, { atomic: true, hash: 2, path: 'b_spell.anm' }], rules);
     expect(ambiguous.decisions.cast.reason).toBe('ambiguous-action'); expect(ambiguous.mapped.cast).toBeUndefined();
     expect(selectAnimations(clips, rules, { idle: 'unit_idle2' }).mapped.idle).toBe('unit_idle2');
+  });
+  it('reads StartFrame and EndFrame from AtomicClipData when present and defaults to null', () => {
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('Spell1') },
+            obj('AtomicClipData', {
+              StartFrame: 4,
+              EndFrame: 20,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_spell.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Idle1') },
+            obj('AtomicClipData', {
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_idle.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    expect(clips).toEqual([
+      {
+        hash: fnv1a('Spell1'),
+        type: fnv1a('AtomicClipData'),
+        atomic: true,
+        flags: 0,
+        path: 'synthetic_spell.anm',
+        startFrame: 4,
+        endFrame: 20,
+      },
+      {
+        hash: fnv1a('Idle1'),
+        type: fnv1a('AtomicClipData'),
+        atomic: true,
+        flags: 0,
+        path: 'synthetic_idle.anm',
+        startFrame: null,
+        endFrame: null,
+      },
+    ]);
+  });
+  it('resolves shared-anm clip ranges by selected graphHashes or deduplication and reports ambiguous ranges', () => {
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('ClipA') },
+            obj('AtomicClipData', {
+              StartFrame: 5,
+              EndFrame: 28,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_shared.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('ClipB') },
+            obj('AtomicClipData', {
+              StartFrame: 36,
+              EndFrame: 69,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'synthetic_shared.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    const hashA = fnv1a('ClipA').toString(16);
+    const hashB = fnv1a('ClipB').toString(16);
+
+    expect(clipRangeFor(clips, 'synthetic_shared', [hashA])).toEqual({ startFrame: 5, endFrame: 28 });
+    expect(clipRangeFor(clips, 'synthetic_shared', [hashB])).toEqual({ startFrame: 36, endFrame: 69 });
+    expect(clipRangeFor(clips, 'synthetic_shared')).toEqual({
+      skip: 'ambiguous-clip-range',
+      candidates: [
+        { hash: hashA, startFrame: 5, endFrame: 28 },
+        { hash: hashB, startFrame: 36, endFrame: 69 },
+      ],
+    });
+
+    const sameRangeClips = [
+      { ...clips[0], startFrame: 5, endFrame: 28 },
+      { ...clips[1], startFrame: 5, endFrame: 28 },
+    ];
+    expect(clipRangeFor(sameRangeClips, 'synthetic_shared')).toEqual({ startFrame: 5, endFrame: 28 });
+
+    const noRangeClips = [
+      { ...clips[0], startFrame: null, endFrame: null },
+      { ...clips[1], startFrame: null, endFrame: null },
+    ];
+    expect(clipRangeFor(noRangeClips, 'synthetic_shared')).toBeNull();
+
+    const namedGraph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            'Spell1_Bar',
+            obj('AtomicClipData', {
+              StartFrame: 10,
+              EndFrame: 32,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'TFT13_Foo_Spell1_Bar.anm' }),
+            }),
+          ],
+          [
+            'Spell1_Other',
+            obj('AtomicClipData', {
+              StartFrame: 123,
+              EndFrame: 142,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'TFT13_Foo_Spell1_Bar.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const namedClips = animationClips([document(namedGraph)]);
+    expect(clipRangeFor(namedClips, 'tft13_foo_spell1_bar')).toEqual({ startFrame: 10, endFrame: 32 });
+
+    const nullNamedClips = [
+      { ...namedClips[0], startFrame: null, endFrame: null },
+      namedClips[1],
+    ];
+    expect(clipRangeFor(nullNamedClips, 'tft13_foo_spell1_bar')).toBeNull();
+
+    const unmatchedNamedClips = [
+      { ...namedClips[0], hash: fnv1a('Spell1_Unrelated') },
+      namedClips[1],
+    ];
+    expect(clipRangeFor(unmatchedNamedClips, 'tft13_foo_spell1_bar')).toEqual({
+      skip: 'ambiguous-clip-range',
+      candidates: [
+        { hash: fnv1a('Spell1_Unrelated').toString(16), startFrame: 10, endFrame: 32 },
+        { hash: fnv1a('Spell1_Other').toString(16), startFrame: 123, endFrame: 142 },
+      ],
+    });
+  });
+  it('writes clipRanges only for cast-referenced clips and records non-cast ranged clips as non-cast-action skips', async () => {
+    const rules = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8')).$animationRules;
+    const graph = obj('AnimationGraphData', {
+      mClipDataMap: {
+        entries: [
+          [
+            { hash: fnv1a('Attack1') },
+            obj('AtomicClipData', {
+              EndFrame: 9,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'unit_attack1.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Spell1') },
+            obj('AtomicClipData', {
+              StartFrame: 6,
+              EndFrame: 24,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'unit_spell1.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Spell1_Out') },
+            obj('AtomicClipData', {
+              EndFrame: 15,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'unit_spell1_out.anm' }),
+            }),
+          ],
+        ],
+      },
+    });
+    const clips = animationClips([document(graph)]);
+    const selected = selectAnimations(clips, rules);
+    const animation = {
+      ...selected,
+      files: { ...selected.files, unit_spell1_out: 'unit_spell1_out.anm' },
+    };
+    const built = resolveUnitClipRanges(animation, clips, [], {
+      castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' },
+    });
+    expect(built.clipRanges).toEqual({
+      unit_spell1: [6 / 30, 24 / 30],
+      unit_spell1_out: [0, 15 / 30],
+    });
+    expect(built.clipRanges).not.toHaveProperty('unit_attack1');
+    expect(built.clipRangeSkips).toEqual([
+      { name: 'unit_attack1', reason: 'non-cast-action', startFrame: null, endFrame: 9 },
+    ]);
+
+    const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
+    await mkdir(local, { recursive: true });
+    const dir = await mkdtemp(join(local, 'clip-ranges-cast-only-'));
+    try {
+      const assets = join(dir, 'assets');
+      const extracted = join(dir, 'extracted');
+      const outPath = join(dir, 'out-manifest.json');
+      await mkdir(join(assets, 'models/synthetic_unit'), { recursive: true });
+      await mkdir(join(extracted, 'data/characters/synthetic_unit/skins'), { recursive: true });
+      const glb = writeGlb(
+        {
+          asset: { version: '2.0' },
+          animations: [{ name: 'unit_attack1' }, { name: 'unit_spell1' }, { name: 'unit_spell1_out' }],
+        },
+        Buffer.alloc(0),
+      );
+      await writeFile(join(assets, 'models/synthetic_unit/model.glb'), glb);
+      await writeFile(
+        join(assets, 'manifest.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          models: {
+            synthetic_unit: {
+              path: 'models/synthetic_unit/model.glb',
+              animations: { attack: 'unit_attack1', cast: 'unit_spell1' },
+              castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' },
+            },
+          },
+        }),
+      );
+      const skin0 = prop(
+        'SkinCharacterDataProperties',
+        field(
+          'skinMeshProperties',
+          0x83,
+          embed('SkinMeshDataProperties', field('simpleSkin', 16, str('synthetic.skn')), field('skeleton', 16, str('synthetic.skl'))),
+        ),
+        field(
+          'skinAnimationProperties',
+          0x83,
+          embed('SkinAnimationProperties', field('animationGraphData', 0x84, u32(fnv1a('synthetic_graph')))),
+        ),
+      );
+      const rootBin = Buffer.concat([
+        Buffer.from('PROP'),
+        u32(3),
+        u32(0),
+        u32(1),
+        u32(fnv1a('AnimationGraphData')),
+        block(
+          Buffer.concat([
+            u32(fnv1a('synthetic_graph')),
+            fields(
+              field(
+                'mClipDataMap',
+                0x86,
+                map(
+                  17,
+                  0x82,
+                  Buffer.concat([
+                    u32(fnv1a('Attack1')),
+                    embed('AtomicClipData', field('EndFrame', 7, u32(9)), field('mAnimationFilePath', 16, str('unit_attack1.anm'))),
+                  ]),
+                  Buffer.concat([
+                    u32(fnv1a('Spell1')),
+                    embed(
+                      'AtomicClipData',
+                      field('StartFrame', 7, u32(6)),
+                      field('EndFrame', 7, u32(24)),
+                      field('mAnimationFilePath', 16, str('unit_spell1.anm')),
+                    ),
+                  ]),
+                  Buffer.concat([
+                    u32(fnv1a('Spell1_Out')),
+                    embed('AtomicClipData', field('EndFrame', 7, u32(15)), field('mAnimationFilePath', 16, str('unit_spell1_out.anm'))),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ]);
+      await writeFile(join(extracted, 'data/characters/synthetic_unit/skins/skin0.bin'), skin0);
+      await writeFile(join(extracted, 'data/characters/synthetic_unit/skins/root.bin'), rootBin);
+      await writeFile(join(extracted, 'unit_attack1.anm'), Buffer.alloc(0));
+      await writeFile(join(extracted, 'unit_spell1.anm'), Buffer.alloc(0));
+      await writeFile(join(extracted, 'unit_spell1_out.anm'), Buffer.alloc(0));
+
+      const staged = await stageClipRanges({ assets, extracted, out: outPath });
+      expect(staged.manifest.models.synthetic_unit.clipRanges).toEqual({
+        unit_spell1: [6 / 30, 24 / 30],
+        unit_spell1_out: [0, 15 / 30],
+      });
+      expect(staged.manifest.models.synthetic_unit.clipRanges).not.toHaveProperty('unit_attack1');
+      expect(staged.skippedClips).toEqual([
+        expect.objectContaining({
+          id: 'synthetic_unit',
+          clipName: 'unit_attack1',
+          reason: 'non-cast-action',
+          startFrame: null,
+          endFrame: 9,
+          refs: ['attack'],
+        }),
+      ]);
+
+      await writeFile(
+        join(assets, 'manifest.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          models: {
+            synthetic_unit: {
+              path: 'models/synthetic_unit/model.glb',
+              animations: { attack: 'unit_spell1', cast: 'unit_spell1' },
+            },
+          },
+        }),
+      );
+      const sharedStaged = await stageClipRanges({ assets, extracted, out: outPath });
+      expect(sharedStaged.manifest.models.synthetic_unit.clipRanges).toEqual({
+        unit_spell1: [6 / 30, 24 / 30],
+      });
+      expect(sharedStaged.rows).toEqual([
+        expect.objectContaining({
+          id: 'synthetic_unit',
+          clipName: 'unit_spell1',
+          refs: ['attack', 'cast'],
+          sharedNonCast: ['attack'],
+        }),
+      ]);
+      expect(sharedStaged.markdown).toContain('attack, cast (施法优先)');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
     expect(characterForPath('characters/demo_unit')).toBe('demo_unit');
