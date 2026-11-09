@@ -3,7 +3,7 @@ import type { BoardFrame } from '../../board-feed';
 import type { LtkPlayOptions } from './runtime';
 import type { WorldPoint } from './timeline';
 import { jayceSkill } from './champions/jayce';
-import { sevikaSkill } from './champions/sevika';
+import { sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
 
 interface Unit { definitionId: string; form: 'front' | 'back'; starLevel: number; alive: boolean; disposed?: boolean }
@@ -55,7 +55,9 @@ export function createBatch2VfxBridge(host: Host) {
         if (!skill) return false; // Never guess a random move from the cast count.
         const channel = outcome!.castVariant!.move === 'flamethrower' ? outcome!.castVariant!.channelTicks : 0;
         const handled = play(champion, source, targets, skill, 0, 'cast', false, channel > 0 ? channel * .05 : undefined);
-        if (handled && ['jackpot', 'rocket', 'shield', 'coin'].includes(outcome!.outcome)) play(champion, source, targets, `sevika-${outcome!.outcome}`);
+        if (handled && ['rocket', 'shield', 'coin'].includes(outcome!.outcome)) play(champion, source, targets, `sevika-${outcome!.outcome}`);
+        // The slot machine is decoration over the cast: a catalogue without it keeps the cast as it was.
+        if (handled) for (const slot of sevikaSlotSkills(outcome!.castVariant!.move, outcome!.outcome)) play(champion, source, targets, slot);
         return handled;
       }
       if (champion === 'jayce') {

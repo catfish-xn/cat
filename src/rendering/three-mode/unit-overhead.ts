@@ -174,9 +174,10 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     const c = ctx.colors(), m = shown?.meters, team = shown?.team ?? 'player';
     g.clearRect(0, 0, tierCanvas.width, tierCanvas.height);
     if (typeof g.drawImage === 'function') g.drawImage(sprite.source, 0, 0, tierCanvas.width, tierCanvas.height);
-    // Inside the track's 1-pixel border: HP blocks (8 rows) over a 2-row mana strip, in the atlas's own fills.
+    // Inside the track's 1-pixel border (11 rows): HP blocks (6 rows), a dark row, then a 4-row mana strip, in the atlas's
+    // own fills. The atlas splits the track 8 + 1 + 2; at board scale its 2-row mana read as no mana at all (playtest 11-09).
     const x0 = (layout.fill + 1) * k, x1 = (sprite.width - 1) * k, y0 = (layout.top + 1) * k, inner = x1 - x0;
-    const hpHeight = 8 * k, manaY = y0 + 9 * k, manaHeight = 2 * k;
+    const hpHeight = 6 * k, manaY = y0 + 7 * k, manaHeight = 4 * k;
     const fill = (id: string, color: string, x: number, y: number, width: number, height: number) => {
       if (width <= 0) return;
       const part = ctx.ui?.sprite(id);
@@ -193,6 +194,10 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     const maxHp = m?.maxHp ?? 0;
     g.fillStyle = 'rgb(2, 18, 35)';
     for (let mark = 300; mark < maxHp; mark += 300) g.fillRect(x0 + inner * mark / maxHp - k / 2, y0, k, hpHeight);
+    // The atlas's own empty-track art below the HP rows gives way to the separator row and the empty mana strip, in the
+    // 2D bar's mana backing colour (0x091219).
+    g.fillStyle = 'rgb(9, 18, 25)';
+    g.fillRect(x0, y0 + hpHeight, inner, manaY + manaHeight - y0 - hpHeight);
     if (m) {
       const full = m.maxMana > 0 && m.mana >= m.maxMana, manaRatio = m.maxMana > 0 ? Math.max(0, Math.min(1, m.mana / m.maxMana)) : 0;
       if (flashing) { g.fillStyle = '#ffffff'; g.fillRect(x0, manaY, inner, manaHeight); }

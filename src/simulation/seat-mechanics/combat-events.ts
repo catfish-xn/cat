@@ -3,7 +3,7 @@ import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
 export interface SevikaCastVariant {
   readonly actionSeq:number;
-  readonly move:'flamethrower'|'punch'|'chomp';
+  readonly move:'flamethrower'|'punch'|'chomp'|'jackpot';
   readonly channelTicks:number;
   /** High Roller's empowered roll, independent of augment ownership. */
   readonly enhanced:boolean;

@@ -65,3 +65,7 @@ null `anomalySelection`, and the 1-2 minion combat outcome (14.24 neutral stats 
 from `8106acee`/`34cfbfbb`: deaths at ticks 155/274 instead of 69/164, `combatTicks` 274, `baseDamage` 0). These match
 `tests/v26-anomaly-identity-audit.test.ts`. The v23/v24/v25 files are unchanged. SHA-256:
 `3e1ca4c8ad23abe7044c1be70fb9e86ce38d93bd87ec91b4d5ef5aa626f05bd7`.
+
+2026-11-09 塞维卡三连/头奖: `pre-spoils-v26-seed42.json` identity-only refresh, `contentDigest` (×2) `150d825d` → `c7f0a2f3`
+and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte changed. SHA-256:
+`8b14766028027050af86186218f274b254a4b258d813a8cc5e136ff646e57167`.

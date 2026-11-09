@@ -179,6 +179,8 @@ describe('3D overhead meters and items', () => {
     overhead.setTier(1);
     overhead.set('player', { hp: 900, maxHp: 900, mana: 30, maxMana: 60, shield: 0 }, undefined);
     expect(tierFake.rects.filter(rect => rect.fill === 'rgb(2, 18, 35)')).toHaveLength(2);
+    // Separator row + 4-row mana strip painted below the HP rows (playtest 11-09: thicker mana).
+    expect(tierFake.rects.filter(rect => rect.fill === 'rgb(9, 18, 25)')).toHaveLength(1);
     const mana = tierFake.rects.filter(rect => rect.fill === DEFAULT_METER_COLORS.mana);
     expect(mana).toHaveLength(1);
     expect(mana[0]!.w).toBeGreaterThan(0);

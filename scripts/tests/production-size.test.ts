@@ -111,8 +111,9 @@ describe('production representation preserves runtime semantics', () => {
     expect(parsed.loot).toBe(parsed.LOOT_REPLAY_DIGEST);
     // v26 卯足全力内容变化 (2026-11-02): 9dc693dd → ed366cad.
     // v26 选秀 8 件散件必出 (2026-11-02): ed366cad → 150d825d.
-    expect(parsed.content).toBe('fnv1a32-utf16:150d825d');
-    expect(parsed.loot).toBe('fnv1a32-utf16:a56b2c4a');
+    // 塞维卡三连/头奖 (2026-11-09): 150d825d → c7f0a2f3, loot a56b2c4a → b53841c0.
+    expect(parsed.content).toBe('fnv1a32-utf16:c7f0a2f3');
+    expect(parsed.loot).toBe('fnv1a32-utf16:b53841c0');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });
