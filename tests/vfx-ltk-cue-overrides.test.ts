@@ -40,7 +40,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
     // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
     // Measured 5.8 cells at 0.5 against the cloud's 5 (cdacbcc9): 0.43 lands on it.
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(measuredAtFxScale(0.43));
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(0.43);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
     // The pool keeps emitting until the blast starts: no empty gap between them (clean4 frames 58-61).
@@ -183,16 +183,21 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(measuredAtFxScale(0.45) * SKILL_FX_SIZE).toBeCloseTo(0.45, 12);
   });
 
-  it('keeps weapon-held systems at the body scale and the arena scale elsewhere (pr572-report)', () => {
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(1); // Jinx muzzle
-    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(1); // Twitch crossbow glow
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(1);
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile' })).toBe(SKILL_FX_SIZE); // a missile crosses the board
-    expect(cueSize({ bone: 'BUFFBONE_GLB_GROUND_LOC', event: 'cast-start' })).toBe(SKILL_FX_SIZE);
-    expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC', event: 'hit' })).toBe(SKILL_FX_SIZE);
-    expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
-    const twitch = CUE_OVERRIDES.twitch.find(cue => cue.system === '900dd2d2')!;
-    expect((twitch.scale ?? 1) * cueSize(twitch)).toBe(1);
+  it('draws ground cues at the arena scale and body-held cues at the body scale (pr572-report)', () => {
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol' })).toBe(1); // Jinx muzzle
+    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1' })).toBe(1); // Twitch crossbow glow
+    expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC' })).toBe(1); // Lux shield
+    expect(cueSize({ bone: 'R_hand' })).toBe(1); // Lux missile
+    expect(cueSize({ bone: 'BUFFBONE_GLB_GROUND_LOC' })).toBe(SKILL_FX_SIZE);
+    expect(cueSize({ bone: 'Buffbone_Glb_Ground_Loc' })).toBe(SKILL_FX_SIZE); // Darius ring
+    expect(cueSize({})).toBe(SKILL_FX_SIZE); // the unit's root
+    expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC', location: 'board' })).toBe(SKILL_FX_SIZE);
+    const swipe = CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!;
+    expect((swipe.scale ?? 1) * cueSize(swipe)).toBeCloseTo(1, 12); // about 3 cells, as the original
+    for (const system of ['78d04f27', '8c256426']) {
+      const cue = CUE_OVERRIDES.nunu.find(c => c.system === system)!;
+      expect((cue.scale ?? 1) * cueSize(cue), system).toBeCloseTo(0.43, 12);
+    }
   });
 
   it('draws every cast cue of Zyra at the size it was measured at, so the vines and sprouts stay in proportion', () => {
