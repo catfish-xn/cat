@@ -1249,9 +1249,9 @@
     },
     "tests/knockup-status.test.ts": {
       "previousBytes": 4240,
-      "currentBytes": 4994,
+      "currentBytes": 5003,
       "previousSha256": "2d2a47b7e14ef43dc09c54b5465196da37d360da834b3fd37f469f9a98fc2e64",
-      "currentSha256": "04539e4a5716f31401ec5cc1894f59a8154f3969d1639fcda51e38816844e063",
+      "currentSha256": "7fa086a3319532b05bd91b008ae5c7a463c5f2733d9892e510136726417dabae",
       "firstDifferentByte": 283
     },
     "tests/late-lag-effects.test.ts": {
