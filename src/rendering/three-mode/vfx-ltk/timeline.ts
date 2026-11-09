@@ -45,11 +45,6 @@ export interface TimelineCue {
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
    */
   readonly optional?: boolean;
-  /**
-   * Draw in another catalogued system's frame (its `transform`), in place of this system's own. For result layers the game
-   * spawns over a parent's frame though their definitions carry none (Sevika's slot icons over the 169-unit slot machine).
-   */
-  readonly frameOf?: string;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
@@ -91,6 +86,6 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
 /** Replacement is atomic: a missing/not-yet-loaded system keeps the entire old action.
  * Legacy callers know the two built-in timelines; catalogues explicitly register other champions. */
 export function selectTimeline(champion: string, cues: readonly TimelineCue[] | undefined, ready: (id: string) => boolean, registered = ['jinx', 'vi'].includes(champion)): readonly TimelineCue[] | null {
-  if (!registered || !cues?.length || cues.some(cue => !ready(cue.system) || (cue.frameOf !== undefined && !ready(cue.frameOf)))) return null;
+  if (!registered || !cues?.length || cues.some(cue => !ready(cue.system))) return null;
   return cues;
 }
