@@ -36,13 +36,17 @@ const RATE_SCALE: readonly (readonly number[])[] = [
   [1, 1, 1, 1, 1, 1],
 ];
 
-/** Whether an emitter is left uninstantiated, by effects quality and then by `importance`. */
+/**
+ * Whether an emitter is left uninstantiated, by effects quality and then by `importance`.
+ *
+ * The two spec-only tiers follow the 14.24 numbering in enums.ts: Very High keeps 4 and culls 5.
+ */
 const CULLED: readonly (readonly boolean[])[] = [
-  [true, true, false, false, false, true],
-  [true, true, false, false, false, true],
+  [true, true, false, false, true, false],
+  [true, true, false, false, true, false],
   [true, true, false, false, false, false],
-  [true, false, false, false, true, false],
-  [false, false, false, false, true, false],
+  [true, false, false, false, false, true],
+  [false, false, false, false, false, true],
 ];
 
 /** The particles either side of a trail point that smoothing averages, by effects quality. */
