@@ -296,6 +296,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     ...(sliceMs === null ? {} : { sliceMs }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
+    // The lobby's countdown to the abandoned room's release starts or stops: lobby connections get the new view.
+    onReleaseChange: () => queue.push(() => broadcastLobby()),
     ...(options.carousel ? { carousel: options.carousel } : {}),
     // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
     bots: { ...options.bots, enqueue: task => queue.push(task) },
@@ -587,7 +589,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const fault = state.fault;
     log(fault ? 'warn' : 'info', 'room.ended', { roomId: state.roomId, round: state.round, roundName: state.roundName, result: fault ? 'fault' : 'ranking',
       fault: fault?.kind, detail: fault ? toPlayerFault(fault).detail : undefined });
-    if (!fault) return;
+    // The lobby's "对局正在进行" line goes away with the match.
+    if (!fault) { queue.push(() => broadcastLobby()); return; }
     queue.push(() => {
       if (room !== ended) return;
       pushAll(ended.state);

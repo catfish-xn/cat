@@ -319,8 +319,9 @@ export class UnitView {
     for (let mark = 300; mark < unit.maxHp; mark += 300) this.hp.fillRect(left + (width * mark) / unit.maxHp, -44, 1, 6);
     this.hp.setData({ value: unit.hp, maxValue: unit.maxHp, ratio: hpRatio, width: width * hpRatio });
     const manaRatio = unit.maxMana > 0 ? unit.mana / unit.maxMana : 0;
-    this.mana.clear().setVisible(alive).fillStyle(0x091219).fillRect(left - 1, -36, width + 2, 5);
-    this.mana.fillStyle(toNumber(unit.mana === unit.maxMana ? C.manaFull : C.mana)).fillRect(left, -35, width * manaRatio, 3);
+    // Mana 4 px (2/3 of the HP fill): at 3 px it was hard to see next to the HP bar (playtest 11-09).
+    this.mana.clear().setVisible(alive).fillStyle(0x091219).fillRect(left - 1, -36, width + 2, 6);
+    this.mana.fillStyle(toNumber(unit.mana === unit.maxMana ? C.manaFull : C.mana)).fillRect(left, -35, width * manaRatio, 4);
     this.mana.setData({ value: unit.mana, maxValue: unit.maxMana, ratio: manaRatio, width: width * manaRatio });
     const shieldRatio = Math.min(1, unit.shield / unit.maxHp);
     this.shield.clear().setVisible(alive && unit.shield > 0);
