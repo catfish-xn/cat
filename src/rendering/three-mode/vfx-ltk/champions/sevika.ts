@@ -1,4 +1,5 @@
 import type { TimelineCue } from '../timeline';
+import { SKILL_FX_SIZE } from '../fx-size';
 /** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
 const SHIELD_SECONDS = 4;
 const SLOTS = '38346d53', SLOT_SECONDS = 2.3;
@@ -10,11 +11,12 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 }],
   'sevika-flamethrower': [
     { system: '2ef508db', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: .4 },
-    { system: '5d6a1033', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, fadeOut: true },
+    // The flame cone reaches across the board, so it takes the arena size though it is held on the claw (fx-size.ts).
+    { system: '5d6a1033', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, fadeOut: true, scale: SKILL_FX_SIZE },
     { system: 'e4e1dab4', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
   ],
   'sevika-blue-flamethrower': [
-    { system: '83de8443', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2 },
+    { system: '83de8443', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, scale: SKILL_FX_SIZE },
     { system: '892df721', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
   ],
   'sevika-punch': [

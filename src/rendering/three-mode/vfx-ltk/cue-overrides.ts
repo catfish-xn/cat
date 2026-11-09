@@ -42,17 +42,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   zyra: [
     { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
+    // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
+    // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
     // Sizes from the cdacbcc9 isolated renders against the 14.24 footage (main wrap about 2.2 cells): E_Outer drew
     // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
     // particles never reach their own authored fade inside the cue, so from the stop the cue eases them out itself.
     { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
     { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, others: true, targetLimit: 2, optional: true, scale: kept(0.5) },
-    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true },
-    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true },
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
     { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: kept(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: kept(1) },
   ],
   // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
