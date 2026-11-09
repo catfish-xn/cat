@@ -2,8 +2,9 @@ import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { ARENA_UNIT_SCALE, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -180,5 +181,34 @@ describe('reviewed vfx-ltk cue overrides', () => {
     // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (original footage ≈ 4.5).
     expect(2 * 485 * FX_SCALE * SKILL_FX_SIZE / (Math.sqrt(3) * 34)).toBeCloseTo(4.6, 1);
     expect(measuredAtFxScale(0.45) * SKILL_FX_SIZE).toBeCloseTo(0.45, 12);
+  });
+
+  it('keeps weapon-held systems at the body scale and the arena scale elsewhere (pr572-report)', () => {
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(1); // Jinx muzzle
+    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(1); // Twitch crossbow glow
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(1);
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile' })).toBe(SKILL_FX_SIZE); // a missile crosses the board
+    expect(cueSize({ bone: 'BUFFBONE_GLB_GROUND_LOC', event: 'cast-start' })).toBe(SKILL_FX_SIZE);
+    expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC', event: 'hit' })).toBe(SKILL_FX_SIZE);
+    expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
+    const twitch = CUE_OVERRIDES.twitch.find(cue => cue.system === '900dd2d2')!;
+    expect((twitch.scale ?? 1) * cueSize(twitch)).toBe(1);
+  });
+
+  it('draws every cast cue of Zyra at the size it was measured at, so the vines and sprouts stay in proportion', () => {
+    const cast = CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast');
+    expect(cast.length).toBeGreaterThan(0);
+    for (const cue of cast) {
+      const drawn = (cue.scale ?? 1) * cueSize(cue);
+      const measured = cue.system === 'b888a24f' ? 1.6 : cue.system === '7ce6b652' ? 0.5 : 1;
+      expect(drawn, cue.system).toBeCloseTo(measured, 12);
+    }
+  });
+
+  it('keeps the flame cone of Sevika at the arena size though it is held on the claw', () => {
+    for (const skill of ['sevika-flamethrower', 'sevika-blue-flamethrower']) {
+      const cone = sevikaSkills[skill].find(cue => cue.system === '5d6a1033' || cue.system === '83de8443')!;
+      expect((cone.scale ?? 1) * cueSize(cone), skill).toBeCloseTo(SKILL_FX_SIZE, 12);
+    }
   });
 });

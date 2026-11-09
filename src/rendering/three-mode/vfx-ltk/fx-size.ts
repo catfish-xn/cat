@@ -13,7 +13,20 @@
 export const FX_SOURCE_SCALE = 0.44; // Must equal particles.ts FX_SCALE.
 /** League units → board units for the default arena model (boardAlignment 0.3306 × alignmentScale 7.2 / 8.48). */
 export const ARENA_UNIT_SCALE = 0.3306 * (7.2 / 8.48);
-/** Multiplies every cue's scale. */
+/** Multiplies a cue's scale (see cueSize for the weapon-bone exception). */
 export const SKILL_FX_SIZE = ARENA_UNIT_SCALE / FX_SOURCE_SCALE;
 /** A cue size measured against footage before SKILL_FX_SIZE existed, kept as drawn. */
 export const measuredAtFxScale = (scale: number): number => scale / SKILL_FX_SIZE;
+/**
+ * A bone on the weapon or a hand: what plays there is drawn against that mesh (Jinx's muzzle flash, Twitch's crossbow
+ * glow), which is drawn at the body's own scale. At the arena scale those shrank inside the weapon (pr572-report,
+ * 11-09: Jinx's muzzle 0.13 cells behind the barrel, Twitch's glow 0.44 cells inside the crossbow arms).
+ */
+export const WEAPON_BONE = /weapon|pistol|rocket|launcher|muzzle|barrel|hand|mace|glove|claw|winch|clamp|rotor|engine|canister|backarm|cast_fx/i;
+/**
+ * The size factor for one cue: SKILL_FX_SIZE, except a cue held on a weapon or hand bone (not a missile in flight,
+ * which crosses the board) keeps the body scale.
+ */
+export function cueSize(cue: { readonly bone?: string; readonly event: string; readonly stationary?: boolean }): number {
+  return cue.bone !== undefined && WEAPON_BONE.test(cue.bone) && (cue.event !== 'projectile' || cue.stationary === true) ? 1 : SKILL_FX_SIZE;
+}
