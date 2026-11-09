@@ -123,8 +123,11 @@ describe('Sevika Extendo-Punch knockback', () => {
   it('real cast: target knocked away, Sevika dashes beside it, event order and replay', () => {
     let found: ReturnType<typeof run> | undefined;
     for (let seed = 1; seed < 400 && !found; seed++) {
-      const r = run([caster('sevika', c(3, 6)), dummy('t', c(3, 5))], seed);
-      if (r.events.some(e => e.type === 'castOutcome' && e.castVariant?.move === 'punch')) found = r;
+      // The punch lands when the slot machine stops, 25 ticks after the pull (G24-SEVIKA-SLOTS-01).
+      let r = run([caster('sevika', c(3, 6)), dummy('t', c(3, 5))], seed);
+      const events = [...r.events];
+      for (let i = 0; i < 25 && r.state.status === 'running'; i++) { r = stepCombat(r.state); events.push(...r.events); }
+      if (events.some(e => e.type === 'castOutcome' && e.castVariant?.move === 'punch')) found = { ...r, events };
     }
     expect(found).toBeDefined();
     const moves = found!.events.filter(e => e.type === 'movement');

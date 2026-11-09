@@ -34,15 +34,17 @@ function advance(initial:CombatState,count:number){
 const damage=(events:readonly CombatEvent[])=>events.flatMap(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='p'?[e.outcome]:[]);
 const raw=(events:readonly CombatEvent[])=>damage(events).map(d=>d.raw);
 const get=(s:CombatState,id='p')=>s.units.find(u=>u.id===id)!;
+/** Sevika's rolled spell lands when the slot machine stops (G24-SEVIKA-SLOTS-01): the pull, then 25 ticks. */
+const SLOT=25,roll=(s:CombatState)=>advance(s,1+SLOT);
 
 describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   it.each([
     [1,260,780,338,832], [2,270,810,351,864], [3,2000,6000,2600,6400],
   ] as const)('Sevika %s star: flame base and both multipliers, same two RNG words',(star,base,punch,splash,bite)=>{
-    const flame=stepCombat(battle([hero('sevika',star),dummy()],{rngState:seed[0]}));
-    const fist=stepCombat(battle([hero('sevika',star),dummy(),dummy('e2',{cell:{col:3,row:3}})],{rngState:seed[1]}));
+    const flame=roll(battle([hero('sevika',star),dummy()],{rngState:seed[0]}));
+    const fist=roll(battle([hero('sevika',star),dummy(),dummy('e2',{cell:{col:3,row:3}})],{rngState:seed[1]}));
     // Chomp uses a high-HP target to expose its raw damage separately from the execution packet.
-    const chomp=stepCombat(battle([hero('sevika',star),dummy()],{rngState:seed[2]}));
+    const chomp=roll(battle([hero('sevika',star),dummy()],{rngState:seed[2]}));
     expect(raw(flame.events)).toEqual([base]);
     expect(raw(fist.events)).toEqual([punch,splash,splash]);
     expect(damage(chomp.events)[0].raw).toBe(bite);
@@ -50,7 +52,7 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   });
   it('flamethrower continues beyond two seconds, samples live adjacency, and stops when its target dies',()=>{
     let state=battle([hero('sevika'),dummy('e',{hp:1000,maxHp:1000}),dummy('side',{cell:{col:3,row:3}})],{rngState:seed[0]});
-    const before=advance(freeze(state),41);state=before.state;
+    const before=advance(freeze(state),41+SLOT);state=before.state;
     expect(damage(before.events).filter(d=>d.context.targetId==='e').map(d=>d.raw)).toEqual([260,260,260]);
     expect(damage(before.events).filter(d=>d.context.targetId==='side').map(d=>d.raw)).toEqual([130,130,130]);
     expect(get(state).statuses?.some(s=>s.kind==='channel')).toBe(true);
@@ -58,11 +60,11 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     expect(get(after.state,'e').alive).toBe(false);
     expect(get(after.state).tasks?.some(t=>t.kind==='g23Flame')).toBe(false);
     expect(get(after.state).statuses?.some(s=>s.kind==='channel')).toBe(false);
-    expect(after.events).toContainEqual(expect.objectContaining({type:'activityChanged',tick:61,reason:'expired'}));
+    expect(after.events).toContainEqual(expect.objectContaining({type:'activityChanged',tick:61+SLOT,reason:'expired'}));
     expect(after.state.rngDraws).toBe(2);
   });
   it.each(['control','death'] as const)('flamethrower stops on caster %s and cannot resume from its task',(stop)=>{
-    const start=stepCombat(battle([hero('sevika'),dummy()],{rngState:seed[0]})).state;
+    const start=roll(battle([hero('sevika'),dummy()],{rngState:seed[0]})).state;
     const state=structuredClone(start),p=get(state) as S13Unit;
     if(stop==='control')applyStatus(p,origin(p),'stun',0,50,state.tick,[]);
     else {p.hp=0;p.alive=false;}
@@ -73,7 +75,7 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   it.each([1,2] as const)('Chomp %s star uses strict 15-percent threshold after damage and preserves the boundary',(star)=>{
     const bite=star===1?832:864;
     for(const [remaining,dead] of [[300,false],[299,true]] as const){
-      const r=stepCombat(battle([hero('sevika',star),dummy('e',{hp:bite+remaining,maxHp:2000}),dummy('far',{cell:{col:6,row:0}})],{rngState:seed[2]}));
+      const r=roll(battle([hero('sevika',star),dummy('e',{hp:bite+remaining,maxHp:2000}),dummy('far',{cell:{col:6,row:0}})],{rngState:seed[2]}));
       expect(get(r.state,'e').alive).toBe(!dead);
       expect(raw(r.events)).toEqual(dead?[bite,299]:[bite]);
     }
@@ -81,7 +83,7 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   it('three-star Chomp executes and jumps to lowest current HP in 10 hexes, retaining 80% per bite',()=>{
     const initial=battle([hero('sevika',3),dummy('e',{hp:10000,maxHp:10000}),
       dummy('low',{hp:20000,maxHp:20000,cell:{col:6,row:0}}),dummy('high',{hp:30000,maxHp:30000,cell:{col:5,row:2}})],{rngState:seed[2]});
-    const r=advance(freeze(initial),3);
+    const r=advance(freeze(initial),3+SLOT);
     expect(damage(r.events).map(d=>[d.context.targetId,d.raw])).toEqual([
       ['e',6400],['e',3600],['low',5120],['low',14880],['high',4096],['high',25904],
     ]);
@@ -91,14 +93,14 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     expect(r.events.filter(e=>e.type==='movement')).toHaveLength(2);
   });
   it('one-star Chomp cannot reset to a target more than two hexes from the victim',()=>{
-    const r=advance(battle([hero('sevika'),dummy('e',{hp:900,maxHp:1000}),dummy('far',{cell:{col:6,row:0}})],{rngState:seed[2]}),2);
+    const r=advance(battle([hero('sevika'),dummy('e',{hp:900,maxHp:1000}),dummy('far',{cell:{col:6,row:0}})],{rngState:seed[2]}),2+SLOT);
     expect(raw(r.events)).toEqual([832,68]);expect(get(r.state,'far').hp).toBe(100000);
   });
   it('execution bypasses remaining shields once without duplicating death',()=>{
     let state=stepCombat(battle([hero('sevika',1,{mana:0}),dummy('e',{hp:140,maxHp:1000}),dummy('far',{cell:{col:6,row:0}})],{rngState:seed[2]})).state;
     state=structuredClone(state);const p=get(state) as S13Unit,e=get(state,'e') as S13Unit;
     p.mana=100;grantShield(e,origin(e),2000,100,state.tick,[]);
-    const r=stepCombat(state);
+    const r=roll(state);
     expect(raw(r.events)).toEqual([832,140]);expect(damage(r.events).map(d=>d.hpDamage)).toEqual([0,140]);
     expect(r.events.filter(e=>e.type==='death'&&e.unitId==='e')).toHaveLength(1);
   });

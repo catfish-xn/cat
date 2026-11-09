@@ -10,7 +10,8 @@ import { mapSkillTimeline, selectTimeline } from '../src/rendering/three-mode/vf
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
 import { Rng } from '../src/rendering/three-mode/vfx-ltk/engine/utils/Rng';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
-import { sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { SEVIKA_SLOT_SECONDS, sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { G23_POLICY } from '../src/simulation/content/g2-3-policy';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { melSkills } from '../src/rendering/three-mode/vfx-ltk/champions/mel';
@@ -65,6 +66,9 @@ describe('batch 2 exact display stages', () => {
     expect(b.branch(c)).toBe(({flamethrower:'one',punch:'two',chomp:'three'} as Record<string,string>)[move]);
     // The High Roller slot machine rides over the cast with the rolled spell's reels (no mod layer for this outcome).
     expect(play.mock.calls.map(x=>x[5].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
+    // The spell lands when the slot machine stops (G23 slotTicks 25); the machine itself starts at the pull.
+    expect(play.mock.calls.map(x=>x[5].delay)).toEqual([1.25,undefined,undefined]);
+    expect(SEVIKA_SLOT_SECONDS).toBe(G23_POLICY.highRoller.slotTicks*.05);
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
   });
   it('shows the rolled mod on the right reel, three of the spell on a Triple, and no layer the catalogue cannot frame', () => {

@@ -2,6 +2,8 @@ import type { TimelineCue } from '../timeline';
 /** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
 const SHIELD_SECONDS = 4;
 const SLOTS = '38346d53', SLOT_SECONDS = 2.3;
+/** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
+export const SEVIKA_SLOT_SECONDS = 1.25;
 const SLOT_LAYERS = { flamethrower: '5af26362', punch: 'a84ed286', thrash: 'd888f50e',
   rocket: 'fced783f', shield: 'ac849f16', coin: '264aee9a', jackpot: 'd2d33ba0' } as const;
 export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
