@@ -17,8 +17,8 @@ export interface DrawnEmitter {
   /** The index of the opened system's emitter it descends from, which solo narrows to. */
   readonly root: number;
   /**
-   * Where it falls in the draw order: the opened system's emitters first, each child's
-   * after, and a ground-layer emitter under [`GROUND_ORDER`] before them all.
+   * Where it falls in the draw order: its `pass`, then the opened system's emitters first and
+   * each child's after, and a ground-layer emitter under [`GROUND_ORDER`] before them all.
    */
   readonly rank: number;
 }
@@ -64,9 +64,22 @@ export function hiddenIn(
   return !run.soloed.has(definition.root) && !underChild(run.soloedChildren, definition.path);
 }
 
-/** `rank` as the draw order, which a ground-layer emitter takes under the character. */
+/** How many ranks of one tree fit between two adjacent passes. */
+const RANK_SPAN = 4096;
+
+/**
+ * `rank` as the draw order, which a ground-layer emitter takes under the character.
+ *
+ * The engine sorts every live emitter by `pass` first, across systems, so the order is the
+ * pass with the tree's own rank as a fraction under it: two systems drawn together interleave
+ * by pass, and one tree keeps the comparator's order within a pass. Sevika's slot icons
+ * (pass 33/34, their own system) draw over the machine's reel backs (pass 30) and under its
+ * white lock-in flashes (45) and border (50); a bare rank drew the 33 backs and boards of the
+ * machine over the icons' 10 emitters (11-09 #579 recording: every reel empty).
+ */
 function orderOf(emitter: EmitterModel, rank: number): number {
-  return emitter.groundLayer ? GROUND_ORDER + rank : rank;
+  const order = emitter.pass + Math.min(rank, RANK_SPAN - 1) / RANK_SPAN;
+  return emitter.groundLayer ? GROUND_ORDER + order : order;
 }
 
 /**
