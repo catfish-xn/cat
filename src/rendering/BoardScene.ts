@@ -1327,18 +1327,21 @@ export class BoardScene extends Phaser.Scene {
     // No camera (a scene that never booted its camera manager) leaves nothing to stop.
     const camera = this.cameras?.main;
     if (camera && camera.visible === feeding) camera.setVisible(!feeding);
-    if (feeding) publishBoardFrame(() => this.boardFrame());
+    // The 3D layer gets this frame after the combat display has advanced (syncCombat below), so a stun or a death the
+    // rules wrote this tick is drawn in the same frame, not the next one (a 33 ms lag before 2026-11-09).
+    const published = { done: false };
+    const publish = () => { if (feeding && !published.done) { published.done = true; publishBoardFrame(() => this.boardFrame()); } };
     const advance = this.application?.frame(delta) ?? true;
     this.inspect?.refresh(now);
-    if (!advance) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
-    this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
+    if (!advance) { publish(); if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
-    if (this.session.phase !== 'combat') { this.syncSelection(); return; }
+    if (this.session.phase !== 'combat') { publish(); this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard(); this.syncSelection(); return; }
     if (this.session instanceof RemoteSession && this.session.takeOpening()) this.showOpening();
     const events = this.session.advanceDisplay(delta);
     // A settlement can grant new units before the frame renders its final combat.
     if (this.session.phase !== 'combat') this.reconcileTokens();
-    this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
+    this.syncCombat(); publish(); this.showEvents(events); this.strategyPanel?.updateCombat();
+    this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
     if (this.session.state.phase !== 'combat') {

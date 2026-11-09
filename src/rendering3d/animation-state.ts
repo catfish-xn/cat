@@ -6,7 +6,12 @@ export type AnimationEvent =
   | { type: 'attack'; attackerId: string }
   | { type: 'cast'; sourceId: string }
   | { type: 'heal'; targetId: string }
-  | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number };
+  | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number;
+      /** Display provenance (combat-replay-view PacketOrigin); an ability's packet flinches a unit mid-swing, an attack's does not. */
+      sourceKind?: string; delivery?: string };
+/** A packet that interrupts a swing or a run with a flinch: ability damage, told by its display provenance. */
+export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetDamage' }>): boolean =>
+  event.sourceKind === 'ability' || event.delivery === 'ability-direct' || event.delivery === 'ability-periodic';
 export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
@@ -24,12 +29,16 @@ export class UnitActionState {
   private resolvePlayback?: ResolveActionPlayback;
   private playback?: ActionPlayback;
   private castIndex = 0;
+  /** Crowd control (presentation): the flinch pose is held until recover(), and no event but death moves it. */
+  private held = false;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
     this.blend = config.blendSeconds ?? 0.12;
     this.durations = { ...defaults, ...config.durations };
     this.resolvePlayback = config.resolvePlayback;
     if (![this.blend, ...Object.values(this.durations)].every(n => Number.isFinite(n) && n >= 0)) throw new Error('invalid-action-config');
   }
+  /** True while a stun holds the flinch pose (stun()). */
+  get stunned(): boolean { return this.held; }
   get output(): ActionOutput {
     return { state: this.state, previous: this.previous, blendSeconds: this.blend,
       loop: this.state === 'idle' || this.state === 'move', revision: this.revision,
@@ -70,14 +79,17 @@ export class UnitActionState {
     if (id !== this.unitId) return this.output;
     if (event.type === 'unitRevived') { if (this.state === 'death') { this.enter('idle'); this.spawn(); } return this.output; }
     if (this.state === 'death') return this.output;
+    // Stunned: the held flinch outlasts every swing, run or packet until the control ends (death still lands).
+    if (this.held && event.type !== 'death') return this.output;
     // Resolved casts own their visual window, so incidental hits cannot cut off the ending.
     if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)) return this.output;
-    // A hit shows only on a unit at rest: a swing or run cut by every incoming packet snaps back to idle mid-clip.
-    if (event.type === 'packetDamage' && this.state !== 'idle' && this.state !== 'hit') return this.output;
+    // A basic attack's hit shows only on a unit at rest: a swing or run cut by every incoming packet snaps back to idle
+    // mid-clip. An ability's hit cuts a swing or a run (the unit is struck by a skill), never a cast.
+    if (event.type === 'packetDamage' && this.state !== 'idle' && this.state !== 'hit' && (this.state === 'cast' || !isForcefulPacket(event))) return this.output;
     // The next step of a run extends it; restarting it would rewind the looping clip at every cell.
     if (event.type === 'movement' && this.state === 'move') { this.remaining = this.durations.move; return this.output; }
     switch (event.type) {
-      case 'death': this.enter('death'); break;
+      case 'death': this.held = false; this.enter('death'); break;
       case 'movement': this.enter('move'); break;
       case 'attack': this.enter('attack'); break;
       case 'cast': this.enter('cast'); break;
@@ -88,7 +100,24 @@ export class UnitActionState {
   }
   /** Crowd control (presentation): drops a swing, cast, run or flinch back to idle; death stays. */
   interrupt(): ActionOutput {
+    if (this.held) return this.recover();
     if (this.state !== 'idle' && this.state !== 'death') this.enter('idle');
+    return this.output;
+  }
+  /**
+   * Stunned or knocked up (presentation): the unit drops whatever it was doing and holds its flinch pose (the hit clip,
+   * clamped on its last frame by the mixer) until recover(). Death stays; a second stun while held changes nothing.
+   */
+  stun(): ActionOutput {
+    if (this.state === 'death' || this.held) return this.output;
+    this.enter('hit'); this.remaining = Infinity; this.held = true;
+    return this.output;
+  }
+  /** The control ended: back to idle (a unit that died meanwhile stays down). */
+  recover(): ActionOutput {
+    if (!this.held) return this.output;
+    this.held = false;
+    if (this.state !== 'death') this.enter('idle');
     return this.output;
   }
   update(seconds: number): ActionOutput {

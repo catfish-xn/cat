@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { readUnitStatusRows } from '../src/presentation/combat-status';
+import { appliedStatusFloat, readUnitStatusRows } from '../src/presentation/combat-status';
 import { unitControl } from '../src/presentation/control-display';
 import { toCombatViewState } from '../src/simulation/combat-replay-view';
 import { battle, unit } from './combat-helpers';
@@ -28,6 +28,13 @@ describe('knock-up stuns carry the rules mark', () => {
   it('杰斯锤形态 knocks its target into the gate', () => expect(stunsOf('jayce').marks).toEqual({ e: true }));
   it('维克托 knocks up every enemy', () => expect(stunsOf('viktor').marks).toEqual({ e: true, f: true }));
   it('瑟提 stuns without a knock-up', () => expect(Object.values(stunsOf('sett').marks)).toEqual([false, false]));
+
+  it('the board float says 击飞 for a knock-up stun and 眩晕 for a plain one (local ledger); the wire event stays 眩晕', () => {
+    const { events } = stepCombat(battle([hero('vi'), dummy('e', 2), dummy('f', 3)], { rngState: 42 }));
+    const applied = events.filter((e): e is Extract<CombatEvent, { type: 'statusChanged' }> => e.type === 'statusChanged' && e.reason === 'applied' && e.group.kind === 'stun');
+    expect(Object.fromEntries(applied.map(e => [e.group.targetId, appliedStatusFloat(e)]))).toEqual({ e: '眩晕', f: '击飞' });
+    expect(appliedStatusFloat({ type: 'statusChanged', tick: 1, eventSeq: 1, targetId: 'f', kind: 'stun', reason: 'applied', effectiveMagnitudeBps: 0 } as never)).toBe('眩晕');
+  });
 
   it('the status rows and the drawn control read the mark once it takes effect', () => {
     let { state } = stunsOf('vi');

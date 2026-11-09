@@ -213,6 +213,8 @@ export function appliedStatusFloat(event: SceneCombatEvent): string | null {
   if (event.type !== 'statusChanged' || (event.reason !== 'applied' && event.reason !== 'refreshed')) return null;
   // Local ledger events carry the whole group; the §14.2 wire event only its kind.
   const kind = 'group' in event ? event.group.kind : event.kind;
+  // A local ledger event tells a knock-up stun apart (StatusApplication.knockup); the wire event carries only the kind.
+  if (kind === 'stun' && 'group' in event && event.group.contributions.some(c => c.application.knockup)) return '击飞';
   return ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
 }
 
