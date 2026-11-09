@@ -53,9 +53,11 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
     basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
 }
-/** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: +Z faces
- * forward on Zyra but backward on Irelia, Kog'Maw and Akali), while bins author "in front" as the unit's facing. */
-const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center)_loc$/i;
+/** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: the ground
+ * locator's +Z faces forward on Zyra but backward on Irelia, Kog'Maw and Akali; Kog'Maw's head and chest locators face
+ * backward too, Irelia's chest sideways), while bins author "in front" as the unit's facing. Weapon and named bones keep
+ * their own axes (Kog'Maw's W mouth spray rides the weapon locator's +Y toward the target). */
+const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head)_loc$/i;
 /**
  * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
  * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
