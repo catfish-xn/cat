@@ -37,7 +37,8 @@ for (const source of [args.source, args['six-cost']]) {
 }
 const overlayPaths = new Set((await files(overlay)).map(p => p.toLowerCase()));
 // map22.bin systems a champion's script spawns. Sevika's High Roller slot machine, its lock-in flash and its result layers.
-const EXTRA_SYSTEMS = { tft13_lieutenant: ['38346d53', '8108acc8', '5af26362', 'a84ed286', 'd888f50e', 'fced783f', 'ac849f16', '264aee9a', 'd2d33ba0'] };
+// Sevika's High Roller slot machine, the _Mirrored twins (see champions/sevika.ts), and the lock-in child the frame spawns.
+const EXTRA_SYSTEMS = { tft13_lieutenant: ['5ee3f587', '8108acc8', '75cc1285', '5875fa39', '85a3c691', '5dbfcb42', 'e9258aa9', 'ba45e98d', '066fd22b'] };
 const results = [];
 for (const champion of input) {
   const folder = join(out, champion.source); await mkdir(folder, { recursive: true });

@@ -319,10 +319,17 @@ function bakeSecondIntegral(value: ValueCurve): Float32Array {
   return out;
 }
 
-/** The integral of one channel of a linear curve from zero to `upTo`, held flat past both ends. */
+/**
+ * The integral of one channel of a linear curve from its first key to `upTo`, held flat past the last.
+ *
+ * Nothing accrues before the first key. Sevika's slot reels (14.24 map22.bin Slots_*_Mirrored) are authored so every
+ * reel's scroll comes to rest on a whole icon: the left and middle curves start at 0 and land within 0.03 of a tile,
+ * and the right reel's, whose first key is at 0.1 of a 2.2 s life, lands on one (-12.03 + 0.625) only when the stretch
+ * before that key adds nothing. Holding the first rate there added 4.4 tiles and left every right-reel icon cut in half
+ * with the one under it showing through (11-09 #579 recording).
+ */
 function integralTo(keys: readonly CurveKey[], channel: number, upTo: number): number {
-  const first = keys[0];
-  let sum = (first.values[channel] ?? 0) * Math.min(upTo, Math.max(first.time, 0));
+  let sum = 0;
   for (let at = 0; at + 1 < keys.length; at += 1) {
     const lo = keys[at];
     const hi = keys[at + 1];

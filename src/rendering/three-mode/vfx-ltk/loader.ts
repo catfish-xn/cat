@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { cueOverride, MUTED_EMITTERS } from './cue-overrides';
+import { cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -130,7 +130,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
-        || (cue.frameOf !== undefined && (typeof cue.frameOf !== 'string' || !Object.hasOwn(raw.systems, cue.frameOf)))
+        || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
@@ -197,7 +197,9 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const model = readVfxSystem(raw), listed = drawnEmitters(model, true);
+      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id];
+      const model = disabled ? { ...parsed, emitters: parsed.emitters.map(e => disabled.includes(e.name ?? '') ? { ...e, disabled: true } : e) } : parsed;
+      const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
       // A muted emitter (cue-overrides.ts) is left undrawn the same way.

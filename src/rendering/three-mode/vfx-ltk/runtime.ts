@@ -3,7 +3,7 @@ import { applyStencil, stencilStates, type StencilClaim } from './rendering/util
 import { cueSize } from './fx-size';
 import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
-import type { VfxLibrary } from './loader';
+import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
@@ -61,6 +61,18 @@ export interface LtkPlayOptions {
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+/** A loaded system with the named top-level emitters, and everything under them, left out of the draw; one per list. */
+const HIDDEN = new WeakMap<PreparedVfx, Map<string, PreparedVfx>>();
+function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVfx {
+  const key = names.join(','); let views = HIDDEN.get(prepared);
+  if (!views) { views = new Map(); HIDDEN.set(prepared, views); }
+  let view = views.get(key);
+  if (!view) {
+    const roots = new Set(prepared.model.emitters.filter(e => names.includes(e.name)).map(e => e.index));
+    view = { ...prepared, drawn: prepared.drawn.filter(d => !roots.has(d.root)) }; views.set(key, view);
+  }
+  return view;
+}
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null } = {}) {
@@ -102,7 +114,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
       const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
-      await Promise.allSettled([...new Set(cues.flatMap(cue => cue.frameOf ? [cue.system, cue.frameOf] : [cue.system]))].map(id => catalog.load(id)));
+      await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };
@@ -253,10 +265,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
-        const own = catalog.get(spawn.system); if (!own || own.empty) continue;
-        const frame = spawn.frameOf ? catalog.get(spawn.frameOf) : undefined;
-        if (spawn.frameOf && !frame) continue;
-        const prepared = frame ? { ...own, model: { ...own.model, transform: frame.model.transform } } : own;
+        const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
+        const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -305,7 +315,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
-        const poolKey = `${spawn.system}\n${spawn.frameOf ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
+        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
