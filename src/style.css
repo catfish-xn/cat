@@ -366,6 +366,7 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
 .queue-entry.me { outline: 1px solid #68ddd0; }
 .queue-kind { color: var(--c-text-muted, #9aaeb9); font-size: 12px; }
 .lobby-error { margin: 0; color: #f08080; font-weight: bold; }
+.lobby-busy { margin: 0; color: #ffd782; }
 .lobby-start { width: 100%; font-size: 16px; }
 .lobby-connection { margin: 0; color: #e6bc76; font-size: 13px; }
 .online-sidebar { min-width: 0; color: #e2eef1; position: sticky; top: 12px; display: grid; gap: 10px; align-content: start; }

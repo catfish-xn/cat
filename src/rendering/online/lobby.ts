@@ -17,6 +17,9 @@ export class Lobby {
   private startButton: HTMLButtonElement;
   private count: HTMLElement;
   private connectionLine: HTMLElement;
+  /** 对局正在进行: a match holds the room; with every player gone, the seconds until the server frees it. */
+  private busyLine: HTMLElement;
+  private busyTimer: number | null = null;
   /** 外观: only while a mounted 3D layer with an asset root offers its picker, and only before joining (as in TFT, no change in a match). */
   private looksButton: HTMLButtonElement;
   private picker: LegendPicker | null = null;
@@ -46,6 +49,8 @@ export class Lobby {
     }); form.append(planner); card.append(plannerError);
     this.count = element('p', '', 'lobby-count'); card.append(this.count);
     this.list = element('ol', '', 'lobby-queue'); this.list.setAttribute('aria-label', '队列'); card.append(this.list);
+    this.busyLine = element('p', '', 'lobby-busy'); this.busyLine.dataset.debug = 'online:lobby-busy'; this.busyLine.setAttribute('role', 'status'); this.busyLine.hidden = true;
+    card.append(this.busyLine);
     this.error = element('p', '', 'lobby-error'); this.error.setAttribute('role', 'alert'); card.append(this.error);
     this.startButton = this.button('online:start', '开始对局', () => this.actions.start()); this.startButton.classList.add('primary-action', 'lobby-start');
     card.append(this.startButton);
@@ -74,9 +79,28 @@ export class Lobby {
     this.joinButton.hidden = view.joined; this.name.hidden = view.joined; this.leaveButton.hidden = !view.joined;
     this.startButton.hidden = !view.joined; this.startButton.disabled = !view.canStart;
     this.joined = view.joined; if (view.joined) this.hidePicker(); this.syncLooks();
+    this.renderBusy(view.busy ?? null);
   }
+  /**
+   * The room is taken by a running match. When every player of it has disconnected the server frees it after its abandon
+   * window (CAT_ABANDON_SEC, 90 s by default): the remaining time is counted down here from the view's `releaseInMs`.
+   */
+  private renderBusy(busy: NonNullable<LobbyView['busy']> | null): void {
+    this.stopBusyTimer();
+    this.busyLine.hidden = !busy;
+    if (!busy) { this.busyLine.textContent = ''; return; }
+    if (busy.releaseInMs === null) { this.busyLine.textContent = '对局正在进行，请等待本局结束'; return; }
+    const endsAt = performance.now() + busy.releaseInMs;
+    const tick = () => {
+      const left = Math.ceil((endsAt - performance.now()) / 1000);
+      this.busyLine.textContent = left > 0 ? `对局正在进行（玩家均已掉线），约 ${left} 秒后释放` : '对局正在进行，即将释放…';
+      if (left <= 0) this.stopBusyTimer();
+    };
+    tick(); if (this.busyTimer === null && endsAt > performance.now()) this.busyTimer = window.setInterval(tick, 1000);
+  }
+  private stopBusyTimer() { if (this.busyTimer !== null) { window.clearInterval(this.busyTimer); this.busyTimer = null; } }
   /** Connection trouble of a network client (reconnecting, opened elsewhere); null hides the line. */
   connection(text: string | null): void { this.connectionLine.textContent = text ?? ''; this.connectionLine.hidden = !text; }
   show(visible: boolean) { this.root.hidden = !visible; if (!visible) this.hidePicker(); }
-  dispose() { this.unwatchPicker(); this.hidePicker(); this.root.remove(); }
+  dispose() { this.stopBusyTimer(); this.unwatchPicker(); this.hidePicker(); this.root.remove(); }
 }
