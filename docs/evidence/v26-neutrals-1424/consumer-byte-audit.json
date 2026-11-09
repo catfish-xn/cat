@@ -1247,6 +1247,13 @@
       "currentSha256": "032e3fc00711e9640282282f14417034e9528d09d6860d43c144b72d7fbe40d4",
       "firstDifferentByte": 0
     },
+    "tests/knockup-status.test.ts": {
+      "previousBytes": 4240,
+      "currentBytes": 5003,
+      "previousSha256": "2d2a47b7e14ef43dc09c54b5465196da37d360da834b3fd37f469f9a98fc2e64",
+      "currentSha256": "7fa086a3319532b05bd91b008ae5c7a463c5f2733d9892e510136726417dabae",
+      "firstDifferentByte": 283
+    },
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2331,10 +2338,10 @@
     },
     "tests/rendering3d-unit-control.test.ts": {
       "previousBytes": 2957,
-      "currentBytes": 2977,
+      "currentBytes": 8616,
       "previousSha256": "292cef5d2b6c513eab2c8fecd4e48ccc29ac1998f7c4d7b2dc2c00162c2462d0",
-      "currentSha256": "47ec79853ad57442e58d309b213829770ebeec5dee56ecc943c93252be1647a0",
-      "firstDifferentByte": 2701
+      "currentSha256": "26318e2bafc0106c5b6bc9b7cd9ecc53b7e65d4d41fc82a7e7676d2865438db7",
+      "firstDifferentByte": 83
     },
     "tests/replay-cache-branch.test.ts": {
       "previousExists": false,

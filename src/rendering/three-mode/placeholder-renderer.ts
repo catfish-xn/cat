@@ -58,7 +58,7 @@ import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, 
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -134,6 +134,8 @@ const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly l
 const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
+/** The stun ring's height over the star row, clear of the bars drawn there. */
+const HALO_OVER_BARS = 26;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
@@ -327,8 +329,12 @@ interface PieceView {
   /** Stun/knock-up drawn from BoardPiece.control (unit-control.ts): the lift curve and the star ring over the head. */
   readonly control: ControlMotion;
   halo: StunHalo | null;
+  /** True while the control holds the piece's flinch pose (UnitActionState.stun), until the motion releases it. */
+  held: boolean;
   /** The body-local y the knock-up has put on `body`, taken off again before the body changes. */
   liftOffset: number;
+  /** The body-local x rotation (backward lean) the knock-up has put on `body`, taken off again before the body changes. */
+  leanOffset: number;
   /** Seconds into a forced move's hop (pulled, grabbed, knocked back), null when none. */
   hop: number | null;
 }
@@ -786,6 +792,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) view.body.position.y += y - view.liftOffset;
     view.liftOffset = y;
   };
+  /** A knocked-up body leans back (rotation about its own x), straightening as it lands. */
+  const setLean = (view: PieceView, radians: number) => {
+    if (view.body) view.body.rotation.x += view.leanOffset - radians;
+    view.leanOffset = radians;
+  };
+  /** White bursts on bodies struck by abilities; parked when spent, never counted against the effect cap. */
+  const flashes: { flash: HitFlash; view: PieceView }[] = [];
+  const spareFlashes: HitFlash[] = [];
+  const strike = (view: PieceView) => {
+    if (!view.alive || !view.root.visible) return;
+    // One flash per body: a second strike in the same frames restarts it rather than stacking a brighter one.
+    const current = flashes.find(entry => entry.view === view);
+    if (current) { current.flash.reset(); return; }
+    const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
+    scene.add(flash.object); flashes.push({ flash, view });
+  };
+  const placeFlash = (flash: HitFlash, view: PieceView) => flash.object.position.copy(view.root.position)
+    .setY(view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset);
   /** Parked stun rings. Control feedback is never counted against the effect cap. */
   const spareHalos: StunHalo[] = [];
   const SPARE_HALOS = 16;
@@ -802,9 +826,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Shows or ends a piece's control; a new one stops its action at once (no swing finishes while it is stunned). */
   const setControl = (view: PieceView, kind: BoardPiece['control'] | null) => {
-    if (view.control.set(kind ?? null)) { view.attackCadence.pause(); view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
-    if (kind && !view.halo) { view.halo = takeHalo(); scene.add(view.halo.object); }
-    else if (!kind && view.halo) { const halo = view.halo; view.halo = null; giveHalo(halo); }
+    // The flinch pose is held for the control; the motion releases it (releaseControl) once the control may end.
+    if (view.control.set(kind ?? null)) { view.attackCadence.pause(); view.state.stun(); view.held = true; if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
+    if (view.control.control && !view.halo) { view.halo = takeHalo(); scene.add(view.halo.object); }
+  };
+  /** Each frame: the pose comes back once the motion shows no control, the ring once the body is back on the floor. */
+  const releaseControl = (view: PieceView) => {
+    if (view.held && !view.control.control) { view.held = false; view.state.recover(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
+    if (view.halo && !view.control.active) { const halo = view.halo; view.halo = null; giveHalo(halo); }
   };
   const startLunge = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId), spec = source && castLungeFor(source.definitionId);
@@ -819,7 +848,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     lighting.detachBody(view);
     const request = Symbol(); attaching.set(view, request);
     const revision = ++view.bodyRevision;
-    cancelLunge(view); setLiftOffset(view, 0);
+    cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; view.starScale = 1; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
@@ -847,7 +876,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (measured) envelopes.set(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
-      cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
+      cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
@@ -939,7 +968,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
-      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null, starScale: 1 };
+      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1 };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -951,7 +980,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
-    view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
+    view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
@@ -1021,7 +1050,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const fx of missileSpare) fx.dispose();
     burstSpare.length = 0; shieldSpare.length = 0; missileSpare.length = 0;
   };
-  const drainHaloSpare = () => { for (const halo of spareHalos) halo.dispose(); spareHalos.length = 0; };
+  const drainHaloSpare = () => { for (const halo of spareHalos) halo.dispose(); spareHalos.length = 0;
+    for (const flash of spareFlashes) flash.dispose(); spareFlashes.length = 0; for (const { flash } of flashes) flash.dispose(); flashes.length = 0; };
   const takeBurst = (kind: 'renata' | 'mel', radius: number, reduced: boolean): BurstFx => {
     const index = burstSpare.findIndex(fx => fx.kind === kind && fx.radius === radius && fx.reduced === reduced);
     if (index < 0) return createReferenceBurst(kind, radius, reduced);
@@ -1393,6 +1423,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
+      // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
+      // attacker's effect; a periodic tick does not either, or a damage-over-time zone would strobe its victims).
+      if (event.type === 'packetDamage' && currentEffect && event.hit && event.hpDamage + event.absorbed > 0 && !reducedMotion()
+        && (event as { delivery?: string }).delivery !== 'ability-periodic'
+        && ((event as { sourceKind?: string }).sourceKind === 'ability' || (event as { delivery?: string }).delivery === 'ability-direct')) {
+        const struck = pieces.get(event.targetId); if (struck) strike(struck);
+      }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) source.castBranch = batch2Vfx.branch(event);
@@ -1839,6 +1876,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;
       let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
+      releaseControl(view);
+      if (view.leanOffset || view.control.lean) setLean(view, view.control.lean);
       if (view.hop !== null) {
         view.hop += seconds;
         if (view.hop >= DISPLACEMENT_HOP.seconds) view.hop = null;
@@ -1875,14 +1914,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.copy(view.root.position)
         .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
-      // The star ring circles just over the head, under the star row.
+      // The star ring circles over the bars (over the head it hid behind the health bar at board distance, 11-09 field).
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight - STAR_GAP / 2 + lift);
+        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift + HALO_OVER_BARS);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).
       view.overhead.object.visible = view.root.visible && view.overhead.drawn && view.alive;
+    }
+    for (let i = flashes.length - 1; i >= 0; i--) {
+      const { flash, view } = flashes[i]!;
+      if (view.disposed || !flash.update(seconds)) { flashes.splice(i, 1); flash.object.removeFromParent(); if (spareFlashes.length < 16) spareFlashes.push(flash); else flash.dispose(); continue; }
+      placeFlash(flash, view);
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); goldMines?.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
