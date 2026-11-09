@@ -263,3 +263,14 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // (11-07 field batches f544/c4a).
   '78d04f27': ['Explosion_Flash_ground', 'Explosion_Flash_ground1'],
 };
+
+/**
+ * Emitters of a system that never emit here, by emitter name: their particles and every child they would spawn are gone.
+ * Each Sevika slot result layer (14.24 map22.bin TFT13_Lieutenant_Base_Slots_*_Child_Mirrored) opens with an
+ * `Alpha_Boarder` whose child is the whole slot machine again; the board already plays that machine as its own cue, so
+ * the layer's copy drew a second frame over the first, and pushed Jackpot to 65 drawn emitters, past the 64 a system
+ * may take, so its Jinx face never loaded (11-09 #579 recording).
+ */
+export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
+  '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+};
