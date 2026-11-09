@@ -32,9 +32,9 @@
     },
     "tests/assets3d-bin.test.ts": {
       "previousBytes": 12171,
-      "currentBytes": 24084,
+      "currentBytes": 30970,
       "previousSha256": "885adb1be19d992c48ecb9943a7c9a26e2608ee3ded1ce70726387486ea5d1b1",
-      "currentSha256": "171d4e827272f4cfc7b3f88848e0f1cedfa46f30404160937c3a2bc14405ed76",
+      "currentSha256": "c9d0d9d2d9097fde46de6463d26864b9ad9b61e7f944fa25158f1aa91c00f2d8",
       "firstDifferentByte": 56
     },
     "tests/assets3d-boards-alignment.test.ts": {
@@ -2059,6 +2059,13 @@
       "currentSha256": "98599e206e26a048210be17a8182f33632a3b878ec1a4d1182a0e2e9b0e1667b",
       "firstDifferentByte": 590
     },
+    "tests/rendering3d-animation.test.ts": {
+      "previousBytes": 16727,
+      "currentBytes": 19205,
+      "previousSha256": "a8eda1c4f305853ef0633d88ba7c7e8715048f1e26992d15a8d428e0266a33a2",
+      "currentSha256": "c4e73b614b75aa2ee9b82775154128ab0918330d63cb02bcdf182705ed899446",
+      "firstDifferentByte": 16723
+    },
     "tests/rendering3d-anvil-idle-vfx.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2105,9 +2112,9 @@
     },
     "tests/rendering3d-cast-sequence.test.ts": {
       "previousBytes": 9546,
-      "currentBytes": 9548,
+      "currentBytes": 10835,
       "previousSha256": "b9bd9d9ea05257161fc5e247fd95dd5eed0c23bf4948962481d1c3915d132ad7",
-      "currentSha256": "dfa10a43e97c89e57eb99c898437158ba34fbf75f439a0983f1424b1aafaf0a7",
+      "currentSha256": "e15d9b3f7ccb4279175a59563e112f0e00a3d3a8de0cb052b7c5a7c6d3b9af52",
       "firstDifferentByte": 3267
     },
     "tests/rendering3d-catchup.test.ts": {
