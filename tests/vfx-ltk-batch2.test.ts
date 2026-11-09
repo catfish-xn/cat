@@ -6,11 +6,11 @@ import { createBatch2VfxBridge, batch2BoardPoint } from '../src/rendering/three-
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import type { LtkPlayOptions } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import { mapSkillTimeline, selectTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
 import { Rng } from '../src/rendering/three-mode/vfx-ltk/engine/utils/Rng';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
-import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { melSkills } from '../src/rendering/three-mode/vfx-ltk/champions/mel';
@@ -41,7 +41,8 @@ describe('batch 2 exact display stages', () => {
     // Per-champion indices have their own resource limits; this synthetic catalogue only needs cue validation.
     for (const [name,cues] of Object.entries(profiles)) {
       expect(cues.length).toBeLessThanOrEqual(12);
-      expect(() => parseIndex({ version: 1, systems: Object.fromEntries(cues.map(c => [c.system, systems[c.system]])), assets: {}, skills: { [name]: cues } })).not.toThrow();
+      const used = cues.flatMap(c => c.frameOf ? [c.system, c.frameOf] : [c.system]);
+      expect(() => parseIndex({ version: 1, systems: Object.fromEntries(used.map(id => [id, systems[id]])), assets: {}, skills: { [name]: cues } })).not.toThrow();
     }
     expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { jinx: Array(13).fill({system:'a',event:'cast-start',delay:0,duration:1}) } })).toThrow('skill');
   });
@@ -62,15 +63,29 @@ describe('batch 2 exact display stages', () => {
     expect(play.mock.calls[0]?.[5]).toMatchObject({skill:`sevika-${move}`});
     expect(play.mock.calls[0]?.[5].channelSeconds).toBe(move === 'flamethrower' ? 2 : undefined);
     expect(b.branch(c)).toBe(({flamethrower:'one',punch:'two',chomp:'three'} as Record<string,string>)[move]);
-    expect(play).toHaveBeenCalledTimes(1);
+    // The High Roller slot machine rides over the cast with the rolled spell's reels (no mod layer for this outcome).
+    expect(play.mock.calls.map(x=>x[5].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
     b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
+  });
+  it('shows the rolled mod on the right reel, three of the spell on a Triple, and no layer the catalogue cannot frame', () => {
+    expect(sevikaSlotSkills('punch','shield')).toEqual(['sevika-slots','sevika-slots-punch','sevika-slots-shield']);
+    expect(sevikaSlotSkills('flamethrower','blue-flamethrower')).toEqual(['sevika-slots','sevika-slots-flamethrower']);
+    expect(sevikaSlotSkills('chomp','quadruple-chomp')).toEqual(['sevika-slots','sevika-slots-thrash']);
+    expect(sevikaSlotSkills('jackpot','jackpot')).toEqual(['sevika-slots','sevika-slots-jackpot']);
+    for (const [name, cues] of Object.entries(sevikaSkills).filter(([n]) => n.startsWith('sevika-slots-')))
+      expect(cues, name).toEqual([expect.objectContaining({ event: 'cast-start', delay: 0, duration: 2.3, frameOf: '38346d53' })]);
+    expect(() => parseIndex({ version: 1, systems: { a: 'a.json' }, assets: {}, skills: { sevika: [{ system: 'a', event: 'cast-start', delay: 0, duration: 1, frameOf: 'missing' }] } })).toThrow('timeline-cue');
+    // A layer waits for the frame it draws in, like any other system of the action.
+    const layer = sevikaSkills['sevika-slots-punch'];
+    expect(selectTimeline('sevika', layer, id => id !== '38346d53', true)).toBeNull();
+    expect(selectTimeline('sevika', layer, () => true, true)).toBe(layer);
   });
   it('plays jackpot alone for its own cast outcome and keeps it out of other branches', () => {
     const { bridge: b, play } = bridge('sevika'), c = cast('s');
     b.begin([c,{type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'jackpot',subOutcomes:[],castVariant:{actionSeq:1,move:'jackpot',channelTicks:0,enhanced:true,heroAugmentIds:[]}}]);
     b.action('cast','s',['target'],0,c);
     // 14.24b Jackpot is its own coin spell: no punch/flame/chomp underneath it.
-    expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-jackpot']); expect(b.branch(c)).toBe('four');
+    expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-jackpot','sevika-slots','sevika-slots-jackpot']); expect(b.branch(c)).toBe('four');
   });
   it('maps Jinx W/E/R and central R without making the first enemy its landing point', () => {
     const w = mapSkillTimeline(jinxSkills.jinx.filter(c=>!c.action),'j',['a','b','c'],0,point);
