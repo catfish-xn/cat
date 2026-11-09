@@ -5,8 +5,9 @@
  * and cast); it applies only when every system it names is present in the loaded index, else the exported list stays.
  * Cue fields as in timeline.ts: `cast-start` plays on the caster (at `bone`), `hit` on each target (at `bone`),
  * `projectile` flies caster → target over `travelSeconds`. `scale` (default 1) shrinks that one
- * system about its anchor and does not move the anchor or the flight; it multiplies the arena-proportioned size
- * (fx-size.ts SKILL_FX_SIZE). `kept(x)` is a size measured against footage at the older 0.44 base, drawn as it was.
+ * system about its anchor and does not move the anchor or the flight; it multiplies the cue's size factor
+ * (fx-size.ts cueSize: the arena scale on the ground, the body scale on a body bone). `kept(x)` is a ground cue's size
+ * measured against footage at the older 0.44 base, drawn as it was.
  */
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
@@ -53,8 +54,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
     { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: kept(1) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: kept(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest },
   ],
   // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
@@ -179,9 +180,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
     // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
     // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: 0.43, main: true },
     // The blast spans the 2-hex cloud, about 5 cells across: at 0.5 it measured 5.8 cells at 3.4 s (cdacbcc9), 16% wide.
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: 0.43, main: true },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: kept(0.7), optional: true },
   ],
@@ -215,7 +216,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The original stance holds to about 1.6 s and goes almost at once (11-08 blind recheck, ±2 frames): no early stop at
     // 1.4 s, which cleared it in one frame; the tail fade covers its last 0.25 s.
     { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, bone: 'C_Buffbone_Glb_Center_Loc' },
-    { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc' },
+    // The swipe reaches the front row, about 3 cells in the original; at the 0.44 base it drew 2.9 and at the arena scale
+    // 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
+    { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc', scale: kept(1) },
   ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
   morgana: [
