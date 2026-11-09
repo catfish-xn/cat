@@ -33,29 +33,40 @@ function advance(initial:CombatState,count:number){
 }
 const damage=(events:readonly CombatEvent[],target='e')=>events.flatMap(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='p'&&e.outcome.context.targetId===target?[e.outcome.raw]:[]);
 const outcome=(events:readonly CombatEvent[])=>events.find(e=>e.type==='castOutcome');
+/** The spell lands when the slot machine stops (G24-SEVIKA-SLOTS-01). */
+const SLOT=25;
 
 describe('Sevika High Roller Triple (AD100/AP100, 1 star)',()=>{
   it('Blue Flamethrower grows 20% per second of channel',()=>{
-    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(0,4000)})),41);
+    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(0,4000)})),41+SLOT);
     expect(outcome(r.events)).toMatchObject({outcome:'blue-flamethrower',castVariant:{move:'flamethrower',enhanced:true}});
     expect(damage(r.events)).toEqual([260,312,364]);
   });
   it('Knockout Punch adds 400% AD to the punched target',()=>{
-    const r=stepCombat(battle([hero(),dummy()],{rngState:seedFor(4000,7500)}));
+    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(4000,7500)})),1+SLOT);
     expect(outcome(r.events)).toMatchObject({outcome:'knockout-punch',castVariant:{move:'punch'}});
     expect(damage(r.events)).toEqual([780,400,338]);
   });
   it('Quadruple Chomp bites four times and bleeds 400% AD over 5 seconds',()=>{
-    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(7500,9950)})),101);
+    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(7500,9950)})),101+SLOT);
     expect(outcome(r.events)).toMatchObject({outcome:'quadruple-chomp',castVariant:{move:'chomp'}});
     expect(damage(r.events)).toEqual([832,832,832,832,80,80,80,80,80]);
   });
   it('Jackpot casts no spell: six 250% AD + 20% AP coins over 1.5 s, no rockets, shield or gold',()=>{
-    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(9950,10000)})),31);
+    const r=advance(freeze(battle([hero(),dummy()],{rngState:seedFor(9950,10000)})),31+SLOT);
     expect(outcome(r.events)).toMatchObject({outcome:'jackpot',castVariant:{move:'jackpot',channelTicks:0,enhanced:true}});
     expect(damage(r.events)).toEqual([270,270,270,270,270,270]);
     const p=r.state.units.find(u=>u.id==='p')!;
     expect(p.g23?.highRoller).toEqual([expect.objectContaining({mod:'jackpot',spell:3,gold:0})]);
     expect(p.shieldLayers??[]).toEqual([]);
+  });
+  it('rolls at the pull and lands the spell only when the slot machine stops, standing still meanwhile',()=>{
+    const start=freeze(battle([hero(),dummy()],{rngState:seedFor(4000,7500)}));
+    const waiting=advance(start,SLOT);
+    expect(outcome(waiting.events)).toMatchObject({outcome:'knockout-punch'});
+    expect(damage(waiting.events)).toEqual([]);
+    expect(waiting.events.some(e=>e.type==='attack'&&e.attackerId==='p')).toBe(false);
+    expect(waiting.state.units.find(u=>u.id==='p')!.tasks).toEqual([expect.objectContaining({kind:'g23Roll',targetId:'e'})]);
+    expect(damage(advance(waiting.state,1).events)).toEqual([780,400,338]);
   });
 });

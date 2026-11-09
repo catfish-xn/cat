@@ -1688,3 +1688,10 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
   - 四连咬：咬 `Spell3_BonusNumChomps`（4）次，每次照常判定处决；另流血 `Spell3_Bonus_BleedADPercent`（400%/400%/1000% AD）物理伤害，分 `Spell3_BleedDuration`（5）秒每秒一跳。`Spell3_Bonus_BleedDuration`(20) 含义未知，不使用。
   - 头奖（约定值 G24-SEVIKA-JACKPOT-01）：不放三个技能之一；1.5 秒内每 0.25 秒射 1 枚金币（共 6 枚）给随机存活敌人（施法时用战斗随机流选定），每枚 250% AD + `APBonusDamage` AP 物理伤害；不再给火箭、护盾、3 金；战利品不做。80% 耐久 1.5 秒沿用每次施法的羁绊效果，不重复叠加。
 - 实现：`src/simulation/combat-g2-3.ts` `case 'sevika'`、`G23_POLICY.highRoller.jackpotCoins/jackpotCoinAdBps`；`castVariant.move` 新增 `'jackpot'`。
+
+## 塞维卡高额赌注：老虎机转完再出手（2026-11-09，待用户确认数值）
+
+- 原版来源：14.24 map22 `TFT13_Lieutenant_Base_Slots` 特效（出现后 0.4/0.7/1.1 秒依次停轮、1.2 秒闪光）；9 段原版录像逐帧测量（`sevika-slot-timing-report.md`）：拉杆后约 0.15 秒出机器，右轮约 +1.25 秒停，技能在转完后才打出，期间塞维卡原地不动；羁绊 80% 耐久 1.5 秒正是覆盖这段等待。
+- 之前的差异：拉杆当下技能立刻生效。
+- 现在（约定值 G24-SEVIKA-SLOTS-01）：拉杆时照旧抽技能和改装、给 80% 耐久 1.5 秒，并原地引导 25 帧（1.25 秒，不移动、不普攻、不施法，被控会打断引导但不取消技能）；1.25 秒时对原目标（已死则最近的敌人）放出抽中的技能，火箭/护盾同时生效；头奖射金币期间再给一次 80% 耐久 1.5 秒（原版 Spell4 "Durability for the Duration"）。塞维卡在等待中阵亡则技能不放。金币改装照旧战后结算。
+- 实现：`G23_POLICY.highRoller.slotTicks`、`g23Roll` 延时任务（`executeG23Task`）；3D 特效技能层延后 1.25 秒播放（`SEVIKA_SLOT_SECONDS`）。
