@@ -27,8 +27,6 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 },
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: .1, duration: .3, travelSeconds: .3 },
     { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
-    // Jackpot also grants the 4 s shield (14.24 shieldTicks 80); the bubble's main emitters never die on their own.
-    { system: '518dee63', event: 'cast-start', delay: .4, duration: SHIELD_SECONDS },
   ],
   'sevika-rocket': [
     { system: 'dcebd22f', event: 'projectile', delay: 0, duration: .3, travelSeconds: .3 },
@@ -39,6 +37,8 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   'sevika-coin': [{ system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 }],
 };
 export function sevikaSkill(move: string, outcome: string): string | undefined {
+  // 14.24b Jackpot is its own spell (coins), not one of the three moves plus a bonus.
+  if (move === 'jackpot') return 'sevika-jackpot';
   if (!['flamethrower', 'punch', 'chomp'].includes(move)) return;
   return outcome === 'blue-flamethrower' && move === 'flamethrower' ? 'sevika-blue-flamethrower' : `sevika-${move}`;
 }

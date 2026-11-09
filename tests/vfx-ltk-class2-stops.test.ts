@@ -51,13 +51,12 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
     expect(stance.stopAfter).toBeUndefined();
   });
 
-  it("keeps Sevika's shield bubble up for the whole 4 s shield, from the shield and the jackpot rolls", () => {
-    for (const [skill, delay] of [['sevika-shield', 0], ['sevika-jackpot', .4]] as const) {
-      const bubble = cue(sevikaSkills[skill], '518dee63');
-      expect(bubble).toMatchObject({ event: 'cast-start', delay, duration: 4 });
-      expect(bubble.stopAfter).toBeUndefined();
-      expect(bubble.fadeOut).toBeUndefined();
-    }
+  it("keeps Sevika's shield bubble up for the whole 4 s shield roll, and Jackpot (coins, no shield) has none", () => {
+    const bubble = cue(sevikaSkills['sevika-shield'], '518dee63');
+    expect(bubble).toMatchObject({ event: 'cast-start', delay: 0, duration: 4 });
+    expect(bubble.stopAfter).toBeUndefined();
+    expect(bubble.fadeOut).toBeUndefined();
+    expect(sevikaSkills['sevika-jackpot'].some(c => c.system === '518dee63')).toBe(false);
   });
 });
 
