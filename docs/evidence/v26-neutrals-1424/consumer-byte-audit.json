@@ -3354,9 +3354,9 @@
     "tests/vfx-ltk-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 25837,
+      "currentBytes": 27464,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "88882e69de526dc35e02a11e4e28a85768b8353e128b5460ba780a76ee4e9bd8",
+      "currentSha256": "74355d3ad4dedd59373c9bc4411314f1b35cc361fd9a5978dcab01d1aaa5026f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch3.test.ts": {
