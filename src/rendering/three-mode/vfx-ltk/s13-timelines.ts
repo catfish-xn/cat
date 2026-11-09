@@ -1,15 +1,12 @@
 /** 14.24 converted event IDs/bones from out/README.md. Seconds and script-only impacts are P conventions, 2026-10-26. */
 import type { TimelineCue } from './timeline';
-import { measuredAtFxScale as kept } from './fx-size';
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
 const viFlight = frame(17) - frame(4.545000076293945);
 export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   jinx: [
     { phase: 0, system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
-    // The pistol's main flash (Mesh_Spikes, Alpha_Head) is drawn inside this missile system, so it keeps the size that
-    // fits the gun (0.88 cells at the body scale; 0.59 at the arena scale, pr582-report 11-09) like the other muzzle cues.
-    { phase: 0, system: '3496e112', event: 'projectile', delay: frame(7.53000020980835), duration: 0.45, travelSeconds: 0.3, bone: 'Cstm_Buffbone_Pistol', targetBone: 'C_Buffbone_Glb_Chest_Loc', scale: kept(1) },
+    { phase: 0, system: '3496e112', event: 'projectile', delay: frame(7.53000020980835), duration: 0.45, travelSeconds: 0.3, bone: 'Cstm_Buffbone_Pistol', targetBone: 'C_Buffbone_Glb_Chest_Loc' },
     { phase: 0, system: '10fede7e', event: 'hit', delay: frame(7.53000020980835) + 0.3, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
     { phase: 1, system: '9bd80364', event: 'projectile', delay: 0.15, duration: 0.6, travelSeconds: 0.45, bone: 'L_Hand', targetBone: ground },
     { phase: 1, system: 'cd05488e', event: 'hit', delay: 0.6, duration: 1.2, bone: ground, stopAfter: 0.15 },
