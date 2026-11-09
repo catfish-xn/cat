@@ -32,7 +32,7 @@ describe('knock-up stuns carry the rules mark', () => {
   it('the board float says 击飞 for a knock-up stun and 眩晕 for a plain one (local ledger); the wire event stays 眩晕', () => {
     const { events } = stepCombat(battle([hero('vi'), dummy('e', 2), dummy('f', 3)], { rngState: 42 }));
     const applied = events.filter((e): e is Extract<CombatEvent, { type: 'statusChanged' }> => e.type === 'statusChanged' && e.reason === 'applied' && e.group.kind === 'stun');
-    expect(Object.fromEntries(applied.map(e => [e.group.targetId, appliedStatusFloat(e)]))).toEqual({ e: '眩晕', f: '击飞' });
+    expect(Object.fromEntries(applied.map(e => [e.group.targetId, appliedStatusFloat(e as never)]))).toEqual({ e: '眩晕', f: '击飞' });
     expect(appliedStatusFloat({ type: 'statusChanged', tick: 1, eventSeq: 1, targetId: 'f', kind: 'stun', reason: 'applied', effectiveMagnitudeBps: 0 } as never)).toBe('眩晕');
   });
 

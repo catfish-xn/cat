@@ -802,6 +802,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const spareFlashes: HitFlash[] = [];
   const strike = (view: PieceView) => {
     if (!view.alive || !view.root.visible) return;
+    // One flash per body: a second strike in the same frames restarts it rather than stacking a brighter one.
+    const current = flashes.find(entry => entry.view === view);
+    if (current) { current.flash.reset(); return; }
     const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
     scene.add(flash.object); flashes.push({ flash, view });
   };
@@ -1420,9 +1423,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
-      // A unit struck by an ability flashes white (a basic attack's hit does not: its spark is the attacker's effect).
+      // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
+      // attacker's effect; a periodic tick does not either, or a damage-over-time zone would strobe its victims).
       if (event.type === 'packetDamage' && currentEffect && event.hit && event.hpDamage + event.absorbed > 0 && !reducedMotion()
-        && ((event as { sourceKind?: string }).sourceKind === 'ability' || String((event as { delivery?: string }).delivery ?? '').startsWith('ability'))) {
+        && (event as { delivery?: string }).delivery !== 'ability-periodic'
+        && ((event as { sourceKind?: string }).sourceKind === 'ability' || (event as { delivery?: string }).delivery === 'ability-direct')) {
         const struck = pieces.get(event.targetId); if (struck) strike(struck);
       }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
