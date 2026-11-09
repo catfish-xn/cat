@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawnEmitters } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/definitions';
+import { drawnEmitters, passOrder, PASS_ORDER_LIMIT } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/definitions';
 import type { EmitterModel, SystemModel } from '../src/rendering/three-mode/vfx-ltk/engine/model/model';
 
 const emitter = (index: number, pass: number, extra: Partial<EmitterModel> = {}) =>
@@ -27,6 +27,23 @@ describe('draw order across systems', () => {
   });
   it('keeps a ground-layer emitter under everything else', () => {
     const ground = orders(system([emitter(0, 100, { groundLayer: true }), emitter(1, -5)]));
+    expect(ground[0]).toBeLessThan(ground[1]);
+  });
+  it('maps every pass strictly increasing inside ±90, under the damage numbers (100) and over the ground layer', () => {
+    // 11-09 survey: passes from -9999 to 32767 across 5584 emitters; the field is signed 16-bit.
+    const passes = [-32768, -9999, -100, -5, -2, -1, 0, 1, 2, 5, 10, 33, 34, 45, 99, 100, 101, 1000, 9999, 32766, 32767];
+    const mapped = passes.map(passOrder);
+    for (let at = 1; at < mapped.length; at++) expect(mapped[at], `${passes[at]}`).toBeGreaterThan(mapped[at - 1]);
+    for (const value of mapped) expect(Math.abs(value)).toBeLessThanOrEqual(PASS_ORDER_LIMIT);
+    expect(PASS_ORDER_LIMIT).toBeLessThan(100);
+    expect(passOrder(0)).toBe(0);
+  });
+  it('keeps the whole tree of the largest passes apart and inside the bound', () => {
+    const top = orders(system([emitter(0, 32767), emitter(1, 32766), emitter(2, 32767), emitter(3, -32768)]));
+    expect(top[1]).toBeLessThan(top[0]); expect(top[0]).toBeLessThan(top[2]);
+    for (const value of top) expect(Math.abs(value)).toBeLessThanOrEqual(PASS_ORDER_LIMIT);
+    const ground = orders(system([emitter(0, 32767, { groundLayer: true }), emitter(1, -32768)]));
+    expect(ground[0]).toBeLessThan(-1000);
     expect(ground[0]).toBeLessThan(ground[1]);
   });
 });

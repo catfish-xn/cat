@@ -68,17 +68,38 @@ export function hiddenIn(
 const RANK_SPAN = 4096;
 
 /**
+ * The bound of [`passOrder`]: every particle stays inside ±90, under the board's damage numbers
+ * (100) and star rows (1000) and over the stage and ground layers far below.
+ */
+export const PASS_ORDER_LIMIT = 90;
+
+/** `pass` is a signed 16-bit field. */
+const PASS_MAX = 32768;
+const PASS_LOG = Math.log1p(PASS_MAX);
+
+/**
+ * `pass` mapped strictly increasing into (-90, 90): sign · log, so every distinct pass keeps its
+ * own place (11-09 survey: 5584 emitters, passes from -9999 to 32767, 870 at 100 or more) while
+ * none reaches another object's order. Small passes, the bulk, keep the widest spacing.
+ */
+export function passOrder(pass: number): number {
+  const p = Math.max(-PASS_MAX, Math.min(PASS_MAX, pass));
+  return Math.sign(p) * PASS_ORDER_LIMIT * Math.log1p(Math.abs(p)) / PASS_LOG;
+}
+
+/**
  * `rank` as the draw order, which a ground-layer emitter takes under the character.
  *
  * The engine sorts every live emitter by `pass` first, across systems, so the order is the
- * pass with the tree's own rank as a fraction under it: two systems drawn together interleave
- * by pass, and one tree keeps the comparator's order within a pass. Sevika's slot icons
- * (pass 33/34, their own system) draw over the machine's reel backs (pass 30) and under its
- * white lock-in flashes (45) and border (50); a bare rank drew the 33 backs and boards of the
- * machine over the icons' 10 emitters (11-09 #579 recording: every reel empty).
+ * pass with the tree's own rank as a fraction of the gap to the next pass: two systems drawn
+ * together interleave by pass, and one tree keeps the comparator's order within a pass.
+ * Sevika's slot icons (pass 33/34, their own system) draw over the machine's reel backs
+ * (pass 30) and under its white lock-in flashes (45) and border (50); a bare rank drew the 33
+ * backs and boards of the machine over the icons' 10 emitters (11-09 #579 recording: every reel empty).
  */
 function orderOf(emitter: EmitterModel, rank: number): number {
-  const order = emitter.pass + Math.min(rank, RANK_SPAN - 1) / RANK_SPAN;
+  const at = passOrder(emitter.pass), gap = passOrder(emitter.pass + 1) - at;
+  const order = at + gap * Math.min(rank, RANK_SPAN - 1) / RANK_SPAN;
   return emitter.groundLayer ? GROUND_ORDER + order : order;
 }
 
