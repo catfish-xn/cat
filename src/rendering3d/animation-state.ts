@@ -12,7 +12,11 @@ export type AnimationEvent =
 /** A packet that interrupts a swing or a run with a flinch: ability damage, told by its display provenance. */
 export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetDamage' }>): boolean =>
   event.sourceKind === 'ability' || event.delivery === 'ability-direct' || event.delivery === 'ability-periodic';
-export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
+/**
+ * `holdSeconds` (optional): only this opening part of a cast owns its window; after it the cast's ending (its out clip)
+ * gives way to the unit's next swing or run. Without it the whole duration is protected.
+ */
+export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
@@ -61,7 +65,8 @@ export class UnitActionState {
       if (state === 'cast') this.castIndex++;
       if (resolved === null) return;
       playback = resolved;
-      if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0)) throw new Error('invalid-playback');
+      if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0
+        || playback.holdSeconds !== undefined && !(Number.isFinite(playback.holdSeconds) && playback.holdSeconds >= 0 && playback.holdSeconds <= playback.durationSeconds))) throw new Error('invalid-playback');
     }
     this.playback = playback;
     this.previous = this.state; this.state = state; this.revision++;
@@ -82,7 +87,10 @@ export class UnitActionState {
     // Stunned: the held flinch outlasts every swing, run or packet until the control ends (death still lands).
     if (this.held && event.type !== 'death') return this.output;
     // Resolved casts own their visual window, so incidental hits cannot cut off the ending.
-    if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)) return this.output;
+    // A held cast (holdSeconds) protects only its pose; its ending gives way to the next swing or run.
+    if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)
+      && !(event.type !== 'packetDamage' && this.playback.holdSeconds !== undefined
+        && this.playback.durationSeconds - this.remaining >= this.playback.holdSeconds)) return this.output;
     // A basic attack's hit shows only on a unit at rest: a swing or run cut by every incoming packet snaps back to idle
     // mid-clip. An ability's hit cuts a swing or a run (the unit is struck by a skill), never a cast.
     if (event.type === 'packetDamage' && this.state !== 'idle' && this.state !== 'hit' && (this.state === 'cast' || !isForcefulPacket(event))) return this.output;

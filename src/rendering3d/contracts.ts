@@ -16,6 +16,13 @@ export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string
 export interface CastSequence {
   in?: string; main: string | readonly string[]; hold?: string; out?: string; layers?: readonly string[];
   masks?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /**
+   * Optional cast pose window in seconds (manifest data, not the `hold` clip): every stage before `out` plays at its own
+   * speed or faster (never slowed) and the pose is held until this time, instead of the whole cast being squeezed under
+   * the 2.5 s cap; `out` then plays compressed and the unit's next swing or run may cut it. Use it only for a cast whose
+   * rule effect lasts at least this long (Nunu's 3 s fumes), or the unit would stand posing while the rules let it act.
+   */
+  holdSeconds?: number;
 }
 /** A rotation entry is one clip, or a whole multi-stage sequence for that cast (Jinx's Death Rocket). */
 export type CastRotation = string | CastSequence;
@@ -256,7 +263,8 @@ function assertCastRotation(value: unknown): void {
 function assertCastSequence(value: unknown): void {
   if (!isPlainObject(value)) throw new Error('invalid-cast-sequence');
   const sequence = value as unknown as CastSequence;
-  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out', 'layers', 'masks'].includes(key)) throw new Error('invalid-cast-sequence');
+  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out', 'layers', 'masks', 'holdSeconds'].includes(key)) throw new Error('invalid-cast-sequence');
+  if (sequence.holdSeconds !== undefined && !(finite(sequence.holdSeconds) && sequence.holdSeconds > 0 && sequence.holdSeconds <= 10)) throw new Error('invalid-cast-sequence');
   if (typeof sequence.main === 'string') { if (!sequence.main.trim()) throw new Error('invalid-cast-sequence'); }
   else assertClipList(sequence.main);
   for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
