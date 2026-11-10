@@ -25,7 +25,20 @@ export interface CastVariants {
 }
 export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
 export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
-export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence }
+/**
+ * Where the original basic attack lets go, from the client's attack spell (server-side manifest data, never in the repo):
+ * `clipSeconds` is the release frame in the attack clip (castFrame / 30), `windupRatio` the share of the attack interval
+ * before release (0.3 + delayCastOffsetPercent), `baseIntervalSeconds` the interval assumed before a second attack is seen.
+ * Display only: the rules never read it. Without it the attack plays exactly as before.
+ */
+export interface AttackRelease { clipSeconds: number; windupRatio: number; baseIntervalSeconds: number }
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence; attackRelease?: AttackRelease }
+/** Seconds after the attack starts at which the original releases, for the observed interval (else the base one). */
+export function attackReleaseSeconds(release: AttackRelease | undefined, intervalSeconds?: number): number | undefined {
+  if (!release) return undefined;
+  const interval = intervalSeconds !== undefined && Number.isFinite(intervalSeconds) && intervalSeconds > 0 ? intervalSeconds : release.baseIntervalSeconds;
+  return release.windupRatio * interval;
+}
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
@@ -167,6 +180,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);
     if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);
+    if (entry.attackRelease !== undefined) assertAttackRelease(entry.attackRelease);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
@@ -262,6 +276,11 @@ function assertCastSequence(value: unknown): void {
   for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
   if (sequence.layers !== undefined) assertCastLayers(sequence.layers);
   if (sequence.masks !== undefined) assertCastMasks(sequence.masks);
+}
+function assertAttackRelease(value: unknown): void {
+  const r = value as AttackRelease, num = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) && v > min && v <= max;
+  if (!isPlainObject(value) || Object.keys(value).some(k => !['clipSeconds', 'windupRatio', 'baseIntervalSeconds'].includes(k))
+    || !num(r.clipSeconds, 0, 10) || !num(r.windupRatio, 0, 1) || !num(r.baseIntervalSeconds, 0, 10)) throw new Error('invalid-attack-release');
 }
 function assertAttackSequence(value: unknown): void {
   try {
