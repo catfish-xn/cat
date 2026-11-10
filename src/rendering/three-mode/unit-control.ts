@@ -37,9 +37,10 @@ export const CONTROL_3D = {
    * of the sprite, the rest is its glow, like the client's star texture), turns per second, the ring centre's height
    * as a share of the drawn body height (head level), and the dark glow behind them. Calibrated on the 11-10 three-row
    * recordings (ccvs-after, -after2): the first cut drew stars ~3× and the ring ~1.7× the client's, a third of a body
-   * too high; at 0.85 the ring still sat 0.18 of a body over the client's (the drawn height includes helmets and hair).
+   * too high; at 0.85 the ring still sat 0.18 of a body over the client's (the drawn height includes helmets and hair),
+   * at 0.67 still 0.08 over (after3).
    */
-  stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.67, glowSize: 32,
+  stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.6, glowSize: 32,
   /** Ghosts trailing each star: how many, the angle (radians) between them, and the first ghost's opacity. */
   trail: { ghosts: 3, gap: 0.28, opacity: 0.5 },
   /** Small sparkles popping around the ring: count, life (s), distance from the centre and size (board units). */
@@ -47,7 +48,7 @@ export const CONTROL_3D = {
   /** Dissolving rings: count (staggered), seconds each, full size (board units); each grows from half size and fades. */
   rings: { count: 2, seconds: 1.5, size: 28 },
   /** The flash as the control starts: seconds and size (board units). */
-  flash: { seconds: 0.15, size: 44 },
+  flash: { seconds: 0.15, size: 30 },
 } as const;
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
@@ -260,7 +261,7 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
       (ring.sprite.material as SpriteMaterial).opacity = 0.7 * Math.sin(Math.PI * t) * (1 - t * 0.5);
     }
     const f = Math.min(1, age / spec.flash.seconds), fs = spec.flash.size * (0.6 + 0.6 * f);
-    flash.scale.set(fs, fs, 1); flashMaterial.opacity = age < spec.flash.seconds ? 1 - f * f : 0;
+    flash.scale.set(fs, fs, 1); flashMaterial.opacity = age < spec.flash.seconds ? 0.85 * (1 - f * f) : 0;
   };
   place();
   return {
