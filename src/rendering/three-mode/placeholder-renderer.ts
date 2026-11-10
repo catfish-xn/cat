@@ -29,7 +29,7 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, hexCenter,
+  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, attackReleaseSeconds, createActionEffectResolver, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -1147,6 +1147,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
+  // A model whose manifest names the original release moves its attack cues with the swing (AttackRelease).
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+    const release = source.lease?.attackRelease, at = attackReleaseSeconds(release, source.attackCadence.intervalSeconds);
+    return release && at !== undefined ? { variant, releaseShift: at - release.clipSeconds } : variant;
+  };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
@@ -1157,7 +1162,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);

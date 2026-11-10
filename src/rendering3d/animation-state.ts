@@ -12,7 +12,11 @@ export type AnimationEvent =
 /** A packet that interrupts a swing or a run with a flinch: ability damage, told by its display provenance. */
 export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetDamage' }>): boolean =>
   event.sourceKind === 'ability' || event.delivery === 'ability-direct' || event.delivery === 'ability-periodic';
-export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
+/**
+ * `release`: a single attack clip played in two speeds so its release frame lands `atSeconds` after the start
+ * (`headSpeed` up to it, then `tailSpeed`, never below 1, for the rest); see AttackRelease.
+ */
+export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; release?: { atSeconds: number; headSpeed: number; tailSpeed: number } }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
