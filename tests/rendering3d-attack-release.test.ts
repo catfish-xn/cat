@@ -56,6 +56,17 @@ describe('attack release timing (AttackRelease)', () => {
     expect(fast.durationSeconds).toBeCloseTo(0.18);
   });
 
+  it('drops the two-speed timing when another action interrupts the swing', () => {
+    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 1 }) });
+    f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);
+    f.mixer.update(0.1);
+    f.mixer.apply({ state: 'idle', previous: 'attack', blendSeconds: 0, loop: true, revision: 99 });
+    const rest = f.mixer.mixer.clipAction(f.clips[0]);
+    f.mixer.update(0.3);
+    expect(rest.getEffectiveTimeScale()).toBe(1);
+    expect(rest.time).toBeCloseTo(0.3);
+  });
+
   it('ignores a release frame outside the clip', () => {
     const f = fixture({ ...RELEASE, clipSeconds: 1.5 });
     expect(f.mixer.resolvePlayback('attack', 0, { attackIntervalSeconds: 1 })).toEqual({ clips: ['swing'], durationSeconds: 0.9 });
@@ -72,7 +83,7 @@ describe('attack release timing (AttackRelease)', () => {
 
 describe('attack cues follow the release (releaseShift)', () => {
   const longLived = () => syntheticSystem({ rate: constant(num(60)), lifetime: num(5), particleLifetime: constant(num(5)), particleLinger: num(5) });
-  async function firstDrawnStep(cues: TimelineCue[], options?: LtkPlayOptions) {
+  async function firstDrawnStep(cues: TimelineCue[], options?: LtkPlayOptions | 'empowered') {
     const library = createVfxLibrary('/root/', {
       readJson: async url => url.endsWith('index.json')
         ? { ...syntheticIndex(), version: 1, systems: { sample: 'systems/sample.json' }, assets: { 'synthetic.tex': 'textures/sample.png' }, skills: { jinx: cues } }
@@ -103,11 +114,18 @@ describe('attack cues follow the release (releaseShift)', () => {
     expect(shifted).toBeLessThan(plain - 25);
   });
 
-  it('never moves a cue before the swing starts and rejects an absurd shift', async () => {
+  it('never moves a cue before the swing starts, holds a large shift to 2 s and rejects a non-number', async () => {
     expect(await firstDrawnStep([hit], { releaseShift: -1 })).toBeLessThan(5);
+    expect(await firstDrawnStep([{ ...hit, delay: 0 }], { releaseShift: 5 })).toBe(-1); // 2 s later: past the 1 s probe window
     const library = createVfxLibrary('/root/', { readJson: async () => ({ version: 1, systems: {}, assets: {}, skills: { jinx: [hit] } }), readTexture: async () => new Texture() });
     const runtime = createLtkRuntime(library, new Scene(), () => undefined);
-    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', { releaseShift: 5 })).toBe(false);
+    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', { releaseShift: Number.NaN })).toBe(false);
     runtime.dispose(); library.dispose();
+  });
+
+  it('keeps the variant choice with the options object', async () => {
+    const empowered: TimelineCue = { ...hit, delay: 0.5, variant: 'empowered' };
+    const plain = await firstDrawnStep([empowered], 'empowered' as never);
+    expect(await firstDrawnStep([empowered], { variant: 'empowered', releaseShift: -0.3 })).toBeLessThan(plain - 25);
   });
 });

@@ -2092,9 +2092,9 @@
     "tests/rendering3d-attack-release.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7278,
+      "currentBytes": 8454,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9ef746f8c378e48e3bf11b6093088f5e945abd378ff3e6f02a3645f38fd844cb",
+      "currentSha256": "2a6adb46a01a78f96121245d2e74d5dd354b3317d8eada8cfca337f784a30af8",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-bench.test.ts": {

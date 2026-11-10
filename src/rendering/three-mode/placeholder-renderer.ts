@@ -29,7 +29,7 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, attackReleaseSeconds, createActionEffectResolver, hexCenter,
+  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -1147,9 +1147,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  // A model whose manifest names the original release moves its attack cues with the swing (AttackRelease).
+  // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
+  // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
   const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
-    const release = source.lease?.attackRelease, at = attackReleaseSeconds(release, source.attackCadence.intervalSeconds);
+    const release = source.lease?.attackRelease, output = source.state.output;
+    const at = output.state === 'attack' ? output.playback?.release?.atSeconds : undefined;
     return release && at !== undefined ? { variant, releaseShift: at - release.clipSeconds } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
