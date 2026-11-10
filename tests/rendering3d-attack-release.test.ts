@@ -56,6 +56,14 @@ describe('attack release timing (AttackRelease)', () => {
     expect(fast.durationSeconds).toBeCloseTo(0.18);
   });
 
+  it('keeps the crossfade into a sped-up head within half of it', () => {
+    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 0.5 }) });
+    f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);
+    expect(state.output.blendSeconds).toBeGreaterThan(0.05);
+    f.mixer.update(0.05); // release at 0.1 s: the 0.05 s crossfade is over
+    expect(f.swing().getEffectiveWeight()).toBeCloseTo(1);
+  });
+
   it('drops the two-speed timing when another action interrupts the swing', () => {
     const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 1 }) });
     f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);

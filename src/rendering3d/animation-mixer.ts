@@ -236,7 +236,9 @@ export class UnitAnimationMixer {
       this.speed = release.headSpeed; this.tailSpeed = release.tailSpeed;
       this.releaseLeft = release.atSeconds; this.stageLeft = 0;
     }
-    this.play(atMain ? this.stage!.primary : clip, output.loop, output.blendSeconds);
+    // A sped-up head is short (0.1–0.2 s): the crossfade from the previous pose may take at most half of it.
+    const blend = this.releaseLeft > 0 ? Math.min(output.blendSeconds, this.releaseLeft / 2) : output.blendSeconds;
+    this.play(atMain ? this.stage!.primary : clip, output.loop, blend);
     if (atMain) this.startLayers(this.stage!.extras);
     return true;
   }
