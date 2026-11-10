@@ -16,7 +16,6 @@ import { contracts } from './runtime.mjs';
 export const DEFAULT_EXCLUDES = new Set([
   'sevika:cast',
   'sevika:attack',
-  'drmundo:cast',
   'caitlyn:attack',
   'singed:cast',
   'violet:cast',
@@ -162,6 +161,10 @@ function collectLinearSegments(node) {
   return { ok: false, reason: `非常规节点 (${node.kind})`, segments: [] };
 }
 
+function isMovingCondition(node) {
+  return node.updater === 'IsMovingParametricUpdater' || node.updater === '0x6c816d62';
+}
+
 /**
  * Pure planner that converts a resolved animation graph node into manifest updates
  * for either `'cast'` or `'attack'`.
@@ -172,6 +175,11 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
   }
   if (!node) {
     return { status: 'skipped', reason: '未解析' };
+  }
+  // IsMoving ConditionBool (e.g. Dr. Mundo Spell4: [true] run / [false] idle): our units stand still while
+  // casting, so the standing (false) branch is the clip the original plays.
+  if (node.kind === 'ConditionBool' && isMovingCondition(node) && node.branches?.false) {
+    return planGraphAction(node.branches.false, { action, entry, otherUsedClips });
   }
   if (node.kind === 'Selector' || node.kind === 'Parametric' || node.kind === 'ConditionBool' || node.kind === 'Unknown' || node.kind === 'Cycle') {
     return { status: 'skipped', reason: `非常规节点 (${node.kind})` };
@@ -318,6 +326,36 @@ export function planRotateEntry(node, { entry = {}, otherUsedClips = new Set() }
   };
 }
 
+/**
+ * Plans an existing `castVariants.hero` from the original `<Spell>Hero` SpellObject's graph node.
+ * Returns the next `castVariants` (undefined when empty); a hero variant equal to the default
+ * cast sequence is dropped so the default path plays it. Ranged/segmented hero clips stay manual.
+ */
+export function planHeroVariant(node, { entry = {} } = {}) {
+  const variants = entry?.castVariants;
+  if (!variants?.hero) return { status: 'skipped', reason: '无 castVariants.hero' };
+  if (!node) return { status: 'skipped', reason: '未解析' };
+  const plan = planGraphAction(node, { action: 'cast', entry: {} });
+  if (plan.status !== 'ok') return plan;
+  if (Object.keys(plan.clipRanges).length > 0 || Object.keys(plan.clipSegments).length > 0) {
+    return { status: 'skipped', reason: '需人工 (hero 片段带帧区间)' };
+  }
+  const trimmed = plan.wholeClips.filter(c => entry.clipRanges && Object.hasOwn(entry.clipRanges, c));
+  if (trimmed.length > 0) return { status: 'skipped', reason: `需人工 (hero 整段与 clipRanges 冲突: ${trimmed.join(', ')})` };
+  const defaultSequence = entry.castSequence ?? (entry.animations?.cast ? { main: entry.animations.cast } : undefined);
+  const sameAsDefault = JSON.stringify(plan.castSequence) === JSON.stringify(defaultSequence);
+  const { hero: _oldHero, ...rest } = variants;
+  const castVariants = sameAsDefault ? rest : { ...rest, hero: plan.castSequence };
+  const changed = JSON.stringify(variants.hero) !== JSON.stringify(plan.castSequence);
+  return {
+    status: 'ok',
+    changed,
+    heroSequence: plan.castSequence,
+    castVariants: Object.keys(castVariants).length > 0 ? castVariants : undefined,
+    requiredClips: plan.requiredClips,
+  };
+}
+
 function fnv1aHex(str) {
   return '0x' + (fnv1a(str) >>> 0).toString(16).padStart(8, '0');
 }
@@ -430,6 +468,10 @@ function formatNodeSummary(node) {
   }
   if (node.kind === 'Parallel') {
     return `Parallel(${node.keyName}): ` + (node.children ?? []).map(formatNodeSummary).join(' ∥ ');
+  }
+  if (node.kind === 'ConditionBool' && node.branches) {
+    return `ConditionBool(${node.keyName}${node.updater ? `, ${node.updater}` : ''}): `
+      + Object.entries(node.branches).map(([label, b]) => `[${label}] ${formatNodeSummary(b)}`).join(' | ');
   }
   return `${node.kind}(${node.keyName})`;
 }
@@ -679,7 +721,19 @@ export async function stageAnimSequences({
           children,
         };
       }
-      if (cls === 'ConditionBoolClipData') return { kind: 'ConditionBool', keyName, keyHash: kHash >>> 0 };
+      if (cls === 'ConditionBoolClipData') {
+        const updater = bField(node, 'Updater');
+        const updaterClass = updater && typeof updater === 'object' && 'type' in updater ? nameOf(updater.type) : null;
+        const branches = {};
+        for (const [label, field] of [['true', 'mTrueConditionClipName'], ['false', 'mFalseConditionClipName']]) {
+          const c = bField(node, field);
+          if (c == null) continue;
+          const ch = (typeof c === 'string' ? fnv1a(c) : c.hash) >>> 0;
+          const r = await resolveNode(ch, new Set(visited));
+          if (r) branches[label] = r;
+        }
+        return { kind: 'ConditionBool', keyName, keyHash: kHash >>> 0, updater: updaterClass, branches };
+      }
       if (cls === 'SelectorClipData') return { kind: 'Selector', keyName, keyHash: kHash >>> 0 };
       if (cls === 'ParametricClipData') return { kind: 'Parametric', keyName, keyHash: kHash >>> 0 };
       return { kind: 'Unknown', keyName, keyHash: kHash >>> 0 };
@@ -806,7 +860,7 @@ export async function stageAnimSequences({
             nodeDesc: formatNodeSummary(origCastNode),
             fieldChange: `${oldDesc} → ${newDesc}`,
             addedClips: missingForCast,
-            skipReason: entry.castVariants?.hero ? '已更新 castSequence（保留 castVariants.hero）' : '已更新',
+            skipReason: entry.castVariants?.hero ? '已更新 castSequence（hero 变体见 cast (hero) 行）' : '已更新',
             applyRollback: null,
           });
         } else {
@@ -822,7 +876,7 @@ export async function stageAnimSequences({
       }
     }
 
-    // 1b. Hand-authored cast rotation (one sequence per rotating spell)
+    // 1c. Hand-authored cast rotation (one sequence per rotating spell)
     const rotateSpells = ROTATE_SPELLS[id];
     const rotate = entry.castVariants?.rotate;
     if (rotateSpells && Array.isArray(rotate) && rotate.length === rotateSpells.length && !excludeSet.has(`${id}:cast-rotate`)) {
@@ -867,6 +921,33 @@ export async function stageAnimSequences({
       entry.castVariants = { ...entry.castVariants, rotate: nextRotate };
       if (Object.keys(nextRanges).length > 0) entry.clipRanges = nextRanges;
       if (Object.keys(nextSegments).length > 0) entry.clipSegments = nextSegments;
+    }
+
+    // 1b. Hero-augment cast variant: follow the original `<Spell>Hero` SpellObject's mAnimationName.
+    if (entry.castVariants?.hero && !excludeSet.has(`${id}:hero`)) {
+      const heroObj = spellObjs.get(`${targetSpellScript}hero`.toLowerCase());
+      const heroNode = heroObj?.anim ? await resolveNode(fnv1a(heroObj.anim)) : null;
+      const heroPlan = planHeroVariant(heroNode, { entry });
+      if (heroPlan.status !== 'ok') {
+        reportRows.push({
+          id, action: 'cast (hero)', nodeDesc: formatNodeSummary(heroNode), fieldChange: '—', addedClips: [],
+          skipReason: `保留 castVariants.hero（${heroPlan.reason}）`,
+        });
+      } else {
+        const missingForHero = heroPlan.requiredClips.filter(c => !existingClips.has(c));
+        for (const c of missingForHero) neededMissingClips.add(c);
+        const oldDesc = JSON.stringify({ castVariants: entry.castVariants });
+        const nextVariantsChanged = JSON.stringify(entry.castVariants) !== JSON.stringify(heroPlan.castVariants);
+        if (heroPlan.castVariants) entry.castVariants = heroPlan.castVariants;
+        else delete entry.castVariants;
+        reportRows.push({
+          id, action: 'cast (hero)', nodeDesc: formatNodeSummary(heroNode),
+          fieldChange: nextVariantsChanged
+            ? `${oldDesc} → ${entry.castVariants ? JSON.stringify({ castVariants: entry.castVariants }) : '删除 castVariants（hero 走默认施法）'}`
+            : '—',
+          addedClips: missingForHero, skipReason: nextVariantsChanged ? '已更新' : '已一致',
+        });
+      }
     }
 
     // 2. Attack (including Gangplank ranged form)
