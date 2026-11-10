@@ -28,10 +28,18 @@ export const DEFAULT_EXCLUDES = new Set([
  * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (cyB8sPEcP6M 189-190.9s); that is
  *   Spell3_In (carries the cast particle) + Spell3_Out (graph end frame 12). Spell2_* is the E blink
  *   with forward root motion, which made the model jump forward and snap back.
+ * - warwick: TFT13_WarwickSpell is Blood Frenzy: he rears up in place and then claws (TYNlhRomM1w 109.2-110s,
+ *   no displacement). The graph key of howl.anm cracks to BloodFrenzy_Activate, the cast's own name. The clip
+ *   we played, TFT13_Warwick_Spell_Dash, sits under the graph key Devour_Dash: the execute leap, not the cast.
+ * - mel: TFT13_MissMageSpell dashes, then fires bolts (TYNlhRomM1w ~160-164s, the dash trail precedes the
+ *   bolts). Spell1_Blast starts from the exact pose Spell_Dash holds, so the two chain as Spell_Dash then
+ *   Spell1_Blast. (Spell2 is not used here: it carries a separate warning sound and is left out.)
  * Each list is played as a Sequencer, so the graph's own frame ranges still apply.
  */
 export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
   ezreal: Object.freeze(['Spell3_In', 'Spell3_Out']),
+  warwick: Object.freeze(['BloodFrenzy_Activate']),
+  mel: Object.freeze(['Spell_Dash', 'Spell1_Blast']),
 });
 
 /**
@@ -67,6 +75,7 @@ const KNOWN_GRAPH_NAMES = new Set([
   'Spell_First', 'Spell_Shoot', 'Spell_Shoot_90', 'Spell_Shoot_-90', 'Spell_Shoot_ToIdle',
   'Transform', 'TransformIn', 'TransformOut', 'Spell_2', 'Spell_3', 'Spell_1', 'Spell4_Hit',
   'Spell2_Ranged_Jump', 'Spell2_KnockHexCrystals', 'Spell1_GainShield', 'Spell1_Right', 'Spell1_Left', 'CallShield',
+  'BloodFrenzy_Activate', 'Devour_Dash', 'Spell_Dash', 'Spell1_Blast',
 ]);
 
 /**
