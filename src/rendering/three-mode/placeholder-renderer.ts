@@ -1153,8 +1153,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
   const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
     const release = source.lease?.attackRelease, output = source.state.output;
-    const at = output.state === 'attack' ? output.playback?.release?.atSeconds : undefined;
-    return release && at !== undefined ? { variant, releaseShift: at - release.clipSeconds } : variant;
+    const played = output.state === 'attack' ? output.playback?.release : undefined;
+    return release && played ? { variant, release: { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {

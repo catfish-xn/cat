@@ -64,11 +64,24 @@ export interface LtkPlayOptions {
    * Only the default ltk.play path takes it; heroes whose attacks go through the batch2 bridge do not move.
    */
   releaseShift?: number;
+  /**
+   * Segment mapping of the attack cues to a swing the mixer retimed to its release (AttackRelease; takes precedence over
+   * releaseShift): a cue before the clip's release frame `clipSeconds` scales to `t × atSeconds / clipSeconds` (the head
+   * plays sped up), a cue at or after it lands at `atSeconds + (t − clipSeconds) / tailSpeed`. Each cue still moves at most
+   * 2 s either way and never before the start. Only the default ltk.play path takes it, like releaseShift.
+   */
+  release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+/** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
+export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
+  // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
+  const shift = t < clip ? t * at / clip - t : at - clip + (t - clip) * (1 / tail - 1);
+  return Math.max(0, t + Math.min(2, Math.max(-2, shift)));
+}
 /** A loaded system with the named top-level emitters, and everything under them, left out of the draw; one per list. */
 const HIDDEN = new WeakMap<PreparedVfx, Map<string, PreparedVfx>>();
 function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVfx {
@@ -180,7 +193,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         selected = selected?.map(cue => cue.stopAfter === undefined ? cue : { ...cue,
           duration: Math.min(10, Math.max(0, end - cue.delay) + .5), stopAfter: Math.max(0, end - cue.delay) });
       }
-      if (context.releaseShift !== undefined) {
+      if (context.release !== undefined) {
+        const { atSeconds: at, clipSeconds: clip, tailSpeed: tail } = context.release;
+        if (![at, clip, tail].every(Number.isFinite) || at < 0 || clip <= 0 || tail <= 0) return false;
+        selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: releaseDelay(cue.delay, at, clip, tail) } : cue);
+      } else if (context.releaseShift !== undefined) {
         if (!Number.isFinite(context.releaseShift)) return false;
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
