@@ -407,6 +407,15 @@ describe('v2 lazy resource loading', () => {
     expect(gd).toHaveBeenCalledTimes(['missing position', 'empty position'].includes(failure) ? 1 : 0);
     if (!['missing position', 'empty position'].includes(failure)) geometry.dispose();
   });
+  it('spans quads and arbitrary quads over quadReach times size0, leaving meshes and rays as they were', () => {
+    const geometry = new BoxGeometry();
+    const fx = new ParticleEffect(parseParticleDocument(doc(quad({ size0: 10 }), quad({ kind: 'arbitraryQuad', size0: 10 }),
+      quad({ kind: 'ray', direction: [0, 1, 0], size0: 10 }), quad({ kind: 'mesh', mesh: 'm.glb', size0: 10 }))), { scale: 1, quadReach: 2, mesh: () => geometry });
+    fx.update(0.1);
+    expect([0, 1, 2, 3].map(i => mesh(fx, i).scale.x)).toEqual([20, 20, 10, 10]);
+    fx.dispose(); geometry.dispose();
+    expect(() => new ParticleEffect(parseParticleDocument(doc(quad())), { scale: 1, quadReach: 0 })).toThrow('invalid-particle-options');
+  });
   it('leaves out the emitter kinds omitKinds names, without changing the reader\'s document', async () => {
     const raw = doc(quad({ position: [1, 0, 0] }), quad({ kind: 'ray', direction: [0, 1, 0], position: [2, 0, 0] }), quad({ position: [3, 0, 0] }));
     const before = structuredClone(raw);

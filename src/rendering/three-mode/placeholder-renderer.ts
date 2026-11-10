@@ -67,6 +67,9 @@ import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
+import { ARENA_UNIT_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
+/** The original spans a quad over twice its scale0 (a half-extent; vfx-ltk materials.ts REACH). */
+const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
@@ -1121,15 +1124,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    void (tuning?.omitKinds?.length ? effects.load(id, spec.maxDuration, tuning.particles, tuning.omitKinds)
-      : effects.load(id, spec.maxDuration, tuning?.particles)).then(fx => {
+    // Sized the original's way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
+    // one held on the caster's weapon or hand bone, which keeps the body's (the vfx-ltk cueSize rule).
+    const held = spec.anchor === 'source' && spec.bone !== undefined && WEAPON_BONE.test(spec.bone);
+    const world = held ? source.modelScale ?? FX_SCALE : ARENA_UNIT_SCALE;
+    void effects.load(id, spec.maxDuration, tuning?.particles, { quadReach: OLD_PATH_QUAD_REACH, ...(tuning?.omitKinds?.length ? { omitKinds: tuning.omitKinds } : {}) }).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0, importance };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed)) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
         if (!makeRoom(importance)) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE) * (tuning?.scale ?? 1));
+        fx.object.scale.setScalar(effectScale(node, world) * (tuning?.scale ?? 1));
         node.add(fx.object);
       } else {
         const from = new Vector3();
@@ -1138,8 +1144,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // An effect authored about the target's feet (skill-fx-table `feet`) stands on its floor, not at IMPACT_HEIGHT.
         else if (spec.anchor === 'target' && tuning?.feet) from.y = target!.root.position.y;
         if (!makeRoom(importance)) { fx.dispose(); return; }
-        // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
-        fx.object.scale.setScalar((spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE) * (tuning?.scale ?? 1));
+        fx.object.scale.setScalar(world * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {

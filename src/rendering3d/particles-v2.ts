@@ -60,6 +60,7 @@ export class ParticleEffectV2 {
   private plane = new PlaneGeometry(1, 1);
   private rayPlane = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
   private elapsed = 0;
+  private readonly quadReach: number;
   private closed = false;
   private initializing = true;
   private attempts = 0;
@@ -97,6 +98,8 @@ export class ParticleEffectV2 {
       this.plane.dispose(); this.rayPlane.dispose(); throw new Error('invalid-particle-options');
     }
     this.object.scale.setScalar(scale);
+    this.quadReach = options.quadReach ?? 1;
+    if (!finite(this.quadReach) || this.quadReach <= 0) { this.plane.dispose(); this.rayPlane.dispose(); throw new Error('invalid-particle-options'); }
     let state = 1;
     this.random = options.random ?? (() => {
       state = (Math.imul(1664525, state) + 1013904223) >>> 0; return state / 4294967296;
@@ -357,7 +360,7 @@ export class ParticleEffectV2 {
         if (e.kind === 'trail') this.trail(p, target, size, camera);
         else {
           p.mesh.position.copy(this.placeInto(p, age, this.placed));
-          p.mesh.scale.copy(p.size).multiplyScalar(size);
+          p.mesh.scale.copy(p.size).multiplyScalar(e.kind === 'quad' || e.kind === 'arbitraryQuad' ? size * this.quadReach : size);
           p.mesh.quaternion.identity();
           if (e.kind === 'quad' && facing) p.mesh.quaternion.copy(facing);
           if (e.kind === 'ray') {

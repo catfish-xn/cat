@@ -22,7 +22,8 @@ export const EFFECT_IDLE_MS = 120_000;
 
 export interface EffectLibrary {
   /** `maxParticles` tightens this one effect's own live-particle limit (the shared budget applies either way). */
-  load(id: string, maxDuration: number, maxParticles?: number, omitKinds?: readonly string[]): Promise<ParticleEffect>;
+  /** `extra`: emitter kinds to leave out, and the quad reach (loadParticleEffect / ParticleOptions). */
+  load(id: string, maxDuration: number, maxParticles?: number, extra?: { omitKinds?: readonly string[]; quadReach?: number }): Promise<ParticleEffect>;
   readonly budget: ParticleBudget;
   readonly pool: ParticleMaterialPool;
   /** Reads so far, by kind (each resource once). */
@@ -65,7 +66,7 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
   const pool = new ParticleMaterialPool();
   return {
     budget, pool, reads,
-    load(id, maxDuration, maxParticles, omitKinds) {
+    load(id, maxDuration, maxParticles, extra) {
       if (closed) return Promise.reject(new Error('effect-library-closed'));
       // The resources this effect reads are held from the read until it ends (a sweep meanwhile leaves them); a failed
       // load lets them go at once.
@@ -77,7 +78,7 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
       const letGo = () => { for (const url of urls) { const use = used(url); use.refs--; use.last = now(); } };
       return loadParticleEffect(manifest, id, { root, scale: 1, maxDuration, readJson: track(readJson), readTexture: track(readTexture),
         readMesh: track(readMesh), borrowed: true, materials: pool, budget, ...(maxParticles === undefined ? {} : { maxParticles }),
-        ...(omitKinds?.length ? { omitKinds } : {}) }).then(effect => {
+        ...(extra?.omitKinds?.length ? { omitKinds: extra.omitKinds } : {}), ...(extra?.quadReach ? { quadReach: extra.quadReach } : {}) }).then(effect => {
         // Closed while it loaded: a mesh that landed late was released (and its emitter skipped), so this effect fails too.
         if (closed) { effect.dispose(); letGo(); throw new Error('effect-library-closed'); }
         const dispose = effect.dispose.bind(effect);

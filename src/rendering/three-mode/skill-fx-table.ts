@@ -7,6 +7,12 @@
 import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from './vfx-ltk/fx-size';
 
 /**
+ * Jinx's R hit was shrunk to 0.6 at the old base (10-24: 太亮太大): quads spanning scale0 at FX_SOURCE_SCALE. The
+ * original sizing (B) spans twice scale0 at the arena scale, so the same drawn quad size takes this factor.
+ */
+const JINX_R_TAR_KEPT = 0.6 * FX_SOURCE_SCALE / (2 * ARENA_UNIT_SCALE);
+
+/**
  * One cast effect's size factor (times its own scale) and live-particle limit. `feet`: a target-anchored effect authored
  * about the target's feet (its ground pieces carry no height, its flashes their own) stands on the target's floor
  * instead of hanging from the impact height.
@@ -16,12 +22,6 @@ export interface SkillFxEffectTuning {
   /** Emitter kinds left out of this effect (e.g. 'ray': flat strips whose host-relative direction the export lost). */
   readonly omitKinds?: readonly string[];
 }
-/**
- * The old action-bindings path (rendering3d/particles-v2.ts) spans a quad over scale0, the original over twice scale0
- * (a half-extent; vfx-ltk materials.ts REACH), and it draws at FX_SOURCE_SCALE rather than the arena's own scale: this
- * factor puts one of its effects at the original's world size (2 × 0.281 / 0.44 ≈ 1.28).
- */
-const OLD_PATH_TO_ORIGINAL = 2 * ARENA_UNIT_SCALE / FX_SOURCE_SCALE;
 /**
  * How a cast's impact lands: seconds the caster and targets hold, camera kick strength, a colored ring at each target,
  * and (optional) seconds the ring waits after the impact moment.
@@ -63,7 +63,7 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
     color: 0xff4fb0,
     keepCast: ['jinx_tft13_jinx_base_r_muzzleflash', 'jinx_tft13_jinx_base_r_rocket_child', 'jinx_tft13_jinx_base_r_tar'],
     // 10-24: 金克丝命中的粉色爆炸太亮太大.
-    effects: { jinx_tft13_jinx_base_r_tar: { scale: 0.6, particles: 50 } },
+    effects: { jinx_tft13_jinx_base_r_tar: { scale: JINX_R_TAR_KEPT, particles: 50 } },
   },
   jayce: {
     color: 0x58b8ff,
@@ -202,15 +202,14 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
   silco: { color: 0x64d8d8 },
   // 辛吉德
   singed: { color: 0x64d864, effects: {
-    // W_Ally_Activate (2639dd7d) drew at 0.78× the original (11-10, Fable C). Compensates for the old path treating
-    // scale0 as full width; remove when B lands. It is authored about the ally's feet: its ground-layer splashes and
+    // W_Ally_Activate (2639dd7d) is authored about the ally's feet: its ground-layer splashes and
     // ground beam carry no height and its flashes and Alpha_Beam sit 120 up, so the whole effect stands on the floor.
-    singed_tft13_singed_base_w_ally_activate: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, feet: true },
-    // W_Ally_Buf (6e34a4e1): the ally's purple ground ring and smoke, same size and footing as the burst. Its four flat
+    singed_tft13_singed_base_w_ally_activate: { scale: 1, particles: 120, feet: true },
+    // W_Ally_Buf (6e34a4e1): the ally's purple ground ring and smoke, on the same footing as the burst. Its four flat
     // ground rays (Alpha_GreenRay, Add_Ray, Alpha_DarkRay, Alpha_Ray: up to 580 long) follow the ally's facing in the
     // original; the export fixed them along one axis, so standing still they drew a long strip toward the camera
     // (10-25 playtest). Those rays are left out; the ring (Alpha_GroundGlow1), smoke, splats and glow stay.
-    singed_tft13_singed_base_w_ally_buf: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, feet: true, omitKinds: ['ray'] },
+    singed_tft13_singed_base_w_ally_buf: { scale: 1, particles: 120, feet: true, omitKinds: ['ray'] },
   } },
   // 史密奇
   smeech: { color: 0x92ef4d, keepCast: [
