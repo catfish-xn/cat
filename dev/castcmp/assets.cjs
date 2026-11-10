@@ -1,10 +1,11 @@
-// node dev/castcmp/assets.cjs <port> [--root <dir>] [--upstream <url>]
-// Read-through mirror of the test-server asset root, cached on disk under --root, served with CORS.
-// --upstream none serves only what is already in --root.
+// node dev/castcmp/assets.cjs <port> [--root <dir>] [--upstream <assets3d url>]
+// Asset root for the capture page, served with CORS. With --upstream (or CASTCMP_ASSET_UPSTREAM) it is a
+// read-through mirror: missing files are fetched from that assets3d root and cached under --root.
+// Without one it serves only what is already in --root.
 const http = require('http'), fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
 const ROOT = path.resolve(opt('root') ?? process.env.CASTCMP_ASSET_ROOT ?? path.join(__dirname, '.asset-mirror'));
-const UPSTREAM = (opt('upstream') ?? 'http://119.45.45.247:5190/assets3d').replace(/\/$/, '');
+const UPSTREAM = (opt('upstream') ?? process.env.CASTCMP_ASSET_UPSTREAM ?? 'none').replace(/\/$/, '');
 const OVERLAY = process.env.OVERLAY_DIR || null; // optional dir whose files replace the mirror's (previews)
 const inflight = new Map();
 function fetchUp(rel, file) {

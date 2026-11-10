@@ -22,7 +22,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   host.style.height = `${h}px`;
   const r = await mod.mountRenderer3d(host, { assetBase: params.get('assets')! });
   r.resize(w, h);
-  const me = { id: 'me', definitionId: unit, team: 'player', starLevel: Number(params.get('star') ?? 2), ...hex(4 + 1, 3), alive: true, visible: true,
+  const me = { id: 'me', definitionId: unit, team: 'player', starLevel: Number(params.get('star') ?? 3), ...hex(4 + 1, 3), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 }, ...(params.get('form') ? { form: params.get('form') } : {}) };
   const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: 1, ...hex(row, col), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });

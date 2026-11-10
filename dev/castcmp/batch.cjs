@@ -1,4 +1,4 @@
-// node dev/castcmp/batch.cjs <jobs.txt> <outRoot> [--parallel 1] [--port 5311] [--assetPort 5419] [--serve] [--root <assetDir>]
+// node dev/castcmp/batch.cjs <jobs.txt> <outRoot> [--parallel 1] [--port 5311] [--assetPort 5419] [--serve] [--root <assetDir>] [--upstream <assets3d url>]
 // Cross-platform batch runner (replaces run.sh / lane.sh). Each non-empty, non-# line of jobs.txt is
 //   <v-capture.cjs|v-capture-attack.cjs> <unit> <name> [capture args...]
 // and records into <outRoot>/<name>; <outRoot>/<name>.ok marks a finished job, so a rerun only does what is left.
@@ -17,7 +17,7 @@ const stop = () => { for (const c of children) { try { process.platform === 'win
 
 async function serve() {
   const node = process.execPath;
-  children.push(spawn(node, [path.join(__dirname, 'assets.cjs'), assetPort, ...(opt('root') ? ['--root', opt('root')] : [])], { stdio: 'ignore' }));
+  children.push(spawn(node, [path.join(__dirname, 'assets.cjs'), assetPort, ...(opt('root') ? ['--root', opt('root')] : []), ...(opt('upstream') ? ['--upstream', opt('upstream')] : [])], { stdio: 'ignore' }));
   children.push(spawn(node, [path.join(repo, 'node_modules/vite/bin/vite.js'), '--port', port, '--strictPort', '--host', '127.0.0.1'], { cwd: repo, stdio: 'ignore' }));
   for (let i = 0; i < 120 && !(await up(`http://127.0.0.1:${port}/dev/castcmp/index.html`) && await up(`http://127.0.0.1:${assetPort}/`)); i++) await new Promise(r => setTimeout(r, 500));
 }
