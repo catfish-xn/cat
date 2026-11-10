@@ -52,7 +52,10 @@ export function castReferencedClips(cast, castSequence, castVariants) {
     addSequence(castSequence);
     if (castVariants && typeof castVariants === 'object') {
         for (const key of ['star3', 'hero', 'front', 'back']) addSequence(castVariants[key]);
-        add(castVariants.rotate);
+        for (const entry of Array.isArray(castVariants.rotate) ? castVariants.rotate : []) {
+            if (typeof entry === 'string') add(entry);
+            else addSequence(entry);
+        }
         if (castVariants.branch && typeof castVariants.branch === 'object')
             for (const seq of Object.values(castVariants.branch)) addSequence(seq);
     }

@@ -2110,6 +2110,14 @@
       "currentSha256": "151c0451e731ae76a594db012dca392cda8443642cae65e2bd417d69c13c78e5",
       "firstDifferentByte": 145
     },
+    "tests/rendering3d-cast-rotate-sequence.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 8076,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "40338c6bec43b73c376907e90fdf514ecf8673666efdb9b1f47dfe9dce3d42cf",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-cast-sequence.test.ts": {
       "previousBytes": 9546,
       "currentBytes": 17681,

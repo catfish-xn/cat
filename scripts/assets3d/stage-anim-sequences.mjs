@@ -315,6 +315,46 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
 }
 
 /**
+ * `castVariants.rotate` is hand-authored: entry i is the i-th spell the unit cycles through. Each spell script names
+ * its graph key (`mAnimationName`, or the listed fallback when that is empty).
+ */
+export const ROTATE_SPELLS = {
+  jinx: [
+    { script: 'TFT13_JinxSpell_Zap', graphKey: 'Spell_Zap' },
+    { script: 'TFT13_JinxSpell_FlameChompers', graphKey: 'Spell_FlameChompers' },
+    { script: 'TFT13_JinxSpell_DeathRocket', graphKey: 'Spell_DeathRocket' },
+  ],
+};
+
+/**
+ * Pure planner for one `castVariants.rotate` entry: a single whole clip stays a string, anything longer becomes a
+ * CastSequence. A trimmed clip may only take a clipRange when no other reference already trims it differently.
+ */
+export function planRotateEntry(node, { entry = {}, otherUsedClips = new Set() } = {}) {
+  const plan = planGraphAction(node, { action: 'cast', entry: {}, otherUsedClips });
+  if (plan.status !== 'ok') return plan;
+  const existing = entry.clipRanges ?? {};
+  for (const [clip, range] of Object.entries(plan.clipRanges)) {
+    const old = existing[clip];
+    if (old && (Math.abs(old[0] - range[0]) > 1e-6 || Math.abs(old[1] - range[1]) > 1e-6)) {
+      return { status: 'skipped', reason: `clipRanges 冲突 (${clip})` };
+    }
+  }
+  for (const clip of plan.wholeClips) {
+    if (existing[clip]) return { status: 'skipped', reason: `clipRanges 冲突 (${clip})` };
+  }
+  const seq = plan.castSequence;
+  const single = typeof seq.main === 'string' && !seq.in && !seq.hold && !seq.out && !seq.layers;
+  return {
+    status: 'ok',
+    rotateEntry: single ? seq.main : seq,
+    clipRanges: plan.clipRanges,
+    clipSegments: plan.clipSegments,
+    requiredClips: plan.requiredClips,
+  };
+}
+
+/**
  * Plans an existing `castVariants.hero` from the original `<Spell>Hero` SpellObject's graph node.
  * Returns the next `castVariants` (undefined when empty); a hero variant equal to the default
  * cast sequence is dropped so the default path plays it. Ranged/segmented hero clips stay manual.
@@ -865,6 +905,53 @@ export async function stageAnimSequences({
           });
         }
       }
+    }
+
+    // 1c. Hand-authored cast rotation (one sequence per rotating spell)
+    const rotateSpells = ROTATE_SPELLS[id];
+    const rotate = entry.castVariants?.rotate;
+    if (rotateSpells && Array.isArray(rotate) && rotate.length === rotateSpells.length && !excludeSet.has(`${id}:cast-rotate`)) {
+      const otherUsedClips = new Set(
+        Object.entries(entry.animations ?? {})
+          .filter(([k, v]) => k !== 'cast' && typeof v === 'string')
+          .map(([, v]) => v),
+      );
+      const nextRotate = [...rotate];
+      let nextRanges = { ...(entry.clipRanges ?? {}) };
+      let nextSegments = { ...(entry.clipSegments ?? {}) };
+      const rotateMissing = [];
+      for (let i = 0; i < rotateSpells.length; i++) {
+        const { script, graphKey } = rotateSpells[i];
+        const anim = spellObjs.get(script.toLowerCase())?.anim;
+        const node = (anim ? await resolveNode(fnv1a(anim)) : null) ?? await resolveNode(fnv1a(graphKey));
+        const plan = planRotateEntry(node, { entry: { clipRanges: nextRanges }, otherUsedClips });
+        const label = `cast (rotate[${i}])`;
+        if (plan.status !== 'ok') {
+          reportRows.push({ id, action: label, nodeDesc: formatNodeSummary(node), fieldChange: '—', addedClips: [], skipReason: plan.reason });
+          continue;
+        }
+        if (JSON.stringify(rotate[i]) === JSON.stringify(plan.rotateEntry)) {
+          reportRows.push({ id, action: label, nodeDesc: formatNodeSummary(node), fieldChange: '—', addedClips: [], skipReason: '已一致' });
+          continue;
+        }
+        const missing = plan.requiredClips.filter(c => !existingClips.has(c));
+        rotateMissing.push(...missing);
+        nextRotate[i] = plan.rotateEntry;
+        nextRanges = { ...nextRanges, ...plan.clipRanges };
+        nextSegments = { ...nextSegments, ...plan.clipSegments };
+        reportRows.push({
+          id,
+          action: label,
+          nodeDesc: formatNodeSummary(node),
+          fieldChange: `castVariants.rotate[${i}]: ${JSON.stringify(rotate[i])} → ${JSON.stringify(plan.rotateEntry)}`,
+          addedClips: missing,
+          skipReason: '已更新',
+        });
+      }
+      for (const c of rotateMissing) neededMissingClips.add(c);
+      entry.castVariants = { ...entry.castVariants, rotate: nextRotate };
+      if (Object.keys(nextRanges).length > 0) entry.clipRanges = nextRanges;
+      if (Object.keys(nextSegments).length > 0) entry.clipSegments = nextSegments;
     }
 
     // 1b. Hero-augment cast variant: follow the original `<Spell>Hero` SpellObject's mAnimationName.
