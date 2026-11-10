@@ -32,9 +32,9 @@
     },
     "tests/assets3d-bin.test.ts": {
       "previousBytes": 12171,
-      "currentBytes": 41105,
+      "currentBytes": 41447,
       "previousSha256": "885adb1be19d992c48ecb9943a7c9a26e2608ee3ded1ce70726387486ea5d1b1",
-      "currentSha256": "5c3aaa471cb65dd336ebb5d3c5951ef4ffee6e697396603548e15e53b048d5c1",
+      "currentSha256": "a2c731cb6c2f788d645984b769dde9f8a77659a4486e0f4441736cd704fbf584",
       "firstDifferentByte": 56
     },
     "tests/assets3d-boards-alignment.test.ts": {

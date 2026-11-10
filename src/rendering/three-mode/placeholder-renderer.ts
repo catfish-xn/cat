@@ -1916,10 +1916,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.copy(view.root.position)
         .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
-      // The stars circle the head like the client's stun, drawn over the bars (STUN_RENDER_ORDER) so the bar never hides them.
+      // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + height + lift + CONTROL_3D.overHead);
+        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + height * CONTROL_3D.headShare + lift);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).

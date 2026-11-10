@@ -17,7 +17,6 @@ export const DEFAULT_EXCLUDES = new Set([
   'sevika:cast',
   'sevika:attack',
   'caitlyn:attack',
-  'singed:cast',
   'violet:cast',
   'malzahar:cast',
 ]);
@@ -41,6 +40,33 @@ export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
   warwick: Object.freeze(['BloodFrenzy_Activate']),
   mel: Object.freeze(['Spell_Dash', 'Spell1_Blast']),
 });
+
+/**
+ * Casts whose spell names a graph key that is not what the original plays. Darius: TFT13_DariusSpell names `Spell`
+ * (Atomic Spell1, 0.53 s), but the original Q_Ring emitters wait 0.75 s and the 11-08 footage audit shows the blade
+ * ring at 0.70 s, the swing of the Sequencer 0x5463dad9 (Spell1_IN 0.77 s → Spell1) next to it in the same graph.
+ * Values are graph keys (names or 0x hashes).
+ */
+export const CAST_GRAPH_KEY_OVERRIDES = Object.freeze({
+  darius: '0x5463dad9',
+});
+
+/** One graph key (a name, or a `0x` hash for an uncracked one) as its hash. */
+export const graphKeyHash = key => (key.startsWith('0x') ? Number.parseInt(key, 16) : fnv1a(key)) >>> 0;
+
+/**
+ * A graph mask (MaskData.mWeightList, one weight per skeleton joint in skeleton order) as bone → weight, without the
+ * zero weights. `jointNames` are the glb skin's joints, which keep the skeleton order.
+ */
+export function maskBoneWeights(weightList, jointNames) {
+  if (!Array.isArray(weightList) || !Array.isArray(jointNames) || weightList.length !== jointNames.length) return null;
+  const out = {};
+  weightList.forEach((w, i) => {
+    const weight = Math.min(1, Math.max(0, Number(w)));
+    if (weight > 0 && jointNames[i]) out[jointNames[i]] = Math.round(weight * 1e4) / 1e4;
+  });
+  return Object.keys(out).length ? out : null;
+}
 
 /**
  * Builds a Sequencer node from SCRIPT_CAST_GRAPH_KEYS for a script-driven cast; null when the unit has none.
@@ -76,6 +102,7 @@ const KNOWN_GRAPH_NAMES = new Set([
   'Transform', 'TransformIn', 'TransformOut', 'Spell_2', 'Spell_3', 'Spell_1', 'Spell4_Hit',
   'Spell2_Ranged_Jump', 'Spell2_KnockHexCrystals', 'Spell1_GainShield', 'Spell1_Right', 'Spell1_Left', 'CallShield',
   'BloodFrenzy_Activate', 'Devour_Dash', 'Spell_Dash', 'Spell1_Blast',
+  'Spell2_Sequence', 'Spell_Out', 'Spell_Hero', 'Spell_Hero_Parallel', 'Spell_Run',
 ]);
 
 /**
@@ -122,6 +149,7 @@ export function mergeAdjacentSegments(segments, { untrimmed = false } = {}) {
       const isWhole = effStart <= 0 && lastFrame != null && mergedEnd != null && mergedEnd >= lastFrame;
       out[out.length - 1] = {
         ...prev,
+        mask: JSON.stringify(prev.mask ?? null) === JSON.stringify(seg.mask ?? null) ? prev.mask : undefined,
         startFrame: isWhole ? null : (prev.startFrame ?? 0),
         endFrame: isWhole ? null : mergedEnd,
         effectiveStartFrame: effStart,
@@ -140,7 +168,7 @@ export function mergeAdjacentSegments(segments, { untrimmed = false } = {}) {
 /**
  * Map 1..4 ordered stage clip names (and optional parallel layers) into a CastSequence.
  */
-export function mapStagesToSequence(stageNames, layers = []) {
+export function mapStagesToSequence(stageNames, layers = [], masks = {}) {
   if (!Array.isArray(stageNames) || stageNames.length === 0) {
     return { sequence: null, skipReason: '无有效片段' };
   }
@@ -162,6 +190,9 @@ export function mapStagesToSequence(stageNames, layers = []) {
   }
   if (layers.length > 0) {
     sequence = { ...sequence, layers: [...layers] };
+    // Masks only matter where clips play together: the main stage and its layers.
+    const kept = Object.fromEntries(Object.entries(masks ?? {}).filter(([name]) => name === sequence.main || layers.includes(name)));
+    if (Object.keys(kept).length) sequence = { ...sequence, masks: kept };
   }
   return { sequence, skipReason: null };
 }
@@ -291,7 +322,13 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
 
   const mainNames = mainSegments.map(resolveSegmentName);
   const layerNames = layerSegments.map(resolveSegmentName);
-  const { sequence, skipReason } = mapStagesToSequence(mainNames, layerNames);
+  // An Atomic's own bone mask (resolved by the caller onto `mask`); a merged segment keeps it only if it is the same.
+  const masks = {};
+  [...mainSegments, ...layerSegments].forEach((seg, i) => {
+    const name = i < mainNames.length ? mainNames[i] : layerNames[i - mainNames.length];
+    if (seg.mask && !Object.hasOwn(masks, name)) masks[name] = seg.mask;
+  });
+  const { sequence, skipReason } = mapStagesToSequence(mainNames, layerNames, masks);
   if (skipReason || !sequence) {
     return { status: 'skipped', reason: skipReason ?? '无法映射序列' };
   }
@@ -432,6 +469,12 @@ function isUncompressedGlb(bytes) {
   } catch {
     return false;
   }
+}
+
+function getGlbJointNames(bytes) {
+  const doc = readGlbDocument(bytes);
+  const skin = doc.skins?.[0];
+  return skin ? skin.joints.map(i => doc.nodes?.[i]?.name ?? '') : null;
 }
 
 function getGlbClipNames(bytes) {
@@ -687,9 +730,16 @@ export async function stageAnimSequences({
     }
     const graphEntries = graphDocs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
     const graphClips = new Map();
+    const graphMasks = new Map();
+    let jointNames = null;
     const clipNameToAnmPath = new Map();
     for (const e of graphEntries) {
       const g = bField(e, 'animationGraphData') ?? e;
+      for (const [k, mask] of bField(g, 'mMaskDataMap')?.entries ?? []) {
+        const mHash = (typeof k === 'object' && k ? Number(k.hash) : typeof k === 'string' ? fnv1a(k) : k) >>> 0;
+        const list = bField(mask, 'mWeightList');
+        if (Array.isArray(list)) graphMasks.set(mHash, list.map(Number));
+      }
       for (const [k, clip] of bField(g, 'mClipDataMap')?.entries ?? []) {
         const p = bField(bField(clip, 'mAnimationResourceData'), 'mAnimationFilePath') ?? bField(clip, 'mAnimationFilePath');
         if (typeof p === 'string') {
@@ -726,8 +776,12 @@ export async function stageAnimSequences({
         const ef = endFrame != null ? endFrame : (anm ? anm.lastFrame : 0);
         const fps = anm?.fps ?? 30;
         const dur = anm ? Math.max(0, (ef - sf) / fps) : 0;
+        const maskKey = bField(node, 'mMaskDataName');
+        const maskHash = maskKey == null ? null : (typeof maskKey === 'object' ? Number(maskKey.hash) : typeof maskKey === 'string' ? fnv1a(maskKey) : maskKey) >>> 0;
+        const mask = maskHash == null ? null : maskBoneWeights(graphMasks.get(maskHash), jointNames);
         return {
           kind: 'Atomic',
+          ...(mask ? { mask } : {}),
           keyName,
           keyHash: kHash >>> 0,
           anmPath,
@@ -781,6 +835,7 @@ export async function stageAnimSequences({
       : join(resolvedAssets, entry.path);
     const deployedBytes = await readFile(deployedGlbPath);
     const existingClips = getGlbClipNames(deployedBytes);
+    jointNames = getGlbJointNames(deployedBytes);
     const neededMissingClips = new Set();
 
     // 1. Cast
@@ -789,14 +844,22 @@ export async function stageAnimSequences({
     const spObj = spellObjs.get(targetSpellScript.toLowerCase());
     const rawSpellAnim = spObj?.anim;
     let origCastNode = null;
-    if (rawSpellAnim) origCastNode = await resolveNode(fnv1a(rawSpellAnim));
+    if (Object.hasOwn(CAST_GRAPH_KEY_OVERRIDES, id)) {
+      origCastNode = await resolveNode(graphKeyHash(CAST_GRAPH_KEY_OVERRIDES[id]));
+      if (!origCastNode) throw new Error(`cast-graph-key-missing: ${id}:${CAST_GRAPH_KEY_OVERRIDES[id]}`);
+    }
+    if (!origCastNode && rawSpellAnim) origCastNode = await resolveNode(fnv1a(rawSpellAnim));
     if (!origCastNode && !rawSpellAnim) {
       origCastNode = await buildScriptCastNode(id, key => resolveNode(fnv1a(key)));
     }
     if (!origCastNode) {
       const fallbackKeys = ['Spell', 'Spell1', 'SpellCast'];
       if (id === 'swain') fallbackKeys.push('Spell2');
-      if (id === 'singed') fallbackKeys.push('0x1bab12f3');
+      // Singed: TFT13_SingedSpell names "Spell1", which the graph does not have. Its graph has Spell_1
+      // (Spell_3.anm 104-131), Spell2_Sequence (Spell_2 = Spell_3.anm 220-end, then Spell_Out) and
+      // Spell_Hero_Parallel (Spell_3.anm 220-248 on the upper-body mask over Spell_Run). The hero variant
+      // throws with the 220.. section, so the standing cast is Spell2_Sequence.
+      if (id === 'singed') fallbackKeys.push('Spell2_Sequence');
       for (const fk of fallbackKeys) {
         const kh = fk.startsWith('0x') ? Number.parseInt(fk, 16) : fnv1a(fk);
         const r = await resolveNode(kh);
@@ -847,7 +910,8 @@ export async function stageAnimSequences({
         };
         const effectiveOldSeq = entry.castSequence ?? (entry.animations?.cast ? { main: entry.animations.cast } : undefined);
         const stagesChanged = JSON.stringify(flattenStages(effectiveOldSeq)) !== JSON.stringify(flattenStages(plan.castSequence));
-        const layersChanged = JSON.stringify(effectiveOldSeq?.layers ?? []) !== JSON.stringify(plan.castSequence.layers ?? []);
+        const layersChanged = JSON.stringify(effectiveOldSeq?.layers ?? []) !== JSON.stringify(plan.castSequence.layers ?? [])
+          || JSON.stringify(effectiveOldSeq?.masks ?? {}) !== JSON.stringify(plan.castSequence.masks ?? {});
         const seqChanged = stagesChanged || layersChanged;
 
         const nextRanges = { ...(entry.clipRanges ?? {}) };

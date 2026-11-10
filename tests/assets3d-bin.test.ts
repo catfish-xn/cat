@@ -18,7 +18,7 @@ import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 // @ts-expect-error Pure Node utility.
-import { SCRIPT_CAST_GRAPH_KEYS, buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction, planHeroVariant } from '../scripts/assets3d/stage-anim-sequences.mjs';
+import { DEFAULT_EXCLUDES, SCRIPT_CAST_GRAPH_KEYS, buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction, planHeroVariant } from '../scripts/assets3d/stage-anim-sequences.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -858,5 +858,11 @@ describe('script-driven cast graph keys', () => {
     expect(SCRIPT_CAST_GRAPH_KEYS.mel).toEqual(['Spell_Dash', 'Spell1_Blast']);
     expect(fnv1a('Spell_Dash') >>> 0).toBe(0x60816d32);
     expect(fnv1a('Spell1_Blast') >>> 0).toBe(0xfb92fc69);
+  });
+
+  it('stages Singed\'s cast from Spell2_Sequence instead of excluding it', () => {
+    // Singed's skin0 graph keeps Spell2_Sequence (Spell_3.anm from frame 220, then Spell_Out) under this hash.
+    expect(fnv1a('Spell2_Sequence') >>> 0).toBe(0x1bab12f3);
+    expect(DEFAULT_EXCLUDES.has('singed:cast')).toBe(false);
   });
 });
