@@ -2351,6 +2351,13 @@
       "currentSha256": "a7bc4631edeccd5682652dbfc808a002246d96c2c703f4c01ac7f1d89edd24ae",
       "firstDifferentByte": 0
     },
+    "tests/rendering3d-skill-fx-table.test.ts": {
+      "previousBytes": 3437,
+      "currentBytes": 4133,
+      "previousSha256": "c0be64de79768f1811de7b6a18173e3ca0f36e8a9841697ff82eba4bc76c8576",
+      "currentSha256": "d73dac3a71cd25dcd6d212d556404d57323524a1ea5a2591f0fe603159c86d69",
+      "firstDifferentByte": 133
+    },
     "tests/rendering3d-star-body-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

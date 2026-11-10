@@ -34,7 +34,7 @@ export const CAST_PARTICLE_CAP = SKILL_FX_DEFAULTS.effect.particles;
 /** Every row's per-effect overrides, by effect id (ids carry their champion's prefix, so they never collide). */
 const EFFECT_TUNING: ReadonlyMap<string, SkillFxEffectTuning> = new Map(Object.values(SKILL_FX_TABLE).flatMap(row => Object.entries(row.effects ?? {})));
 /** A sample cast effect's size factor and live-particle limit. */
-export const castEffectTuning = (id: string): { scale: number; particles: number } => ({ ...(EFFECT_TUNING.get(id) ?? SKILL_FX_DEFAULTS.effect) });
+export const castEffectTuning = (id: string): { scale: number; particles: number; feet?: boolean } => ({ ...(EFFECT_TUNING.get(id) ?? SKILL_FX_DEFAULTS.effect) });
 const RELEASE_SECONDS = 0.14, SHAKE_SECONDS = 0.16, SHAKE_AMPLITUDE = 1.6, SHAKE_GAP = 0.35;
 
 /** A sample champion's cast plan: trimmed to its kept effects, none starting before the charge has finished. */

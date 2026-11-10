@@ -4,8 +4,20 @@
  * champion means adding its row, nothing else. Fields left out fall back to SKILL_FX_DEFAULTS.
  */
 
-/** One cast effect's size factor (times its own scale) and live-particle limit. */
-export interface SkillFxEffectTuning { readonly scale: number; readonly particles: number }
+import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from './vfx-ltk/fx-size';
+
+/**
+ * One cast effect's size factor (times its own scale) and live-particle limit. `feet`: a target-anchored effect authored
+ * about the target's feet (its ground pieces carry no height, its flashes their own) stands on the target's floor
+ * instead of hanging from the impact height.
+ */
+export interface SkillFxEffectTuning { readonly scale: number; readonly particles: number; readonly feet?: boolean }
+/**
+ * The old action-bindings path (rendering3d/particles-v2.ts) spans a quad over scale0, the original over twice scale0
+ * (a half-extent; vfx-ltk materials.ts REACH), and it draws at FX_SOURCE_SCALE rather than the arena's own scale: this
+ * factor puts one of its effects at the original's world size (2 × 0.281 / 0.44 ≈ 1.28).
+ */
+const OLD_PATH_TO_ORIGINAL = 2 * ARENA_UNIT_SCALE / FX_SOURCE_SCALE;
 /**
  * How a cast's impact lands: seconds the caster and targets hold, camera kick strength, a colored ring at each target,
  * and (optional) seconds the ring waits after the impact moment.
@@ -185,7 +197,12 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
   // 希尔科
   silco: { color: 0x64d8d8 },
   // 辛吉德
-  singed: { color: 0x64d864 },
+  singed: { color: 0x64d864, effects: {
+    // W_Ally_Activate (2639dd7d) drew at 0.78× the original (11-10, Fable C). Compensates for the old path treating
+    // scale0 as full width; remove when B lands. It is authored about the ally's feet: its ground-layer splashes and
+    // ground beam carry no height and its flashes and Alpha_Beam sit 120 up, so the whole effect stands on the floor.
+    singed_tft13_singed_base_w_ally_activate: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, feet: true },
+  } },
   // 史密奇
   smeech: { color: 0x92ef4d, keepCast: [
     'smeech_tft13_gremlin_base_z_jump_launch',
