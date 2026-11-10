@@ -111,6 +111,78 @@ describe('staged casts with generated skeleton curves', () => {
     mixer.apply(state.consume(cast)); mixer.update(0.25); mixer.apply(state.update(1));
     expect(mixer.mixer.clipAction(f.clips[0]).time).toBeCloseTo(0.5); mixer.dispose(); f.mixer.dispose();
   });
+  it('resolves attackSequence into multi-stage playback fitted to attack interval, while formAnimations takes priority', () => {
+    const f = fixture();
+    const formClip = new AnimationClip('form_atk', 0.8, [new NumberKeyframeTrack('joint.position[x]', [0, 0.8], [0, 3])]);
+    const clips = [...f.clips, formClip];
+    const mixer = new UnitAnimationMixer(f.root, clips, f.names, {
+      attackSequence: { in: 'entry', main: 'strike', out: 'exit' },
+      formAnimations: { back: { attack: 'form_atk' } },
+    });
+    expect(mixer.resolvePlayback('attack')).toEqual({ clips: ['entry', 'strike', 'exit'], durationSeconds: 2 });
+    expect(mixer.resolvePlayback('attack', 0, { attackIntervalSeconds: 1.5 })).toEqual({
+      clips: ['entry', 'strike', 'exit'],
+      durationSeconds: 1.35,
+    });
+    expect(mixer.resolvePlayback('attack', 0, { form: 'back' })).toEqual({
+      clips: ['form_atk'],
+      durationSeconds: 0.8,
+    });
+    mixer.setForm('back');
+    expect(mixer.resolvePlayback('attack')).toEqual({ clips: ['form_atk'], durationSeconds: 0.8 });
+    mixer.setForm('front');
+    const atkPlayback = mixer.resolvePlayback('attack')!;
+    expect(atkPlayback).toEqual({ clips: ['entry', 'strike', 'exit'], durationSeconds: 2 });
+    mixer.apply({ state: 'attack', previous: 'idle', revision: 1, loop: false, blendSeconds: 0, playback: atkPlayback });
+    mixer.update(0.25); expect(f.bone.position.x).toBeCloseTo(0.5);
+    mixer.update(1.75); expect(f.bone.position.x).toBeCloseTo(5);
+    mixer.dispose(); f.mixer.dispose();
+  });
+  it('plays layers with LoopOnce and matching timeScale when main starts, stops them on sequence end or action switch, and ignores missing layer clips', () => {
+    const root = new Group(), bone = new Bone(), subBone = new Bone();
+    bone.name = 'joint'; subBone.name = 'sub'; root.add(bone, subBone);
+    const clip = (name: string, target: string, duration: number, a: number, b: number) =>
+      new AnimationClip(name, duration, [new NumberKeyframeTrack(`${target}.position[x]`, [0, duration], [a, b])]);
+    const clips = [
+      clip('rest', 'joint', 1, 0, 0),
+      clip('entry', 'joint', 0.5, 0, 1),
+      clip('strike', 'joint', 1, 1, 3),
+      clip('exit', 'joint', 0.5, 3, 4),
+      clip('layer_fx', 'sub', 1, 0, 10),
+    ];
+    const mixer = new UnitAnimationMixer(root, clips, { idle: 'rest', cast: 'strike' }, {
+      castSequence: { in: 'entry', main: 'strike', out: 'exit', layers: ['layer_fx', 'missing_layer'] },
+    });
+    const layerAction = mixer.mixer.clipAction(clips[4]);
+    const playback = mixer.resolvePlayback('cast')!;
+    mixer.apply({ state: 'cast', previous: 'idle', revision: 1, loop: false, blendSeconds: 0, playback });
+    expect(layerAction.isRunning()).toBe(false);
+    mixer.update(0.25);
+    expect(layerAction.isRunning()).toBe(false);
+    mixer.update(0.25);
+    expect(layerAction.isRunning()).toBe(true);
+    expect(layerAction.loop).toBe(LoopOnce);
+    expect(layerAction.clampWhenFinished).toBe(true);
+    expect(layerAction.getEffectiveWeight()).toBeCloseTo(1);
+    mixer.update(0.5);
+    expect(subBone.position.x).toBeCloseTo(5);
+    mixer.update(1);
+    expect(layerAction.isRunning()).toBe(false);
+
+    // Switching to another action mid-main also stops layers immediately.
+    const directMixer = new UnitAnimationMixer(root, clips, { idle: 'rest', attack: 'strike' }, {
+      attackSequence: { main: 'strike', layers: ['layer_fx'] },
+    });
+    const directLayer = directMixer.mixer.clipAction(clips[4]);
+    const atkPlayback = directMixer.resolvePlayback('attack', 0, { attackIntervalSeconds: 0.5 })!;
+    directMixer.apply({ state: 'attack', previous: 'idle', revision: 1, loop: false, blendSeconds: 0, playback: atkPlayback });
+    expect(directLayer.isRunning()).toBe(true);
+    expect(directLayer.getEffectiveTimeScale()).toBeCloseTo(1 / 0.45);
+    directMixer.apply({ state: 'idle', previous: 'attack', revision: 2, loop: true, blendSeconds: 0 });
+    expect(directLayer.isRunning()).toBe(false);
+    directMixer.dispose();
+    mixer.dispose();
+  });
 });
 
 describe('cast metadata contract and offline dependency list', () => {
@@ -167,6 +239,82 @@ describe('cast metadata contract and offline dependency list', () => {
       expect(() =>
         assertManifest({ schemaVersion: 1, models: { alpha: { path: 'alpha.glb', formAnimations: invalid } } }),
       ).toThrow('invalid-form-animations');
+    }
+  });
+  it('validates layers, attackSequence, and clipSegments contracts and rejects invalid definitions', async () => {
+    const valid = {
+      path: 'alpha.glb',
+      castSequence: { in: 'entry', main: 'strike', layers: ['layer_a', 'layer_b'] },
+      attackSequence: { in: 'atk_in', main: 'atk_main', out: 'atk_out', layers: ['atk_layer'] },
+      clipSegments: { 'seg_a': ['source_clip', 0, 0.5] as const, 'seg_b': ['source_clip', 0.8, 2.4] as const },
+    };
+    expect(() => assertManifest({ schemaVersion: 1, models: { alpha: valid } })).not.toThrow();
+    const cache = new ModelCache({ schemaVersion: 1, models: { alpha: valid } }, '/local/', async () => ({ scene: new Group(), animations: [] }));
+    const lease = await cache.load('alpha');
+    expect(lease.attackSequence).toEqual(valid.attackSequence);
+    expect(lease.castSequence).toEqual(valid.castSequence);
+    lease.release();
+    cache.dispose();
+
+    for (const badLayers of [[], [''], ['   '], [123], 'not-array', ['a', 'b', 'c', 'd', 'e']]) {
+      expect(() =>
+        assertManifest({
+          schemaVersion: 1,
+          models: { alpha: { path: 'alpha.glb', castSequence: { main: 'strike', layers: badLayers as never } } },
+        }),
+      ).toThrow('invalid-cast-layers');
+      expect(() =>
+        assertManifest({
+          schemaVersion: 1,
+          models: { alpha: { path: 'alpha.glb', attackSequence: { main: 'strike', layers: badLayers as never } } },
+        }),
+      ).toThrow('invalid-cast-layers');
+    }
+
+    for (const badAttack of [
+      null,
+      [],
+      'attack',
+      {},
+      { main: '' },
+      { main: '   ' },
+      { main: [] },
+      { main: 'strike', in: '' },
+      { main: 'strike', unknown: 'clip' },
+    ]) {
+      expect(() =>
+        assertManifest({
+          schemaVersion: 1,
+          models: { alpha: { path: 'alpha.glb', attackSequence: badAttack as never } },
+        }),
+      ).toThrow('invalid-attack-sequence');
+    }
+
+    for (const badSegments of [
+      null,
+      [],
+      'segments',
+      Object.create({}),
+      { '': ['src', 0, 1] },
+      { '   ': ['src', 0, 1] },
+      { alias: ['src', 0] },
+      { alias: ['src', 0, 1, 2] },
+      { alias: ['', 0, 1] },
+      { alias: ['   ', 0, 1] },
+      { alias: [123, 0, 1] },
+      { alias: ['src', -0.1, 1] },
+      { alias: ['src', 1, 1] },
+      { alias: ['src', 2, 1] },
+      { alias: ['src', 0, Number.NaN] },
+      { alias: ['src', 0, Number.POSITIVE_INFINITY] },
+      Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`seg_${i}`, ['src', 0, 1]])),
+    ]) {
+      expect(() =>
+        assertManifest({
+          schemaVersion: 1,
+          models: { alpha: { path: 'alpha.glb', clipSegments: badSegments as never } },
+        }),
+      ).toThrow('invalid-clip-segments');
     }
   });
 });
