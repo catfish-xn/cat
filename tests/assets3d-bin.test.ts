@@ -771,6 +771,22 @@ describe('initial material and action binding', () => {
       },
     );
     expect(variantPlan).toEqual({ status: 'skipped', reason: '需人工 (castVariants)' });
+
+    // 7. IsMoving ConditionBool plays the standing (false) branch; other ConditionBool stays manual
+    const movingNode = (updater: string) => ({
+      kind: 'ConditionBool',
+      keyName: 'Spell',
+      updater,
+      branches: { true: atomic('spell_run', 0, 32, 32), false: atomic('spell_idle', 0, 32, 32) },
+    });
+    const movingPlan = planGraphAction(movingNode('IsMovingParametricUpdater'), { action: 'cast', entry: {} });
+    expect(movingPlan).toMatchObject({ status: 'ok', castSequence: { main: 'spell_idle' }, requiredClips: ['spell_idle'] });
+    expect(movingPlan.castSequence).not.toHaveProperty('in');
+    expect(movingPlan.castSequence).not.toHaveProperty('out');
+    expect(planGraphAction(movingNode('0x6c816d62'), { action: 'cast', entry: {} }))
+      .toMatchObject({ status: 'ok', castSequence: { main: 'spell_idle' } });
+    expect(planGraphAction(movingNode('OtherParametricUpdater'), { action: 'cast', entry: {} }))
+      .toEqual({ status: 'skipped', reason: '非常规节点 (ConditionBool)' });
   });
 
   it('plans castVariants.hero from the original hero SpellObject graph node', () => {
