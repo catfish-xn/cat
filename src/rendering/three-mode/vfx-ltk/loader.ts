@@ -21,6 +21,19 @@ export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
   constructor(readonly reason: LoadFailure, detail: string) { super(`vfx-ltk:${reason}:${detail}`); }
 }
+/**
+ * An attached-mesh emitter that names a static mesh (`mSimpleMeshName`, a `.scb`) rather than its host's own skin.
+ *
+ * The attached kind draws the host's skinned body at the particle's scale, and such an emitter carries the scale meant for
+ * its own small mesh: Sevika's punch hit BUBBLE_START1 (the bubble, 12×) drew a 4–12× purple copy of the struck unit
+ * (#588, 11-10 a96aac47 recording), and Renata's empowered attack missile (d7729373 Alpha_Bullet/Add_Bullet, her
+ * canister at 1.2 × 1.2 × 2.3) would stretch her body the same way. These three are the only such emitters in Set 13;
+ * every other attached-mesh emitter names no mesh or the host's own `.skn` and stays at most 1.1× (11-10 audit).
+ * They are left undrawn like a muted emitter.
+ */
+export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh && emitter.mesh !== null && !emitter.mesh.skinned;
+}
 export interface VfxIndex {
   version: 1;
   systems: Record<string, string>;
@@ -202,9 +215,11 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
-      // A muted emitter (cue-overrides.ts) is left undrawn the same way.
+      // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
+      // static mesh of its own (attachedMeshOfItsOwn).
       const muted = MUTED_EMITTERS[id] ?? [];
-      const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet) && !muted.includes(e.name ?? ''));
+      const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
+        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
       if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes

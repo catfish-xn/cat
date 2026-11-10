@@ -1149,6 +1149,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
+  // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
+  // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+    const release = source.lease?.attackRelease, output = source.state.output;
+    const at = output.state === 'attack' ? output.playback?.release?.atSeconds : undefined;
+    return release && at !== undefined ? { variant, releaseShift: at - release.clipSeconds } : variant;
+  };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
@@ -1159,7 +1166,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
