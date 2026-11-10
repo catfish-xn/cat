@@ -22,6 +22,14 @@
       "currentSha256": "ccc03650d0cef9cc1d30bc4bba81c8ac41c549527a18558647d93364f5ae24d4",
       "firstDifferentByte": 1900
     },
+    "tests/assets3d-anim-masks.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2705,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "d854aa8a70cecff505fc3989d4a1c51b46beec3930a1249d4f38253cb80c90a4",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-augment-icons.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2109,6 +2117,14 @@
       "previousSha256": "6bf6b4c0e10f4fef73c5ea74c45cce1a447840f54824399d8d8bcefffda4cafa",
       "currentSha256": "151c0451e731ae76a594db012dca392cda8443642cae65e2bd417d69c13c78e5",
       "firstDifferentByte": 145
+    },
+    "tests/rendering3d-cast-layer-masks.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4024,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "947fc4fd41014418b34736b37e3246ecfd835b6b5df70be03bff2f53b7c84384",
+      "firstDifferentByte": 0
     },
     "tests/rendering3d-cast-rotate-sequence.test.ts": {
       "previousExists": false,
