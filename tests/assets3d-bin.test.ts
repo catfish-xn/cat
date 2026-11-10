@@ -17,6 +17,8 @@ import { characterForPath, propertyReferences } from '../scripts/assets3d/plan-f
 import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
+// @ts-expect-error Pure Node utility.
+import { mapStagesToSequence, mergeAdjacentSegments, planGraphAction } from '../scripts/assets3d/stage-anim-sequences.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -634,5 +636,140 @@ describe('initial material and action binding', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+  it('plans cast and attack sequences from synthetic animation graphs (adjacent merge, 2/3/4 stages, Parallel layers, untrimmed attacks, >4 and castVariants skips)', () => {
+    const atomic = (clipName: string, startFrame: number | null = null, endFrame: number | null = null, lastFrame = 60, fps = 30) => ({
+      kind: 'Atomic',
+      keyName: clipName,
+      clipName,
+      startFrame,
+      endFrame,
+      effectiveStartFrame: startFrame ?? 0,
+      effectiveEndFrame: endFrame ?? lastFrame,
+      lastFrame,
+      fps,
+    });
+
+    // 1. Sequencer adjacent segment merge vs non-adjacent clipSegments
+    const mergedSeq = mergeAdjacentSegments([
+      atomic('clip_intro', 0, 14, 30),
+      atomic('clip_out', 0, 19, 50),
+      atomic('clip_out', 20, 50, 50),
+    ]);
+    expect(mergedSeq).toHaveLength(2);
+    expect(mergedSeq[0]).toMatchObject({ clipName: 'clip_intro', startFrame: 0, endFrame: 14 });
+    expect(mergedSeq[1]).toMatchObject({ clipName: 'clip_out', startFrame: null, endFrame: null, isWholeClip: true });
+
+    const adjacentPlan = planGraphAction(
+      {
+        kind: 'Sequencer',
+        keyName: 'Spell',
+        children: [
+          atomic('clip_intro', 0, 14, 30),
+          atomic('clip_out', 0, 19, 50),
+          atomic('clip_out', 20, 50, 50),
+        ],
+      },
+      { action: 'cast', entry: {} },
+    );
+    expect(adjacentPlan).toMatchObject({
+      status: 'ok',
+      castSequence: { in: 'clip_intro', main: 'clip_out' },
+      clipRanges: { clip_intro: [0, 14 / 30] },
+      clipSegments: {},
+    });
+
+    const splitSameClipPlan = planGraphAction(
+      {
+        kind: 'Sequencer',
+        keyName: 'Spell',
+        children: [
+          atomic('combo_clip', 0, 12, 90),
+          atomic('combo_clip', 24, 84, 90),
+        ],
+      },
+      { action: 'cast', entry: {} },
+    );
+    expect(splitSameClipPlan).toMatchObject({
+      status: 'ok',
+      castSequence: { in: 'combo_clip@0-12', main: 'combo_clip@24-84' },
+      clipRanges: {},
+      clipSegments: {
+        'combo_clip@0-12': ['combo_clip', 0, 0.4],
+        'combo_clip@24-84': ['combo_clip', 0.8, 2.8],
+      },
+    });
+
+    // 2. 2/3/4 stage mapping
+    expect(mapStagesToSequence(['s1'])).toEqual({ sequence: { main: 's1' }, skipReason: null });
+    expect(mapStagesToSequence(['s1', 's2'])).toEqual({ sequence: { in: 's1', main: 's2' }, skipReason: null });
+    expect(mapStagesToSequence(['s1', 's2', 's3'])).toEqual({ sequence: { in: 's1', main: 's2', out: 's3' }, skipReason: null });
+    expect(mapStagesToSequence(['s1', 's2', 's3', 's4'])).toEqual({
+      sequence: { in: 's1', hold: 's2', main: 's3', out: 's4' },
+      skipReason: null,
+    });
+
+    // 3. Parallel -> layers
+    const parallelPlan = planGraphAction(
+      {
+        kind: 'Parallel',
+        keyName: 'Spell',
+        children: [
+          atomic('body_cast', 0, 24, 60),
+          atomic('overlay_fx', 6, 45, 60),
+        ],
+      },
+      { action: 'cast', entry: {} },
+    );
+    expect(parallelPlan).toMatchObject({
+      status: 'ok',
+      castSequence: { main: 'body_cast', layers: ['overlay_fx'] },
+      clipRanges: {
+        body_cast: [0, 0.8],
+        overlay_fx: [0.2, 1.5],
+      },
+    });
+
+    // 4. Attack segments are untrimmed (#581)
+    const attackPlan = planGraphAction(
+      {
+        kind: 'Sequencer',
+        keyName: 'Attack1',
+        children: [
+          atomic('atk_start', 0, 9, 30),
+          atomic('atk_hit', 0, 15, 45),
+          atomic('atk_hit', 15, 45, 45),
+          atomic('atk_end', 3, 21, 30),
+        ],
+      },
+      { action: 'attack', entry: {} },
+    );
+    expect(attackPlan).toMatchObject({
+      status: 'ok',
+      attackSequence: { in: 'atk_start', main: 'atk_hit', out: 'atk_end' },
+    });
+    expect(attackPlan).not.toHaveProperty('clipRanges');
+    expect(attackPlan).not.toHaveProperty('clipSegments');
+
+    // 5. >4 segments skipped
+    const fiveStagePlan = planGraphAction(
+      {
+        kind: 'Sequencer',
+        keyName: 'Spell',
+        children: [atomic('a'), atomic('b'), atomic('c'), atomic('d'), atomic('e')],
+      },
+      { action: 'cast', entry: {} },
+    );
+    expect(fiveStagePlan).toEqual({ status: 'skipped', reason: '段数>4 (5段)' });
+
+    // 6. castVariants skipped
+    const variantPlan = planGraphAction(
+      atomic('spell_main'),
+      {
+        action: 'cast',
+        entry: { castVariants: { rotate: ['spell_a', 'spell_b'] } },
+      },
+    );
+    expect(variantPlan).toEqual({ status: 'skipped', reason: '需人工 (castVariants)' });
   });
 });
