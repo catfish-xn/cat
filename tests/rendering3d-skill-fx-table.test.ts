@@ -36,12 +36,12 @@ describe('skill feel table', () => {
     }
   });
 
-  it('sizes Singed\'s W ally burst to the original from the scale constants and grounds its ground-layer pieces', () => {
+  it('sizes Singed\'s W ally burst to the original from the scale constants and stands it on the ally\'s feet', () => {
     // Old path quads span scale0 at FX_SOURCE_SCALE; the original spans twice scale0 at the arena scale (11-10, Fable C).
     const tuning = castEffectTuning('singed_tft13_singed_base_w_ally_activate');
     expect(tuning.scale).toBeCloseTo(2 * ARENA_UNIT_SCALE / FX_SOURCE_SCALE, 12);
     expect(tuning.scale).toBeCloseTo(1.276, 3);
-    expect(tuning.ground).toEqual([7, 8, 9, 10]);
+    expect(tuning.feet).toBe(true);
     expect(castEffectTuning('singed_tft13_singed_base_w_mis')).toEqual({ scale: 1, particles: 120 });
   });
 
