@@ -3396,6 +3396,14 @@
       "currentSha256": "6b804a15f31df92ad2d59d2a7593c1060a74ea41097183cf40f96b9ef67c70d8",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-attack-release-map.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5975,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ebe9ca5f4f3d72e80648e6ad1697a8a746ee4fb0797b3ad35e3b397c116cd55b",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-batch1-natural.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
