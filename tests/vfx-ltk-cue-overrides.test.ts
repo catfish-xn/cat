@@ -235,7 +235,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '714bd6e8')?.bone).toBe('L_Hand');
     expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '9f19f946')?.bone).toBe('C_buffbone_Glb_Chest_Loc');
     expect(CUE_OVERRIDES.corki.find(cue => cue.system === 'ee7fccd1')?.bone).toBe('R_missile_b');
-    expect(CUE_OVERRIDES.corki.find(cue => cue.system === '022fe9ec')?.bone).toBe('Cstm_Buffbone_Gatling_Gun_Origin');
+    expect(CUE_OVERRIDES.corki.find(cue => cue.system === '022fe9ec')?.bone).toBe('L_missile');
     expect(CUE_OVERRIDES.gangplank.find(cue => cue.system === '80ab2d1b')?.bone).toBe('r_hand');
     expect(CUE_OVERRIDES.leblanc.find(cue => cue.system === '93fe62de')?.bone).toBe('BUFFBONE_CSTM_WEAPON_2');
     expect(CUE_OVERRIDES.nami.find(cue => cue.system === 'a64f66ee')?.bone).toBe('L_Buffbone_Glb_Hand_Loc');
