@@ -59,7 +59,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
@@ -1115,13 +1115,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const effectScaleScratch = new Vector3(), attackFrom = new Vector3(), attackTo = new Vector3(), attackDelta = new Vector3();
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(effectScaleScratch).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
-    tuning?: { scale: number; particles: number; feet?: boolean }) => {
+    tuning?: { scale: number; particles: number; feet?: boolean; omitKinds?: readonly string[] }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
+    void (tuning?.omitKinds?.length ? effects.load(id, spec.maxDuration, tuning.particles, tuning.omitKinds)
+      : effects.load(id, spec.maxDuration, tuning?.particles)).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0, importance };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed)) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
@@ -1223,7 +1224,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
     for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : undefined) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }
   };
   // Shader prewarm for the sample casts: in preparation each sample champion on the board has its trimmed cast effects

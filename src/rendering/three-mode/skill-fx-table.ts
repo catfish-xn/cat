@@ -11,7 +11,11 @@ import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from './vfx-ltk/fx-size';
  * about the target's feet (its ground pieces carry no height, its flashes their own) stands on the target's floor
  * instead of hanging from the impact height.
  */
-export interface SkillFxEffectTuning { readonly scale: number; readonly particles: number; readonly feet?: boolean }
+export interface SkillFxEffectTuning {
+  readonly scale: number; readonly particles: number; readonly feet?: boolean;
+  /** Emitter kinds left out of this effect (e.g. 'ray': flat strips whose host-relative direction the export lost). */
+  readonly omitKinds?: readonly string[];
+}
 /**
  * The old action-bindings path (rendering3d/particles-v2.ts) spans a quad over scale0, the original over twice scale0
  * (a half-extent; vfx-ltk materials.ts REACH), and it draws at FX_SOURCE_SCALE rather than the arena's own scale: this
@@ -202,6 +206,11 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
     // scale0 as full width; remove when B lands. It is authored about the ally's feet: its ground-layer splashes and
     // ground beam carry no height and its flashes and Alpha_Beam sit 120 up, so the whole effect stands on the floor.
     singed_tft13_singed_base_w_ally_activate: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, feet: true },
+    // W_Ally_Buf (6e34a4e1): the ally's purple ground ring and smoke, same size and footing as the burst. Its four flat
+    // ground rays (Alpha_GreenRay, Add_Ray, Alpha_DarkRay, Alpha_Ray: up to 580 long) follow the ally's facing in the
+    // original; the export fixed them along one axis, so standing still they drew a long strip toward the camera
+    // (10-25 playtest). Those rays are left out; the ring (Alpha_GroundGlow1), smoke, splats and glow stay.
+    singed_tft13_singed_base_w_ally_buf: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, feet: true, omitKinds: ['ray'] },
   } },
   // 史密奇
   smeech: { color: 0x92ef4d, keepCast: [

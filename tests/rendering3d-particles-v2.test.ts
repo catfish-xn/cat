@@ -407,6 +407,15 @@ describe('v2 lazy resource loading', () => {
     expect(gd).toHaveBeenCalledTimes(['missing position', 'empty position'].includes(failure) ? 1 : 0);
     if (!['missing position', 'empty position'].includes(failure)) geometry.dispose();
   });
+  it('leaves out the emitter kinds omitKinds names, without changing the reader\'s document', async () => {
+    const raw = doc(quad({ position: [1, 0, 0] }), quad({ kind: 'ray', direction: [0, 1, 0], position: [2, 0, 0] }), quad({ position: [3, 0, 0] }));
+    const before = structuredClone(raw);
+    const effect = await loadParticleEffect(manifest, 'effect', { readJson: async () => raw, omitKinds: ['ray'] });
+    try {
+      expect(effect.object.children.map(c => c.position.x)).toEqual([1, 3]);
+      expect(raw).toEqual(before);
+    } finally { effect.dispose(); }
+  });
   it('deduplicates failed mesh reads but counts every skipped emitter and preserves valid meshes', async () => {
     const geometry = new BoxGeometry(), gd = vi.spyOn(geometry, 'dispose');
     const readMesh = vi.fn(async (url: string) => {
