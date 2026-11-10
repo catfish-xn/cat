@@ -18,7 +18,7 @@ import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 // @ts-expect-error Pure Node utility.
-import { buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction } from '../scripts/assets3d/stage-anim-sequences.mjs';
+import { buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction, planHeroVariant } from '../scripts/assets3d/stage-anim-sequences.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -771,6 +771,61 @@ describe('initial material and action binding', () => {
       },
     );
     expect(variantPlan).toEqual({ status: 'skipped', reason: '需人工 (castVariants)' });
+
+    // 7. IsMoving ConditionBool plays the standing (false) branch; other ConditionBool stays manual
+    const movingNode = (updater: string) => ({
+      kind: 'ConditionBool',
+      keyName: 'Spell',
+      updater,
+      branches: { true: atomic('spell_run', 0, 32, 32), false: atomic('spell_idle', 0, 32, 32) },
+    });
+    const movingPlan = planGraphAction(movingNode('IsMovingParametricUpdater'), { action: 'cast', entry: {} });
+    expect(movingPlan).toMatchObject({ status: 'ok', castSequence: { main: 'spell_idle' }, requiredClips: ['spell_idle'] });
+    expect(movingPlan.castSequence).not.toHaveProperty('in');
+    expect(movingPlan.castSequence).not.toHaveProperty('out');
+    expect(planGraphAction(movingNode('0x6c816d62'), { action: 'cast', entry: {} }))
+      .toMatchObject({ status: 'ok', castSequence: { main: 'spell_idle' } });
+    expect(planGraphAction(movingNode('OtherParametricUpdater'), { action: 'cast', entry: {} }))
+      .toEqual({ status: 'skipped', reason: '非常规节点 (ConditionBool)' });
+  });
+
+  it('plans castVariants.hero from the original hero SpellObject graph node', () => {
+    const atomic = (clipName: string, startFrame: number | null = null, endFrame: number | null = null, lastFrame = 84, fps = 30) => ({
+      kind: 'Atomic', keyName: clipName, clipName, startFrame, endFrame,
+      effectiveStartFrame: startFrame ?? 0, effectiveEndFrame: endFrame ?? lastFrame, lastFrame, fps,
+    });
+    const entry = {
+      animations: { cast: 'champ_spell' },
+      castSequence: { main: 'champ_spell' },
+      castVariants: { hero: { main: 'champ_spellhero' } },
+    };
+
+    // Hero spell plays the same whole clip as the default cast: drop the variant entirely.
+    const same = planHeroVariant(atomic('champ_spell'), { entry });
+    expect(same).toMatchObject({ status: 'ok', changed: true, heroSequence: { main: 'champ_spell' }, requiredClips: ['champ_spell'] });
+    expect(same.castVariants).toBeUndefined();
+
+    // Other variants are kept when the hero variant is dropped.
+    const withStar3 = planHeroVariant(atomic('champ_spell'), {
+      entry: { ...entry, castVariants: { ...entry.castVariants, star3: { main: 'champ_spell3' } } },
+    });
+    expect(withStar3.castVariants).toEqual({ star3: { main: 'champ_spell3' } });
+
+    // A different original hero clip replaces the hand-picked one.
+    const other = planHeroVariant(atomic('champ_spell_alt'), { entry });
+    expect(other).toMatchObject({ status: 'ok', changed: true, castVariants: { hero: { main: 'champ_spell_alt' } } });
+
+    // Already matching: unchanged.
+    expect(planHeroVariant(atomic('champ_spellhero'), { entry })).toMatchObject({ status: 'ok', changed: false, castVariants: entry.castVariants });
+
+    // Unresolved hero animation (empty mAnimationName), no hero variant, trimmed clips and range conflicts stay manual.
+    expect(planHeroVariant(null, { entry })).toEqual({ status: 'skipped', reason: '未解析' });
+    expect(planHeroVariant(atomic('champ_spell'), { entry: { castSequence: { main: 'champ_spell' } } }))
+      .toEqual({ status: 'skipped', reason: '无 castVariants.hero' });
+    expect(planHeroVariant(atomic('champ_spell', 5, 40), { entry }))
+      .toEqual({ status: 'skipped', reason: '需人工 (hero 片段带帧区间)' });
+    expect(planHeroVariant(atomic('champ_spell'), { entry: { ...entry, clipRanges: { champ_spell: [0, 1] } } }))
+      .toEqual({ status: 'skipped', reason: '需人工 (hero 整段与 clipRanges 冲突: champ_spell)' });
   });
 });
 
