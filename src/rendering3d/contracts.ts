@@ -7,8 +7,16 @@ export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
 export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab' | 'spawn';
 export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab', 'spawn'];
 export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
-/** Array main rotates between casts; the other stages each play once. */
-export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string; layers?: readonly string[] }
+/**
+ * Array main rotates between casts; the other stages each play once. `layers` play together with the main stage
+ * (an original Parallel clip). `masks` (by clip name: main or a layer) is that clip's original bone mask, bone → weight
+ * in [0, 1]: a masked clip drives only its own bones, blended by weight over the unmasked clips of the stage, instead of
+ * all clips averaging on every bone. Without masks every clip of the stage drives every bone it has.
+ */
+export interface CastSequence {
+  in?: string; main: string | readonly string[]; hold?: string; out?: string; layers?: readonly string[];
+  masks?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+}
 /** A rotation entry is one clip, or a whole multi-stage sequence for that cast (Jinx's Death Rocket). */
 export type CastRotation = string | CastSequence;
 export interface CastVariants {
@@ -223,6 +231,18 @@ function assertCastLayers(value: unknown): void {
     throw new Error('invalid-cast-layers');
   }
 }
+function assertCastMasks(value: unknown): void {
+  if (!isPlainObject(value)) throw new Error('invalid-cast-masks');
+  const entries = Object.entries(value);
+  if (!entries.length || entries.length > 5) throw new Error('invalid-cast-masks');
+  for (const [clip, bones] of entries) {
+    if (!clip.trim() || !isPlainObject(bones)) throw new Error('invalid-cast-masks');
+    const weights = Object.entries(bones);
+    if (!weights.length || weights.length > 512 || weights.some(([bone, w]) => !bone.trim() || !finite(w) || w < 0 || w > 1)) {
+      throw new Error('invalid-cast-masks');
+    }
+  }
+}
 function assertClipList(value: unknown): void {
   if (!Array.isArray(value) || !value.length || value.length > 64 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) throw new Error('invalid-cast-clips');
 }
@@ -236,17 +256,18 @@ function assertCastRotation(value: unknown): void {
 function assertCastSequence(value: unknown): void {
   if (!isPlainObject(value)) throw new Error('invalid-cast-sequence');
   const sequence = value as unknown as CastSequence;
-  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out', 'layers'].includes(key)) throw new Error('invalid-cast-sequence');
+  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out', 'layers', 'masks'].includes(key)) throw new Error('invalid-cast-sequence');
   if (typeof sequence.main === 'string') { if (!sequence.main.trim()) throw new Error('invalid-cast-sequence'); }
   else assertClipList(sequence.main);
   for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
   if (sequence.layers !== undefined) assertCastLayers(sequence.layers);
+  if (sequence.masks !== undefined) assertCastMasks(sequence.masks);
 }
 function assertAttackSequence(value: unknown): void {
   try {
     assertCastSequence(value);
   } catch (error) {
-    if ((error as Error)?.message === 'invalid-cast-layers') throw error;
+    if (['invalid-cast-layers', 'invalid-cast-masks'].includes((error as Error)?.message)) throw error;
     throw new Error('invalid-attack-sequence');
   }
 }

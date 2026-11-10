@@ -1,4 +1,4 @@
-import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationAction, type AnimationClip, type Object3D } from 'three';
+import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
 import type { ActionState, AnimationNames, CastMetadata, CastSequence, FormAnimations } from './contracts';
 
@@ -17,6 +17,44 @@ export function selectCastSequence(metadata: CastMetadata, castIndex: number, co
   return metadata.castSequence;
 }
 
+/** A parallel stage: one action that owns crossfades, plus the other clips playing with it at their mixer weights. */
+interface ParallelStage { primary: AnimationClip; extras: readonly { clip: AnimationClip; weight: number }[]; duration: number }
+
+const trackBone = (track: KeyframeTrack): string => PropertyBinding.parseTrackName(track.name).nodeName;
+const pickTracks = (clip: AnimationClip, keep: (bone: string) => boolean, suffix: string): AnimationClip =>
+  new AnimationClip(clip.name + suffix, clip.duration, clip.tracks.filter(track => keep(trackBone(track))));
+
+/**
+ * The mixer averages every action on a bone by weight, so a main clip and an equal-weight layer on the same skeleton
+ * each move it half way. The original Parallel clip instead lays a masked clip over the others on the mask's bones
+ * only (Nami's water bones over her cast, Heimerdinger's upper-body throw over his full-body step). With masks, the
+ * unmasked clips lose the bones a mask fully owns, and each masked clip is split by weight: a bone weighted w gets the
+ * mixer weight n·w/(1−w) against the n unmasked clips, which blends it exactly w of the way. Without masks (or with
+ * nothing unmasked to lay over) every clip keeps weight 1, as before.
+ */
+function parallelStage(sequence: CastSequence, main: AnimationClip, layers: readonly AnimationClip[]): ParallelStage {
+  const duration = layers.reduce((m, c) => Math.max(m, c.duration), main.duration);
+  const masks = sequence.masks, all = [main, ...layers];
+  const maskOf = (clip: AnimationClip) => masks && Object.hasOwn(masks, clip.name) ? masks[clip.name] : undefined;
+  const base = all.filter(clip => !maskOf(clip)), masked = all.filter(clip => maskOf(clip));
+  if (!masked.length || !base.length) return { primary: main, extras: layers.map(clip => ({ clip, weight: 1 })), duration };
+  const weights = masked.map(clip => new Map(Object.entries(maskOf(clip)!)
+    .map(([bone, w]) => [PropertyBinding.sanitizeNodeName(bone), Math.min(1, Math.max(0, w))] as const)
+    .filter(([, w]) => w > 0)));
+  const owned = new Set(weights.flatMap(m => [...m].filter(([, w]) => w >= 1).map(([bone]) => bone)));
+  const bases = base.map(clip => owned.size ? pickTracks(clip, bone => !owned.has(bone), '#base') : clip);
+  const extras: { clip: AnimationClip; weight: number }[] = bases.slice(1).map(clip => ({ clip, weight: 1 }));
+  masked.forEach((clip, at) => {
+    const byWeight = new Map<number, Set<string>>();
+    for (const [bone, w] of weights[at]) byWeight.set(w, (byWeight.get(w) ?? new Set()).add(bone));
+    for (const [w, bones] of byWeight) {
+      const part = pickTracks(clip, bone => bones.has(bone), `#mask${w}`);
+      if (part.tracks.length) extras.push({ clip: part, weight: w >= 1 ? 1 : bases.length * w / (1 - w) });
+    }
+  });
+  return { primary: bases[0], extras, duration };
+}
+
 /** Applies complete sequences, including overflow across stages in one update. */
 export class UnitAnimationMixer {
   readonly mixer: AnimationMixer;
@@ -28,8 +66,11 @@ export class UnitAnimationMixer {
   private speed = 1;
   private form?: 'front' | 'back';
   private layerActions: AnimationAction[] = [];
-  private pendingLayers: AnimationClip[] = [];
-  private stagesUntilLayers = -1;
+  private fadingLayers: AnimationAction[] = [];
+  /** The parallel main stage of the playing sequence, by stage index. */
+  private stage?: ParallelStage & { index: number };
+  private stageIndex = 0;
+  private readonly stages = new WeakMap<CastSequence, Map<string, ParallelStage>>();
   private lastResolved?: { clips: readonly string[]; sequence: CastSequence };
   constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations } = {}) {
     this.mixer = new AnimationMixer(root);
@@ -74,22 +115,36 @@ export class UnitAnimationMixer {
     }
     return undefined;
   }
-  private startLayers(clips: readonly AnimationClip[]): void {
+  private parallel(sequence: CastSequence, main: AnimationClip, layers: readonly AnimationClip[]): ParallelStage {
+    let byMain = this.stages.get(sequence);
+    if (!byMain) this.stages.set(sequence, byMain = new Map());
+    const key = [main.name, ...layers.map(c => c.name)].join('\u0000');
+    let stage = byMain.get(key);
+    if (!stage) byMain.set(key, stage = parallelStage(sequence, main, layers));
+    return stage;
+  }
+  private startLayers(extras: ParallelStage['extras']): void {
     this.stopLayers();
-    for (const clip of clips) {
+    for (const { clip, weight } of extras) {
       const action = this.mixer.clipAction(clip);
-      action.reset().setEffectiveWeight(1).setEffectiveTimeScale(this.speed);
+      this.fadingLayers = this.fadingLayers.filter(a => a !== action);
+      action.reset().setEffectiveWeight(weight).setEffectiveTimeScale(this.speed);
       action.setLoop(LoopOnce, 1);
       action.clampWhenFinished = true;
       action.play();
       this.layerActions.push(action);
     }
   }
-  private stopLayers(): void {
-    for (const action of this.layerActions) action.stop();
+  /** Fades the layers out with the action that replaces their stage, so their bones do not snap; no blend stops them. */
+  private stopLayers(blend = 0): void {
+    for (const action of this.layerActions) {
+      if (blend > 0) { action.fadeOut(blend); this.fadingLayers.push(action); } else action.stop();
+    }
     this.layerActions = [];
-    this.pendingLayers = [];
-    this.stagesUntilLayers = -1;
+  }
+  private dropFadedLayers(): void {
+    for (const action of this.fadingLayers) action.stop();
+    this.fadingLayers = [];
   }
   resolvePlayback(state: 'cast' | 'attack' | 'spawn', castIndex = 0, context: CastSelection = {}): ActionPlayback | null {
     if (state === 'spawn') {
@@ -143,23 +198,24 @@ export class UnitAnimationMixer {
     // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
     if (output.loop && this.active === this.mixer.clipAction(clip) && this.active.loop === LoopRepeat
       && this.active.repetitions === Infinity && this.active.isRunning()) return true;
-    this.stopLayers();
+    this.dropFadedLayers();
+    this.stopLayers(output.blendSeconds);
     const seqDef = playback ? this.findSequence(output.state, playback.clips) : undefined;
     const layers = seqDef?.layers?.map(name => this.clips.get(name)).filter((c): c is AnimationClip => !!c && Number.isFinite(c.duration) && c.duration > 0) ?? [];
-    const maxLayerDuration = layers.reduce((m, c) => Math.max(m, c.duration), 0);
     const mainStage = seqDef ? (seqDef.in ? 1 : 0) + (seqDef.hold ? 1 : 0) : -1;
+    this.stage = undefined; this.stageIndex = 0;
+    if (sequence && playback && seqDef && layers.length && mainStage >= 0 && sequence[mainStage]) {
+      this.stage = { ...this.parallel(seqDef, sequence[mainStage]!, layers), index: mainStage };
+    }
+    const atMain = this.stage?.index === 0;
     if (sequence && playback) {
-      const rawTotal = sequence.reduce((sum, c, idx) => sum + (idx === mainStage ? Math.max(c!.duration, maxLayerDuration) : c!.duration), 0);
+      const rawTotal = sequence.reduce((sum, c, idx) => sum + (idx === this.stage?.index ? this.stage.duration : c!.duration), 0);
       this.speed = rawTotal / playback.durationSeconds;
       this.queue = sequence.slice(1) as AnimationClip[];
-      const firstDuration = mainStage === 0 ? Math.max(clip.duration, maxLayerDuration) : clip.duration;
-      this.stageLeft = firstDuration / this.speed;
+      this.stageLeft = (atMain ? this.stage!.duration : clip.duration) / this.speed;
     }
-    this.play(clip, output.loop, output.blendSeconds);
-    if (sequence && playback && layers.length) {
-      if (mainStage === 0) this.startLayers(layers);
-      else if (mainStage > 0) { this.pendingLayers = layers; this.stagesUntilLayers = mainStage; }
-    }
+    this.play(atMain ? this.stage!.primary : clip, output.loop, output.blendSeconds);
+    if (atMain) this.startLayers(this.stage!.extras);
     return true;
   }
   update(seconds: number): void {
@@ -169,22 +225,19 @@ export class UnitAnimationMixer {
       this.mixer.update(step); seconds = Math.max(0, seconds - step);
       const next = this.queue.shift();
       if (next) {
-        this.play(next, false, 0.08);
-        let stageDur = next.duration;
-        if (this.stagesUntilLayers > 0 && --this.stagesUntilLayers === 0) {
-          const pending = this.pendingLayers;
-          this.pendingLayers = [];
-          for (const l of pending) stageDur = Math.max(stageDur, l.duration);
-          this.startLayers(pending);
-        }
-        this.stageLeft = stageDur / this.speed;
+        const index = ++this.stageIndex, stage = this.stage;
+        const atMain = stage?.index === index;
+        if (stage && index === stage.index + 1) this.stopLayers(0.08);
+        this.play(atMain ? stage.primary : next, false, 0.08);
+        if (atMain) this.startLayers(stage.extras);
+        this.stageLeft = (atMain ? stage.duration : next.duration) / this.speed;
       } else {
+        // A sequence ending on its parallel stage holds the layers' last pose with the main one until the next action.
         this.stageLeft = 0;
-        this.stopLayers();
       }
     }
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
   }
-  dispose(): void { this.stopLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; }
+  dispose(): void { this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; }
 }
