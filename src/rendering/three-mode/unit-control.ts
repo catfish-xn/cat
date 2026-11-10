@@ -36,9 +36,10 @@ export const CONTROL_3D = {
    * Stars around the head: count, ring radius and star sprite size (board units; the star itself fills about a third
    * of the sprite, the rest is its glow, like the client's star texture), turns per second, the ring centre's height
    * as a share of the drawn body height (head level), and the dark glow behind them. Calibrated on the 11-10 three-row
-   * recording (ccvs-after): the first cut drew stars ~3× and the ring ~1.7× the client's, a third of a body too high.
+   * recordings (ccvs-after, -after2): the first cut drew stars ~3× and the ring ~1.7× the client's, a third of a body
+   * too high; at 0.85 the ring still sat 0.18 of a body over the client's (the drawn height includes helmets and hair).
    */
-  stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.85, glowSize: 32,
+  stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.67, glowSize: 32,
   /** Ghosts trailing each star: how many, the angle (radians) between them, and the first ghost's opacity. */
   trail: { ghosts: 3, gap: 0.28, opacity: 0.5 },
   /** Small sparkles popping around the ring: count, life (s), distance from the centre and size (board units). */
@@ -46,7 +47,7 @@ export const CONTROL_3D = {
   /** Dissolving rings: count (staggered), seconds each, full size (board units); each grows from half size and fades. */
   rings: { count: 2, seconds: 1.5, size: 28 },
   /** The flash as the control starts: seconds and size (board units). */
-  flash: { seconds: 0.15, size: 26 },
+  flash: { seconds: 0.15, size: 44 },
 } as const;
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
@@ -153,7 +154,7 @@ function starMap(): CanvasTexture | null {
   }
   g.beginPath();
   for (let i = 0; i < 10; i++) {
-    const r = i % 2 ? 4.5 : 11, a = -Math.PI / 2 + i * Math.PI / 5;
+    const r = i % 2 ? 3.3 : 8, a = -Math.PI / 2 + i * Math.PI / 5;
     g.lineTo(32 + r * Math.cos(a), 32 + r * Math.sin(a));
   }
   g.closePath();
@@ -236,7 +237,7 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
   }
   const sparkles = Array.from({ length: spec.sparkles.count }, (_, i) => ({ sprite: sprite(`render3d-stun-sparkle-${i}`, make(starMap(), '#fff3b0', 0, true)), born: -i * spec.sparkles.seconds / spec.sparkles.count, round: 0, index: i }));
   const rings = Array.from({ length: spec.rings.count }, (_, i) => ({ sprite: sprite(`render3d-stun-ring-${i}`, make(ringMap(), '#ff9a2e', 0, true), STUN_RENDER_ORDER - 1), offset: i * spec.rings.seconds / spec.rings.count }));
-  const flashMaterial = make(glowMap(), '#fff4c0', 0, true);
+  const flashMaterial = make(glowMap(), '#fffbe8', 0, true);
   const flash = sprite('render3d-stun-flash', flashMaterial, STUN_RENDER_ORDER + 2);
   let angle = 0, age = 0;
   const ringPoint = (a: number) => [Math.cos(a) * spec.ringRadius, Math.sin(a) * spec.ringRadius * 0.18, Math.sin(a) * spec.ringRadius] as const;
@@ -259,7 +260,7 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
       (ring.sprite.material as SpriteMaterial).opacity = 0.7 * Math.sin(Math.PI * t) * (1 - t * 0.5);
     }
     const f = Math.min(1, age / spec.flash.seconds), fs = spec.flash.size * (0.6 + 0.6 * f);
-    flash.scale.set(fs, fs, 1); flashMaterial.opacity = age < spec.flash.seconds ? 0.9 * (1 - f) : 0;
+    flash.scale.set(fs, fs, 1); flashMaterial.opacity = age < spec.flash.seconds ? 1 - f * f : 0;
   };
   place();
   return {
