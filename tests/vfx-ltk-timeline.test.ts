@@ -132,6 +132,18 @@ describe('cast timeline replacement and fallback', () => {
     // The same emitters in another system are drawn.
     expect((await library.load('other')).drawn).toHaveLength(3);
   });
+  it('leaves Sevika punch hit BUBBLE_START1 (attached mesh at bubble scale) undrawn and keeps its other emitters (11-10)', async () => {
+    const named = (name: string) => syntheticSystem({ emitterName: { type: 'string', value: name } });
+    const items = (doc: ReturnType<typeof syntheticSystem>) => (doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items;
+    const doc = named('BIGGEST_Flash');
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: unknown[] }).fields[0] as object,
+      value: { type: 'container', items: [...items(named('BIGGEST_Flash')), ...items(named('BUBBLE_START1'))] } }];
+    const index = { ...syntheticIndex(), systems: { '95fb90ce': 'systems/punch_hit.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
+    const pool = await library.load('95fb90ce');
+    expect(pool.model.emitters).toHaveLength(2);
+    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['BIGGEST_Flash']);
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);

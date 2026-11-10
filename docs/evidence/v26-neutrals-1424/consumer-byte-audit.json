@@ -32,9 +32,9 @@
     },
     "tests/assets3d-bin.test.ts": {
       "previousBytes": 12171,
-      "currentBytes": 39172,
+      "currentBytes": 40527,
       "previousSha256": "885adb1be19d992c48ecb9943a7c9a26e2608ee3ded1ce70726387486ea5d1b1",
-      "currentSha256": "602c7c2baf685770fc978627507bc1675e4369203e272b9ff7f59cebd038d479",
+      "currentSha256": "ac544c07448636522acca76b91f6aa8595160931350c05317c7e06b1c0c61696",
       "firstDifferentByte": 56
     },
     "tests/assets3d-boards-alignment.test.ts": {
@@ -3507,9 +3507,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 21852,
+      "currentBytes": 22949,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "fdb89bcee6f297aa011ece6445f6e025e70dee7232df82bf986dd840cb56a51b",
+      "currentSha256": "8a1f49eab1f0fcf50bc6018c3af4eae7ac508175ce125ec9cfeed8d34f5d7de8",
       "firstDifferentByte": 84
     }
   }

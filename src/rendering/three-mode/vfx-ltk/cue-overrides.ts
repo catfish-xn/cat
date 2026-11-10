@@ -298,6 +298,10 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // of the pool the whole time; in 14.24 the channel is a dim green mist and only the blast (R_full_explo) flares
   // (11-07 field batches f544/c4a).
   '78d04f27': ['Explosion_Flash_ground', 'Explosion_Flash_ground1'],
+  // Sevika punch hit: BUBBLE_START1 is an attached-mesh emitter (draws the host's own skinned mesh) yet carries the
+  // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
+  // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
+  '95fb90ce': ['BUBBLE_START1'],
 };
 
 /**

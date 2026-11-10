@@ -22,6 +22,34 @@ export const DEFAULT_EXCLUDES = new Set([
   'malzahar:cast',
 ]);
 
+/**
+ * Casts whose SpellObject has an empty mAnimationName (the original spell script picks the clips).
+ * The graph keys below were checked against gameplay video and the clips' own events:
+ * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (cyB8sPEcP6M 189-190.9s); that is
+ *   Spell3_In (carries the cast particle) + Spell3_Out (graph end frame 12). Spell2_* is the E blink
+ *   with forward root motion, which made the model jump forward and snap back.
+ * Each list is played as a Sequencer, so the graph's own frame ranges still apply.
+ */
+export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
+  ezreal: Object.freeze(['Spell3_In', 'Spell3_Out']),
+});
+
+/**
+ * Builds a Sequencer node from SCRIPT_CAST_GRAPH_KEYS for a script-driven cast; null when the unit has none.
+ * `resolveKey` resolves one graph key to a node (or null); a missing key is an error, not a silent skip.
+ */
+export async function buildScriptCastNode(id, resolveKey, table = SCRIPT_CAST_GRAPH_KEYS) {
+  const keys = table[id];
+  if (!keys?.length) return null;
+  const children = [];
+  for (const key of keys) {
+    const child = await resolveKey(key);
+    if (!child) throw new Error(`script-cast-graph-key-missing: ${id}:${key}`);
+    children.push(child);
+  }
+  return { kind: 'Sequencer', keyName: `script:${keys.join('+')}`, keyHash: 0, children };
+}
+
 const KNOWN_GRAPH_NAMES = new Set([
   'AnimationGraphData', 'mClipDataMap', 'mBlendDataTable', 'mMaskDataMap', 'mTrackDataMap', 'mSyncGroupDataMap',
   'AtomicClipData', 'SequencerClipData', 'SelectorClipData', 'ParallelClipData', 'ConditionFloatClipData',
@@ -753,6 +781,9 @@ export async function stageAnimSequences({
     const rawSpellAnim = spObj?.anim;
     let origCastNode = null;
     if (rawSpellAnim) origCastNode = await resolveNode(fnv1a(rawSpellAnim));
+    if (!origCastNode && !rawSpellAnim) {
+      origCastNode = await buildScriptCastNode(id, key => resolveNode(fnv1a(key)));
+    }
     if (!origCastNode) {
       const fallbackKeys = ['Spell', 'Spell1', 'SpellCast'];
       if (id === 'swain') fallbackKeys.push('Spell2');
