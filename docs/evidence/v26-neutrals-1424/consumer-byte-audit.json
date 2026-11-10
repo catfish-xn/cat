@@ -2247,9 +2247,9 @@
     },
     "tests/rendering3d-particles-v2.test.ts": {
       "previousBytes": 32759,
-      "currentBytes": 33388,
+      "currentBytes": 33955,
       "previousSha256": "10a3f4d9b64f7fa09a167e08b114aa1b8764d21f5917e8400459596ec196e84c",
-      "currentSha256": "5797d26ca893bf6fb26b69666618072c629e03249fe1f0f94765c561f86419c8",
+      "currentSha256": "8afbdc51412aab2019c6dd72170a98e1936a76cbf0319cec8a80df01b352e655",
       "firstDifferentByte": 23949
     },
     "tests/rendering3d-player-damage.test.ts": {
@@ -2334,6 +2334,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "a7bc4631edeccd5682652dbfc808a002246d96c2c703f4c01ac7f1d89edd24ae",
       "firstDifferentByte": 0
+    },
+    "tests/rendering3d-skill-fx-table.test.ts": {
+      "previousBytes": 3437,
+      "currentBytes": 4149,
+      "previousSha256": "c0be64de79768f1811de7b6a18173e3ca0f36e8a9841697ff82eba4bc76c8576",
+      "currentSha256": "9de0e1432fd206df742b408fa23cb33bbc0637575bcc99203387277bf32c9181",
+      "firstDifferentByte": 133
     },
     "tests/rendering3d-star-body-scale.test.ts": {
       "previousExists": false,

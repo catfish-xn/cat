@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SKILL_FX_TABLE } from '../src/rendering/three-mode/skill-fx-table';
+import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { CAST_PARTICLE_CAP, HITSTOP_SECONDS, SKILL_FEEL_SAMPLE, WINDUP_SECONDS, castEffectTuning, impactFeel, skillColor } from '../src/rendering/three-mode/skill-feel';
 
 describe('skill feel table', () => {
@@ -33,6 +34,15 @@ describe('skill feel table', () => {
       expect(Math.max(row.color >> 16, (row.color >> 8) & 255, row.color & 255)).toBeGreaterThanOrEqual(0xa0);
       if (row.keepCast) expect(row.keepCast.length).toBeLessThanOrEqual(4);
     }
+  });
+
+  it('sizes Singed\'s W ally burst to the original from the scale constants and grounds its ground-layer pieces', () => {
+    // Old path quads span scale0 at FX_SOURCE_SCALE; the original spans twice scale0 at the arena scale (11-10, Fable C).
+    const tuning = castEffectTuning('singed_tft13_singed_base_w_ally_activate');
+    expect(tuning.scale).toBeCloseTo(2 * ARENA_UNIT_SCALE / FX_SOURCE_SCALE, 12);
+    expect(tuning.scale).toBeCloseTo(1.276, 3);
+    expect(tuning.ground).toEqual([7, 8, 9, 10]);
+    expect(castEffectTuning('singed_tft13_singed_base_w_mis')).toEqual({ scale: 1, particles: 120 });
   });
 
   it('hands out copies, so a caller cannot change the table', () => {

@@ -4,8 +4,20 @@
  * champion means adding its row, nothing else. Fields left out fall back to SKILL_FX_DEFAULTS.
  */
 
-/** One cast effect's size factor (times its own scale) and live-particle limit. */
-export interface SkillFxEffectTuning { readonly scale: number; readonly particles: number }
+import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from './vfx-ltk/fx-size';
+
+/**
+ * One cast effect's size factor (times its own scale) and live-particle limit. `ground` lists emitter indices (in the
+ * effect document) that the original marks as ground-layer pieces: on a target-anchored effect they sit on the target's
+ * floor instead of at the impact height the rest of the effect hangs from.
+ */
+export interface SkillFxEffectTuning { readonly scale: number; readonly particles: number; readonly ground?: readonly number[] }
+/**
+ * The old action-bindings path (rendering3d/particles-v2.ts) spans a quad over scale0, the original over twice scale0
+ * (a half-extent; vfx-ltk materials.ts REACH), and it draws at FX_SOURCE_SCALE rather than the arena's own scale: this
+ * factor puts one of its effects at the original's world size (2 × 0.281 / 0.44 ≈ 1.28).
+ */
+const OLD_PATH_TO_ORIGINAL = 2 * ARENA_UNIT_SCALE / FX_SOURCE_SCALE;
 /**
  * How a cast's impact lands: seconds the caster and targets hold, camera kick strength, a colored ring at each target,
  * and (optional) seconds the ring waits after the impact moment.
@@ -185,7 +197,13 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
   // 希尔科
   silco: { color: 0x64d8d8 },
   // 辛吉德
-  singed: { color: 0x64d864 },
+  singed: { color: 0x64d864, effects: {
+    // W_Ally_Activate (2639dd7d) drew at 0.78× the original (11-10, Fable C). Compensates for the old path treating
+    // scale0 as full width; remove when B lands. Its ground pieces are the emitters 14.24 marks isGroundLayer with no
+    // height of their own: Alpha_GroundBeam, Alpha_Splash1, Add_Splash, Alpha_Splash (document emitters 7-10).
+    // Alpha_Beam is ground-layer too but authored 120 up, so it keeps that height.
+    singed_tft13_singed_base_w_ally_activate: { scale: OLD_PATH_TO_ORIGINAL, particles: 120, ground: [7, 8, 9, 10] },
+  } },
   // 史密奇
   smeech: { color: 0x92ef4d, keepCast: [
     'smeech_tft13_gremlin_base_z_jump_launch',

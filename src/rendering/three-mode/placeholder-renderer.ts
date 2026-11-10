@@ -1115,13 +1115,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const effectScaleScratch = new Vector3(), attackFrom = new Vector3(), attackTo = new Vector3(), attackDelta = new Vector3();
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(effectScaleScratch).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
-    tuning?: { scale: number; particles: number }) => {
+    tuning?: { scale: number; particles: number; ground?: readonly number[] }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
+    // A target-anchored effect hangs from IMPACT_HEIGHT; its ground-layer emitters go back down to the target's floor.
+    const lift = spec.anchor === 'target' && !targetPoint && tuning?.ground?.length && target
+      ? Object.fromEntries(tuning.ground.map(index => [index, (target.root.position.y - IMPACT_HEIGHT) / (FX_SCALE * tuning.scale)])) : undefined;
+    void (lift ? effects.load(id, spec.maxDuration, tuning?.particles, lift) : effects.load(id, spec.maxDuration, tuning?.particles)).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0, importance };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed)) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
