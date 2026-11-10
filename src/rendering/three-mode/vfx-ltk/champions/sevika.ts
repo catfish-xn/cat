@@ -43,7 +43,7 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
   ],
   'sevika-rocket': [
-    { system: 'dcebd22f', event: 'projectile', delay: 0, duration: .3, travelSeconds: .3 },
+    { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
     { system: '4e1283b2', event: 'hit', primary: true, delay: .3, duration: .6 },
   ],
   // The original bubble stays up for the whole shield (11-08 gRcKEl213wk) and only the shared tail fade ends it.

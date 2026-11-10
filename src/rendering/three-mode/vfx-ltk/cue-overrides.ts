@@ -21,7 +21,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
   vex: [
-    { system: '85788d2c', action: 'attack', event: 'projectile', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '85788d2c', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5666666666666667, duration: 1.5 },
     { system: 'c173eb0c', action: 'cast', event: 'projectile', delay: 0, duration: 0.35, travelSeconds: 0.28, bone: 'R_Buffbone_Glb_Hand_Loc', targetBone: ground },
     { system: '8682c9ee', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true, scale: kept(0.68) },
@@ -42,7 +42,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // vines (E_Outer) sprout around each rooted target, not at Zyra's feet (ca23e060: they spread from her toward empty
   // ground). E_Sequence_Root binds the primary target; the plant flash marks every one. No E_Mis or E_Mis_Child exists.
   zyra: [
-    { system: 'ec6aaee6', action: 'attack', event: 'projectile', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: 'ec6aaee6', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
     // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
     // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
@@ -78,7 +78,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.2990000089009603, duration: 1.5 },
-    { system: 'bef025dc', action: 'cast', event: 'projectile', delay: 0.1, duration: 0.9, travelSeconds: 0.25, bone: chest, targetBone: chest, targetLimit: 3 },
+    { system: 'bef025dc', action: 'cast', event: 'projectile', delay: 0.1, duration: 0.9, travelSeconds: 0.25, bone: 'L_Hand', targetBone: chest, targetLimit: 3 },
     { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 0.55, bone: chest, targetLimit: 3 },
     { system: 'f4a6240a', action: 'cast', event: 'cast-start', delay: 1.1, duration: 1.1, bone: chest },
   ],
@@ -95,7 +95,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   leblanc: [
     { system: '9ad0dd7c', action: 'attack', event: 'projectile', bone: 'weapon_b', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5666666666666667, duration: 1.5 },
-    { system: '93fe62de', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.45, travelSeconds: 0.18, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '93fe62de', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.45, travelSeconds: 0.18, bone: 'BUFFBONE_CSTM_WEAPON_2', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'c54516b3', action: 'cast', event: 'hit', delay: 0.32, duration: 0.45, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
     { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
@@ -143,9 +143,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q_Proc is the ground disk (indicator ring, floor mesh). The spell is a hand comet plus one primary splash.
   // The third cast also splashes the next two receipt targets. There is no separate hand-glow system.
   cassiopeia: [
-    { system: '714bd6e8', action: 'attack', event: 'projectile', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
-    { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'R_BUFFBONE_GLB_HAND_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 0 },
     { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 1 },
     { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', phase: 2, targetLimit: 3 },
@@ -248,6 +248,38 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline). A hit on the ally
     // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).
     { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, fadeOut: true, bone: chest },
+  ],
+  // 弹道发射骨骼按原版 mStartBoneName
+  corki: [
+    { system: '4f6da7bc', action: 'attack', event: 'projectile', bone: 'gun', delay: 0.13999999364217122, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BuffBone_Glb_Center_Loc' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.43999999364217124, duration: 1.5 },
+    { system: 'ee7fccd1', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'R_missile_b', travelSeconds: 0.7 },
+    { system: '444c30d5', action: 'cast', event: 'hit', delay: 0.8, duration: 1 },
+    // 022fe9ec 原版骨骼 Cstm_Buffbone_Gatling_Gun_Origin 在我们模型上位于机尾下方，复录更偏，保留 L_missile
+    { system: '022fe9ec', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.7, bone: 'L_missile', travelSeconds: 0.7 },
+    { system: '0e89bea0', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
+    { system: '4f440b84', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
+  ],
+  // 弹道发射骨骼按原版 mStartBoneName
+  gangplank: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
+    { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
+    { system: '80ab2d1b', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'r_hand', travelSeconds: 0.7 },
+    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'Buffbone_Glb_Weapon_2', travelSeconds: 0.7 },
+    { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
+    { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
+    { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },
+    { system: '5d21d7bb', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
+    { system: 'f9ead72c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
+  ],
+  // 弹道发射骨骼按原版 mStartBoneName
+  nami: [
+    { system: '952026ec', action: 'attack', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5833333333333333, duration: 1.5 },
+    { system: 'e4b6f1a3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'Weapon' },
+    { system: 'a64f66ee', action: 'cast', event: 'projectile', delay: 0.3, duration: 1, bone: 'L_Buffbone_Glb_Hand_Loc', travelSeconds: 1 },
+    { system: '95bbab3d', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
+    { system: '03b4d6ac', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
   ],
 };
 

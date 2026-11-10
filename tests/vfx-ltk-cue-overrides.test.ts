@@ -2,6 +2,8 @@ import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
+import { silco } from '../src/rendering/three-mode/vfx-ltk/batch3/silco';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
@@ -223,5 +225,22 @@ describe('reviewed vfx-ltk cue overrides', () => {
       const cone = sevikaSkills[skill].find(cue => cue.system === '5d6a1033' || cue.system === '83de8443')!;
       expect((cone.scale ?? 1) * cueSize(cone), skill).toBeCloseTo(SKILL_FX_SIZE, 12);
     }
+  });
+
+  it('aligns projectile launch bones with mStartBoneName when present in the model', () => {
+    expect(sevikaSkills['sevika-rocket'].find(cue => cue.system === 'dcebd22f')?.bone).toBe('Buffbone_Glb_Weapon_1');
+    expect(silco.silco.find(cue => cue.system === '2b0232bc')?.bone).toBe('R_Buffbone_Glb_Ability_Loc');
+    expect(elise.elise.find(cue => cue.system === 'a0484f04')?.bone).toBe('R_Buffbone_CSTM_Hand_Loc');
+    expect(elise['elise-front'].find(cue => cue.system === '92ff3d2c')?.bone).toBe('Buffbone_Glb_Channel_Loc');
+    expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '714bd6e8')?.bone).toBe('L_Hand');
+    expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '9f19f946')?.bone).toBe('C_buffbone_Glb_Chest_Loc');
+    expect(CUE_OVERRIDES.corki.find(cue => cue.system === 'ee7fccd1')?.bone).toBe('R_missile_b');
+    expect(CUE_OVERRIDES.corki.find(cue => cue.system === '022fe9ec')?.bone).toBe('L_missile');
+    expect(CUE_OVERRIDES.gangplank.find(cue => cue.system === '80ab2d1b')?.bone).toBe('r_hand');
+    expect(CUE_OVERRIDES.leblanc.find(cue => cue.system === '93fe62de')?.bone).toBe('BUFFBONE_CSTM_WEAPON_2');
+    expect(CUE_OVERRIDES.nami.find(cue => cue.system === 'a64f66ee')?.bone).toBe('L_Buffbone_Glb_Hand_Loc');
+    expect(CUE_OVERRIDES.scar.find(cue => cue.system === 'bef025dc')?.bone).toBe('L_Hand');
+    expect(CUE_OVERRIDES.vex.find(cue => cue.system === '85788d2c')?.bone).toBe('L_Hand');
+    expect(CUE_OVERRIDES.zyra.find(cue => cue.system === 'ec6aaee6')?.bone).toBe('L_Hand');
   });
 });
