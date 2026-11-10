@@ -37,6 +37,15 @@ const EFFECT_TUNING: ReadonlyMap<string, SkillFxEffectTuning> = new Map(Object.v
 export const castEffectTuning = (id: string): { scale: number; particles: number; feet?: boolean; omitKinds?: readonly string[] } => ({ ...(EFFECT_TUNING.get(id) ?? SKILL_FX_DEFAULTS.effect) });
 const RELEASE_SECONDS = 0.14, SHAKE_SECONDS = 0.16, SHAKE_AMPLITUDE = 1.6, SHAKE_GAP = 0.35;
 
+/**
+ * The tuning of an effect whose row corrects how it is staged (`feet`, `omitKinds`), for plays outside the skill feel
+ * sample (`?skillfx=off`): those corrections apply either way, so e.g. Singed's ally buff never brings its fixed-axis
+ * rays back. Any other effect plays untuned there, as before.
+ */
+export const effectCorrection = (id: string): { scale: number; particles: number; feet?: boolean; omitKinds?: readonly string[] } | undefined => {
+  const tuning = EFFECT_TUNING.get(id);
+  return tuning && (tuning.feet || tuning.omitKinds?.length) ? { ...tuning } : undefined;
+};
 /** A sample champion's cast plan: trimmed to its kept effects, none starting before the charge has finished. */
 export function simplifyCast(definitionId: string, plan: readonly PlannedEffect[]): PlannedEffect[] {
   const keep = SKILL_FX_TABLE[definitionId]?.keepCast;

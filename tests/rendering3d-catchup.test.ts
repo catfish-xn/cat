@@ -17,6 +17,7 @@ import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runti
 import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
 import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-replay';
 
+const SINGED_BUFF = 'singed_tft13_singed_base_w_ally_buf';
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
   let mounted: Renderer3d | undefined, listener: BoardFeedListener, library: EffectLibrary;
@@ -42,13 +43,13 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
-      effects: { flash: { path: 'flash.json' } },
-      actionEffects: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])) };
+    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+      effects: { flash: { path: 'flash.json' }, [SINGED_BUFF]: { path: 'buff.json' } },
+      actionEffects: { ...Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])), singed: { attack: ['flash'], cast: [SINGED_BUFF] } } };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.endsWith('manifest.json')) return Response.json(manifest);
       if (url.endsWith('precache.json')) return Response.json({ schemaVersion: 1, files: [] });
-      if (url.endsWith('action-bindings.json')) return Response.json({ playback: { flash: { anchor: 'source', delay: 0, maxDuration: 1 } } });
+      if (url.endsWith('action-bindings.json')) return Response.json({ playback: { flash: { anchor: 'source', delay: 0, maxDuration: 1 }, [SINGED_BUFF]: { anchor: 'target', delay: 0, maxDuration: 1.5 } } });
       return new Response('', { status: 404 });
     }));
     vi.doMock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
@@ -247,6 +248,16 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     }
     expect(session.displayLog).toContainEqual(event); expect(session.state).toBe(authoritative);
     expect(client.send).not.toHaveBeenCalled(); expect(replay).toEqual(before);
+  });
+
+  it.each([false, true])('Singed\'s ally buff plays without its fixed-axis rays, on the ally\'s feet (skill feel=%s)', async skillFeel => {
+    vi.stubGlobal('location', { search: skillFeel ? '?debug3d' : '?debug3d&skillfx=off' });
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'singed' }, { ...frame.pieces[0], id: 'b', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); loads.mockClear();
+    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    for (let i = 0; i < 6; i++) await advance(100);
+    expect(loads).toHaveBeenCalledWith(SINGED_BUFF, 1.5, 120, ['ray']);
+    expect(loads.mock.calls.filter(([id]) => id === SINGED_BUFF).every(call => (call[3] as readonly string[] | undefined)?.includes('ray'))).toBe(true);
   });
 
   it('a cast begun after 1.2 seconds hidden starts at its own time on the first visible frame', async () => {

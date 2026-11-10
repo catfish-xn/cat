@@ -59,7 +59,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
@@ -1224,7 +1224,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
     for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : undefined) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }
   };
   // Shader prewarm for the sample casts: in preparation each sample champion on the board has its trimmed cast effects
