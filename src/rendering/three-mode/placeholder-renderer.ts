@@ -134,8 +134,6 @@ const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly l
 const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
-/** The stun ring's height over the star row, clear of the bars drawn there. */
-const HALO_OVER_BARS = 26;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
@@ -1918,10 +1916,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.copy(view.root.position)
         .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
-      // The star ring circles over the bars (over the head it hid behind the health bar at board distance, 11-09 field).
+      // The stars circle the head like the client's stun, drawn over the bars (STUN_RENDER_ORDER) so the bar never hides them.
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift + HALO_OVER_BARS);
+        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + height + lift + CONTROL_3D.overHead);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).
