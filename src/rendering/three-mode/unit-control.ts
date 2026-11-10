@@ -33,18 +33,20 @@ export const CONTROL_3D = {
   /** A knocked-up body leans back by this much (radians) at the top of its lift. */
   leanRadians: 0.3,
   /**
-   * Stars around the head: count, ring radius and star size (board units), turns per second, the ring centre's height
-   * over the top of the head, and the dark glow behind them.
+   * Stars around the head: count, ring radius and star sprite size (board units; the star itself fills about a third
+   * of the sprite, the rest is its glow, like the client's star texture), turns per second, the ring centre's height
+   * as a share of the drawn body height (head level), and the dark glow behind them. Calibrated on the 11-10 three-row
+   * recording (ccvs-after): the first cut drew stars ~3× and the ring ~1.7× the client's, a third of a body too high.
    */
-  stars: 2, ringRadius: 18, starSize: 26, turnsPerSecond: 0.48, overHead: 12, glowSize: 53,
+  stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.85, glowSize: 32,
   /** Ghosts trailing each star: how many, the angle (radians) between them, and the first ghost's opacity. */
   trail: { ghosts: 3, gap: 0.28, opacity: 0.5 },
   /** Small sparkles popping around the ring: count, life (s), distance from the centre and size (board units). */
-  sparkles: { count: 4, seconds: 0.5, radius: [13, 18], size: [9, 13] },
+  sparkles: { count: 4, seconds: 0.5, radius: [8, 11], size: [12, 16] },
   /** Dissolving rings: count (staggered), seconds each, full size (board units); each grows from half size and fades. */
-  rings: { count: 2, seconds: 1.5, size: 44 },
+  rings: { count: 2, seconds: 1.5, size: 28 },
   /** The flash as the control starts: seconds and size (board units). */
-  flash: { seconds: 0.15, size: 40 },
+  flash: { seconds: 0.15, size: 26 },
 } as const;
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
@@ -135,20 +137,28 @@ export class ControlMotion {
 }
 
 let starTexture: CanvasTexture | null = null;
-/** One bright gold five-point star with a warm halo, shared by every stun (never disposed: a few KB for the page's life). */
+/**
+ * One bright gold five-point star (about a third of the sprite) in a warm glow filling the rest, shared by every stun
+ * (never disposed: a few KB for the page's life).
+ */
 function starMap(): CanvasTexture | null {
   if (starTexture || typeof document === 'undefined') return starTexture;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
   const g = canvas.getContext('2d');
   if (!g) return null;
+  if (typeof g.createRadialGradient === 'function') {
+    const halo = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    halo.addColorStop(0, 'rgba(255,214,110,0.75)'); halo.addColorStop(0.35, 'rgba(255,170,40,0.35)'); halo.addColorStop(1, 'rgba(255,150,0,0)');
+    g.fillStyle = halo; g.fillRect(0, 0, 64, 64);
+  }
   g.beginPath();
   for (let i = 0; i < 10; i++) {
-    const r = i % 2 ? 11 : 27, a = -Math.PI / 2 + i * Math.PI / 5;
+    const r = i % 2 ? 4.5 : 11, a = -Math.PI / 2 + i * Math.PI / 5;
     g.lineTo(32 + r * Math.cos(a), 32 + r * Math.sin(a));
   }
   g.closePath();
-  g.shadowColor = 'rgba(255,170,0,0.9)'; g.shadowBlur = 8;
-  g.fillStyle = '#ffe680'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#fff8d8'; g.stroke();
+  g.shadowColor = 'rgba(255,170,0,0.9)'; g.shadowBlur = 4;
+  g.fillStyle = '#ffe680'; g.fill(); g.lineWidth = 1; g.strokeStyle = '#fff8d8'; g.stroke();
   starTexture = new CanvasTexture(canvas); starTexture.colorSpace = SRGBColorSpace; starTexture.minFilter = LinearFilter;
   return starTexture;
 }
