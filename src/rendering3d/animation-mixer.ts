@@ -55,6 +55,21 @@ function parallelStage(sequence: CastSequence, main: AnimationClip, layers: read
   return { primary: bases[0], extras, duration };
 }
 
+/** A held cast's out clip plays this many times faster than authored (it may also be cut by the next swing). */
+export const HELD_CAST_OUT_SPEED = 2;
+/** Per-stage speeds and end pads of a held cast: stages before out at ≥1× fill holdSeconds, out fills the rest. */
+interface HeldTiming { speeds: number[]; pads: number[] }
+function heldTiming(raw: readonly number[], playback: ActionPlayback, hasOut: boolean): HeldTiming | undefined {
+  const hold = playback.holdSeconds;
+  if (hold === undefined) return undefined;
+  const preCount = hasOut && raw.length > 1 ? raw.length - 1 : raw.length;
+  const preRaw = raw.slice(0, preCount).reduce((a, b) => a + b, 0);
+  const preSpeed = Math.max(1, preRaw / Math.max(hold, 1e-6));
+  const speeds = raw.map((_, i) => i < preCount ? preSpeed : raw[i] / Math.max(playback.durationSeconds - hold, 1e-6));
+  const pads = raw.map((_, i) => i === preCount - 1 ? Math.max(0, hold - preRaw / preSpeed) : 0);
+  return { speeds, pads };
+}
+
 /** Applies complete sequences, including overflow across stages in one update. */
 export class UnitAnimationMixer {
   readonly mixer: AnimationMixer;
@@ -64,6 +79,7 @@ export class UnitAnimationMixer {
   private queue: AnimationClip[] = [];
   private stageLeft = 0;
   private speed = 1;
+  private timing?: HeldTiming;
   /** Seconds until an attack with a release reaches its release frame, and the speed it plays after it. */
   private releaseLeft = 0;
   private tailSpeed = 1;
@@ -173,9 +189,13 @@ export class UnitAnimationMixer {
     const duration = clips.reduce((n, c, idx) => n + (idx === mainIndex ? Math.max(c!.duration, maxLayerDuration) : c!.duration), 0), interval = context.attackIntervalSeconds;
     // Fit the whole swing between observed attacks, leaving recovery time for the idle blend.
     // Two intervals still let a long clip restart before its ending on every attack (Mordekaiser).
-    const durationSeconds = state === 'cast' ? Math.min(2.5, Math.max(0.3, duration))
+    // A held cast (manifest holdSeconds) keeps its pose for its rule effect instead of the 2.5 s cap; its out is compressed.
+    const hold = state === 'cast' ? sequence?.holdSeconds : undefined;
+    const outSeconds = hold !== undefined && sequence?.out && clips.length > 1 ? clips[clips.length - 1]!.duration / HELD_CAST_OUT_SPEED : 0;
+    const durationSeconds = hold !== undefined ? hold + outSeconds : state === 'cast' ? Math.min(2.5, Math.max(0.3, duration))
       : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 0.9) : duration;
     if (sequence) this.lastResolved = { clips: names, sequence };
+    if (hold !== undefined) return { clips: names, durationSeconds, holdSeconds: hold };
     const release = state === 'attack' && !sequence && !(formAttack && this.clips.has(formAttack)) ? this.release(clips[0]!, interval) : undefined;
     if (release) return { clips: names, durationSeconds: release.durationSeconds, release: release.release };
     return { clips: names, durationSeconds };
@@ -210,7 +230,7 @@ export class UnitAnimationMixer {
     const sequence = playback?.clips.map(name => this.clips.get(name));
     if (sequence?.some(c => !c)) return !!this.active;
     const clip = sequence?.[0] ?? this.clips.get(this.nameFor(output.state));
-    this.queue = []; this.stageLeft = 0; this.speed = 1; this.releaseLeft = 0; this.tailSpeed = 1;
+    this.queue = []; this.stageLeft = 0; this.speed = 1; this.timing = undefined; this.releaseLeft = 0; this.tailSpeed = 1;
     if (!clip) return !!this.active;
     // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
     if (output.loop && this.active === this.mixer.clipAction(clip) && this.active.loop === LoopRepeat
@@ -226,10 +246,12 @@ export class UnitAnimationMixer {
     }
     const atMain = this.stage?.index === 0;
     if (sequence && playback) {
-      const rawTotal = sequence.reduce((sum, c, idx) => sum + (idx === this.stage?.index ? this.stage.duration : c!.duration), 0);
-      this.speed = rawTotal / playback.durationSeconds;
+      const raw = sequence.map((c, idx) => idx === this.stage?.index ? this.stage.duration : c!.duration);
+      this.speed = raw.reduce((a, b) => a + b, 0) / playback.durationSeconds;
+      this.timing = heldTiming(raw, playback, !!seqDef?.out);
+      if (this.timing) this.speed = this.timing.speeds[0];
       this.queue = sequence.slice(1) as AnimationClip[];
-      this.stageLeft = (atMain ? this.stage!.duration : clip.duration) / this.speed;
+      this.stageLeft = this.stageSeconds(0, atMain ? this.stage!.duration : clip.duration);
     }
     const release = playback?.release;
     if (release && sequence?.length === 1 && !this.stage) {
@@ -241,6 +263,9 @@ export class UnitAnimationMixer {
     this.play(atMain ? this.stage!.primary : clip, output.loop, blend);
     if (atMain) this.startLayers(this.stage!.extras);
     return true;
+  }
+  private stageSeconds(index: number, raw: number): number {
+    return raw / this.speed + (this.timing?.pads[index] ?? 0);
   }
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
@@ -257,9 +282,10 @@ export class UnitAnimationMixer {
         const index = ++this.stageIndex, stage = this.stage;
         const atMain = stage?.index === index;
         if (stage && index === stage.index + 1) this.stopLayers(0.08);
+        if (this.timing) this.speed = this.timing.speeds[index] ?? this.speed;
         this.play(atMain ? stage.primary : next, false, 0.08);
         if (atMain) this.startLayers(stage.extras);
-        this.stageLeft = (atMain ? stage.duration : next.duration) / this.speed;
+        this.stageLeft = this.stageSeconds(index, atMain ? stage.duration : next.duration);
       } else {
         // A sequence ending on its parallel stage holds the layers' last pose with the main one until the next action.
         this.stageLeft = 0;
