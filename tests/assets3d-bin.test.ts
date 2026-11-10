@@ -18,7 +18,7 @@ import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 // @ts-expect-error Pure Node utility.
-import { mapStagesToSequence, mergeAdjacentSegments, planGraphAction } from '../scripts/assets3d/stage-anim-sequences.mjs';
+import { buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction } from '../scripts/assets3d/stage-anim-sequences.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -771,5 +771,28 @@ describe('initial material and action binding', () => {
       },
     );
     expect(variantPlan).toEqual({ status: 'skipped', reason: '需人工 (castVariants)' });
+  });
+});
+
+describe('script-driven cast graph keys', () => {
+  it('builds a Sequencer from the listed graph keys and plans it like a graph cast', async () => {
+    const atomic = (clipName: string, startFrame: number | null, endFrame: number | null, lastFrame: number) => ({
+      kind: 'Atomic', clipName, glbName: clipName, startFrame, endFrame,
+      effectiveStartFrame: startFrame ?? 0, effectiveEndFrame: endFrame ?? lastFrame, lastFrame, fps: 30,
+    });
+    const graph: Record<string, ReturnType<typeof atomic>> = {
+      Wind_In: atomic('clip_wind_in', null, null, 12),
+      Wind_Out: atomic('clip_wind_out', null, 12, 33),
+    };
+    const table = { hero: ['Wind_In', 'Wind_Out'] };
+    const node = await buildScriptCastNode('hero', async (key: string) => graph[key] ?? null, table);
+    expect(node).toMatchObject({ kind: 'Sequencer', keyName: 'script:Wind_In+Wind_Out' });
+    expect(planGraphAction(node, { action: 'cast', entry: {} })).toMatchObject({
+      status: 'ok',
+      castSequence: { in: 'clip_wind_in', main: 'clip_wind_out' },
+      clipRanges: { clip_wind_out: [0, 12 / 30] },
+    });
+    expect(await buildScriptCastNode('other', async () => null, table)).toBeNull();
+    await expect(buildScriptCastNode('hero', async () => null, table)).rejects.toThrow('script-cast-graph-key-missing: hero:Wind_In');
   });
 });
