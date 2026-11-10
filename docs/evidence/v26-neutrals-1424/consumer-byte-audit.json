@@ -2375,9 +2375,9 @@
     },
     "tests/rendering3d-unit-control.test.ts": {
       "previousBytes": 2957,
-      "currentBytes": 8616,
+      "currentBytes": 12971,
       "previousSha256": "292cef5d2b6c513eab2c8fecd4e48ccc29ac1998f7c4d7b2dc2c00162c2462d0",
-      "currentSha256": "26318e2bafc0106c5b6bc9b7cd9ecc53b7e65d4d41fc82a7e7676d2865438db7",
+      "currentSha256": "13f98960b1235402bb4abda8aaf4a7c4618c5054ef1f3db61281a680dd316a2b",
       "firstDifferentByte": 83
     },
     "tests/replay-cache-branch.test.ts": {
