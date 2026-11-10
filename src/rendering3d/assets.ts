@@ -128,6 +128,7 @@ export class ModelCache {
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
       formAnimations: this.manifest.models[id]?.formAnimations,
       attackSequence: this.manifest.models[id]?.attackSequence,
+      attackCastSeconds: this.manifest.models[id]?.attackCastSeconds,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

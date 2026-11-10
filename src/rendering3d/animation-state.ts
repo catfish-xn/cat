@@ -12,7 +12,11 @@ export type AnimationEvent =
 /** A packet that interrupts a swing or a run with a flinch: ability damage, told by its display provenance. */
 export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetDamage' }>): boolean =>
   event.sourceKind === 'ability' || event.delivery === 'ability-direct' || event.delivery === 'ability-periodic';
-export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
+/**
+ * `releaseSeconds` (attack only): the release point in unscaled sequence time. Up to it the sequence plays at 1x;
+ * the rest is compressed into what remains of `durationSeconds`.
+ */
+export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; releaseSeconds?: number }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }

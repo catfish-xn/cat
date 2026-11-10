@@ -26,6 +26,9 @@ export class UnitAnimationMixer {
   private queue: AnimationClip[] = [];
   private stageLeft = 0;
   private speed = 1;
+  /** Display seconds until the speed switches to `postSpeed` (plan C release); 0 = no switch pending. */
+  private switchLeft = 0;
+  private postSpeed = 1;
   private form?: 'front' | 'back';
   private layerActions: AnimationAction[] = [];
   private pendingLayers: AnimationClip[] = [];
@@ -118,6 +121,11 @@ export class UnitAnimationMixer {
     const durationSeconds = state === 'cast' ? Math.min(2.5, Math.max(0.3, duration))
       : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 0.9) : duration;
     if (sequence) this.lastResolved = { clips: names, sequence };
+    // Plan C: a compressed attack keeps its wind-up at 1x up to the release (original castFrame), so the swing lands with
+    // the hit cue's fixed delay; only the follow-through is squeezed. A release past the fitted time keeps the uniform fit.
+    const release = this.metadata.attackCastSeconds;
+    if (state === 'attack' && !formAttack && release !== undefined && durationSeconds < duration && release < durationSeconds && release < duration)
+      return { clips: names, durationSeconds, releaseSeconds: release };
     return { clips: names, durationSeconds };
   }
   private play(clip: AnimationClip, loop: boolean, blend: number): void {
@@ -138,7 +146,7 @@ export class UnitAnimationMixer {
     const sequence = playback?.clips.map(name => this.clips.get(name));
     if (sequence?.some(c => !c)) return !!this.active;
     const clip = sequence?.[0] ?? this.clips.get(this.nameFor(output.state));
-    this.queue = []; this.stageLeft = 0; this.speed = 1;
+    this.queue = []; this.stageLeft = 0; this.speed = 1; this.switchLeft = 0; this.postSpeed = 1;
     if (!clip) return !!this.active;
     // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
     if (output.loop && this.active === this.mixer.clipAction(clip) && this.active.loop === LoopRepeat
@@ -151,6 +159,12 @@ export class UnitAnimationMixer {
     if (sequence && playback) {
       const rawTotal = sequence.reduce((sum, c, idx) => sum + (idx === mainStage ? Math.max(c!.duration, maxLayerDuration) : c!.duration), 0);
       this.speed = rawTotal / playback.durationSeconds;
+      const release = playback.releaseSeconds;
+      if (release !== undefined && release > 0 && release < playback.durationSeconds && release < rawTotal) {
+        this.speed = 1;
+        this.switchLeft = release;
+        this.postSpeed = (rawTotal - release) / (playback.durationSeconds - release);
+      }
       this.queue = sequence.slice(1) as AnimationClip[];
       const firstDuration = mainStage === 0 ? Math.max(clip.duration, maxLayerDuration) : clip.duration;
       this.stageLeft = firstDuration / this.speed;
@@ -164,27 +178,45 @@ export class UnitAnimationMixer {
   }
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
-    while (this.stageLeft > 0 && seconds >= this.stageLeft) {
-      const step = this.stageLeft;
+    for (;;) {
+      const stage = this.stageLeft > 0, sw = this.switchLeft > 0;
+      if (!stage && !sw) break;
+      const step = Math.min(stage ? this.stageLeft : Infinity, sw ? this.switchLeft : Infinity);
+      if (seconds < step) break;
       this.mixer.update(step); seconds = Math.max(0, seconds - step);
-      const next = this.queue.shift();
-      if (next) {
-        this.play(next, false, 0.08);
-        let stageDur = next.duration;
-        if (this.stagesUntilLayers > 0 && --this.stagesUntilLayers === 0) {
-          const pending = this.pendingLayers;
-          this.pendingLayers = [];
-          for (const l of pending) stageDur = Math.max(stageDur, l.duration);
-          this.startLayers(pending);
-        }
-        this.stageLeft = stageDur / this.speed;
-      } else {
-        this.stageLeft = 0;
-        this.stopLayers();
+      if (stage) this.stageLeft -= step;
+      if (sw) this.switchLeft -= step;
+      // Speed switch first: the rest of the current stage then runs at the new speed.
+      if (sw && this.switchLeft <= 1e-9) {
+        this.switchLeft = 0;
+        const rawLeft = this.stageLeft * this.speed;
+        this.speed = this.postSpeed;
+        this.active?.setEffectiveTimeScale(this.speed);
+        for (const action of this.layerActions) action.setEffectiveTimeScale(this.speed);
+        if (this.stageLeft > 1e-9) { this.stageLeft = rawLeft / this.speed; continue; }
       }
+      if (stage && this.stageLeft <= 1e-9) this.advanceStage();
     }
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
+    if (this.switchLeft > 0) this.switchLeft -= seconds;
   }
-  dispose(): void { this.stopLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; }
+  private advanceStage(): void {
+    const next = this.queue.shift();
+    if (next) {
+      this.play(next, false, 0.08);
+      let stageDur = next.duration;
+      if (this.stagesUntilLayers > 0 && --this.stagesUntilLayers === 0) {
+        const pending = this.pendingLayers;
+        this.pendingLayers = [];
+        for (const l of pending) stageDur = Math.max(stageDur, l.duration);
+        this.startLayers(pending);
+      }
+      this.stageLeft = stageDur / this.speed;
+    } else {
+      this.stageLeft = 0;
+      this.stopLayers();
+    }
+  }
+  dispose(): void { this.stopLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.switchLeft = 0; }
 }

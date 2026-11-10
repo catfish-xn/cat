@@ -17,7 +17,12 @@ export interface CastVariants {
 }
 export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
 export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
-export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence }
+/**
+ * `attackCastSeconds` (optional): when the basic attack releases, in seconds of the attack clip (or attack sequence)
+ * played at 1x — the original castFrame / 30. With it, a fast attack keeps the wind-up at its own speed and compresses only
+ * the follow-through, so the swing lands with the projectile/hit cue instead of ahead of it.
+ */
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence; attackCastSeconds?: number }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
@@ -159,6 +164,8 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);
     if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);
+    if (entry.attackCastSeconds !== undefined && !(typeof entry.attackCastSeconds === 'number' && Number.isFinite(entry.attackCastSeconds)
+      && entry.attackCastSeconds > 0 && entry.attackCastSeconds <= 10)) throw new Error('invalid-attack-cast-seconds');
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
