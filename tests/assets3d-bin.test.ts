@@ -18,7 +18,7 @@ import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 // @ts-expect-error Pure Node utility.
-import { buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction, planHeroVariant } from '../scripts/assets3d/stage-anim-sequences.mjs';
+import { SCRIPT_CAST_GRAPH_KEYS, buildScriptCastNode, mapStagesToSequence, mergeAdjacentSegments, planGraphAction, planHeroVariant } from '../scripts/assets3d/stage-anim-sequences.mjs';
 
 const u8 = (n: number) => Buffer.from([n]);
 const u16 = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
@@ -849,5 +849,14 @@ describe('script-driven cast graph keys', () => {
     });
     expect(await buildScriptCastNode('other', async () => null, table)).toBeNull();
     await expect(buildScriptCastNode('hero', async () => null, table)).rejects.toThrow('script-cast-graph-key-missing: hero:Wind_In');
+  });
+
+  it('pins the script-cast graph keys to the hashes found in the original animation graphs', () => {
+    // Warwick's howl.anm and Mel's Spell1_Dash.anm sit under these hashes in their skin0 animation graphs.
+    expect(SCRIPT_CAST_GRAPH_KEYS.warwick).toEqual(['BloodFrenzy_Activate']);
+    expect(fnv1a('BloodFrenzy_Activate') >>> 0).toBe(0x510c4083);
+    expect(SCRIPT_CAST_GRAPH_KEYS.mel).toEqual(['Spell_Dash', 'Spell1_Blast']);
+    expect(fnv1a('Spell_Dash') >>> 0).toBe(0x60816d32);
+    expect(fnv1a('Spell1_Blast') >>> 0).toBe(0xfb92fc69);
   });
 });
