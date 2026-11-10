@@ -1,4 +1,4 @@
-// node dev/castcmp/v-capture-attack.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 1500 | --times 0,33,...] [--gl gpu|swift]
+// node dev/castcmp/v-capture-attack.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 1500 | --times 0,33,...] [--gl gpu|swift] [--interval ms [--repeat 1]]
 // Records one attack as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
 const { launchOptions, timeline, timer } = require('./common.cjs');
@@ -25,21 +25,25 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   await page.evaluate(() => { window.__h.step(1500); });
   await page.waitForTimeout(1500); // effect files / textures fetch
   const isCast = !!opt('cast');
-  const triggerAction = () => page.evaluate((asCast) => {
+  // --interval <ms>: attack events are spaced that far apart in combat ticks (50 ms each), so the renderer's observed
+  // cadence (attack speed) is 1000/interval; without it they are 5 s apart (no compression).
+  // --repeat 1: keep attacking every interval during the recording, as in a real fight.
+  const intervalMs = Number(opt('interval') ?? 5000), tickStep = Math.max(1, Math.round(intervalMs / 50)), repeat = !!opt('repeat');
+  const triggerAction = () => page.evaluate(([asCast, step]) => {
     if (asCast) { window.__h.cast(); return; }
     const s = (window.__atkSeq = (window.__atkSeq || 10) + 1);
-    if (window.__h.attack) window.__h.attack();
-    else window.__h.events([{ type: 'attack', tick: s * 100, eventSeq: s * 100, attackerId: 'me', targetId: 'foe' }]);
-  }, isCast);
-  for (let w = 0; w < Number(opt('warm') ?? 1); w++) { if (w) { for (let i = 0; i < 8; i++) await page.evaluate(() => window.__h.step(250)); } await triggerAction(); }
+    window.__h.events([{ type: 'attack', tick: s * step, eventSeq: s * step, attackerId: 'me', targetId: 'foe' }]);
+  }, [isCast, tickStep]);
+  for (let w = 0; w < Number(opt('warm') ?? (opt('interval') ? 2 : 1)); w++) { if (w) { for (let i = 0; i < 8; i++) await page.evaluate(() => window.__h.step(250)); } await triggerAction(); }
   for (let i = 0; i < 12; i++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(80); }
   await page.evaluate(() => window.__h.step(3000)); await page.waitForTimeout(200);
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const fullClip = { x: 0, y: 0, width: 1920, height: 1080 }; fs.writeFileSync(path.join(out, 'boxes.json'), JSON.stringify({ boxes, ids: ['me', 'foe', 'foe2', 'foe3', 'foe4'] }));
   await triggerAction();
-  let at = 0;
+  let at = 0, nextAttack = repeat ? intervalMs : Infinity;
   for (let idx = 0; idx < times.length; idx++) {
     const t = times[idx];
+    while (nextAttack <= t) { await page.evaluate(ms => window.__h.step(ms), nextAttack - at); at = nextAttack; await triggerAction(); nextAttack += intervalMs; }
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     await page.waitForTimeout(idx <= 1 ? 300 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 });
