@@ -13,7 +13,9 @@ export interface CastVariants {
   star3?: CastSequence; hero?: CastSequence; front?: CastSequence; back?: CastSequence;
   rotate?: readonly string[]; branch?: Record<string, CastSequence>;
 }
-export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants }
+export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
+export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
@@ -26,6 +28,7 @@ export interface AssetManifest {
   models: Record<string, {
     path: string;
     animations?: AnimationNames;
+    formAnimations?: FormAnimations;
     unitScale?: number;
     selfIllumination?: number;
     clipRanges?: Record<string, readonly [number, number]>;
@@ -149,6 +152,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.selfIllumination !== undefined && !lightTerm(entry.selfIllumination)) throw new Error('invalid-self-illumination');
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
+    if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
@@ -179,6 +183,21 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
   if (m.boards !== undefined) assertBoards(m.boards, m);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+    && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+}
+function assertFormAnimations(value: unknown): void {
+  if (!isPlainObject(value)) throw new Error('invalid-form-animations');
+  for (const [form, actions] of Object.entries(value)) {
+    if ((form !== 'front' && form !== 'back') || !isPlainObject(actions)) throw new Error('invalid-form-animations');
+    for (const [action, name] of Object.entries(actions)) {
+      if ((action !== 'idle' && action !== 'move' && action !== 'attack') || typeof name !== 'string' || !name.trim()) {
+        throw new Error('invalid-form-animations');
+      }
+    }
+  }
+}
 function assertClipRanges(value: unknown): void {
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) throw new Error('invalid-clip-ranges');
