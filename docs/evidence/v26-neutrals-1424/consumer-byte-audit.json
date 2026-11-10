@@ -2089,6 +2089,14 @@
       "currentSha256": "519cff2b8d7d747b6cc38148f3ffbab4dd8594c5c82079af84ad2aeb23e078f0",
       "firstDifferentByte": 46
     },
+    "tests/rendering3d-attack-release.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7278,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "9ef746f8c378e48e3bf11b6093088f5e945abd378ff3e6f02a3645f38fd844cb",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-bench.test.ts": {
       "previousBytes": 9925,
       "currentBytes": 12870,
