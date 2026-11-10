@@ -16,7 +16,6 @@ import { contracts } from './runtime.mjs';
 export const DEFAULT_EXCLUDES = new Set([
   'sevika:cast',
   'sevika:attack',
-  'drmundo:cast',
   'caitlyn:attack',
   'singed:cast',
   'violet:cast',
@@ -162,6 +161,10 @@ function collectLinearSegments(node) {
   return { ok: false, reason: `非常规节点 (${node.kind})`, segments: [] };
 }
 
+function isMovingCondition(node) {
+  return node.updater === 'IsMovingParametricUpdater' || node.updater === '0x6c816d62';
+}
+
 /**
  * Pure planner that converts a resolved animation graph node into manifest updates
  * for either `'cast'` or `'attack'`.
@@ -172,6 +175,11 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
   }
   if (!node) {
     return { status: 'skipped', reason: '未解析' };
+  }
+  // IsMoving ConditionBool (e.g. Dr. Mundo Spell4: [true] run / [false] idle): our units stand still while
+  // casting, so the standing (false) branch is the clip the original plays.
+  if (node.kind === 'ConditionBool' && isMovingCondition(node) && node.branches?.false) {
+    return planGraphAction(node.branches.false, { action, entry, otherUsedClips });
   }
   if (node.kind === 'Selector' || node.kind === 'Parametric' || node.kind === 'ConditionBool' || node.kind === 'Unknown' || node.kind === 'Cycle') {
     return { status: 'skipped', reason: `非常规节点 (${node.kind})` };
@@ -390,6 +398,10 @@ function formatNodeSummary(node) {
   }
   if (node.kind === 'Parallel') {
     return `Parallel(${node.keyName}): ` + (node.children ?? []).map(formatNodeSummary).join(' ∥ ');
+  }
+  if (node.kind === 'ConditionBool' && node.branches) {
+    return `ConditionBool(${node.keyName}${node.updater ? `, ${node.updater}` : ''}): `
+      + Object.entries(node.branches).map(([label, b]) => `[${label}] ${formatNodeSummary(b)}`).join(' | ');
   }
   return `${node.kind}(${node.keyName})`;
 }
@@ -639,7 +651,19 @@ export async function stageAnimSequences({
           children,
         };
       }
-      if (cls === 'ConditionBoolClipData') return { kind: 'ConditionBool', keyName, keyHash: kHash >>> 0 };
+      if (cls === 'ConditionBoolClipData') {
+        const updater = bField(node, 'Updater');
+        const updaterClass = updater && typeof updater === 'object' && 'type' in updater ? nameOf(updater.type) : null;
+        const branches = {};
+        for (const [label, field] of [['true', 'mTrueConditionClipName'], ['false', 'mFalseConditionClipName']]) {
+          const c = bField(node, field);
+          if (c == null) continue;
+          const ch = (typeof c === 'string' ? fnv1a(c) : c.hash) >>> 0;
+          const r = await resolveNode(ch, new Set(visited));
+          if (r) branches[label] = r;
+        }
+        return { kind: 'ConditionBool', keyName, keyHash: kHash >>> 0, updater: updaterClass, branches };
+      }
       if (cls === 'SelectorClipData') return { kind: 'Selector', keyName, keyHash: kHash >>> 0 };
       if (cls === 'ParametricClipData') return { kind: 'Parametric', keyName, keyHash: kHash >>> 0 };
       return { kind: 'Unknown', keyName, keyHash: kHash >>> 0 };
