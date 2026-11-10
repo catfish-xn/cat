@@ -159,7 +159,9 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     /** Adapter supplies geometry from one static mesh (or rejects); unavailable emitters are skipped. */
     readMesh?: (url: string) => Promise<BufferGeometry>;
     /** The readers' textures and geometry stay theirs (a caching reader): the effect never disposes them. */
-    borrowed?: boolean } = {}): Promise<ParticleEffect> {
+    borrowed?: boolean;
+    /** v2 only: emitters of these kinds are left out (a copy of the document; the reader's value is not changed). */
+    omitKinds?: readonly string[] } = {}): Promise<ParticleEffect> {
   const entry = Object.hasOwn(manifest.effects ?? {}, id) ? manifest.effects![id] : undefined;
   if (manifest.schemaVersion !== 1 || !entry) throw new Error('unknown-effect');
   const root = options.root ?? DEFAULT_ASSET_ROOT;
@@ -168,7 +170,10 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     if (!response.ok) throw new Error(`particle-http-${response.status}`);
     return response.json();
   });
-  const doc = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
+  const parsed = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
+  const omit = options.omitKinds;
+  const doc: typeof parsed = omit?.length && parsed.schemaVersion === 2
+    ? { ...parsed, emitters: parsed.emitters.filter(e => !omit.includes(e.kind)) } : parsed;
   const textures = new Map<string, Texture>();
   const meshes = new Map<string, BufferGeometry>();
   const loadedGeometry = new Set<BufferGeometry>();

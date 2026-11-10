@@ -2263,9 +2263,9 @@
     },
     "tests/rendering3d-particles-v2.test.ts": {
       "previousBytes": 32759,
-      "currentBytes": 33388,
+      "currentBytes": 33966,
       "previousSha256": "10a3f4d9b64f7fa09a167e08b114aa1b8764d21f5917e8400459596ec196e84c",
-      "currentSha256": "5797d26ca893bf6fb26b69666618072c629e03249fe1f0f94765c561f86419c8",
+      "currentSha256": "b5ebbd476d075384170af97f6f69d366cfe0a37ae50ad59ac95ec5c681df08e8",
       "firstDifferentByte": 23949
     },
     "tests/rendering3d-player-damage.test.ts": {
@@ -2350,6 +2350,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "a7bc4631edeccd5682652dbfc808a002246d96c2c703f4c01ac7f1d89edd24ae",
       "firstDifferentByte": 0
+    },
+    "tests/rendering3d-singed-cast.test.ts": {
+      "previousBytes": 4823,
+      "currentBytes": 5043,
+      "previousSha256": "85dcf90eb4d249e546bcd4c3949e45dd722355460b0460276961326c0f461231",
+      "currentSha256": "55e707154431c5d41d4a1ae4efb9f30d2f6c5d03e118147a1555f3a87159c421",
+      "firstDifferentByte": 295
     },
     "tests/rendering3d-skill-fx-table.test.ts": {
       "previousBytes": 3437,

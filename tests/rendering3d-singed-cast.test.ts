@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Box3, Group, Mesh, PerspectiveCamera, Vector3 } from 'three';
 import { ParticleEffect } from '../src/rendering3d/particles';
 import { planActionEffects, type EffectPlayback } from '../src/rendering/three-mode/action-effect-plan';
-import { simplifyCast } from '../src/rendering/three-mode/skill-feel';
+import { castEffectTuning, simplifyCast } from '../src/rendering/three-mode/skill-feel';
 
 const missile = 'singed_tft13_singed_base_w_mis';
 const activation = 'singed_tft13_singed_base_w_ally_activate';
@@ -68,12 +68,14 @@ describe('Singed online 3D cast staging', () => {
     fx.dispose();
   });
 
-  it.each([false, true])('omits the directional buff with skill feel %s, retaining launch and activation', skillFeel => {
+  it.each([false, true])('keeps the ally buff in the plan with skill feel %s; its rays are left out by the buff\'s own tuning', skillFeel => {
     const plan = planActionEffects('singed', 'cast', effects, playback);
     const selected = skillFeel ? simplifyCast('singed', plan) : plan;
-    expect(selected.map(effect => effect.id)).toEqual([missile, activation]);
-    expect(selected.map(effect => effect.playback)).toEqual([playback[missile], playback[activation]]);
-    expect(effects).toHaveLength(3); expect(playback[directionalBuff].anchor).toBe('target');
+    expect(selected.map(effect => effect.id)).toEqual([missile, activation, directionalBuff]);
+    expect(selected.map(effect => effect.playback)).toEqual([playback[missile], playback[activation], playback[directionalBuff]]);
+    expect(castEffectTuning(directionalBuff).omitKinds).toEqual(['ray']);
+    expect(castEffectTuning(directionalBuff).feet).toBe(true);
+    expect(castEffectTuning(directionalBuff).scale).toBe(castEffectTuning(activation).scale);
   });
 
   it('leaves other champions and basic attacks unchanged', () => {
