@@ -10,7 +10,10 @@ export function selectCastSequence(metadata: CastMetadata, castIndex: number, co
   if ((context.starLevel ?? 0) >= 3 && v?.star3) return v.star3;
   if (context.branch && v?.branch && Object.hasOwn(v.branch, context.branch)) return v.branch[context.branch];
   if (context.form && v?.[context.form]) return v[context.form];
-  if (v?.rotate) return { main: v.rotate[castIndex % v.rotate.length] };
+  if (v?.rotate) {
+    const entry = v.rotate[castIndex % v.rotate.length];
+    return typeof entry === 'string' ? { main: entry } : entry;
+  }
   return metadata.castSequence;
 }
 
@@ -58,6 +61,7 @@ export class UnitAnimationMixer {
             this.metadata.castVariants?.front,
             this.metadata.castVariants?.back,
             ...Object.values(this.metadata.castVariants?.branch ?? {}),
+            ...(this.metadata.castVariants?.rotate ?? []).filter((r): r is CastSequence => typeof r !== 'string'),
           ]
         : [];
     for (const seq of candidates) {

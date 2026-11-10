@@ -50,7 +50,10 @@ export function castClipsFor(modelEntry = {}) {
   const variants = modelEntry.castVariants;
   if (variants && typeof variants === 'object') {
     for (const key of ['star3', 'hero', 'front', 'back']) addSequence(variants[key]);
-    add(variants.rotate);
+    for (const entry of Array.isArray(variants.rotate) ? variants.rotate : []) {
+      if (typeof entry === 'string') add(entry);
+      else addSequence(entry);
+    }
     if (variants.branch && typeof variants.branch === 'object') {
       for (const seq of Object.values(variants.branch)) addSequence(seq);
     }
@@ -79,8 +82,11 @@ function referencedBy(modelEntry, clipName) {
     for (const key of ['star3', 'hero', 'front', 'back']) {
       if (variants[key]) checkSequence(`castVariants.${key}`, variants[key]);
     }
-    if (Array.isArray(variants.rotate) && variants.rotate.some(matches)) {
-      refs.push('castVariants.rotate');
+    if (Array.isArray(variants.rotate)) {
+      variants.rotate.forEach((entry, index) => {
+        if (matches(entry)) refs.push('castVariants.rotate');
+        else checkSequence(`castVariants.rotate.${index}`, entry);
+      });
     }
     if (variants.branch && typeof variants.branch === 'object') {
       for (const [branch, seq] of Object.entries(variants.branch)) {

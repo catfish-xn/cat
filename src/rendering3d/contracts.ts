@@ -9,9 +9,11 @@ export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 
 export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
 /** Array main rotates between casts; the other stages each play once. */
 export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string; layers?: readonly string[] }
+/** A rotation entry is one clip, or a whole multi-stage sequence for that cast (Jinx's Death Rocket). */
+export type CastRotation = string | CastSequence;
 export interface CastVariants {
   star3?: CastSequence; hero?: CastSequence; front?: CastSequence; back?: CastSequence;
-  rotate?: readonly string[]; branch?: Record<string, CastSequence>;
+  rotate?: readonly CastRotation[]; branch?: Record<string, CastSequence>;
 }
 export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
 export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
@@ -163,7 +165,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
       if (!variants || typeof variants !== 'object' || Array.isArray(variants)) throw new Error('invalid-cast-variants');
       for (const [key, sequence] of Object.entries(variants)) {
         if (['star3', 'hero', 'front', 'back'].includes(key)) assertCastSequence(sequence);
-        else if (key === 'rotate') assertClipList(sequence);
+        else if (key === 'rotate') assertCastRotation(sequence);
         else if (key === 'branch') {
           if (!sequence || typeof sequence !== 'object' || Array.isArray(sequence) || !Object.keys(sequence).length) throw new Error('invalid-cast-branch');
           for (const [branch, value] of Object.entries(sequence)) {
@@ -223,6 +225,13 @@ function assertCastLayers(value: unknown): void {
 }
 function assertClipList(value: unknown): void {
   if (!Array.isArray(value) || !value.length || value.length > 64 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) throw new Error('invalid-cast-clips');
+}
+function assertCastRotation(value: unknown): void {
+  if (!Array.isArray(value) || !value.length || value.length > 64) throw new Error('invalid-cast-clips');
+  for (const item of value) {
+    if (typeof item === 'string') { if (!item.trim()) throw new Error('invalid-cast-clips'); }
+    else assertCastSequence(item);
+  }
 }
 function assertCastSequence(value: unknown): void {
   if (!isPlainObject(value)) throw new Error('invalid-cast-sequence');
