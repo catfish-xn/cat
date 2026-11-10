@@ -278,6 +278,36 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
   };
 }
 
+/**
+ * Plans an existing `castVariants.hero` from the original `<Spell>Hero` SpellObject's graph node.
+ * Returns the next `castVariants` (undefined when empty); a hero variant equal to the default
+ * cast sequence is dropped so the default path plays it. Ranged/segmented hero clips stay manual.
+ */
+export function planHeroVariant(node, { entry = {} } = {}) {
+  const variants = entry?.castVariants;
+  if (!variants?.hero) return { status: 'skipped', reason: '无 castVariants.hero' };
+  if (!node) return { status: 'skipped', reason: '未解析' };
+  const plan = planGraphAction(node, { action: 'cast', entry: {} });
+  if (plan.status !== 'ok') return plan;
+  if (Object.keys(plan.clipRanges).length > 0 || Object.keys(plan.clipSegments).length > 0) {
+    return { status: 'skipped', reason: '需人工 (hero 片段带帧区间)' };
+  }
+  const trimmed = plan.wholeClips.filter(c => entry.clipRanges && Object.hasOwn(entry.clipRanges, c));
+  if (trimmed.length > 0) return { status: 'skipped', reason: `需人工 (hero 整段与 clipRanges 冲突: ${trimmed.join(', ')})` };
+  const defaultSequence = entry.castSequence ?? (entry.animations?.cast ? { main: entry.animations.cast } : undefined);
+  const sameAsDefault = JSON.stringify(plan.castSequence) === JSON.stringify(defaultSequence);
+  const { hero: _oldHero, ...rest } = variants;
+  const castVariants = sameAsDefault ? rest : { ...rest, hero: plan.castSequence };
+  const changed = JSON.stringify(variants.hero) !== JSON.stringify(plan.castSequence);
+  return {
+    status: 'ok',
+    changed,
+    heroSequence: plan.castSequence,
+    castVariants: Object.keys(castVariants).length > 0 ? castVariants : undefined,
+    requiredClips: plan.requiredClips,
+  };
+}
+
 function fnv1aHex(str) {
   return '0x' + (fnv1a(str) >>> 0).toString(16).padStart(8, '0');
 }
@@ -766,7 +796,7 @@ export async function stageAnimSequences({
             nodeDesc: formatNodeSummary(origCastNode),
             fieldChange: `${oldDesc} → ${newDesc}`,
             addedClips: missingForCast,
-            skipReason: entry.castVariants?.hero ? '已更新 castSequence（保留 castVariants.hero）' : '已更新',
+            skipReason: entry.castVariants?.hero ? '已更新 castSequence（hero 变体见 cast (hero) 行）' : '已更新',
             applyRollback: null,
           });
         } else {
@@ -779,6 +809,33 @@ export async function stageAnimSequences({
             skipReason: '已一致',
           });
         }
+      }
+    }
+
+    // 1b. Hero-augment cast variant: follow the original `<Spell>Hero` SpellObject's mAnimationName.
+    if (entry.castVariants?.hero && !excludeSet.has(`${id}:hero`)) {
+      const heroObj = spellObjs.get(`${targetSpellScript}hero`.toLowerCase());
+      const heroNode = heroObj?.anim ? await resolveNode(fnv1a(heroObj.anim)) : null;
+      const heroPlan = planHeroVariant(heroNode, { entry });
+      if (heroPlan.status !== 'ok') {
+        reportRows.push({
+          id, action: 'cast (hero)', nodeDesc: formatNodeSummary(heroNode), fieldChange: '—', addedClips: [],
+          skipReason: `保留 castVariants.hero（${heroPlan.reason}）`,
+        });
+      } else {
+        const missingForHero = heroPlan.requiredClips.filter(c => !existingClips.has(c));
+        for (const c of missingForHero) neededMissingClips.add(c);
+        const oldDesc = JSON.stringify({ castVariants: entry.castVariants });
+        const nextVariantsChanged = JSON.stringify(entry.castVariants) !== JSON.stringify(heroPlan.castVariants);
+        if (heroPlan.castVariants) entry.castVariants = heroPlan.castVariants;
+        else delete entry.castVariants;
+        reportRows.push({
+          id, action: 'cast (hero)', nodeDesc: formatNodeSummary(heroNode),
+          fieldChange: nextVariantsChanged
+            ? `${oldDesc} → ${entry.castVariants ? JSON.stringify({ castVariants: entry.castVariants }) : '删除 castVariants（hero 走默认施法）'}`
+            : '—',
+          addedClips: missingForHero, skipReason: nextVariantsChanged ? '已更新' : '已一致',
+        });
       }
     }
 
