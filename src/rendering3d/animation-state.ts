@@ -15,8 +15,10 @@ export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetD
 /**
  * `holdSeconds` (optional): only this opening part of a cast owns its window; after it the cast's ending (its out clip)
  * gives way to the unit's next swing or run. Without it the whole duration is protected.
+ * `release`: a single attack clip played in two speeds so its release frame lands `atSeconds` after the start
+ * (`headSpeed` up to it, then `tailSpeed`, never below 1, for the rest); see AttackRelease.
  */
-export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number }
+export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number; release?: { atSeconds: number; headSpeed: number; tailSpeed: number } }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }

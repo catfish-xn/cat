@@ -1,6 +1,6 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import type { ActionState, AnimationNames, CastMetadata, CastSequence, FormAnimations } from './contracts';
+import { attackReleaseSeconds, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations } from './contracts';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
 /** Select only supplied display context; never infer a random ability or hero augment. */
@@ -80,6 +80,9 @@ export class UnitAnimationMixer {
   private stageLeft = 0;
   private speed = 1;
   private timing?: HeldTiming;
+  /** Seconds until an attack with a release reaches its release frame, and the speed it plays after it. */
+  private releaseLeft = 0;
+  private tailSpeed = 1;
   private form?: 'front' | 'back';
   private layerActions: AnimationAction[] = [];
   private fadingLayers: AnimationAction[] = [];
@@ -192,7 +195,22 @@ export class UnitAnimationMixer {
     const durationSeconds = hold !== undefined ? hold + outSeconds : state === 'cast' ? Math.min(2.5, Math.max(0.3, duration))
       : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 0.9) : duration;
     if (sequence) this.lastResolved = { clips: names, sequence };
-    return hold !== undefined ? { clips: names, durationSeconds, holdSeconds: hold } : { clips: names, durationSeconds };
+    if (hold !== undefined) return { clips: names, durationSeconds, holdSeconds: hold };
+    const release = state === 'attack' && !sequence && !(formAttack && this.clips.has(formAttack)) ? this.release(clips[0]!, interval) : undefined;
+    if (release) return { clips: names, durationSeconds: release.durationSeconds, release: release.release };
+    return { clips: names, durationSeconds };
+  }
+  /**
+   * The original lets go after windupRatio of the attack interval; the clip's head runs up to its release frame in that
+   * time, then the rest plays at 1× (faster only if the next attack would cut it off) and the unit returns to idle.
+   */
+  private release(clip: AnimationClip, interval?: number) {
+    const data = this.metadata.attackRelease, at = attackReleaseSeconds(data, interval);
+    if (!data || at === undefined || !(data.clipSeconds < clip.duration)) return undefined;
+    const tail = clip.duration - data.clipSeconds;
+    const room = (interval !== undefined && Number.isFinite(interval) && interval > 0 ? interval : data.baseIntervalSeconds) * 0.9 - at;
+    const tailSpeed = room > 0 ? Math.max(1, tail / room) : Math.max(1, tail / 0.05);
+    return { durationSeconds: at + tail / tailSpeed, release: { atSeconds: at, headSpeed: data.clipSeconds / at, tailSpeed } };
   }
   private play(clip: AnimationClip, loop: boolean, blend: number): void {
     const next = this.mixer.clipAction(clip), previous = this.active;
@@ -212,7 +230,7 @@ export class UnitAnimationMixer {
     const sequence = playback?.clips.map(name => this.clips.get(name));
     if (sequence?.some(c => !c)) return !!this.active;
     const clip = sequence?.[0] ?? this.clips.get(this.nameFor(output.state));
-    this.queue = []; this.stageLeft = 0; this.speed = 1; this.timing = undefined;
+    this.queue = []; this.stageLeft = 0; this.speed = 1; this.timing = undefined; this.releaseLeft = 0; this.tailSpeed = 1;
     if (!clip) return !!this.active;
     // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
     if (output.loop && this.active === this.mixer.clipAction(clip) && this.active.loop === LoopRepeat
@@ -235,7 +253,14 @@ export class UnitAnimationMixer {
       this.queue = sequence.slice(1) as AnimationClip[];
       this.stageLeft = this.stageSeconds(0, atMain ? this.stage!.duration : clip.duration);
     }
-    this.play(atMain ? this.stage!.primary : clip, output.loop, output.blendSeconds);
+    const release = playback?.release;
+    if (release && sequence?.length === 1 && !this.stage) {
+      this.speed = release.headSpeed; this.tailSpeed = release.tailSpeed;
+      this.releaseLeft = release.atSeconds; this.stageLeft = 0;
+    }
+    // A sped-up head is short (0.1–0.2 s): the crossfade from the previous pose may take at most half of it.
+    const blend = this.releaseLeft > 0 ? Math.min(output.blendSeconds, this.releaseLeft / 2) : output.blendSeconds;
+    this.play(atMain ? this.stage!.primary : clip, output.loop, blend);
     if (atMain) this.startLayers(this.stage!.extras);
     return true;
   }
@@ -244,6 +269,11 @@ export class UnitAnimationMixer {
   }
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
+    if (this.releaseLeft > 0) {
+      if (seconds < this.releaseLeft) { this.mixer.update(seconds); this.releaseLeft -= seconds; return; }
+      this.mixer.update(this.releaseLeft); seconds -= this.releaseLeft; this.releaseLeft = 0;
+      this.speed = this.tailSpeed; this.active?.setEffectiveTimeScale(this.speed);
+    }
     while (this.stageLeft > 0 && seconds >= this.stageLeft) {
       const step = this.stageLeft;
       this.mixer.update(step); seconds = Math.max(0, seconds - step);
@@ -264,5 +294,5 @@ export class UnitAnimationMixer {
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
   }
-  dispose(): void { this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; }
+  dispose(): void { this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
 }

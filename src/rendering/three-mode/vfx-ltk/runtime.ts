@@ -56,6 +56,14 @@ export interface LtkPlayOptions {
   persistAcrossPhase?: boolean;
   /** Seconds (0..2) added to every cue's delay: a receipt the board times itself (Renata's shield as her rocket passes). */
   delay?: number;
+  /** Timeline variant (empowered, a form), as the string argument would name it. */
+  variant?: TimelineVariant;
+  /**
+   * Seconds (held to −2..2) every attack cue moves by, none earlier than the start: the original release lands `windupRatio`
+   * of the interval after the swing starts, while the exported cues assume the clip's release frame at 1× (AttackRelease).
+   * Only the default ltk.play path takes it; heroes whose attacks go through the batch2 bridge do not move.
+   */
+  releaseShift?: number;
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
 }
@@ -157,7 +165,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (closed) return false;
       void warm(champion);
       const context: LtkPlayOptions = extra !== undefined && typeof extra !== 'string' ? extra : {};
-      const form = typeof extra === 'string' ? extra : undefined;
+      const form = typeof extra === 'string' ? extra : context.variant;
       const catalog = catalogs.get(champion) ?? library;
       const skill = context.skill ?? champion;
       if (skill !== champion && !skill.startsWith(champion + '-')) return false;
@@ -171,6 +179,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const end = context.channelSeconds;
         selected = selected?.map(cue => cue.stopAfter === undefined ? cue : { ...cue,
           duration: Math.min(10, Math.max(0, end - cue.delay) + .5), stopAfter: Math.max(0, end - cue.delay) });
+      }
+      if (context.releaseShift !== undefined) {
+        if (!Number.isFinite(context.releaseShift)) return false;
+        const shift = Math.min(2, Math.max(-2, context.releaseShift));
+        selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
