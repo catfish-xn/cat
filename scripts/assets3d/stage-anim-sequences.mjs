@@ -17,7 +17,6 @@ export const DEFAULT_EXCLUDES = new Set([
   'sevika:cast',
   'sevika:attack',
   'caitlyn:attack',
-  'singed:cast',
   'violet:cast',
   'malzahar:cast',
 ]);
@@ -103,6 +102,7 @@ const KNOWN_GRAPH_NAMES = new Set([
   'Transform', 'TransformIn', 'TransformOut', 'Spell_2', 'Spell_3', 'Spell_1', 'Spell4_Hit',
   'Spell2_Ranged_Jump', 'Spell2_KnockHexCrystals', 'Spell1_GainShield', 'Spell1_Right', 'Spell1_Left', 'CallShield',
   'BloodFrenzy_Activate', 'Devour_Dash', 'Spell_Dash', 'Spell1_Blast',
+  'Spell2_Sequence', 'Spell_Out', 'Spell_Hero', 'Spell_Hero_Parallel', 'Spell_Run',
 ]);
 
 /**
@@ -855,7 +855,11 @@ export async function stageAnimSequences({
     if (!origCastNode) {
       const fallbackKeys = ['Spell', 'Spell1', 'SpellCast'];
       if (id === 'swain') fallbackKeys.push('Spell2');
-      if (id === 'singed') fallbackKeys.push('0x1bab12f3');
+      // Singed: TFT13_SingedSpell names "Spell1", which the graph does not have. Its graph has Spell_1
+      // (Spell_3.anm 104-131), Spell2_Sequence (Spell_2 = Spell_3.anm 220-end, then Spell_Out) and
+      // Spell_Hero_Parallel (Spell_3.anm 220-248 on the upper-body mask over Spell_Run). The hero variant
+      // throws with the 220.. section, so the standing cast is Spell2_Sequence.
+      if (id === 'singed') fallbackKeys.push('Spell2_Sequence');
       for (const fk of fallbackKeys) {
         const kh = fk.startsWith('0x') ? Number.parseInt(fk, 16) : fnv1a(fk);
         const r = await resolveNode(kh);
