@@ -3447,10 +3447,10 @@
     },
     "tests/vfx-ltk-features.test.ts": {
       "previousBytes": 10544,
-      "currentBytes": 11003,
+      "currentBytes": 12331,
       "previousSha256": "666186f53e870d54824dae5d18d5d2006f083cf0539877febfb26ebedc77044c",
-      "currentSha256": "5bf5d11285331da3b406cf90284ee8dade0a683be22f504021dfae9afed4dedd",
-      "firstDifferentByte": 9217
+      "currentSha256": "785b3f22a191ee1c92154a3ca713d44c6bccefd41d6f80fe44074a24acc0b8ff",
+      "firstDifferentByte": 7848
     },
     "tests/vfx-ltk-ground-pass.test.ts": {
       "previousBytes": 3207,
