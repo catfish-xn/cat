@@ -111,6 +111,7 @@ export class ModelCache {
     let released = false;
     return { scene, animations: model.animations, placeholder: current.placeholder,
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
+      formAnimations: this.manifest.models[id]?.formAnimations,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

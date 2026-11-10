@@ -135,4 +135,38 @@ describe('cast metadata contract and offline dependency list', () => {
   it('deduplicates every stage and variant needed by the exporter', () => {
     expect(castClipNames({ ...model, castExtraClips: ['candidate', 'entry'] })).toEqual(['alternate', 'candidate', 'entry', 'exit', 'hero', 'strike']);
   });
+  it('validates formAnimations and rejects non-objects, unknown forms, unknown actions, and empty clip names', async () => {
+    const valid = {
+      path: 'alpha.glb',
+      formAnimations: {
+        front: { idle: 'idle_melee', move: 'run_melee', attack: 'attack_melee' },
+        back: { idle: 'idle_ranged', attack: 'attack_ranged' },
+      },
+    };
+    expect(() => assertManifest({ schemaVersion: 1, models: { alpha: valid } })).not.toThrow();
+    const cache = new ModelCache({ schemaVersion: 1, models: { alpha: valid } }, '/local/', async () => ({ scene: new Group(), animations: [] }));
+    const lease = await cache.load('alpha');
+    expect(lease.formAnimations).toEqual(valid.formAnimations);
+    lease.release();
+    cache.dispose();
+
+    for (const invalid of [
+      null,
+      [],
+      'front',
+      Object.create({}),
+      { middle: { attack: 'clip' } },
+      { front: null },
+      { front: [] },
+      { front: { cast: 'clip' } },
+      { back: { death: 'clip' } },
+      { back: { attack: '' } },
+      { back: { idle: '   ' } },
+      { front: { move: 123 } },
+    ]) {
+      expect(() =>
+        assertManifest({ schemaVersion: 1, models: { alpha: { path: 'alpha.glb', formAnimations: invalid } } }),
+      ).toThrow('invalid-form-animations');
+    }
+  });
 });

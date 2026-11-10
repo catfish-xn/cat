@@ -1,6 +1,6 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationAction, type AnimationClip, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import type { AnimationNames, CastMetadata, CastSequence } from './contracts';
+import type { ActionState, AnimationNames, CastMetadata, CastSequence, FormAnimations } from './contracts';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
 /** Select only supplied display context; never infer a random ability or hero augment. */
@@ -23,9 +23,23 @@ export class UnitAnimationMixer {
   private queue: AnimationClip[] = [];
   private stageLeft = 0;
   private speed = 1;
-  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata = {}) {
+  private form?: 'front' | 'back';
+  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
+  }
+  setForm(form?: 'front' | 'back'): void {
+    if (this.form !== form) {
+      this.form = form;
+      this.revision = -1;
+    }
+  }
+  private nameFor(state: ActionState, form = this.form): string {
+    const formClip = form && (state === 'idle' || state === 'move' || state === 'attack')
+      ? this.metadata.formAnimations?.[form]?.[state]
+      : undefined;
+    if (formClip && this.clips.has(formClip)) return formClip;
+    return (this.names[state] as string | undefined) ?? state;
   }
   resolvePlayback(state: 'cast' | 'attack' | 'spawn', castIndex = 0, context: CastSelection = {}): ActionPlayback | null {
     if (state === 'spawn') {
@@ -36,7 +50,7 @@ export class UnitAnimationMixer {
     const sequence = state === 'cast' ? selectCastSequence(this.metadata, castIndex, context) : undefined;
     const main = sequence && (Array.isArray(sequence.main) ? sequence.main[castIndex % sequence.main.length] : sequence.main as string);
     const names = sequence ? [sequence.in, sequence.hold, main, sequence.out].filter((v): v is string => !!v)
-      : [this.names[state] ?? state];
+      : [this.nameFor(state, context.form)];
     const clips = names.map(name => this.clips.get(name));
     if (clips.some(c => !c || !Number.isFinite(c.duration) || c.duration <= 0)) return null;
     const duration = clips.reduce((n, c) => n + c!.duration, 0), interval = context.attackIntervalSeconds;
@@ -63,7 +77,7 @@ export class UnitAnimationMixer {
     if (playback === null) return !!this.active;
     const sequence = playback?.clips.map(name => this.clips.get(name));
     if (sequence?.some(c => !c)) return !!this.active;
-    const clip = sequence?.[0] ?? this.clips.get(this.names[output.state] ?? output.state);
+    const clip = sequence?.[0] ?? this.clips.get(this.nameFor(output.state));
     this.queue = []; this.stageLeft = 0; this.speed = 1;
     if (!clip) return !!this.active;
     // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
