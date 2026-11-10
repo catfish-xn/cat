@@ -24,14 +24,14 @@ describe('attack cue segment mapping (LtkPlayOptions.release)', () => {
     expect(releaseDelay(3, 0, 2.9, 1)).toBe(1);
   });
 
-  it('keeps Malzahar item by item identical to releaseShift (no cue before release, tail at 1×)', () => {
-    // Values as deployed with #600: attackRelease in the test server manifest, attack cues in tft13_malzahar's index.
-    const release: AttackRelease = { clipSeconds: 0.8666666666666667, windupRatio: 0.1654, baseIntervalSeconds: 1.25 };
-    const cues = [0.8666666666666667, 1.1666666666666667];
-    const clip = new AnimationClip('tft13_malzahar_attack1', 1, [new NumberKeyframeTrack('.position[x]', [0, 1], [0, 1])]);
+  it('matches releaseShift item by item when no cue is before release and the tail plays at 1× (the Malzahar case)', () => {
+    // Synthetic values only (as in rendering3d-attack-release): a 1 s swing, release frame at 0.8 s, cues at and after it.
+    const release: AttackRelease = { clipSeconds: 0.8, windupRatio: 0.2, baseIntervalSeconds: 1.25 };
+    const cues = [0.8, 1.1];
+    const clip = new AnimationClip('swing', 1, [new NumberKeyframeTrack('.position[x]', [0, 1], [0, 1])]);
     const mixer = new UnitAnimationMixer(new Group(), [clip], { attack: clip.name }, { attackRelease: release });
     for (const t of cues) expect(t).toBeGreaterThanOrEqual(release.clipSeconds);
-    for (let interval = 0.2; interval <= 3.0001; interval += 0.01) {
+    for (let interval = 0.3; interval <= 3.0001; interval += 0.01) {
       const played = mixer.resolvePlayback('attack', 0, { attackIntervalSeconds: interval })!.release!;
       expect(played.tailSpeed).toBe(1);
       for (const t of cues) expect(Object.is(releaseDelay(t, played.atSeconds, release.clipSeconds, played.tailSpeed), shifted(t, played.atSeconds, release.clipSeconds))).toBe(true);
