@@ -98,6 +98,21 @@ export class ModelCache {
             }),
           };
         }
+        const segments = definition?.clipSegments;
+        if (segments && model.animations.length) {
+          const animations = [...model.animations];
+          const names = new Set(animations.map(clip => clip.name));
+          for (const [alias, [sourceName, start, end]] of Object.entries(segments)) {
+            if (names.has(alias)) continue;
+            const source = model.animations.find(clip => clip.name === sourceName);
+            if (!source) continue;
+            const trimmed = trimClip(source, start, end);
+            trimmed.name = alias;
+            animations.push(trimmed);
+            names.add(alias);
+          }
+          model = { ...model, animations };
+        }
         created.model = model;
         return model;
       });
@@ -112,6 +127,7 @@ export class ModelCache {
     return { scene, animations: model.animations, placeholder: current.placeholder,
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
       formAnimations: this.manifest.models[id]?.formAnimations,
+      attackSequence: this.manifest.models[id]?.attackSequence,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

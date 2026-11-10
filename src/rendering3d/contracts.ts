@@ -8,14 +8,14 @@ export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab' | 'spawn';
 export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab', 'spawn'];
 export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
 /** Array main rotates between casts; the other stages each play once. */
-export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string }
+export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string; layers?: readonly string[] }
 export interface CastVariants {
   star3?: CastSequence; hero?: CastSequence; front?: CastSequence; back?: CastSequence;
   rotate?: readonly string[]; branch?: Record<string, CastSequence>;
 }
 export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
 export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
-export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations }
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
@@ -32,6 +32,7 @@ export interface AssetManifest {
     unitScale?: number;
     selfIllumination?: number;
     clipRanges?: Record<string, readonly [number, number]>;
+    clipSegments?: Record<string, readonly [string, number, number]>;
   } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
@@ -154,6 +155,8 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
+    if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);
+    if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
@@ -205,16 +208,38 @@ function assertClipRanges(value: unknown): void {
   if (entries.length > 64 || entries.some(([key, range]) => !key.trim() || !Array.isArray(range) || range.length !== 2
     || !finite(range[0]) || !finite(range[1]) || range[0] < 0 || range[0] >= range[1])) throw new Error('invalid-clip-ranges');
 }
+function assertClipSegments(value: unknown): void {
+  if (!isPlainObject(value)) throw new Error('invalid-clip-segments');
+  const entries = Object.entries(value);
+  if (entries.length > 64 || entries.some(([alias, seg]) => !alias.trim() || !Array.isArray(seg) || seg.length !== 3
+    || typeof seg[0] !== 'string' || !seg[0].trim() || !finite(seg[1]) || !finite(seg[2]) || seg[1] < 0 || seg[1] >= seg[2])) {
+    throw new Error('invalid-clip-segments');
+  }
+}
+function assertCastLayers(value: unknown): void {
+  if (!Array.isArray(value) || !value.length || value.length > 4 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) {
+    throw new Error('invalid-cast-layers');
+  }
+}
 function assertClipList(value: unknown): void {
   if (!Array.isArray(value) || !value.length || value.length > 64 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) throw new Error('invalid-cast-clips');
 }
 function assertCastSequence(value: unknown): void {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid-cast-sequence');
-  const sequence = value as CastSequence;
-  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out'].includes(key)) throw new Error('invalid-cast-sequence');
+  if (!isPlainObject(value)) throw new Error('invalid-cast-sequence');
+  const sequence = value as unknown as CastSequence;
+  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out', 'layers'].includes(key)) throw new Error('invalid-cast-sequence');
   if (typeof sequence.main === 'string') { if (!sequence.main.trim()) throw new Error('invalid-cast-sequence'); }
   else assertClipList(sequence.main);
   for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
+  if (sequence.layers !== undefined) assertCastLayers(sequence.layers);
+}
+function assertAttackSequence(value: unknown): void {
+  try {
+    assertCastSequence(value);
+  } catch (error) {
+    if ((error as Error)?.message === 'invalid-cast-layers') throw error;
+    throw new Error('invalid-attack-sequence');
+  }
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);

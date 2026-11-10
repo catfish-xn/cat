@@ -136,4 +136,56 @@ describe('clip-range trimming and manifest contract (synthetic data only)', () =
     second.release();
     cache.dispose();
   });
+
+  it('appends aliased clipSegments with duration end-start, preserves source clips, and skips missing sources or existing names', async () => {
+    const sourceClip = new AnimationClip('combo_all', 4, [new NumberKeyframeTrack('.position[x]', [0, 4], [0, 8])]);
+    const idleClip = new AnimationClip('idle_clip', 2, [new NumberKeyframeTrack('.position[y]', [0, 2], [0, 2])]);
+    const read = vi.fn(async () => ({ scene: new Group(), animations: [idleClip, sourceClip] }));
+    const manifest: AssetManifest = {
+      schemaVersion: 1,
+      models: {
+        unit: {
+          path: 'units/test.glb',
+          animations: { idle: 'idle_clip' },
+          clipSegments: {
+            seg_first: ['combo_all', 0, 0.5],
+            seg_second: ['combo_all', 1.0, 3.5],
+            missing_src: ['nonexistent', 0, 1],
+            idle_clip: ['combo_all', 0, 1],
+          },
+        },
+      },
+    };
+
+    const cache = new ModelCache(manifest, '/cdn/', read);
+    const first = await cache.load('unit');
+    const second = await cache.load('unit');
+
+    expect(read).toHaveBeenCalledTimes(1);
+    const origSource = first.animations.find(clip => clip.name === 'combo_all')!;
+    const segFirst = first.animations.find(clip => clip.name === 'seg_first')!;
+    const segSecond = first.animations.find(clip => clip.name === 'seg_second')!;
+    const keptIdle = first.animations.find(clip => clip.name === 'idle_clip')!;
+
+    expect(origSource).toBe(sourceClip);
+    expect(origSource.duration).toBe(4);
+    expect(keptIdle).toBe(idleClip);
+    expect(keptIdle.duration).toBe(2);
+    expect(first.animations.find(clip => clip.name === 'missing_src')).toBeUndefined();
+
+    expect(segFirst).toBeDefined();
+    expect(segFirst.duration).toBeCloseTo(0.5, 6);
+    expect(Array.from(segFirst.tracks[0].values)).toEqual([0, 1]);
+
+    expect(segSecond).toBeDefined();
+    expect(segSecond.duration).toBeCloseTo(2.5, 6);
+    expect(Array.from(segSecond.tracks[0].values)).toEqual([2, 7]);
+
+    expect(second.animations.find(clip => clip.name === 'seg_first')).toBe(segFirst);
+    expect(second.animations.find(clip => clip.name === 'seg_second')).toBe(segSecond);
+
+    first.release();
+    second.release();
+    cache.dispose();
+  });
 });
