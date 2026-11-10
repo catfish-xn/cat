@@ -93,6 +93,20 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     fx.dispose(); expect(geometryDispose).not.toHaveBeenCalled(); expect(skeletonDispose).not.toHaveBeenCalled();
     source.geometry.dispose(); source.skeleton.dispose(); f.library.dispose();
   });
+  it('leaves an attached-mesh emitter naming its own static mesh undrawn, so it never scales up the host (#588, 11-10)', async () => {
+    const own = await load({ birthScale0: struct('ValueVector3', { constantValue: { type: 'vector', values: [12, 400, 400] } }),
+      primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', { mSimpleMeshName: asset('bubble.scb') }) }) });
+    expect(own.prepared.model.emitters[0].mesh!.skinned).toBe(false);
+    expect(own.prepared.drawn).toEqual([]);
+    const source = new SkinnedMesh(new BoxGeometry()), bone = new Bone(); source.add(bone); source.bind(new Skeleton([bone])); own.body.add(source);
+    const fx = own.create(); expect(fx.draws).toHaveLength(0); fx.dispose(); own.library.dispose();
+    // The host's own skin (or no mesh at all) still draws the avatar overlay.
+    const host = await load({ primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', {
+      mMeshName: asset('skin.skn'), mMeshSkeletonName: asset('skin.skl') }) }) }, { 'skin.skn': 'meshes/skin.ltkg', 'skin.skl': 'skeletons/skin.ltks' });
+    expect(host.prepared.model.emitters[0].mesh!.skinned).toBe(true);
+    expect(host.prepared.drawn).toHaveLength(1); host.library.dispose();
+    source.geometry.dispose(); source.skeleton.dispose();
+  });
   it('handles original empty definitions as explicit no-ops', async () => {
     const doc = syntheticSystem(); doc.root = struct('VfxSystemDefinitionData', {});
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => { throw new Error('empty must not read textures'); } });
