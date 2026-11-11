@@ -606,6 +606,14 @@
       "currentSha256": "a2fd47863cc053d17794faed0f8237bfaf063bbfdb48c09f98f9c5c0d76e8085",
       "firstDifferentByte": 1078
     },
+    "tests/camera-far.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1148,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "5fe4ccc81544d6736f9e4f1e76ee382226be57b63fecdd0efadbdd3d8897b4e0",
+      "firstDifferentByte": 0
+    },
     "tests/carousel-composition.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
