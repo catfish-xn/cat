@@ -191,7 +191,7 @@
     "src/simulation/combat-g2-2.ts": "4f0b725919c55d2cc6608ba789a28608a2213db9648d116dfd5f90e31de58d53",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
     "src/simulation/combat-g2-3-summons.ts": "674da09bfb74f3cf835acf4a53837c22ca753993d840595fdaea60039d4af57d",
-    "src/simulation/combat-g2-3.ts": "6b6ea54fa81b25c4979ec60bfd0e9f9e2f05587af8d8ff9cb6637ee2e66f9442",
+    "src/simulation/combat-g2-3.ts": "adebf977b2c0ed936aa5d8bd0cffd413e270eb65f92f812e4dd017cce215eb73",
     "src/simulation/combat-g2-4b-trench.ts": "c4957265097e620890d6c91b33f2eeb68b5c67da04d726b4839ca250912d5d8f",
     "src/simulation/combat-g2-4b.ts": "dd3028d2977f1d31ab0a4064740ffde11cf51bbbeedb33bf24a20d0b66dc32b7",
     "src/simulation/combat-g2.ts": "f2c3259602725c15681394c3c2c783eae55697eaf20c4c065f223763e9806de1",
@@ -641,9 +641,9 @@
     "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d"
   },
   "previousBytes": 4979457,
-  "currentBytes": 4133910,
+  "currentBytes": 4129061,
   "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-  "currentSha256": "4d41d43b184f38a336c836c01dd8b437b3f84ffad3b116cf07a9db7925c7db16",
+  "currentSha256": "aaed966586caa52df9cf635c5d5e6c9c5ce5abf07181a3390b15bbf58fc24eec",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
@@ -665,9 +665,9 @@
     },
     {
       "round": 9,
-      "time": 420550,
-      "initialHash": "0b2bb7807298c764579a77c7824833eebbd3eb06c54a389ebe544e4824bde57a",
-      "firstHash": "f3ee6b64c8d68d5ed84e10b47e092d835ddff83f0170c29dc002e9fe0388f83c",
+      "time": 420750,
+      "initialHash": "57df02be8e7fc5cfa90f3f9f312cdf742c8c837b9e417fa95e98fff6375cb381",
+      "firstHash": "d1e14b2257ff0ff18dd9290c48146e1fb9d8f4099fd0a088de293f30b1a43609",
       "boardCounts": [
         2,
         5,
@@ -682,14 +682,14 @@
     },
     {
       "round": 23,
-      "time": 1310400,
-      "initialHash": "697463ae46c17ad404b64ea08a526a6cc364d81162e48f8ef77c454eaf0c7cba",
-      "firstHash": "3bf58f36f7ef5429dbe1527cba5e8903880afe67dc6662878689cf8056606bd5",
+      "time": 1310650,
+      "initialHash": "d2e2bcde1ed88c2d8feb22f3555f442ad5188c78ee238a20cd304f30b28e4ef0",
+      "firstHash": "a9eb4dd56eed0a85477dda7d71bc0109394a43bdab55ffbe0ffbcf4658d46cb1",
       "boardCounts": [
         8,
         8,
         8,
-        8,
+        7,
         9,
         8,
         8
