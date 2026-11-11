@@ -175,14 +175,17 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
   // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
-  // W: Singed lobs a flask (W_Mis, its missile data: left hand → the ally's head attach point in 0.35 s) at the ally who
-  // dealt the most damage, himself included. Where it lands the ally gets W_Ally_Buf (ground glow, smoke, rays) and
-  // W_Buff_Avatar2 (a single whole-body edge glow, 4 s particle); Singed's own W_Self_Buff pool starts with it. All of it
+  // W: Singed lobs a flask (W_Mis, its missile data: left hand → the ally's head attach point in 0.35 s, a gravity arc
+  // aimed 150 above it) at the ally who dealt the most damage, himself included. Its 0.6 s release is a fitted value, not
+  // original data (the spell data carries none). Where it lands the ally gets W_Ally_Activate (flash, burst, splashes),
+  // W_Ally_Buf (ground glow, smoke, rays) and W_Buff_Avatar2 (a single whole-body edge glow, 4 s particle); Singed's own
+  // W_Self_Buff pool starts with it. All of it
   // fades out over SOFT_STOP_SECONDS when his damage reduction ends for any reason or he dies (batch1-events.ts), so the
   // durations are only bounds: W_Self_Buff's emitters never end, W_Ally_Buf's rays run 5 s.
   singed: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
-    { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: 0.6, duration: 0.6, travelSeconds: 0.35 },
+    { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: 0.6, duration: 0.6, travelSeconds: 0.35, arc: { gravity: 10000, targetOffset: 150 } },
+    { system: '2639dd7d', action: 'cast', event: 'hit', bone: ground, delay: 0.95, duration: 2.5 },
     { system: '6e34a4e1', action: 'cast', event: 'hit', bone: ground, delay: 0.95, duration: 5 },
     { system: '58f996d2', action: 'cast', event: 'hit', bone: chest, delay: 0.95, duration: 4.2 },
     { system: 'db0f8e0d', action: 'cast', event: 'cast-start', bone: ground, delay: 0.95, duration: 10 },
@@ -315,6 +318,10 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // Singed W_Ally_Activate: Add_PaticlesBurst emits from the host's posed surface (surface-host-pose), which the loader
+  // does not support; the other 17 emitters load. One emitter is knowingly missing (small motes; its look could not
+  // be rendered to check). Listed by system and emitter only: no other unsupported emitter is skipped.
+  '2639dd7d': ['Add_PaticlesBurst'],
 };
 
 /**

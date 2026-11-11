@@ -99,6 +99,8 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** An arcing projectile's gravity height solver and aimed-point lift (TimelineCue.arc). */
+  arc?: { readonly gravity: number; readonly targetOffset: number };
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
@@ -115,7 +117,9 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
     return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.arc
+          ? { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: spec.projectileSeconds }, height: { kind: 'gravity', gravity: spec.arc.gravity }, targetOffset: spec.arc.targetOffset }
+          : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
@@ -183,7 +187,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.arc = next.arc; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },

@@ -33,6 +33,11 @@ export interface TimelineCue {
   /** A beam keeps its source bone while aiming at the actual target; it does not fly. */
   readonly stationary?: boolean;
   /**
+   * A projectile that arcs as its missile data says: a gravity height solver (units/s², the spell's heightSolver) and
+   * the height added to the aimed point (mOffsetInitialTargetHeight). It still lands after travelSeconds.
+   */
+  readonly arc?: { readonly gravity: number; readonly targetOffset: number };
+  /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
    * Multiplies the system's own offsets, particle size and velocity. It does not move the

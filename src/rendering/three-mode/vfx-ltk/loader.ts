@@ -218,6 +218,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
       // static mesh of its own (attachedMeshOfItsOwn).
       const muted = MUTED_EMITTERS[id] ?? [];
+      if (muted.length) console.info(`vfx-ltk:${id}:muted:${muted.join(',')}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
         && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
       if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
