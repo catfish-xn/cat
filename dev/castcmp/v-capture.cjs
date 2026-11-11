@@ -30,11 +30,15 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 800000, eventSeq: 800000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
   for (let i = 0; i < 12; i++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(700); }
   await page.evaluate(() => window.__h.step(3000)); await page.waitForTimeout(300);
+  // LOCAL --settle ms (default 12000): let every effect the warm cast spawned run out before the recorded cast,
+  // so lasting effects (fog, auras) from the warm pass never overlap the recorded one; pre-cast.jpg is the evidence.
+  for (let left = Number(opt('settle') ?? 12000); left > 0; left -= 1000) { await page.evaluate(() => window.__h.step(1000)); await page.waitForTimeout(60); }
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4', 'ally'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
   const clip = { x: Math.max(0, cx - half), y: Math.max(0, cy - half * 3 / 4), width: Math.min(960, half * 2), height: Math.min(720, half * 1.5) };
   const fullClip = { x: 0, y: 0, width: 1920, height: 1080 }; fs.writeFileSync(path.join(out, 'boxes.json'), JSON.stringify({ boxes, ids: ['me', 'foe', 'foe2', 'foe3', 'foe4', 'ally'] }));
+  await page.screenshot({ path: path.join(out, 'pre-cast.jpg'), type: 'jpeg', quality: 85 });
   await page.evaluate(() => window.__h.cast());
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
