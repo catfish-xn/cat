@@ -22,6 +22,13 @@ export function colorChannels(color: readonly { readonly time: number; readonly 
 }
 export const vertexShader = `varying vec2 vUv;
 void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+/*
+ * Output is written as the raw value, with no #include <colorspace_fragment>. The particle textures load with
+ * NoColorSpace (their stored sRGB bytes) and the document colors are League's own gamma-space numbers, so the value is
+ * already display-ready; the renderer's sRGB output conversion encoded it a second time, lifting every color (11-11:
+ * Ambessa's crimson 0.60/0.04/0.13 drew as pink 0.80/0.23/0.40, a pale wash). The vfx-ltk engine and the original write
+ * the value as is.
+ */
 export const fragmentShader = `uniform sampler2D map; uniform bool hasMap;
 uniform vec3 tint; uniform float opacity; uniform float dissolve;
 uniform vec2 tiles; uniform float frame; varying vec2 vUv;
@@ -32,7 +39,6 @@ void main(){
  if(dissolve>=1.0 || noise<dissolve)discard;
  gl_FragColor=vec4(texel.rgb*tint,texel.a*opacity);
  #include <tonemapping_fragment>
- #include <colorspace_fragment>
 }`;
 
 /**

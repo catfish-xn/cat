@@ -31,6 +31,8 @@ describe('normalized 3D particle interpreter', () => {
     expect(p.scale.x).toBe(1); expect(uniforms.dissolve.value).toBe(0.5); expect(uniforms.frame.value).toBe(3);
     expect(uniforms.tiles.value).toEqual([2, 2]);
     expect(p.material.fragmentShader).toContain('discard'); expect(p.material.fragmentShader).toContain('texture2D');
+    // 11-11 (Ambessa 发糊): raw output, no second sRGB encode of NoColorSpace textures and gamma-space colors.
+    expect(p.material.fragmentShader).not.toContain('colorspace_fragment');
     effect.dispose(); expect(textureDispose).not.toHaveBeenCalled(); texture.dispose();
   });
   it('loops atlas frames or clamps at the last frame', () => {

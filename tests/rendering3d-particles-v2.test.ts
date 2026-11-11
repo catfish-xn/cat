@@ -24,6 +24,8 @@ describe('particle mesh vertex color runtime', () => {
     expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(1.0);');
     expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
     expect(mesh(fx).geometry).toBe(geometry);
+    // 11-11 (Ambessa 发糊): the old path writes the value as is, like vfx-ltk; no second sRGB encode.
+    expect(mesh(fx).material.fragmentShader).not.toContain('colorspace_fragment');
     expect(mesh(fx).material.defines.PARTICLE_MESH_RGBA).toBeUndefined();
     expect(mesh(fx).material.vertexShader).not.toMatch(/attribute\s+vec[34]\s+color\s*;/);
     for (const shader of [mesh(fx).material.vertexShader, mesh(fx).material.fragmentShader]) {
