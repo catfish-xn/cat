@@ -34,6 +34,21 @@ export class VfxLoadError extends Error {
 export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }): boolean {
   return emitter.quadType === QUAD_TYPE.attachedMesh && emitter.mesh !== null && !emitter.mesh.skinned;
 }
+/**
+ * An attached-mesh emitter whose look needs a frozen pose (afterimages: GhostImages, AvatarDash) or a dissolve, which
+ * the live-pose overlay cannot show. Phase two of the attached-mesh work (11-11, Fable); until then it is left undrawn
+ * and listed in the system's notes rather than drawn as a body that follows its host.
+ */
+export function attachedMeshDeferred(emitter: { readonly quadType: number | null; readonly name: string | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh && /ghostimage|avatardash|dissolve/i.test(emitter.name ?? '');
+}
+/**
+ * An attached-mesh emitter that draws its host's own skin. The geometry it names, if any, is the host's `.skn`, which the
+ * overlay borrows from the live model; the vfx export does not carry it, so it is never loaded as a mesh of its own.
+ */
+export function attachedToHost(emitter: { readonly quadType: number | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh;
+}
 export interface VfxIndex {
   version: 1;
   systems: Record<string, string>;
@@ -61,6 +76,11 @@ export interface PreparedVfx {
   surfaces?: EmissionSurfaces;
   /** An original empty definition is an intentional no-op, never a failed replacement. */
   empty?: boolean;
+  /**
+   * What this system loads without: `reflection-cube:<emitter>` (a reflection map that is no cube strip, drawn without
+   * its reflection) and `attached-deferred:<emitter>` (see attachedMeshDeferred). Logged once per system when loaded.
+   */
+  notes?: readonly string[];
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -218,8 +238,10 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
       // static mesh of its own (attachedMeshOfItsOwn).
       const muted = MUTED_EMITTERS[id] ?? [];
+      const notes: string[] = [];
+      for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
-        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
+        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e) && !attachedMeshDeferred(e));
       if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes
@@ -265,10 +287,20 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         const bundle: EmitterSamplers = { base: black, mult: null, color: null, palette: null, erosion: null, normal: null, reflection: null };
         for (const [slot, named] of Object.entries(slots)) if (named) {
           const url = assetPath(named);
-          (bundle as unknown as Record<string, Texture | null>)[slot] = slot === 'reflection' ? await cube(url) : await texture(url); ensureOpen();
+          let loaded: Texture | null;
+          if (slot !== 'reflection') loaded = await texture(url);
+          else {
+            // A reflection map the converter did not write as a cube strip drops only the reflection; the fill and rim still
+            // draw (W_Buff_Avatar2 58f996d2 failed whole on this, 11-11). Listed in notes so the format can be judged later.
+            loaded = await cube(url).catch((error: unknown) => {
+              if (error instanceof Error && error.message.startsWith('reflection-cube')) { notes.push(`reflection-cube:${e.name}`); return null; }
+              throw error;
+            });
+          }
+          ensureOpen(); (bundle as unknown as Record<string, Texture | null>)[slot] = loaded;
         }
         samplers.set(key, bundle);
-        if (e.mesh) {
+        if (e.mesh && !attachedToHost(e)) {
           if (reader.readBinary) {
             const signature = JSON.stringify(e.mesh) + (e.mesh.animationVariants.length ? key : '');
             let held = converted.get(signature);
@@ -299,7 +331,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         let system = surfaces.get(path); if (!system) { system = new Map(); surfaces.set(path, system); }
         system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
       }
-      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty }; prepared.set(id, result); return result;
+      if (notes.length) console.warn(`vfx-ltk:${id}:${notes.join(',')}`);
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}) }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));

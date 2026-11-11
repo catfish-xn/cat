@@ -107,6 +107,29 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     expect(host.prepared.drawn).toHaveLength(1); host.library.dispose();
     source.geometry.dispose(); source.skeleton.dispose();
   });
+  it('never loads the host skin an attached-mesh emitter names: the export does not carry it (11-11)', async () => {
+    // No index entry for skin.skn: before, the asset lookup failed and the whole system fell back to the legacy path.
+    const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', {
+      mMeshName: asset('skin.skn'), mMeshSkeletonName: asset('skin.skl') }) }) });
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.meshes.size).toBe(0); expect(f.prepared.notes).toBeUndefined();
+    f.library.dispose();
+  });
+  it('draws an attached emitter without its reflection when the map is no cube strip, and notes it (58f996d2, 11-11)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', {}),
+      reflectionDefinition: struct('VfxReflectionDefinitionData', { fresnel: num(2), reflectionMapTexture: asset('flat.dds') }) },
+    { 'flat.dds': 'textures/flat.png' });
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.samplers.get('0')!.reflection).toBeNull();
+    expect(f.prepared.notes).toEqual(['reflection-cube:synthetic-only']);
+    expect(warn).toHaveBeenCalledWith('vfx-ltk:sample:reflection-cube:synthetic-only');
+    warn.mockRestore(); f.library.dispose();
+  });
+  it.each(['GhostImages1', 'AvatarDash2', 'dissolve'])('leaves the frozen-pose/dissolve attached emitter %s undrawn and noted (phase two)', async name => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = await load({ emitterName: { type: 'string', value: name }, primitive: struct('VfxPrimitiveAttachedMesh', {}) });
+    expect(f.prepared.drawn).toEqual([]); expect(f.prepared.notes).toEqual([`attached-deferred:${name}`]);
+    warn.mockRestore(); f.library.dispose();
+  });
   it('handles original empty definitions as explicit no-ops', async () => {
     const doc = syntheticSystem(); doc.root = struct('VfxSystemDefinitionData', {});
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => { throw new Error('empty must not read textures'); } });
