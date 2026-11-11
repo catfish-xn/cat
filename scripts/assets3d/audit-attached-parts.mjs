@@ -14,7 +14,8 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, 
 for (const k of ['audit', 'models', 'out']) if (!args[k]) throw Error(`--${k}= required`);
 const out = resolve(args.out); await mkdir(out, { recursive: true });
 // Export folder names that the model folders call by the champion's own name.
-const ALIASES = { lieutenant: 'sevika', missmage: 'mel', beardy: 'loris', gremlin: 'smeech', renataglasc: 'renata', fish: 'steb',
+const ALIASES = { beardy: 'loris', blue: 'powder', chainsaw: 'renni', fish: 'steb', flyguy: 'scar', gremlin: 'smeech', lieutenant: 'sevika',
+  nunuwillump: 'nunu', prime: 'vander', red: 'violet', renataglasc: 'renata', shooter: 'maddie', missmage: 'mel',
   ...Object.fromEntries((args.alias ?? '').split(',').filter(Boolean).map(pair => pair.split(':'))) };
 const fnv = text => { let h = 0x811c9dc5; for (const b of new TextEncoder().encode(text.toLowerCase())) { h ^= b; h = Math.imul(h, 0x01000193); } return `0x${(h >>> 0).toString(16).padStart(8, '0')}`; };
 
