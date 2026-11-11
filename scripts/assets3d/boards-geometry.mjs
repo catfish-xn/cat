@@ -57,12 +57,16 @@ export function readBoardGeometry(b) {
     const position = attributes.find(e => e.usage === 0 && e.format === 2);
     const uv = attributes.find(e => e.usage === 7 && e.format === 7);
     const color = attributes.find(e=>e.usage === 4 && e.format === 4);
+    // The baked lightmap's own UV set (usage 14); placed on the shared atlas by baked[0].scaleBias.
+    const lightmapUv = attributes.find(e => e.usage === 14 && e.format === 7);
     check(position && uv && ranges.length > 0, 'mapgeo-missing-attributes');
     const vertices = Array.from({ length: vertexCount }, (_, i) => {
       const p = [0, 1, 2].map(k => position.vb.bytes.readFloatLE(i*position.stride + position.offset + k * 4));
       const texcoord = [0, 1].map(k => halfFloat(uv.vb.bytes.readUInt16LE(i*uv.stride + uv.offset + k * 2)));
       check([...p, ...texcoord].every(Number.isFinite), 'mapgeo-nonfinite-vertex');
-      return { p, uv: texcoord, ...(color?{color:[2,1,0,3].map(k=>color.vb.bytes[i*color.stride+color.offset+k]/255)}:{}) };
+      const lightmap = lightmapUv && [0, 1].map(k => halfFloat(lightmapUv.vb.bytes.readUInt16LE(i*lightmapUv.stride + lightmapUv.offset + k * 2)));
+      check(!lightmap || lightmap.every(Number.isFinite), 'mapgeo-nonfinite-vertex');
+      return { p, uv: texcoord, ...(color?{color:[2,1,0,3].map(k=>color.vb.bytes[i*color.stride+color.offset+k]/255)}:{}), ...(lightmap?{lightmapUv:lightmap}:{}) };
     });
     const indices = Array.from({ length: indexCount }, (_, i) => ib.bytes.readUInt16LE(i * 2));
     check(indices.every(i => i < vertexCount), 'mapgeo-index-out-of-bounds');
@@ -72,21 +76,49 @@ export function readBoardGeometry(b) {
   return { version, channels, meshes, meshTableEnd: at, ignoredSpatialBytes: b.length - at };
 }
 
+/** The mesh's baked lightmap placement, or null: the first baked channel must name a texture and place this mesh on a
+ * part of the atlas. Meshes left at scale 1 / bias 0 sample unlit (black, alpha 0) atlas texels in Map22 and are drawn
+ * without the lightmap. */
+export function boardLightmapPlacement(mesh){
+  const baked=mesh.baked?.[0],sb=baked?.scaleBias;
+  if(!baked?.path||!/\.(tex|dds)$/i.test(baked.path)||!sb||!mesh.vertices.some(v=>v.lightmapUv))return null;
+  if(sb[0]===1&&sb[1]===1&&sb[2]===0&&sb[3]===0)return null;
+  check(sb.every(Number.isFinite)&&sb[0]>0&&sb[1]>0&&sb[0]+sb[2]<=1.0001&&sb[1]+sb[3]<=1.0001,'mapgeo-lightmap-placement');
+  return {path:baked.path,scaleBias:sb};
+}
+
 export function boardRangeGlb(mesh,range,png,options){
   const converted=carouselRangeGlb(mesh,range,png,options);
-  const {document:d,binary:b}=readGlb(converted.glb),ids=mesh.indices.slice(range.start,range.start+range.count),colors=Buffer.alloc(ids.length*16);
+  const {document:d,binary:b}=readGlb(converted.glb),ids=mesh.indices.slice(range.start,range.start+range.count);
   boardAlphaMaterials(d,b);
-  if(!mesh.vertices.some(v=>v.color))return {...converted,glb:writeGlb(d,b)};
-  ids.forEach((_,i)=>{const j=i-i%3+[0,2,1][i%3],c=mesh.vertices[ids[j]].color??[1,1,1,1];c.forEach((v,k)=>colors.writeFloatLE(v,i*16+k*4));});
-  const pad=Buffer.alloc((4-b.length%4)%4),offset=b.length+pad.length;
-  d.bufferViews.push({buffer:0,byteOffset:offset,byteLength:colors.length});
-  d.accessors.push({bufferView:d.bufferViews.length-1,componentType:5126,count:ids.length,type:'VEC4'});
-  // The source shader uses these channels as deformation/material masks.
-  // Retain the attribute without silently treating it as a glTF colour tint.
-  d.meshes[0].primitives[0].attributes._SOURCE_COLOR=d.accessors.length-1;
-  d.buffers[0].byteLength=offset+colors.length;
-  d.asset.extras={boardBgraCorrected:true};
-  return {...converted,glb:writeGlb(d,Buffer.concat([b,pad,colors]))};
+  // Same vertex expansion as carouselRangeGlb: one vertex per index, winding swapped.
+  const source=i=>mesh.vertices[ids[i-i%3+[0,2,1][i%3]]];
+  const extra=[];
+  if(mesh.vertices.some(v=>v.color)){
+    const colors=Buffer.alloc(ids.length*16);
+    ids.forEach((_,i)=>(source(i).color??[1,1,1,1]).forEach((v,k)=>colors.writeFloatLE(v,i*16+k*4)));
+    // The source shader uses these channels as deformation/material masks.
+    // Retain the attribute without silently treating it as a glTF colour tint.
+    extra.push(['_SOURCE_COLOR',colors,'VEC4']);
+  }
+  const lightmap=options?.lightmap?boardLightmapPlacement(mesh):null;
+  if(lightmap){
+    const [sx,sy,bx,by]=lightmap.scaleBias,uv=Buffer.alloc(ids.length*8);
+    ids.forEach((_,i)=>{const [u,v]=source(i).lightmapUv??[0,0];uv.writeFloatLE(u*sx+bx,i*8);uv.writeFloatLE(v*sy+by,i*8+4);});
+    extra.push(['TEXCOORD_1',uv,'VEC2']);
+  }
+  if(!extra.length)return {...converted,glb:writeGlb(d,b)};
+  const parts=[b];let size=b.length;
+  for(const [name,bytes,type] of extra){
+    const pad=Buffer.alloc((4-size%4)%4);parts.push(pad);size+=pad.length;
+    d.bufferViews.push({buffer:0,byteOffset:size,byteLength:bytes.length});
+    d.accessors.push({bufferView:d.bufferViews.length-1,componentType:5126,count:ids.length,type});
+    d.meshes[0].primitives[0].attributes[name]=d.accessors.length-1;
+    parts.push(bytes);size+=bytes.length;
+  }
+  d.buffers[0].byteLength=size;
+  if(extra.some(([name])=>name==='_SOURCE_COLOR'))d.asset.extras={boardBgraCorrected:true};
+  return {...converted,glb:writeGlb(d,Buffer.concat(parts)),...(lightmap?{lightmap}:{})};
 }
 
 function halfFloat(h) {

@@ -573,8 +573,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   scene.add(arenaGroup);
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
+  // The arena's baked lightmap, read through the same local store as the models (arena-lightmap.ts).
+  const lightmapEntry = boardEntry?.lightmap, lightmapReader = models.reader, assetRoot = options.assetBase;
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
+    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid,
+    lightmapEntry && lightmapReader && assetRoot
+      ? { gamma: lightmapEntry.gamma, scale: lightmapEntry.scale, load: () => lightmapReader.readTexture(assetUrl(assetRoot, lightmapEntry.path)) }
+      : undefined) : null;
   const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
   let boardKey = '', showingOwnBoard = true;
   /**
