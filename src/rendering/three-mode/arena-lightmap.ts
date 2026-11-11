@@ -2,7 +2,7 @@
  * The original arena's baked lightmap (Map22 `BakedLight`). The converter keeps each lit mesh's lightmap UVs, already
  * placed on the shared atlas, as TEXCOORD_1 (`uv1`); meshes without it stay as they are. The arena is unlit, so the
  * light is multiplied into the diffuse colour in sRGB space: diffuse × pow(lightmap.rgb, gamma) × scale
- * (BoardLightmap in contracts.ts; gamma/scale fitted to TFT footage of the same arena).
+ * (BoardLightmap in contracts.ts; gamma/scale are our fit to TFT footage of the same arena, not original data).
  */
 import { MeshBasicMaterial, NoColorSpace, type Material, type Mesh, type Object3D, type Texture } from 'three';
 import type { BoardLightmap } from '../../rendering3d';
