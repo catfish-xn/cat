@@ -155,8 +155,21 @@ describe('batch 1 catalogue and runtime forms', () => {
     runtime.update(.1, new Camera()); runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
     runtime.fadeAction('source', 'passive', .6);
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(1);
-    runtime.update(.4, new Camera()); expect(runtime.active).toBe(0);
-    runtime.dispose(); expect(budget.live).toBe(0);
+    runtime.update(.4, new Camera()); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // Reduced motion never starts the buff; a fade with nothing running is a no-op and leaves nothing behind.
+    runtime.fadeAction('source', 'passive', .6); runtime.fadeAction('nobody', 'passive', .6); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(0);
+    // A parked system replays at full strength for its whole duration, not as the tail of the earlier fade.
+    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true);
+    runtime.update(.05, new Camera()); runtime.update(2, new Camera()); expect(runtime.active).toBe(1);
+    // A round change mid-fade clears it at once.
+    runtime.fadeAction('source', 'passive', .6); runtime.update(.1, new Camera()); runtime.clear();
+    expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // A removed caster's buff goes with him even while fading; a queued one is dropped by the fade.
+    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true); runtime.update(.05, new Camera());
+    runtime.fadeAction('source', 'passive', .6); runtime.stopUnit('source'); runtime.update(.7, new Camera());
+    expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true); runtime.fadeAction('source', 'passive', .6); expect(runtime.queued).toBe(0);
+    runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toEqual([]);
   });
   it('does not pull empowered or self cues into an options-object play of the default form', async () => {
     const cues = BATCH1_TIMELINES.zeri;
