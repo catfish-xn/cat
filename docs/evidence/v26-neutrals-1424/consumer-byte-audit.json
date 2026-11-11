@@ -2220,9 +2220,9 @@
     "tests/rendering3d-in-place-clips.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3764,
+      "currentBytes": 3704,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d769561ed08852810e1ce13e3584db657f866ba18a289b17676bfe3cfe5ac139",
+      "currentSha256": "345f566cd79e6fdb6e3209be9e0246d0002a0aab8d06ff623930ff74949e6285",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-isolation.test.ts": {
