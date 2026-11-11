@@ -15,7 +15,7 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','foes'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','foes','ally','after','allyAt'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   mark('harness ready');
@@ -38,12 +38,13 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   await page.evaluate(() => window.__h.cast());
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
-  let at = 0; const files = [];
+  let at = 0; const files = []; const track = [];
   for (const t of times) {
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     await page.waitForTimeout(t === times[0] ? 400 : 40);
-    const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
+    track.push([t, await page.evaluate(() => window.__h.box('me'))]); const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
+  fs.writeFileSync(path.join(out, 'track.json'), JSON.stringify(track)); // LOCAL: `me` screen box per frame, for close crops
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);

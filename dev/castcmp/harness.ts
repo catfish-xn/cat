@@ -32,7 +32,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   listener.frame(frame(false)); step(50); listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
   // enemies' own attacks all come from the rules' event stream, replayed tick by tick on the virtual clock.
-  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('foes') ?? 4)) : null;
+  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('foes') ?? 4), params.get('ally'), Number(params.get('after') ?? 3000), params.get('allyAt')) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
@@ -96,17 +96,19 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
-async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, foeCount = 4) {
+async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, foeCount = 4, ally: string | null = null, afterMs = 3000, allyAt: string | null = null) {
   const [{ createCombat, stepCombat }, { DEFAULT_BOARD }, display, control] = await Promise.all([
     import('../../src/simulation/combat'), import('../../src/simulation/board'),
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
   const foe = foeModel === 'training-dummy' ? 'garen' : foeModel;
   // Combat cells (player rows 4-7, enemy rows 0-3); the harness draws a cell at hex(row, col).
-  const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, dist)));
+  // LOCAL ?ally=<id>[&allyAt=row,col]: a 1-star ally (default row 4, col 3, in front of `me`); `me` then stands on row 6.
+  const meRow = ally ? 6 : 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, dist)));
   const units: any[] = [
     { id: 'me', definitionId: unit, team: 'player', starLevel: star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(form ? { form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, foeCount).map(([id, col, row]) =>
       ({ id, definitionId: foe, team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } } })),
+    ...(ally ? [{ id: 'ally', definitionId: ally, team: 'player', starLevel: 1, location: { kind: 'board', cell: allyAt ? { row: Number(allyAt.split(',')[0]), col: Number(allyAt.split(',')[1]) } : { col: 3, row: 4 } } }] : []),
   ];
   let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units } as any);
   const frames: Piece[][] = [], events: any[][] = [];
@@ -118,14 +120,17 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
   }));
   frames.push(snapshot()); events.push([]);
-  // Up to 30 s, or 3 s past the first cast of `me`.
-  while (state.status !== 'finished' && frames.length < 600 && (castIndex < 0 || frames.length < castIndex + 60)) {
+  // Up to 30 s, or `afterMs` (?after=, default 3000) past the first cast of `me`.
+  while (state.status !== 'finished' && frames.length < 600 && (castIndex < 0 || frames.length < castIndex + Math.ceil(afterMs / 50))) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = display.toDisplayEvents(stepped.events as any);
     if (castIndex < 0 && shown.some((e: any) => e.type === 'cast' && e.sourceId === 'me')) castIndex = frames.length;
     frames.push(snapshot()); events.push(shown);
   }
   if (castIndex < 0) throw new Error(`real combat: ${unit} never cast in ${frames.length} ticks`);
+  // LOCAL: the recorded window must show only `me` casting; report anyone else who casts in it.
+  for (let i = Math.max(0, castIndex - 10); i < frames.length; i++) for (const e of events[i]!) if (e.type === 'cast' && e.sourceId !== 'me')
+    console.error(`other cast in window: ${e.sourceId} at ${(i - castIndex) * 50}ms`);
   return { frames, events, castIndex };
 }
 const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
