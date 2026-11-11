@@ -4,7 +4,7 @@ import { cueSize } from './fx-size';
 import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
+import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
@@ -67,8 +67,9 @@ export interface LtkPlayOptions {
   /**
    * Segment mapping of the attack cues to a swing the mixer retimed to its release (AttackRelease; takes precedence over
    * releaseShift): a cue before the clip's release frame `clipSeconds` scales to `t × atSeconds / clipSeconds` (the head
-   * plays sped up), a cue at or after it lands at `atSeconds + (t − clipSeconds) / tailSpeed`. Each cue still moves at most
-   * 2 s either way and never before the start. Only the default ltk.play path takes it, like releaseShift.
+   * plays sped up), a cue at or after it lands at `atSeconds + (t − clipSeconds) / tailSpeed`; a projectile or hit cue after
+   * the release only moves with it (its flight and impact are not part of the recovery the tail speeds up). Each cue still
+   * moves at most 2 s either way and never before the start. The default ltk.play path and the batch2 bridge take it.
    */
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
@@ -81,6 +82,11 @@ export function releaseDelay(t: number, at: number, clip: number, tail: number):
   // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
   const shift = t < clip ? t * at / clip - t : at - clip + (t - clip) * (1 / tail - 1);
   return Math.max(0, t + Math.min(2, Math.max(-2, shift)));
+}
+/** One attack cue on a retimed swing: projectile and hit cues after the release only shift with it (tail speed 1). */
+export function releaseCueDelay(cue: Pick<TimelineCue, 'delay' | 'event'>, release: NonNullable<LtkPlayOptions['release']>): number {
+  const tail = cue.event === 'projectile' || cue.event === 'hit' ? 1 : release.tailSpeed;
+  return releaseDelay(cue.delay, release.atSeconds, release.clipSeconds, tail);
 }
 /** A loaded system with the named top-level emitters, and everything under them, left out of the draw; one per list. */
 const HIDDEN = new WeakMap<PreparedVfx, Map<string, PreparedVfx>>();
@@ -196,7 +202,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (context.release !== undefined) {
         const { atSeconds: at, clipSeconds: clip, tailSpeed: tail } = context.release;
         if (![at, clip, tail].every(Number.isFinite) || at < 0 || clip <= 0 || tail <= 0) return false;
-        selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: releaseDelay(cue.delay, at, clip, tail) } : cue);
+        selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: releaseCueDelay(cue, { atSeconds: at, clipSeconds: clip, tailSpeed: tail }) } : cue);
       } else if (context.releaseShift !== undefined) {
         if (!Number.isFinite(context.releaseShift)) return false;
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
