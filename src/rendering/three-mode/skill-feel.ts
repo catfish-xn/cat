@@ -19,6 +19,10 @@ export function skillFeelFor(definitionId: string): boolean {
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('skillfx') === 'off') return false;
   return SKILL_FEEL_SAMPLE.has(definitionId);
 }
+/** `?skillfx=off` in the page address: the side-by-side review of the old look, which also drops the host-body overlays. */
+export function skillFxOff(): boolean {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).get('skillfx') === 'off';
+}
 /** The charge color per sample champion (its main skin color); anything else charges in warm gold. */
 export const skillColor = (definitionId: string): number => SKILL_FX_TABLE[definitionId]?.color ?? SKILL_FX_DEFAULTS.color;
 

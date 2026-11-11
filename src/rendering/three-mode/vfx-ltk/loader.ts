@@ -36,8 +36,9 @@ export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null
 }
 /**
  * An attached-mesh emitter whose look needs a frozen pose (afterimages: GhostImages, AvatarDash) or a dissolve, which
- * the live-pose overlay cannot show. Phase two of the attached-mesh work (11-11, Fable); until then it is left undrawn
- * and listed in the system's notes rather than drawn as a body that follows its host.
+ * the live-pose overlay cannot show. Phase two of the attached-mesh work (11-11, Fable). Until then it still draws as a
+ * body that follows its host, as it did before (the 11-11 audit: skipping it emptied Illaoi's cued eefae499), and is
+ * listed in the system's notes.
  */
 export function attachedMeshDeferred(emitter: { readonly quadType: number | null; readonly name: string | null }): boolean {
   return emitter.quadType === QUAD_TYPE.attachedMesh && /ghostimage|avatardash|dissolve/i.test(emitter.name ?? '');
@@ -78,7 +79,7 @@ export interface PreparedVfx {
   empty?: boolean;
   /**
    * What this system loads without: `reflection-cube:<emitter>` (a reflection map that is no cube strip, drawn without
-   * its reflection) and `attached-deferred:<emitter>` (see attachedMeshDeferred). Logged once per system when loaded.
+   * its reflection) and `attached-deferred:<emitter>` (see attachedMeshDeferred, drawn as before). Logged once per system when loaded.
    */
   notes?: readonly string[];
 }
@@ -241,7 +242,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       const notes: string[] = [];
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
-        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e) && !attachedMeshDeferred(e));
+        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
       if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes

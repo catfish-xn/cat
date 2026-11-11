@@ -84,7 +84,7 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', { mLockMeshToAttachment: { type: 'bool', value: true } }) }) });
     const source = new SkinnedMesh(new BoxGeometry()), bone = new Bone(); source.add(bone); source.bind(new Skeleton([bone])); f.body.add(source);
     const geometryDispose = vi.spyOn(source.geometry, 'dispose'), skeletonDispose = vi.spyOn(source.skeleton, 'dispose');
-    const fx = f.create(); expect(fx.draws).toHaveLength(8); fx.update(0.1, new Camera());
+    const fx = f.create(); expect(fx.draws).toHaveLength(4); expect(fx.attached).toHaveLength(4); fx.update(0.1, new Camera());
     expect(fx.draws.some(draw => draw.object.visible)).toBe(true);
     const overlay = fx.draws[0].object as SkinnedMesh;
     expect(overlay.skeleton).toBe(source.skeleton); expect(overlay.geometry).toBe(source.geometry);
@@ -124,10 +124,10 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     expect(warn).toHaveBeenCalledWith('vfx-ltk:sample:reflection-cube:synthetic-only');
     warn.mockRestore(); f.library.dispose();
   });
-  it.each(['GhostImages1', 'AvatarDash2', 'dissolve'])('leaves the frozen-pose/dissolve attached emitter %s undrawn and noted (phase two)', async name => {
+  it.each(['GhostImages1', 'AvatarDash2', 'dissolve'])('keeps drawing the frozen-pose/dissolve attached emitter %s as before and notes it (phase two)', async name => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const f = await load({ emitterName: { type: 'string', value: name }, primitive: struct('VfxPrimitiveAttachedMesh', {}) });
-    expect(f.prepared.drawn).toEqual([]); expect(f.prepared.notes).toEqual([`attached-deferred:${name}`]);
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.notes).toEqual([`attached-deferred:${name}`]);
     warn.mockRestore(); f.library.dispose();
   });
   it('handles original empty definitions as explicit no-ops', async () => {
