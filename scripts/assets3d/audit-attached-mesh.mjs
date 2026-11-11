@@ -99,6 +99,6 @@ const md = ['| 目录 | id | 系统 | 附着发射器（lock/部件） | 被技�
 const totals = { systems: rows.length, cued: rows.filter(r => r.after.cued).length, beforeOk: rows.filter(r => r.before.ok).length,
   afterOk: rows.filter(r => r.after.ok).length, switched: rows.filter(r => r.switched).length,
   reflectionFallback: rows.filter(r => r.after.notes?.some(n => n.startsWith('reflection-cube'))).map(r => r.id) };
-md.unshift(`# 附着网格核对表\n\n${JSON.stringify(totals)}\n`);
+md.unshift(`# 附着网格核对表\n\n实测方式：node + 真实加载器（esbuild 打包 src），贴图用 sharp 解码成像素（DataTexture），不是浏览器解码；素材根 ${root}。浏览器里的贴图解码、显卡相关问题此表查不到。\n\n${JSON.stringify(totals)}\n`);
 await writeFile(join(out, 'attached-audit.md'), md.join('\n') + '\n');
 console.log(JSON.stringify(totals));

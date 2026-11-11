@@ -69,6 +69,6 @@ const label = { 'whole-body': '整身罩一层', parts: '只画部件', 'not-dra
 const md = ['| 目录 | id | 系统 | 被点到 | 发射器 | 修前 | 修后 | 命中部件 | 宿主部件 |', '|---|---|---|---|---|---|---|---|---|',
   ...report.map(r => `| ${r.folder} | ${r.id} | ${r.system} | ${r.cued ? '是' : '否'} | ${r.emitter} | ${label[r.before]} | ${label[r.after]} | ${r.matched.join('+')} | ${(r.hostParts ?? []).join('+')} |`)];
 const changed = report.filter(r => r.cued && r.before !== r.after);
-md.unshift(`# 附着发射器实际画法\n\n被点到且画面会变：${changed.length} 个发射器（${[...new Set(changed.map(r => r.id))].join(', ')}）\n`);
+md.unshift(`# 附着发射器实际画法\n\n实测方式：只读 glb 的 JSON（材质名、节点名）按名字哈希比对，不渲染；"只画部件"表示名字对上，画面是否正确要看录像。\n\n被点到且画面会变：${changed.length} 个发射器（${[...new Set(changed.map(r => r.id))].join(', ')}）\n`);
 await writeFile(join(out, 'attached-parts.md'), md.join('\n') + '\n');
 console.log(JSON.stringify({ emitters: report.length, changed: changed.length, noModel: report.filter(r => !r.model).length }));
