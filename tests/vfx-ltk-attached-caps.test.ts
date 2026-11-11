@@ -75,6 +75,23 @@ describe('attached-mesh screen cap and switch', () => {
     expect(warn.mock.calls.filter(([line]) => String(line).startsWith('vfx-ltk:attached-cap:'))).toEqual([[`vfx-ltk:attached-cap:${runtime.attachedStats.peakLayers}>${ATTACHED_LAYER_CAP}`]]);
     runtime.dispose(); library.dispose();
   });
+  it.each([[2, 7, 0], [6, 3, 1]] as const)('counts a layer once over all %i hosts\' %i skinned parts and keeps or hides it whole (cap trips %i times)', async (count, partCount, trips) => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scene = new Scene();
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });
+    const hosts = new Map(Array.from({ length: count }, (_, at) => {
+      const root = new Group(), body = new Group(); root.add(body); for (let p = 0; p < partCount; p++) body.add(part(`part${p}`));
+      return [`u${at}` as string, { root, body, alive: true }] as const;
+    }));
+    const runtime = createLtkRuntime(library, scene, id => hosts.get(id));
+    await runtime.warm('jinx');
+    for (const id of hosts.keys()) runtime.play('jinx', id, [], 0, 'cast');
+    runtime.update(0.2, new Camera());
+    const layers = Math.min(runtime.attachedStats.peakLayers, ATTACHED_LAYER_CAP); expect(layers).toBeGreaterThan(count - 1);
+    expect(visibleOverlays(scene)).toBe(layers * partCount);
+    expect(runtime.attachedStats.capEvents).toBe(trips);
+    runtime.dispose(); library.dispose();
+  });
   it('hides every overlay while the host switches them off (reduced motion, ?skillfx=off)', async () => {
     const scene = new Scene(); let on = false;
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });

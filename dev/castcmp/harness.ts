@@ -49,7 +49,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: 1, ...hex(row, col), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });
   const tRow = Math.max(0, 5 - dist);
-  const pieces = [me, foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)];
+  // ?nfoes=N (1-4): how many dummies stand in front of the caster.
+  const pieces = [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
   const frame = (fighting: boolean) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces, fighting, dragging: null });
   listener.frame(frame(false)); step(50); listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
@@ -127,7 +128,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, dist)));
   const units: any[] = [
     { id: 'me', definitionId: unit, team: 'player', starLevel: star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(form ? { form } : {}) },
-    ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].map(([id, col, row]) =>
+    ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4)))).map(([id, col, row]) =>
       ({ id, definitionId: foe, team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } } })),
   ];
   let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units } as any);
