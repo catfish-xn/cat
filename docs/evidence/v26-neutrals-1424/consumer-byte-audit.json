@@ -2777,9 +2777,9 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 13136,
+      "currentBytes": 13206,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "64888b32bee1e42525a2f56df9b1978dd8bac75817d5a2eeec1bf72092a1cbab",
+      "currentSha256": "22d97694b273bdf9f9b79aa34b92834bb4bd29be0931961cdacfce91330f9333",
       "firstDifferentByte": 809
     },
     "tests/server/carousel-room.test.ts": {
