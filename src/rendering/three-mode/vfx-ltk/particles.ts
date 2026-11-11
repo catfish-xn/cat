@@ -2,6 +2,7 @@
 import { BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
+import type { MissileFlight } from './engine/model/missile';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
@@ -97,6 +98,12 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
     return held;
   };
 }
+/** A cue projectile's flight: straight at the speed that lands it in `seconds`, or a gravity arc landing in `seconds`. */
+export function projectileFlight(distance: number, seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }): MissileFlight {
+  return arc
+    ? { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds }, height: { kind: 'gravity', gravity: arc.gravity }, targetOffset: arc.targetOffset }
+    : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / seconds } };
+}
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   /** An arcing projectile's gravity height solver and aimed-point lift (TimelineCue.arc). */
@@ -117,9 +124,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
     return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: spec.arc
-          ? { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: spec.projectileSeconds }, height: { kind: 'gravity', gravity: spec.arc.gravity }, targetOffset: spec.arc.targetOffset }
-          : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: projectileFlight(distance, spec.projectileSeconds, spec.arc) }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
