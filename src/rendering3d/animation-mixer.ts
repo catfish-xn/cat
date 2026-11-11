@@ -1,6 +1,6 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import { attackReleaseSeconds, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations } from './contracts';
+import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations } from './contracts';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
 /** Select only supplied display context; never infer a random ability or hero augment. */
@@ -55,6 +55,27 @@ function parallelStage(sequence: CastSequence, main: AnimationClip, layers: read
   return { primary: bases[0], extras, duration };
 }
 
+/**
+ * A StatusPose as mixer actions: the clip's pose at `atSeconds`, frozen, split by mask weight. Each part's mixer weight
+ * is set per frame so that the pose takes fraction f·w of the bone against the unit's own action (total weight 1).
+ */
+function poseParts(pose: StatusPose, source: AnimationClip): { clip: AnimationClip; weight: number }[] {
+  const byWeight = new Map<number, Set<string>>();
+  for (const [bone, w] of Object.entries(pose.mask)) {
+    const weight = Math.min(1, Math.max(0, w));
+    if (weight > 0) byWeight.set(weight, (byWeight.get(weight) ?? new Set()).add(PropertyBinding.sanitizeNodeName(bone)));
+  }
+  const at = Math.min(Math.max(0, pose.atSeconds), source.duration);
+  return [...byWeight].map(([weight, bones]) => {
+    const tracks = source.tracks.filter(track => bones.has(trackBone(track))).map(track => {
+      const value = Array.from((track as KeyframeTrack & { createInterpolant(): { evaluate(t: number): ArrayLike<number> } }).createInterpolant().evaluate(at));
+      const Track = track.constructor as new (name: string, times: number[], values: number[]) => KeyframeTrack;
+      return new Track(track.name, [0, 1], [...value, ...value]);
+    });
+    return { clip: new AnimationClip(`${source.name}#pose${weight}`, 1, tracks), weight };
+  }).filter(part => part.clip.tracks.length);
+}
+
 /** A held cast's out clip plays this many times faster than authored (it may also be cut by the next swing). */
 export const HELD_CAST_OUT_SPEED = 2;
 /** Per-stage speeds and end pads of a held cast: stages before out at ≥1× fill holdSeconds, out fills the rest. */
@@ -91,6 +112,9 @@ export class UnitAnimationMixer {
   private stageIndex = 0;
   private readonly stages = new WeakMap<CastSequence, Map<string, ParallelStage>>();
   private lastResolved?: { clips: readonly string[]; sequence: CastSequence };
+  /** The status pose: wanted on/off, its current fraction, and its actions (built on first use). */
+  private pose?: { on: boolean; fraction: number; parts: { action: AnimationAction; weight: number }[] };
+  private baseState: ActionState = 'idle';
   constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
@@ -221,9 +245,44 @@ export class UnitAnimationMixer {
     if (previous && previous !== next) next.crossFadeFrom(previous, blend, false);
     this.active = next;
   }
+  /**
+   * Hold (or release) the manifest's status pose. It eases in and out over its blendSeconds, and only shows while the
+   * unit idles or moves: an attack or cast plays whole, then the pose returns.
+   */
+  setStatusPose(on: boolean): void {
+    const pose = this.metadata.statusPose;
+    if (!pose) return;
+    if (!this.pose) {
+      if (!on) return;
+      const source = this.clips.get(pose.clip);
+      if (!source) return;
+      const parts = poseParts(pose, source).map(({ clip, weight }) => {
+        const action = this.mixer.clipAction(clip);
+        action.setLoop(LoopRepeat, Infinity).setEffectiveTimeScale(0).setEffectiveWeight(0).play();
+        return { action, weight };
+      });
+      if (!parts.length) return;
+      this.pose = { on, fraction: 0, parts };
+    }
+    this.pose.on = on;
+  }
+  /** The status pose's share of its bones right now (0 when there is none). */
+  get statusPoseFraction(): number { return this.pose?.fraction ?? 0; }
+  private updatePose(seconds: number): void {
+    const pose = this.pose;
+    if (!pose) return;
+    const target = pose.on && (this.baseState === 'idle' || this.baseState === 'move') ? 1 : 0;
+    const blend = this.metadata.statusPose?.blendSeconds ?? 0.2;
+    pose.fraction = blend > 0 ? (target > pose.fraction ? Math.min(target, pose.fraction + seconds / blend) : Math.max(target, pose.fraction - seconds / blend)) : target;
+    for (const { action, weight } of pose.parts) {
+      const share = pose.fraction * weight;
+      action.setEffectiveWeight(share >= 1 ? 1e4 : share / (1 - share));
+    }
+  }
   apply(output: ActionOutput): boolean {
     if (this.revision === output.revision) return !!this.active;
     this.revision = output.revision;
+    this.baseState = output.state;
     const playback = output.playback ?? ((output.state === 'cast' || output.state === 'attack') ? this.resolvePlayback(output.state) : undefined);
     // Absent casts leave both the active action and its playback time unchanged.
     if (playback === null) return !!this.active;
@@ -269,6 +328,7 @@ export class UnitAnimationMixer {
   }
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
+    this.updatePose(seconds);
     if (this.releaseLeft > 0) {
       if (seconds < this.releaseLeft) { this.mixer.update(seconds); this.releaseLeft -= seconds; return; }
       this.mixer.update(this.releaseLeft); seconds -= this.releaseLeft; this.releaseLeft = 0;
@@ -294,5 +354,5 @@ export class UnitAnimationMixer {
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
   }
-  dispose(): void { this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
+  dispose(): void { for (const part of this.pose?.parts ?? []) part.action.stop(); this.pose = undefined; this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
 }

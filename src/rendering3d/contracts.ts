@@ -39,7 +39,14 @@ export interface FormAnimations { front?: FormAnimationActions; back?: FormAnima
  * Display only: the rules never read it. Without it the attack plays exactly as before.
  */
 export interface AttackRelease { clipSeconds: number; windupRatio: number; baseIntervalSeconds: number }
-export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence; attackRelease?: AttackRelease }
+/**
+ * A pose held on part of the body while a status from the unit's own cast lasts (the original lays a masked clip over
+ * idle and movement): `clip`'s pose at `atSeconds` on the `mask` bones (bone → weight, as CastSequence.masks). It
+ * starts with the unit's completed cast, eases out over `blendSeconds` (default 0.2) when the status `status` ends for
+ * any reason or the unit dies, and yields to attacks and casts while they play.
+ */
+export interface StatusPose { clip: string; atSeconds: number; mask: Readonly<Record<string, number>>; status: string; blendSeconds?: number }
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence; attackRelease?: AttackRelease; statusPose?: StatusPose }
 /** Seconds after the attack starts at which the original releases, for the observed interval (else the base one). */
 export function attackReleaseSeconds(release: AttackRelease | undefined, intervalSeconds?: number): number | undefined {
   if (!release) return undefined;
@@ -188,6 +195,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);
     if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);
     if (entry.attackRelease !== undefined) assertAttackRelease(entry.attackRelease);
+    if (entry.statusPose !== undefined) assertStatusPose(entry.statusPose);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
@@ -284,6 +292,14 @@ function assertCastSequence(value: unknown): void {
   for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
   if (sequence.layers !== undefined) assertCastLayers(sequence.layers);
   if (sequence.masks !== undefined) assertCastMasks(sequence.masks);
+}
+function assertStatusPose(value: unknown): void {
+  const p = value as StatusPose;
+  if (!isPlainObject(value) || Object.keys(value).some(k => !['clip', 'atSeconds', 'mask', 'status', 'blendSeconds'].includes(k))
+    || typeof p.clip !== 'string' || !p.clip.trim() || !finite(p.atSeconds) || p.atSeconds < 0 || p.atSeconds > 60
+    || typeof p.status !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(p.status)
+    || (p.blendSeconds !== undefined && !(finite(p.blendSeconds) && p.blendSeconds >= 0 && p.blendSeconds <= 2))) throw new Error('invalid-status-pose');
+  try { assertCastMasks({ [p.clip]: p.mask }); } catch { throw new Error('invalid-status-pose'); }
 }
 function assertAttackRelease(value: unknown): void {
   const r = value as AttackRelease, num = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) && v > min && v <= max;
