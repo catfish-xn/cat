@@ -855,11 +855,10 @@ export async function stageAnimSequences({
     if (!origCastNode) {
       const fallbackKeys = ['Spell', 'Spell1', 'SpellCast'];
       if (id === 'swain') fallbackKeys.push('Spell2');
-      // Singed: TFT13_SingedSpell names "Spell1", which the graph does not have. Its graph has Spell_1
-      // (Spell_3.anm 104-131), Spell2_Sequence (Spell_2 = Spell_3.anm 220-end, then Spell_Out) and
-      // Spell_Hero_Parallel (Spell_3.anm 220-248 on the upper-body mask over Spell_Run). The hero variant
-      // throws with the 220.. section, so the standing cast is Spell2_Sequence.
-      if (id === 'singed') fallbackKeys.push('Spell2_Sequence');
+      // Singed: TFT13_SingedSpell names "Spell1"; the graph spells it Spell_1 (a section of Spell_3.anm: the canister
+      // swung round to the front and held up as a shield, the original's block). Spell2_Sequence starts mid-swing
+      // and flips the canister within a few frames, which read as a twitch (user 11-11).
+      if (id === 'singed') fallbackKeys.push('Spell_1');
       for (const fk of fallbackKeys) {
         const kh = fk.startsWith('0x') ? Number.parseInt(fk, 16) : fnv1a(fk);
         const r = await resolveNode(kh);

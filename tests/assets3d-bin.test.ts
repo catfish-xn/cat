@@ -860,8 +860,7 @@ describe('script-driven cast graph keys', () => {
     expect(fnv1a('Spell1_Blast') >>> 0).toBe(0xfb92fc69);
   });
 
-  it('stages Singed\'s cast from Spell2_Sequence instead of excluding it', () => {
-    // Singed's skin0 graph keeps Spell2_Sequence (Spell_3.anm from frame 220, then Spell_Out) under this hash.
+  it('stages Singed\'s cast from Spell_1 (the spell\'s own "Spell1": the shield block), not Spell2_Sequence', () => {
     expect(fnv1a('Spell2_Sequence') >>> 0).toBe(0x1bab12f3);
     expect(DEFAULT_EXCLUDES.has('singed:cast')).toBe(false);
   });
