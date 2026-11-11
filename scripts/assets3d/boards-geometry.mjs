@@ -83,7 +83,8 @@ export function boardLightmapPlacement(mesh){
   const baked=mesh.baked?.[0],sb=baked?.scaleBias;
   if(!baked?.path||!/\.(tex|dds)$/i.test(baked.path)||!sb||!mesh.vertices.some(v=>v.lightmapUv))return null;
   if(sb[0]===1&&sb[1]===1&&sb[2]===0&&sb[3]===0)return null;
-  check(sb.every(Number.isFinite)&&sb[0]>0&&sb[1]>0&&sb[0]+sb[2]<=1.0001&&sb[1]+sb[3]<=1.0001,'mapgeo-lightmap-placement');
+  // A mesh's own UVs need not span 0..1, so scale + bias may pass 1 (seen on board-spirit-blossom).
+  check(sb.every(Number.isFinite)&&sb[0]>0&&sb[1]>0,'mapgeo-lightmap-placement');
   return {path:baked.path,scaleBias:sb};
 }
 

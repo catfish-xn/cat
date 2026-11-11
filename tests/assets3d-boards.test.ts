@@ -89,7 +89,7 @@ describe('offline board planning with synthetic inputs', () => {
     expect(uv1([1, 1, 0, 0])).toBeNull(); // left at the whole atlas: unlit in the original data
     expect(uv1(null)).toBeNull();
     expect(uv1([0.5, 0.25, 0.25, 0.5], {})).toBeNull(); // only on request
-    expect(() => uv1([0.9, 0.5, 0.5, 0])).toThrow('mapgeo-lightmap-placement');
+    expect(() => uv1([0, 0.5, 0.5, 0])).toThrow('mapgeo-lightmap-placement');
   });
   it('aligns all cells of an authored odd-row grid to the runtime grid', () => {
     const a = boardAlignment([0, 0, 0], [13, 0, 14], {radius: 2, origin: {x: 10, y: 20}});
