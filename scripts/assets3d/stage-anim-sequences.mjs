@@ -33,12 +33,16 @@ export const DEFAULT_EXCLUDES = new Set([
  * - mel: TFT13_MissMageSpell dashes, then fires bolts (TYNlhRomM1w ~160-164s, the dash trail precedes the
  *   bolts). Spell1_Blast starts from the exact pose Spell_Dash holds, so the two chain as Spell_Dash then
  *   Spell1_Blast. (Spell2 is not used here: it carries a separate warning sound and is left out.)
+ * - vi: TFT13_ViSpell names "Spell", which her graph does not have. FB7YoqakYqE 191.4-193.4s (3 stars): shield, she
+ *   closes on the target, then leaps with it and slams (192.8s); that is Spell_Dash (Vi_Dash) then Spell_Knockup
+ *   (Vi_Spell4_hit, the slam at its frame 17). We played Spell_Knockup alone, so only the last move showed.
  * Each list is played as a Sequencer, so the graph's own frame ranges still apply.
  */
 export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
   ezreal: Object.freeze(['Spell3_In', 'Spell3_Out']),
   warwick: Object.freeze(['BloodFrenzy_Activate']),
   mel: Object.freeze(['Spell_Dash', 'Spell1_Blast']),
+  vi: Object.freeze(['Spell_Dash', 'Spell_Knockup']),
 });
 
 /**
@@ -849,7 +853,8 @@ export async function stageAnimSequences({
       if (!origCastNode) throw new Error(`cast-graph-key-missing: ${id}:${CAST_GRAPH_KEY_OVERRIDES[id]}`);
     }
     if (!origCastNode && rawSpellAnim) origCastNode = await resolveNode(fnv1a(rawSpellAnim));
-    if (!origCastNode && !rawSpellAnim) {
+    // A script-driven cast (empty mAnimationName), or a named one the graph does not have (Vi's "Spell").
+    if (!origCastNode && (!rawSpellAnim || Object.hasOwn(SCRIPT_CAST_GRAPH_KEYS, id))) {
       origCastNode = await buildScriptCastNode(id, key => resolveNode(fnv1a(key)));
     }
     if (!origCastNode) {

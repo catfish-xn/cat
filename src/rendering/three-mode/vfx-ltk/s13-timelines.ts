@@ -3,6 +3,11 @@ import type { TimelineCue } from './timeline';
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
 const viFlight = frame(17) - frame(4.545000076293945);
+/**
+ * Vi's cast plays Spell_Dash (vi_dash, 25 frames) before Spell_Knockup (vi_spell4_hit) since 2026-11-11 (manifest
+ * castSequence). Her cues were authored on vi_spell4_hit's clock, so all but the opening shield glint wait for the dash.
+ */
+const VI_DASH = frame(25);
 export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   jinx: [
     { phase: 0, system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
@@ -16,15 +21,15 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { phase: 2, system: '809da1b1', event: 'hit', delay: frame(20) + 0.6, duration: 2, bone: ground, primary: true },
   ],
   vi: [
-    { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
-    { system: '0314626c', event: 'cast-start', delay: 0, duration: 1, bone: ground },
-    { system: '25afa6a6', event: 'cast-start', delay: 0, duration: 1, bone: ground }, // Original empty event: explicit no-op.
+    { system: 'c11e6814', event: 'cast-start', delay: VI_DASH, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
+    { system: '0314626c', event: 'cast-start', delay: VI_DASH, duration: 1, bone: ground },
+    { system: '25afa6a6', event: 'cast-start', delay: VI_DASH, duration: 1, bone: ground }, // Original empty event: explicit no-op.
     // Landing owns the debris/impact. Retaining the flight past frame 17 would
     // occupy the sixth-system budget and drop the separate chest impact.
-    { system: '84b969e0', event: 'projectile', delay: frame(4.545000076293945), duration: viFlight, travelSeconds: viFlight, targetBone: ground },
-    { system: '18e22631', event: 'cast-start', delay: frame(17), duration: 1.5, bone: ground },
-    { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
-    { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
+    { system: '84b969e0', event: 'projectile', delay: VI_DASH + frame(4.545000076293945), duration: viFlight, travelSeconds: viFlight, targetBone: ground },
+    { system: '18e22631', event: 'cast-start', delay: VI_DASH + frame(17), duration: 1.5, bone: ground },
+    { system: 'd27b3044', event: 'hit', delay: VI_DASH + frame(17), duration: 1.5, bone: ground, primary: true },
+    { system: '66c600e8', event: 'hit', delay: VI_DASH + frame(17), duration: 1, bone: chest },
     { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
   ],
 };

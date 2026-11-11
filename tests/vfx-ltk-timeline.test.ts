@@ -38,7 +38,9 @@ describe('cast timeline replacement and fallback', () => {
     expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 3)).toEqual(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0));
     const vi = mapSkillTimeline(S13_TIMELINES.vi, 'v', ['a', 'b']).spawns;
     expect(vi.find(c => c.system === 'c11e6814')).toMatchObject({ bone: 'R_Buffbone_Glb_Hand_Loc', stopAfter: 17 / 30 });
-    expect(vi.find(c => c.system === '18e22631')).toMatchObject({ bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 17 / 30 });
+    // Vi's slam cues wait for Spell_Dash (vi_dash, 25 frames) since 2026-11-11; the opening shield glint does not.
+    expect(vi.find(c => c.system === '18e22631')).toMatchObject({ bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 25 / 30 + 17 / 30 });
+    expect(vi.find(c => c.system === '9614ffb4')).toMatchObject({ delay: 0 });
     expect(vi.filter(c => c.system === 'd27b3044').map(c => c.targetId)).toEqual(['a']);
     expect(vi.filter(c => c.system === '66c600e8').map(c => c.targetId)).toEqual(['a', 'b']);
     expect(vi.find(c => c.system === '66c600e8')!.bone).toBe('C_BUFFBONE_GLB_CHEST_LOC');
@@ -275,7 +277,7 @@ it('expires Vi flight at landing even after a frame-quantized start, leaving roo
   const scene = new Scene(), source = { root: new Group(), body: null, alive: true }, budget = { live: 0, max: 1500 };
   const runtime = createLtkRuntime(library, scene, () => source, { budget });
   await runtime.warm('vi'); expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  for (let frame = 0; frame < 17; frame++) runtime.update(1 / 30, new Camera());
+  for (let frame = 0; frame < 25 + 17; frame++) runtime.update(1 / 30, new Camera()); // vi_dash, then the slam's frame 17
   const live = scene.children.map(o => o.userData.ltkSystem);
   expect(live).toContain('66c600e8'); expect(live).toContain('d27b3044'); expect(live).toContain('18e22631');
   expect(live).not.toContain('84b969e0'); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);

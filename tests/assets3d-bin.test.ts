@@ -858,6 +858,9 @@ describe('script-driven cast graph keys', () => {
     expect(SCRIPT_CAST_GRAPH_KEYS.mel).toEqual(['Spell_Dash', 'Spell1_Blast']);
     expect(fnv1a('Spell_Dash') >>> 0).toBe(0x60816d32);
     expect(fnv1a('Spell1_Blast') >>> 0).toBe(0xfb92fc69);
+    // Vi (mAnimationName "Spell", not in her graph): Spell_Dash then Spell_Knockup, keys as in her animation graph.
+    expect(SCRIPT_CAST_GRAPH_KEYS.vi).toEqual(['Spell_Dash', 'Spell_Knockup']);
+    expect(fnv1a('Spell_Knockup') >>> 0).toBe(0x821bfd3b);
   });
 
   it('stages Singed\'s cast from Spell2_Sequence instead of excluding it', () => {
