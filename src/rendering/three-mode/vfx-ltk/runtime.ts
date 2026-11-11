@@ -27,10 +27,21 @@ export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
 /** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
 const ATTACK_FREE_SLOTS = 6;
 /**
- * Host-body overlays (attached-mesh slots, one full skinned draw each) on screen at once, across systems (11-11, Fable:
- * 16 for now; raised to 24 only if `attachedStats` shows it binding often with frame time to spare).
+ * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
+ * play (the build before it had no cap). A layer is one live particle of an attached emitter, drawn once per skinned
+ * part of its host. Measured 11-11 (asset-root-live c1333710ad8e, dev/castcmp/board-load.cjs, SwiftShader): a whole
+ * 8 v 8 3-star combat of attached-heavy champions (Mundo, Vi, Jinx, Leona, Mordekaiser, Ambessa, Jayce, Loris against
+ * Kog'Maw and the same) peaks at 13 layers / 61 draws, Mundo's R alone at 5 / 29, cap untouched; frame time within
+ * noise of the uncapped build. 24 leaves that peak almost twice over.
  */
-export const ATTACHED_LAYER_CAP = 16;
+export const ATTACHED_LAYER_CAP = 24;
+/**
+ * Every runtime's overlay counts (the castcmp board-load harness reads them): layers on screen in the latest frame (one
+ * per live particle of an attached emitter) and the skinned draws they cost, the peaks, what made the peak layer count
+ * (`system@unit+start:emitter` → layers), and how often the cap tripped. Read by dev tools only: every runtime writes
+ * to it, so with several runtimes `layers`/`draws` are the last one's.
+ */
+export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
@@ -114,11 +125,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null;
   /** False hides every host-body overlay (attached mesh): reduced motion, `?skillfx=off`. Omitted means shown. */
-  attachedLayers?: () => boolean } = {}) {
+  attachedLayers?: () => boolean;
+  /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
+  layerCap?: number } = {}) {
   let clock = 0, closed = false, seed = 1;
+  const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
-  const layerBuf: { draw: AttachedDraw; rank: number; started: number }[] = [];
+  const layerBuf: { key: string; draws: AttachedDraw[]; rank: number; started: number; system: string }[] = [];
   const attachedStats = { capEvents: 0, cappedFrames: 0, peakLayers: 0 };
   let capped = false;
   const liveFx: { passes: LtkPassFlags }[] = [];
@@ -387,19 +401,41 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.
+      // A layer is one live particle of an attached emitter: it draws once per skinned part of its host (Mundo's model is
+      // 7 parts), and is kept or hidden whole, so the cap never leaves a body half covered.
       // Over the cap the lowest importance goes first (attack, flourish, body, then damage), the newest of a rank before
       // the oldest, so what is already showing stays. Only the overlay is hidden; the system's other emitters still draw.
       const showAttached = options.attachedLayers?.() ?? true;
-      layerBuf.length = 0;
-      for (const run of running) for (const draw of run.fx.attached) if (draw.object.visible) {
-        if (!showAttached || run.bodyGone) draw.object.visible = false;
-        else layerBuf.push({ draw, rank: LAYER_RANK[run.persistent ? 'critical' : run.importance], started: run.started });
+      layerBuf.length = 0; let drawsOn = 0;
+      for (const run of running) {
+        const first = layerBuf.length;
+        for (const draw of run.fx.attached) if (draw.object.visible) {
+          if (!showAttached || run.bodyGone) { draw.object.visible = false; continue; }
+          drawsOn++;
+          let layer: (typeof layerBuf)[number] | undefined;
+          for (let at = first; at < layerBuf.length && !layer; at++) if (layerBuf[at].key === draw.object.name) layer = layerBuf[at];
+          if (layer) layer.draws.push(draw);
+          else layerBuf.push({ key: draw.object.name, draws: [draw], rank: LAYER_RANK[run.persistent ? 'critical' : run.importance], started: run.started,
+            system: `${run.system}@${run.source}+${run.started}:${draw.object.name.split('#')[0]}` });
+        }
       }
       attachedStats.peakLayers = Math.max(attachedStats.peakLayers, layerBuf.length);
-      if (layerBuf.length > ATTACHED_LAYER_CAP) {
+      ATTACHED_LAYER_STATS.layers = layerBuf.length; ATTACHED_LAYER_STATS.draws = drawsOn;
+      ATTACHED_LAYER_STATS.peakDraws = Math.max(ATTACHED_LAYER_STATS.peakDraws, drawsOn);
+      if (layerBuf.length > ATTACHED_LAYER_STATS.peakLayers) {
+        ATTACHED_LAYER_STATS.peakLayers = layerBuf.length; ATTACHED_LAYER_STATS.peakSystems = {};
+        for (const layer of layerBuf) ATTACHED_LAYER_STATS.peakSystems[layer.system] = (ATTACHED_LAYER_STATS.peakSystems[layer.system] ?? 0) + 1;
+      }
+      if (layerBuf.length > layerCap) {
         layerBuf.sort((a, b) => b.rank - a.rank || a.started - b.started);
-        for (let at = ATTACHED_LAYER_CAP; at < layerBuf.length; at++) layerBuf[at].draw.object.visible = false;
-        attachedStats.cappedFrames++; if (!capped) attachedStats.capEvents++; capped = true;
+        for (let at = layerCap; at < layerBuf.length; at++) for (const draw of layerBuf[at].draws) draw.object.visible = false;
+        attachedStats.cappedFrames++; ATTACHED_LAYER_STATS.cappedFrames++;
+        if (!capped) {
+          // The cap is a fuse: it should never trip in play, so the first trip of each runtime says so in the console.
+          if (attachedStats.capEvents === 0) console.warn(`vfx-ltk:attached-cap:${layerBuf.length}>${layerCap}`);
+          attachedStats.capEvents++; ATTACHED_LAYER_STATS.capEvents++;
+        }
+        capped = true;
       } else capped = false;
       claimBuf.length = 0;
       for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);
@@ -420,7 +456,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     },
     get active() { return running.size; },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
-    get attachedStats() { return { ...attachedStats, layerCap: ATTACHED_LAYER_CAP, slots: ATTACHED_SLOTS, peakAlive: ATTACHED_STATS.peakAlive, overSlotFrames: ATTACHED_STATS.overSlotFrames }; },
+    get attachedStats() { return { ...attachedStats, layerCap, slots: ATTACHED_SLOTS, peakAlive: ATTACHED_STATS.peakAlive, overSlotFrames: ATTACHED_STATS.overSlotFrames }; },
     get queued() { return waiting.length; },
     dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); flushDrawBufferPool(); flushFrameTargetPool(); library.dispose(); },
   };

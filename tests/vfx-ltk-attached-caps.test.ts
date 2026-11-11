@@ -55,22 +55,47 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
 });
 
 describe('attached-mesh screen cap and switch', () => {
+  /** The synthetic hosts cannot reach the real cap under the runtime's slot budget, so the over-cap tests use a lower one. */
+  const CAP = 16;
   const visibleOverlays = (scene: Scene) => {
     let count = 0; scene.traverse(node => { if ((node as SkinnedMesh).isSkinnedMesh && node.parent?.name === 'ltk-vfx' && node.visible) count++; }); return count;
   };
-  it(`keeps at most ${ATTACHED_LAYER_CAP} overlays on screen and counts the cap`, async () => {
+  it('runs with the measured fuse by default', () => {
+    const runtime = createLtkRuntime(createVfxLibrary('/root/', { readJson: async () => syntheticIndex(), readTexture: async () => new Texture() }), new Scene(), () => undefined);
+    expect(runtime.attachedStats.layerCap).toBe(ATTACHED_LAYER_CAP); runtime.dispose();
+  });
+  it(`keeps at most the cap of overlays on screen and counts the cap`, async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scene = new Scene();
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });
     const hosts = new Map(Array.from({ length: 6 }, (_, at) => {
       const root = new Group(), body = new Group(); root.add(body); body.add(part('body')); return [`u${at}` as string, { root, body, alive: true }] as const;
     }));
-    const runtime = createLtkRuntime(library, scene, id => hosts.get(id));
+    const runtime = createLtkRuntime(library, scene, id => hosts.get(id), { layerCap: CAP });
     await runtime.warm('jinx');
     for (const id of hosts.keys()) expect(runtime.play('jinx', id, [], 0, 'cast')).toBe(true);
     runtime.update(0.2, new Camera()); runtime.update(0.05, new Camera());
-    expect(runtime.attachedStats.peakLayers).toBeGreaterThan(ATTACHED_LAYER_CAP);
-    expect(visibleOverlays(scene)).toBe(ATTACHED_LAYER_CAP);
+    expect(runtime.attachedStats.peakLayers).toBeGreaterThan(CAP);
+    expect(visibleOverlays(scene)).toBe(CAP);
     expect(runtime.attachedStats.capEvents).toBe(1); expect(runtime.attachedStats.cappedFrames).toBe(2);
+    expect(warn.mock.calls.filter(([line]) => String(line).startsWith('vfx-ltk:attached-cap:'))).toEqual([[`vfx-ltk:attached-cap:${runtime.attachedStats.peakLayers}>${CAP}`]]);
+    runtime.dispose(); library.dispose();
+  });
+  it.each([[2, 7, 0], [6, 3, 1]] as const)('counts a layer once over all %i hosts\' %i skinned parts and keeps or hides it whole (cap trips %i times)', async (count, partCount, trips) => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scene = new Scene();
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });
+    const hosts = new Map(Array.from({ length: count }, (_, at) => {
+      const root = new Group(), body = new Group(); root.add(body); for (let p = 0; p < partCount; p++) body.add(part(`part${p}`));
+      return [`u${at}` as string, { root, body, alive: true }] as const;
+    }));
+    const runtime = createLtkRuntime(library, scene, id => hosts.get(id), { layerCap: CAP });
+    await runtime.warm('jinx');
+    for (const id of hosts.keys()) runtime.play('jinx', id, [], 0, 'cast');
+    runtime.update(0.2, new Camera());
+    const layers = Math.min(runtime.attachedStats.peakLayers, CAP); expect(layers).toBeGreaterThan(count - 1);
+    expect(visibleOverlays(scene)).toBe(layers * partCount);
+    expect(runtime.attachedStats.capEvents).toBe(trips);
     runtime.dispose(); library.dispose();
   });
   it('hides every overlay while the host switches them off (reduced motion, ?skillfx=off)', async () => {
