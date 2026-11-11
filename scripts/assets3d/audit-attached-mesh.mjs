@@ -21,7 +21,8 @@ async function engine(repo, tag) {
   await build({ stdin: { contents: `export { createVfxLibrary } from './src/rendering/three-mode/vfx-ltk/loader';
  export { readVfxSystem } from './src/rendering/three-mode/vfx-ltk/engine/parsing/readVfxSystem';
  export { QUAD_TYPE } from './src/rendering/three-mode/vfx-ltk/engine/model/enums';
- export { DataTexture } from 'three';`, resolveDir: resolve(repo), loader: 'ts' },
+ export { createLtkParticles } from './src/rendering/three-mode/vfx-ltk/particles';
+ export { DataTexture, PerspectiveCamera } from 'three';`, resolveDir: resolve(repo), loader: 'ts' },
     outfile, bundle: true, format: 'esm', platform: 'node', logLevel: 'silent' });
   return import(pathToFileURL(outfile).href + `?${tag}`);
 }
@@ -73,11 +74,34 @@ async function loadWith(E, folder, id) {
   try {
     const index = await library.ready;
     const cued = !!index && Object.values(index.skills).some(cues => cues?.some(c => c.system === id));
-    try { const p = await library.load(id); return { ok: true, empty: !!p.empty, drawn: p.drawn.length, notes: p.notes ?? [], cued }; }
+    try { const p = await library.load(id); return { ok: true, empty: !!p.empty, drawn: p.drawn.length, notes: p.notes ?? [], cued, alive: peakAlive(E, p) }; }
     catch (error) { return { ok: false, error: String(error.message ?? error), cued }; }
   } finally { library.dispose(); }
 }
 
+// Most live particles each attached emitter holds at once over 4 s (30 fps), simulated by the real driver with no host:
+// one overlay slot draws one such particle, so this is the slot count it would need. Counted off the particle pools,
+// not the overlays, so a part filter does not hide it. A cue's own stop or hand-set duration is not applied.
+const anchor = { originAt: () => [0, 0, 0], basisInto: (_time, result) => { result.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return result; } };
+function peakAlive(E, prepared) {
+  const attached = prepared.drawn.filter(d => d.emitter.quadType === E.QUAD_TYPE.attachedMesh && !d.emitter.disabled);
+  if (!attached.length) return {};
+  const camera = new E.PerspectiveCamera(); camera.position.set(0, 200, 300); camera.updateMatrixWorld();
+  const fx = E.createLtkParticles(prepared, { anchor, target: null, joints: () => anchor, duration: 4, seed: 1 });
+  const peak = {};
+  try {
+    for (let frame = 0; frame < 120; frame++) {
+      fx.update(1 / 30, camera);
+      for (const d of attached) {
+        let alive = 0;
+        for (const held of d.path ? fx.driver.sources(d.path) : [fx.driver])
+          for (let at = 0; at < held.pool.count; at++) if (held.pool.emitter[at] === d.emitter.index) alive++;
+        const name = d.emitter.name ?? d.key; peak[name] = Math.max(peak[name] ?? 0, alive);
+      }
+    }
+  } finally { fx.dispose(); }
+  return peak;
+}
 const warn = console.warn; console.warn = () => {};
 const rows = [];
 for (const folder of await folders(root)) {
@@ -94,11 +118,13 @@ for (const folder of await folders(root)) {
 console.warn = warn;
 await writeFile(join(out, 'attached-audit.json'), JSON.stringify(rows, null, 2));
 const cell = r => r.ok ? (r.empty ? '空' : `ok(${r.drawn})`) : `失败 ${r.error.replace(/\|/g, '/')}`;
-const md = ['| 目录 | id | 系统 | 附着发射器（lock/部件） | 被技能点到 | 修前 | 修后 | 切到新引擎 | 降级/跳过 |', '|---|---|---|---|---|---|---|---|---|',
-  ...rows.map(r => `| ${r.folder} | ${r.id} | ${r.system} | ${r.emitters.map(e => `${e.name}(${e.lock ?? '-'}${e.submeshes.length ? '/' + e.submeshes.join('+') : ''}${e.simple ? '/静态' : ''})`).join(', ')} | ${r.after.cued ? '是' : '否'} | ${cell(r.before)} | ${cell(r.after)} | ${r.switched ? '**是**' : ''} | ${(r.after.notes ?? []).join(', ')} |`)];
+const md = ['| 目录 | id | 系统 | 附着发射器（lock/部件） | 被技能点到 | 修前 | 修后 | 切到新引擎 | 降级/跳过 | 同时存活峰值 |', '|---|---|---|---|---|---|---|---|---|---|',
+  ...rows.map(r => `| ${r.folder} | ${r.id} | ${r.system} | ${r.emitters.map(e => `${e.name}(${e.lock ?? '-'}${e.submeshes.length ? '/' + e.submeshes.join('+') : ''}${e.simple ? '/静态' : ''})`).join(', ')} | ${r.after.cued ? '是' : '否'} | ${cell(r.before)} | ${cell(r.after)} | ${r.switched ? '**是**' : ''} | ${(r.after.notes ?? []).join(', ')} | ${Object.entries(r.after.alive ?? {}).map(([n, v]) => `${n}:${v}`).join(', ')} |`)];
 const totals = { systems: rows.length, cued: rows.filter(r => r.after.cued).length, beforeOk: rows.filter(r => r.before.ok).length,
   afterOk: rows.filter(r => r.after.ok).length, switched: rows.filter(r => r.switched).length,
-  reflectionFallback: rows.filter(r => r.after.notes?.some(n => n.startsWith('reflection-cube'))).map(r => r.id) };
+  reflectionFallback: rows.filter(r => r.after.notes?.some(n => n.startsWith('reflection-cube'))).map(r => r.id),
+  peakAlive: Math.max(0, ...rows.flatMap(r => Object.values(r.after.alive ?? {}))),
+  overFourCued: rows.filter(r => r.after.cued).flatMap(r => Object.entries(r.after.alive ?? {}).filter(([, v]) => v > 4).map(([n, v]) => `${r.id}:${n}:${v}`)) };
 md.unshift(`# 附着网格核对表\n\n实测方式：node + 真实加载器（esbuild 打包 src），贴图用 sharp 解码成像素（DataTexture），不是浏览器解码；素材根 ${root}。浏览器里的贴图解码、显卡相关问题此表查不到。\n\n${JSON.stringify(totals)}\n`);
 await writeFile(join(out, 'attached-audit.md'), md.join('\n') + '\n');
 console.log(JSON.stringify(totals));
