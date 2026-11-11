@@ -23,6 +23,10 @@ export function skillFeelFor(definitionId: string): boolean {
 export function skillFxOff(): boolean {
   return typeof location !== 'undefined' && new URLSearchParams(location.search).get('skillfx') === 'off';
 }
+/** ?attached=off: only the host-body overlays of vfx-ltk are switched off (an on/off pair measures what they add). */
+export function attachedOff(): boolean {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).get('attached') === 'off';
+}
 /** The charge color per sample champion (its main skin color); anything else charges in warm gold. */
 export const skillColor = (definitionId: string): number => SKILL_FX_TABLE[definitionId]?.color ?? SKILL_FX_DEFAULTS.color;
 
