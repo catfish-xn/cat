@@ -124,7 +124,7 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     expect(warn).toHaveBeenCalledWith('vfx-ltk:sample:reflection-cube:synthetic-only');
     warn.mockRestore(); f.library.dispose();
   });
-  it('also drops only the reflection when a 1:6 map has no faces to cut (a compressed KTX2 image), 9614ffb4 on the test server', async () => {
+  it('also drops only the reflection when a 1:6 map has no faces to cut (e.g. a compressed image), defensive', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const index = syntheticIndex(); Object.assign(index.assets, { 'packed.dds': 'textures/packed.ktx2' });
     const library = createVfxLibrary('/root/', {

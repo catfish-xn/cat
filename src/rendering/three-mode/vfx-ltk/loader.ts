@@ -217,7 +217,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   };
   const cube = (url: string) => {
     let held = cubes.get(url);
-    // A map that loads but cannot be cut into faces (no 1:6 strip, or a compressed KTX2 with no drawable image) answers
+    // A map that loads but cannot be cut into faces (no 1:6 strip, or an image with no drawable source) answers
     // null: the emitter then draws without its reflection. A map that fails to load still fails the system.
     if (!held) { held = texture(url).then(source => { try { return reflectionCube(source); } catch { return null; } })
       .then(t => { if (t && closed) { t.dispose(); ensureOpen(); } if (t) ownedTextures.add(t); return t; }); cubes.set(url, held); }
@@ -296,7 +296,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           if (slot !== 'reflection') loaded = await texture(url);
           else {
             // A reflection map the converter did not write as a cube strip drops only the reflection; the fill and rim still
-            // draw (W_Buff_Avatar2 58f996d2 failed whole on this, 11-11). Listed in notes so the format can be judged later.
+            // draw. Defensive: the deployed PNG strips (all 1:6) cut fine (11-11 audit on live assets). Listed in notes.
             loaded = await cube(url);
             if (!loaded) notes.push(`reflection-cube:${e.name}`);
           }
