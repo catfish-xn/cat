@@ -31,3 +31,20 @@ export function trimClip(clip: AnimationClip, start: number, end: number): Anima
   });
   return new AnimationClip(clip.name, clampedEnd - start, tracks);
 }
+
+/**
+ * Hold a clip's root bone in place horizontally: every key of `${bone}.position` keeps its own height (a jump still
+ * rises and lands) but takes `rest`'s x and z. Returns the source clip when it has no such track. Does not mutate it.
+ */
+export function holdRootInPlace(clip: AnimationClip, bone: string, rest: readonly [number, number, number]): AnimationClip {
+  const name = `${bone}.position`;
+  if (!clip.tracks.some(track => track.name === name && track.getValueSize() === 3)) return clip;
+  const tracks = clip.tracks.map(track => {
+    if (track.name !== name || track.getValueSize() !== 3) return track.clone();
+    const values = Array.from(track.values);
+    for (let i = 0; i < values.length; i += 3) { values[i] = rest[0]; values[i + 2] = rest[2]; }
+    const Track = track.constructor as TrackConstructor;
+    return new Track(track.name, Array.from(track.times), values);
+  });
+  return new AnimationClip(clip.name, clip.duration, tracks);
+}

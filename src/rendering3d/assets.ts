@@ -2,7 +2,8 @@ import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata } from './contracts';
-import { trimClip } from './clip-range';
+import { holdRootInPlace, trimClip } from './clip-range';
+import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
 export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
 export interface ModelLease extends ModelTemplate, CastMetadata {
@@ -97,6 +98,14 @@ export class ModelCache {
               return range ? trimClip(clip, range[0], range[1]) : clip;
             }),
           };
+        }
+        const inPlace = Object.hasOwn(IN_PLACE_CLIPS, id) ? IN_PLACE_CLIPS[id] : undefined;
+        const root = inPlace && model.animations.length ? model.scene.getObjectByName(ROOT_BONE) : undefined;
+        if (inPlace && root) {
+          // Held where the unit stands: the idle clip's first root key (the blend in and out then has no step), else the bind pose.
+          const idle = model.animations.find(clip => clip.name === definition?.animations?.idle)?.tracks.find(track => track.name === `${ROOT_BONE}.position`);
+          const rest = idle && idle.values.length >= 3 ? [idle.values[0], idle.values[1], idle.values[2]] as const : [root.position.x, root.position.y, root.position.z] as const;
+          model = { ...model, animations: model.animations.map(clip => inPlace.includes(clip.name) ? holdRootInPlace(clip, ROOT_BONE, rest) : clip) };
         }
         const segments = definition?.clipSegments;
         if (segments && model.animations.length) {
