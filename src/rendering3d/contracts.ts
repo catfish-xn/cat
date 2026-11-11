@@ -88,7 +88,12 @@ export interface BoardAlignment {
  * `lighting` (optional): a ChampionLighting JSON beside the manifest. Champions with `selfIllumination` are then lit by
  * it instead of the scene lights; without it (or on older roots) every model keeps the generic lit material.
  */
-export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string } }
+/**
+ * The arena's baked lightmap (Map22 `BakedLight`): an RGB(A) atlas sampled with the arena meshes' TEXCOORD_1, which the
+ * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space.
+ */
+export interface BoardLightmap { path: string; gamma: number; scale: number }
+export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string }; lightmap?: BoardLightmap }
 /**
  * Champion light for one board, built offline from the board's light data: six colours along the world axes
  * (+X, −X, +Y, −Y, +Z, −Z; display-encoded 0..1), blended by the squared world normal, scaled by `ambientScale`, plus the
@@ -312,6 +317,12 @@ function assertBoards(value: unknown, manifest: AssetManifest): void {
     if (entry.lighting !== undefined) {
       if (!entry.lighting || typeof entry.lighting.path !== 'string' || !/\.json$/i.test(entry.lighting.path)) throw new Error('invalid-board-lighting');
       assetUrl('', entry.lighting.path);
+    }
+    if (entry.lightmap !== undefined) {
+      const l = entry.lightmap;
+      if (!l || typeof l.path !== 'string' || !/\.(png|ktx2)$/i.test(l.path) || !finite(l.gamma) || l.gamma <= 0 || l.gamma > 4
+        || !finite(l.scale) || l.scale <= 0 || l.scale > 16) throw new Error('invalid-board-lightmap');
+      assetUrl('', l.path);
     }
   }
 }

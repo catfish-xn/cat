@@ -3,7 +3,8 @@
  * hex cells sit on the live grid. Display only: picking and commands keep using the grid math (picking.ts), never
  * this model. Without a board in the manifest, or until its model loads, the procedural tiles stay as they are.
  */
-import { Group, Vector3 } from 'three';
+import { Group, Vector3, type Object3D, type Texture } from 'three';
+import { applyArenaLightmap, type ArenaLightmap } from './arena-lightmap';
 import type { BoardAlignment, BoardEntry } from '../../rendering3d';
 import type { ModelLease } from '../../rendering3d';
 
@@ -64,10 +65,23 @@ export interface BoardArena {
 }
 
 /** Loads once (after a matching frame if grid is declared); a missing or placeholder model leaves no arena. */
-export function createBoardArena(parent: Group, alignment: BoardAlignment, load: () => Promise<ModelLease>, onReady: () => void, grid?: BoardEntry['grid']): BoardArena {
+/** The arena's baked lightmap (arena-lightmap.ts): its texture is read once the model is in; failing that, none is drawn. */
+export interface ArenaLightmapSource { readonly gamma: number; readonly scale: number; load(): Promise<Texture> }
+
+export function createBoardArena(parent: Group, alignment: BoardAlignment, load: () => Promise<ModelLease>, onReady: () => void, grid?: BoardEntry['grid'],
+  lightmap?: ArenaLightmapSource): BoardArena {
   const root = new Group();
   root.name = 'render3d-board-arena';
   let lease: ModelLease | null = null, frame: ArenaFrame | null = null, disposed = false, started = false;
+  let baked: { texture: Texture; applied: ArenaLightmap | null } | null = null;
+  const bake = (scene: Object3D) => {
+    if (!lightmap) return;
+    void lightmap.load().then(texture => {
+      if (disposed || lease === null) { texture.dispose(); return; }
+      baked = { texture, applied: applyArenaLightmap(scene, texture, lightmap) };
+      if (!baked.applied) { texture.dispose(); baked = null; }
+    }).catch(() => { /* drawn without the lightmap */ });
+  };
   const compatible = () => !grid || (frame?.columns === grid.columns && frame?.rows === grid.rows);
   const apply = () => {
     root.visible = compatible();
@@ -83,6 +97,7 @@ export function createBoardArena(parent: Group, alignment: BoardAlignment, load:
       lease = loaded;
       root.add(loaded.scene);
       parent.add(root);
+      bake(loaded.scene);
       apply();
       if (compatible()) onReady();
     }).catch(() => { /* keeps the procedural board */ });
@@ -92,6 +107,10 @@ export function createBoardArena(parent: Group, alignment: BoardAlignment, load:
   return {
     get ready() { return lease !== null && compatible(); },
     place(next) { frame = next; apply(); start(); },
-    dispose() { disposed = true; root.removeFromParent(); lease?.release(); lease = null; },
+    dispose() {
+      disposed = true; root.removeFromParent();
+      baked?.applied?.dispose(); baked?.texture.dispose(); baked = null;
+      lease?.release(); lease = null;
+    },
   };
 }
