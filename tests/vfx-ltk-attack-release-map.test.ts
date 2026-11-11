@@ -3,7 +3,7 @@ import { AnimationClip, Camera, Group, NumberKeyframeTrack, Scene, Texture, type
 import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
 import type { AttackRelease } from '../src/rendering3d/contracts';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, releaseDelay, type LtkPlayOptions, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, releaseCueDelay, releaseDelay, type LtkPlayOptions, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 
@@ -74,6 +74,18 @@ describe('attack cue segment mapping (LtkPlayOptions.release)', () => {
       expect(mapped).toBeGreaterThanOrEqual(28);
       expect(mapped).toBeLessThan(plain - 25);
       expect(await firstDrawnStep([hit(0.6)], { releaseShift: 0.4 - 0.8 })).toBeLessThan(mapped - 5);
+    });
+    it('after the release, a projectile or hit cue only moves with it while other cues follow the tail speed', async () => {
+      // Synthetic: release frame 0.4 s lands at 0.2 s, tail at 4×; cues 0.6 s after the start (0.2 s after the release).
+      const release = { atSeconds: 0.2, clipSeconds: 0.4, tailSpeed: 4 };
+      const shiftOnly = await firstDrawnStep([hit(0.6)], { releaseShift: 0.2 - 0.4 });
+      expect(await firstDrawnStep([hit(0.6)], { release })).toBe(shiftOnly);
+      // Any other attack cue after the release follows the tail speed: 0.2 + 0.2 / 4 = 0.25 s.
+      expect(releaseCueDelay({ delay: 0.6, event: 'cast-start' }, release)).toBeCloseTo(0.25);
+      expect(releaseCueDelay({ delay: 0.6, event: 'hit' }, release)).toBeCloseTo(0.4);
+      expect(releaseCueDelay({ delay: 0.6, event: 'projectile' }, release)).toBeCloseTo(0.4);
+      // Before the release every cue scales with the head, projectiles and hits included.
+      expect(releaseCueDelay({ delay: 0.2, event: 'hit' }, release)).toBeCloseTo(0.1);
     });
     it('rejects a non-number, negative or zero release', () => {
       const library = createVfxLibrary('/root/', { readJson: async () => ({ version: 1, systems: {}, assets: {}, skills: { jinx: [hit(0.5)] } }), readTexture: async () => new Texture() });
