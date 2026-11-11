@@ -314,3 +314,15 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
 };
+
+/**
+ * Attached-mesh emitters that keep covering the whole host although they name parts, by system and emitter name.
+ * Only for a cued emitter that drew before the part filter (11-11) and whose parts our host model does not hold, so the
+ * filter would take away something the board shows today. Each stays until its host model is split into those parts.
+ */
+export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = {
+  // Jinx R_Cast_Mouth: Avatar_BodyLight names Weapon (her launcher); our Jinx model is one Body part (11-11 parts audit).
+  '7e6f06b5': ['Avatar_BodyLight'],
+  // Leona W_buf: Avatar3 names a part hashed 0xddb924a1 that is none of her model's Body, Sword, Equipment (11-11).
+  '8d9a4ccc': ['Avatar3'],
+};

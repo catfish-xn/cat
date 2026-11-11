@@ -41,6 +41,17 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     expect(warn).toHaveBeenCalledWith('vfx-ltk:attached-parts-missing:synthetic-only:host-without-cape');
     fx.dispose(); library.dispose();
   });
+  it('keeps a listed cued emitter on the whole body while its host model lacks the part (ATTACHED_WHOLE_BODY)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const index = { ...syntheticIndex(), systems: { '7e6f06b5': 'systems/listed.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index
+      : syntheticSystem({ emitterName: { type: 'string', value: 'Avatar_BodyLight' }, ...attached({ mSubmeshesToDraw: parts('Weapon') }) }), readTexture: async () => new Texture() });
+    const prepared = await library.load('7e6f06b5');
+    const root = new Group(), body = new Group(), whole = part('Body'); root.add(body); body.add(whole);
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body } });
+    expect(fx.attached).toHaveLength(ATTACHED_SLOTS); expect(warn).not.toHaveBeenCalled();
+    fx.dispose(); library.dispose();
+  });
 });
 
 describe('attached-mesh screen cap and switch', () => {
