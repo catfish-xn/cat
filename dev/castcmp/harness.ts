@@ -46,7 +46,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   }
   const me = { id: 'me', definitionId: unit, team: 'player', starLevel: Number(params.get('star') ?? 3), ...hex(4 + 1, 3), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 }, ...(params.get('form') ? { form: params.get('form') } : {}) };
-  const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: 1, ...hex(row, col), alive: true, visible: true,
+  const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: Number(params.get('foestar') ?? 1), ...hex(row, col), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });
   const tRow = Math.max(0, 5 - dist);
   // ?nfoes=N (1-4): how many dummies stand in front of the caster.
@@ -129,7 +129,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const units: any[] = [
     { id: 'me', definitionId: unit, team: 'player', starLevel: star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(form ? { form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4)))).map(([id, col, row]) =>
-      ({ id, definitionId: foe, team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } } })),
+      ({ id, definitionId: foe, team: 'enemy', starLevel: Number(params.get('foestar') ?? 1), location: { kind: 'board', cell: { col, row } } })),
   ];
   let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units } as any);
   const frames: Piece[][] = [], events: any[][] = [];

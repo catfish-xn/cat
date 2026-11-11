@@ -1,4 +1,4 @@
-// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--unbind 1] [--attached off] [--nfoes 1-4] [--gl gpu|swift]
+// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--unbind 1] [--attached off] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
 // Records one cast as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
 const { launchOptions, timeline, timer } = require('./common.cjs');
@@ -23,7 +23,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   mark('harness ready');
