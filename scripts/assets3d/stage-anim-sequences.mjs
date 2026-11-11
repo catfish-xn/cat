@@ -556,6 +556,19 @@ function formatNodeSummary(node) {
   return `${node.kind}(${node.keyName})`;
 }
 
+/**
+ * Graph keys tried, in order, for a champion's cast when its spell data names nothing the graph has.
+ * Swain's falls back to Spell2. Singed: TFT13_SingedSpell names "Spell1"; the graph spells it Spell_1 (a section of
+ * Spell_3.anm: the canister swung round to the front and held up as a shield, the original's block). Spell2_Sequence
+ * starts mid-swing and flips the canister within a few frames, which read as a twitch (user 11-11).
+ */
+export function castFallbackKeys(id) {
+  const keys = ['Spell', 'Spell1', 'SpellCast'];
+  if (id === 'swain') keys.push('Spell2');
+  if (id === 'singed') keys.push('Spell_1');
+  return keys;
+}
+
 export async function stageAnimSequences({
   assetsRoot,
   extractedRoot,
@@ -853,12 +866,7 @@ export async function stageAnimSequences({
       origCastNode = await buildScriptCastNode(id, key => resolveNode(fnv1a(key)));
     }
     if (!origCastNode) {
-      const fallbackKeys = ['Spell', 'Spell1', 'SpellCast'];
-      if (id === 'swain') fallbackKeys.push('Spell2');
-      // Singed: TFT13_SingedSpell names "Spell1"; the graph spells it Spell_1 (a section of Spell_3.anm: the canister
-      // swung round to the front and held up as a shield, the original's block). Spell2_Sequence starts mid-swing
-      // and flips the canister within a few frames, which read as a twitch (user 11-11).
-      if (id === 'singed') fallbackKeys.push('Spell_1');
+      const fallbackKeys = castFallbackKeys(id);
       for (const fk of fallbackKeys) {
         const kh = fk.startsWith('0x') ? Number.parseInt(fk, 16) : fnv1a(fk);
         const r = await resolveNode(kh);
