@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { OVERHEAD_FOLLOW_SECONDS, OverheadFollow } from '../src/rendering/three-mode/overhead-follow';
+import { OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow } from '../src/rendering/three-mode/overhead-follow';
 
 // Synthetic skeleton, made-up integers.
 const body = () => {
@@ -35,10 +35,11 @@ describe('overhead follow', () => {
     expect(OverheadFollow.of(new Group(), [], undefined).update(1, null).length()).toBe(0);
   });
 
-  it('eases toward the travel instead of jumping', () => {
+  it('eases a small change and takes a large one at once', () => {
     const plain = new OverheadFollow();
-    const first = plain.update(OVERHEAD_FOLLOW_SECONDS, { x: 10, z: 0 }).x;
-    expect(first).toBeGreaterThan(5); expect(first).toBeLessThan(7);
-    expect(plain.update(0, { x: 10, z: 0 }).x).toBe(first);
+    const first = plain.update(OVERHEAD_FOLLOW_SECONDS, { x: 4, z: 0 }).x; // within OVERHEAD_SNAP_DISTANCE: eased
+    expect(first).toBeGreaterThan(2); expect(first).toBeLessThan(3);
+    expect(plain.update(0, { x: 4, z: 0 }).x).toBe(first);
+    expect(plain.update(0.001, { x: first + OVERHEAD_SNAP_DISTANCE + 5, z: 0 }).x).toBe(first + OVERHEAD_SNAP_DISTANCE + 5); // a jump: no lag
   });
 });
