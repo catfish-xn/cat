@@ -76,7 +76,7 @@ export interface LtkPlayOptions {
   cancelWithSource?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
   // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
@@ -253,12 +253,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     /** Like stopAction, but a running system fades out over `seconds` instead of vanishing in one frame. */
     fadeAction(sourceId: string, action: TimelineAction, seconds: number) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) { run.fx.fade(seconds); run.until = Math.min(run.until, clock + seconds); }
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) { run.fx.fade(seconds); run.fading = true; run.until = Math.min(run.until, clock + seconds); }
     },
-    /** True while a cue of this action from the source is queued or running. */
+    /** True while a cue of this action from the source is queued or running; a stopped or fading run does not count. */
     playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
       for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.fading) return true;
       return false;
     },
     stopUnit(id: string) {

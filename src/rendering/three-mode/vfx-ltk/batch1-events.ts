@@ -4,8 +4,16 @@ import type { TimelineAction, TimelineVariant } from './timeline';
 /** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
 export const SOFT_STOP_SECONDS = 0.6;
 
+/** Play one extra visual; a `once` visual is skipped while its source already runs that action at full strength. */
+export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], delay: number, action: TimelineAction, variant?: TimelineVariant): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
+  if (fx.once && ltk.playing(fx.sourceId, fx.action)) return false;
+  return ltk.play(fx.champion, fx.sourceId, fx.targets, 0, fx.action, fx.variant);
+}
+
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
+  /** Skip it while the source already runs this action at full strength (one that is fading out does not count). */
+  once?: boolean;
 }
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
@@ -53,11 +61,12 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (event.eventSeq <= lastSeq) { plan.fresh = !tracked; return plan; }
           lastSeq = event.eventSeq;
         }
-        // Singed's self buff (W_Self_Buff) runs from his cast until his damage reduction expires; his cast effects stay on
-        // their own path, so it is an extra passive cue rather than a tracked champion's cast.
+        // Singed's self buff (W_Self_Buff) runs from his cast until his damage reduction ends for any reason (expired, cleansed,
+        // replaced, ...) or he dies; his cast effects stay on their own path, so it is an extra passive cue rather than a
+        // tracked champion's cast. A cast while it still runs does not stack a second one.
         if (owner !== undefined && definition(owner) === 'singed') {
-          if (event.type === 'cast' && event.completed !== false) plan.extra.push({ champion: 'singed', sourceId: event.sourceId, targets: [], action: 'passive' });
-          else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason === 'expired') plan.stopPassive = event.targetId;
+          if (event.type === 'cast' && event.completed !== false) plan.extra.push({ champion: 'singed', sourceId: event.sourceId, targets: [], action: 'passive', once: true });
+          else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason !== 'applied' && event.reason !== 'refreshed') plan.stopPassive = event.targetId;
           else if (event.type === 'death') plan.stopPassive = event.unitId;
         }
         if (!tracked) return plan;

@@ -1,7 +1,7 @@
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
-import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
+import { createBatch1VfxEvents, playBatch1Visual } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
 import { BATCH1_DIRECTORIES, BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
@@ -28,15 +28,21 @@ describe('batch 1 observed forms and passive/end triggers', () => {
       expect(plan.skipCast).toBeUndefined(); expect(plan.fresh).toBe(true);
     }
   });
-  it('starts Singed\'s self buff with his cast and stops it when his damage reduction expires or he dies; his cast stays untracked', () => {
+  it('starts Singed\'s self buff with his cast and stops it when his damage reduction ends for any reason or he dies; his cast stays untracked', () => {
     const events = createBatch1VfxEvents(id => id);
     const [plan] = events.batch([cast('singed', 1)]);
-    expect(plan.extra).toEqual([{ champion: 'singed', sourceId: 'singed', targets: [], action: 'passive' }]);
+    expect(plan.extra).toEqual([{ champion: 'singed', sourceId: 'singed', targets: [], action: 'passive', once: true }]);
     expect(plan.skipCast).toBeUndefined(); expect(plan.stopCast).toBeUndefined();
     expect(events.batch([{ ...cast('singed', 2), completed: false } as DisplayCombatEvent])[0].extra).toEqual([]);
     const end = { type: 'statusChanged', eventSeq: 3, tick: 80, targetId: 'singed', kind: 'damage-reduction', reason: 'expired', effectiveMagnitudeBps: 0 } as DisplayCombatEvent;
     expect(events.batch([end])[0].stopPassive).toBe('singed');
     expect(events.batch([{ type: 'death', eventSeq: 4, tick: 81, unitId: 'singed' } as DisplayCombatEvent])[0].stopPassive).toBe('singed');
+    let seq = 10;
+    for (const reason of ['cleansed', 'source-lost', 'death-cleanup', 'replaced', 'combat-end'])
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].stopPassive).toBe('singed');
+    for (const reason of ['applied', 'refreshed'])
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].stopPassive).toBeUndefined();
+    expect(events.batch([{ ...end, eventSeq: seq++, kind: 'stun' } as DisplayCombatEvent])[0].stopPassive).toBeUndefined();
     expect(events.batch([cast('singed', 1)])[0].extra).toEqual([]); // a replayed cast plays nothing again
   });
   it('suppresses only VFX selection on sequence rollback and leaves event facts intact', () => {
@@ -153,13 +159,17 @@ describe('batch 1 catalogue and runtime forms', () => {
     const runtime = createLtkRuntime(library, scene, () => source, { budget }); await runtime.warm('buffed');
     expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true);
     runtime.update(.1, new Camera()); runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
-    runtime.fadeAction('source', 'passive', .6);
+    // Two casts in a row keep one buff: a `once` visual is skipped while the first runs at full strength.
+    const again = { champion: 'buffed', sourceId: 'source', targets: [], action: 'passive' as const, once: true };
+    expect(playBatch1Visual(runtime, again)).toBe(false); runtime.update(.05, new Camera()); expect(runtime.active).toBe(1);
+    // A fading one no longer counts, so a cast during the fade starts a fresh buff (checked after it below).
+    runtime.fadeAction('source', 'passive', .6); expect(runtime.playing('source', 'passive')).toBe(false);
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(1);
     runtime.update(.4, new Camera()); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
     // Reduced motion never starts the buff; a fade with nothing running is a no-op and leaves nothing behind.
     runtime.fadeAction('source', 'passive', .6); runtime.fadeAction('nobody', 'passive', .6); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(0);
     // A parked system replays at full strength for its whole duration, not as the tail of the earlier fade.
-    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true);
+    expect(playBatch1Visual(runtime, again)).toBe(true);
     runtime.update(.05, new Camera()); runtime.update(2, new Camera()); expect(runtime.active).toBe(1);
     // A round change mid-fade clears it at once.
     runtime.fadeAction('source', 'passive', .6); runtime.update(.1, new Camera()); runtime.clear();
