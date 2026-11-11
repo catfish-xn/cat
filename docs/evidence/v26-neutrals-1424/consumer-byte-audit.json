@@ -3437,9 +3437,9 @@
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8342,
+      "currentBytes": 8783,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a34e299961e4927830e01c6b1adb99ef28478a349590d3040d52f2c865fd8cdc",
+      "currentSha256": "78a9d85f2a2546b97c9bb55f73dd70dc9ae9ad4d99bb38fef41d777cd0a5f1ef",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {
