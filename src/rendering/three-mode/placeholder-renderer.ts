@@ -56,6 +56,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
+import { OverheadFollow } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
@@ -338,6 +339,10 @@ interface PieceView {
   leanOffset: number;
   /** Seconds into a forced move's hop (pulled, grabbed, knocked back), null when none. */
   hop: number | null;
+  /** The world (x, z) the lunge has moved the body by (lungeOffset before it was turned into the body's frame). */
+  lungeWorld: { x: number; z: number };
+  /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
+  follow: OverheadFollow;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -785,7 +790,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const turn = view.root.rotation.y, cos = Math.cos(turn), sin = Math.sin(turn);
     const localX = x * cos - z * sin, localZ = x * sin + z * cos, applied = view.lungeOffset;
     if (view.body) { view.body.position.x += localX - applied.x; view.body.position.z += localZ - applied.z; }
-    applied.x = localX; applied.z = localZ;
+    applied.x = localX; applied.z = localZ; view.lungeWorld.x = x; view.lungeWorld.z = z;
   };
   function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
   // Knock-ups lift the body the same way: a change from what was applied, never its fitted y.
@@ -853,7 +858,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; view.starScale = 1; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
-    view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
+    view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP; view.follow = new OverheadFollow();
     view.body.scale.multiplyScalar(view.model.scale);
     view.starHeight = PAWN_HEIGHT * view.model.scale + STAR_GAP;
     lighting.registerBody(view.body);
@@ -932,6 +937,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       lighting.registerBody(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.mixer.setForm(view.form);
+      view.follow = OverheadFollow.of(lease.scene, lease.animations, lease.animationNames.idle);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
@@ -970,7 +976,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
-      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1 };
+      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow() };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1921,24 +1928,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
+      // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
+      // (a jump, a dash) on top of its spot; the knock-up lift is already in `lift`.
+      const travel = view.body ? view.follow.update(seconds, view.lungeWorld) : null;
+      const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
+      const overY = view.root.position.y + (travel?.y ?? 0);
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
       const benchedInCombat = !!fighting && view.onBench;
       view.overhead.setBarsHidden(benchedInCombat);
       if (view.stars) {
         view.stars.setLevel(starUps.level(id, view.starLevel));
         view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
-        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
+        view.stars.object.position.set(overX, overY + view.starHeight + lift, overZ);
         // The original star emblem on the bar replaces the star row (as in the client); the row stays as a fallback.
         view.stars.object.visible = view.root.visible && !view.overhead.tiered && !benchedInCombat && view.alive;
       }
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
-      view.overhead.object.position.copy(view.root.position)
-        .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      view.overhead.object.position.set(overX, overY + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2), overZ);
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + height * CONTROL_3D.headShare + lift);
+        view.halo.object.position.set(overX, overY + height * CONTROL_3D.headShare + lift, overZ);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).
