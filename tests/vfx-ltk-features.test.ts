@@ -124,6 +124,19 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     expect(warn).toHaveBeenCalledWith('vfx-ltk:sample:reflection-cube:synthetic-only');
     warn.mockRestore(); f.library.dispose();
   });
+  it('also drops only the reflection when a 1:6 map has no faces to cut (a compressed KTX2 image), 9614ffb4 on the test server', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const index = syntheticIndex(); Object.assign(index.assets, { 'packed.dds': 'textures/packed.ktx2' });
+    const library = createVfxLibrary('/root/', {
+      readJson: async url => url.endsWith('index.json') ? index : syntheticSystem({ primitive: struct('VfxPrimitiveAttachedMesh', {}),
+        reflectionDefinition: struct('VfxReflectionDefinitionData', { fresnel: num(2), reflectionMapTexture: asset('packed.dds') }) }),
+      readTexture: async url => { const t = new Texture(); if (url.endsWith('.ktx2')) t.image = { width: 4, height: 24 }; return t; },
+    });
+    const prepared = await library.load('sample');
+    expect(prepared.drawn).toHaveLength(1); expect(prepared.samplers.get('0')!.reflection).toBeNull();
+    expect(prepared.notes).toEqual(['reflection-cube:synthetic-only']);
+    warn.mockRestore(); library.dispose();
+  });
   it.each(['GhostImages1', 'AvatarDash2', 'dissolve'])('keeps drawing the frozen-pose/dissolve attached emitter %s as before and notes it (phase two)', async name => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const f = await load({ emitterName: { type: 'string', value: name }, primitive: struct('VfxPrimitiveAttachedMesh', {}) });

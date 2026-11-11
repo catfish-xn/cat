@@ -206,7 +206,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   const ownedTextures = new Set<Texture>(), ownedGeometry = new Set<BufferGeometry>();
   const children = new Map<string, VfxLibrary>();
   const urlOf = (path: string) => vfxUrl(root, (options.directory ?? '') + path);
-  const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture>>();
+  const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture | null>>();
   const birthMeshes = new Map<string, Promise<EmissionSampler>>();
   const black = new DataTexture(new Uint8Array(4), 1, 1); black.needsUpdate = true;
   const ensureOpen = () => { if (closed) throw new VfxLoadError('closed', 'library'); };
@@ -217,7 +217,10 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   };
   const cube = (url: string) => {
     let held = cubes.get(url);
-    if (!held) { held = texture(url).then(reflectionCube).then(t => { if (closed) { t.dispose(); ensureOpen(); } ownedTextures.add(t); return t; }); cubes.set(url, held); }
+    // A map that loads but cannot be cut into faces (no 1:6 strip, or a compressed KTX2 with no drawable image) answers
+    // null: the emitter then draws without its reflection. A map that fails to load still fails the system.
+    if (!held) { held = texture(url).then(source => { try { return reflectionCube(source); } catch { return null; } })
+      .then(t => { if (t && closed) { t.dispose(); ensureOpen(); } if (t) ownedTextures.add(t); return t; }); cubes.set(url, held); }
     return held;
   };
   const assetPath = (named: NamedAsset) => {
@@ -294,10 +297,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           else {
             // A reflection map the converter did not write as a cube strip drops only the reflection; the fill and rim still
             // draw (W_Buff_Avatar2 58f996d2 failed whole on this, 11-11). Listed in notes so the format can be judged later.
-            loaded = await cube(url).catch((error: unknown) => {
-              if (error instanceof Error && error.message.startsWith('reflection-cube')) { notes.push(`reflection-cube:${e.name}`); return null; }
-              throw error;
-            });
+            loaded = await cube(url);
+            if (!loaded) notes.push(`reflection-cube:${e.name}`);
           }
           ensureOpen(); (bundle as unknown as Record<string, Texture | null>)[slot] = loaded;
         }
