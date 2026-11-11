@@ -26,7 +26,7 @@ const combat = ['category-five', 'long-distance-pals', 'sated-spellweaver', 'ove
 // needs no augment/crown history), long-distance-pals 14 (was 49), sated-spellweaver 37 (was 42).
 const late: Record<string, [number, string]> = {
  'lategame-specialist': [107, '3-2'], 'slammin-plus': [43, '3-2'],
- 'invested-plus': [29, '3-2'], 'invested-plus-plus': [12, '4-2'],
+ 'invested-plus': [29, '3-2'], 'invested-plus-plus': [90, '4-2'], // 90 (was 12): first seed from 1 that passes after Nunu's 3 s cast lock; same in b4reroll
  'long-distance-pals': [14, '3-2'], 'sated-spellweaver': [37, '3-2'], 'overheal': [11, '3-2'],
 };
 const entries = ['JSON', 'object', 'serialized'] as const;
