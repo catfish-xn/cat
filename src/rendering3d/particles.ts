@@ -24,6 +24,14 @@ export interface ParticleOptions {
   materials?: ParticleMaterialPool;
   /** Shared live-particle cap across effects; particles past it are not born. */
   budget?: ParticleBudget;
+  /**
+   * v2 only: how many times size0 a quad or arbitrary quad spans (default 1). The original treats scale0 as a
+   * half-extent (vfx-ltk materials.ts REACH = 2); hosts that size effects the original's way pass 2. Rays are not
+   * affected: the original draws a ray scale0.x across and scale0.y along (vfx-ltk shaders/quad.ts RAY reads the
+   * corner, not the reach), as v2 already does. Camera unit quads (REACH 1) never reach v2: the exporter rejects
+   * that primitive (scripts/assets3d/particles.mjs), and no Set 13 system uses one.
+   */
+  quadReach?: number;
 }
 export interface ParticleSkip { emitterIndex: number; kind: string; reason: string }
 /** Short, stable code for a failed mesh read: HTTP status, the adapter's own code, or `read-failed`. */

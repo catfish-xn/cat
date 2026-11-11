@@ -242,7 +242,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
       expect(loads).not.toHaveBeenCalled();
       expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['start', 'hit']);
     } else {
-      expect(loads).toHaveBeenCalledExactlyOnceWith('flash', 1, undefined);
+      expect(loads).toHaveBeenCalledExactlyOnceWith('flash', 1, undefined, { quadReach: 2 });
       expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(0);
       expect(debug().scene.children.filter(o => o.name === 'ltk-vfx')).toEqual([]);
     }
@@ -256,8 +256,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); loads.mockClear();
     listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
     for (let i = 0; i < 6; i++) await advance(100);
-    expect(loads).toHaveBeenCalledWith(SINGED_BUFF, 1.5, 120, ['ray']);
-    expect(loads.mock.calls.filter(([id]) => id === SINGED_BUFF).every(call => (call[3] as readonly string[] | undefined)?.includes('ray'))).toBe(true);
+    expect(loads).toHaveBeenCalledWith(SINGED_BUFF, 1.5, 120, { quadReach: 2, omitKinds: ['ray'] });
+    expect(loads.mock.calls.filter(([id]) => id === SINGED_BUFF).every(call => call[3]?.omitKinds?.includes('ray'))).toBe(true);
   });
 
   it('a cast begun after 1.2 seconds hidden starts at its own time on the first visible frame', async () => {

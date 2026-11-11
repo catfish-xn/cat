@@ -2151,9 +2151,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 36406,
+      "currentBytes": 36429,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "9dccaa0b9f8779ce2c320448637ae838191123fd42f0d92153a7025cab2dc015",
+      "currentSha256": "c335490463f6f727a9bf3ebfd92291aaa10babb909888f9f1a23bbc908393cbd",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-lighting.test.ts": {
@@ -2263,9 +2263,9 @@
     },
     "tests/rendering3d-particles-v2.test.ts": {
       "previousBytes": 32759,
-      "currentBytes": 33966,
+      "currentBytes": 34693,
       "previousSha256": "10a3f4d9b64f7fa09a167e08b114aa1b8764d21f5917e8400459596ec196e84c",
-      "currentSha256": "b5ebbd476d075384170af97f6f69d366cfe0a37ae50ad59ac95ec5c681df08e8",
+      "currentSha256": "507d05432b3a0c296adf7e9772d04880b06b126b83f3fd6217bce2fc3ca20948",
       "firstDifferentByte": 23949
     },
     "tests/rendering3d-player-damage.test.ts": {
@@ -2358,11 +2358,18 @@
       "currentSha256": "a410d2fcb283f42e86a043fe2db1867cabb1911ff0244025a582e29d59a9ebed",
       "firstDifferentByte": 295
     },
+    "tests/rendering3d-skill-feel.test.ts": {
+      "previousBytes": 5033,
+      "currentBytes": 5055,
+      "previousSha256": "6db01a7795273eb7be0b94d16521682df7aae1fb8db27b02b29df615330f0a2c",
+      "currentSha256": "ae3faf473a8b127e2bc274739b0548fc3a8a23c73af24d518097e03a2d7d99f9",
+      "firstDifferentByte": 4335
+    },
     "tests/rendering3d-skill-fx-table.test.ts": {
       "previousBytes": 3437,
-      "currentBytes": 4133,
+      "currentBytes": 4181,
       "previousSha256": "c0be64de79768f1811de7b6a18173e3ca0f36e8a9841697ff82eba4bc76c8576",
-      "currentSha256": "d73dac3a71cd25dcd6d212d556404d57323524a1ea5a2591f0fe603159c86d69",
+      "currentSha256": "7303e646a31ad35e5ce93335e1d41de7ba35768c6f781f5fa87c92c85cb58e28",
       "firstDifferentByte": 133
     },
     "tests/rendering3d-star-body-scale.test.ts": {
