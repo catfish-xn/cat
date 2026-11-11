@@ -1,6 +1,6 @@
 /**
  * Dev-only still viewer for old-path effects (effect-library / particles-v2), for colour reviews; not part of any build.
- * /dev/fx-oldpath/?id=<effect id>&assets=<asset root url>&bg=<image url>[&scale=0.44&y=0]; then `await __show(seconds)`
+ * /dev/fx-oldpath/?id=<effect id>&assets=<asset root url>&bg=<image url>[&scale=0.281&y=0&legacy=1 (extras look)]; then `await __show(seconds)`
  * renders the effect at that age over the background image with the board camera's tilt. Effects play the way the
  * renderer plays them (effect-library, FX_SCALE world scale), so a shader change shows as it does in game.
  */
@@ -20,7 +20,7 @@ camera.position.set(0, 330, 300); camera.lookAt(0, 20, 0);
 const manifest = await (await fetch(root + 'manifest.json')).json();
 const reader = createAssetReader(renderer, async url => { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.blob(); });
 const library = createEffectLibrary(manifest, root, reader);
-const fx = await library.load(id, 30, undefined, { quadReach: 2 });
+const fx = await library.load(id, 30, undefined, { quadReach: 2, legacyOutputEncode: params.get('legacy') === '1' });
 fx.object.scale.setScalar(Number(params.get('scale') ?? 0.281)); fx.object.position.y = Number(params.get('y') ?? 0);
 scene.add(fx.object);
 let age = 0;

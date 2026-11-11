@@ -27,7 +27,8 @@ void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.
  * NoColorSpace (their stored sRGB bytes) and the document colors are League's own gamma-space numbers, so the value is
  * already display-ready; the renderer's sRGB output conversion encoded it a second time, lifting every color (11-11:
  * Ambessa's crimson 0.60/0.04/0.13 drew as pink 0.80/0.23/0.40, a pale wash). The vfx-ltk engine and the original write
- * the value as is.
+ * the value as is. `legacyEncode` keeps that second encode for effects whose colors were set by eye on it (see
+ * ParticleOptions.legacyOutputEncode).
  */
 export const fragmentShader = `uniform sampler2D map; uniform bool hasMap;
 uniform vec3 tint; uniform float opacity; uniform float dissolve;
@@ -40,6 +41,8 @@ void main(){
  gl_FragColor=vec4(texel.rgb*tint,texel.a*opacity);
  #include <tonemapping_fragment>
 }`;
+/** The same shader with the renderer's sRGB output conversion kept (the look before 11-11). */
+export const legacyEncode = (shader: string): string => shader.replace(/\n}$/, '\n #include <colorspace_fragment>\n}');
 
 /**
  * Particle materials kept for reuse, per shader variant (`key`): an effect given a pool hands its materials back on

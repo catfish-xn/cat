@@ -44,7 +44,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
     const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
-      effects: { flash: { path: 'flash.json' }, [SINGED_BUFF]: { path: 'buff.json' } },
+      effects: { flash: { path: 'flash.json' }, [SINGED_BUFF]: { path: 'buff.json' }, 'player-damage-mis': { path: 'pdm.json' }, 'player-damage-tar': { path: 'pdt.json' } },
       actionEffects: { ...Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])), singed: { attack: ['flash'], cast: [SINGED_BUFF] } } };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.endsWith('manifest.json')) return Response.json(manifest);
@@ -263,6 +263,17 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     for (let i = 0; i < 6; i++) await advance(100);
     expect(loads).toHaveBeenCalledWith(SINGED_BUFF, 1.5, 120, { quadReach: 2, omitKinds: ['ray'] });
     expect(loads.mock.calls.filter(([id]) => id === SINGED_BUFF).every(call => call[3]?.omitKinds?.includes('ray'))).toBe(true);
+  });
+
+  // 11-11 (Ambessa 发糊): combat effects are written raw (their calls above carry no flag); the non-combat extras keep the
+  // old sRGB output encode, as their colors were chosen on it.
+  it('loads the non-combat extras (player damage) with the legacy output encode', async () => {
+    loads.mockClear();
+    listener.playerDamage!({ key: 'r1', target: 'me', damage: 5, sources: [{ col: 0, row: 0 }] });
+    for (let i = 0; i < 30; i++) await advance(100);
+    const extras = loads.mock.calls.filter(([id]) => String(id).startsWith('player-damage-'));
+    expect(extras.length).toBeGreaterThan(0);
+    expect(extras.every(call => call[3]?.legacyOutputEncode === true)).toBe(true);
   });
 
   // User 11-11: the bar stayed put while the model moved. Bars, star row and stun ring follow the drawn body.

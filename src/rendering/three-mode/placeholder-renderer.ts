@@ -489,7 +489,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number, maxParticles?: number) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
-    return effects.load(id, maxDuration, maxParticles);
+    // Non-combat extras (carousel, tabletop orbs and damage, trait props) keep the old sRGB output (ParticleOptions.legacyOutputEncode).
+    return effects.load(id, maxDuration, maxParticles, { legacyOutputEncode: true });
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: defaultLegendId(),
     font: canvasFont, ui: originalUi,

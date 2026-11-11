@@ -183,3 +183,12 @@ describe('normalized 3D particle interpreter', () => {
     } finally { fetchMock.mockRestore(); }
   });
 });
+
+describe('v1 output color conversion (11-11 Ambessa 发糊)', () => {
+  it('writes raw by default and keeps the sRGB output encode only when asked', () => {
+    const raw = new ParticleEffect(document(emitter())), legacy = new ParticleEffect(document(emitter()), { legacyOutputEncode: true });
+    expect(mesh(raw).material.fragmentShader).not.toContain('colorspace_fragment');
+    expect(mesh(legacy).material.fragmentShader).toContain('#include <colorspace_fragment>');
+    raw.dispose(); legacy.dispose();
+  });
+});

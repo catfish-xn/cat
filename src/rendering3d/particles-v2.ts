@@ -2,7 +2,7 @@ import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Euler, Float32Buff
   Matrix4, Mesh, MultiplyBlending, NormalBlending, PlaneGeometry, Quaternion, ShaderMaterial, Vector3,
   type Camera } from 'three';
 import type { BirthValue, ParticleDocumentV2, ParticleEmitterV2 } from './contracts';
-import { colorChannels, fragmentShader, sampleCurve, vertexShader } from './particle-common';
+import { colorChannels, fragmentShader, legacyEncode, sampleCurve, vertexShader } from './particle-common';
 import type { ParticleOptions, ParticleSkip } from './particles';
 
 interface Source {
@@ -38,6 +38,7 @@ const v2FragmentShader = fragmentShader.replace('uniform vec2 tiles;', 'uniform 
   .replace('(vUv+cell)/tiles', '(vec2(repeatU?fract(vUv.x):vUv.x,vUv.y)+cell)/tiles')
   .replace('varying vec2 vUv;', 'varying vec2 vUv; varying vec4 vParticleColor;')
   .replace('texel.rgb*tint,texel.a*opacity', 'texel.rgb*tint*vParticleColor.rgb,texel.a*opacity*vParticleColor.a');
+const v2LegacyFragmentShader = legacyEncode(v2FragmentShader);
 // Three declares color and selects RGB/RGBA via the material's vertexColors flag.
 const v2VertexShader = vertexShader.replace('varying vec2 vUv;', 'varying vec2 vUv; varying vec4 vParticleColor;')
   .replace('vUv=uv;', `vUv=uv;
@@ -222,9 +223,9 @@ export class ParticleEffectV2 {
     const uniforms = { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
       opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [e.frames?.columns ?? 1, e.frames?.rows ?? 1] }, frame: { value: 0 },
       repeatU: { value: e.kind === 'trail' && e.trail.uvMode === 'repeat' } };
-    const key = `v2/${blending}/${vertexColors}`;
+    const legacy = !!this.options.legacyOutputEncode, key = `v2/${blending}/${vertexColors}${legacy ? '/enc' : ''}`;
     const material = this.options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader: v2VertexShader,
-      fragmentShader: v2FragmentShader, vertexColors, transparent: true, depthWrite: false, side: DoubleSide, blending, uniforms });
+      fragmentShader: legacy ? v2LegacyFragmentShader : v2FragmentShader, vertexColors, transparent: true, depthWrite: false, side: DoubleSide, blending, uniforms });
     const mesh = this.takeMesh(geometry, material, e.kind === 'trail');
     this.object.add(mesh);
     this.live.push({ source, mesh, key, birth, origin, size, rotation, history: this.takeHistory(),

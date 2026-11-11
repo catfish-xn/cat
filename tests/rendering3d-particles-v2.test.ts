@@ -466,3 +466,24 @@ describe('v2 lazy resource loading', () => {
     } finally { fetchMock.mockRestore(); }
   });
 });
+
+describe('output color conversion (11-11 Ambessa 发糊)', () => {
+  it('writes combat effects raw and keeps the sRGB output encode only for legacy extras, in separate pooled materials', async () => {
+    const { ParticleMaterialPool } = await import('../src/rendering3d/particle-common');
+    const pool = new ParticleMaterialPool();
+    const raw = new ParticleEffect(parseParticleDocument(doc(quad())), { scale: 1, materials: pool });
+    const legacy = new ParticleEffect(parseParticleDocument(doc(quad())), { scale: 1, materials: pool, legacyOutputEncode: true });
+    raw.update(0.1); legacy.update(0.1);
+    expect(mesh(raw).material.fragmentShader).not.toContain('colorspace_fragment');
+    expect(mesh(legacy).material.fragmentShader).toContain('#include <colorspace_fragment>');
+    expect(mesh(legacy).material.fragmentShader.replace('\n #include <colorspace_fragment>', '')).toBe(mesh(raw).material.fragmentShader);
+    const rawMaterial = mesh(raw).material, legacyMaterial = mesh(legacy).material;
+    raw.update(5); legacy.update(5); raw.dispose(); legacy.dispose();
+    // A material handed back by one kind is never reused by the other.
+    const again = new ParticleEffect(parseParticleDocument(doc(quad())), { scale: 1, materials: pool, legacyOutputEncode: true });
+    again.update(0.1);
+    expect(mesh(again).material).toBe(legacyMaterial);
+    expect(mesh(again).material).not.toBe(rawMaterial);
+    again.dispose(); pool.dispose();
+  });
+});

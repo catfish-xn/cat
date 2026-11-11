@@ -3,7 +3,7 @@ import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Group, Mesh, Multi
 import { assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type ParticleEmitter } from './contracts';
 
 import { parseParticleDocument, parseParticleDocumentV1 } from './particle-validation';
-import { colorChannels, fragmentShader, vertexShader, sampleCurve, type ParticleBudget, type ParticleMaterialPool } from './particle-common';
+import { colorChannels, fragmentShader, legacyEncode, vertexShader, sampleCurve, type ParticleBudget, type ParticleMaterialPool } from './particle-common';
 import { ParticleEffectV2 } from './particles-v2';
 export { parseParticleDocument } from './particle-validation';
 export { sampleCurve, ParticleMaterialPool, type ParticleBudget } from './particle-common';
@@ -32,7 +32,15 @@ export interface ParticleOptions {
    * that primitive (scripts/assets3d/particles.mjs), and no Set 13 system uses one.
    */
   quadReach?: number;
+  /**
+   * Keep the renderer's sRGB output conversion on top of the raw value (default false: written as is, like the original
+   * and vfx-ltk; particle-common.ts). Only for our own non-combat extras (roots/9: loot orbs, chest, carousel, flask,
+   * player damage), whose colors were chosen by eye on that look: without it the gray orb draws black and the orb-open
+   * bursts nearly vanish (11-11 review).
+   */
+  legacyOutputEncode?: boolean;
 }
+const v1LegacyFragmentShader = legacyEncode(fragmentShader);
 export interface ParticleSkip { emitterIndex: number; kind: string; reason: string }
 /** Short, stable code for a failed mesh read: HTTP status, the adapter's own code, or `read-failed`. */
 function meshErrorCode(error: unknown): string {
@@ -85,8 +93,9 @@ class ParticleEffectV1 {
           const blending = emitter.blend === 'additive' ? AdditiveBlending : emitter.blend === 'multiply' ? MultiplyBlending : NormalBlending;
           const uniforms = { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
             opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [frames?.columns ?? 1, frames?.rows ?? 1] }, frame: { value: 0 } };
-          const key = `v1/${blending}`;
-          const material = options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader, fragmentShader, transparent: true,
+          const legacy = !!options.legacyOutputEncode, key = `v1/${blending}${legacy ? '/enc' : ''}`;
+          const material = options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader,
+            fragmentShader: legacy ? v1LegacyFragmentShader : fragmentShader, transparent: true,
             depthWrite: false, side: DoubleSide, blending, uniforms });
           const mesh = new Mesh(this.geometry, material);
           this.object.add(mesh);
