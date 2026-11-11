@@ -54,6 +54,25 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
   });
 });
 
+describe('attached-mesh size', () => {
+  async function drawnAt(scale: number) {
+    const { library, prepared } = await prepare(attached());
+    const scene = new Scene(), root = new Group(), body = new Group(), host = part('body'); scene.add(root); root.add(body); body.add(host);
+    root.position.set(30, 0, -20); host.position.set(0, 40, 5);
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body }, scale });
+    scene.add(fx.object); fx.update(0.1, new Camera()); scene.updateMatrixWorld(true);
+    const shown = fx.attached.find(draw => draw.object.visible);
+    const elements = shown ? [...shown.object.matrixWorld.elements] : null;
+    fx.dispose(); library.dispose();
+    return elements;
+  }
+  it('draws on the host at the same size whatever the cue scale (a chest cue is SKILL_FX_SIZE 0.64)', async () => {
+    const plain = await drawnAt(1), scaled = await drawnAt(0.638);
+    expect(plain).not.toBeNull();
+    plain!.forEach((value, at) => expect(scaled![at]).toBeCloseTo(value, 4));
+  });
+});
+
 describe('attached-mesh screen cap and switch', () => {
   /** The synthetic hosts cannot reach the real cap under the runtime's slot budget, so the over-cap tests use a lower one. */
   const CAP = 16;
