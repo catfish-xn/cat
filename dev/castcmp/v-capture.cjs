@@ -1,4 +1,4 @@
-// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--gl gpu|swift]
+// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--gl gpu|swift]
 // Records one cast as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
 const { launchOptions, timeline, timer } = require('./common.cjs');
@@ -30,6 +30,8 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 800000, eventSeq: 800000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
   for (let i = 0; i < 12; i++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(700); }
   await page.evaluate(() => window.__h.step(3000)); await page.waitForTimeout(300);
+  // LOCAL: --settle MS lets a lasting effect of the warm cast (Mordekaiser's 10 s aura) run out before the recorded cast.
+  if (opt('settle')) { for (let left = Number(opt('settle')); left > 0; left -= 500) { await page.evaluate(ms => window.__h.step(ms), Math.min(500, left)); await page.waitForTimeout(50); } }
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
