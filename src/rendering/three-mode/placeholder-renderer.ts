@@ -34,7 +34,7 @@ import {
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
-import { createBatch1VfxEvents } from './vfx-ltk/batch1-events';
+import { createBatch1VfxEvents, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
@@ -1426,6 +1426,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
+      if (planned.stopPassive) ltk?.fadeAction(planned.stopPassive, 'passive', SOFT_STOP_SECONDS);
       if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, 0, fx.action, fx.variant);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);

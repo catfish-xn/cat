@@ -1,13 +1,18 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { TimelineAction, TimelineVariant } from './timeline';
 
+/** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
+export const SOFT_STOP_SECONDS = 0.6;
+
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
 }
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
   event: DisplayCombatEvent; fresh: boolean; variant?: TimelineVariant; targets?: readonly string[];
-  skipCast?: boolean; stopCast?: string; extra: Batch1Visual[];
+  skipCast?: boolean; stopCast?: string;
+  /** Fade this unit's passive cues out over SOFT_STOP_SECONDS (Singed's self buff when his damage reduction ends). */
+  stopPassive?: string; extra: Batch1Visual[];
 }
 interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
@@ -47,6 +52,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if ('eventSeq' in event) {
           if (event.eventSeq <= lastSeq) { plan.fresh = !tracked; return plan; }
           lastSeq = event.eventSeq;
+        }
+        // Singed's self buff (W_Self_Buff) runs from his cast until his damage reduction expires; his cast effects stay on
+        // their own path, so it is an extra passive cue rather than a tracked champion's cast.
+        if (owner !== undefined && definition(owner) === 'singed') {
+          if (event.type === 'cast' && event.completed !== false) plan.extra.push({ champion: 'singed', sourceId: event.sourceId, targets: [], action: 'passive' });
+          else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason === 'expired') plan.stopPassive = event.targetId;
+          else if (event.type === 'death') plan.stopPassive = event.unitId;
         }
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {

@@ -189,6 +189,12 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     },
     get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
+    /** Ease every particle's alpha to nothing over `seconds` from now and finish then; emitters keep running meanwhile. */
+    fade(seconds: number) {
+      if (closed || !(seconds > 0)) return;
+      if (spec.fadeFrom !== undefined && spec.fadeFrom <= elapsed && spec.duration <= elapsed + seconds) return;
+      spec.fadeFrom = elapsed; spec.duration = Math.min(spec.duration, elapsed + seconds);
+    },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;

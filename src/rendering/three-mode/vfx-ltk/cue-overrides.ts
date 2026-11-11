@@ -176,6 +176,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // R: 14.24 is a 3 s gas cloud that then detonates (11-06 field review: ours burst at 1.2 s, white and about 3.8 cells).
   // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.
+  // W_Self_Buff (db0f8e0d): the purple pool and drops at Singed's feet while his damage reduction lasts. Started as a
+  // passive cue on his cast (batch1-events.ts), so the cast's own old-path effects still play; stopped when the
+  // damage-reduction status expires, fading out over SOFT_STOP_SECONDS. Three of its four emitters never end, so the
+  // duration is only a safety bound (the loader's 10 s cap); the status ends it well before.
+  singed: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
+    { system: 'db0f8e0d', action: 'passive', event: 'cast-start', bone: ground, delay: 0, duration: 10 },
+  ],
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over

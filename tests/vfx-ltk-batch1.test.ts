@@ -28,6 +28,17 @@ describe('batch 1 observed forms and passive/end triggers', () => {
       expect(plan.skipCast).toBeUndefined(); expect(plan.fresh).toBe(true);
     }
   });
+  it('starts Singed\'s self buff with his cast and stops it when his damage reduction expires or he dies; his cast stays untracked', () => {
+    const events = createBatch1VfxEvents(id => id);
+    const [plan] = events.batch([cast('singed', 1)]);
+    expect(plan.extra).toEqual([{ champion: 'singed', sourceId: 'singed', targets: [], action: 'passive' }]);
+    expect(plan.skipCast).toBeUndefined(); expect(plan.stopCast).toBeUndefined();
+    expect(events.batch([{ ...cast('singed', 2), completed: false } as DisplayCombatEvent])[0].extra).toEqual([]);
+    const end = { type: 'statusChanged', eventSeq: 3, tick: 80, targetId: 'singed', kind: 'damage-reduction', reason: 'expired', effectiveMagnitudeBps: 0 } as DisplayCombatEvent;
+    expect(events.batch([end])[0].stopPassive).toBe('singed');
+    expect(events.batch([{ type: 'death', eventSeq: 4, tick: 81, unitId: 'singed' } as DisplayCombatEvent])[0].stopPassive).toBe('singed');
+    expect(events.batch([cast('singed', 1)])[0].extra).toEqual([]); // a replayed cast plays nothing again
+  });
   it('suppresses only VFX selection on sequence rollback and leaves event facts intact', () => {
     const events = createBatch1VfxEvents(id => id);
     events.batch([cast('leona', 100), attack('zeri', 101), attack('zeri', 102)]);
@@ -132,6 +143,20 @@ describe('batch 1 catalogue and runtime forms', () => {
     expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack')).toBe(true); runtime.stopUnit('source');
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(0);
     runtime.dispose(); expect(scene.children).toEqual([]); expect(budget.live).toBe(0);
+  });
+  it('fades a passive cue out over the given time instead of clearing it in one frame', async () => {
+    const cues = [{ system: 'buff', action: 'passive', event: 'cast-start', delay: 0, duration: 10 }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? {
+      version: 1, systems: { buff: 'buff.json' }, assets: { 'synthetic.tex': 'same.png' }, skills: { buffed: cues },
+    } : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), budget = { live: 0, max: 1500 };
+    const runtime = createLtkRuntime(library, scene, () => source, { budget }); await runtime.warm('buffed');
+    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true);
+    runtime.update(.1, new Camera()); runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
+    runtime.fadeAction('source', 'passive', .6);
+    runtime.update(.3, new Camera()); expect(runtime.active).toBe(1);
+    runtime.update(.4, new Camera()); expect(runtime.active).toBe(0);
+    runtime.dispose(); expect(budget.live).toBe(0);
   });
   it('does not pull empowered or self cues into an options-object play of the default form', async () => {
     const cues = BATCH1_TIMELINES.zeri;
