@@ -71,7 +71,7 @@ export function createAttachedMeshes(emitter: EmitterModel, sources: readonly So
     // DetachedBindMode resets the inverse during scene traversal. The source's live inverse
     // must be installed after that traversal, before uniforms are uploaded.
     mesh.onBeforeRender = () => { mesh.bindMatrixInverse.copy(source.bindMatrixInverse); };
-    mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.renderOrder = rank;
+    mesh.name = `${emitter.name}#${slot}`; mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.renderOrder = rank;
     const drawn = { scale: new Float32Array(3), color: new Float32Array(4) }, uv = uvDraw();
     const inverse = new Matrix4(), origin = new Matrix4(), scale = new Matrix4();
     let closed = false;

@@ -22,6 +22,28 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   host.style.height = `${h}px`;
   const r = await mod.mountRenderer3d(host, { assetBase: params.get('assets')! });
   r.resize(w, h);
+  // ?board=a,b,...&foes=c,d,...: a whole real combat of up to 8 against 8 (dev/castcmp/board-load.cjs), replayed in full.
+  if (params.get('board')) {
+    const star = Number(params.get('star') ?? 3);
+    const replay = await createBoardReplay(params.get('board')!.split(','), (params.get('foes') ?? params.get('board')!).split(','), star);
+    const frameOf = (i: number) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces: replay.frames[i]!, fighting: true, dragging: null });
+    listener.frame({ ...frameOf(0), fighting: false }); step(50);
+    let at = 0, carry = 0;
+    const boardStep = (ms: number) => {
+      while (ms > 0) {
+        const d = Math.min(ms, 16); carry += d;
+        while (carry >= 50 && at < replay.frames.length - 1) { carry -= 50; at++; listener.frame(frameOf(at)); if (replay.events[at]!.length) listener.events(replay.events[at]); }
+        step(d); ms -= d;
+      }
+    };
+    listener.frame(frameOf(0));
+    (window as any).__h = {
+      step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; listener.frame(frameOf(0)); },
+      clock: () => clock, tick: () => at, status: r.status, detail: r.detail,
+      board: { ticks: replay.frames.length, casts: replay.casts, result: replay.result },
+    };
+    return;
+  }
   const me = { id: 'me', definitionId: unit, team: 'player', starLevel: Number(params.get('star') ?? 3), ...hex(4 + 1, 3), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 }, ...(params.get('form') ? { form: params.get('form') } : {}) };
   const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: 1, ...hex(row, col), alive: true, visible: true,
@@ -127,6 +149,30 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   }
   if (castIndex < 0) throw new Error(`real combat: ${unit} never cast in ${frames.length} ticks`);
   return { frames, events, castIndex };
+}
+/** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
+async function createBoardReplay(mine: string[], theirs: string[], star: number) {
+  const [{ createCombat, stepCombat }, { DEFAULT_BOARD }, display, control] = await Promise.all([
+    import('../../src/simulation/combat'), import('../../src/simulation/board'),
+    import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
+  const COLS = [1, 3, 5, 2, 4, 0, 6];
+  const place = (ids: string[], team: string, rows: [number, number]) => ids.slice(0, 8).map((definitionId, i) =>
+    ({ id: `${team === 'player' ? 'p' : 'e'}${i}-${definitionId}`, definitionId, team, starLevel: star,
+      location: { kind: 'board', cell: { col: COLS[i % 4]!, row: rows[i < 4 ? 0 : 1] } } }));
+  let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units: [...place(mine, 'player', [4, 6]), ...place(theirs, 'enemy', [3, 1])] } as any);
+  const snapshot = () => display.toCombatViewState(state).units.map((u: any) => ({
+    id: u.id, definitionId: u.definitionId, team: u.team, starLevel: u.starLevel, ...hexOf(u.cell.row, u.cell.col),
+    alive: u.alive, visible: u.alive, meters: { hp: u.hp, maxHp: u.maxHp, mana: u.mana, maxMana: u.maxMana, shield: u.shield ?? 0 },
+    ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
+  }));
+  const frames: Piece[][] = [snapshot()], events: any[][] = [[]]; let casts = 0;
+  while (state.status !== 'finished' && frames.length < 1200) {
+    const stepped = stepCombat(state); state = stepped.state;
+    const shown = display.toDisplayEvents(stepped.events as any);
+    casts += shown.filter((e: any) => e.type === 'cast').length;
+    frames.push(snapshot()); events.push(shown);
+  }
+  return { frames, events, casts, result: state.result ?? null };
 }
 const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 

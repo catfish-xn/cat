@@ -31,6 +31,12 @@ const ATTACK_FREE_SLOTS = 6;
  * 16 for now; raised to 24 only if `attachedStats` shows it binding often with frame time to spare).
  */
 export const ATTACHED_LAYER_CAP = 16;
+/**
+ * Every runtime's overlay counts (the castcmp board-load harness reads them): overlays on screen in the latest frame, the
+ * peak, and what made it (`system@unit+start:emitter` → overlays, one per live particle per skinned part of the host),
+ * and how often the cap tripped.
+ */
+export const ATTACHED_LAYER_STATS = { layers: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
@@ -116,7 +122,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
-  const layerBuf: { draw: AttachedDraw; rank: number; started: number }[] = [];
+  const layerBuf: { draw: AttachedDraw; rank: number; started: number; system: string }[] = [];
   const attachedStats = { capEvents: 0, cappedFrames: 0, peakLayers: 0 };
   let capped = false;
   const liveFx: { passes: LtkPassFlags }[] = [];
@@ -386,13 +392,24 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       layerBuf.length = 0;
       for (const run of running) for (const draw of run.fx.attached) if (draw.object.visible) {
         if (!showAttached) draw.object.visible = false;
-        else layerBuf.push({ draw, rank: LAYER_RANK[run.persistent ? 'critical' : run.importance], started: run.started });
+        else layerBuf.push({ draw, rank: LAYER_RANK[run.persistent ? 'critical' : run.importance], started: run.started, system: `${run.system}@${run.source}+${run.started}:${draw.object.name.split('#')[0]}` });
       }
       attachedStats.peakLayers = Math.max(attachedStats.peakLayers, layerBuf.length);
+      ATTACHED_LAYER_STATS.layers = layerBuf.length;
+      if (layerBuf.length > ATTACHED_LAYER_STATS.peakLayers) {
+        ATTACHED_LAYER_STATS.peakLayers = layerBuf.length; ATTACHED_LAYER_STATS.peakSystems = {};
+        for (const layer of layerBuf) ATTACHED_LAYER_STATS.peakSystems[layer.system] = (ATTACHED_LAYER_STATS.peakSystems[layer.system] ?? 0) + 1;
+      }
       if (layerBuf.length > ATTACHED_LAYER_CAP) {
         layerBuf.sort((a, b) => b.rank - a.rank || a.started - b.started);
         for (let at = ATTACHED_LAYER_CAP; at < layerBuf.length; at++) layerBuf[at].draw.object.visible = false;
-        attachedStats.cappedFrames++; if (!capped) attachedStats.capEvents++; capped = true;
+        attachedStats.cappedFrames++; ATTACHED_LAYER_STATS.cappedFrames++;
+        if (!capped) {
+          // The cap is a fuse: it should never trip in play, so the first trip of each runtime says so in the console.
+          if (attachedStats.capEvents === 0) console.warn(`vfx-ltk:attached-cap:${layerBuf.length}>${ATTACHED_LAYER_CAP}`);
+          attachedStats.capEvents++; ATTACHED_LAYER_STATS.capEvents++;
+        }
+        capped = true;
       } else capped = false;
       claimBuf.length = 0;
       for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);

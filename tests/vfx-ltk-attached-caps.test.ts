@@ -59,6 +59,7 @@ describe('attached-mesh screen cap and switch', () => {
     let count = 0; scene.traverse(node => { if ((node as SkinnedMesh).isSkinnedMesh && node.parent?.name === 'ltk-vfx' && node.visible) count++; }); return count;
   };
   it(`keeps at most ${ATTACHED_LAYER_CAP} overlays on screen and counts the cap`, async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scene = new Scene();
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });
     const hosts = new Map(Array.from({ length: 6 }, (_, at) => {
@@ -71,6 +72,7 @@ describe('attached-mesh screen cap and switch', () => {
     expect(runtime.attachedStats.peakLayers).toBeGreaterThan(ATTACHED_LAYER_CAP);
     expect(visibleOverlays(scene)).toBe(ATTACHED_LAYER_CAP);
     expect(runtime.attachedStats.capEvents).toBe(1); expect(runtime.attachedStats.cappedFrames).toBe(2);
+    expect(warn.mock.calls.filter(([line]) => String(line).startsWith('vfx-ltk:attached-cap:'))).toEqual([[`vfx-ltk:attached-cap:${runtime.attachedStats.peakLayers}>${ATTACHED_LAYER_CAP}`]]);
     runtime.dispose(); library.dispose();
   });
   it('hides every overlay while the host switches them off (reduced motion, ?skillfx=off)', async () => {
