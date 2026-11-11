@@ -211,9 +211,9 @@
     },
     "tests/augment-pool-batch4-b4reroll.test.ts": {
       "previousBytes": 10687,
-      "currentBytes": 10974,
+      "currentBytes": 11160,
       "previousSha256": "d42c4910aff23066b6def8084a962f3eda0baf5ad20204acdc3f977c76626c81",
-      "currentSha256": "972b8e0c0a143836de8cf7d6a2bf56010dcb01cf94b9692c928368c0908817ec",
+      "currentSha256": "f2fd22ecbfbef5bdfb6edcf8eb7899e2ec92e61228449951c2e19f0d94359359",
       "firstDifferentByte": 7435
     },
     "tests/augment-pool-batch4-b4xp.test.ts": {
@@ -2466,9 +2466,9 @@
     },
     "tests/restore-audit/cd-replay-facts.test.ts": {
       "previousBytes": 19334,
-      "currentBytes": 21068,
+      "currentBytes": 21198,
       "previousSha256": "848c90511a1ba2da6066ae455bd7be7253ae1a153dcbe10cb30d4aa3caea2103",
-      "currentSha256": "7f9b8c0936316065491f04fe152cd60222bd94a5cc017d410931665165b0e9cc",
+      "currentSha256": "8a37fc73ccde843df6fd142fb8ef618be3b552da56152ffa6eeb252ec50a025c",
       "firstDifferentByte": 1113
     },
     "tests/restore-audit/g23-grant-evidence.test.ts": {
@@ -3342,9 +3342,9 @@
     },
     "tests/v23-tamper-batch4.test.ts": {
       "previousBytes": 15620,
-      "currentBytes": 16067,
+      "currentBytes": 16158,
       "previousSha256": "27ef3b3930b52798c0580ba4b020cfd2d043f9584af4c193514c087fc2d78135",
-      "currentSha256": "e727be376499bab6f05d8b488c772d78a4acfad430c0f14c7b310e67769164d2",
+      "currentSha256": "cb1ffd9bd098a29dc39d8433b5b8a92afb0fff207fda9add2c44d1d0e2f393f2",
       "firstDifferentByte": 1670
     },
     "tests/v23-tamper-mechanics.test.ts": {

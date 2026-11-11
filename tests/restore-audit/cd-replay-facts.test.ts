@@ -150,8 +150,9 @@ it('G-C07 authenticates burn phase even when the group and task agree', () => {
 
 it('G-C08 rejects invented Experiment takedowns plus matching maximum health', () => {
   // Seed 1: after the augment pool grew, seed 5's route holds a sampled shield whose check fires before the G23 facts.
-  // Route seed 2 (was 1) after the global 14.24 stage bans; 12 after the v23 integration merge (seed 2 opens with Trainer Golems).
-  const routeSeed = 12, seed = readG23Progress(reachRound('2-1', true, routeSeed))!.seed;
+  // Route seed 2 (was 1) after the global 14.24 stage bans; 12 after the v23 integration merge (seed 2 opens with Trainer Golems);
+  // 3 after Nunu's 3 s cast lock (seed 12's route now holds a sampled shield whose check fires first; first passing seed from 1).
+  const routeSeed = 3, seed = readG23Progress(reachRound('2-1', true, routeSeed))!.seed;
   const labs = g23Laboratories(seed, 'player', 3);
   const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], routeSeed);
   const eligible = (s: MatchState) => s.combat!.units.find(u => u.team === 'player' && u.mechanics?.some(m => m.mechanic === 'g23Experiment' && m.values.mundo > 0)
