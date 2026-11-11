@@ -9,6 +9,8 @@
  */
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 for (const k of ['audit', 'models', 'out']) if (!args[k]) throw Error(`--${k}= required`);
@@ -43,6 +45,10 @@ function hostParts(gltf) {
   }
   return parts;
 }
+// The reviewed exceptions of the checked-out code (cue-overrides.ts): those emitters keep the whole body.
+const overridesFile = join(out, '_cue-overrides.mjs');
+await build({ entryPoints: [resolve('src/rendering/three-mode/vfx-ltk/cue-overrides.ts')], outfile: overridesFile, bundle: true, format: 'esm', platform: 'node', logLevel: 'silent' });
+const { ATTACHED_WHOLE_BODY = {} } = await import(pathToFileURL(overridesFile).href);
 const all = await glbs(resolve(args.models));
 const rows = JSON.parse(await readFile(resolve(args.audit), 'utf8'));
 const report = [];
@@ -55,6 +61,7 @@ for (const row of rows) {
   for (const e of row.emitters) {
     let now = 'whole-body', next = 'whole-body', matched = [];
     if (e.simple) now = next = 'not-drawn(static)';
+    else if (e.submeshes.length && ATTACHED_WHOLE_BODY[row.id]?.includes(e.name)) next = 'whole-body(exception)';
     else if (e.submeshes.length) {
       const wanted = new Set(e.submeshes.map(h => String(h).toLowerCase()));
       matched = (parts ?? []).filter(p => wanted.has(fnv(p.material)) || (p.single && wanted.has(fnv(p.node)))).map(p => p.material || p.node);
@@ -65,10 +72,10 @@ for (const row of rows) {
   }
 }
 await writeFile(join(out, 'attached-parts.json'), JSON.stringify(report, null, 2));
-const label = { 'whole-body': '整身罩一层', parts: '只画部件', 'not-drawn(parts-missing)': '没画（部件名对不上）', 'not-drawn(static)': '没画（自带静态网格）', 'unknown(no-model)': '未知（没找到模型）' };
+const label = { 'whole-body': '整身罩一层', 'whole-body(exception)': '整身罩一层（例外表）', parts: '只画部件', 'not-drawn(parts-missing)': '没画（部件名对不上）', 'not-drawn(static)': '没画（自带静态网格）', 'unknown(no-model)': '未知（没找到模型）' };
 const md = ['| 目录 | id | 系统 | 被点到 | 发射器 | 修前 | 修后 | 命中部件 | 宿主部件 |', '|---|---|---|---|---|---|---|---|---|',
   ...report.map(r => `| ${r.folder} | ${r.id} | ${r.system} | ${r.cued ? '是' : '否'} | ${r.emitter} | ${label[r.before]} | ${label[r.after]} | ${r.matched.join('+')} | ${(r.hostParts ?? []).join('+')} |`)];
-const changed = report.filter(r => r.cued && r.before !== r.after);
+const changed = report.filter(r => r.cued && r.before !== r.after.replace('(exception)', ''));
 md.unshift(`# 附着发射器实际画法\n\n实测方式：只读 glb 的 JSON（材质名、节点名）按名字哈希比对，不渲染；"只画部件"表示名字对上，画面是否正确要看录像。\n\n被点到且画面会变：${changed.length} 个发射器（${[...new Set(changed.map(r => r.id))].join(', ')}）\n`);
 await writeFile(join(out, 'attached-parts.md'), md.join('\n') + '\n');
 console.log(JSON.stringify({ emitters: report.length, changed: changed.length, noModel: report.filter(r => !r.model).length }));

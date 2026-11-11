@@ -328,4 +328,8 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   // Remove when the Leona model holds the part 0xddb924a1 names. Both stay provisional: if the side-by-side with the
   // original shows the whole-body layer clearly overdone, the entry goes and the filter leaves it undrawn (Fable, 11-11).
   '8d9a4ccc': ['Avatar3'],
+  // Sion Unleash_Cas and its Cabal copy: Avatar_Fresnel names Head, Body and Weapon, which is near enough his whole body;
+  // our Sion model is one merged part (Sion_Base_MD_lambert2SG1, 11-11 live parts audit). Remove when the model is split.
+  '9118f221': ['Avatar_Fresnel'],
+  '5afb9708': ['Avatar_Fresnel'],
 };
