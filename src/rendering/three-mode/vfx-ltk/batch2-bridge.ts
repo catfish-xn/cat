@@ -26,9 +26,12 @@ export function createBatch2VfxBridge(host: Host) {
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
   const energyTicks = new Map<string, number>();
+  // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
+  let release: LtkPlayOptions['release'];
   const play = (champion: string, source: string, targets: readonly string[], skill: string, index = 0, action: 'cast' | 'attack' = 'cast', snapshotTargets = false, channelSeconds?: number, boardOnly = false, delay?: number) =>
-    host.play(champion, source, targets, index, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}) });
-  return {
+    host.play(champion, source, targets, index, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}),
+      ...(action === 'attack' && release ? { release } : {}) });
+  const bridge = {
     branch(cast: Cast): string | undefined {
       const outcome = outcomes.get(`${cast.sourceId}:${cast.actionSeq}`);
       if (!outcome?.castVariant || host.unit(cast.sourceId)?.definitionId !== 'sevika') return;
@@ -45,7 +48,12 @@ export function createBatch2VfxBridge(host: Host) {
         consequences.set(`${event.sourceId}:${event.actionSeq}`, events.slice(at + 1, end));
       });
     },
-    action(action: 'cast' | 'attack', source: string, targets: readonly string[], index: number, cast?: Cast): boolean | undefined {
+    /** `timing`: the attack's release mapping (LtkPlayOptions.release) when the mixer retimed this swing; casts ignore it. */
+    action(action: 'cast' | 'attack', source: string, targets: readonly string[], index: number, cast?: Cast, timing?: LtkPlayOptions['release']): boolean | undefined {
+      release = action === 'attack' ? timing : undefined;
+      try { return bridge.dispatch(action, source, targets, index, cast); } finally { release = undefined; }
+    },
+    dispatch(action: 'cast' | 'attack', source: string, targets: readonly string[], index: number, cast?: Cast): boolean | undefined {
       const unit = host.unit(source); if (!unit) return;
       const champion = unit.definitionId;
       if (champion === 'sevika') {
@@ -121,4 +129,5 @@ export function createBatch2VfxBridge(host: Host) {
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
     clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); },
   };
+  return bridge;
 }

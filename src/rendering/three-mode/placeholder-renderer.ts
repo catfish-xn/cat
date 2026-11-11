@@ -1157,10 +1157,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+  const releaseOf = (source: PieceView) => {
     const release = source.lease?.attackRelease, output = source.state.output;
     const played = output.state === 'attack' ? output.playback?.release : undefined;
-    return release && played ? { variant, release: { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } } : variant;
+    return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
+  };
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+    const release = releaseOf(source);
+    return release ? { variant, release } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
@@ -1171,7 +1175,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast)
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
         ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
     }
     const owner = generation;
