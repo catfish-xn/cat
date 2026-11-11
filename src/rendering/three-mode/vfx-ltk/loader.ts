@@ -163,6 +163,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))

@@ -303,9 +303,10 @@ export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
   // Original ImniG7AWTjU.mp4 measured by the sweep thread, 11-11: red from about 7.9 s to 17.0 s, black again by 17.5 s
   // (9.1–9.6 s; its start was read off the chains, not the mana bar). Our rule holds the empower for EmpowerDuration,
-  // 10 s in the 14.24b data, so the layer runs that long and fades over its last half second.
+  // 10 s in the 14.24b data, so the layer runs that long and fades over its last half second. A recast refreshes the
+  // empower, so it refreshes the layer rather than stacking a second (refresh).
   mordekaiser: [
-    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest },
+    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest, refresh: true },
   ],
 };
 export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
