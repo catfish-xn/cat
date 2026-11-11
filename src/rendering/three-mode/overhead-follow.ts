@@ -1,7 +1,7 @@
 import { Vector3, type AnimationClip, type Object3D } from 'three';
 
-/** Seconds for the followed offset to close most of a gap: smooth, but quick enough to stay on a jumping body. */
-export const OVERHEAD_FOLLOW_SECONDS = 0.05;
+/** Seconds for the followed offset to close most of a gap: smooth, but quick enough to stay on a jumping body (0.05 s trailed a falling Jayce by a third of a cell). */
+export const OVERHEAD_FOLLOW_SECONDS = 0.02;
 /** The skeleton bone that carries a League model's travel (root motion, jumps). */
 export const TRAVEL_BONE = 'Root';
 
