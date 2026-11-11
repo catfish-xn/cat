@@ -10,9 +10,10 @@ describe('farToCover', () => {
     expect(farToCover(new Vector3(0, 700, 800), new Box3(new Vector3(-400, 0, -400), new Vector3(400, 50, 400)))).toBe(DEFAULT_FAR);
   });
   it('reaches the farthest corner of a skybox below the board, with the margin', () => {
-    const eye = new Vector3(205, 694, 781);
-    const box = new Box3(new Vector3(-6744, -5200, -7436), new Vector3(7197, -41, 7893));
-    const corner = Math.hypot(7197 - 205, -5200 - 694, -7436 - 781); // the farthest of the eight
+    // Made-up numbers: a wide box well below the eye, as a skybox would be.
+    const eye = new Vector3(100, 600, 800);
+    const box = new Box3(new Vector3(-6000, -5000, -7000), new Vector3(7000, -50, 8000));
+    const corner = Math.hypot(7000 - 100, -5000 - 600, -7000 - 800); // the farthest of the eight
     const far = farToCover(eye, box);
     expect(far).toBe(Math.ceil(corner * FAR_MARGIN));
     expect(far).toBeGreaterThan(corner);
