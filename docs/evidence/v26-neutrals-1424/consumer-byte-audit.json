@@ -52,6 +52,13 @@
       "currentSha256": "b4a318d46f5931d04e26d619fa0b696300d4db022ac3b16dea8791302952c977",
       "firstDifferentByte": 56
     },
+    "tests/assets3d-boards.test.ts": {
+      "previousBytes": 10077,
+      "currentBytes": 11997,
+      "previousSha256": "19920a3399ed9a500b29d5f00bd81ba3002c4fb87aa8991ce4404155af21e685",
+      "currentSha256": "a2588caac5d56bb5cec710222f5b238b23f28412ebc722f4364263041bef88ec",
+      "firstDifferentByte": 1244
+    },
     "tests/assets3d-champion-lighting.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2097,6 +2104,14 @@
       "currentSha256": "519cff2b8d7d747b6cc38148f3ffbab4dd8594c5c82079af84ad2aeb23e078f0",
       "firstDifferentByte": 46
     },
+    "tests/rendering3d-arena-lightmap.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4633,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "57528809ab587be0afac6cd6381dcdb666b3219a3050c80be46e7edff1effaa3",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-attack-release.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2114,10 +2129,10 @@
     },
     "tests/rendering3d-board-arena.test.ts": {
       "previousBytes": 6182,
-      "currentBytes": 6742,
+      "currentBytes": 8610,
       "previousSha256": "4ea4803c554c59ac5459f49aec5b9fc4b85fbb8f8d33a51773f35cab7e6302d0",
-      "currentSha256": "55737597df2896e4e8c78acf7aaa952f231505de45cfde614acb061acc79d30f",
-      "firstDifferentByte": 101
+      "currentSha256": "a762f0f93323b03608b6beb4d87dfb5203f61c98c60a36869dd11094eddf8fbc",
+      "firstDifferentByte": 56
     },
     "tests/rendering3d-carousel-leash.test.ts": {
       "previousExists": false,
