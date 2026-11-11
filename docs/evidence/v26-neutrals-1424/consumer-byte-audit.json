@@ -1805,9 +1805,9 @@
     "tests/nunu-cast-lock.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3101,
+      "currentBytes": 4888,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "85da7878a0c175b8f929ffaa4ee1190b1bdeb8bfeed77e03905593a04fdf2147",
+      "currentSha256": "2d3ac43fd24c08787f6cf14c3d9085126e96c4a79f03d1ad17d7af679e27796d",
       "firstDifferentByte": 0
     },
     "tests/opening-encounter-ui.test.ts": {
