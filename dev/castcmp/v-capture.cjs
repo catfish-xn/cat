@@ -15,7 +15,7 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','foes'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   mark('harness ready');

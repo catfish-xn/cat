@@ -42,6 +42,6 @@ npx vite --port 5311 --strictPort --host 127.0.0.1
 node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 ```
 
-常用参数：`--dist` 是目标距离（格），`--star` 是星级（默认 3）；`--ms` 是时长，或用 `--times` 直接给时间点；`--warm N` 表示正式录之前先放 N 次技能，用于多段技能选段；`--form`、`--move`、`--outcome` 用来指定形态和施法分支；`--slam 1` 是维克托的砸地。
+常用参数：`--dist` 是目标距离（格），`--star` 是星级（默认 3）；`--ms` 是时长，或用 `--times` 直接给时间点；`--warm N` 表示正式录之前先放 N 次技能，用于多段技能选段；`--form`、`--move`、`--outcome` 用来指定形态和施法分支；`--slam 1` 是维克托的砸地；`--real 1` 用真实战斗回放时，`--foes N`（1–4，默认 4）只留前 N 个对手，1 星后排对 4 个对手常常没放技能就死了。
 
 录的是当前检出的代码。如果要录测试服上的版本，先检出测试服的 SHA 再录。

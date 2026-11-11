@@ -32,7 +32,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   listener.frame(frame(false)); step(50); listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
   // enemies' own attacks all come from the rules' event stream, replayed tick by tick on the virtual clock.
-  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist) : null;
+  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('foes') ?? 4)) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
@@ -96,7 +96,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
-async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number) {
+async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, foeCount = 4) {
   const [{ createCombat, stepCombat }, { DEFAULT_BOARD }, display, control] = await Promise.all([
     import('../../src/simulation/combat'), import('../../src/simulation/board'),
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
@@ -105,7 +105,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, dist)));
   const units: any[] = [
     { id: 'me', definitionId: unit, team: 'player', starLevel: star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(form ? { form } : {}) },
-    ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].map(([id, col, row]) =>
+    ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, foeCount).map(([id, col, row]) =>
       ({ id, definitionId: foe, team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } } })),
   ];
   let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units } as any);
