@@ -322,7 +322,10 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
  */
 export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = {
   // Jinx R_Cast_Mouth: Avatar_BodyLight names Weapon (her launcher); our Jinx model is one Body part (11-11 parts audit).
+  // Remove when the Jinx model holds the launcher as its own Weapon part (or phase two filters it by bone weights).
   '7e6f06b5': ['Avatar_BodyLight'],
   // Leona W_buf: Avatar3 names a part hashed 0xddb924a1 that is none of her model's Body, Sword, Equipment (11-11).
+  // Remove when the Leona model holds the part 0xddb924a1 names. Both stay provisional: if the side-by-side with the
+  // original shows the whole-body layer clearly overdone, the entry goes and the filter leaves it undrawn (Fable, 11-11).
   '8d9a4ccc': ['Avatar3'],
 };
