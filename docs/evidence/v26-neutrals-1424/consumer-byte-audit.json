@@ -1802,6 +1802,14 @@
       "currentSha256": "0e3193c78ea02c78a0112583d9b95d410dc5db43cdd683ef9d31251035366255",
       "firstDifferentByte": 0
     },
+    "tests/nunu-cast-lock.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3101,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "85da7878a0c175b8f929ffaa4ee1190b1bdeb8bfeed77e03905593a04fdf2147",
+      "firstDifferentByte": 0
+    },
     "tests/opening-encounter-ui.test.ts": {
       "previousBytes": 12386,
       "currentBytes": 13337,
