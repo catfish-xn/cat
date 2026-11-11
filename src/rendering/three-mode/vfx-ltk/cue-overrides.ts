@@ -290,6 +290,29 @@ export function cueOverride(champion: string, systems: Readonly<Record<string, s
 }
 
 /**
+ * Cues added to a champion's list (exported or replaced above), each only when its system is in the loaded index.
+ * For a layer the export never cued, where copying the champion's whole list into CUE_OVERRIDES would freeze the rest.
+ * Times are measured on the original, with 0 at the mana bar emptying.
+ */
+export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // R_Energy_Avatar: the red body glow of her cast. Original FB7YoqakYqE.mp4 (3-star, 1080p60) measured by the Ambessa
+  // thread, 11-11: shows at +0.05 s, brightest at +0.3–0.4 s, turns orange and fades from +0.45 s, gone at +0.5 s.
+  ambessa: [
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+  ],
+  // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
+  // Original ImniG7AWTjU.mp4 measured by the sweep thread, 11-11: red from about 7.9 s to 17.0 s, black again by 17.5 s
+  // (9.1–9.6 s; its start was read off the chains, not the mana bar). Our rule holds the empower for EmpowerDuration,
+  // 10 s in the 14.24b data, so the layer runs that long and fades over its last half second.
+  mordekaiser: [
+    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest },
+  ],
+};
+export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
+  return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
+}
+
+/**
  * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
  * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
  */
