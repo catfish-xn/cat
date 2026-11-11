@@ -90,7 +90,8 @@ export interface BoardAlignment {
  */
 /**
  * The arena's baked lightmap (Map22 `BakedLight`): an RGB(A) atlas sampled with the arena meshes' TEXCOORD_1, which the
- * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space.
+ * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space;
+ * gamma and scale are fitted against original footage by the converter (not values from the game data).
  */
 export interface BoardLightmap { path: string; gamma: number; scale: number }
 export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string }; lightmap?: BoardLightmap }
