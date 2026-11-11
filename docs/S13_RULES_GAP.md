@@ -1695,3 +1695,10 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 之前的差异：拉杆当下技能立刻生效。
 - 现在（约定值 G24-SEVIKA-SLOTS-01）：拉杆时照旧抽技能和改装、给 80% 耐久 1.5 秒，并原地引导 25 帧（1.25 秒，不移动、不普攻、不施法，被控会打断引导但不取消技能）；1.25 秒时对原目标（已死则最近的敌人）放出抽中的技能，火箭/护盾同时生效；头奖射金币期间再给一次 80% 耐久 1.5 秒（原版 Spell4 "Durability for the Duration"）。塞维卡在等待中阵亡则技能不放。金币改装照旧战后结算。
 - 实现：`G23_POLICY.highRoller.slotTicks`、`g23Roll` 延时任务（`executeG23Task`）；3D 特效技能层延后 1.25 秒播放（`SEVIKA_SLOT_SECONDS`）。
+
+## 努努 ZOMBIE POWER!!：施法期间锁定 3 秒（2026-11-11，用户批准，#607）
+
+- 原版来源：14.24 `TFT13_NunuWillumpSpell` 客户端技能数据没有引导、禁攻或施法时长字段（只有 mAnimationName "Spell1"、自身目标）；锁定依据是用户对照原版 3 星实战录像（YouTube EIrtPqdN9_8 约 486.5s、561s：施法到毒雾爆炸约 3.1 秒原地保持施法姿势、零普攻、不位移）后的决定（"那就按照原版加锁并且原地不动"）。原版动作 Spell_Activate 也是 3.03 秒。
+- 之前的差异：施法后只挂 3 秒减伤和毒雾，按攻击间隔继续普攻、可移动。
+- 现在：施法时给努努挂 `channel`，时长取 `DamageDuration`（3 秒 = 60 tick），期间不移动、不普攻、不施法。被眩晕/击飞等控制会提前结束锁定（`control-cancelled`），但毒雾每跳伤害、爆炸和减伤照常按原时长打完。锁定期间挨打仍会回蓝；锁定结束时若蓝已满会立刻再放（所有 channel 的既有行为）。
+- 实现：`src/simulation/combat-g2-3.ts` `case 'nunu'`；测试 `tests/nunu-cast-lock.test.ts`。表现层清单 `models.nunu.castSequence.holdSeconds = 3`（#601）与锁定对齐。
