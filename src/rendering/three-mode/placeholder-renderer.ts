@@ -1428,7 +1428,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
-      if (planned.stopPassive) ltk?.fadeAction(planned.stopPassive, 'passive', SOFT_STOP_SECONDS);
+      if (planned.fadeCast) ltk?.fadeAction(planned.fadeCast, 'cast', SOFT_STOP_SECONDS);
       // A held status pose (Singed's shield while his damage reduction lasts) follows the same cast and status events.
       const pose = statusPoses.next(event);
       if (pose) pieces.get(pose.id)?.mixer?.setStatusPose(pose.on);

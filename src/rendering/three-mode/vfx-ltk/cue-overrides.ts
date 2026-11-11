@@ -175,13 +175,17 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
   // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
-  // W_Self_Buff (db0f8e0d): the purple pool and drops at Singed's feet while his damage reduction lasts. Started as a
-  // passive cue on his cast (batch1-events.ts), so the cast's own old-path effects still play; it fades out over
-  // SOFT_STOP_SECONDS when the damage-reduction status ends for any reason or he dies. Three of its four emitters never
-  // end, so the duration is only a safety bound (the loader's 10 s cap); the status ends it well before.
+  // W: Singed lobs a flask (W_Mis, its missile data: left hand → the ally's head attach point in 0.35 s) at the ally who
+  // dealt the most damage, himself included. Where it lands the ally gets W_Ally_Buf (ground glow, smoke, rays) and
+  // W_Buff_Avatar2 (a single whole-body edge glow, 4 s particle); Singed's own W_Self_Buff pool starts with it. All of it
+  // fades out over SOFT_STOP_SECONDS when his damage reduction ends for any reason or he dies (batch1-events.ts), so the
+  // durations are only bounds: W_Self_Buff's emitters never end, W_Ally_Buf's rays run 5 s.
   singed: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
-    { system: 'db0f8e0d', action: 'passive', event: 'cast-start', bone: ground, delay: 0, duration: 10 },
+    { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: 0.6, duration: 0.6, travelSeconds: 0.35 },
+    { system: '6e34a4e1', action: 'cast', event: 'hit', bone: ground, delay: 0.95, duration: 5 },
+    { system: '58f996d2', action: 'cast', event: 'hit', bone: chest, delay: 0.95, duration: 4.2 },
+    { system: 'db0f8e0d', action: 'cast', event: 'cast-start', bone: ground, delay: 0.95, duration: 10 },
   ],
   // R: 14.24 is a 3 s gas cloud that then detonates (11-06 field review: ours burst at 1.2 s, white and about 3.8 cells).
   // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.

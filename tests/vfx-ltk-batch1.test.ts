@@ -28,22 +28,23 @@ describe('batch 1 observed forms and passive/end triggers', () => {
       expect(plan.skipCast).toBeUndefined(); expect(plan.fresh).toBe(true);
     }
   });
-  it('starts Singed\'s self buff with his cast and stops it when his damage reduction ends for any reason or he dies; his cast stays untracked', () => {
+  it('fades Singed\'s cast visuals when his damage reduction ends for any reason, he dies or he casts again; skips an interrupted cast', () => {
     const events = createBatch1VfxEvents(id => id);
     const [plan] = events.batch([cast('singed', 1)]);
-    expect(plan.extra).toEqual([{ champion: 'singed', sourceId: 'singed', targets: [], action: 'passive', once: true }]);
+    expect(plan.fadeCast).toBe('singed'); expect(plan.extra).toEqual([]);
     expect(plan.skipCast).toBeUndefined(); expect(plan.stopCast).toBeUndefined();
-    expect(events.batch([{ ...cast('singed', 2), completed: false } as DisplayCombatEvent])[0].extra).toEqual([]);
+    const interrupted = events.batch([{ ...cast('singed', 2), completed: false } as DisplayCombatEvent])[0];
+    expect(interrupted.skipCast).toBe(true); expect(interrupted.fadeCast).toBeUndefined();
     const end = { type: 'statusChanged', eventSeq: 3, tick: 80, targetId: 'singed', kind: 'damage-reduction', reason: 'expired', effectiveMagnitudeBps: 0 } as DisplayCombatEvent;
-    expect(events.batch([end])[0].stopPassive).toBe('singed');
-    expect(events.batch([{ type: 'death', eventSeq: 4, tick: 81, unitId: 'singed' } as DisplayCombatEvent])[0].stopPassive).toBe('singed');
+    expect(events.batch([end])[0].fadeCast).toBe('singed');
+    expect(events.batch([{ type: 'death', eventSeq: 4, tick: 81, unitId: 'singed' } as DisplayCombatEvent])[0].fadeCast).toBe('singed');
     let seq = 10;
     for (const reason of ['cleansed', 'source-lost', 'death-cleanup', 'replaced', 'combat-end'])
-      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].stopPassive).toBe('singed');
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].fadeCast).toBe('singed');
     for (const reason of ['applied', 'refreshed'])
-      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].stopPassive).toBeUndefined();
-    expect(events.batch([{ ...end, eventSeq: seq++, kind: 'stun' } as DisplayCombatEvent])[0].stopPassive).toBeUndefined();
-    expect(events.batch([cast('singed', 1)])[0].extra).toEqual([]); // a replayed cast plays nothing again
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
+    expect(events.batch([{ ...end, eventSeq: seq++, kind: 'stun' } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
+    expect(events.batch([{ ...end, eventSeq: seq++, targetId: 'leona' } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
   });
   it('suppresses only VFX selection on sequence rollback and leaves event facts intact', () => {
     const events = createBatch1VfxEvents(id => id);
