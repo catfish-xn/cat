@@ -4,7 +4,8 @@
  * the host materials whose name hashes to one of them, and nothing when none does.
  *
  * node scripts/assets3d/audit-attached-parts.mjs --audit=<attached-audit.json> --models=<dir with champion .glb> --out=<dir>
- * A host is found as the first .glb under --models whose path holds the champion folder name (tft13_x -> x).
+ * A host is the .glb under --models with a path segment equal to the champion (tft13_x -> x, through ALIASES or
+ * --alias=export:model,...), else the first whose path holds it.
  */
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -12,6 +13,9 @@ import { join, resolve } from 'node:path';
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 for (const k of ['audit', 'models', 'out']) if (!args[k]) throw Error(`--${k}= required`);
 const out = resolve(args.out); await mkdir(out, { recursive: true });
+// Export folder names that the model folders call by the champion's own name.
+const ALIASES = { lieutenant: 'sevika', missmage: 'mel', beardy: 'loris', gremlin: 'smeech', renataglasc: 'renata', fish: 'steb',
+  ...Object.fromEntries((args.alias ?? '').split(',').filter(Boolean).map(pair => pair.split(':'))) };
 const fnv = text => { let h = 0x811c9dc5; for (const b of new TextEncoder().encode(text.toLowerCase())) { h ^= b; h = Math.imul(h, 0x01000193); } return `0x${(h >>> 0).toString(16).padStart(8, '0')}`; };
 
 async function glbs(dir, found = []) {
@@ -43,7 +47,9 @@ const rows = JSON.parse(await readFile(resolve(args.audit), 'utf8'));
 const report = [];
 for (const row of rows) {
   const champion = (row.folder.split('/').pop() || row.system.split('_')[1] || '').replace(/^tft13_/, '').toLowerCase();
-  const model = all.find(p => p.toLowerCase().includes(champion)) ?? null;
+  const name = ALIASES[champion] ?? champion, root = resolve(args.models);
+  const model = all.find(p => p.slice(root.length + 1).toLowerCase().split(/[/._-]/).includes(name))
+    ?? all.find(p => p.slice(root.length + 1).toLowerCase().includes(name)) ?? null;
   let parts = null; try { parts = model ? hostParts(await gltfOf(model)) : null; } catch { parts = null; }
   for (const e of row.emitters) {
     let now = 'whole-body', next = 'whole-body', matched = [];
