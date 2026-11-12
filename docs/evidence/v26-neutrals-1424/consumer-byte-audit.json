@@ -3721,9 +3721,9 @@
     "tests/vfx-ltk-projectile-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4179,
+      "currentBytes": 7012,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ba590d71db6b708e795e005514f0995b0b982ed392065364afd155ebfc20ff9e",
+      "currentSha256": "fc8064d31aca48fed8464d8a01d21405bbe66bcad4b459a0fa7331a3c3acacd4",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {

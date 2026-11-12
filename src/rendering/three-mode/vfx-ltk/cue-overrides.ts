@@ -404,9 +404,17 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
  * hit effect taking over at once is the original's own design, so this is no default.
  * - 20cd67dc Gangplank's ground-fire line: its ground strand carries a long particleLinger; in the original the burning
  *   line stays on the ground well after it is drawn, then chars and fades (11-12 footage).
- * - 87913524 Viktor's basic-attack laser: its scorched trench and rays carry particleLinger; the beam itself does not.
+ * Viktor's basic-attack laser (87913524) was weighed and left out: what it keeps past landing is a few faint draws for
+ * under a second, not worth the run (Fable 11-12).
+ * Each entry ends its play-out on its own clock: gone `seconds` after landing, every draw fading out over the last `fade`.
  */
-export const PLAY_OUT_SYSTEMS: ReadonlySet<string> = new Set(['20cd67dc', '87913524']);
+export interface PlayOut { readonly seconds: number; readonly fade: number }
+export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
+  // A FIT to original footage, not the original's own values. Its scorch strand lives and erodes on its authored 4.2 s
+  // curves here (fully dark well past a second, gone after about three); in the original's footage the scorch has broken
+  // up and gone a little over a second after the line lands. Why the original ends it sooner is not known.
+  '20cd67dc': { seconds: 1.1, fade: 0.3 },
+};
 
 /**
  * Emitters of a system that never emit here, by emitter name: their particles and every child they would spawn are gone.
