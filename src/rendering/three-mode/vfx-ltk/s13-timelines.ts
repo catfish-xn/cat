@@ -28,7 +28,7 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     // The flight ends on arrival (the engine stops a missile where it lands). Its emitters are authored to run on past
     // it: trench, dust, smoke and the fire-shaped spikes, plus its two rock and shard child systems (Landing_Mis_Child,
     // _Child02). So the same system plays again where she lands, for its own span (playOut), as the original's fire,
-    // ground crack and dust after the slam show (11-12 FB7YoqakYqE third cast). `duration` 4 is only a cap.
+    // ground crack and dust after the slam show (11-12 review of the original). `duration` 4 is only a cap.
     { system: '84b969e0', event: 'projectile', delay: frame(4.545000076293945), duration: viFlight, travelSeconds: viFlight, targetBone: ground },
     { system: '18e22631', event: 'cast-start', delay: frame(17), duration: 1.5, bone: ground },
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
