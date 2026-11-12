@@ -4,7 +4,7 @@ import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
-import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
+import { S13_TIMELINES, VI_LANDING, VI_ROW_SHOCKWAVE, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
   { system: 'cast', event: 'cast-start', delay: 0, duration: 1, bone: 'R_Hand', stopAfter: 0.2 },
@@ -144,6 +144,18 @@ describe('cast timeline replacement and fallback', () => {
     expect(pool.model.emitters).toHaveLength(2);
     expect(pool.drawn.map(d => d.emitter.name)).toEqual(['BIGGEST_Flash']);
   });
+  it('holds back the Trench of Vi\'s row shockwave and keeps its other emitters (11-12)', async () => {
+    const named = (name: string) => syntheticSystem({ emitterName: { type: 'string', value: name } });
+    const items = (doc: ReturnType<typeof syntheticSystem>) => (doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items;
+    const doc = named('Dust');
+    (doc.root as { fields: unknown[] }).fields = [{ ...(doc.root as { fields: unknown[] }).fields[0] as object,
+      value: { type: 'container', items: [...items(named('SpikeShapes1')), ...items(named('Dust')), ...items(named('Trench'))] } }];
+    const index = { ...syntheticIndex(), systems: { '84b969e0': 'systems/landing_mis.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
+    const pool = await library.load('84b969e0');
+    expect(pool.model.emitters).toHaveLength(3);
+    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['SpikeShapes1', 'Dust']);
+  });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
     expect(runtime.play('vi', 'caster', ['target'])).toBe(false);
@@ -264,7 +276,7 @@ describe('cast timeline replacement and fallback', () => {
   });
 });
 
-it('expires Vi flight at landing even after a frame-quantized start, leaving room for every impact', async () => {
+it('Vi: her landing systems start on the landing frame; her row shockwave pair is dropped whole on a first cast, on time warm', async () => {
   const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
   const library = createVfxLibrary('/root/', {
     readJson: async url => {
@@ -272,12 +284,31 @@ it('expires Vi flight at landing even after a frame-quantized start, leaving roo
       const doc = syntheticSystem(); if (url.includes('25afa6a6')) doc.root = struct('VfxSystemDefinitionData', {}); return doc;
     }, readTexture: async () => new Texture(),
   });
-  const scene = new Scene(), source = { root: new Group(), body: null, alive: true }, budget = { live: 0, max: 1500 };
-  const runtime = createLtkRuntime(library, scene, () => source, { budget });
-  await runtime.warm('vi'); expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  for (let frame = 0; frame < 17; frame++) runtime.update(1 / 30, new Camera());
-  const live = scene.children.map(o => o.userData.ltkSystem);
-  expect(live).toContain('66c600e8'); expect(live).toContain('d27b3044'); expect(live).toContain('18e22631');
-  expect(live).not.toContain('84b969e0'); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);
+  const scene = new Scene(), units = new Map(['source', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 30, 0, 0); return [id, { root, body: null, alive: true }]; }));
+  const budget = { live: 0, max: 1500 }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+  const live = () => scene.children.map(o => o.userData.ltkSystem as string).filter(Boolean);
+  const rows = () => live().filter(id => id === '84b969e0').length;
+  const step = (frames: number, each?: () => void) => { for (let f = 0; f < frames; f++) { runtime.update(1 / 30, new Camera()); each?.(); } };
+  const landing = Math.round(VI_LANDING * 30), launch = Math.ceil(VI_ROW_SHOCKWAVE.delay * 30);
+  await runtime.warm('vi');
+  // Cold: every system first reserves 250 slots, six of them fill the 1500 at the landing, and nothing there may give way
+  // to the pair: it waits whole and is dropped whole once overdue (never one side alone). Every other system still plays.
+  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+  step(landing);
+  for (const id of ['d27b3044', '18e22631', '66c600e8', '0314626c', '9614ffb4', 'c11e6814']) expect(live()).toContain(id);
+  expect(rows()).toBe(0); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(runtime.queued).toBe(2);
+  step(12, () => expect(rows()).toBe(0));
+  expect(runtime.queued).toBe(0);
+  for (const id of ['d27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
+  expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  for (let f = 0; f < 300 && runtime.active; f++) { step(1); expect(rows()).toBe(0); }
+  expect(runtime.active).toBe(0);
+  // Warm: each system reserves what it was seen to need (the pair, never played, still its first 250 each); the pair
+  // starts on its own frame, both in that frame, beside every other system.
+  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+  step(launch + 1, () => expect([0, 2]).toContain(rows()));
+  expect(rows()).toBe(2);
+  for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
+  expect(runtime.active).toBe(8); expect(budget.live).toBe(1096); expect(budget.live).toBeLessThanOrEqual(budget.max);
   runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
 });

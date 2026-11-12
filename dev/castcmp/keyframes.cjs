@@ -19,7 +19,7 @@ for (const k of ['hero', 'system', 'after', 'out', ...(opt('times') ? [] : ['bef
 const MAX_BYTES = 2 * 1024 * 1024;
 const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k => ({ key: k, dir: path.resolve(opt(k)) }));
 
-const frames = dir => fs.readdirSync(dir).filter(f => /-\d{4}\.jpg$/.test(f)).sort().map(f => ({ t: Number(f.match(/-(\d{4})\.jpg$/)[1]), file: path.join(dir, f) }));
+const { frames } = require('./frames.cjs');
 const gateOf = dir => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'gate.json'), 'utf8')); } catch { return null; } };
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 const caption = (w, lines) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${lines.length * 22 + 10}">

@@ -12,6 +12,7 @@
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
+import { S13_TIMELINES } from './s13-timelines';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -281,6 +282,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '95bbab3d', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
     { system: '03b4d6ac', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
   ],
+  // The asset root's exported list is S13_TIMELINES.vi as of 10-27 plus its attack hit (copied unchanged from the
+  // export); this replaces it so the landing play-out (s13-timelines.ts) reaches the live board without an asset rebuild.
+  vi: [
+    ...S13_TIMELINES.vi,
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
+  ],
 };
 
 /**
@@ -332,8 +339,8 @@ export function cueAdditions(champion: string, systems: Readonly<Record<string, 
 }
 
 /**
- * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
- * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
+ * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
+ * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
@@ -344,6 +351,10 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
+  // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
+  // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
+  '84b969e0': ['Trench'],
 };
 
 /**
