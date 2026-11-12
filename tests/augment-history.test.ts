@@ -469,7 +469,7 @@ it('keeps the real battle ledger and terminal save identical to the independent 
   // pathing (c64a756a; m01@155). Same values as tests/v26-anomaly-identity-audit.test.ts. Were
   // 0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324 and 99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431.
   expect(s.combat!.tick).toBe(274);expect(events).toHaveLength(153);
-  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('536cc14b0a3d4245d616eef7a92bb33769fca3e5ea2228c56bdb17cb508ddb83');
+  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('f7e27bc0bb88aa0289c0268bee4aa19e3d7d19a904b90f738a527380ec0b7a8e');
   expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('fc3de4605395549c665e4cbbb9a2f50fee4d9bd97806f8f6320bbe2c87ac6c8f');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{

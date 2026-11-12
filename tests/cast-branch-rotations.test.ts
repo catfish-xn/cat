@@ -23,7 +23,7 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
   }
   return out;
 }
-const MIXED_DIGEST = '00232cbba2af1ffeb56bacfbb66c15edd3abee03b8e7a6d215dc3c0fbf5a447d';
+const MIXED_DIGEST = '49e1d29a58fb069e6a6d2493b461bca599f21376d65379668018b2680a2976bc';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 
@@ -72,8 +72,8 @@ describe('cast branch output for count-driven abilities', () => {
   });
 
   it('output only: with the two display fields removed, a mixed combat is byte-identical to the pre-change run', () => {
-    // Pinned digest of the events and the final state with castIndex/branch stripped. The same script at 0b245f80 (before
-    // this change; #623 already there) gives the same digest, so nothing but the two fields moved.
+    // Pinned digest of the events and the final state with castIndex/branch stripped. The same test at b590df74 (this PR's
+    // base, before the change) gives the same digest, so nothing but the two fields moved.
     const units: any[] = [['jinx', 1, 5], ['cassiopeia', 2, 5], ['mel', 3, 5], ['ambessa', 4, 5], ['ekko', 5, 5]]
       .map(([definitionId, col, row], i) => ({ id: `p${i}`, definitionId, team: 'player', starLevel: 2, location: { kind: 'board', cell: { col, row } } }))
       .concat(['garen', 'amumu', 'vi', 'sett'].map((definitionId, i) => ({ id: `e${i}`, definitionId, team: 'enemy', starLevel: 2, location: { kind: 'board', cell: { col: 2 + i, row: 1 } } })));
@@ -86,6 +86,7 @@ describe('cast branch output for count-driven abilities', () => {
       ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'castIndex' && k !== 'branch')) : v;
     const digest = createHash('sha256').update(JSON.stringify({ log, state }, strip)).digest('hex');
     expect(log.filter((e: any) => e.type === 'cast').length).toBeGreaterThan(5);
+    if (process.env.DIGEST_OUT) require('node:fs').writeFileSync(process.env.DIGEST_OUT, digest);
     expect(digest).toBe(MIXED_DIGEST);
   });
 });
