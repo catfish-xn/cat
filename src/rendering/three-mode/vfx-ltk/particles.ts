@@ -30,7 +30,7 @@ export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
  * One flat 100 refused the second and third of the rock children every FillMouth particle of Vi's row shockwave
  * spawns (84b969e0 -> db4240a5 -> 4e1dc787, 11-12): only one of about three appeared, near the row's start.
  */
-export const CHILD_ROOM_CAP = 512, CHILD_COUNT_CAP = 24;
+export const CHILD_ROOM_CAP = 1024, CHILD_COUNT_CAP = 32;
 /** The child room a run of one system gets: pool slots for the engine's child budget, and live child systems. */
 export interface ChildRoom { readonly budget: number; readonly most: number }
 export const DEFAULT_CHILD_ROOM: ChildRoom = { budget: CHILD_PARTICLES, most: 8 };
@@ -256,11 +256,14 @@ export function measureChildren(prepared: PreparedVfx, seconds: number, stopAt?:
   }
   return { room, live, particles };
 }
-/** A run's child room off what its system measured: the measured room and count with one more child's worth, capped. */
+/**
+ * A run's child room off what its system measured: half again the measured room and count, capped. The measure stands
+ * still and stops at the cue's nominal flight; a real run moves, and on Vi's longest row (6.5 cells) it held one more
+ * rock child than the measure did, which a single child's margin refused (11-12, measured).
+ */
 export function childRoomOf(measured: { room: number; live: number } | null): ChildRoom {
   if (!measured || measured.live === 0) return DEFAULT_CHILD_ROOM;
-  const each = Math.ceil(measured.room / measured.live);
-  return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, measured.room + each)), most: Math.min(CHILD_COUNT_CAP, Math.max(8, measured.live + 1)) };
+  return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, Math.ceil(measured.room * 1.5))), most: Math.min(CHILD_COUNT_CAP, Math.max(8, Math.ceil(measured.live * 1.5))) };
 }
 export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
   const anchor = pointAnchor([0, 0, 0]);
