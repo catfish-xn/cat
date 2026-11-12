@@ -307,6 +307,8 @@ interface PieceView {
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
   castBranch?: string;
+  /** The rule's cast number for this unit's last cast (cast event `castIndex`, 1 on its first cast); 0 = not reported. */
+  castIndex: number;
   readonly attackCadence: AttackCadence;
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
@@ -683,7 +685,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
-  const ltkCastCounts = new Map<string, number>();
   const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
@@ -944,7 +945,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.mixer.setForm(view.form);
       view.follow = OverheadFollow.of(lease.scene, lease.animations, lease.animationNames.idle);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
       flushRise(view);
@@ -979,7 +980,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = new Group();
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
-    const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, stars: null, castIndex: 0, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
@@ -1001,7 +1002,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
       view.mixer.setForm(view.form);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
     }
@@ -1113,7 +1114,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkCastCounts.clear(); ltkEvents.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1466,7 +1467,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       if (event.type === 'cast') {
-        const source = pieces.get(event.sourceId); if (source) source.castBranch = batch2Vfx.branch(event);
+        const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
@@ -1477,8 +1478,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
-        const castIndex = ltkCastCounts.get(event.sourceId) ?? 0;
-        ltkCastCounts.set(event.sourceId, castIndex + 1);
+        // The rule's own cast number (cast event castIndex); the board keeps no count of its own.
+        const castIndex = event.castIndex ?? 0;
         face(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.

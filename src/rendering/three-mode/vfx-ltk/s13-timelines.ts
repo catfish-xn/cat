@@ -28,15 +28,15 @@ const viRowCue = (rowSide: -1 | 1): TimelineCue => ({ system: '84b969e0', event:
   rowSide, rowCells: VI_ROW_SHOCKWAVE.cells, rowToEnd: true, rowBeyond: VI_ROW_SHOCKWAVE.beyond, rowSpeed: VI_ROW_SHOCKWAVE.speed, together: 'row' });
 export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   jinx: [
-    { phase: 0, system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
-    { phase: 0, system: '3496e112', event: 'projectile', delay: frame(7.53000020980835), duration: 0.45, travelSeconds: 0.3, bone: 'Cstm_Buffbone_Pistol', targetBone: 'C_Buffbone_Glb_Chest_Loc' },
-    { phase: 0, system: '10fede7e', event: 'hit', delay: frame(7.53000020980835) + 0.3, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
-    { phase: 1, system: '9bd80364', event: 'projectile', delay: 0.15, duration: 0.6, travelSeconds: 0.45, bone: 'L_Hand', targetBone: ground },
-    { phase: 1, system: 'cd05488e', event: 'hit', delay: 0.6, duration: 1.2, bone: ground, stopAfter: 0.15 },
-    { phase: 2, system: '7e6f06b5', event: 'cast-start', delay: frame(5), duration: 1, bone: 'Cstm_Buffbone_Rocket_Launcher', stopAfter: 0.3 },
-    { phase: 2, system: '449d6617', event: 'cast-start', delay: frame(20), duration: 0.8, bone: 'Cstm_Buffbone_Rocket_Launcher' },
-    { phase: 2, system: '8b59c09d', event: 'projectile', delay: frame(20), duration: 0.75, travelSeconds: 0.6, bone: 'Cstm_Buffbone_Rocket_Launcher', targetBone: ground },
-    { phase: 2, system: '809da1b1', event: 'hit', delay: frame(20) + 0.6, duration: 2, bone: ground, primary: true },
+    { branch: 'zap', system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
+    { branch: 'zap', system: '3496e112', event: 'projectile', delay: frame(7.53000020980835), duration: 0.45, travelSeconds: 0.3, bone: 'Cstm_Buffbone_Pistol', targetBone: 'C_Buffbone_Glb_Chest_Loc' },
+    { branch: 'zap', system: '10fede7e', event: 'hit', delay: frame(7.53000020980835) + 0.3, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { branch: 'chompers', system: '9bd80364', event: 'projectile', delay: 0.15, duration: 0.6, travelSeconds: 0.45, bone: 'L_Hand', targetBone: ground },
+    { branch: 'chompers', system: 'cd05488e', event: 'hit', delay: 0.6, duration: 1.2, bone: ground, stopAfter: 0.15 },
+    { branch: 'rocket', system: '7e6f06b5', event: 'cast-start', delay: frame(5), duration: 1, bone: 'Cstm_Buffbone_Rocket_Launcher', stopAfter: 0.3 },
+    { branch: 'rocket', system: '449d6617', event: 'cast-start', delay: frame(20), duration: 0.8, bone: 'Cstm_Buffbone_Rocket_Launcher' },
+    { branch: 'rocket', system: '8b59c09d', event: 'projectile', delay: frame(20), duration: 0.75, travelSeconds: 0.6, bone: 'Cstm_Buffbone_Rocket_Launcher', targetBone: ground },
+    { branch: 'rocket', system: '809da1b1', event: 'hit', delay: frame(20) + 0.6, duration: 2, bone: ground, primary: true },
   ],
   vi: [
     { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },

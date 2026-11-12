@@ -84,7 +84,7 @@ export function createBatch2VfxBridge(host: Host) {
         return handled;
       }
       if (champion === 'jinx') return play(champion, source, targets, 'jinx', index, action);
-      if (champion === 'mel') return play(champion, source, targets, melSkill(index), index, action);
+      if (champion === 'mel') return play(champion, source, targets, melSkill(cast?.branch?.branch), index, action);
       if (champion === 'warwick') return play(champion, source, targets, 'warwick', index, action);
       if (champion === 'viktor') return play(champion, source, targets, 'viktor', index, action);
     },

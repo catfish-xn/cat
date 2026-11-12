@@ -105,20 +105,25 @@ describe('batch 2 exact display stages', () => {
     expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-jackpot','sevika-slots','sevika-slots-jackpot']); expect(b.branch(c)).toBe('four');
   });
   it('maps Jinx W/E/R and central R without making the first enemy its landing point', () => {
-    const w = mapSkillTimeline(jinxSkills.jinx.filter(c=>!c.action),'j',['a','b','c'],0,point);
+    const of = (branch: string, cues = jinxSkills.jinx) => cues.filter(c => c.branch === undefined || c.branch === branch);
+    const w = mapSkillTimeline(of('zap', jinxSkills.jinx.filter(c=>!c.action)),'j',['a','b','c'],point);
     expect(w.spawns.some(c=>c.system==='40140250')).toBe(true);
-    const e = mapSkillTimeline(jinxSkills.jinx,'j',['a','b','c','d'],1,point);
+    const e = mapSkillTimeline(of('chompers'),'j',['a','b','c','d'],point);
     expect(e.spawns.filter(c=>c.system==='9bd80364').map(c=>c.targetId)).toEqual(['a','b','c']);
-    const r = mapSkillTimeline(jinxSkills.jinx.filter(c=>!c.action),'j',['a','b'],2,point);
+    const r = mapSkillTimeline(of('rocket', jinxSkills.jinx.filter(c=>!c.action)),'j',['a','b'],point);
     expect(r.spawns.filter(c=>c.location==='board')).toHaveLength(2);
     expect(r.spawns.find(c=>c.system==='809da1b1')).toMatchObject({point});
     expect(r.spawns.find(c=>c.system==='809da1b1')?.targetId).toBeUndefined();
-    expect(mapSkillTimeline(jinxSkills.jinx,'j',['a'],2).unsupported.map(c=>c.reason)).toContain('missing-point');
+    expect(mapSkillTimeline(of('rocket'),'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
   });
   it('distinguishes Mel normal/third cast, throttles energy only within the same tick, and keeps confirmed save independent of a living caster', () => {
     const {bridge:b,play}=bridge('mel');
-    for (let i=0;i<4;i++) b.action('cast','m',['target'],i);
-    expect(play.mock.calls.map(c=>c[5].skill)).toEqual(['mel','mel','mel-third','mel']);
+    // The third cast is the rule's own branch on the cast event (combat-six-cost.ts), never a count kept here.
+    const melCast=(i:number,branch?:string)=>({type:'cast',tick:i,eventSeq:i,sourceId:'m',actionSeq:i,completed:true,actualManaSpent:0,refundedMana:0,targetIds:['target'],
+      completionCell:{col:0,row:0},castIndex:i+1,...(branch?{branch:{castIndex:i+1,branch}}:{})}) as never;
+    for (let i=0;i<4;i++) b.action('cast','m',['target'],i,melCast(i,i%3===2?'third':'normal'));
+    b.action('cast','m',['target'],2,melCast(2));
+    expect(play.mock.calls.map(c=>c[5].skill)).toEqual(['mel','mel','mel-third','mel','mel']);
     play.mockClear();
     for (const tick of [1,1,2]) b.event({type:'melEnergyChanged',eventSeq:1,tick,unitId:'m',before:0,after:10},true);
     expect(play).toHaveBeenCalledTimes(2); b.save('battle'); expect(play.mock.calls[2]?.[5]).toMatchObject({skill:'mel-save',board:point});
@@ -339,10 +344,10 @@ describe('batch 2 runtime boundaries', () => {
     runtime.stopUnit('dead');runtime.update(.01,new Camera());expect(runtime.active).toBe(2);
     runtime.clear();expect(budget.live).toBe(0);expect(scene.children).toHaveLength(0);runtime.dispose();
   });
-  it('does not let an unavailable different Jinx phase force a prepared phase to legacy', async () => {
-    const cues=[{system:'a',phase:0,event:'cast-start',delay:0,duration:1},{system:'b',phase:1,event:'cast-start',delay:0,duration:1}];
+  it('does not let an unavailable different Jinx branch force a prepared branch to legacy', async () => {
+    const cues=[{system:'a',branch:'zap',event:'cast-start',delay:0,duration:1},{system:'b',branch:'chompers',event:'cast-start',delay:0,duration:1}];
     const library=createVfxLibrary('/root/',{readJson:async url=>url.endsWith('index.json')?{version:1,systems:{a:'a.json',b:'missing.json'},assets:{'synthetic.tex':'a.png'},skills:{jinx:cues}}:url.endsWith('missing.json')?Promise.reject(Error('404')):syntheticSystem(),readTexture:async()=>new Texture()});
     const source={root:new Group(),body:null,alive:true},runtime=createLtkRuntime(library,new Scene(),()=>source);
-    await runtime.warm('jinx');expect(runtime.play('jinx','j',[],0)).toBe(true);expect(runtime.play('jinx','j',[],1)).toBe(false);runtime.dispose();
+    await runtime.warm('jinx');expect(runtime.play('jinx','j',[],0,'cast',{branch:'zap'})).toBe(true);expect(runtime.play('jinx','j',[],0,'cast',{branch:'chompers'})).toBe(false);runtime.dispose();
   });
 });
