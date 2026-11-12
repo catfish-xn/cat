@@ -1,7 +1,9 @@
 import type { TimelineCue } from '../timeline';
+import { CHEST } from '../timeline';
+// Attack: no 14.24 Mel record on hand; the chest, as every S13 basic attack we have data for (inferred).
 const attack: readonly TimelineCue[] = [
-  { system: '539901e6', action: 'attack', event: 'projectile', bone: 'r_hand', delay: 9.5 / 30, duration: .3, travelSeconds: .3 },
-  { system: '0f2af66b', action: 'attack', event: 'hit', delay: 9.5 / 30 + .3, duration: .5 },
+  { system: '539901e6', action: 'attack', event: 'projectile', bone: 'r_hand', targetBone: CHEST, delay: 9.5 / 30, duration: .3, travelSeconds: .3 },
+  { system: '0f2af66b', action: 'attack', event: 'hit', bone: CHEST, delay: 9.5 / 30 + .3, duration: .5 },
 ];
 export const melSkills: Record<string, readonly TimelineCue[]> = {
   mel: [...attack,

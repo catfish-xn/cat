@@ -1,3 +1,5 @@
+/** The chest locator: 14.24 basic attacks hit here (BasicAttack mHitBoneName), and their missiles fly to it. */
+export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
 export type TimelineVariant = 'empowered' | 'self';
