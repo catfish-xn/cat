@@ -47,6 +47,27 @@ export function installProbes(clock: () => number) {
     /** Systems running now, and every start since the last reset (t on the harness clock, ms). */
     systems: () => ({ live: [...new Set([...live].map(r => r.system))], started: started.slice() }),
     resetStarts: () => { started.length = 0; },
+    /** Every attached-mesh overlay drawn now (vfx-ltk AttachedMeshes: a SkinnedMesh named `<emitter>#<index>.<slot>` whose
+     * material carries particleTint): its tint and erosion drive, its blend state, and each texture it samples with
+     * whether that texture has its image yet (a texture still loading samples as nothing or a flat colour). */
+    attached() {
+      if (!scene) return { missing: ['scene'] };
+      const out: any[] = [];
+      scene.traverse((o: any) => {
+        if (!o.isSkinnedMesh || !o.visible || !/#\d+\.\d+$/.test(o.name)) return;
+        const mats: any[] = Array.isArray(o.material) ? o.material : [o.material];
+        const m = mats.find(x => x?.uniforms?.particleTint); if (!m) return;
+        const textures = Object.entries(m.uniforms).filter(([, u]: any) => u?.value?.isTexture).map(([k, u]: any) => {
+          const img = u.value.image; return { uniform: k, ready: !!img && (img.width > 0 || img.data?.length > 0), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: u.value.version };
+        });
+        const num = (v: any) => Array.isArray(v) ? v.map((x: number) => +x.toFixed(3)) : typeof v === 'number' ? +v.toFixed(3) : v;
+        out.push({ name: o.name, host: o.parent?.name ?? null, parts: mats.filter(x => x?.visible !== false).length, of: mats.length,
+          tint: num(m.uniforms.particleTint.value), erode: num(m.uniforms.particleErode?.value), blending: m.blending,
+          blendSrc: m.blendSrc, blendDst: m.blendDst, transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite,
+          defines: Object.keys(m.defines ?? {}).filter(k => !/^(SHEEN)$/.test(k)).join(','), textures });
+      });
+      return { draws: out };
+    },
     /** Screen points (CSS px in the canvas) of `pos`'s unit: its overhead bar and its body (Pelvis, else Root, else root). */
     async overhead(pos: { x: number; y: number }) {
       const THREE = await three;

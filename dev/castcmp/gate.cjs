@@ -8,7 +8,9 @@
 //     one sample just before the recorded action (a system already running then is the warm pass's, not this action's);
 //   - covering, at the action frame: a foe nearer the camera (its box's bottom below the caster's) over 60% of the
 //     caster's box fails; any other overlap over 30% is a warning in notes (warnings[]), not a failure;
-//   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame.
+//   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame; (--probe attached)
+//     every attached overlay drawn, per frame: tint, blend state, textures and whether each has loaded (recorded only).
+//     Both: --probe overhead,attached.
 // Options: --systems id,id|none (must run in the judged window), --absent id,id (must not run in it), --layers id,id|none
 // (which of --systems must also show an attached layer; default all of them), --from/--to ms (the judged window on the
 // recording's clock; default all of it), --column before|after|off|debug.
@@ -76,7 +78,7 @@ function createGate(opt, ctx) {
   const layerIds = opt('layers') === undefined ? systems : list(opt('layers'));
   const column = opt('column') ?? (opt('attached') === 'off' ? 'off' : opt('attached') === 'debug' ? 'debug' : 'after');
   const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
-  const probeOverhead = opt('probe') === 'overhead';
+  const probeList = list(opt('probe')), probeOverhead = probeList.includes('overhead'), probeAttached = probeList.includes('attached');
   const frames = [];
   let ckout = null, pre = { running: [], layers: [] }, sampleLayers = false;
   return {
@@ -91,7 +93,7 @@ function createGate(opt, ctx) {
     },
     async beforeStep() { if (enabled && sampleLayers) await resetLayers(ctx.page); },
     async frame(t) {
-      if (!enabled && !probeOverhead) return;
+      if (!enabled && !probeOverhead && !probeAttached) return;
       const f = { t };
       if (enabled) {
         const running = await readRunning(ctx.page);
@@ -101,10 +103,12 @@ function createGate(opt, ctx) {
         f.boxes = await ctx.page.evaluate(() => Object.fromEntries(['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => [id, window.__h.box(id) ?? null])));
       }
       if (probeOverhead) f.overhead = await ctx.page.evaluate(() => window.__h.overhead?.('me') ?? null);
+      if (probeAttached) f.attachedDraws = await ctx.page.evaluate(() => window.__h.attached?.() ?? null);
       frames.push(f);
     },
     async finish(record) {
       const fs = require('fs'), path = require('path');
+      if (probeAttached) fs.writeFileSync(path.join(record.out, 'attached.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.attachedDraws ?? {}) })), null, 2));
       if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) })), null, 2));
       if (!enabled) return true;
       const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
