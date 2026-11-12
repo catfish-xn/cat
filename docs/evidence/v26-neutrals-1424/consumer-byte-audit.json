@@ -8,6 +8,14 @@
       "currentSha256": "7443428a08538ebbb72c1c2b019962b9b357b569d85b9dc070110de3c3b021fa",
       "firstDifferentByte": 606
     },
+    "tests/ambessa-cast-branch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3954,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b3df927f012e8ea3c68b199fe58dd20d68757c7853c611e1ef95a469d7cbd411",
+      "firstDifferentByte": 0
+    },
     "tests/ambessa-dash.test.ts": {
       "previousBytes": 11319,
       "currentBytes": 13063,

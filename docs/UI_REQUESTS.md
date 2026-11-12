@@ -4,7 +4,9 @@
 
 # 界面数据需求（Claude → Codex）
 
-## CAST-BRANCH-FIELD（2026-11-12，Claude → Codex，Fable 已定方案）
+## CAST-BRANCH-FIELD（2026-11-12，Fable 已定方案；已完成：用户决定不经 Codex，由 Claude 实现）
+
+**实现：**`CastReceipt.branch?: { castIndex, branch }`（`m8/contracts.ts`），能力判定处写 `ctx.castBranch`（安蓓萨在 `combat-g2-2.ts` 写 `chain`／`fist`），`combat-s13.ts` 生成收据时带上，回放视图的 `cast` 事件透传为 `branch`。只在规则写了分支时出现，其余施法字节不变。测试 `tests/ambessa-cast-branch.test.ts`。以下保留原请求。
 
 渲染端要按规则实际走的分支选施法动作和特效，目前只有塞维卡有分支输出（`castOutcome.castVariant`，`combat-g2-3.ts` 写出，类型 `SevikaCastVariant`）。安蓓萨的拳/链分支在 `combat-g2-2.ts` 的 `case 'ambessa'` 里按 `castCount%2` 判定（`combat-s13.ts` 在结算前先 `castCount++`，所以第 1、3、5… 次施法为链：冲刺+目标周围 1 格；第 2、4… 次为拳：SlamDamage+眩晕+登记后撤），但没有任何输出；现有的 `movement.reason`（`ambessa-chain`／`ambessa-fist-retreat`）在没有落点或后撤被挡时缺失，不能代替。渲染端不得自己数施法次数。
 
