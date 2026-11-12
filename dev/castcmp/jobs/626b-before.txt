@@ -1,0 +1,12 @@
+# #626 Vi row shockwave (redo 11-12 b), before column. Checkout: branch claude/vi-grab-slam-kf (#618 head 2f5f9885 merged with the castcmp tools e998bf8b,
+# plus --probe emitters on this branch only). Recording only, never merged.
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (both PASS, 11-12, Linux).
+# One 3-star Sett, --dist 2. Vi casts at 0.5 s (window), lands at about 1.07 s, slams at 1.1 s.
+# Line 1, cold: --warm 0, so the recorded cast is the first of the page (every vfx system reserves its first-play room);
+#   after column: the hand trail gives way and the two row shockwaves start together about 0.28 s late.
+# Line 2, warm: one warm cast first (default), so each system reserves what it was seen to need; the pair starts on time.
+# Both: --probe emitters writes emitters.json (every running system per frame: live particles by emitter index, and each
+#   draw on screen or not). Map draw index -> emitter with dev/castcmp/jobs/626b-draws.json.
+# Keyframes (window ms): landing +0/+0.3/+0.6/+1.4 s = 1067/1367/1667/2467; hand trail 1400-1700; jump dust 800/1100/1400.
+v-capture.cjs vi v626b-before-cold --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 3000 --settle 3000 --warm 0 --systems 9614ffb4 --layers 9614ffb4 --probe emitters --column before --snapshot c1333710ad8e
+v-capture.cjs vi v626b-before-warm --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 3000 --settle 3000 --systems 9614ffb4 --layers 9614ffb4 --probe emitters --column before --snapshot c1333710ad8e

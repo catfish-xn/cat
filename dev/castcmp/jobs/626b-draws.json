@@ -1,0 +1,161 @@
+{
+ "note": "Draw index -> emitter for emitters.json (particles.ts build order, children appended; measured on Linux 11-12 from asset-root-live snapshot c1333710ad8e). 9614ffb4 draws only its attached overlays on a body.",
+ "systems": {
+  "c11e6814": {
+   "emitters": [
+    "0:Ribbon_",
+    "1:Ribbon_1",
+    "2:Ribbon_2",
+    "3:Trail_Tech",
+    "4:Trail_Tech1",
+    "5:Alpha_Glow"
+   ],
+   "draws": [
+    "0:Ribbon_",
+    "1:Ribbon_1",
+    "2:Ribbon_2",
+    "3:Trail_Tech",
+    "4:Trail_Tech1",
+    "5:Alpha_Glow"
+   ]
+  },
+  "0314626c": {
+   "emitters": [
+    "0:Alpha_shockwave",
+    "1:Alpha_Smoke",
+    "2:Alpha_Smoke1"
+   ],
+   "draws": [
+    "0:Alpha_shockwave",
+    "1:Alpha_Smoke",
+    "2:Alpha_Smoke1"
+   ]
+  },
+  "9614ffb4": {
+   "emitters": [
+    "0:Add_Avatar"
+   ],
+   "draws": []
+  },
+  "18e22631": {
+   "emitters": [
+    "0:Add_Spikes",
+    "1:Add_Spikes1",
+    "2:Add_Spikes2"
+   ],
+   "draws": [
+    "0:Add_Spikes",
+    "1:Add_Spikes1",
+    "2:Add_Spikes2"
+   ]
+  },
+  "d27b3044": {
+   "emitters": [
+    "0:Shockwave1",
+    "1:Hit",
+    "2:dustRing",
+    "3:Spikes_Edge_Dark",
+    "4:onKill_GlowDecal",
+    "5:onKill_GlowDecal1",
+    "6:poolSphere_GROUND",
+    "7:onKill_GlowDecal2",
+    "8:Add_Sparks",
+    "9:distot_activate4",
+    "10:ray_Glow",
+    "11:SpikeShapes",
+    "12:Smoke"
+   ],
+   "draws": [
+    "0:Shockwave1",
+    "1:Hit",
+    "2:dustRing",
+    "3:Spikes_Edge_Dark",
+    "4:onKill_GlowDecal",
+    "5:onKill_GlowDecal1",
+    "6:poolSphere_GROUND",
+    "7:onKill_GlowDecal2",
+    "8:Add_Sparks",
+    "9:distot_activate4",
+    "10:ray_Glow",
+    "11:SpikeShapes",
+    "12:Smoke"
+   ]
+  },
+  "66c600e8": {
+   "emitters": [
+    "0:Glow",
+    "1:SolidBeams",
+    "2:flash",
+    "3:vecalign",
+    "4:flash1",
+    "5:Additive_Flipbook",
+    "6:Glow1"
+   ],
+   "draws": [
+    "0:Glow",
+    "1:SolidBeams",
+    "2:flash",
+    "3:vecalign",
+    "4:flash1",
+    "5:Additive_Flipbook",
+    "6:Glow1"
+   ]
+  },
+  "84b969e0": {
+   "emitters": [
+    "0:SpikeShapes1",
+    "1:Dust",
+    "2:Smoke",
+    "3:FillMouth",
+    "4:Alpha_Dust",
+    "5:Trench"
+   ],
+   "draws": [
+    "0:SpikeShapes1",
+    "1:Dust",
+    "2:Smoke",
+    "3:FillMouth",
+    "4:Alpha_Dust",
+    "5:Trench",
+    "6:Rock_Mesh_Large",
+    "7:Rock_Mesh_Large1",
+    "8:Smoke_Burst",
+    "9:StrokeDissolve_Right",
+    "10:SmokeRing_rocks",
+    "11:FillMouth",
+    "12:iceshard_center",
+    "13:iceshard_center1"
+   ]
+  },
+  "db4240a5": {
+   "emitters": [
+    "0:Rock_Mesh_Large",
+    "1:Rock_Mesh_Large1",
+    "2:Smoke_Burst",
+    "3:StrokeDissolve_Right",
+    "4:SmokeRing_rocks",
+    "5:FillMouth"
+   ],
+   "draws": [
+    "0:Rock_Mesh_Large",
+    "1:Rock_Mesh_Large1",
+    "2:Smoke_Burst",
+    "3:StrokeDissolve_Right",
+    "4:SmokeRing_rocks",
+    "5:FillMouth",
+    "6:iceshard_center",
+    "7:iceshard_center1"
+   ]
+  },
+  "4e1dc787": {
+   "emitters": [
+    "0:iceshard_center",
+    "1:iceshard_center1"
+   ],
+   "draws": [
+    "0:iceshard_center",
+    "1:iceshard_center1"
+   ]
+  }
+ }
+}
