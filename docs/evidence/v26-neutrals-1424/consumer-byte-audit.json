@@ -3388,10 +3388,17 @@
     },
     "tests/v23-review-restore.test.ts": {
       "previousBytes": 7717,
-      "currentBytes": 8219,
+      "currentBytes": 8486,
       "previousSha256": "f3363cab9b51758d33b19f95eecc01e35afeb3ff1096838caa8ff4f691db95f7",
-      "currentSha256": "afc401ddbfd34d018a2b361ee81f8822bd2f4db4c9bc3f0453765cf3833b8c7f",
+      "currentSha256": "0e84ef76eafce7da05d45f0622c98da1b024920be181fb574ef8d63c593155ea",
       "firstDifferentByte": 401
+    },
+    "tests/v23-rules-verify-sion-cc.test.ts": {
+      "previousBytes": 17437,
+      "currentBytes": 17656,
+      "previousSha256": "f5543fd8a0223d3e45457c666c4840d097f4df872b4473dce032cfd7ea4ab940",
+      "currentSha256": "1beb2cd5e1703d3910ae26c20527282f1e7e327a05fc1e127aaeda7c82a515ac",
+      "firstDifferentByte": 555
     },
     "tests/v23-tamper-batch4.test.ts": {
       "previousBytes": 15620,
