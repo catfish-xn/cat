@@ -146,7 +146,7 @@ describe('cast timeline replacement and fallback', () => {
     expect(pool.model.emitters).toHaveLength(2);
     expect(pool.drawn.map(d => d.emitter.name)).toEqual(['BIGGEST_Flash']);
   });
-  it('holds back the Trench of Vi\'s row shockwave and keeps its other emitters (11-12)', async () => {
+  it('draws the Trench of Vi\'s row shockwave again, with its stopped head faded (a fit), beside its other emitters', async () => {
     const named = (name: string) => syntheticSystem({ emitterName: { type: 'string', value: name } });
     const items = (doc: ReturnType<typeof syntheticSystem>) => (doc.root as { fields: { value: { items: unknown[] } }[] }).fields[0].value.items;
     const doc = named('Dust');
@@ -156,7 +156,8 @@ describe('cast timeline replacement and fallback', () => {
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
     const pool = await library.load('84b969e0');
     expect(pool.model.emitters).toHaveLength(3);
-    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['SpikeShapes1', 'Dust']);
+    expect(pool.drawn.map(d => d.emitter.name)).toEqual(['SpikeShapes1', 'Dust', 'Trench']);
+    expect([...pool.endFade ?? []]).toEqual(['Trench']);
   });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
     const { runtime, scene, camera } = await setup();
