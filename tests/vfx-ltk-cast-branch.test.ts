@@ -52,7 +52,8 @@ describe('cast branch: effects follow the rule branch', () => {
 
   it('never picks a branch from the cast count: without the event branch no branched system plays', async () => {
     const runtime = await setup(cues);
-    for (const index of [0, 1, 2, 3]) { runtime.play('ambessa', 'self', ['enemy'], index, 'cast'); expect(runtime.queued).toBe(0); }
+    // Returning false hands the cast to the host's older path (a replay recorded before the field still draws a cast).
+    for (const index of [0, 1, 2, 3]) { expect(runtime.play('ambessa', 'self', ['enemy'], index, 'cast')).toBe(false); expect(runtime.queued).toBe(0); }
     expect(runtime.play('ambessa', 'self', ['enemy'], 0, 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
