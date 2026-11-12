@@ -1,0 +1,8 @@
+# Vi row shockwave Trench + dust and smoke layers together (evidence only; branch claude/vi-trench-dust-iso, never merged):
+# claude/vi-trench-iso-endfade (Trench with the end fade, linger 0.6) with Vi playing only her two row shockwaves and, of
+# their system 84b969e0, the Trench plus Dust, Smoke, Alpha_Dust and the rock child's Smoke_Burst and SmokeRing_rocks drawn
+# (spikes, rock meshes, fill and shards muted).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# 3-star Vi on one 3-star Sett, --dist 2, warm. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 ms, wide (3 cells each side)
+# and zoomed on the band between the two shockwaves, beside the original (Qr1n) at the same moments.
+v-capture.cjs vi trench-dust-iso --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --probe emitters --emitters Trench --column after --snapshot c1333710ad8e
