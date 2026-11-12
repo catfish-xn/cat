@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, rowPath } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, rowPath, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CELL_LEAGUE_UNITS } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -26,10 +26,15 @@ const row = (rowSide: -1 | 1, rowCells = 2): TimelineCue =>
 const index = (cues: readonly TimelineCue[]) => ({ version: 1, systems: { sample: 'systems/sample.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } });
 
 describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
-  it('runs from where its target stands along the board row (world X), rowCells cells to either side', () => {
-    const root = new Group(); root.position.set(12, 3, -40); root.updateMatrixWorld();
-    expect(rowPath(root, 1, 2.5)).toEqual([[12, 3, -40], [12 + 2.5 * cell, 3, -40]]);
-    expect(rowPath(root, -1, 1)).toEqual([[12, 3, -40], [12 - cell, 3, -40]]);
+  it('runs from a point along the board row (world X), rowCells cells to either side', () => {
+    expect(rowPath([12, 3, -40], 1, 2.5)).toEqual([[12, 3, -40], [12 + 2.5 * cell, 3, -40]]);
+    expect(rowPath([12, 3, -40], -1, 1)).toEqual([[12, 3, -40], [12 - cell, 3, -40]]);
+  });
+
+  it('starts where its target stands: a knocked-up body under the root does not lift the start', () => {
+    const root = new Group(), body = new Group(); root.add(body); root.position.set(5, 0, 7);
+    body.position.y = 40; // the renderer lifts the body, never the root (placeholder-renderer setLiftOffset)
+    expect(standingPoint(root)).toEqual([5, 0, 7]);
   });
 
   it('parses only on a projectile, with a side of -1 or 1 and 0.5-8 cells', () => {
@@ -64,6 +69,34 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     // Taken at the spawn: the target moving afterwards leaves both runs where they were.
     units.get('target')!.root.position.x += 50; units.get('target')!.root.updateMatrixWorld();
     expect(built[1].options.target.originAt(0)).toEqual(toSystem(at.x - 50 + 2 * cell, at.y, at.z));
+    runtime.dispose();
+  });
+
+  it('a dead target: from its snapshot point when the cast keeps it, else not at all, never from the caster', async () => {
+    const setup = async (delay: number) => {
+      built.length = 0;
+      const cues = [row(-1), row(1)].map(cue => ({ ...cue, delay }));
+      const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index(cues) : syntheticSystem(), readTexture: async () => new Texture() });
+      const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 40, 0, i * 10); return [id, { root, body: null, alive: true }]; }));
+      const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+      await runtime.warm('vi');
+      return { runtime, units };
+    };
+    const toSystem = (x: number, y: number, z: number) => [x * AXIS_SIGN[0] / FX_SCALE, y / FX_SCALE, z / FX_SCALE];
+    // Killed by this very cast, its place kept (snapshotTargets): both runs start at that place.
+    let { runtime, units } = await setup(0);
+    units.get('target')!.alive = false;
+    expect(runtime.play('vi', 'caster', ['target'], 0, 'cast', { snapshotTargets: true })).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(2);
+    for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
+    runtime.dispose();
+    // Dead before it starts, no place kept: neither run plays.
+    ({ runtime, units } = await setup(0.1));
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    units.get('target')!.alive = false;
+    for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(0);
     runtime.dispose();
   });
 
