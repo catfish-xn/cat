@@ -2,7 +2,8 @@
 // Pre-flight for a jobs file, in node only (no browser, no assets): every `v-capture.cjs ... --real 1` line is simulated the
 // way harness.ts replays it (real-combat.ts) and must show, inside its recorded window (--ms, default 3000, from half a
 // second before the first cast of the unit): that cast, its targets alive at the end, no other unit casting, and no foe
-// next to the caster on its row or nearer the camera (may cover it on screen) from the cast to the window's end.
+// next to the caster on its row or nearer the camera from the cast to the window's end (coarse: the browser gate's
+// box-overlap check is the authority on covering).
 // Lines without --real are listed as "dummy" (no rules run; nothing to check here). Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -41,7 +42,7 @@ for (const line of lines) {
   const dead = Object.entries(a.targetsAliveAtEnd).filter(([, up]) => !up).map(([id]) => id);
   if (dead.length) why.push(`target dead by window end: ${dead.join(',')}`);
   if (a.otherCasts.length) why.push(`others cast in window: ${a.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
-  // A foe standing next to the caster on its row or nearer the camera at the cast may cover it (the browser gate measures
+  // A foe next to the caster on its row or nearer the camera may cover it (the browser gate measures
   // the real screen boxes; this is the node stand-in, checked at the cast and through the window).
   const blockers = [...new Set([run.castIndex, ...Array.from({ length: a.to - run.castIndex + 1 }, (_, i) => run.castIndex + i)]
     .filter(t => cells[t]).flatMap(t => rc.frontBlockers(cells[t])))];

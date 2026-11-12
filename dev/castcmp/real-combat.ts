@@ -73,8 +73,9 @@ export function hexDistance(a: { row: number; col: number }, b: { row: number; c
   return Math.max(Math.abs(p[0] - q[0]), Math.abs(p[1] - q[1]), Math.abs(p[2] - q[2]));
 }
 /** Foes that may hide the caster on screen when `me` casts: alive, next to `me`, on its row or nearer the camera
- * (the camera looks from the player's side, so a larger row is drawn lower and in front). Node's stand-in for the
- * browser's box-overlap check in gate.cjs. */
+ * (the camera looks from the player's side, so a larger row is drawn lower and in front). A coarse stand-in for the
+ * browser's box-overlap check in gate.cjs, which is the authority: a tall foe one row behind can still cover the caster
+ * (Viktor vs two Garens: 36.5% on a Windows GPU run, 11-12) and only the gate sees that. */
 export function frontBlockers(cells: Record<string, { row: number; col: number; alive: boolean }>): string[] {
   const me = cells.me; if (!me) return [];
   return Object.entries(cells).filter(([id, c]) => id !== 'me' && c.alive && c.row >= me.row && hexDistance(c, me) <= 1).map(([id]) => id);

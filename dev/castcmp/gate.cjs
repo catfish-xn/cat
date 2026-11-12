@@ -21,7 +21,9 @@ async function checkout(page, repo) {
   const probes = [];
   for (const file of SRC_PROBES) {
     const served = await page.evaluate(f => import('/' + f + '?raw').then(m => m.default).catch(() => null), file);
-    probes.push({ file, same: served !== null && served === git(repo, 'show', `HEAD:${file}`) });
+    // Line endings aside: a Windows checkout (core.autocrlf) holds CRLF files whose blobs are still HEAD's.
+    const lf = text => text.replace(/\r\n/g, '\n');
+    probes.push({ file, same: served !== null && lf(served) === lf(git(repo, 'show', `HEAD:${file}`)) });
   }
   return { head, srcClean, devCastcmpTree: devTree, probes, ok: srcClean && probes.every(p => p.same) };
 }
