@@ -1,0 +1,8 @@
+# #618 Vi grab-and-slam, after column only: 3-star keyframes to read which frame shows the lift, the slam and the damage
+# numbers (no original side-by-side yet: that waits for the hero scale decision). Checkout: this commit (branch
+# claude/vi-grab-slam-kf = #618 head 2f5f9885 merged with the castcmp self-check tools 78b6adfc; recording only, never merged).
+# Pre-flighted with `node dev/castcmp/jobs-check.mjs dev/castcmp/jobs/618-after.txt` (PASS).
+# Node replay of this setup (real-combat.ts): Vi casts at tick 79 on foe2 (col 2) and holds it (stun/knock-up); at tick 91
+# (+0.6 s, VI_SLAM_TICKS) foe2 and the same-row foe (col 3) take damage, foe2 is stunned and foe knocked up. In the
+# recorded window the cast is at 0.5 s, so the slam frame is at 1.1 s.
+v-capture.cjs vi kf-vi3-after --real 1 --star 3 --target garen --nfoes 2 --foestar 3 --dist 3 --ms 2500 --settle 3000 --systems 9614ffb4 --column after --snapshot c1333710ad8e

@@ -1708,3 +1708,14 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 之前的差异：施法后只挂 3 秒减伤和毒雾，按攻击间隔继续普攻、可移动。
 - 现在：施法时给努努挂 `channel`，时长取 `DamageDuration`（3 秒 = 60 tick），期间不移动、不普攻、不施法。被眩晕/击飞等控制会提前结束锁定（`control-cancelled`），但毒雾每跳伤害、爆炸和减伤照常按原时长打完。锁定期间挨打仍会回蓝；锁定结束时若蓝已满会立刻再放（所有 channel 的既有行为）。
 - 实现：`src/simulation/combat-g2-3.ts` `case 'nunu'`；测试 `tests/nunu-cast-lock.test.ts`。表现层清单 `models.nunu.castSequence.holdSeconds = 3`（#601）与锁定对齐。
+
+## 蔚：抓起目标 0.6 秒后砸地结算（2026-11-11，用户批准）
+
+- 原版来源：14.24 `TFT13_ViSpell`（mAnimationName "Spell"，图里施法相关键为 Spell_Knockup / Spell_Dash）。原版 3 星录像 FB7YoqakYqE 同一局三次施法（约 188.5s、192.8s、198.4s，均贴身）：护盾标记出现后约 0.03 秒抓住主目标一起跃起，0.61–0.67 秒砸地，主目标伤害数字在砸地那一帧出现；贴身时不播 Spell_Dash。
+- 之前的差异：伤害、主目标眩晕、同排伤害和击飞都在施法当刻结算，砸地画面在 0.57 秒，飘字比画面早。
+- 现在（`VI_SLAM_TICKS` = 12 tick = 0.6 秒）：
+  - 施法当刻：护盾照常；蔚挂 12 tick `channel`（不移动、不普攻、不施法）；主目标挂 12 tick 带击飞标记的控制（被抓起，不能行动）。
+  - 第 12 tick（砸地，新任务 `g22ViSlam`）：主目标受伤并开始原时长眩晕（`StunDuration`）；施法当刻记下的那一排上其他敌人受副伤害并被击飞 `VI_ROW_KNOCKUP_TICKS`。伤害数值在施法当刻计算。
+  - 中途情况：蔚在砸地前阵亡——砸地取消（主目标的抓起控制按原 12 tick 自然结束）；蔚被控——按现有 channel 机制结束引导，砸地照常落地；主目标在砸地前死亡——不换目标，主目标那份伤害作废，同排溅射仍按记下的那一排结算。
+- 实现：`src/simulation/combat-g2-2.ts` `case 'vi'` 与 `executeG22Task`；任务类型 `g22ViSlam`（combat-types、serialization-structure 任务校验）。测试 `tests/vi-grab-slam.test.ts`。
+- **已知差异，原版行为未核实**（2026-11-12，Fable 定案：本次不改规则）：蔚在砸地前阵亡时，砸地取消，但主目标的 12 tick 抓起控制不提前解除（现有机制没有"施法者死亡提前解除他人状态"的通道）。3D 画面上主目标仍被举在空中，到 0.6 秒自己落下，没有伤害数字和眩晕。原版此时是否立即放下目标没有录像核实。若要改成立即放下，需要先在规则层提前解除抓起控制，再让渲染（`ControlMotion.grab`）跟随。

@@ -11,6 +11,8 @@ export interface TimelineCue {
   readonly duration: number;
   readonly bone?: string;
   readonly targetBone?: string;
+  /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
+  readonly branch?: string;
   /** Zero-based cast rotation, selected from observed cast events, including catch-up events. */
   readonly phase?: 0 | 1 | 2;
   readonly primary?: boolean;
@@ -50,6 +52,11 @@ export interface TimelineCue {
    * cue covers (a Sevika spell's right reel under the rolled mod, which the mod's own layer draws there).
    */
   readonly hide?: readonly string[];
+  /**
+   * A cast-start buff that a recast refreshes rather than stacks: when this cue starts while the same system from the
+   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura).
+   */
+  readonly refresh?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

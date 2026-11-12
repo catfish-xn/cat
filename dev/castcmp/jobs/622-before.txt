@@ -1,0 +1,16 @@
+# #622 keyframes (gap list item 13: the target died just before the cast or attack), before column.
+# Checkout: src at 46a8b0d5 (HEAD, clean src/) + dev/castcmp from 5f8a3be8 (tar castcmp-5f8a3be8.tar.gz over the repo root).
+# Before = 46a8b0d5 (integration, whole-action fallback). After = c2af12a7 (#622 head).
+# Dummies only (no --real): --kill marks the target dead (still drawn) --killlead ms before the recorded action. A real
+# replay cannot do this and its gate requires the targets alive to the window's end. Caption: "dummies (not real combat)",
+# i.e. staged, not a real fight.
+# --layers none: these are particle systems, not attached layers. --systems are the vfx-ltk cues of the action, judged in
+# --from/--to on the recording clock (0 = the action). The before column only records them (exempt); after must run them.
+# Not used: illaoi-drain (batch 3 playVariant), viktor-slam (filters the living first), warwick-devour (already snapshots):
+# #622 does not change those paths.
+v-capture.cjs corki d-corki-before --one 1 --nfoes 1 --dist 3 --star 2 --ms 2000 --kill foe --killlead 300 --systems ee7fccd1,444c30d5 --layers none --from 0 --to 1500 --column before --snapshot c1333710ad8e
+v-capture.cjs jinx d-jinx1-before --one 1 --nfoes 1 --dist 3 --star 2 --warm 1 --ms 2000 --kill foe --killlead 300 --systems 9bd80364,cd05488e --layers none --from 0 --to 1200 --column before --snapshot c1333710ad8e
+v-capture.cjs caitlyn d-caitlyn-before --one 1 --nfoes 1 --dist 3 --star 2 --ms 2000 --kill foe --killlead 300 --systems ce2a567b,a1ab2507 --layers none --from 0 --to 1200 --column before --snapshot c1333710ad8e
+v-capture.cjs darius d-darius3-before --nfoes 3 --dist 2 --star 2 --ms 2000 --kill foe --killlead 300 --systems a7efa545,a5373796 --layers none --from 0 --to 1200 --column before --snapshot c1333710ad8e
+v-capture-attack.cjs viktor d-viktor-atk-before --one 1 --nfoes 1 --dist 3 --star 2 --ms 1500 --kill foe --killlead 300 --systems b5077b11,a7e3596a --layers none --from 0 --to 1400 --column before --snapshot c1333710ad8e
+v-capture-attack.cjs tristana d-tristana-atk-before --one 1 --nfoes 1 --dist 3 --star 2 --ms 1500 --kill foe --killlead 300 --systems ed157b4e,0f2af66b --layers none --from 0 --to 1000 --column before --snapshot c1333710ad8e
