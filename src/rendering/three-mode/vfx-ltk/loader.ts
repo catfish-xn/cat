@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_WHOLE_BODY, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
+import { ATTACHED_WHOLE_BODY, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -163,6 +163,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
@@ -188,12 +189,15 @@ export function parseIndex(raw: unknown): VfxIndex {
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
-/** The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines. */
+/**
+ * The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines, and
+ * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands.
+ */
 export function withCueOverrides(index: VfxIndex): VfxIndex {
   let skills: VfxIndex['skills'] | null = null;
   for (const champion of Object.keys(index.skills)) {
-    const override = cueOverride(champion, index.systems);
-    if (override) (skills ??= { ...index.skills })[champion] = override;
+    const override = cueOverride(champion, index.systems), added = cueAdditions(champion, index.systems);
+    if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
   }
   return skills ? { ...index, skills } : index;
 }

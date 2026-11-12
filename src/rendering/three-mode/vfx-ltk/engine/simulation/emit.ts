@@ -228,7 +228,9 @@ export function emit(
     if (cue !== 1) {
       scaleAxes(pool.velocity, slot, cue);
       scaleAxes(pool.birthAcceleration, slot, cue);
-      scaleAxes(pool.birthScale, slot, cue);
+      // An attached mesh is the host's own mesh: it draws at the host's size whatever the cue's (a chest cue's
+      // SKILL_FX_SIZE 0.64 shrank Mordekaiser's aura toward his feet and left a slab on his arm and mace).
+      if (emitter.quadType !== QUAD_TYPE.attachedMesh) scaleAxes(pool.birthScale, slot, cue);
       scaleAxes(BORN.offset, 0, cue);
     }
     for (let axis = 0; axis < 3; axis += 1) {

@@ -50,6 +50,11 @@ export interface TimelineCue {
    * cue covers (a Sevika spell's right reel under the rolled mod, which the mod's own layer draws there).
    */
   readonly hide?: readonly string[];
+  /**
+   * A cast-start buff that a recast refreshes rather than stacks: when this cue starts while the same system from the
+   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura).
+   */
+  readonly refresh?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
