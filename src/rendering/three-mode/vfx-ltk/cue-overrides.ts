@@ -12,6 +12,12 @@
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
+import { jinxSkills } from './champions/jinx';
+import { jayceSkills } from './champions/jayce';
+import { melSkills } from './champions/mel';
+import { sevikaSkills } from './champions/sevika';
+import { viktorSkills } from './champions/viktor';
+import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
@@ -288,6 +294,17 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     ...S13_TIMELINES.vi,
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
   ],
+  // #627 (11-12): these batch-2 lists are the repository tables themselves, so a cue edit (here: basic-attack hits and
+  // missiles on the target's chest, 14.24 BasicAttack mHitBoneName) plays from code without rebuilding the asset index.
+  // The asset root's vfx-ltk/batch2/tft13_*/index.json keeps the older copy; it is not hand-edited.
+  jinx: jinxSkills.jinx,
+  'jayce-front': jayceSkills['jayce-front'],
+  'jayce-back': jayceSkills['jayce-back'],
+  mel: melSkills.mel,
+  'mel-third': melSkills['mel-third'],
+  sevika: sevikaSkills.sevika,
+  viktor: viktorSkills.viktor,
+  warwick: warwickSkills.warwick,
 };
 
 /**
@@ -312,7 +329,22 @@ export function withCueBranches(champion: string, cues: readonly TimelineCue[] |
 /** The override for `champion` when every system it names is present in `systems`. */
 export function cueOverride(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] | undefined {
   const cues = Object.hasOwn(CUE_OVERRIDES, champion) ? CUE_OVERRIDES[champion] : undefined;
-  return cues?.length && cues.every(cue => Object.hasOwn(systems, cue.system)) ? cues : undefined;
+  if (!cues?.length) return undefined;
+  const missing = cues.filter(cue => !Object.hasOwn(systems, cue.system)).map(cue => cue.system);
+  noteOverride(champion, missing);
+  return missing.length ? undefined : cues;
+}
+/**
+ * Dev builds only: which overrides applied and which were skipped for a missing system (warned once per key), kept on
+ * `globalThis.__vfxCueOverrides` so a capture can prove an override reached the page (#627). Production does nothing.
+ */
+function noteOverride(key: string, missing: readonly string[]): void {
+  if (!import.meta.env?.DEV) return;
+  const log = ((globalThis as { __vfxCueOverrides?: { applied: string[]; skipped: Record<string, string[]> } }).__vfxCueOverrides ??= { applied: [], skipped: {} });
+  if (!missing.length) { if (!log.applied.includes(key)) log.applied.push(key); return; }
+  if (log.skipped[key]) return;
+  log.skipped[key] = [...missing];
+  console.warn(`[vfx-ltk] cue override '${key}' skipped: system(s) ${missing.join(', ')} not in the loaded index`);
 }
 
 /**
@@ -351,11 +383,17 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
-  // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
-  // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
-  // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
-  // CANDIDATE (claude/vi-candidate, recording only): the Trench is back on, with the end fade (Trails.ts).
-  // '84b969e0': ['Trench'],
+};
+
+/**
+ * Trail emitters, by system and emitter name, whose head fades out over twice its own drawn half-width once the strand
+ * stops growing, instead of ending on a flat cut across the trail (Trails.ts). A fit, not the original's behaviour: how
+ * the original ends a trail whose emitter stopped is not known.
+ * Vi's row shockwave Trench: its head kept widening after the run landed and drew a straight vertical edge at the row end
+ * (11-12 isolate recordings; back on screen once the run's rock children and play-out were in, Fable 11-12).
+ */
+export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
+  '84b969e0': ['Trench'],
 };
 
 /**

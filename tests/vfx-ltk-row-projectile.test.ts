@@ -146,6 +146,31 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     runtime.dispose();
   });
 
+  it('a run playing out gives way: its reserve shrinks to what it still holds, and a new run lacking room takes it first', async () => {
+    built.length = 0;
+    const later: TimelineCue = { system: 'sample', event: 'cast-start', delay: 0.7, duration: 0.5, bone: 'ground' };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index([row(-1), row(1), later]) : syntheticSystem(), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
+      const root = new Group(); root.position.set(i * 20 + 5, 0, i * 30); scene.add(root); root.updateMatrixWorld();
+      return [id, { root, body: null, alive: true }];
+    }));
+    // Room for the two rows and nothing else.
+    const budget = { live: 0, max: 2 * MIN_RESERVE }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(2);
+    const [left, right] = built.map(entry => entry.fx);
+    // Both still hold particles past their end, so neither plays out on its own before the later cue.
+    for (const fx of [left, right]) Object.defineProperty(fx, 'playedOut', { get: () => false });
+    let most = 0;
+    for (let t = 1 / 30; t < 0.8; t += 1 / 30) { runtime.update(1 / 30, new Camera()); most = Math.max(most, budget.live); }
+    expect(most).toBeLessThanOrEqual(budget.max);
+    expect(built).toHaveLength(3);
+    expect(built[2].fx.object.parent).toBe(scene);
+    runtime.dispose();
+  });
+
   it('a dead target: from its snapshot point when the cast keeps it, else not at all, never from the caster', async () => {
     const setup = async (delay: number) => {
       built.length = 0;

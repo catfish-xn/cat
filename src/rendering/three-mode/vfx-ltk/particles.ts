@@ -1,5 +1,5 @@
 /** Bare Three.js host over the upstream simulation and original GPU buffer writers. */
-import { BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
+import { Box3, BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
@@ -63,6 +63,28 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
     basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
 }
+/**
+ * Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet).
+ * Fitted values, not 14.24 data: chosen to sit near where those locators are on the models that have them.
+ */
+const MISSING_LOCATOR_SHARE: readonly [RegExp, number][] = [
+  [/^c?_?buffbone_glb_chest_loc$/i, 0.6], [/^c?_?buffbone_glb_center_loc$/i, 0.5], [/^c?_?buffbone_glb_head_loc$/i, 0.9],
+  [/^c?_?buffbone_glb_overhead_loc$/i, 1],
+];
+/**
+ * Height above the unit's origin for a requested bone the model does not have. Body locators (chest, centre, head,
+ * overhead) take their share of `bodyHeight`; any other missing bone (ground, a weapon) stays on the origin, as before.
+ */
+export function missingLocatorLift(bone: string, bodyHeight: number): number {
+  const share = MISSING_LOCATOR_SHARE.find(([pattern]) => pattern.test(bone))?.[1];
+  return share === undefined || !(bodyHeight > 0) ? 0 : share * bodyHeight;
+}
+const box = new Box3();
+/** World height of the body's top above the unit's origin (bind-pose bounds), 0 without geometry. */
+function bodyHeightAbove(root: Object3D, body: Object3D): number {
+  box.setFromObject(body); if (box.isEmpty()) return 0;
+  return box.max.y - root.getWorldPosition(new Vector3()).y;
+}
 /** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: the ground
  * locator's +Z faces forward on Zyra but backward on Irelia, Kog'Maw and Akali; Kog'Maw's head and chest locators face
  * backward too, Irelia's chest sideways), while bins author "in front" as the unit's facing. Weapon and named bones keep
@@ -77,8 +99,10 @@ export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string,
   let attachment: Object3D | undefined;
   if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
   const node = () => attachment ?? root;
+  // A body locator the model lacks stands in at its share of the body's height above the unit, not on the floor.
+  const lift = !attachment && bone && body ? missingLocatorLift(bone, bodyHeightAbove(root, body)) : 0;
   return {
-    originAt() { node().getWorldPosition(point); return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
+    originAt() { node().getWorldPosition(point); point.y += lift; return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
       // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
       const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
@@ -174,7 +198,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
           });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
-      else if (drawsAsTrail(emitter)) draw = createTrails(props);
+      else if (drawsAsTrail(emitter)) draw = createTrails({ ...props, endFade: prepared.endFade?.has(emitter.name ?? '') ?? false });
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
       if (draw) {

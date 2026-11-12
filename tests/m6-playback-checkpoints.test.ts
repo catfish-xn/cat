@@ -63,12 +63,13 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // v26 选秀 8 件散件必出: content digest ed366cad → 150d825d in the record only (frames/events/terminal unchanged; was b8cf8acd…).
     // 塞维卡三连/头奖 (2026-11-09): content digest 150d825d → c7f0a2f3 and loot a56b2c4a → b53841c0 in the record only (frames/events/terminal unchanged; was edfa8dc9…).
     // 塞维卡老虎机转完再出手 (2026-11-09): c7f0a2f3 → f37c6970 and loot b53841c0 → 9c98c8ef in the record only (was b73401ac…).
-    const newer = JSON.stringify(record).split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // 14.24b 七项英雄数值 (2026-11-12): f37c6970 → db6dc9b6 in the record only; loot replay unchanged (was a11426bb…).
+    const newer = JSON.stringify(record).split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('b73401accdc212c638a52b6144b26069263254e9687d53c8648823599868efda');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('b8cf8acdbe9f19fa36ba427146c5bd776af97b42415717f82fd5770b69ea5389');
     expect(bytesHash(JSON.parse(back))).toBe('edfa8dc9731e2f878ffa22c1392acbdc03da0c3e526cd2907043751f9901f3fd');
-    expect(bytesHash(record)).toBe('a11426bb1405f768be4c6754e97160d726e77303aab1162f9066cb5f4d504b0c');
+    expect(bytesHash(record)).toBe('d377d5a2d54b0b81c2e5922af547039a0bc96c762662a7e2418227c2774c863c');
     expect(bytesHash(record.events)).toBe('26280de8df6c851839c04015c748150e84a2c9efc28b1014ad0f5f774e37d683');
     expect(bytesHash(expected.terminal)).toBe('004d6c06b1d5f8491412f5a2ee55a64a4c9d2f2ba5d5da31faa003527d72ff23');
     // An external JSON record is cold on each constructor, like browser fixtures.
