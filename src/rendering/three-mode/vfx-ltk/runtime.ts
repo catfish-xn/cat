@@ -205,7 +205,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
+      // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
       for (const id of new Set(cues.map(cue => cue.system))) {
+        await new Promise(resolve => setTimeout(resolve, 0));
         const prepared = catalog.get(id);
         if (closed || needs.has(id) || !prepared || prepared.empty) continue;
         const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
