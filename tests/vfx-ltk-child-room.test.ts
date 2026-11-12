@@ -31,7 +31,7 @@ describe('every child a moving run spawns fits the room its system measured', ()
     const parent = syntheticSystem({ lifetime: num(5), rate: constant(num(9)), particleLifetime: constant(num(0.8)) });
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : parent, readTexture: async () => new Texture() });
     const base = await library.load('sample');
-    const child: SystemModel = { ...base.model, emitters: base.model.emitters.map(e => ({ ...e, childSet: null, rate: { constant: [30], keys: [], tables: [] }, lifetime: { constant: [0.2], keys: [], tables: [] }, particleLifetime: { constant: [0.5], keys: [], tables: [] } })) };
+    const child: SystemModel = { ...base.model, emitters: base.model.emitters.map(e => ({ ...e, childSet: null, rate: { constant: [30], keys: [], tables: [] }, lifetime: 0.2, particleLifetime: { constant: [0.5], keys: [], tables: [] } })) };
     const model: SystemModel = { ...base.model, emitters: base.model.emitters.map(e => ({ ...e, childSet: {
       children: [child], bones: [], probability: { constant: [0], keys: [], tables: [] }, onDeath: false, inheritance: null,
     } })) };
