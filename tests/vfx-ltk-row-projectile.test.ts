@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 // Each particle set the runtime builds, with the options it was built with (anchor, target, attachment, flight).
-const built: { options: any }[] = [];
+const built: { options: any; fx: any }[] = [];
 vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal => {
   const real: any = await importOriginal();
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => {
-    const fx = real.createLtkParticles(prepared, options), entry = { options };
+    const fx = real.createLtkParticles(prepared, options), entry = { options, fx };
     built.push(entry); const reuse = fx.reuse.bind(fx); fx.reuse = (next: unknown) => { entry.options = next; return reuse(next); };
     return fx;
   } };
@@ -19,7 +19,7 @@ import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { S13_TIMELINES, VI_ROW_SHOCKWAVE } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
-import { syntheticSystem } from './vfx-ltk-synthetic';
+import { constant, num, struct, syntheticSystem } from './vfx-ltk-synthetic';
 
 const cell = BOARD_CELL;
 const row = (rowSide: -1 | 1, rowCells = 2): TimelineCue =>
@@ -172,6 +172,38 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
     for (let f = 0; f < 30; f++) { runtime.update(1 / 30, new Camera()); expect(live(scene)).toBe(0); }
     expect(runtime.queued).toBe(0);
+    runtime.dispose();
+  });
+
+  it('a first play measured too low in place (a rate the flight drives) keeps every particle, then reserves what it held', async () => {
+    built.length = 0;
+    // Its rate comes from its own speed: standing still, warm measures nothing; flying, it emits up to its pool.
+    const flying = syntheticSystem({ rateByVelocityFunction: struct('ValueVector2', { constantValue: { type: 'vector', values: [4, 0] } }),
+      MaximumRateByVelocity: num(600), lifetime: num(1), particleLifetime: constant(num(0.5)) });
+    const cues: TimelineCue[] = [{ system: 'flying', event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.5, bone: 'ground', targetBone: 'ground' },
+      { system: 'other', event: 'cast-start', delay: 0, duration: 0.6, main: true }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems: { flying: 'systems/flying.json', other: 'systems/other.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } }
+      : url.includes('flying') ? flying : syntheticSystem(), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 300, 0, 0); return [id, { root, body: null, alive: true }]; }));
+    // Room for exactly what the two were measured to need: an underestimate does not stop the other from playing.
+    const budget = { live: 0, max: 2 * MIN_RESERVE }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(scene.children.map(o => o.userData.ltkSystem).sort()).toEqual(['flying', 'other']);
+    expect(budget.live).toBe(2 * MIN_RESERVE);
+    const run = built.find(entry => entry.fx.object.userData.ltkSystem === 'flying')!.fx;
+    let peak = 0; for (let f = 0; f < 20; f++) { runtime.update(1 / 30, new Camera()); peak = Math.max(peak, run.peak); }
+    // Over its reservation, nothing is cut: the accounting runs short (by peak − reservation) until the play ends.
+    expect(peak).toBeGreaterThan(MIN_RESERVE); expect(budget.live).toBeLessThanOrEqual(budget.max);
+    for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
+    expect(runtime.active).toBe(0);
+    // The finished play raised its need: the next one reserves what it held.
+    budget.max = 1500;
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(budget.live).toBe(Math.min(250, Math.ceil(peak * 1.25)) + MIN_RESERVE);
     runtime.dispose();
   });
 
