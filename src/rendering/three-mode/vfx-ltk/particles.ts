@@ -207,3 +207,17 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   };
 }
 export type LtkParticles = ReturnType<typeof createLtkParticles>;
+/**
+ * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
+ * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
+ */
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
+  const anchor = pointAnchor([0, 0, 0]);
+  const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: { kind: 'bone', anchor, target: null } });
+  let peak = 0;
+  for (let at = 0; at < seconds; at += 1 / 30) { driver.advance(1 / 30); peak = Math.max(peak, driver.pool.count); }
+  return peak;
+}

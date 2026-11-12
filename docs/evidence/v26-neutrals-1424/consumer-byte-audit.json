@@ -3545,9 +3545,9 @@
     "tests/vfx-ltk-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 29111,
+      "currentBytes": 29189,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dac7ce5084affa2a898d52df5ea50411fc8c14023b6b129d69df27eb8668156e",
+      "currentSha256": "7833bc153d42f00fc0ad64271da74ac8de08ffc89c16882d4deb8310b44bbafa",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch3.test.ts": {
@@ -3650,12 +3650,19 @@
       "currentSha256": "2836354550ea96f77aab1c94cce5c49f2dfd08897bac30a7dda0a5519c867081",
       "firstDifferentByte": 9055
     },
+    "tests/vfx-ltk-review-r.test.ts": {
+      "previousBytes": 8912,
+      "currentBytes": 8975,
+      "previousSha256": "bd0f9d638180651c7cd84cbf8835d2d42f3b5a83bf4465fe5a32dced859fb019",
+      "currentSha256": "5e9914b768d2b44192dc01f545fbbd7635f7e028e738fe69bd42881f791c4bbe",
+      "firstDifferentByte": 338
+    },
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12984,
+      "currentBytes": 13036,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "378831929b6a975fefdfb11380fff9f3223ac31b1611122d6952f3fb4c5ba0f5",
+      "currentSha256": "7eabf1caab5a0c86eb80b1db00e6c11a44d3ba4d185651234ccf7ab5a384d4cb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sevika-reels.test.ts": {
@@ -3684,9 +3691,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 25745,
+      "currentBytes": 26848,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "406b4eeae0e5624af25088b3b827036a66d4d3e583d073974943384f486efee7",
+      "currentSha256": "3465b3f72caaf362dd894f303df959c5fe2f6e8b834757ed993304e60500da39",
       "firstDifferentByte": 84
     },
     "tests/vi-grab-slam.test.ts": {

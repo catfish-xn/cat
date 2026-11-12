@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -166,8 +166,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   let capped = false;
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
-  /** Slots each system was seen to need, from its last finished play. */
+  /**
+   * Slots each system needs: measured in place when its champion warms (measurePeak), then raised by what each finished
+   * play held. A first play used to reserve the full 250 instead: six systems filled the shared 1500, so a first cast
+   * dropped whatever came seventh (Vi's row shockwave, 11-12).
+   */
   const needs = new Map<string, number>();
+  const reserveOf = (peak: number, children: boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25) + (children ? CHILD_PARTICLES : 0)));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
@@ -179,8 +184,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     if (options.budget) options.budget.live -= run.reserved;
     // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet. The need only
     // grows: a low-peaking seed or a shorter cue on a shared system (Zyra's 857fe049 at 0.6 and 0.7 s) never lowers it.
-    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0,
-      Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(run.fx.peak * 1.25) + (run.fx.children ? CHILD_PARTICLES : 0)))));
+    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children)));
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
@@ -200,6 +204,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       catalogs.set(champion, catalog);
       const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
+      // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
+      for (const id of new Set(cues.map(cue => cue.system))) {
+        const prepared = catalog.get(id);
+        if (closed || needs.has(id) || !prepared || prepared.empty) continue;
+        const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
+        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), longest.fadeOut ? undefined : longest.stopAfter),
+          prepared.drawn.some(definition => !!definition.path)));
+      }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };

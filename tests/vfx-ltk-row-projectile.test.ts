@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MIN_RESERVE, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
@@ -149,13 +149,13 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
         skills: { vi: pair, 'vi-filler': [{ system: 'other', event: 'cast-start', delay: 0, duration: 0.2, main: true }],
         'vi-long': [{ system: 'other', event: 'cast-start', delay: 0, duration: 1, main: true }] } } : syntheticSystem(), readTexture: async () => new Texture() });
       const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 20, 0, 0); scene.add(root); return [id, { root, body: null, alive: true }]; }));
-      // Room for one 250-slot run beside the filler, not two (each first play reserves 250).
-      const budget = { live: 0, max: 600 }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+      // Room for one run beside the filler, not two: warm measured each synthetic system below the floor (MIN_RESERVE).
+      const budget = { live: 0, max: 2.5 * MIN_RESERVE }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
       await runtime.warm('vi');
       return { runtime, scene, budget };
     };
     const live = (scene: Scene) => scene.children.filter(o => o.userData.ltkSystem === 'sample').length;
-    // The filler holds 250 of 600 until it ends at 0.2 s: the pair waits, then both start in the same frame.
+    // The filler holds its room until it ends at 0.2 s: the pair waits, then both start in the same frame.
     let { runtime, scene } = await make();
     expect(runtime.play('vi', 'caster', ['target'], 0, 'cast', { skill: 'vi-filler' })).toBe(true);
     runtime.update(1 / 30, new Camera());
