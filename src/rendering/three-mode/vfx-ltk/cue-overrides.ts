@@ -314,3 +314,22 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
 };
+
+/**
+ * Attached-mesh emitters that keep covering the whole host although they name parts, by system and emitter name.
+ * Only for a cued emitter that drew before the part filter (11-11) and whose parts our host model does not hold, so the
+ * filter would take away something the board shows today. Each stays until its host model is split into those parts.
+ */
+export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = {
+  // Jinx R_Cast_Mouth: Avatar_BodyLight names Weapon (her launcher); our Jinx model is one Body part (11-11 parts audit).
+  // Remove when the Jinx model holds the launcher as its own Weapon part (or phase two filters it by bone weights).
+  '7e6f06b5': ['Avatar_BodyLight'],
+  // Leona W_buf: Avatar3 names a part hashed 0xddb924a1 that is none of her model's Body, Sword, Equipment (11-11).
+  // Remove when the Leona model holds the part 0xddb924a1 names. Both stay provisional: if the side-by-side with the
+  // original shows the whole-body layer clearly overdone, the entry goes and the filter leaves it undrawn (Fable, 11-11).
+  '8d9a4ccc': ['Avatar3'],
+  // Sion Unleash_Cas and its Cabal copy: Avatar_Fresnel names Head, Body and Weapon, which is near enough his whole body;
+  // our Sion model is one merged part (Sion_Base_MD_lambert2SG1, 11-11 live parts audit). Remove when the model is split.
+  '9118f221': ['Avatar_Fresnel'],
+  '5afb9708': ['Avatar_Fresnel'],
+};

@@ -12,7 +12,7 @@ import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
 import { borrowMeshBuffers } from './rendering/utils/drawBufferPool';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
-import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
+import { createAttachedMeshes, type AttachedDraw } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
 import type { ParticleDraw, DrawFrameState } from './rendering/lifetime';
 import { meshPose } from './rendering/utils/meshPose';
@@ -127,7 +127,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
-  const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
+  const draws: ParticleDraw[] = [], overlays: AttachedDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };
   try {
     for (const definition of prepared.drawn) {
@@ -145,7 +145,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
-          draws.push(held); object.add(held.object);
+          draws.push(held); overlays.push(held); object.add(held.object);
           const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: held.material });
         }
       } else if (drawsAsMesh(emitter)) {
@@ -175,6 +175,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
+    /** The host-body overlays among `draws`, which the runtime counts against its screen cap. */
+    attached: overlays,
     /** Most root particles live at once in this play, which the runtime reserves for the system's next play. */
     get peak() { return peak; },
     /** It runs child systems, whose room (CHILD_PARTICLES) the root count does not show. */

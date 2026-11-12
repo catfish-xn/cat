@@ -84,7 +84,7 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', { mLockMeshToAttachment: { type: 'bool', value: true } }) }) });
     const source = new SkinnedMesh(new BoxGeometry()), bone = new Bone(); source.add(bone); source.bind(new Skeleton([bone])); f.body.add(source);
     const geometryDispose = vi.spyOn(source.geometry, 'dispose'), skeletonDispose = vi.spyOn(source.skeleton, 'dispose');
-    const fx = f.create(); expect(fx.draws).toHaveLength(8); fx.update(0.1, new Camera());
+    const fx = f.create(); expect(fx.draws).toHaveLength(4); expect(fx.attached).toHaveLength(4); fx.update(0.1, new Camera());
     expect(fx.draws.some(draw => draw.object.visible)).toBe(true);
     const overlay = fx.draws[0].object as SkinnedMesh;
     expect(overlay.skeleton).toBe(source.skeleton); expect(overlay.geometry).toBe(source.geometry);
@@ -106,6 +106,42 @@ describe('real-export feature paths with tiny synthetic assets', () => {
     expect(host.prepared.model.emitters[0].mesh!.skinned).toBe(true);
     expect(host.prepared.drawn).toHaveLength(1); host.library.dispose();
     source.geometry.dispose(); source.skeleton.dispose();
+  });
+  it('never loads the host skin an attached-mesh emitter names: the export does not carry it (11-11)', async () => {
+    // No index entry for skin.skn: before, the asset lookup failed and the whole system fell back to the legacy path.
+    const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', {
+      mMeshName: asset('skin.skn'), mMeshSkeletonName: asset('skin.skl') }) }) });
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.meshes.size).toBe(0); expect(f.prepared.notes).toBeUndefined();
+    f.library.dispose();
+  });
+  it('draws an attached emitter without its reflection when the map is no cube strip, and notes it (58f996d2, 11-11)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = await load({ primitive: struct('VfxPrimitiveAttachedMesh', {}),
+      reflectionDefinition: struct('VfxReflectionDefinitionData', { fresnel: num(2), reflectionMapTexture: asset('flat.dds') }) },
+    { 'flat.dds': 'textures/flat.png' });
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.samplers.get('0')!.reflection).toBeNull();
+    expect(f.prepared.notes).toEqual(['reflection-cube:synthetic-only']);
+    expect(warn).toHaveBeenCalledWith('vfx-ltk:sample:reflection-cube:synthetic-only');
+    warn.mockRestore(); f.library.dispose();
+  });
+  it('also drops only the reflection when a 1:6 map has no faces to cut (e.g. a compressed image), defensive', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const index = syntheticIndex(); Object.assign(index.assets, { 'packed.dds': 'textures/packed.ktx2' });
+    const library = createVfxLibrary('/root/', {
+      readJson: async url => url.endsWith('index.json') ? index : syntheticSystem({ primitive: struct('VfxPrimitiveAttachedMesh', {}),
+        reflectionDefinition: struct('VfxReflectionDefinitionData', { fresnel: num(2), reflectionMapTexture: asset('packed.dds') }) }),
+      readTexture: async url => { const t = new Texture(); if (url.endsWith('.ktx2')) t.image = { width: 4, height: 24 }; return t; },
+    });
+    const prepared = await library.load('sample');
+    expect(prepared.drawn).toHaveLength(1); expect(prepared.samplers.get('0')!.reflection).toBeNull();
+    expect(prepared.notes).toEqual(['reflection-cube:synthetic-only']);
+    warn.mockRestore(); library.dispose();
+  });
+  it.each(['GhostImages1', 'AvatarDash2', 'dissolve'])('keeps drawing the frozen-pose/dissolve attached emitter %s as before and notes it (phase two)', async name => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = await load({ emitterName: { type: 'string', value: name }, primitive: struct('VfxPrimitiveAttachedMesh', {}) });
+    expect(f.prepared.drawn).toHaveLength(1); expect(f.prepared.notes).toEqual([`attached-deferred:${name}`]);
+    warn.mockRestore(); f.library.dispose();
   });
   it('handles original empty definitions as explicit no-ops', async () => {
     const doc = syntheticSystem(); doc.root = struct('VfxSystemDefinitionData', {});
