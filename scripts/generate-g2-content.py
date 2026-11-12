@@ -11,6 +11,7 @@ EXISTING = set('irelia maddie darius lux zyra tristana urgot rell leona vander k
 
 def outputs():
     rows = json.loads((DATA / 'g2-1-champions.json').read_text())['champions']
+    b = json.loads((DATA.parent / 'b-patch-overrides.json').read_text())
     new = [c for c in rows if c['id'] not in EXISTING and c['status'] != 'blocked-on-form-stats']
     units, abilities = {}, {}
     for c in new:
@@ -22,7 +23,10 @@ def outputs():
                         attackRange=int(s['attackRange']), attackIntervalTicks=s['attackIntervalTicks'],
                         baseAttackSpeedBps=s['attackSpeedBps'], initialMana=int(s['initialMana']),
                         maxMana=int(s['maxMana']), abilityId=n+'-ability', traits=c['runtimeTraits'])
+        units[n]['baseStats'].update(b['units'].get(n, {}))
         abilities[n+'-ability'] = c['ability']
+        if n in b['abilities']:
+            abilities[n+'-ability'] = {**c['ability'], 'variables': {**c['ability']['variables'], **{k: [float(x) for x in v] for k, v in b['abilities'][n].items()}}}
     existing_traits = {c['id']: c['runtimeTraits'] for c in rows if c['id'] in EXISTING and set(c['sourceTraits']) & {'Automata','Firelight','Family'}}
     def ts(value):
         return json.dumps(value, ensure_ascii=False, indent=2) + ';\n'
