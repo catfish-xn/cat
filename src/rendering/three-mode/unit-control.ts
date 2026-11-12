@@ -50,6 +50,13 @@ export const CONTROL_3D = {
   /** The flash as the control starts: seconds and size (board units). */
   flash: { seconds: 0.15, size: 30 },
 } as const;
+/**
+ * Vi's grab (rules: VI_SLAM_TICKS, a knock-up on the held target until her slam): the target goes up with her, hangs at
+ * `peakShare` × the knock-up lift, and is slammed down in `slamSeconds` so it lands on the slam tick, where the rules
+ * apply the damage and the stun. Rise and slam in seconds; the hold fills the rest. `viSlamTicks` copies the rules'
+ * VI_SLAM_TICKS (a 3D module must not import the rules); tests/rendering3d-vi-grab.test.ts keeps the two equal.
+ */
+export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 12 } as const;
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
 /** The white burst on a unit struck by an ability (board units, seconds). */
@@ -83,14 +90,25 @@ export class ControlMotion {
   /** Seconds the current control has been shown, and whether the rules already ended it before minShownSeconds. */
   private shown = 0;
   private releasePending = false;
+  /** A grab (grab()): seconds into it and its length; null when none. It owns the lift until it lands. */
+  private grabAt: number | null = null;
+  private grabSeconds = 0;
   constructor(private readonly spec: { readonly riseSeconds: number; readonly fallSeconds: number; readonly arcSeconds?: number; readonly minShownSeconds?: number; readonly leanRadians?: number } = CONTROL_3D) {}
   get control(): ControlKind | null { return this.kind; }
   /** Lift share now: 0 on the floor, 1 at the top. */
   get lift(): number { return this.share; }
   /** Backward lean (radians) of a knocked-up body: follows the lift, so it straightens as it lands. */
-  get lean(): number { return this.share * (this.spec.leanRadians ?? 0); }
+  get lean(): number { return Math.min(1, this.share) * (this.spec.leanRadians ?? 0); }
   /** True from a control's start until the piece is back on the floor. */
-  get active(): boolean { return this.kind !== null || this.share > 0 || this.arc !== null; }
+  get active(): boolean { return this.kind !== null || this.share > 0 || this.arc !== null || this.grabAt !== null; }
+  /**
+   * Held up for `seconds` and slammed down to land as they end (GRAB_3D): replaces a knock-up arc already in flight, and
+   * a knock-up shown during the grab starts no arc of its own.
+   */
+  grab(seconds: number): void {
+    if (!(Number.isFinite(seconds) && seconds > 0)) return;
+    this.grabAt = 0; this.grabSeconds = seconds; this.arc = null; this.landing = null;
+  }
   /** The control shown now; returns true when one has just started (the host stops the piece's action). */
   set(kind: ControlKind | null): boolean {
     if (kind === null && this.kind !== null && this.shown < (this.spec.minShownSeconds ?? 0)) { this.releasePending = true; return false; }
@@ -103,7 +121,7 @@ export class ControlMotion {
     if (started) this.shown = 0;
     if (this.spec.arcSeconds !== undefined) {
       // Arc mode: a knock-up starts a new arc; ending or changing the control leaves the arc in flight until it lands.
-      if (kind === 'airborne' && this.arc === null) this.arc = 0;
+      if (kind === 'airborne' && this.arc === null && this.grabAt === null) this.arc = 0;
     } else if (kind === 'airborne') { this.since = 0; this.landing = null; }
     else if (this.kind === 'airborne') { this.from = this.share; this.landing = 0; }
     this.kind = kind;
@@ -114,6 +132,16 @@ export class ControlMotion {
     if (this.kind !== null) {
       this.shown += seconds;
       if (this.releasePending && this.shown >= (this.spec.minShownSeconds ?? 0)) { this.releasePending = false; this.change(null); }
+    }
+    if (this.grabAt !== null) {
+      this.grabAt += seconds;
+      const total = this.grabSeconds, slam = Math.min(GRAB_3D.slamSeconds, total / 2), rise = Math.min(GRAB_3D.riseSeconds, total - slam);
+      const t = this.grabAt;
+      if (t >= total) { this.grabAt = null; this.share = 0; }
+      else if (t < rise) this.share = GRAB_3D.peakShare * easeOutCubic(t / rise);
+      else if (t < total - slam) this.share = GRAB_3D.peakShare;
+      else this.share = GRAB_3D.peakShare * (1 - easeInQuad((t - (total - slam)) / slam));
+      return this.share;
     }
     const arcSeconds = this.spec.arcSeconds;
     if (arcSeconds !== undefined) {
@@ -135,7 +163,7 @@ export class ControlMotion {
     return this.share;
   }
   /** Back on the floor with no control (a new combat, a reset action). */
-  clear(): void { this.kind = null; this.arc = null; this.landing = null; this.share = 0; this.from = 0; this.shown = 0; this.releasePending = false; }
+  clear(): void { this.kind = null; this.arc = null; this.landing = null; this.share = 0; this.from = 0; this.shown = 0; this.releasePending = false; this.grabAt = null; }
 }
 
 let starTexture: CanvasTexture | null = null;
