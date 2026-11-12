@@ -284,8 +284,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The asset root's exported list is S13_TIMELINES.vi as of 10-27 plus its attack hit (copied unchanged from the
   // export); this replaces it so the landing play-out (s13-timelines.ts) reaches the live board without an asset rebuild.
+  // EVIDENCE ONLY (claude/vi-trench-iso): Vi plays her two row shockwaves and nothing else.
   vi: [
-    ...S13_TIMELINES.vi,
+    ...S13_TIMELINES.vi.filter(cue => cue.system === '84b969e0'),
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
   ],
 };
@@ -354,7 +355,9 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, draws as a crisp dark crack band
   // where the original shows loose dust and rock slabs (11-12 keyframes). Its fade-out is right since its run outlives the
   // trail's own fade; its shape is still under study (with the rock layer): held back until checked.
-  '84b969e0': ['Trench'],
+  // EVIDENCE ONLY (claude/vi-trench-iso, never merged): the Trench alone is drawn; every other emitter of the system and its children is muted.
+  '84b969e0': ['Alpha_Dust', 'Dust', 'FillMouth', 'Rock_Mesh_Large', 'Rock_Mesh_Large1', 'Smoke', 'SmokeRing_rocks', 'Smoke_Burst', 'SpikeShapes1',
+    'StrokeDissolve_Right', 'iceshard_center', 'iceshard_center1'],
 };
 
 /**
