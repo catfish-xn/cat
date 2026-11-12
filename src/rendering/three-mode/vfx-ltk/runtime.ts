@@ -366,6 +366,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
+        // A run that plays out does so from here too: a killing hit lands as its unit dies, and the landed projectile's
+        // tail must not go whole with it.
+        if (run.playOut && !run.ending) { run.ending = true; run.until = clock + PLAY_OUT_CAP; }
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
       for (let index = spareFx.length - 1; index >= 0; index--) {
@@ -505,7 +508,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && loaded.playOut) || undefined }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

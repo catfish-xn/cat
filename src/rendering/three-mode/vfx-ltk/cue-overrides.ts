@@ -397,6 +397,18 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Projectile systems that play out when they land: emission stops at arrival and the run stays until its particles have
+ * finished their own curves (runtime PLAY_OUT_CAP at most), instead of being removed whole at the cue's end. Particles of
+ * emitters without particleLinger still go at the stop, as the engine does for any stopped system, so a beam or missile
+ * head still ends on the hit. Decided system by system against original footage (Fable 11-12): on some projectiles the
+ * hit effect taking over at once is the original's own design, so this is no default.
+ * - 20cd67dc Gangplank's ground-fire line: its ground strand carries a long particleLinger; in the original the burning
+ *   line stays on the ground well after it is drawn, then chars and fades (11-12 footage).
+ * - 87913524 Viktor's basic-attack laser: its scorched trench and rays carry particleLinger; the beam itself does not.
+ */
+export const PLAY_OUT_SYSTEMS: ReadonlySet<string> = new Set(['20cd67dc', '87913524']);
+
+/**
  * Emitters of a system that never emit here, by emitter name: their particles and every child they would spawn are gone.
  * Each Sevika slot result layer (14.24 map22.bin TFT13_Lieutenant_Base_Slots_*_Child_Mirrored) opens with an
  * `Alpha_Boarder` whose child is the whole slot machine again; the board already plays that machine as its own cue, so
