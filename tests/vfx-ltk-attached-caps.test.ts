@@ -52,15 +52,26 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     expect(fx.attached).toHaveLength(ATTACHED_SLOTS); expect(warn).not.toHaveBeenCalled();
     fx.dispose(); library.dispose();
   });
-  it('leaves a held-back attached emitter undrawn (ATTACHED_HELD_BACK), the system itself still loading', async () => {
-    const index = { ...syntheticIndex(), systems: { '8d9d784b': 'systems/held.json' }, skills: {} };
+  /** Overlays one synthetic attached emitter named `name` of system `id` would draw on a one-part host. */
+  async function heldOverlays(id: string, name: string) {
+    const index = { ...syntheticIndex(), systems: { [id]: 'systems/held.json' }, skills: {} };
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index
-      : syntheticSystem({ emitterName: { type: 'string', value: 'Avatar_Fresnel' }, ...attached() }), readTexture: async () => new Texture() });
-    const prepared = await library.load('8d9d784b');
+      : syntheticSystem({ emitterName: { type: 'string', value: name }, ...attached() }), readTexture: async () => new Texture() });
+    const prepared = await library.load(id);
     const root = new Group(), body = new Group(); root.add(body); body.add(part('body'));
     const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body } });
-    expect(fx.attached).toEqual([]);
+    const count = fx.attached.length;
     fx.dispose(); library.dispose();
+    return count;
+  }
+  it('leaves a held-back attached emitter undrawn (ATTACHED_HELD_BACK), the system itself still loading', async () => {
+    expect(await heldOverlays('8d9d784b', 'Avatar_Fresnel')).toBe(0);
+  });
+  it('holds back by system and emitter name together: another emitter of that system still draws', async () => {
+    expect(await heldOverlays('8d9d784b', 'Avatar_Other')).toBe(ATTACHED_SLOTS);
+  });
+  it('holds back by system and emitter name together: the same emitter name in another system still draws', async () => {
+    expect(await heldOverlays('0badc0de', 'Avatar_Fresnel')).toBe(ATTACHED_SLOTS);
   });
 });
 
