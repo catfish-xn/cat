@@ -26,6 +26,9 @@ export function resetAttachedStats() { ATTACHED_STATS.peakAlive = 0; ATTACHED_ST
 export interface AttachedDraw extends ParticleDraw { readonly attached: true }
 export const isAttachedDraw = (draw: ParticleDraw): draw is AttachedDraw => (draw as Partial<AttachedDraw>).attached === true;
 
+const DEBUG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('attached') === 'debug';
+const DEBUG_COLORS = [0xff2020, 0x20ff20, 0x2080ff, 0xffff20, 0xff20ff, 0x20ffff, 0xffffff];
+const debugWire = (at: number) => new MeshBasicMaterial({ color: DEBUG_COLORS[at % DEBUG_COLORS.length], wireframe: true, depthTest: false, transparent: true, opacity: 0.6 });
 const materialsOf = (mesh: SkinnedMesh): readonly Material[] => Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 /**
  * Which materials of `skin` a part filter keeps, or null when the emitter has no filter (the whole body draws).
@@ -65,8 +68,10 @@ export function createAttachedMeshes(emitter: EmitterModel, sources: readonly So
       emitter.backfaceCull ? emitter.flipWinding ? BackSide : FrontSide : DoubleSide);
     const skipped = new MeshBasicMaterial({ visible: false });
     const draws = (held: Material, at: number) => held.visible && (!kept || kept[at]);
+    // ?attached=debug (dev): each kept part as a wireframe in its own colour, to see what an overlay covers and where.
+    const shown = (at: number) => DEBUG ? debugWire(at) : material;
     const mesh = new SkinnedMesh(source.geometry, Array.isArray(source.material)
-      ? source.material.map((held, at) => draws(held, at) ? material : skipped) : material);
+      ? source.material.map((held, at) => draws(held, at) ? shown(at) : skipped) : shown(0));
     mesh.bindMode = DetachedBindMode; mesh.bind(source.skeleton, source.bindMatrix);
     // DetachedBindMode resets the inverse during scene traversal. The source's live inverse
     // must be installed after that traversal, before uniforms are uploaded.

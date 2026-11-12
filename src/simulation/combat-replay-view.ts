@@ -132,7 +132,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'manaChanged': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'before', 'after']) };
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
-      targetIds: [...event.receipt.targetIds], completionCell: cellView(event.receipt.completionCell) };
+      targetIds: [...event.receipt.targetIds], completionCell: cellView(event.receipt.completionCell),
+      ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}) };
     case 'shieldLayerChanged': return { ...envelope, type: event.type, reason: event.reason,
       ...pick(event.layer, ['key', 'targetId', 'remaining']) };
     case 'statusChanged': return { ...envelope, type: event.type, reason: event.reason,

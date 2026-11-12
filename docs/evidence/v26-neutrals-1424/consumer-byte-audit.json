@@ -8,6 +8,14 @@
       "currentSha256": "7443428a08538ebbb72c1c2b019962b9b357b569d85b9dc070110de3c3b021fa",
       "firstDifferentByte": 606
     },
+    "tests/ambessa-cast-branch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3955,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4a258c17c6619e45c30e262636cde8480b5c01174a04264ee4069640be29562f",
+      "firstDifferentByte": 0
+    },
     "tests/ambessa-dash.test.ts": {
       "previousBytes": 11319,
       "currentBytes": 13063,
@@ -3481,9 +3489,9 @@
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8783,
+      "currentBytes": 13255,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "78a9d85f2a2546b97c9bb55f73dd70dc9ae9ad4d99bb38fef41d777cd0a5f1ef",
+      "currentSha256": "e8e1dfacc50ede589f88bd1335bbb01d1a1b42cb458b88e0de9d003d98f1796d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {
@@ -3542,6 +3550,14 @@
       "currentSha256": "13b224ae631c8503c9e5f8c8b2050bbfad588517a0e6fec9e8e2fa98e6a5b893",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cast-branch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5085,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "3ea9608d932dc424badfd42956218737e827919b072eada78f503540fe4a8bca",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3553,9 +3569,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 19483,
+      "currentBytes": 20900,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7434060777ca868a69d53b3bf762c3cf15900d27856ad12320370aafc8e14d05",
+      "currentSha256": "08673b2dc93bc7b4b19bb71bc46122f7dfd1dd5bd9789fa52db7cb184146ee55",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {

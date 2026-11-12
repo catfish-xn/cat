@@ -1,7 +1,7 @@
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
-import { CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_ADDITIONS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 import { silco } from '../src/rendering/three-mode/vfx-ltk/batch3/silco';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
@@ -39,6 +39,26 @@ describe('reviewed vfx-ltk cue overrides', () => {
       { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.26666666666666666, duration: 1.5 }]);
     expect(CUE_OVERRIDES.vi.filter(cue => cue.rowSide).map(cue => [cue.system, cue.event, cue.rowSide, cue.together])).toEqual([['84b969e0', 'projectile', -1, 'row'], ['84b969e0', 'projectile', 1, 'row']]);
   });
+
+  it('appends reviewed additions to the exported or replaced list, each only when its system was exported', () => {
+    const extra: TimelineCue = { system: 'cc', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45 };
+    (CUE_ADDITIONS as Record<string, readonly TimelineCue[]>).probe = [extra];
+    try {
+      expect(withCueOverrides(parseIndex(index({ aa: 'aa.json', cc: 'cc.json' }))).skills.probe).toEqual([...exported, extra]);
+      expect(withCueOverrides(parseIndex(index({ aa: 'aa.json' }))).skills.probe).toEqual(exported);
+      (CUE_OVERRIDES as Record<string, readonly TimelineCue[]>).probe = fixed;
+      expect(withCueOverrides(parseIndex(index({ aa: 'aa.json', bb: 'bb.json', cc: 'cc.json' }))).skills.probe).toEqual([...fixed, extra]);
+    } finally { delete (CUE_ADDITIONS as Record<string, readonly TimelineCue[]>).probe; delete (CUE_OVERRIDES as Record<string, readonly TimelineCue[]>).probe; }
+  });
+
+  it('every shipped addition is a well-formed timeline beside the champion\'s override', () => {
+    for (const [champion, added] of Object.entries(CUE_ADDITIONS)) {
+      const cues = [...(CUE_OVERRIDES[champion] ?? []), ...added];
+      const systems = Object.fromEntries(cues.map(cue => [cue.system, `${cue.system}.json`]));
+      expect(() => parseIndex({ version: 1, systems, assets: {}, skills: { [champion]: cues } }), champion).not.toThrow();
+    }
+  });
+
   it('every shipped override is a well-formed timeline', () => {
     for (const [champion, cues] of Object.entries(CUE_OVERRIDES)) {
       const systems = Object.fromEntries(cues.map(cue => [cue.system, `${cue.system}.json`]));

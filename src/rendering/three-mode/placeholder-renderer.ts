@@ -1188,7 +1188,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);

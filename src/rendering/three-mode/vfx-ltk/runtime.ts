@@ -77,6 +77,8 @@ export interface LtkPlayOptions {
   delay?: number;
   /** Timeline variant (empowered, a form), as the string argument would name it. */
   variant?: TimelineVariant;
+  /** The cast event's rule branch (`branch.branch`); never inferred from a cast count. Branched cues need it. */
+  branch?: string;
   /**
    * Seconds (held to −2..2) every attack cue moves by, none earlier than the start: the original release lands `windupRatio`
    * of the interval after the swing starts, while the exported cues assume the clip's release frame at 1× (AttackRelease).
@@ -97,7 +99,9 @@ export interface LtkPlayOptions {
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
   together?: string }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
+  /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
+  bodyGone?: boolean }
 /**
  * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
@@ -232,6 +236,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const available = catalog.index?.skills[skill];
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
         && cue.variant === form
+        && (cue.branch === undefined || cue.branch === context.branch)
         && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {
@@ -305,8 +310,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
-        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park.
-        run.fx.stop(); run.stopped = true;
+        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
+        // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
+        run.fx.stop(); run.stopped = true; run.bodyGone = true;
+        for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
@@ -346,6 +353,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
         const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
+        // and frees that run's room before this one asks for its own.
+        if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
         // A row projectile (TimelineCue.rowSide) runs between two board points taken now: where its target stands (its
         // snapshot point once it is dead) and rowCells along the row. With neither it does not play: it never falls back
         // to a flight from the caster.
@@ -429,7 +439,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (const run of running) {
         const first = layerBuf.length;
         for (const draw of run.fx.attached) if (draw.object.visible) {
-          if (!showAttached) { draw.object.visible = false; continue; }
+          if (!showAttached || run.bodyGone) { draw.object.visible = false; continue; }
           drawsOn++;
           let layer: (typeof layerBuf)[number] | undefined;
           for (let at = first; at < layerBuf.length && !layer; at++) if (layerBuf[at].key === draw.object.name) layer = layerBuf[at];

@@ -443,8 +443,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const oldInterval = interval(unit, tick, units);
         castB4Combat(ctx,unit,seq);
         castAnomaly(ctx,unit,target);
+        ctx.castBranch = undefined;
         const targets = planS13Cast(ctx, unit, target, seq);
-        const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
+        const branch = ctx.castBranch; ctx.castBranch = undefined;
+        const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell,
+          ...(branch !== undefined ? { branch: { castIndex: unit.runtime.castCount, branch } } : {}) }, cost.actualManaSpent);
         (ctx.castReceipts ??= []).push(receipt);
         // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
         events.splice(beforeCount, 0, { type: 'cast', tick, receipt });

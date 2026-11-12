@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_WHOLE_BODY, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, withCueBranches } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -161,8 +161,10 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
+        || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
         || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
         || ((cue.rowSide !== undefined || cue.rowCells !== undefined) && (cue.event !== 'projectile' || (cue.rowSide !== -1 && cue.rowSide !== 1)
@@ -191,12 +193,17 @@ export function parseIndex(raw: unknown): VfxIndex {
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
-/** The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines. */
+/**
+ * The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines, and
+ * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands.
+ */
 export function withCueOverrides(index: VfxIndex): VfxIndex {
   let skills: VfxIndex['skills'] | null = null;
   for (const champion of Object.keys(index.skills)) {
-    const override = cueOverride(champion, index.systems);
-    if (override) (skills ??= { ...index.skills })[champion] = override;
+    const override = cueOverride(champion, index.systems), added = cueAdditions(champion, index.systems);
+    if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
+    const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
+    if (branched) (skills ??= { ...index.skills })[champion] = branched;
   }
   return skills ? { ...index, skills } : index;
 }
@@ -245,7 +252,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
       // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
       // static mesh of its own (attachedMeshOfItsOwn).
-      const muted = MUTED_EMITTERS[id] ?? [];
+      // Held-back attached overlays (cue-overrides.ts ATTACHED_HELD_BACK) are left undrawn the same way.
+      const muted = [...(MUTED_EMITTERS[id] ?? []), ...(ATTACHED_HELD_BACK[id] ?? [])];
       const notes: string[] = [];
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
