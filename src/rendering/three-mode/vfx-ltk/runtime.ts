@@ -110,6 +110,10 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
 export function rowPath(from: WorldPoint, side: -1 | 1, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] {
   return [from, [from[0] + side * cells * cell, from[1], from[2]]];
 }
+/** Where a projectile falling onto a target standing at `at` starts (TimelineCue.fromAbove): `offset` cells from there. */
+export function dropStart(at: WorldPoint, offset: readonly [number, number, number], cell = BOARD_CELL): WorldPoint {
+  return [at[0] + offset[0] * cell, at[1] + offset[1] * cell, at[2] + offset[2] * cell];
+}
 /** The board's cell geometry (board-feed BoardFrame: columns, hexRadius, origin), in the units pieces stand in. */
 export interface RowBoard { readonly columns: number; readonly radius: number; readonly origin: { readonly x: number; readonly y: number } }
 /**
@@ -392,6 +396,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const board = rowStart && spawn.rowToEnd ? options.board?.() ?? null : null;
         const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
         if (rowStart && !(rowCells > 0.05)) continue;
+        // A falling projectile (TimelineCue.fromAbove) starts above where its target stands (its snapshot point once it is
+        // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
+        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
+        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
@@ -431,8 +440,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
-        const attachment = rowEnds || (fixed && spawn.event !== 'projectile') ? undefined : host;
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
         const tail = Math.min(0.25, runFor / 4);
@@ -442,7 +451,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
-          joints: rowEnds || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
+          joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.

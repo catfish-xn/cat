@@ -84,6 +84,13 @@ export interface TimelineCue {
    * dropped once overdue, so one half of a pair never shows without the other (Vi's two row shockwaves).
    */
   readonly together?: string;
+  /**
+   * A projectile that falls onto its target from above instead of flying from the caster: it starts this many cells from
+   * where its target stands (along world X, up, along world Z; the camera looks toward −Z, so −X and −Z are the screen's
+   * left and top) and lands on the target's `targetBone`. The start is taken when it spawns. For a missile whose launcher
+   * the board never shows (Caitlyn's Air Raid comet, dropped from a blimp off screen).
+   */
+  readonly fromAbove?: readonly [number, number, number];
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
