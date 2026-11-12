@@ -12,9 +12,7 @@ import { canonicalContent } from '../src/simulation/content';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
 
 const clock=new ManualClock();
-// 14.24b unit values (b-patch-overrides.json): seed 4 no longer settles round 17 inside the case timeout. Re-searched from
-// seed 1: seed 3 is the first that passes this file unchanged.
-const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-forward-room',seed:3,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-forward-room',seed:4,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 let restoreOffers:()=>void;
 // Pool expansion moved the old offer. Script only the eligible draw; selection and restore share this scope.
 // Finding the target below is fixture self-checking, not a claim about the real RNG draw.
