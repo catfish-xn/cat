@@ -90,10 +90,11 @@ export interface BoardAlignment {
  */
 /**
  * The arena's baked lightmap (Map22 `BakedLight`): an RGB(A) atlas sampled with the arena meshes' TEXCOORD_1, which the
- * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space;
- * gamma and scale are fitted against original footage by the converter (not values from the game data).
+ * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space, scale
+ * one number or one per R/G/B channel; gamma and scale are fitted against original footage by the converter (not values
+ * from the game data).
  */
-export interface BoardLightmap { path: string; gamma: number; scale: number }
+export interface BoardLightmap { path: string; gamma: number; scale: number | readonly [number, number, number] }
 export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string }; lightmap?: BoardLightmap }
 /**
  * Champion light for one board, built offline from the board's light data: six colours along the world axes
@@ -306,6 +307,7 @@ function assertAttackSequence(value: unknown): void {
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const scaleOk = (v: unknown): boolean => finite(v) && v > 0 && v <= 16;
 const vec3 = (v: unknown): boolean => Array.isArray(v) && v.length === 3 && v.every(finite);
 /** Each board names a model of this manifest (same key) and how its source coordinates land on the hex grid. */
 function assertBoards(value: unknown, manifest: AssetManifest): void {
@@ -322,7 +324,7 @@ function assertBoards(value: unknown, manifest: AssetManifest): void {
     if (entry.lightmap !== undefined) {
       const l = entry.lightmap;
       if (!l || typeof l.path !== 'string' || !/\.(png|ktx2)$/i.test(l.path) || !finite(l.gamma) || l.gamma <= 0 || l.gamma > 4
-        || !finite(l.scale) || l.scale <= 0 || l.scale > 16) throw new Error('invalid-board-lightmap');
+        || !(Array.isArray(l.scale) ? l.scale.length === 3 && l.scale.every(scaleOk) : scaleOk(l.scale))) throw new Error('invalid-board-lightmap');
       assetUrl('', l.path);
     }
   }

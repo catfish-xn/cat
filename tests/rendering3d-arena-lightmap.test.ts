@@ -19,8 +19,10 @@ describe('3D arena baked lightmap', () => {
     expect(() => assertManifest(root())).not.toThrow();
     expect(() => assertManifest(root({ path: 'lighting/a.png', ...decode }))).not.toThrow();
     expect(() => assertManifest(root({ path: 'lighting/a.ktx2', ...decode }))).not.toThrow();
+    expect(() => assertManifest(root({ path: 'lighting/a.png', gamma: 0.5, scale: [2.5, 2.3, 1.9] }))).not.toThrow();
     for (const bad of [{ path: 'a.json', ...decode }, { path: 'a.png', gamma: 0, scale: 1 }, { path: 'a.png', gamma: 1, scale: -1 },
-      { path: 'a.png', gamma: 1, scale: 17 }, { path: 'a.png', gamma: '1', scale: 1 }, null])
+      { path: 'a.png', gamma: 1, scale: 17 }, { path: 'a.png', gamma: '1', scale: 1 }, { path: 'a.png', gamma: 1, scale: [1, 1] },
+      { path: 'a.png', gamma: 1, scale: [1, 0, 1] }, null])
       expect(() => assertManifest(root(bad))).toThrow('invalid-board-lightmap');
     expect(() => assertManifest(root({ path: '../a.png', ...decode }))).toThrow('invalid-asset-path');
   });
@@ -42,7 +44,7 @@ describe('3D arena baked lightmap', () => {
     const shader = compile(litMesh.material as MeshBasicMaterial);
     expect(shader.uniforms.arenaLightmap.value).toBe(texture);
     expect(shader.uniforms.arenaLightmapGamma.value).toBe(0.5);
-    expect(shader.uniforms.arenaLightmapScale.value).toBe(2.3);
+    expect((shader.uniforms.arenaLightmapScale.value as { toArray(): number[] }).toArray()).toEqual([2.3, 2.3, 2.3]);
     expect(shader.vertexShader).toContain(`vArenaLightmapUv = ${ARENA_LIGHTMAP_UV};`);
     expect(shader.fragmentShader).toMatch(/#include <map_fragment>\s*\{\s*vec3 bakedLight/);
     expect((litMesh.material as MeshBasicMaterial).customProgramCacheKey()).toBe('arena-lightmap');
@@ -54,8 +56,9 @@ describe('3D arena baked lightmap', () => {
   it('patches a material in place when no unlit mesh shares it, and leaves arenas without lightmap UVs alone', () => {
     const material = new MeshBasicMaterial({ map: new Texture() }), scene = new Group(), mesh = new Mesh(lit(), material);
     scene.add(mesh);
-    const applied = applyArenaLightmap(scene, new Texture(), decode)!;
+    const applied = applyArenaLightmap(scene, new Texture(), { gamma: 0.5, scale: [2.5, 2.3, 1.9] })!;
     expect(mesh.material).toBe(material);
+    expect((compile(material).uniforms.arenaLightmapScale.value as { toArray(): number[] }).toArray()).toEqual([2.5, 2.3, 1.9]);
     expect(material.customProgramCacheKey()).toBe('arena-lightmap');
     applied.dispose();
     expect(Object.hasOwn(material, 'onBeforeCompile')).toBe(false);
