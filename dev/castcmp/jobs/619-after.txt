@@ -48,7 +48,7 @@ v-capture.cjs scar w-scar-after --real 1 --star 3 --target amumu --nfoes 1 --foe
 v-capture.cjs scar w-scar-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems f4a6240a --column off --snapshot c1333710ad8e --attached off
 v-capture.cjs jayce w-jayce-after --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column after --snapshot c1333710ad8e
 v-capture.cjs jayce w-jayce-off --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column off --snapshot c1333710ad8e --attached off
-v-capture.cjs silco w-silco-after --star 3 --one 1 --dist 2 --settle 3000 --systems c7bb8557 --column after --snapshot c1333710ad8e
-v-capture.cjs silco w-silco-off --star 3 --one 1 --dist 2 --settle 3000 --systems c7bb8557 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs silco w-silco-after --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column after --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-off --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column off --snapshot c1333710ad8e --attached off
 v-capture.cjs g23-sion w-g23-sion-after --star 3 --one 1 --dist 1 --unbind 1 --settle 3000 --systems 5afb9708,9118f221 --column after --snapshot c1333710ad8e
 v-capture.cjs g23-sion w-g23-sion-off --star 3 --one 1 --dist 1 --unbind 1 --settle 3000 --systems 5afb9708,9118f221 --column off --snapshot c1333710ad8e --attached off
