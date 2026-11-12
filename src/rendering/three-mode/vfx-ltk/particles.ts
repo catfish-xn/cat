@@ -23,7 +23,7 @@ import { withDrawFade } from './engine/simulation/particleRead';
 
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
-export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
+export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 400; // EVIDENCE ONLY (claude/vi-dust-rubble-full): every FillMouth particle gets its rock child.
 /**
  * A fading cue's alpha at `elapsed` seconds: full until `stopAfter`, then easing to nothing at `duration`, so particles
  * that outlive the cue leave with it instead of being cut off at full strength. 1 without a soft stop.

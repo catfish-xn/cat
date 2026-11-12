@@ -23,7 +23,7 @@ export const VI_ROW_SHOCKWAVE = {
    * Fitted value, not original data: seconds its particles play out after it lands. Long enough for its lingering trail
    * particles to fade by their own colour curve: a shorter run cut them off at once while still half opaque (11-12 probe).
    */
-  linger: 0.6,
+  linger: 1.2,
 } as const;
 const viRowTravel = VI_ROW_SHOCKWAVE.cells / VI_ROW_SHOCKWAVE.speed;
 const viRowCue = (rowSide: -1 | 1): TimelineCue => ({ system: '84b969e0', event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay,

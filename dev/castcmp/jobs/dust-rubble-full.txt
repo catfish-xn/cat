@@ -1,0 +1,7 @@
+# Vi row shockwave column D+ (evidence only; branch claude/vi-dust-rubble-full, never merged): same base as claude/vi-dust-iso
+# (Vi plays only her two row shockwaves) with every layer of 84b969e0 drawn except the Trench and SpikeShapes1:
+# Dust, Smoke, Alpha_Dust, both FillMouth glows, and all of the rock child db4240a5 (rock meshes, Smoke_Burst,
+# StrokeDissolve_Right, SmokeRing_rocks) and its shard child 4e1dc787. CHILD BUDGET RAISED 100 -> 400 particles per run (every FillMouth particle gets its rock child) and LINGER 1.2 so the children play out.
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# 3-star Vi on one 3-star Sett, --dist 2, warm. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 ms, wide and band crop, beside C and Qr1n.
+v-capture.cjs vi dust-rubble-full --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --column after --snapshot c1333710ad8e
