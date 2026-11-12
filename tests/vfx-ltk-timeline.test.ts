@@ -4,8 +4,7 @@ import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
-import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
-import { systemSpan } from '../src/rendering/three-mode/vfx-ltk/engine/model/systemModel';
+import { S13_TIMELINES, VI_LANDING, VI_ROW_SHOCKWAVE, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
   { system: 'cast', event: 'cast-start', delay: 0, duration: 1, bone: 'R_Hand', stopAfter: 0.2 },
@@ -265,7 +264,7 @@ describe('cast timeline replacement and fallback', () => {
   });
 });
 
-it('ends Vi flight at landing and plays its landing out there; on a first cast the jump dust yields, warm every system fits', async () => {
+it('Vi: her landing systems start on the landing frame; her row shockwave pair starts whole, late on a first cast, on time warm', async () => {
   const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
   const library = createVfxLibrary('/root/', {
     readJson: async url => {
@@ -273,30 +272,31 @@ it('ends Vi flight at landing and plays its landing out there; on a first cast t
       const doc = syntheticSystem(); if (url.includes('25afa6a6')) doc.root = struct('VfxSystemDefinitionData', {}); return doc;
     }, readTexture: async () => new Texture(),
   });
-  const scene = new Scene(), source = { root: new Group(), body: null, alive: true }, budget = { live: 0, max: 1500 };
-  const runtime = createLtkRuntime(library, scene, () => source, { budget });
-  const live = () => scene.children.map(o => o.userData.ltkSystem as string);
-  const landing = ['84b969e0', 'd27b3044', '18e22631', '66c600e8'];
+  const scene = new Scene(), units = new Map(['source', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 30, 0, 0); return [id, { root, body: null, alive: true }]; }));
+  const budget = { live: 0, max: 1500 }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+  const live = () => scene.children.map(o => o.userData.ltkSystem as string).filter(Boolean);
+  const rows = () => live().filter(id => id === '84b969e0').length;
+  const step = (frames: number, each?: () => void) => { for (let f = 0; f < frames; f++) { runtime.update(1 / 30, new Camera()); each?.(); } };
+  const landing = Math.round(VI_LANDING * 30), launch = Math.ceil(VI_ROW_SHOCKWAVE.delay * 30);
   await runtime.warm('vi');
-  // Cold: every system reserves its first-play 250 slots, so the landing needs a slot: the jump dust (decorative) gives it.
+  // Cold: every system first reserves 250 slots, six of them fill the 1500 at the landing.
   expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  for (let frame = 0; frame < 17; frame++) runtime.update(1 / 30, new Camera());
-  for (const id of landing) expect(live()).toContain(id);
-  expect(live()).not.toContain('0314626c');
-  expect(live().filter(id => id === '84b969e0')).toHaveLength(1); // the flight ended where it landed; this is its play-out
-  expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
-  for (let frame = 0; frame < 300 && runtime.active; frame++) runtime.update(1 / 30, new Camera());
+  step(landing);
+  for (const id of ['d27b3044', '18e22631', '66c600e8', '0314626c', '9614ffb4']) expect(live()).toContain(id);
+  expect(rows()).toBe(0); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);
+  // The pair waits whole (never one side alone); the hand trail (decorative, done emitting) gives way, the jump dust does not.
+  let late = 0;
+  step(launch - landing, () => expect(rows()).toBe(0));
+  step(12, () => { expect([0, 2]).toContain(rows()); if (!rows()) late++; });
+  expect(rows()).toBe(2); expect(live()).not.toContain('c11e6814');
+  expect(late).toBe(7); // about 0.23 s, inside the 0.3 s a critical cue may wait expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  for (let f = 0; f < 300 && runtime.active; f++) step(1);
   expect(runtime.active).toBe(0);
-  // Warm: each system now reserves what it was seen to need, and every landing system fits beside the jump dust.
+  // Warm: each system reserves what it was seen to need; the pair starts on its own frame, beside every other system.
   expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  // 18 frames: on this second cast the landing starts one frame later (the clock is off the 1/30 grid by now).
-  for (let frame = 0; frame < 18; frame++) runtime.update(1 / 30, new Camera());
-  for (const id of [...landing, '0314626c']) expect(live()).toContain(id);
-  expect(runtime.active).toBe(7); expect(budget.live).toBe(846); expect(budget.live).toBeLessThanOrEqual(budget.max);
-  // The play-out lasts its system's own span (systemSpan), under the cue's cap.
-  const cap = cues.find(c => c.playOut)!.duration, span = Math.min(cap, systemSpan(library.get('84b969e0')!.model));
-  let seconds = 0;
-  while (live().includes('84b969e0') && seconds < cap + 1) { runtime.update(1 / 30, new Camera()); seconds += 1 / 30; }
-  expect(seconds).toBeGreaterThan(span - 2 / 30); expect(seconds).toBeLessThan(span + 1 / 30); // it began with the landing
+  step(launch + 1);
+  expect(rows()).toBe(2);
+  for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
+  expect(runtime.active).toBe(8); expect(budget.live).toBe(870); expect(budget.live).toBeLessThanOrEqual(budget.max);
   runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
 });

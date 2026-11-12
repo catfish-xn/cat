@@ -5,7 +5,25 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
 /** Vi lands on the export's frame 17, where her landing systems start. */
 export const VI_LANDING = frame(17);
-const viFlight = VI_LANDING - frame(4.545000076293945);
+/**
+ * Vi's row shockwave (TFT13_Vi_Base_Q_Landing_Mis): a line missile the export lists as a spell of its own, cast at a
+ * location with no animation, not her leap. It goes out from her landing along her target's row both ways, where her
+ * slam's secondary damage lands. When it is cast and the location it aims at are not in the export: every value here is
+ * a fitted value, not original data.
+ */
+export const VI_ROW_SHOCKWAVE = {
+  /** Fitted value, not original data: seconds after the cast it leaves the landing point. */
+  delay: VI_LANDING + 0.15,
+  /** Fitted value, not original data: how many cells each side it runs. */
+  cells: 2.5,
+  /** Fitted value, not original data: seconds it takes to get there. */
+  travel: 0.3,
+  /** Fitted value, not original data: seconds its particles play out after it lands. */
+  linger: 1,
+} as const;
+const viRowCue = (rowSide: -1 | 1): TimelineCue => ({ system: '84b969e0', event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay,
+  duration: VI_ROW_SHOCKWAVE.travel + VI_ROW_SHOCKWAVE.linger, travelSeconds: VI_ROW_SHOCKWAVE.travel, bone: ground, targetBone: ground,
+  primary: true, rowSide, rowCells: VI_ROW_SHOCKWAVE.cells, together: 'row' });
 export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   jinx: [
     { phase: 0, system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
@@ -19,21 +37,15 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { phase: 2, system: '809da1b1', event: 'hit', delay: frame(20) + 0.6, duration: 2, bone: ground, primary: true },
   ],
   vi: [
-    { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
-    // Jump dust: kept just under CAST_BODY_SECONDS so it ranks decorative, and the landing impacts may take its slot when
-    // the budget is full (a first cast reserves 250 slots per system). At the landing it has about 5 particles left
-    // (11-12 measurement); before, its 1 s made it a skill body that no impact could replace.
-    { system: '0314626c', event: 'cast-start', delay: 0, duration: CAST_BODY_SECONDS - frame(1), bone: ground },
+    // Hand trail: it stops emitting at the landing and only fades after. Kept just under CAST_BODY_SECONDS so it ranks
+    // decorative and a first cast's row shockwave (every system then reserves its first-play 250 slots) may take its slot.
+    { system: 'c11e6814', event: 'cast-start', delay: 0, duration: CAST_BODY_SECONDS - frame(1), stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
+    { system: '0314626c', event: 'cast-start', delay: 0, duration: 1, bone: ground },
     { system: '25afa6a6', event: 'cast-start', delay: 0, duration: 1, bone: ground }, // Original empty event: explicit no-op.
-    // The flight ends on arrival (the engine stops a missile where it lands). Its emitters are authored to run on past
-    // it: trench, dust, smoke and the fire-shaped spikes, plus its two rock and shard child systems (Landing_Mis_Child,
-    // _Child02). So the same system plays again where she lands, for its own span (playOut), as the original's fire,
-    // ground crack and dust after the slam show (11-12 review of the original). `duration` 4 is only a cap.
-    { system: '84b969e0', event: 'projectile', delay: frame(4.545000076293945), duration: viFlight, travelSeconds: viFlight, targetBone: ground },
     { system: '18e22631', event: 'cast-start', delay: frame(17), duration: 1.5, bone: ground },
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
     { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
-    { system: '84b969e0', event: 'hit', delay: VI_LANDING, duration: 4, bone: ground, primary: true, playOut: true },
+    viRowCue(-1), viRowCue(1),
     { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
   ],
 };
