@@ -77,3 +77,8 @@ and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte chang
 2026-11-12 14.24b 七项英雄数值 (b-patch-overrides.json): identity-only refresh, `contentDigest` (×2) `f37c6970` → `db6dc9b6`;
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. SHA-256:
 `a895917a2707e529fe319fd3d2c4dbc0c7667f877092313d0f9bb8eca3dfc6fe`.
+
+2026-11-12 施法事件带 castIndex、回放格式 8→9 (#628): identity-only refresh, `contentDigest` (×2) `db6dc9b6` → `d94c78f1`
+(content-digest.ts covers `replayFormatVersion`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed.
+Exported with `git show 808d16ae:src/simulation/g2-3-settlement.ts | node scripts/export-pre-spoils-compat.cjs <out>`, v24 gameplay
+check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce479df19d96456580682`.

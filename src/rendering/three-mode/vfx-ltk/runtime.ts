@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -101,7 +101,18 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   together?: string }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
-  bodyGone?: boolean }
+  bodyGone?: boolean;
+  /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
+  playOut?: boolean;
+  /** Its end came and it is playing out. */
+  ending?: boolean;
+  /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
+  heldAtEnd?: number }
+/**
+ * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
+ * past its landing, and none of its own particles' curves run longer.
+ */
+export const PLAY_OUT_CAP = 2;
 /**
  * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
@@ -176,7 +187,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * dropped whatever came seventh (Vi's row shockwave, 11-12).
    */
   const needs = new Map<string, number>();
-  const reserveOf = (peak: number, children: boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25) + (children ? CHILD_PARTICLES : 0)));
+  /**
+   * Each system's child room, measured when its champion warms (measureChildren): a run gets what its system's children
+   * take rather than one flat CHILD_PARTICLES, bounded by CHILD_ROOM_CAP and CHILD_COUNT_CAP. The shared budget still
+   * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
+   */
+  const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
+  /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
+  const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
+    + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
@@ -188,7 +207,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     if (options.budget) options.budget.live -= run.reserved;
     // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet. The need only
     // grows: a low-peaking seed or a shorter cue on a shared system (Zyra's 857fe049 at 0.6 and 0.7 s) never lowers it.
-    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children)));
+    if (run.fx.finished) {
+      const kids = run.fx.children ? Math.max(childLive.get(run.system) ?? 0, run.fx.childPeak) : 0;
+      if (run.fx.children) childLive.set(run.system, kids);
+      needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children && !rooms.has(run.system) ? true : kids)));
+    }
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
@@ -215,8 +238,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const prepared = catalog.get(id);
         if (closed || needs.has(id) || !prepared || prepared.empty) continue;
         const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
-        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), longest.fadeOut ? undefined : longest.stopAfter),
-          prepared.drawn.some(definition => !!definition.path)));
+        const stopAt = longest.fadeOut ? undefined : longest.stopAfter;
+        // A missile stops emitting where it lands, so its children are measured stopped at its flight.
+        const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
+        if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
+        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
@@ -332,7 +358,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     /** True while a cue of this action from the source is queued or running. */
     playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
       for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.ending) return true;
       return false;
     },
     stopUnit(id: string) {
@@ -358,7 +384,19 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
         run.fx.update(seconds, camera);
-        if (run.fx.finished || clock + 1e-9 >= run.until) { release(run, run.stopped); running.delete(run); }
+        // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
+        // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
+        if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
+          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP; run.heldAtEnd = run.reserved;
+        }
+        // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
+        // (a child may still emit through its own short life after the stop), never above what it held at its end.
+        if (run.ending) {
+          const live = Math.min(run.heldAtEnd ?? run.reserved, run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0));
+          if (live !== run.reserved) { if (options.budget) options.budget.live += live - run.reserved; run.reserved = live; }
+        }
+        const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
+        if (over) { release(run, run.stopped); running.delete(run); }
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
@@ -414,8 +452,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
         const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
-        const blocked = () => running.size + partners.length >= MAX_LTK_SYSTEMS || starts + partners.length >= 6 || !!(options.budget
+        const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
+        const blocked = () => crowded() || starts + partners.length >= 6;
+        // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
+        // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
+        // its rock children and smoke included: what was left of it disappears in that frame.
+        while (crowded()) {
+          let tail: Running | undefined;
+          for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
+          if (!tail) break;
+          release(tail); running.delete(tail);
+        }
         while (blocked()) {
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
@@ -449,14 +497,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // before it, so the cue stays at full strength up to its stop.
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
+        const room = rooms.get(spawn.system);
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
+        // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
+        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -468,7 +518,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

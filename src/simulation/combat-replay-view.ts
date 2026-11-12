@@ -133,6 +133,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
       targetIds: [...event.receipt.targetIds], completionCell: cellView(event.receipt.completionCell),
+      ...(event.receipt.castIndex !== undefined ? { castIndex: event.receipt.castIndex } : {}),
       ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}) };
     case 'shieldLayerChanged': return { ...envelope, type: event.type, reason: event.reason,
       ...pick(event.layer, ['key', 'targetId', 'remaining']) };

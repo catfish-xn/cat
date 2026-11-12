@@ -1,19 +1,19 @@
 {
   "parentEpoch": "v25-online-rules",
-  "contentDigest": "fnv1a32-utf16:db6dc9b6",
+  "contentDigest": "fnv1a32-utf16:d94c78f1",
   "lootReplayDigest": "fnv1a32-utf16:9c98c8ef",
   "rulesVersion": "s13-g2-3-v26-neutrals-1424",
   "contentVersion": "s13-14.24b-g2-3-v26-neutrals-1424",
   "schemaVersion": 12,
   "saveFormatVersion": 9,
-  "replayFormatVersion": 8,
+  "replayFormatVersion": 9,
   "commandProtocolVersion": 7,
   "netProtocolVersion": 6,
   "previousContentDigest": "fnv1a32-utf16:f671ab88",
   "previousLootReplayDigest": "fnv1a32-utf16:36ebfac2",
   "traceHashes": {
-    "state": "7a37120bc660561e9f0333d77e895a8712bedfc80495aa2635eebd7a5d516be8",
-    "events": "2fc5afcb0a7d6165ca37b4f08d4ec42b21662bf8ee29b369fadfa78f880ba663",
+    "state": "68547bf8ca4470725b611d3a248c495bcc95ad4fd1765145774c26b44ffdcf39",
+    "events": "c37a30cf6ef2bb73a771275c33aba9ec422d0239b95a6195da668c35aa56e5d5",
     "rng": "6a51e9d56c70d5c04656107c3820eecd28fedfaf4bd83f84a3770c3c8e6245fa"
   },
   "firstBattle": {
@@ -22,7 +22,7 @@
     "events": 147,
     "result": "playerWin",
     "stateHash": "fnv1a32-utf16:0453f70d",
-    "eventHash": "fnv1a32-utf16:08a8b268"
+    "eventHash": "fnv1a32-utf16:6df1c9ca"
   },
   "reason": "v26 integrates the 14.24 neutral restore, targeting-p0/p1, melee pathing, anomaly-ui and d5-register on v25; schema/save/replay/command 12/9/8/7 (save 9: compact battle exports), NET6. Old identities are rejected without migration."
 }
