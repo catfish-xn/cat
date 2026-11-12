@@ -89,10 +89,12 @@ for (const batch of plan.batches) {
       if (fs.existsSync(from)) fs.copyFileSync(from, path.join(gatesOut, `${batch.name}-${column}-${n}.${to}`));
   }
   if (result.skipped) continue;
-  // Sheets: --before / --after name job folders of this batch's columns.
+  // Sheets.
   for (const sheet of batch.keyframes ?? []) {
     const args = sheet.split(/\s+/);
-    for (const column of ['before', 'after']) { const i = args.indexOf('--' + column); if (i >= 0) args[i + 1] = path.join(out, batch.name, column, args[i + 1]); }
+    // --before names a job folder of the before column; --after, --off and --debug of the after column (the after jobs file
+    // holds the after, off and debug lines).
+    for (const [flag, column] of [['before', 'before'], ['after', 'after'], ['off', 'after'], ['debug', 'after']]) { const i = args.indexOf('--' + flag); if (i >= 0) args[i + 1] = path.join(out, batch.name, column, args[i + 1]); }
     const r = run(process.execPath, [path.join(trees.after, 'dev/castcmp/keyframes.cjs'), ...args, '--out', kfOut, '--prefix', batch.prefix ?? 'e138w'], trees.after, true);
     result.sheets.push({ sheet, ok: r.code === 0, out: r.out.trim().split('\n').pop() });
   }
