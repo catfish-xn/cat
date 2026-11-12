@@ -1,0 +1,8 @@
+# Vi row shockwave dust and smoke layers, isolated (evidence only; branch claude/vi-dust-iso-l03, never merged): same base as
+# claude/vi-trench-iso (#636 head f2511cc3, LINGER 0.3 as on the live board today) with Vi playing only her two row
+# shockwaves and, of their system 84b969e0, only Dust, Smoke, Alpha_Dust and the rock child's Smoke_Burst and
+# SmokeRing_rocks drawn (Trench, spikes, rocks, fill and shards muted).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# 3-star Vi on one 3-star Sett, --dist 2, warm. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 ms, wide (3 cells each side)
+# and zoomed on the band between the two shockwaves, beside the original (Qr1n) at the same moments.
+v-capture.cjs vi dust-iso-l03 --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --column after --snapshot c1333710ad8e
