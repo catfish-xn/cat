@@ -11,9 +11,9 @@
     "tests/ambessa-cast-branch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3954,
+      "currentBytes": 3955,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b3df927f012e8ea3c68b199fe58dd20d68757c7853c611e1ef95a469d7cbd411",
+      "currentSha256": "4a258c17c6619e45c30e262636cde8480b5c01174a04264ee4069640be29562f",
       "firstDifferentByte": 0
     },
     "tests/ambessa-dash.test.ts": {

@@ -28,7 +28,7 @@ describe('Ambessa cast branch output', () => {
     const result = step([ambessa(prior), dummy()]);
     const [receipt] = casts(result.events);
     expect(receipt.branch).toEqual({ castIndex: index, branch });
-    expect(result.state.units.find(u => u.id === 'p')!.runtime.castCount).toBe(index);
+    expect(result.state.units.find(u => u.id === 'p')!.runtime?.castCount).toBe(index);
     // The branch named is the one that resolved.
     expect(stunned(result.state)).toBe(branch === 'fist');
     expect(dashed(result.events)).toBe(branch === 'chain');
