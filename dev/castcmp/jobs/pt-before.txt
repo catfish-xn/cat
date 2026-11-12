@@ -1,0 +1,8 @@
+# Projectile play-out (PLAY_OUT_SYSTEMS), before column. Recording only, never merged.
+# before: #637 head 4f3c7953 (projectiles removed whole at cue end). after: claude/proj-tail-gp-viktor 376a42cc.
+# Same machine, same asset snapshot, same lines in both columns (only --column and the output names differ).
+# Gangplank: every cast fires 20cd67dc (ground-fire line, ~0.9 s to land). after: still running 1.1–2.4 s; before: gone at landing.
+# Viktor: basic attack laser 87913524 lands ~0.84 s. after: still running 0.95–1.4 s.
+v-capture.cjs gangplank pt-before-gp3 --star 3 --dist 3 --ms 3300 --systems 20cd67dc --layers none --from 1100 --to 2400 --probe emitters --column before --snapshot c1333710ad8e
+v-capture.cjs gangplank pt-before-gp1 --star 1 --dist 2 --ms 3300 --systems 20cd67dc --layers none --from 1100 --to 2400 --probe emitters --column before --snapshot c1333710ad8e
+v-capture-attack.cjs viktor pt-before-vk2 --star 2 --dist 3 --ms 2000 --systems 87913524 --layers none --from 950 --to 1400 --probe emitters --column before --snapshot c1333710ad8e
