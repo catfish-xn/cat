@@ -4,7 +4,7 @@ import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { toCombatViewEvents } from '../src/simulation/combat-replay-view';
 import { createBatch2VfxBridge, batch2BoardPoint } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import type { LtkPlayOptions } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
@@ -335,7 +335,7 @@ describe('batch 2 runtime boundaries', () => {
     expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour'})).toBe(false);
     expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour',snapshotTargets:true})).toBe(true);
     runtime.stopUnit('dead'); // The next frame reports the victim dead as well.
-    runtime.update(.01,new Camera());expect(runtime.active).toBe(2);expect(budget.live).toBe(500);
+    runtime.update(.01,new Camera());expect(runtime.active).toBe(2);expect(budget.live).toBe(2*MIN_RESERVE); // warm measured each synthetic system below the floor
     runtime.stopUnit('dead');runtime.update(.01,new Camera());expect(runtime.active).toBe(2);
     runtime.clear();expect(budget.live).toBe(0);expect(scene.children).toHaveLength(0);runtime.dispose();
   });

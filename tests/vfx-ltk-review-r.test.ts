@@ -2,7 +2,7 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { createLtkRuntime, MAX_LTK_QUEUED, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MAX_LTK_QUEUED, MIN_RESERVE, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import * as particles from '../src/rendering/three-mode/vfx-ltk/particles';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 import { stepCombat } from '../src/simulation/combat';
@@ -53,7 +53,7 @@ describe('review R: whole-action target coverage', () => {
     runtime.update(.2, camera); runtime.update(.2, camera);
     expect(scene.children.map(o => o.userData.ltkSystem)).toEqual(['start', 'hit']);
     expect(create.mock.calls[1][1].attachment).toBe(units.get('self'));
-    expect(runtime.queued).toBe(0); expect(budget.live).toBe(500); expect(cast).toEqual(before);
+    expect(runtime.queued).toBe(0); expect(budget.live).toBe(2 * MIN_RESERVE); expect(cast).toEqual(before); // warm measured both below the floor
   });
 
   it('keeps self and allies in receipt order, deduplicates hits, and preserves a primary self hit', async () => {
