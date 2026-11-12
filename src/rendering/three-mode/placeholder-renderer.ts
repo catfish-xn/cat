@@ -45,6 +45,7 @@ import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL, minesFrameFor } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
+import { DEFAULT_FAR, farToCover } from './camera-far';
 import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
 // Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
@@ -396,7 +397,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const sun = new DirectionalLight(0xffffff, 1.5);
   sun.position.set(-200, 600, 300);
   scene.add(sun);
-  const camera = new PerspectiveCamera(36, 1, 1, 5000);
+  const camera = new PerspectiveCamera(36, 1, 1, DEFAULT_FAR);
   const quality = readQuality3d(typeof location === 'undefined' ? '' : location.search);
   const lighting = createPresentationLighting(scene, quality), portal = createPvpPortal(scene);
   const arrivalsEnabled = () => quality !== 'off' && !reducedMotion() && !visiting() && !stage.active;
@@ -520,7 +521,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
     font: canvasFont, ui: originalUi,
     loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
-  const boardGroup = new Group(), boardBox = new Box3();
+  const boardGroup = new Group(), boardBox = new Box3(), arenaBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
   // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the drop marker by the
@@ -566,6 +567,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // The last shift moved the extents: back off just enough that they still fit.
     for (let i = 0; i < 16 && !fits(distance); i++) distance *= 1.02;
     place(distance);
+    // Reach the arena's skybox from wherever the framing put the camera (camera-far.ts).
+    const far = farToCover(camera.position, arena?.ready ? arenaBox.setFromObject(arenaGroup) : arenaBox.makeEmpty());
+    if (far !== camera.far) { camera.far = far; camera.updateProjectionMatrix(); }
   };
   scene.add(boardGroup);
   // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
@@ -1184,7 +1188,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);

@@ -309,7 +309,11 @@ export interface CastReceipt {
   readonly actualManaSpent: number;
   readonly refundedMana: number;
   readonly completionCell: HexCell;
+  /** Display-only: which branch this cast took, written where the rule chose it; absent when the ability has none. */
+  readonly branch?: CastBranch;
 }
+/** castIndex: the caster's cast count this combat including this cast (runtime.castCount, from 1). */
+export interface CastBranch { readonly castIndex: number; readonly branch: string }
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'
   | 'damage-dealt' | 'damage-taken' | 'shield-hit' | 'post-damage-survival' | 'shield-ended'
   | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated'

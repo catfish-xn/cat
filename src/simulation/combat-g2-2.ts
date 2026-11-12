@@ -85,9 +85,11 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
       else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
     }
-    case 'ambessa':
-      if(u.runtime.castCount%2===1){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
-      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
+    case 'ambessa': {
+      // One parity read decides the branch that resolves and the branch reported (display output only).
+      const chain=u.runtime.castCount%2===1;ctx.castBranch=chain?'chain':'fist';
+      if(chain){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
+      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;}
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);

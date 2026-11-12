@@ -283,6 +283,25 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
 };
 
+/**
+ * Which rule branch each cast system belongs to, by champion and system. Tags only: the exported timing stays as it is.
+ * A tagged cue plays only when the cast event names its branch (TimelineCue.branch), so one cast no longer plays every
+ * branch's effects at once. Untagged cues play on every cast. Applied only when every tagged system is in the list.
+ */
+export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  // Ambessa: odd casts chain (Q: the chain swipe and its hit), even casts fist (R: dash, ground, weapon and slam hit).
+  // Rule side: combat-g2-2.ts writes the branch (PR #623); the 11-11 live index played all six on every cast.
+  ambessa: { '3b4c15e0': 'chain', '8a64f4dd': 'chain', '754b6c78': 'fist', 'a429a900': 'fist', '6390530e': 'fist', 'cba05b6e': 'fist' },
+};
+/** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
+export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {
+  const tags = Object.hasOwn(CUE_BRANCHES, champion) ? CUE_BRANCHES[champion] : undefined;
+  if (!tags || !cues) return undefined;
+  const cast = new Set(cues.filter(cue => (cue.action ?? 'cast') === 'cast').map(cue => cue.system));
+  if (!Object.keys(tags).every(system => cast.has(system))) return undefined;
+  return cues.map(cue => (cue.action ?? 'cast') === 'cast' && Object.hasOwn(tags, cue.system) ? { ...cue, branch: tags[cue.system] } : cue);
+}
+
 /** The override for `champion` when every system it names is present in `systems`. */
 export function cueOverride(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] | undefined {
   const cues = Object.hasOwn(CUE_OVERRIDES, champion) ? CUE_OVERRIDES[champion] : undefined;
