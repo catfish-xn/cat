@@ -31,6 +31,8 @@ export interface AbilityContext {
   nextTriggerEventSeq?: number;
   virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
+  /** Set by an ability's own branch choice while its cast resolves; copied onto that cast's receipt as output only. */
+  castBranch?: string;
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
