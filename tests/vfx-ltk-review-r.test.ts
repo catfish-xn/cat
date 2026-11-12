@@ -103,10 +103,10 @@ describe('review R: whole-action target coverage', () => {
   it('checks only the active branch for missing targets and keeps attack coverage separate', async () => {
     const cues: TimelineCue[] = [{ ...start, branch: 'one' }, { ...flight, branch: 'two' }, { ...hit, action: 'attack' }];
     const { runtime } = await setup(cues);
-    expect(runtime.play('vander', 'self', [], 0, 'cast', { branch: 'one' })).toBe(true); expect(runtime.queued).toBe(1); runtime.clear();
-    expect(runtime.play('vander', 'self', ['self'], 0, 'cast', { branch: 'two' })).toBe(false); expect(runtime.queued).toBe(0);
-    expect(runtime.play('vander', 'self', [], 0, 'cast', { branch: 'three' })).toBe(false); expect(runtime.queued).toBe(0);
-    expect(runtime.play('vander', 'self', ['self'], 1, 'attack')).toBe(true); expect(runtime.queued).toBe(1);
+    expect(runtime.play('vander', 'self', [], 'cast', { branch: 'one' })).toBe(true); expect(runtime.queued).toBe(1); runtime.clear();
+    expect(runtime.play('vander', 'self', ['self'], 'cast', { branch: 'two' })).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('vander', 'self', [], 'cast', { branch: 'three' })).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('vander', 'self', ['self'], 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
   it.each(['missing', 'dead', 'disposed'] as const)('keeps the whole multi-target action on fallback for a %s ally', async reason => {

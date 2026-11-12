@@ -126,8 +126,8 @@ describe('late-game effect budget', () => {
     const { runtime, scene, camera } = await setup();
     const board: [number, number, number] = [0, 0, 0];
     const half = MAX_LTK_SYSTEMS / 2;
-    for (let i = 0; i < half; i++) expect(runtime.play('mel', `mel-${i}`, [], 0, 'cast', { board, persistAcrossPhase: true })).toBe(true);
-    for (let i = 0; i < half; i++) expect(runtime.play('viktor', `viktor-${i}`, [], 0, 'cast', { board })).toBe(true);
+    for (let i = 0; i < half; i++) expect(runtime.play('mel', `mel-${i}`, [], 'cast', { board, persistAcrossPhase: true })).toBe(true);
+    for (let i = 0; i < half; i++) expect(runtime.play('viktor', `viktor-${i}`, [], 'cast', { board })).toBe(true);
     runtime.update(0.01, camera); runtime.update(0.01, camera); // at most six start in one frame
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
@@ -137,8 +137,8 @@ describe('late-game effect budget', () => {
     expect(shown(scene)).not.toContain('blow');
     // A flourish beside them is still the one a hit replaces.
     runtime.clear();
-    expect(runtime.play('mel', 'mel-0', [], 0, 'cast', { board, persistAcrossPhase: true })).toBe(true);
-    expect(runtime.play('viktor', 'viktor-0', [], 0, 'cast', { board })).toBe(true);
+    expect(runtime.play('mel', 'mel-0', [], 'cast', { board, persistAcrossPhase: true })).toBe(true);
+    expect(runtime.play('viktor', 'viktor-0', [], 'cast', { board })).toBe(true);
     for (let i = 0; i < MAX_LTK_SYSTEMS - 2; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
     runtime.update(0.01, camera); runtime.update(0.01, camera);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
@@ -226,7 +226,7 @@ describe('late-game effect budget', () => {
 
   it('lets a hit that is already past its window retire plain attacks for room, but never a skill body', async () => {
     const { runtime, scene, camera } = await setup({ lucian: [{ system: 'deco', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 2 }] });
-    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('lucian', `a-${i}`, ['victim'], 0, 'attack')).toBe(true);
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('lucian', `a-${i}`, ['victim'], 'attack')).toBe(true);
     runtime.update(0.005, camera); runtime.update(0.005, camera);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     expect(runtime.play('vi', 'caster-0', ['victim'])).toBe(true);
@@ -258,7 +258,7 @@ describe('late-game effect budget', () => {
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('ezreal', `c-${i}`, ['victim'])).toBe(true);
     runtime.update(0.005, camera); runtime.update(0.005, camera);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
-    expect(runtime.play('lucian', 'a-0', ['victim'], 0, 'attack')).toBe(true);
+    expect(runtime.play('lucian', 'a-0', ['victim'], 'attack')).toBe(true);
     runtime.update(0.36, camera);
     expect(runtime.active).toBe(0);
     expect(runtime.queued).toBe(0);
@@ -325,7 +325,7 @@ describe('late-game effect budget', () => {
       { system: 'blow', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 1 },
       { system: 'blow', event: 'hit' as const, delay: 0, duration: 1 },
     ] });
-    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `hitter-${i}`, [`victim-${i}`], 0, 'attack')).toBe(true);
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('vi', `hitter-${i}`, [`victim-${i}`], 'attack')).toBe(true);
     runtime.update(0.01, camera); runtime.update(0.01, camera);
     expect(shown(scene).filter(name => name === 'blow')).toHaveLength(MAX_LTK_SYSTEMS);
     expect(runtime.play('jinx', 'caster-0', [])).toBe(true);
@@ -335,7 +335,7 @@ describe('late-game effect budget', () => {
     runtime.clear();
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
     runtime.update(0.01, camera); runtime.update(0.01, camera);
-    expect(runtime.play('vi', 'hitter-0', ['victim-0'], 0, 'attack')).toBe(true);
+    expect(runtime.play('vi', 'hitter-0', ['victim-0'], 'attack')).toBe(true);
     runtime.update(0.01, camera);
     expect(shown(scene)).not.toContain('blow');
     runtime.dispose();

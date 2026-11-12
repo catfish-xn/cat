@@ -111,7 +111,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     const shield = (targetId: string) => ({ type: 'shieldLayerChanged', tick: 1, eventSeq: 2, reason: 'granted', remaining: 10, targetId,
       key: JSON.stringify(['combat', 'r', 'ability', 'renata-ability', 'r', 0, null, targetId, 'source']) }) as unknown as DisplayCombatEvent;
     const renataCast = { ...cast(1), sourceId: 'r', targetIds: ['f'] } as DisplayCombatEvent;
-    const delays = () => play.mock.calls.filter(args => args[0] === 'renata' && args[4] === 'passive').map(args => (args[5] as { delay: number }).delay);
+    const delays = () => play.mock.calls.filter(args => args[0] === 'renata' && args[3] === 'passive').map(args => (args[4] as { delay: number }).delay);
     // The ally stands halfway along the flight: launch (0.3 s) plus half the 0.6 s flight.
     listener.events([shield('s'), renataCast]);
     expect(delays()).toHaveLength(1); expect(delays()[0]).toBeCloseTo(0.6);
@@ -138,14 +138,13 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(events).toEqual(before);
   });
 
-  it('batch 1: interrupted casts suppress only batch 1 effects and pass other casts the rule\'s cast index', async () => {
+  it('batch 1: interrupted casts suppress only batch 1 effects and still play other champions\' casts', async () => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'vander' }] };
     listener.frame({ ...board, fighting: false }); await debug().ltk.warm('vander'); await flush(); listener.frame(board);
     const play = vi.spyOn(debug().ltk, 'play');
-    // The index handed to ltk is the cast event's castIndex (the rule's count), not a count the board keeps.
     listener.events([{ ...cast(1), completed: false, castIndex: 1 } as DisplayCombatEvent]);
     listener.events([{ ...cast(2), castIndex: 2 } as DisplayCombatEvent]);
-    expect(play.mock.calls.map(args => [args[0], args[3], args[4]])).toEqual([['vander', 1, 'cast'], ['vander', 2, 'cast']]);
+    expect(play.mock.calls.map(args => [args[0], args[3]])).toEqual([['vander', 'cast'], ['vander', 'cast']]);
     listener.frame({ ...board, fighting: false, pieces: [{ ...board.pieces[0], definitionId: 'twitch' }] });
     await debug().ltk.warm('twitch'); await flush();
     listener.frame({ ...board, pieces: [{ ...board.pieces[0], definitionId: 'twitch' }] }); play.mockClear();
@@ -155,7 +154,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(consume).toHaveBeenCalledExactlyOnceWith(interrupted);
     expect(play).not.toHaveBeenCalled(); expect(debug().ltk.queued).toBe(0);
     listener.events([attack(2)]);
-    expect(play).toHaveBeenCalledWith('twitch', 'a', ['a'], 0, 'attack', undefined);
+    expect(play).toHaveBeenCalledWith('twitch', 'a', ['a'], 'attack', undefined);
   });
 
   it('cast index and branch come from the cast event: joining mid-combat and a cast landing on a held stun stay in step', async () => {
@@ -165,17 +164,17 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     const ruled = (tick: number, castIndex: number, branch: string) => ({ ...cast(tick), castIndex, branch: { castIndex, branch } }) as DisplayCombatEvent;
     // Joined after two casts: the first cast seen is the rule's third, and that is what both the vfx and the pose read.
     listener.events([ruled(3, 3, 'rocket')]);
-    expect(play.mock.calls.at(-1)?.slice(3, 6)).toEqual([3, 'cast', { variant: undefined, branch: 'rocket' }]);
+    expect(play.mock.calls.at(-1)?.slice(3, 5)).toEqual(['cast', { variant: undefined, branch: 'rocket' }]);
     expect(piece.castIndex).toBe(3);
     // A cast that arrives while the stun pose is still held plays no clip, and nothing is counted, so the next cast is
     // still the rule's own number and branch (11-12 table: a skipped cast used to leave the pose one step behind).
     piece.state.stun(); listener.events([ruled(4, 4, 'zap')]); piece.state.recover();
     listener.events([ruled(5, 5, 'chompers')]);
-    expect(play.mock.calls.at(-1)?.slice(3, 6)).toEqual([5, 'cast', { variant: undefined, branch: 'chompers' }]);
+    expect(play.mock.calls.at(-1)?.slice(3, 5)).toEqual(['cast', { variant: undefined, branch: 'chompers' }]);
     expect(piece.castIndex).toBe(5);
     // An older replay without the fields: index 0 (no rotation guess) and no branch.
     listener.events([cast(6)]);
-    expect(play.mock.calls.at(-1)?.slice(3, 5)).toEqual([0, 'cast']); expect(piece.castIndex).toBe(0);
+    expect(play.mock.calls.at(-1)?.slice(3, 5)).toEqual(['cast', undefined]); expect(piece.castIndex).toBe(0);
   });
 
   it('batch 1: Leona self buff releases its slots and explodes from status expiration before the animation filter', async () => {

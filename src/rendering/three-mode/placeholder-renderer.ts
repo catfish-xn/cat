@@ -714,7 +714,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
   const anvilIdle = ltk ? createAnvilIdleLoop({
-    play: (key, id) => ltk.play(key, id, [], 0, 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
+    play: (key, id) => ltk.play(key, id, [], 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
   }) : null;
   const anvilPieces = function* () { for (const [id, view] of pieces) if (isAnvilPiece(view.definitionId)) yield { id, definitionId: view.definitionId, alive: view.alive && !view.disposed }; };
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
@@ -1180,7 +1180,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const release = releaseOf(source);
     return release ? { variant, release } : variant;
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
@@ -1189,8 +1189,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1433,14 +1433,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
-      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, 0, fx.action, fx.variant);
+      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, fx.action, fx.variant);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
-      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 0, 'passive', { delay: renataShieldDelay(event, events, recipient) }))) {
+      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 'passive', { delay: renataShieldDelay(event, events, recipient) }))) {
         const fx = takeShield(grid?.radius ?? 34, reducedMotion());
         recipient.root.add(fx.object); addReference(fx, 'critical');
       }
@@ -1474,14 +1474,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, 0, planned.variant);
+        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
-        // The rule's own cast number (cast event castIndex); the board keeps no count of its own.
-        const castIndex = event.castIndex ?? 0;
         face(event.sourceId, event.targetIds[0]);
-        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.
         if (current && pieces.get(event.sourceId)?.definitionId === 'vi') { const held = pieces.get(event.targetIds[0]); if (held?.alive) held.control.grab(GRAB_3D.viSlamTicks / 20); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its

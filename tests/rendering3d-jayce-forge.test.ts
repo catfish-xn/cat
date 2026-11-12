@@ -376,7 +376,7 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
       hit: true, hpDamage: 100, absorbed: 0, critical: false, killingPacket: false };
     listener.events([cast, landing]);
     expect(play).toHaveBeenCalledTimes(1);
-    expect(play!.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor-slam' }]);
+    expect(play!.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 'cast', { skill: 'viktor-slam' }]);
     listener.events([{ ...landing, eventSeq: 3, tick: 42 }]);
     expect(play).toHaveBeenCalledTimes(1);
   });

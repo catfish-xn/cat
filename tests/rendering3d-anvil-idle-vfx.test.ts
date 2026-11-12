@@ -69,12 +69,12 @@ describe('anvil idle particles', () => {
     const runtime = createLtkRuntime(library, scene, () => source);
     await runtime.warm('anvil-support');
     expect(runtime.playing('anvil', 'passive')).toBe(false);
-    expect(runtime.play('anvil-support', 'anvil', [], 0, 'passive')).toBe(true);
+    expect(runtime.play('anvil-support', 'anvil', [], 'passive')).toBe(true);
     expect(runtime.playing('anvil', 'passive')).toBe(true);
     runtime.update(0.1, new Camera()); expect(runtime.active).toBe(1); expect(runtime.playing('anvil', 'passive')).toBe(true);
     expect(runtime.playing('anvil', 'cast')).toBe(false);
     runtime.update(2, new Camera()); expect(runtime.playing('anvil', 'passive')).toBe(false);
-    runtime.play('anvil-support', 'anvil', [], 0, 'passive'); runtime.update(0.1, new Camera());
+    runtime.play('anvil-support', 'anvil', [], 'passive'); runtime.update(0.1, new Camera());
     runtime.stopAction('anvil', 'passive'); expect(runtime.playing('anvil', 'passive')).toBe(false);
     runtime.dispose();
   });

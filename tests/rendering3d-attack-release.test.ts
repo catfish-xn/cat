@@ -102,7 +102,7 @@ describe('attack cues follow the release (releaseShift)', () => {
     const units = new Map<string, VfxUnit>([['caster', { root: new Group(), body: new Group(), alive: true }], ['target', { root: new Group(), body: new Group(), alive: true }]]);
     for (const unit of units.values()) unit.root.add(unit.body!);
     const scene = new Scene(), camera = new Camera(), runtime = createLtkRuntime(library, scene, id => units.get(id));
-    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', options)).toBe(true);
+    expect(runtime.play('jinx', 'caster', ['target'], 'attack', options)).toBe(true);
     let first = -1;
     for (let step = 0; step < 100 && first < 0; step++) {
       runtime.update(0.01, camera);
@@ -127,7 +127,7 @@ describe('attack cues follow the release (releaseShift)', () => {
     expect(await firstDrawnStep([{ ...hit, delay: 0 }], { releaseShift: 5 })).toBe(-1); // 2 s later: past the 1 s probe window
     const library = createVfxLibrary('/root/', { readJson: async () => ({ version: 1, systems: {}, assets: {}, skills: { jinx: [hit] } }), readTexture: async () => new Texture() });
     const runtime = createLtkRuntime(library, new Scene(), () => undefined);
-    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', { releaseShift: Number.NaN })).toBe(false);
+    expect(runtime.play('jinx', 'caster', ['target'], 'attack', { releaseShift: Number.NaN })).toBe(false);
     runtime.dispose(); library.dispose();
   });
 

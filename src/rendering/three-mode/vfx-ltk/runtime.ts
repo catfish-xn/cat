@@ -251,10 +251,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (const run of running) if (run.group === group) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** True means every active cue is covered and queued. Partial/unsupported actions
-     * return false without enqueueing anything, so the host runs its entire fallback. The fourth argument is no longer
-     * read: which cues a cast plays comes from the rule's cast event (`branch`), never from a count (the slot stays only so
-     * the callers keep their argument order). */
-    play(champion: string, sourceId: string, targetIds: readonly string[], _castIndex = 0, action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
+     * return false without enqueueing anything, so the host runs its entire fallback. Which cues a cast plays comes from
+     * the rule's cast event (`extra.branch`), never from a count. */
+    play(champion: string, sourceId: string, targetIds: readonly string[], action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
       if (closed) return false;
       void warm(champion);
       const context: LtkPlayOptions = extra !== undefined && typeof extra !== 'string' ? extra : {};

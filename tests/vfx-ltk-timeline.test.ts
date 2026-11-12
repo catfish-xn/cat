@@ -186,14 +186,14 @@ describe('cast timeline replacement and fallback', () => {
     const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined, { budget });
     await library.load('sample');
     // Below half: a hit takes a free LTK slot even when fallback particles fill the shared budget.
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
     runtime.clear(); expect(budget.live).toBe(1499);
     // From half the systems on (six), it waits for shared room; a larger shared budget lets six first plays in.
     budget.live = 0; budget.max = 3000;
     for (let i = 0; i < 6; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
     expect(runtime.active).toBe(6); budget.live += 1251;
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
-    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
+    runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
+    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(7); expect(budget.live).toBe(2950);
     runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
   });

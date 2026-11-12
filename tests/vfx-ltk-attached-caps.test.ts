@@ -113,7 +113,7 @@ describe('attached-mesh screen cap and switch', () => {
     }));
     const runtime = createLtkRuntime(library, scene, id => hosts.get(id), { layerCap: CAP });
     await runtime.warm('jinx');
-    for (const id of hosts.keys()) expect(runtime.play('jinx', id, [], 0, 'cast')).toBe(true);
+    for (const id of hosts.keys()) expect(runtime.play('jinx', id, [], 'cast')).toBe(true);
     runtime.update(0.2, new Camera()); runtime.update(0.05, new Camera());
     expect(runtime.attachedStats.peakLayers).toBeGreaterThan(CAP);
     expect(visibleOverlays(scene)).toBe(CAP);
@@ -131,7 +131,7 @@ describe('attached-mesh screen cap and switch', () => {
     }));
     const runtime = createLtkRuntime(library, scene, id => hosts.get(id), { layerCap: CAP });
     await runtime.warm('jinx');
-    for (const id of hosts.keys()) runtime.play('jinx', id, [], 0, 'cast');
+    for (const id of hosts.keys()) runtime.play('jinx', id, [], 'cast');
     runtime.update(0.2, new Camera());
     const layers = Math.min(runtime.attachedStats.peakLayers, CAP); expect(layers).toBeGreaterThan(count - 1);
     expect(visibleOverlays(scene)).toBe(layers * partCount);
@@ -143,7 +143,7 @@ describe('attached-mesh screen cap and switch', () => {
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(attached()), readTexture: async () => new Texture() });
     const root = new Group(), body = new Group(); root.add(body); body.add(part('body'));
     const runtime = createLtkRuntime(library, scene, () => ({ root, body, alive: true }), { attachedLayers: () => on });
-    await runtime.warm('jinx'); runtime.play('jinx', 'u', [], 0, 'cast');
+    await runtime.warm('jinx'); runtime.play('jinx', 'u', [], 'cast');
     runtime.update(0.2, new Camera()); expect(visibleOverlays(scene)).toBe(0);
     on = true; runtime.update(0.05, new Camera()); expect(visibleOverlays(scene)).toBeGreaterThan(0);
     runtime.dispose(); library.dispose();

@@ -32,7 +32,7 @@ const stormDamage = (tick = 40): Extract<DisplayCombatEvent, { type: 'packetDama
   hit: true, hpDamage: 100, absorbed: 0, critical: false, killingPacket: false,
 });
 function bridge(champion: string, form: 'front' | 'back' = 'front') {
-  const play = vi.fn((_champion: string, _source: string, _targets: readonly string[], _index: number, _action: 'cast' | 'attack', _context: LtkPlayOptions) => true);
+  const play = vi.fn((_champion: string, _source: string, _targets: readonly string[], _action: 'cast' | 'attack', _context: LtkPlayOptions) => true);
   const host = { unit: (_id: string) => ({ definitionId: champion, form, alive: true, starLevel: 1 }), board: () => board, play };
   return { bridge: createBatch2VfxBridge(host), play };
 }
@@ -51,26 +51,26 @@ describe('batch 2 exact display stages', () => {
     for (const form of ['front','back'] as const) {
       const { bridge: b, play } = bridge('jayce',form), c = cast('j');
       b.begin([c, {type:'statusChanged',eventSeq:2,tick:0,targetId:'ally',kind:'stat-buff',effectiveMagnitudeBps:1000,reason:'applied'}]);
-      b.action('cast','j',['target'],0,c);
-      expect(play.mock.calls[0]?.[5]).toMatchObject({skill:`jayce-${form}`});
-      if (form === 'back') expect(play.mock.calls[1]).toMatchObject(['jayce','j:g23-forge',['ally'],0,'cast',{skill:'jayce-forge-back'}]);
+      b.action('cast','j',['target'],c);
+      expect(play.mock.calls[0]?.[4]).toMatchObject({skill:`jayce-${form}`});
+      if (form === 'back') expect(play.mock.calls[1]).toMatchObject(['jayce','j:g23-forge',['ally'],'cast',{skill:'jayce-forge-back'}]);
       else expect(play).toHaveBeenCalledTimes(1);
     }
   });
   it.each(['flamethrower','punch','chomp'] as const)('selects Sevika %s from a later outcome in the batch, including animation branch', move => {
     const { bridge: b, play } = bridge('sevika'), c = cast('s',42);
     const outcome: DisplayCombatEvent = {type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'none',subOutcomes:[],castVariant:{actionSeq:42,move,channelTicks:40,enhanced:false,heroAugmentIds:[]}};
-    b.begin([c,outcome]); b.action('cast','s',['target'],7,c);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({skill:`sevika-${move}`});
-    expect(play.mock.calls[0]?.[5].channelSeconds).toBe(move === 'flamethrower' ? 2 : undefined);
+    b.begin([c,outcome]); b.action('cast','s',['target'],c);
+    expect(play.mock.calls[0]?.[4]).toMatchObject({skill:`sevika-${move}`});
+    expect(play.mock.calls[0]?.[4].channelSeconds).toBe(move === 'flamethrower' ? 2 : undefined);
     expect(b.branch(c)).toBe(({flamethrower:'one',punch:'two',chomp:'three'} as Record<string,string>)[move]);
     // The High Roller slot machine rides over the cast with the rolled spell's reels (no mod layer for this outcome).
-    expect(play.mock.calls.map(x=>x[5].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
+    expect(play.mock.calls.map(x=>x[4].skill)).toEqual([`sevika-${move}`,'sevika-slots',`sevika-slots-${move==='chomp'?'thrash':move}`]);
     // The spell lands when the slot machine stops (G23 slotTicks 25); the machine itself starts at the pull.
-    expect(play.mock.calls.map(x=>x[5].delay)).toEqual([1.25,undefined,undefined]);
-    expect(play.mock.calls[0]?.[5].cancelWithSource).toBe(true);
+    expect(play.mock.calls.map(x=>x[4].delay)).toEqual([1.25,undefined,undefined]);
+    expect(play.mock.calls[0]?.[4].cancelWithSource).toBe(true);
     expect(SEVIKA_SLOT_SECONDS).toBe(G23_POLICY.highRoller.slotTicks*.05);
-    b.begin([c]); expect(b.action('cast','s',['target'],8,c)).toBe(false);
+    b.begin([c]); expect(b.action('cast','s',['target'],c)).toBe(false);
   });
   it('shows the rolled mod on the right reel and three of the spell on a Triple, from the mirrored twins', () => {
     expect(sevikaSlotSkills('punch','shield')).toEqual(['sevika-slots','sevika-slots-punch-pair','sevika-slots-shield']);
@@ -100,9 +100,9 @@ describe('batch 2 exact display stages', () => {
   it('plays jackpot alone for its own cast outcome and keeps it out of other branches', () => {
     const { bridge: b, play } = bridge('sevika'), c = cast('s');
     b.begin([c,{type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'jackpot',subOutcomes:[],castVariant:{actionSeq:1,move:'jackpot',channelTicks:0,enhanced:true,heroAugmentIds:[]}}]);
-    b.action('cast','s',['target'],0,c);
+    b.action('cast','s',['target'],c);
     // 14.24b Jackpot is its own coin spell: no punch/flame/chomp underneath it.
-    expect(play.mock.calls.map(x=>x[5].skill)).toEqual(['sevika-jackpot','sevika-slots','sevika-slots-jackpot']); expect(b.branch(c)).toBe('four');
+    expect(play.mock.calls.map(x=>x[4].skill)).toEqual(['sevika-jackpot','sevika-slots','sevika-slots-jackpot']); expect(b.branch(c)).toBe('four');
   });
   it('maps Jinx W/E/R and central R without making the first enemy its landing point', () => {
     const of = (branch: string, cues = jinxSkills.jinx) => cues.filter(c => c.branch === undefined || c.branch === branch);
@@ -121,12 +121,12 @@ describe('batch 2 exact display stages', () => {
     // The third cast is the rule's own branch on the cast event (combat-six-cost.ts), never a count kept here.
     const melCast=(i:number,branch?:string)=>({type:'cast',tick:i,eventSeq:i,sourceId:'m',actionSeq:i,completed:true,actualManaSpent:0,refundedMana:0,targetIds:['target'],
       completionCell:{col:0,row:0},castIndex:i+1,...(branch?{branch:{castIndex:i+1,branch}}:{})}) as never;
-    for (let i=0;i<4;i++) b.action('cast','m',['target'],i,melCast(i,i%3===2?'third':'normal'));
-    b.action('cast','m',['target'],2,melCast(2));
-    expect(play.mock.calls.map(c=>c[5].skill)).toEqual(['mel','mel','mel-third','mel','mel']);
+    for (let i=0;i<4;i++) b.action('cast','m',['target'],melCast(i,i%3===2?'third':'normal'));
+    b.action('cast','m',['target'],melCast(2));
+    expect(play.mock.calls.map(c=>c[4].skill)).toEqual(['mel','mel','mel-third','mel','mel']);
     play.mockClear();
     for (const tick of [1,1,2]) b.event({type:'melEnergyChanged',eventSeq:1,tick,unitId:'m',before:0,after:10},true);
-    expect(play).toHaveBeenCalledTimes(2); b.save('battle'); expect(play.mock.calls[2]?.[5]).toMatchObject({skill:'mel-save',board:point});
+    expect(play).toHaveBeenCalledTimes(2); b.save('battle'); expect(play.mock.calls[2]?.[4]).toMatchObject({skill:'mel-save',board:point});
     b.clear(); b.event({type:'melEnergyChanged',eventSeq:1,tick:2,unitId:'m',before:0,after:10},true); expect(play).toHaveBeenCalledTimes(4);
   });
   it('uses a Warwick self buff at cast and a snapshotted victim only after a devoured receipt', () => {
@@ -134,15 +134,15 @@ describe('batch 2 exact display stages', () => {
     const {bridge:b,play}=bridge('warwick');
     b.event({type:'devoured',eventSeq:2,tick:1,unitId:'w',targetId:'dead'},false); expect(play).not.toHaveBeenCalled();
     b.event({type:'devoured',eventSeq:2,tick:1,unitId:'w',targetId:'dead'},true);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({skill:'warwick-devour',snapshotTargets:true});
+    expect(play.mock.calls[0]?.[4]).toMatchObject({skill:'warwick-devour',snapshotTargets:true});
   });
   it('starts Viktor full-board slam from the later ability packet and does not mistake an attack tick for it', () => {
     const {bridge:b,play}=bridge('viktor'), c=cast('v');
-    b.begin([c]);b.event(c,true);b.action('cast','v',['target'],0,c);play.mockClear();
+    b.begin([c]);b.event(c,true);b.action('cast','v',['target'],c);play.mockClear();
     const damage = stormDamage();
     b.begin([{type:'attack',eventSeq:1,tick:40,attackerId:'v',targetId:'target'},damage]);b.event(damage,true);expect(play).not.toHaveBeenCalled();
     b.begin([{...damage,tick:60}]);b.event({...damage,tick:60},true);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({skill:'viktor-slam',board:point});
+    expect(play.mock.calls[0]?.[4]).toMatchObject({skill:'viktor-slam',board:point});
     b.event({...damage,tick:61},true);expect(play).toHaveBeenCalledTimes(1);
   });
   it('does not consume Viktor pending storm on true burn, physical damage, another source or an unrelated target', () => {
@@ -160,14 +160,14 @@ describe('batch 2 exact display stages', () => {
     expect(play).not.toHaveBeenCalled();
     b.begin([damage]); b.event(damage, true);
     expect(play).toHaveBeenCalledTimes(1);
-    expect(play.mock.calls[0]?.[5].skill).toBe('viktor-slam');
+    expect(play.mock.calls[0]?.[4].skill).toBe('viktor-slam');
     b.event({ ...damage, targetId: 'target', tick: 41 }, true);
     expect(play).toHaveBeenCalledTimes(1);
   });
   it('observes old casts without action playback and consumes old landings without replaying them later', () => {
     const { bridge: b, play } = bridge('viktor'), c = cast('v'), damage = stormDamage();
     b.begin([c, damage]); b.event(c, false); b.event(damage, true);
-    expect(play.mock.calls.map(call => call[5].skill)).toEqual(['viktor-slam']);
+    expect(play.mock.calls.map(call => call[4].skill)).toEqual(['viktor-slam']);
     play.mockClear(); b.clear();
     b.begin([c]); b.event(c, false);
     b.begin([damage]); b.event(damage, false);
@@ -189,7 +189,7 @@ describe('batch 2 exact display stages', () => {
     expect(play).not.toHaveBeenCalled();
     b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
     expect(play).toHaveBeenCalledTimes(1);
-    expect(play.mock.calls[0]?.[5].skill).toBe('viktor-slam');
+    expect(play.mock.calls[0]?.[4].skill).toBe('viktor-slam');
     b.begin([stormDamage(282)]); b.event(stormDamage(282), true);
     expect(play).toHaveBeenCalledTimes(1);
   });
@@ -198,20 +198,20 @@ describe('batch 2 exact display stages', () => {
       ['v', { definitionId: 'viktor', form: 'front', alive: true, starLevel: 3 }],
       ['target', { definitionId: 'dummy', form: 'front', alive: true, starLevel: 1 }],
     ]);
-    const play = vi.fn((_champion: string, _source: string, _targets: readonly string[], _index: number, _action: 'cast' | 'attack', _context: LtkPlayOptions) => true);
+    const play = vi.fn((_champion: string, _source: string, _targets: readonly string[], _action: 'cast' | 'attack', _context: LtkPlayOptions) => true);
     const b = createBatch2VfxBridge({ unit: id => units.get(id), board: () => board, play });
     const c = { ...cast('v', 1, 241), targetIds: ['target'] };
     b.begin([c]); b.event(c, false);
     units.get('v')!.alive = false;
     b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
-    expect(play.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor-slam-3star', boardOnly: false }]);
+    expect(play.mock.calls[0]).toMatchObject(['viktor', 'v', ['target'], 'cast', { skill: 'viktor-slam-3star', boardOnly: false }]);
     play.mockClear(); b.clear();
     units.set('v', { definitionId: 'viktor', form: 'front', alive: true, starLevel: 3 });
     b.begin([c]); b.event(c, false);
     units.delete('v');
     b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
     expect(play.mock.calls[0]?.[2]).toEqual(['target']);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({ skill: 'viktor-slam-3star', boardOnly: false });
+    expect(play.mock.calls[0]?.[4]).toMatchObject({ skill: 'viktor-slam-3star', boardOnly: false });
   });
   it('projects ability-versus-item packet tags and leaves the rest of the source off the view', () => {
     const event = { domain: 'combat', combatId: 'c', eventSeq: 8, tick: 281, type: 'packetDamage' as const, outcome: {
@@ -246,7 +246,7 @@ describe('batch 2 runtime boundaries', () => {
     const boardSystem = starLevel >= 3 ? 'efdd9461' : 'c4ef93f3';
     await runtime.warm('viktor');
     // Default runtime atomicity stays intact for callers that pass an invalid target.
-    expect(runtime.play('viktor', 'v', c.targetIds, 0, 'cast', { skill, board: point })).toBe(false);
+    expect(runtime.play('viktor', 'v', c.targetIds, 'cast', { skill, board: point })).toBe(false);
     expect(runtime.queued).toBe(0);
     b.begin([c]); b.event(c, false);
     b.begin([stormDamage()]); b.event(stormDamage(), true);
@@ -258,7 +258,7 @@ describe('batch 2 runtime boundaries', () => {
     b.begin([c]); b.event(c, false);
     b.begin([stormDamage()]); b.event(stormDamage(), true);
     expect(play.mock.calls[0]?.[2]).toEqual([]);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({ skill, boardOnly: true });
+    expect(play.mock.calls[0]?.[4]).toMatchObject({ skill, boardOnly: true });
     expect(play.mock.results[0]?.value).toBe(true); expect(runtime.queued).toBe(1);
     runtime.update(.01, new Camera());
     expect(scene.children.map(child => child.userData.ltkSystem)).toEqual([boardSystem]);
@@ -275,11 +275,11 @@ describe('batch 2 runtime boundaries', () => {
     const hits = skills['sevika-punch'].filter(c => c.event === 'hit').length;
     expect(hits).toBeGreaterThan(0);
     // Without the flag a delayed target hit outlives its caster (a projectile already on its way)...
-    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25 })).toBe(true);
+    expect(runtime.play('sevika', 's', ['target'], 'cast', { skill: 'sevika-punch', delay: 1.25 })).toBe(true);
     runtime.stopUnit('s'); expect(runtime.queued).toBe(hits);
     runtime.clear();
     // ...but Sevika's rolled spell is never delivered by the rules if she dies during the slot wait.
-    expect(runtime.play('sevika', 's', ['target'], 0, 'cast', { skill: 'sevika-punch', delay: 1.25, cancelWithSource: true })).toBe(true);
+    expect(runtime.play('sevika', 's', ['target'], 'cast', { skill: 'sevika-punch', delay: 1.25, cancelWithSource: true })).toBe(true);
     runtime.stopUnit('s'); expect(runtime.queued).toBe(0);
     runtime.dispose();
   });
@@ -291,17 +291,17 @@ describe('batch 2 runtime boundaries', () => {
     const units = new Map([['v', unit(true)], ['target', unit(true)]]);
     const scene = new Scene(), runtime = createLtkRuntime(library, scene, id => units.get(id));
     await runtime.warm('viktor');
-    expect(runtime.play('viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor', board: point })).toBe(true);
+    expect(runtime.play('viktor', 'v', ['target'], 'cast', { skill: 'viktor', board: point })).toBe(true);
     runtime.clear();
     units.get('v')!.alive = false;
-    expect(runtime.play('viktor', 'v', ['target'], 0, 'cast', { skill: 'viktor', board: point })).toBe(false);
+    expect(runtime.play('viktor', 'v', ['target'], 'cast', { skill: 'viktor', board: point })).toBe(false);
     expect(runtime.queued).toBe(0);
     const play = vi.fn(runtime.play), b = createBatch2VfxBridge({ unit: id => units.get(id), board: () => board, play });
     const c = { ...cast('v', 1, 241), targetIds: ['target'] };
     b.begin([c]); b.event(c, false);
     b.begin([stormDamage(281)]); b.event(stormDamage(281), true);
     expect(play.mock.calls[0]?.[2]).toEqual(['target']);
-    expect(play.mock.calls[0]?.[5]).toMatchObject({ skill: 'viktor-slam', boardOnly: false });
+    expect(play.mock.calls[0]?.[4]).toMatchObject({ skill: 'viktor-slam', boardOnly: false });
     expect(play.mock.results[0]?.value).toBe(true); expect(runtime.queued).toBe(2);
     runtime.stopUnit('v'); expect(runtime.queued).toBe(2);
     runtime.update(.01, new Camera());
@@ -333,12 +333,12 @@ describe('batch 2 runtime boundaries', () => {
     const source={root:new Group(),body:null,alive:true},dead={root:new Group(),body:null,alive:false},scene=new Scene(),budget={live:0,max:1500};dead.root.position.set(7,0,9);
     const runtime=createLtkRuntime(library,scene,id=>id==='w'?source:id==='dead'?dead:undefined,{budget});
     await runtime.warm('mel');await runtime.warm('warwick');
-    expect(runtime.play('mel','absent',[],0,'cast',{skill:'mel-save',board:point,persistAcrossPhase:true})).toBe(true);
+    expect(runtime.play('mel','absent',[],'cast',{skill:'mel-save',board:point,persistAcrossPhase:true})).toBe(true);
     runtime.clear(true); // Settlement feedback survives the following preparation frame.
     runtime.update(.01,new Camera());expect(runtime.active).toBe(1);
     runtime.clear(true);expect(runtime.active).toBe(1);runtime.clear();expect(runtime.active).toBe(0);
-    expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour'})).toBe(false);
-    expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour',snapshotTargets:true})).toBe(true);
+    expect(runtime.play('warwick','w',['dead'],'cast',{skill:'warwick-devour'})).toBe(false);
+    expect(runtime.play('warwick','w',['dead'],'cast',{skill:'warwick-devour',snapshotTargets:true})).toBe(true);
     runtime.stopUnit('dead'); // The next frame reports the victim dead as well.
     runtime.update(.01,new Camera());expect(runtime.active).toBe(2);expect(budget.live).toBe(2*MIN_RESERVE); // warm measured each synthetic system below the floor
     runtime.stopUnit('dead');runtime.update(.01,new Camera());expect(runtime.active).toBe(2);
@@ -348,6 +348,6 @@ describe('batch 2 runtime boundaries', () => {
     const cues=[{system:'a',branch:'zap',event:'cast-start',delay:0,duration:1},{system:'b',branch:'chompers',event:'cast-start',delay:0,duration:1}];
     const library=createVfxLibrary('/root/',{readJson:async url=>url.endsWith('index.json')?{version:1,systems:{a:'a.json',b:'missing.json'},assets:{'synthetic.tex':'a.png'},skills:{jinx:cues}}:url.endsWith('missing.json')?Promise.reject(Error('404')):syntheticSystem(),readTexture:async()=>new Texture()});
     const source={root:new Group(),body:null,alive:true},runtime=createLtkRuntime(library,new Scene(),()=>source);
-    await runtime.warm('jinx');expect(runtime.play('jinx','j',[],0,'cast',{branch:'zap'})).toBe(true);expect(runtime.play('jinx','j',[],0,'cast',{branch:'chompers'})).toBe(false);runtime.dispose();
+    await runtime.warm('jinx');expect(runtime.play('jinx','j',[],'cast',{branch:'zap'})).toBe(true);expect(runtime.play('jinx','j',[],'cast',{branch:'chompers'})).toBe(false);runtime.dispose();
   });
 });
