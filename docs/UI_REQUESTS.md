@@ -4,6 +4,20 @@
 
 # 界面数据需求（Claude → Codex）
 
+## CAST-BRANCH-FIELD（2026-11-12，Claude → Codex，Fable 已定方案）
+
+渲染端要按规则实际走的分支选施法动作和特效，目前只有塞维卡有分支输出（`castOutcome.castVariant`，`combat-g2-3.ts` 写出，类型 `SevikaCastVariant`）。安蓓萨的拳/链分支在 `combat-g2-2.ts` 的 `case 'ambessa'` 里按 `castCount%2` 判定（`combat-s13.ts` 在结算前先 `castCount++`，所以第 1、3、5… 次施法为链：冲刺+目标周围 1 格；第 2、4… 次为拳：SlamDamage+眩晕+登记后撤），但没有任何输出；现有的 `movement.reason`（`ambessa-chain`／`ambessa-fist-retreat`）在没有落点或后撤被挡时缺失，不能代替。渲染端不得自己数施法次数。
+
+- 字段：给每次施法的事件加通用字段 `{ castIndex, branch }`。`castIndex` 为该单位本场第几次施法（与规则 `runtime.castCount` 同口径，写明从 0 还是 1 起）；`branch` 为分支名字符串，只在规则有分支时出现。挂在施法事件上（`cast`，或与 `actionSeq` 能一一对应的同一动作事件），回放视图（`combat-replay-view.ts` 的白名单）和联机投影原样透传。
+- 写出位置：分支名由规则里已有的判定处直接写出（安蓓萨即 `case 'ambessa'` 的两个分支，写 `chain`／`fist`），不另建一份判定，不写死英雄名到通用路径里；以后其他英雄有分支时在各自判定处写出即可。塞维卡现有 `castVariant` 保持不变。
+- 边界：只加输出，不动结算。伤害、眩晕、冲刺、后撤、射程/攻速加成、RNG 消耗、事件顺序全部不变。
+- 用途：渲染端读 `branch` 去 `castVariants.branch[branch]` 选动作，并只放该分支的特效（安蓓萨链 2 个系统、拳 4 个系统），代替现在每次施法 6 个全放；渲染端只读不算。
+- 验收：
+  - 本地跑 `tests/server`、restore-audit、augment-pool、tamper 相关测试，证明结算零漂移；有漂移交 Fable 复核，不许改断言凑绿。
+  - 同步 `consumer-byte-audit.json`，`audit --check` 通过。
+  - 事件结构变了需重录纪元：进本批统一重录，不单独录。
+  - 补一条测试：安蓓萨连续施法时 `branch` 与实际结算分支（是否冲刺/是否眩晕）逐次一致；首次施法、被打断后、复活后、回放中途接入时都一致。
+
 ## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 已修：boardUnitAt 对不可装备的可见单位返回原 id，走 unknown-unit 提示；U3 10/10）
 
 - 离线 Chromium 对照：`83fd7fa5` 的 `verify-m8-u3-dynamic.cjs` 10/10 通过；PR9 原 HEAD `f879b2b2` 为 9/10，唯一失败为 `drag-enemy`，与本次体积优化无关。
