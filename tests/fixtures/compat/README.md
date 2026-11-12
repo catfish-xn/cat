@@ -73,3 +73,7 @@ and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte chang
 2026-11-09 塞维卡老虎机转完再出手: identity-only refresh again, `contentDigest` (×2) `c7f0a2f3` → `f37c6970` and
 `m8.loot.frozen.replayDigest` `b53841c0` → `9c98c8ef`; no other byte changed. SHA-256:
 `8648179a96e0091283e61cf1e2f1fc8cf13d665df42dc1805f0e54b00d0cbaf8`.
+
+2026-11-12 14.24b 七项英雄数值 (b-patch-overrides.json): identity-only refresh, `contentDigest` (×2) `f37c6970` → `db6dc9b6`;
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. SHA-256:
+`a895917a2707e529fe319fd3d2c4dbc0c7667f877092313d0f9bb8eca3dfc6fe`.

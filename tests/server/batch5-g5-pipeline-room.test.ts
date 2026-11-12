@@ -102,7 +102,9 @@ it('the common real claim command also bonuses a later natural prismatic orb, an
 describe('2-7 orb queued in the next 3-1 battle', () => {
   // 14.24 neutrals (568eeea4) + PvE loot carryover (8f794062): on the old route (seed 16, s2) the 2-7 source survives, so the
   // pipeline orb is carried to 3-7 instead of being claimable at 3-1. Seed 38, s0 still kills it at 2-7.
-  const reviewRoute = findG5RoomOffer('prismatic-pipeline', s => s.augmentTierSeed === 38 && s.multiplayer?.seatId === 's0');
+  // 14.24b unit values (b-patch-overrides.json): on seed 38, s0 the orb is no longer available on entering 3-1. Re-searched
+  // tier seeds from 1 on any seat: seed 7, s2 is the first that passes this block unchanged.
+  const reviewRoute = findG5RoomOffer('prismatic-pipeline', s => s.augmentTierSeed === 7 && s.multiplayer?.seatId === 's2');
   const session = makeRoom(new TwoSidedBattleResolver(), { seed: reviewRoute.seed });
   const current = () => session.room.state.seats.find(s => s.seatId === reviewRoute.seatId)!.match;
   afterAll(() => session.room.dispose());
