@@ -54,12 +54,14 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // substituting both back gives the previous pin 338bebf5….
   const save=serializeMatch(started);
   // 塞维卡老虎机转完再出手 (2026-11-09): contentDigest c7f0a2f3->f37c6970, loot b53841c0->9c98c8ef only (was a7947f17…).
-  const back=save.split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 14.24b 七项英雄数值 (2026-11-12, b-patch-overrides.json): contentDigest f37c6970->db6dc9b6 only; loot replay unchanged
+  // (was 6c5f207e…).
+  const back=save.split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('6c5f207ed17ec220e2c89d6998458251246ff76db8f9941ea39521d423264de3');
+    .toBe('e168149d2d44eece0b9cc331efedc3d04785598a23bf310c06344588813d7cba');
   expect(restoreMatch(save)).toEqual(started);
 });
 

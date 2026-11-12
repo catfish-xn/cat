@@ -87,6 +87,8 @@ async function unbind(page, tick, rebind) {
     await page.waitForTimeout(t === times[0] ? 400 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
+  // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
+  fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   // The overlay counts of the recorded window (vfx-ltk runtime.ts ATTACHED_LAYER_STATS, cleared before the recorded cast; null on builds before it).
   fs.writeFileSync(path.join(out, 'attached-stats.json'), JSON.stringify(await page.evaluate(async () => {

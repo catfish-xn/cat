@@ -18,7 +18,7 @@
     "scripts/v26-neutrals-1424-route.cjs": "4b2ebc503ae902ff08de1baa66c6859c08e10ca1295fde7dbf1530f3ef70db6f",
     "scripts/verify-m8-herald-fixtures.cjs": "7443428a08538ebbb72c1c2b019962b9b357b569d85b9dc070110de3c3b021fa",
     "scripts/verify-v26-neutrals-1424-epoch.cjs": "d49dd679d9bdc213819617c345a338f96f7e3cc870ac39a8e4e118908f797087",
-    "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
+    "src/simulation/ability-display-source.ts": "320132c6ec4be8a8e149be979e16539488ee676a31b8b95c87df1512849e60bb",
     "src/simulation/ability-display.ts": "13292b832a0e201ae70b202e08ff742bb56bd975c322ed8450b6022320014312",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
     "src/simulation/anomalies/availability.ts": "ef9b07c61873878c909ba026366b19d6936df200d8870c29c7a0e48b63fb2634",
@@ -276,7 +276,7 @@
     "src/simulation/content/freeze.ts": "3166db37aabd888a1cc84c4bdde723f80dd6c7da3783dd001789773e9c00aa05",
     "src/simulation/content/g2-2-abilities.ts": "f1056777733c6fb59d8c899381b873f71d401cd0f48b2c958386434f205c4390",
     "src/simulation/content/g2-2-traits.ts": "20fe90f21e361c34a21b94e8c8c45a901fb695ac5b227788ce78d1ece1249df9",
-    "src/simulation/content/g2-2-units.ts": "ba7b9f30e2566f609fc9ded95a94b884965cf87cae6193d80b4c688ee48baa6d",
+    "src/simulation/content/g2-2-units.ts": "b46b3584449d758928be096b38f9d03596ea60885b600a1ce15c87f1c208a805",
     "src/simulation/content/g2-3-abilities.ts": "19bef67cfe4916d78cf1d5146be5c60a637eb08d678481ae302f848d9a4a9a0e",
     "src/simulation/content/g2-3-academy.ts": "d08d255e75343b474bc7b8d7b2b6df88cb8b0a4ea752edacb41140768a8c2166",
     "src/simulation/content/g2-3-anomalies.ts": "b9fd74e34fd010c2380d95339de70026febbbac68c207e556037fc0c7bb3a040",
@@ -302,11 +302,11 @@
     "src/simulation/content/g2-4-support-items.ts": "7ef06963b194d4847bb695f4499a55debfa145289d59dbc913a352256e06a7d2",
     "src/simulation/content/g2-4b-mechanism-items.ts": "c5f9f2e3b5998a441de68051e73475166da95139c7aa12bf075a3ca2691c25b9",
     "src/simulation/content/g2-4b-voidspawn.ts": "7dce5e27ff2e0a08e2c4bc913a60e53725bc3d37dc6cc18fc0221e949461327f",
-    "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
+    "src/simulation/content/g2-abilities.ts": "32277d6b67e5d67d0c5d870712d72e79772a733af47753b7a8adebfe95ec8704",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
-    "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
+    "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "de98c5f89ccb19551771e335aac3fab9a26891d389be8bd1cfa704661f5e7026",
+    "src/simulation/content/identity-constants.ts": "0ebecc2f5d352ad87ea00c73a3fdb37af230cc51a0f8ddf03342dd29c72c3ade",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -347,6 +347,7 @@
     "src/simulation/content/scrap-lucky.ts": "237d59a0bdbfbe7b8a6380f2ff7f0d428ef5d0bc83d83996b7d3a602ca246316",
     "src/simulation/content/source-manifest.ts": "d08468bd6dfffd503cee4abbef705939a2d1c69f8b9182c2cc3372814e836628",
     "src/simulation/content/source/s13-14.24.json": "219dd985349544e6769b51dc7fd4f7d2c718f2bb1d45be0f89c3d30dc3a50ef8",
+    "src/simulation/content/source/s13-14.24b/b-patch-overrides.json": "8d25b9d463c7ead1a47e26cc39111dedf9986df5a4b787eba110bcb958f7d881",
     "src/simulation/content/source/s13-14.24b/normalized/g2-1-champions.json": "cd63df6273416b6194b44be0b0914a79f651d416a39334172e4fecc7a3ec523a",
     "src/simulation/content/source/s13-14.24b/normalized/g2-1-items.json": "5e4bf674ad78b1dd4917815dad26a411d82df1c7b763b116d25c7b0307c35960",
     "src/simulation/content/source/s13-14.24b/normalized/g2-1-traits.json": "d119a8fada75a2777e51485abc2f35e99239c5383124ca6fa5ade647f3029765",
@@ -657,12 +658,12 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:f37c6970",
+  "contentDigest": "fnv1a32-utf16:db6dc9b6",
   "route": "mage",
   "seed": 15972,
   "partialSeed": 54239,
   "roundId": "4-7",
-  "prefixHash": "75be0f82638cb6ca9f7fc6816467e1b9abcced2c0be505af283cc2f57a04d007",
+  "prefixHash": "02c0cf66a08f4c806ebb452651be6bd93dafd214c528591e8ff50fdbaee5ec65",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -947,7 +948,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "9ac33825f4e14da47362f07da57b53490c460568e40a9b4e3a204ae943d6d1de",
-      "terminalHash": "0506b5b715d8001036b80e24d9eca318cf7506cc3b1e3e56c4a8310d470eda23",
+      "terminalHash": "aadfadc70d30d789359513b3610cce0a8fbd18bc24f19357607e44789e03a914",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1114,7 +1115,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "113af2a41670498643165233701bbc327d52868f4e7e684b56f6309f899ade24",
-      "terminalHash": "526d3133b77574c0d399c81bd337be937269278d60f9749f4c9f15ac6c867939",
+      "terminalHash": "7fe3ee97914ef42f476691329819a1c0c4e3065cf5eab150034ee42f63a1c8f9",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1175,7 +1176,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "f90208764c84b145e6b10a4f24f4845364bfb8309e9f0970bbe576c507c8252b",
-      "terminalHash": "7b6ce102ded09c7e893a626698195cdc2cd87e74d5d340b170fcd8af61bb09e2",
+      "terminalHash": "f4ebf63bb6a8b9dc0335cfc8855a30055ddc134e3a204464329a7bc5c6a8fed9",
       "receipts": 2,
       "unitSerialDelta": 1,
       "itemSerialDelta": 0,
@@ -1184,7 +1185,7 @@
         "col": 6,
         "row": 7
       },
-      "prefixHash": "e9f13239380fcca61a2f146de970a5605194b620d816ffba2648697a2fe3b88c"
+      "prefixHash": "9a8acbfcabc3016b6c33e61b08a0799b75fd5f4b4b995347c8ad28914ab2a9c0"
     },
     "loris-r01": {
       "deaths": [
@@ -1233,7 +1234,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "50c5a2ae365ae240c9671c08ad3a6c69d7da62e4677a84fbbd583ed4d12239b6",
-      "terminalHash": "c81a479aa0fa7e845531ad6e92a257365f0e2e6018e8fe4ebc69159ff4c28a7d",
+      "terminalHash": "4b07989ad5b4e80d3945a5193289ac7d998060f97da0708b4b07f037ffe5c0d3",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
@@ -1242,7 +1243,7 @@
         "col": 0,
         "row": 6
       },
-      "prefixHash": "e9f13239380fcca61a2f146de970a5605194b620d816ffba2648697a2fe3b88c"
+      "prefixHash": "9a8acbfcabc3016b6c33e61b08a0799b75fd5f4b4b995347c8ad28914ab2a9c0"
     },
     "unloadedCarrier": {
       "roundId": "1-4",

@@ -85,9 +85,29 @@ describe('production placeholder Golden Find history', () => {
 
 describe('production placeholder Golden Find payout from real bound-unit kills', () => {
   const placeholder = new PlaceholderBattleResolver();
-  const { room, clock } = makeRoom({ resolveBattle: (input, pool) =>
-    (input.round >= 19 ? placeholder : placeholderPvp).resolveBattle(input, pool) }, { pvpMode: 'placeholder' });
+  // Each round's own combat for the seat, kept to count the bound unit's kills from the event stream, independently of the
+  // augment history facts.
+  const combats = new Map<number, { readonly initial: any; readonly events: readonly any[] }>();
+  const { room, clock } = makeRoom({ resolveBattle: (input, pool) => {
+    const result = (input.round >= 19 ? placeholder : placeholderPvp).resolveBattle(input, pool);
+    if (result.kind === 'placeholder') for (const o of result.outcomes) if (o.seatId === 's3' && o.combat) combats.set(input.round, o.combat);
+    return result;
+  } }, { pvpMode: 'placeholder' });
   const seatId = 's3', target = 'unit-1';
+  /** Enemy deaths whose last damaging packet came from `unit`, read from the round's combat events alone. */
+  function killsInEvents(round: number, unit: string): number {
+    const combat = combats.get(round); if (!combat) throw new Error(`no combat recorded for round ${round}`);
+    const enemies = new Set(combat.initial.units.filter((u: any) => u.team === 'enemy').map((u: any) => u.id));
+    const lastHit = new Map<string, string>();
+    let kills = 0;
+    for (const e of combat.events) {
+      if (e.type === 'packetDamage' && e.outcome.hpDamage > 0) lastHit.set(e.outcome.context.targetId, e.outcome.context.source.ownerId);
+      if (e.type === 'death' && enemies.has(e.unitId) && lastHit.get(e.unitId) === unit) kills++;
+    }
+    return kills;
+  }
+  /** A Golden Find stack is three kills by the bound unit and pays two gold (14.24 description). */
+  const goldenFindGold = (killsBefore: number, killsAfter: number) => (Math.floor(killsAfter / 3) - Math.floor(killsBefore / 3)) * 2;
   const mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
   const command = (cmd: SeatCommand) => expect(room.handle(seatId, cmd)).toMatchObject({ ok: true });
   const answer = () => answerOpenChoices(room, [seatId]);
@@ -95,6 +115,8 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
   // Seed 42: public orb/shop/XP/equipment commands produce a two-star Darius and
   // three-star Urgot. With Darius at (1, 5), integrated melee pathing gives him
   // one real PvP kill at 4-6 and two PvE kills at 4-7.
+  // 14.24b unit values (b-patch-overrides.json): the same seed and army now give him two PvP kills at 4-6 and four PvE kills
+  // at 4-7. Both counts are checked against the combat events, and the payout against the counts.
   // That first kill must carry into the 3-kill threshold; the old T2-only logic pays nothing.
   function prepareArmy(): void {
     for (const orb of matchRules.readLootView(mine()).unclaimedOrbs ?? []) {
@@ -173,7 +195,9 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     expect(requireAugmentFacts(mine(), 'combat-roster', 23).map(f => f.battleId)).toEqual([binding.battleId]);
     const kills = requireAugmentFacts(mine(), 'deaths', 23).flatMap(f => f.deaths)
       .filter(d => d.team === 'enemy' && d.ownerSeatId === null && d.killer?.ownerId === target);
-    expect(kills).toHaveLength(1);
+    expect(kills).toHaveLength(2);
+    expect(killsInEvents(23, target)).toBe(kills.length);
+    expect(goldenFindGold(0, kills.length)).toBe(0);
     expect(goldenFindGoldPlan(mine())).toEqual([]);
   });
   it('carries that PvP kill into the next threshold, pays once and restores the authoritative receipt', () => {
@@ -182,11 +206,14 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     const state = mine();
     const kills = requireAugmentFacts(state, 'deaths', 24).flatMap(f => f.deaths)
       .filter(d => d.team === 'enemy' && d.killer?.ownerId === target);
-    expect(kills).toHaveLength(2);
+    expect(kills).toHaveLength(4);
+    expect(killsInEvents(24, target)).toBe(kills.length);
+    const before = killsInEvents(23, target), gold = goldenFindGold(before, before + kills.length);
+    expect(gold).toBe(4);
     const plan = goldenFindGoldPlan(state);
-    expect(plan).toEqual([{ receiptId: JSON.stringify([GOLDEN_FIND_SOURCE, 'round:4-2:augment', 24]), source: GOLDEN_FIND_SOURCE, round: 24, amount: 2 }]);
+    expect(plan).toEqual([{ receiptId: JSON.stringify([GOLDEN_FIND_SOURCE, 'round:4-2:augment', 24]), source: GOLDEN_FIND_SOURCE, round: 24, amount: gold }]);
     expect(state.seatMechanics!.receipts.filter(r => r.source === GOLDEN_FIND_SOURCE))
-      .toEqual([expect.objectContaining({ receiptId: plan[0].receiptId, kind: 'gold', amount: 2 })]);
+      .toEqual([expect.objectContaining({ receiptId: plan[0].receiptId, kind: 'gold', amount: gold })]);
     expect(settleBatch5H9History(state).state).toBe(state);
     expect(restoreSharedOrbSnapshot(room.state.pool, state, room.augmentHistoryAuthority(seatId))).toEqual(state);
   });

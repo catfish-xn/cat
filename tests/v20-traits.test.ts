@@ -71,8 +71,8 @@ describe('v20-traits approved custom rules',()=>{
   it.each(['reunion','geniuses'] as const)('%s has three independent echoes with exact integer coefficients and no shred',id=>{
     const names=[...V20_TRAITS[id].partners],c=start(army(names,[id])),r=stepCombat(idle(c,[names[0]])),ekko=unit(r.state,'ekko');
     const task=ekko.tasks.find(t=>t.kind==='v20Teamup')!,ctx=context(r.state);executeV20Teamup(ctx,ctx.units.find(u=>u.id==='ekko')!,task);
-    // Ekko one-star primary 290 at 100 AP (other opening modifiers are sampled explicitly).
-    const expected=Math.floor(Math.floor(290*ap(ekko,r.state.tick)/100)*(id==='geniuses'?33:50)/100);
+    // Ekko one-star primary 300 (14.24b) at 100 AP (other opening modifiers are sampled explicitly).
+    const expected=Math.floor(Math.floor(300*ap(ekko,r.state.tick)/100)*(id==='geniuses'?33:50)/100);
     expect(ctx.packets[0].raw).toBe(expected);expect(ctx.events).toEqual([]);
     const result=stepCombat(r.state);expect(result.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.definitionId===id)).toHaveLength(3);
     expect(unit(result.state,'ekko').runtime.castCount).toBe(0);

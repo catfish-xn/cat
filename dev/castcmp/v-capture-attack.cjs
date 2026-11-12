@@ -54,6 +54,8 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
     await page.waitForTimeout(idx <= 1 ? 300 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 });
   }
+  // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
+  fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
     star: Number(opt('star') ?? 3), dist: Number(dist), ms: times[times.length - 1], real: false, kill: opt('kill') ?? null, action: opt('cast') ? 'cast' : 'attack', args: args.slice(2), errors: errors.length } });

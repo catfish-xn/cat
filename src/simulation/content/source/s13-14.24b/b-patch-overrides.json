@@ -1,0 +1,18 @@
+{
+  "source": {
+    "title": "Teamfight Tactics patch 14.24 notes, mid-patch update of December 17th (14.24b), Units",
+    "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+    "note": "Official published values only. The archived raw source stays 14.24 (pre-B); these are applied at generation. docs/M9_DATA_LEDGER.md §2 lists them as adopted 14.24b values."
+  },
+  "units": {
+    "violet": { "attack": 46 },
+    "camille": { "attack": 52 },
+    "nocturne": { "attack": 63 },
+    "zeri": { "attack": 48 }
+  },
+  "abilities": {
+    "singed": { "DR": [0.5, 0.5, 0.55] },
+    "ekko": { "TargetDamage": [300, 450, 1200], "SecondaryDamage": [150, 225, 450] },
+    "malzahar": { "InfectionDamage": [15, 22, 400] }
+  }
+}
