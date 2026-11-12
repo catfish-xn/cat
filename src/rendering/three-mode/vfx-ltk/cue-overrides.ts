@@ -354,7 +354,8 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
   // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
   // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
-  '84b969e0': ['Trench'],
+  // CANDIDATE (claude/vi-candidate, recording only): the Trench is back on, with the end fade (Trails.ts).
+  // '84b969e0': ['Trench'],
 };
 
 /**

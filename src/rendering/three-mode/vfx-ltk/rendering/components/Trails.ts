@@ -10,7 +10,7 @@ import { Vector3 } from "three";
 
 import { AXIS_SIGN } from "../../space";
 
-import { TRAIL_MODE } from "../../engine/model/enums";
+import { BLEND_MODE, TRAIL_MODE } from "../../engine/model/enums";
 import type { EmitterModel } from "../../engine/model/model";
 import { smoothingReachAt } from "../../engine/model/quality";
 import type { Point } from "../../engine/model/rig";
@@ -191,5 +191,32 @@ function strandInto(source: Source, emitter: EmitterModel, stamp: number): void 
       packUv(UV_DRAWN, STRAND.multUv, slot * UV_STRIDE);
     }
     colorLookupInto(emitter, pool, at, through, STRAND.lookup, slot * 2);
+  }
+  if (held > 1 && time - pool.birthTime[ORDER[held - 1]] > END_FADE_STOPPED) endFade(emitter, held);
+}
+
+/* Candidate (branch claude/vi-candidate, recording only, never merged): once a strand has
+   stopped growing, its head fades out over its own drawn width instead of ending on a flat cut. */
+const END_FADE_STOPPED = 0.05;
+const END_FADE_SPAN = 2;
+function endFade(emitter: EmitterModel, held: number): void {
+  const span = END_FADE_SPAN * STRAND.width[held - 1];
+  if (!(span > 0)) return;
+  const premultiplied = emitter.blendMode === BLEND_MODE.add || emitter.blendMode === BLEND_MODE.subtract;
+  let walked = 0;
+  for (let slot = held - 1; slot >= 0; slot -= 1) {
+    if (slot < held - 1) {
+      const a = slot * 3, b = (slot + 1) * 3;
+      walked += Math.hypot(
+        STRAND.position[a] - STRAND.position[b],
+        STRAND.position[a + 1] - STRAND.position[b + 1],
+        STRAND.position[a + 2] - STRAND.position[b + 2],
+      );
+    }
+    if (walked >= span) break;
+    const x = walked / span;
+    const keep = x * x * (3 - 2 * x);
+    if (premultiplied) for (let channel = 0; channel < 4; channel += 1) STRAND.color[slot * 4 + channel] *= keep;
+    else STRAND.color[slot * 4 + 3] *= keep;
   }
 }

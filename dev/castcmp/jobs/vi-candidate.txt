@@ -1,0 +1,8 @@
+# Vi candidate (recording only; branch claude/vi-candidate, never merged): integration 5324bec0 with every live layer on
+# (landing system, SpikeShapes1 and all) plus three changes: each system's measured child room instead of a flat 100
+# (claude/ltk-child-room 47e8f57e), the row shockwave playing out at its end instead of being cut (7a861b3b), and the
+# Trench restored with the end fade (Trails.ts).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# 3-star Vi on one 3-star Sett, --dist 2, warm, the whole cast drawn. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 / 2200 /
+# 2500 ms, wide (3 cells each side) and band crop, beside current integration (vi-live.txt) and Qr1n.
+v-capture.cjs vi candidate --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2700 --settle 3000 --column after --snapshot c1333710ad8e
