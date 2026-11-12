@@ -105,7 +105,9 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
   playOut?: boolean;
   /** Its end came and it is playing out. */
-  ending?: boolean }
+  ending?: boolean;
+  /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
+  heldAtEnd?: number }
 /**
  * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
  * past its landing, and none of its own particles' curves run longer.
@@ -381,12 +383,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
         // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
-          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP;
+          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP; run.heldAtEnd = run.reserved;
         }
-        // Playing out, it holds only what it still has live: its reserve shrinks as its particles die.
+        // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
+        // (a child may still emit through its own short life after the stop), never above what it held at its end.
         if (run.ending) {
-          const live = run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0);
-          if (live < run.reserved) { if (options.budget) options.budget.live -= run.reserved - live; run.reserved = live; }
+          const live = Math.min(run.heldAtEnd ?? run.reserved, run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0));
+          if (live !== run.reserved) { if (options.budget) options.budget.live += live - run.reserved; run.reserved = live; }
         }
         const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
         if (over) { release(run, run.stopped); running.delete(run); }
@@ -444,7 +447,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
-        // first, before anything still in its own time is weighed for eviction.
+        // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
+        // its rock children and smoke included: what was left of it disappears in that frame.
         while (crowded()) {
           let tail: Running | undefined;
           for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
