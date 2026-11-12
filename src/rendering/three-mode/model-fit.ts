@@ -2,12 +2,13 @@
  * Champion model sizing shared by the board, the carousel and the scout stage (planning/3d/model-scale-plan).
  * With the asset root's official per-unit scale (`models[id].unitScale`, from the 14.24 skin data), a model keeps its
  * own League size: drawn at sourceScale × unitScale, so a short champion (Amumu, Ziggs) stays short and a big one
- * (Mordekaiser, Warwick) stays big. No height or footprint cap and no per-champion override: 2026-11-03 1080p video
- * review (castcmp-1103) found the capped champions 20–40% smaller than the original game while the uncapped ones
- * matched it (median original/ours ≈ 0.97 across 22 measured champions). Without a unitScale (older asset roots)
- * every model is fitted to `height` and its x/z box to `width` exactly as before.
+ * (Mordekaiser, Warwick) stays big. No height or footprint cap and no per-champion override. The board's sourceScale is
+ * CHAMPION_SOURCE_SCALE, the arena's own League-unit scale (vfx-ltk/fx-size.ts, 2026-11-12): at FX_SCALE bodies drew
+ * larger than the original against the grid. Without a unitScale (older asset roots) every model is fitted to `height`
+ * and its x/z box to `width` exactly as before.
  */
 import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
+export { CHAMPION_SOURCE_SCALE, BODY_TO_FX } from './vfx-ltk/fx-size';
 import { createSupportSampler, registerModelGrounding, supportRotation, supportVertexSteps, MESH_PENETRATION_RATIO, type ModelSupport } from './model-grounding';
 
 /**

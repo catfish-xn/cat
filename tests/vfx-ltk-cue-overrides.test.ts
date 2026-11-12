@@ -8,7 +8,7 @@ import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevi
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { ARENA_UNIT_SCALE, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { ARENA_UNIT_SCALE, BODY_TO_FX, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -188,9 +188,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
   });
 
   it('keeps weapon-held cues at the body scale and draws every other cue at the arena scale (pr580-report)', () => {
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(1); // Jinx muzzle
-    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(1); // Twitch crossbow glow
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(1);
+    // The body is drawn at the arena scale since 2026-11-12, so a weapon-held cue takes BODY_TO_FX (equal to SKILL_FX_SIZE).
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(BODY_TO_FX); // Jinx muzzle
+    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(BODY_TO_FX); // Twitch crossbow glow
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(BODY_TO_FX);
     expect(cueSize({ bone: 'R_Buffbone_Glb_Hand_Loc', event: 'projectile' })).toBe(SKILL_FX_SIZE); // Vex's missile travels
     expect(cueSize({ bone: 'BUFFBONE_GLB_WEAPON_1', event: 'link' })).toBe(SKILL_FX_SIZE); // LeBlanc's chain
     expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC', event: 'cast-start' })).toBe(SKILL_FX_SIZE); // Garen's shield
