@@ -1,0 +1,8 @@
+# #626 Vi row shockwave (round c, 11-12), after column: the band between the two shockwaves. Checkout: branch claude/vi-landing-kf
+# (#626 head cdd9c160 merged with the castcmp tools e998bf8b, plus --probe emitters on this branch only). Recording only, never merged.
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (PASS, 11-12, Linux).
+# One 3-star Sett, --dist 2, warm (one warm cast first): a true cold first cast needs a recording option the tools line
+# will add; both columns here are warm. Vi casts at 0.5 s (window), lands at about 1.07 s.
+# Keyframes (window ms): 1433 / 1567 / 1667 / 1833, wide (3 cells each side of Vi) plus a zoomed crop of the ground between
+# the two shockwaves. --probe emitters: map draw index -> emitter with dev/castcmp/jobs/626c-draws-after.json.
+v-capture.cjs vi v626c-after-warm --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 9614ffb4 --layers 9614ffb4 --probe emitters --column after --snapshot c1333710ad8e
