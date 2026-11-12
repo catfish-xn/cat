@@ -51,6 +51,11 @@ export interface TimelineCue {
    */
   readonly hide?: readonly string[];
   /**
+   * A cast-start buff that a recast refreshes rather than stacks: when this cue starts while the same system from the
+   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura).
+   */
+  readonly refresh?: boolean;
+  /**
    * The run lasts its system's own span (systemSpan: each emitter's last birth plus its particles' longest life, from
    * the definition), never more than `duration`, which is then only a cap. For a system the export cues as a flight that
    * the engine ends on arrival, though its emitters are authored to keep going where it lands (Vi's Landing_Mis).

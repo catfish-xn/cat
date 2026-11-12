@@ -1,0 +1,92 @@
+// The recording self-check behind v-capture.cjs --systems (writes gate.json; a failed gate exits non-zero, so batch.cjs
+// leaves no .ok). What it reads:
+//   - the checkout: HEAD, a clean src/, and the page's own copy of two src files equal to HEAD's (the server is this tree);
+//   - the rules (--real 1, harness.ts __h.real.audit): combat start applied, the cast's targets alive at the window's end,
+//     nobody but the recorded unit casting inside the window;
+//   - the renderer: which attached systems have a layer on screen, sampled per recorded frame from runtime.ts
+//     ATTACHED_LAYER_STATS (peak cleared before each step, so its peakSystems are that step's layers), and once before the
+//     recorded cast (a system already on screen then is the warm pass's, not this cast's).
+// Layer checks need a build with ATTACHED_LAYER_STATS and overlays on: the `before` column (older build) and `off`
+// (?attached=off) are exempt from them and say so; every other check still applies.
+const { execFileSync } = require('child_process');
+const os = require('os');
+
+const SRC_PROBES = ['src/rendering/three-mode/vfx-ltk/runtime.ts', 'src/rendering/three-mode/placeholder-renderer.ts'];
+const git = (repo, ...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8', maxBuffer: 64 << 20 });
+
+async function checkout(page, repo) {
+  const head = git(repo, 'rev-parse', 'HEAD').trim();
+  let srcClean = true; try { execFileSync('git', ['diff', '--quiet', 'HEAD', '--', 'src'], { cwd: repo }); } catch { srcClean = false; }
+  const devTree = git(repo, 'write-tree', '--prefix=dev/castcmp/').trim();
+  const probes = [];
+  for (const file of SRC_PROBES) {
+    const served = await page.evaluate(f => import('/' + f + '?raw').then(m => m.default).catch(() => null), file);
+    // Line endings aside: a Windows checkout (core.autocrlf) holds CRLF files whose blobs are still HEAD's.
+    const lf = text => text.replace(/\r\n/g, '\n');
+    probes.push({ file, same: served !== null && lf(served) === lf(git(repo, 'show', `HEAD:${file}`)) });
+  }
+  return { head, srcClean, devCastcmpTree: devTree, probes, ok: srcClean && probes.every(p => p.same) };
+}
+
+/** Clears the layer peak; the next read returns what was on screen during the steps in between. */
+const resetLayers = page => page.evaluate(async () => {
+  const r = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+  const s = r?.ATTACHED_LAYER_STATS; if (!s) return false;
+  s.peakLayers = 0; s.peakSystems = {}; return true;
+});
+const readLayers = page => page.evaluate(async () => {
+  const r = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+  const s = r?.ATTACHED_LAYER_STATS; if (!s) return null;
+  // peakSystems keys are `<system>@<source>+<started>:<emitter>`.
+  return { layers: s.peakLayers, systems: [...new Set(Object.keys(s.peakSystems).map(k => k.split('@')[0]))] };
+});
+
+/** Share of `me`'s screen box covered by each foe's box in one frame. */
+function cover(boxes) {
+  const me = boxes.me; if (!me) return {};
+  const area = b => Math.max(0, b.right - b.left) * Math.max(0, b.bottom - b.top);
+  return Object.fromEntries(Object.entries(boxes).filter(([id, b]) => id !== 'me' && b).map(([id, b]) => {
+    const i = { left: Math.max(me.left, b.left), right: Math.min(me.right, b.right), top: Math.max(me.top, b.top), bottom: Math.min(me.bottom, b.bottom) };
+    return [id, +(area(i) / Math.max(1, area(me))).toFixed(3)];
+  }));
+}
+/** A foe's box may cover at most this share of the caster's at the cast frame. */
+const MAX_COVER = 0.3;
+
+function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStats, boxes = [], castAtMs = 0 }) {
+  const fails = [], exempt = [], notes = [];
+  // Whether the cast went to the new engine (runtime.play's return) is not read: the page cannot see it without a src
+  // hook. In after/debug columns a named system on screen is the indirect proof; in before/off nothing is.
+  notes.push('play() return: not checked (after/debug: inferred from the named systems being on screen)');
+  const castFrame = boxes.find(f => f.t >= castAtMs) ?? boxes[0];
+  if (castFrame) {
+    const c = cover(castFrame.boxes), worst = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
+    notes.push(`cover at ${castFrame.t}ms: ${JSON.stringify(c)}`);
+    if (worst && worst[1] > MAX_COVER) fails.push(`cover: ${worst[0]} covers ${(worst[1] * 100).toFixed(0)}% of the caster's box at the cast (${castFrame.t}ms; max ${MAX_COVER * 100}%)`);
+  } else fails.push('cover: no boxes recorded');
+  if (!ckout.ok) fails.push(`checkout: src clean ${ckout.srcClean}, served src = HEAD ${ckout.probes.map(p => `${p.file.split('/').pop()}:${p.same}`).join(' ')}`);
+  if (real) {
+    if (!audit) fails.push('real: no audit from the page');
+    else {
+      if (!audit.combatStart) fails.push('real: combat start not applied');
+      if (!audit.coversWindow) fails.push(`real: combat ends at tick ${audit.replayEnds}, before the window's end ${audit.to}`);
+      const dead = Object.entries(audit.targetsAliveAtEnd).filter(([, up]) => !up).map(([id]) => id);
+      if (dead.length) fails.push(`real: target dead by window end: ${dead.join(',')}`);
+      if (audit.otherCasts.length) fails.push(`real: others cast in window: ${audit.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
+    }
+  } else exempt.push('rules checks (not --real: dummies, no rules run)');
+  const layerColumn = column === 'after' || column === 'debug';
+  if (!layerColumn) exempt.push(`layer checks (column ${column})`);
+  else if (!layerStats) fails.push('layers: this build has no ATTACHED_LAYER_STATS');
+  else {
+    const seen = new Set(timeline.flatMap(f => f.systems));
+    for (const id of systems) {
+      if (pre.systems.includes(id)) fails.push(`layers: ${id} already on screen before the cast (warm residue)`);
+      if (!seen.has(id)) fails.push(`layers: ${id} never on screen in the window`);
+    }
+    if (!timeline.some(f => f.layers > 0)) fails.push('layers: peakLayers 0 in the window');
+  }
+  return { ok: !fails.length, fails, exempt, notes };
+}
+
+module.exports = { checkout, resetLayers, readLayers, verdict, machine: () => `${os.hostname()} ${process.platform}` };

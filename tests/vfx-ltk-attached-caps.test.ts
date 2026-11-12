@@ -54,6 +54,25 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
   });
 });
 
+describe('attached-mesh size', () => {
+  async function drawnAt(scale: number) {
+    const { library, prepared } = await prepare(attached());
+    const scene = new Scene(), root = new Group(), body = new Group(), host = part('body'); scene.add(root); root.add(body); body.add(host);
+    root.position.set(30, 0, -20); host.position.set(0, 40, 5);
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body }, scale });
+    scene.add(fx.object); fx.update(0.1, new Camera()); scene.updateMatrixWorld(true);
+    const shown = fx.attached.find(draw => draw.object.visible);
+    const elements = shown ? [...shown.object.matrixWorld.elements] : null;
+    fx.dispose(); library.dispose();
+    return elements;
+  }
+  it('draws on the host at the same size whatever the cue scale (a chest cue is SKILL_FX_SIZE 0.64)', async () => {
+    const plain = await drawnAt(1), scaled = await drawnAt(0.638);
+    expect(plain).not.toBeNull();
+    plain!.forEach((value, at) => expect(scaled![at]).toBeCloseTo(value, 4));
+  });
+});
+
 describe('attached-mesh screen cap and switch', () => {
   /** The synthetic hosts cannot reach the real cap under the runtime's slot budget, so the over-cap tests use a lower one. */
   const CAP = 16;
@@ -106,6 +125,32 @@ describe('attached-mesh screen cap and switch', () => {
     await runtime.warm('jinx'); runtime.play('jinx', 'u', [], 0, 'cast');
     runtime.update(0.2, new Camera()); expect(visibleOverlays(scene)).toBe(0);
     on = true; runtime.update(0.05, new Camera()); expect(visibleOverlays(scene)).toBeGreaterThan(0);
+    runtime.dispose(); library.dispose();
+  });
+
+  async function oneHost(cue: Record<string, unknown>) {
+    const scene = new Scene();
+    const index = { ...syntheticIndex(), skills: { jinx: [{ system: 'sample', action: 'cast', event: 'cast-start', delay: 0, duration: 10, ...cue }] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(attached()), readTexture: async () => new Texture() });
+    const root = new Group(), body = new Group(); root.add(body); body.add(part('body'));
+    const runtime = createLtkRuntime(library, scene, () => ({ root, body, alive: true }));
+    await runtime.warm('jinx');
+    return { scene, runtime, library };
+  }
+  const systems = (scene: Scene) => scene.children.filter(node => node.name === 'ltk-vfx').length;
+  it.each([[true, 1], [false, 2]] as const)('a recast with refresh=%s leaves %i body layer(s) of the same system', async (refresh, layers) => {
+    const { scene, runtime, library } = await oneHost(refresh ? { refresh: true } : {});
+    runtime.play('jinx', 'u', [], 0, 'cast'); runtime.update(0.2, new Camera());
+    runtime.play('jinx', 'u', [], 0, 'cast'); runtime.update(0.2, new Camera());
+    expect(runtime.active).toBe(layers); expect(systems(scene)).toBe(layers);
+    runtime.dispose(); library.dispose();
+  });
+  it('takes the body overlays off at once when the unit dies or leaves, though the system tail may linger', async () => {
+    const { scene, runtime, library } = await oneHost({ refresh: true });
+    runtime.play('jinx', 'u', [], 0, 'cast'); runtime.update(0.2, new Camera());
+    expect(visibleOverlays(scene)).toBeGreaterThan(0);
+    runtime.stopUnit('u'); expect(visibleOverlays(scene)).toBe(0);
+    runtime.update(0.05, new Camera()); expect(visibleOverlays(scene)).toBe(0);
     runtime.dispose(); library.dispose();
   });
 });
