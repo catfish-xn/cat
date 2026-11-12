@@ -50,6 +50,30 @@ export function installProbes(clock: () => number) {
     /** Every attached-mesh overlay drawn now (vfx-ltk AttachedMeshes: a SkinnedMesh whose material carries particleTint,
      * named `<emitter>#<index>.<slot>` in builds from 673f1bd5 on): its tint and erosion drive, its blend state, and each texture it samples with
      * whether that texture has its image yet (a texture still loading samples as nothing or a flat colour). */
+    /**
+     * Every running system, per frame (--probe emitters): its live root particles by emitter index (pool.emitter), its
+     * live child particles, and each draw it built, in build order (particles.ts: one per drawn emitter, one per attached
+     * overlay), with whether it is on screen now (visible and in the scene), how many instances / vertices it submits, its
+     * render layers, blend state and whether each sampled texture has its image. Draws carry no emitter name in src, so
+     * the draw index is mapped to an emitter offline from the definition (the order particles.ts walks prepared.drawn).
+     */
+    emitters() {
+      const inScene = (o: any) => { for (let p = o; p; p = p.parent) { if (!p.visible) return false; if (p === scene) return true; } return false; };
+      return [...live].map((r: any) => {
+        const fx = r.fx, pool = fx?.driver?.pool, particles: Record<number, number> = {};
+        for (let i = 0; i < (pool?.count ?? 0); i++) particles[pool.emitter[i]] = (particles[pool.emitter[i]] ?? 0) + 1;
+        const kids = fx?.driver?.liveChildren?.();
+        return { system: r.system, source: r.source ?? null, target: r.target ?? null, particles, children: typeof kids === 'number' ? kids : kids?.size ?? kids?.length ?? null,
+          draws: (fx?.draws ?? []).map((d: any, i: number) => {
+            const o = d.object, g = o?.geometry, m = d.material;
+            const textures = m?.uniforms ? Object.entries(m.uniforms).filter(([, u]: any) => u?.value?.isTexture).map(([k, u]: any) => {
+              const img = u.value.image; return { uniform: k, ready: !!img && (img.width > 0 || img.data?.length > 0) };
+            }) : [];
+            return { i, name: o?.name || null, onScreen: !!o && inScene(o), instances: g?.instanceCount ?? null, range: g?.drawRange?.count ?? null,
+              meshCount: o?.count ?? null, layers: o?.layers?.mask ?? null, blending: m?.blending ?? null, transparent: m?.transparent ?? null, textures };
+          }) };
+      });
+    },
     attached() {
       if (!scene) return { missing: ['scene'] };
       const out: any[] = [];
