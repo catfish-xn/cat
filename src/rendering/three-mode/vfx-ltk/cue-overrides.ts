@@ -340,6 +340,17 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Attached-mesh emitters held off screen, by system and emitter name, until their look is checked against the original.
+ * The rest of each system draws as before. Only for an overlay measured to draw wrong on the board.
+ */
+export const ATTACHED_HELD_BACK: Readonly<Record<string, readonly string[]>> = {
+  // Jayce R_Melee_LightningCall: Avatar_Fresnel is authored black (birthColor 0,0,0) and lights only through its gold rim
+  // (fresnel 0.1); our rim at that exponent stays near zero, so the layer adds nothing, and the board showed a near-black
+  // shell (#619 Windows probe, 11-12). Held with Avatar_Hammer until the rim is checked against an original of the same star.
+  '8d9d784b': ['Avatar_Hammer', 'Avatar_Fresnel'],
+};
+
+/**
  * Attached-mesh emitters that keep covering the whole host although they name parts, by system and emitter name.
  * Only for a cued emitter that drew before the part filter (11-11) and whose parts our host model does not hold, so the
  * filter would take away something the board shows today. Each stays until its host model is split into those parts.

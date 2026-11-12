@@ -52,6 +52,16 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     expect(fx.attached).toHaveLength(ATTACHED_SLOTS); expect(warn).not.toHaveBeenCalled();
     fx.dispose(); library.dispose();
   });
+  it('leaves a held-back attached emitter undrawn (ATTACHED_HELD_BACK), the system itself still loading', async () => {
+    const index = { ...syntheticIndex(), systems: { '8d9d784b': 'systems/held.json' }, skills: {} };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index
+      : syntheticSystem({ emitterName: { type: 'string', value: 'Avatar_Fresnel' }, ...attached() }), readTexture: async () => new Texture() });
+    const prepared = await library.load('8d9d784b');
+    const root = new Group(), body = new Group(); root.add(body); body.add(part('body'));
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body } });
+    expect(fx.attached).toEqual([]);
+    fx.dispose(); library.dispose();
+  });
 });
 
 describe('attached-mesh size', () => {
