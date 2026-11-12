@@ -13,6 +13,17 @@
 type Rec = { system: string; source?: string; action?: string; reserved?: unknown; fx?: unknown; until?: unknown };
 const looksRunning = (v: any): v is Rec => !!v && typeof v === 'object' && typeof v.system === 'string' && 'reserved' in v && 'fx' in v && 'until' in v;
 
+const num = (v: any) => Array.isArray(v) ? v.map((x: number) => +x.toFixed(3)) : typeof v === 'number' ? +v.toFixed(3) : v;
+/** Whether a texture has its image yet. A cube map's image is its six faces: ready when every face has a size or data. */
+function textureState(t: any) {
+  const img = t.image, has = (i: any) => !!i && (i.width > 0 || i.data?.length > 0);
+  if (t.isCubeTexture || Array.isArray(img)) {
+    const faces: any[] = Array.isArray(img) ? img : [];
+    return { ready: faces.length === 6 && faces.every(f => has(f?.isTexture ? f.image : f)), size: faces[0] ? `6x${(faces[0].isTexture ? faces[0].image : faces[0])?.width ?? '?'}` : null, version: t.version, cube: true };
+  }
+  return { ready: has(img), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: t.version };
+}
+
 export function installProbes(clock: () => number) {
   const live = new Set<Rec>(), started: { t: number; system: string; source?: string; action?: string }[] = [];
   const add = Set.prototype.add, del = Set.prototype.delete;
@@ -50,6 +61,41 @@ export function installProbes(clock: () => number) {
     /** Every attached-mesh overlay drawn now (vfx-ltk AttachedMeshes: a SkinnedMesh whose material carries particleTint,
      * named `<emitter>#<index>.<slot>` in builds from 673f1bd5 on): its tint and erosion drive, its blend state, and each texture it samples with
      * whether that texture has its image yet (a texture still loading samples as nothing or a flat colour). */
+    /** Every particle draw of the systems running now (vfx-ltk particles.ts: quads, meshes, trails, beams, projections and
+     * attached overlays), optionally only those whose emitter name contains one of `names` (case-insensitive): the
+     * material's blend and depth state, alphaTest and the alphaRef uniform, every define with its value, each texture it
+     * samples with whether that texture has its image yet, and its other small uniforms (numbers and vectors up to 4).
+     * Draws are named `<emitter>#<rank>` from the build that added this probe on (older builds: '(unnamed)', so filter by
+     * --systems there). */
+    emitters(names?: string[]) {
+      const want = (names ?? []).map(n => n.toLowerCase()).filter(Boolean);
+      const out: any[] = [];
+      for (const rec of live) {
+        const draws: any[] = (rec.fx as any)?.draws ?? [];
+        draws.forEach((d: any, index: number) => {
+          const o = d?.object; if (!o) return;
+          const name: string = o.name || '(unnamed)';
+          if (want.length && !want.some(w => name.toLowerCase().includes(w))) return;
+          const mats: any[] = Array.isArray(o.material) ? o.material : [o.material];
+          const m = d.material ?? mats[0]; if (!m) return;
+          const uniforms: Record<string, unknown> = {}, textures: any[] = [];
+          for (const [k, u] of Object.entries<any>(m.uniforms ?? {})) {
+            const v = u?.value;
+            if (v?.isTexture) textures.push({ uniform: k, ...textureState(v) });
+            else if (typeof v === 'number' || typeof v === 'boolean') uniforms[k] = num(v);
+            else if (Array.isArray(v) && v.length <= 4 && v.every((x: unknown) => typeof x === 'number')) uniforms[k] = num(v);
+            else if (v && typeof v === 'object' && typeof v.x === 'number') uniforms[k] = num([v.x, v.y, v.z, v.w].filter((x: unknown) => typeof x === 'number'));
+          }
+          let parentVisible = true; for (let p = o; p; p = p.parent) if (p.visible === false) { parentVisible = false; break; }
+          out.push({ system: rec.system, source: rec.source ?? null, name, index, visible: !!o.visible && parentVisible, kind: o.isInstancedMesh ? 'instanced' : o.isSkinnedMesh ? 'skinned' : 'mesh',
+            count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
+            material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
+            transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),
+            defines: { ...(m.defines ?? {}) }, textures, uniforms });
+        });
+      }
+      return { draws: out };
+    },
     attached() {
       if (!scene) return { missing: ['scene'] };
       const out: any[] = [];
@@ -58,10 +104,7 @@ export function installProbes(clock: () => number) {
         if (!o.isSkinnedMesh || !o.visible) return;
         const mats: any[] = Array.isArray(o.material) ? o.material : [o.material];
         const m = mats.find(x => x?.uniforms?.particleTint); if (!m) return;
-        const textures = Object.entries(m.uniforms).filter(([, u]: any) => u?.value?.isTexture).map(([k, u]: any) => {
-          const img = u.value.image; return { uniform: k, ready: !!img && (img.width > 0 || img.data?.length > 0), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: u.value.version };
-        });
-        const num = (v: any) => Array.isArray(v) ? v.map((x: number) => +x.toFixed(3)) : typeof v === 'number' ? +v.toFixed(3) : v;
+        const textures = Object.entries(m.uniforms).filter(([, u]: any) => u?.value?.isTexture).map(([k, u]: any) => ({ uniform: k, ...textureState(u.value) }));
         out.push({ name: o.name || '(unnamed: build before overlay names)', host: o.parent?.name ?? null, parts: mats.filter(x => x?.visible !== false).length, of: mats.length,
           tint: num(m.uniforms.particleTint.value), erode: num(m.uniforms.particleErode?.value), blending: m.blending,
           blendSrc: m.blendSrc, blendDst: m.blendDst, transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite,

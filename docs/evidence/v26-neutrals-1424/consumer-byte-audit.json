@@ -638,6 +638,14 @@
       "currentSha256": "fa2170bd62861811db605495b04e14c3f63801cdf54e29b8eaa1c6771dc72b40",
       "firstDifferentByte": 0
     },
+    "tests/castcmp-probe-emitters.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2096,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "86260ca79af0bf1f22f2459713f318b01dda044d32b2113253937f303783cbda",
+      "firstDifferentByte": 0
+    },
     "tests/chest-bracer-integration-trial.test.ts": {
       "previousBytes": 6430,
       "currentBytes": 7009,

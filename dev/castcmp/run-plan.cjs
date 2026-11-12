@@ -85,7 +85,7 @@ for (const batch of plan.batches) {
     if (lines.length > 1) { const restJobs = path.join(dir, '_rest.txt'); fs.writeFileSync(restJobs, lines.slice(1).join('\n') + '\n'); run(process.execPath, batchArgs(restJobs), tree); }
     const names = lines.map(l => l.split(/\s+/)[2]);
     result.columns[column] = { src: spec.src, passed: names.filter(n => fs.existsSync(path.join(dir, n + '.ok'))), failed: names.filter(n => !fs.existsSync(path.join(dir, n + '.ok'))) };
-    for (const n of names) for (const [from, to] of [[path.join(dir, n, 'gate.json'), 'gate.json'], [path.join(dir, n, 'overhead.json'), 'overhead.json'], [path.join(dir, n, 'attached.json'), 'attached.json'], [path.join(dir, n + '.log'), 'log']])
+    for (const n of names) for (const [from, to] of [[path.join(dir, n, 'gate.json'), 'gate.json'], [path.join(dir, n, 'overhead.json'), 'overhead.json'], [path.join(dir, n, 'attached.json'), 'attached.json'], [path.join(dir, n, 'emitters.json'), 'emitters.json'], [path.join(dir, n + '.log'), 'log']])
       if (fs.existsSync(from)) fs.copyFileSync(from, path.join(gatesOut, `${batch.name}-${column}-${n}.${to}`));
   }
   if (result.skipped) continue;
