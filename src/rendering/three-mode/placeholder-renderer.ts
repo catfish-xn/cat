@@ -61,7 +61,7 @@ import { OverheadFollow } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
@@ -705,7 +705,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
-    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe }) : null;
+    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });

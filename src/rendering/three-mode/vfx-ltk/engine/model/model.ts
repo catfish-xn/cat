@@ -882,6 +882,11 @@ export interface EmitterModel {
   readonly primitiveName: string | null;
   /** The geometry a mesh primitive draws, and null for every other kind. */
   readonly mesh: MeshModel | null;
+  /**
+   * An attached-mesh primitive's part filter (`mSubmeshesToDraw`, `mSubmeshesToDrawAlways`, as hashes), null for the
+   * whole body or any other kind. Optional so hand-built models in tests may leave it out.
+   */
+  readonly attachedSubmeshes?: { readonly draw: readonly string[]; readonly always: readonly string[] } | null;
   /** The ribbon a trail primitive strings its particles along, and null for every other kind. */
   readonly trail: TrailModel | null;
   /** The ribbon a beam primitive reaches the target with, and null for every other kind. */
