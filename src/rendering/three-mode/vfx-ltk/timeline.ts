@@ -56,11 +56,18 @@ export interface TimelineCue {
    */
   readonly refresh?: boolean;
   /**
-   * The run lasts its system's own span (systemSpan: each emitter's last birth plus its particles' longest life, from
-   * the definition), never more than `duration`, which is then only a cap. For a system the export cues as a flight that
-   * the engine ends on arrival, though its emitters are authored to keep going where it lands (Vi's Landing_Mis).
+   * A projectile that starts where its target stands and runs along the board row (world X) to `rowCells` cells on the
+   * `rowSide` side, instead of flying from the caster to the target: a line missile the original casts at a location
+   * (Vi's row shockwave). Both points are taken when it spawns.
    */
-  readonly playOut?: boolean;
+  readonly rowSide?: -1 | 1;
+  /** With `rowSide`: how many cells the row projectile runs. */
+  readonly rowCells?: number;
+  /**
+   * Cues of one play with the same key start together or not at all: they wait for room for all of them and are all
+   * dropped once overdue, so one half of a pair never shows without the other (Vi's two row shockwaves).
+   */
+  readonly together?: string;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

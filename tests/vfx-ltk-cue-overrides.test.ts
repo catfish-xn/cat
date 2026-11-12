@@ -37,7 +37,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     // The live vi timeline comes from the asset index (skills.vi), which replaces S13_TIMELINES; this row is what plays.
     expect(CUE_OVERRIDES.vi).toEqual([...S13_TIMELINES.vi,
       { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.26666666666666666, duration: 1.5 }]);
-    expect(CUE_OVERRIDES.vi.filter(cue => cue.playOut).map(cue => [cue.system, cue.event])).toEqual([['84b969e0', 'hit']]);
+    expect(CUE_OVERRIDES.vi.filter(cue => cue.rowSide).map(cue => [cue.system, cue.event, cue.rowSide, cue.together])).toEqual([['84b969e0', 'projectile', -1, 'row'], ['84b969e0', 'projectile', 1, 'row']]);
   });
 
   it('appends reviewed additions to the exported or replaced list, each only when its system was exported', () => {

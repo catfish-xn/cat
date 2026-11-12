@@ -165,7 +165,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
         || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
-        || (cue.playOut !== undefined && typeof cue.playOut !== 'boolean')
+        || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
+        || ((cue.rowSide !== undefined || cue.rowCells !== undefined) && (cue.event !== 'projectile' || (cue.rowSide !== -1 && cue.rowSide !== 1)
+          || !finite(cue.rowCells) || Number(cue.rowCells) < 0.5 || Number(cue.rowCells) > 8))
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
