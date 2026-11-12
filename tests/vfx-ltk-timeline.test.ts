@@ -301,7 +301,8 @@ it('Vi: her landing systems start on the landing frame; her row shockwave pair s
   step(launch - landing, () => expect(rows()).toBe(0));
   step(12, () => { expect([0, 2]).toContain(rows()); if (!rows()) late++; });
   expect(rows()).toBe(2); expect(live()).not.toContain('c11e6814');
-  expect(late).toBe(8); // about 0.27 s, inside the 0.3 s a critical cue may wait expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  expect(late).toBe(8); // about 0.27 s, inside the 0.3 s a critical cue may wait
+  expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
   for (let f = 0; f < 300 && runtime.active; f++) step(1);
   expect(runtime.active).toBe(0);
   // Warm: each system reserves what it was seen to need; the pair starts on its own frame, beside every other system.

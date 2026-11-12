@@ -3676,9 +3676,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 25667,
+      "currentBytes": 25669,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "6d49cdd84b958955f25a0b599798f0269eadb44c76809897dec4333aa8aaa030",
+      "currentSha256": "313bd1a6d2b581b5662876e4f73e17e0becbb936d4ff3d16ed4eb32daaaa1a38",
       "firstDifferentByte": 84
     },
     "tests/vi-grab-slam.test.ts": {
