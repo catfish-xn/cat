@@ -10,7 +10,7 @@ import { Vector3 } from "three";
 
 import { AXIS_SIGN } from "../../space";
 
-import { TRAIL_MODE } from "../../engine/model/enums";
+import { BLEND_MODE, TRAIL_MODE } from "../../engine/model/enums";
 import type { EmitterModel } from "../../engine/model/model";
 import { smoothingReachAt } from "../../engine/model/quality";
 import type { Point } from "../../engine/model/rig";
@@ -73,6 +73,8 @@ export interface TrailsProps {
   /** Where the emitter falls in the system's draw order, from `drawRanks`. */
   rank: number;
   hidden: boolean;
+  /** Port: fade the head of a strand that stopped growing (cue-overrides.ts TRAIL_END_FADE, a fit). */
+  endFade?: boolean;
 }
 
 /**
@@ -86,7 +88,7 @@ export interface TrailsProps {
  * With the game's shaders on, the ribbon draws through the translated `quad` or `distortion`
  * pair once it is ready, and through the hand-written material until then.
  */
-export function createTrails({ emitter, sources, samplers, rank, hidden }: TrailsProps) {
+export function createTrails({ emitter, sources, samplers, rank, hidden, endFade = false }: TrailsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
   const trail = emitter.trail;
   const buffers = memo(() => borrowRibbonBuffers(TRAIL_VERTICES), []);
@@ -127,7 +129,7 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
     CURSOR.vertex = 0;
     CURSOR.index = 0;
     for (const source of sources) {
-      strandInto(source, emitter, renderStamp(state.gl));
+      strandInto(source, emitter, renderStamp(state.gl), endFade);
       writeTrail(
         STRAND,
         {
@@ -151,7 +153,7 @@ export function createTrails({ emitter, sources, samplers, rank, hidden }: Trail
 
 /** One source's particles of `emitter` as a strand, into `STRAND`, in the order they were born. */
 let trailFrame: FrameSlot | undefined;
-function strandInto(source: Source, emitter: EmitterModel, stamp: number): void {
+function strandInto(source: Source, emitter: EmitterModel, stamp: number, fadeHead: boolean): void {
   const pool = source.pool;
   trailFrame ??= frameOf(source, emitter) as FrameSlot;
   const frame = frameInto(source, emitter, trailFrame);
@@ -191,5 +193,36 @@ function strandInto(source: Source, emitter: EmitterModel, stamp: number): void 
       packUv(UV_DRAWN, STRAND.multUv, slot * UV_STRIDE);
     }
     colorLookupInto(emitter, pool, at, through, STRAND.lookup, slot * 2);
+  }
+  if (fadeHead && held > 1 && time - pool.birthTime[ORDER[held - 1]] > END_FADE_STOPPED) endFade(emitter, held);
+}
+
+/*
+ * Port, a fit and not the original's behaviour (cue-overrides.ts TRAIL_END_FADE): once a strand's newest point is older
+ * than END_FADE_STOPPED it has stopped growing, and its head fades out (smoothstep alpha) over END_FADE_SPAN times the
+ * head's drawn half-width instead of ending on a flat cut. The span grows from nothing with the head's own width, so
+ * the fade comes in without a jump at the stop.
+ */
+const END_FADE_STOPPED = 0.05;
+const END_FADE_SPAN = 2;
+function endFade(emitter: EmitterModel, held: number): void {
+  const span = END_FADE_SPAN * STRAND.width[held - 1];
+  if (!(span > 0)) return;
+  const premultiplied = emitter.blendMode === BLEND_MODE.add || emitter.blendMode === BLEND_MODE.subtract;
+  let walked = 0;
+  for (let slot = held - 1; slot >= 0; slot -= 1) {
+    if (slot < held - 1) {
+      const a = slot * 3, b = (slot + 1) * 3;
+      walked += Math.hypot(
+        STRAND.position[a] - STRAND.position[b],
+        STRAND.position[a + 1] - STRAND.position[b + 1],
+        STRAND.position[a + 2] - STRAND.position[b + 2],
+      );
+    }
+    if (walked >= span) break;
+    const x = walked / span;
+    const keep = x * x * (3 - 2 * x);
+    if (premultiplied) for (let channel = 0; channel < 4; channel += 1) STRAND.color[slot * 4 + channel] *= keep;
+    else STRAND.color[slot * 4 + 3] *= keep;
   }
 }

@@ -351,9 +351,16 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
-  // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
-  // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
-  // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
+};
+
+/**
+ * Trail emitters, by system and emitter name, whose head fades out over twice its own drawn half-width once the strand
+ * stops growing, instead of ending on a flat cut across the trail (Trails.ts). A fit, not the original's behaviour: how
+ * the original ends a trail whose emitter stopped is not known.
+ * Vi's row shockwave Trench: its head kept widening after the run landed and drew a straight vertical edge at the row end
+ * (11-12 isolate recordings; back on screen once the run's rock children and play-out were in, Fable 11-12).
+ */
+export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
   '84b969e0': ['Trench'],
 };
 

@@ -174,7 +174,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
           });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
-      else if (drawsAsTrail(emitter)) draw = createTrails(props);
+      else if (drawsAsTrail(emitter)) draw = createTrails({ ...props, endFade: prepared.endFade?.has(emitter.name ?? '') ?? false });
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
       if (draw) {
