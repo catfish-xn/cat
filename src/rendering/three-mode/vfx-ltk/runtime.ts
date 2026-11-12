@@ -101,7 +101,16 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   together?: string }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
-  bodyGone?: boolean }
+  bodyGone?: boolean;
+  /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
+  playOut?: boolean;
+  /** Its end came and it is playing out. */
+  ending?: boolean }
+/**
+ * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
+ * past its landing, and none of its own particles' curves run longer.
+ */
+export const PLAY_OUT_CAP = 2;
 /**
  * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
@@ -343,7 +352,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     /** True while a cue of this action from the source is queued or running. */
     playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
       for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.ending) return true;
       return false;
     },
     stopUnit(id: string) {
@@ -369,7 +378,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
         run.fx.update(seconds, camera);
-        if (run.fx.finished || clock + 1e-9 >= run.until) { release(run, run.stopped); running.delete(run); }
+        // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
+        // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
+        if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
+          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP;
+        }
+        const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
+        if (over) { release(run, run.stopped); running.delete(run); }
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
@@ -476,7 +491,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

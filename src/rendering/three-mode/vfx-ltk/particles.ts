@@ -210,6 +210,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       elapsed = 0; peak = 0; childPeak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
+    /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
+    get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;

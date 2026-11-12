@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, MIN_RESERVE, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MIN_RESERVE, PLAY_OUT_CAP, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE, measurePeak } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
@@ -110,6 +110,39 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     // Taken at the spawn: the target moving afterwards leaves both runs where they were.
     units.get('target')!.root.position.x += 50; units.get('target')!.root.updateMatrixWorld();
     expect(built[1].options.target.originAt(0)).toEqual(toSystem(at.x - 50 + 2 * cell, at.y, at.z));
+    runtime.dispose();
+  });
+
+  it('at its end a row run stops emitting and stays until it has played out, PLAY_OUT_CAP at most; a plain projectile still ends', async () => {
+    built.length = 0;
+    const plain: TimelineCue = { system: 'sample', event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.3, bone: 'ground', targetBone: 'ground' };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index([row(-1), row(1), plain]) : syntheticSystem(), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
+      const root = new Group(); root.position.set(i * 20 + 5, 0, i * 30); scene.add(root); root.updateMatrixWorld();
+      return [id, { root, body: null, alive: true }];
+    }));
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(3);
+    const [left, right, flown] = built.map(entry => entry.fx);
+    // Never played out on its own here: the left run is held by its particles, the right one empties after its end.
+    Object.defineProperty(left, 'playedOut', { get: () => false });
+    let rightOut = false; Object.defineProperty(right, 'playedOut', { get: () => rightOut });
+    const stop = vi.spyOn(left, 'stop');
+    for (let t = 1 / 30; t < 0.6 + 1 / 30; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    expect(flown.object.parent).toBeNull();
+    expect(left.object.parent).toBe(scene);
+    expect(right.object.parent).toBe(scene);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(runtime.playing('caster')).toBe(false);
+    rightOut = true; runtime.update(1 / 30, new Camera());
+    expect(right.object.parent).toBeNull();
+    for (let t = 0; t < PLAY_OUT_CAP - 0.1; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    expect(left.object.parent).toBe(scene);
+    for (let t = 0; t < 0.2; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    expect(left.object.parent).toBeNull();
     runtime.dispose();
   });
 
