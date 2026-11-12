@@ -244,9 +244,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const source = findUnit(sourceId);
       if (!cues) return false;
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board), { unsupported } = mapped;
-      // A cast whose target is already dead still plays: the 14.24 data has no cancel-on-target-death switch. A target cue
-      // keeps the body's last world point; only a cue whose target model is already gone has nowhere to play and is left out.
-      const castLike = action === 'cast';
+      // A cast or attack whose target is already dead still plays: the 14.24 data has no cancel-on-target-death switch. A
+      // target cue keeps the body's last world point; only a cue whose target model is already gone has nowhere to play and
+      // is left out. Passive and end cues keep the whole-action rule.
+      const castLike = action === 'cast' || action === 'attack';
       const present = (id: string) => { const target = findUnit(id); return !!target && !target.disposed; };
       // An optional target cue whose recipient is already gone (often killed by this very cast) is dropped, not fatal.
       const spawns = mapped.spawns.filter(spawn => {
@@ -259,8 +260,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const independent = spawns.every(s => s.point && s.event !== 'projectile');
       // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.
       if (spawns.some(needsLivingSource) && (!source?.alive || source.disposed)) return false;
-      // An attack (or a non-cast action) still needs every target alive before suppressing the old visual; later
-      // disappearance cancels a queued cue that kept no snapshot.
+      // A passive or end cue still needs every target alive before suppressing the old visual; later disappearance
+      // cancels a queued cue that kept no snapshot.
       if (spawns.some(spawn => {
         if (spawn.targetId === undefined) return false;
         const target = findUnit(spawn.targetId);
