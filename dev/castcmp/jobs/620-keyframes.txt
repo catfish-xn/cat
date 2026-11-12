@@ -1,0 +1,13 @@
+# #620 关键帧合成（定稿 2026-11-12，工具 5f8a3be8；只出修前|修后两列，不传 --off）
+# 两列都有 overhead.json 时每格标 dx，角标写两边最大偏差。默认裁施法者（--crop me），峰值帧在 --from/--to 内自动选，前后各一帧。
+# 输出：e138w-<英雄>-overhead.jpg（≤2MB）+ -full.jpg，交 Fable。
+node dev/castcmp/keyframes.cjs --hero illaoi --system overhead --before bar-illaoi-before --after bar-illaoi-after --from 500 --to 4000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero rumble --system overhead --before bar-rumble-before --after bar-rumble-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero nami --system overhead --before bar-nami-before --after bar-nami-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero corki --system overhead --before bar-corki-before --after bar-corki-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero malzahar --system overhead --before bar-malzahar-before --after bar-malzahar-after --from 500 --to 4000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero vi --system overhead --before bar-vi-before --after bar-vi-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero leona --system overhead --before bar-leona-before --after bar-leona-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero urgot --system overhead --before bar-urgot-before --after bar-urgot-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero jayce --system overhead --before bar-jayce-before --after bar-jayce-after --from 500 --to 3000 --crop me --out kf --prefix e138w
+node dev/castcmp/keyframes.cjs --hero nocturne --system overhead --before bar-nocturne-before --after bar-nocturne-after --from 0 --to 3000 --crop me --out kf --prefix e138w

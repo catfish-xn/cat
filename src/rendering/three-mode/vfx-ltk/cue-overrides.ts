@@ -309,6 +309,29 @@ export function cueOverride(champion: string, systems: Readonly<Record<string, s
 }
 
 /**
+ * Cues added to a champion's list (exported or replaced above), each only when its system is in the loaded index.
+ * For a layer the export never cued, where copying the champion's whole list into CUE_OVERRIDES would freeze the rest.
+ * Times are measured on the original, with 0 at the mana bar emptying.
+ */
+export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
+  // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
+  ambessa: [
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+  ],
+  // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
+  // The original keeps it for about as long as the empower lasts (sweep thread side by side, 11-11). Our rule holds the
+  // empower for EmpowerDuration, so the layer runs that long and fades over its last half second (our fit). A recast refreshes the
+  // empower, so it refreshes the layer rather than stacking a second (refresh).
+  mordekaiser: [
+    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest, refresh: true },
+  ],
+};
+export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
+  return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
+}
+
+/**
  * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
  * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
  */
@@ -332,6 +355,21 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+};
+
+/**
+ * Attached-mesh emitters held off screen, by system and emitter name, until their look is checked against the original.
+ * The rest of each system draws as before. Only for an overlay measured to draw wrong on the board.
+ */
+export const ATTACHED_HELD_BACK: Readonly<Record<string, readonly string[]>> = {
+  // Jayce R_Melee_LightningCall: Avatar_Fresnel is a black-based layer lit only by its rim, and our rim leaves it unlit, so
+  // the layer adds nothing (#619 Windows probe, 11-12). Held with Avatar_Hammer until the rim is checked against an
+  // original of the same star.
+  '8d9d784b': ['Avatar_Hammer', 'Avatar_Fresnel'],
+  // Jayce E_Knockback_Wave, which plays with it: Avatar_Dark is a near-black copy of the body, meant to sit under
+  // Avatar_Orange and Avatar_Yellow, black-based layers lit only by their rims; with those unlit, the dark copy alone drew
+  // a black shell over Jayce (#619 Windows probe, 11-12).
+  'e07c8088': ['Avatar_Dark', 'Avatar_Orange', 'Avatar_Yellow'],
 };
 
 /**

@@ -97,7 +97,9 @@ export interface LtkPlayOptions {
   cancelWithSource?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
+  /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
+  bodyGone?: boolean }
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
   // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
@@ -292,8 +294,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
-        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park.
-        run.fx.stop(); run.stopped = true;
+        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
+        // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
+        run.fx.stop(); run.stopped = true; run.bodyGone = true;
+        for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
@@ -333,6 +337,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
         const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
+        // and frees that run's room before this one asks for its own.
+        if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -406,7 +413,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (const run of running) {
         const first = layerBuf.length;
         for (const draw of run.fx.attached) if (draw.object.visible) {
-          if (!showAttached) { draw.object.visible = false; continue; }
+          if (!showAttached || run.bodyGone) { draw.object.visible = false; continue; }
           drawsOn++;
           let layer: (typeof layerBuf)[number] | undefined;
           for (let at = first; at < layerBuf.length && !layer; at++) if (layerBuf[at].key === draw.object.name) layer = layerBuf[at];
