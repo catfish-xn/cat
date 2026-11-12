@@ -2,6 +2,7 @@
 //   [--from MS --to MS] pick the peak only inside this span; [--times a,b,c] use these frames instead of the peak (then
 //   --before may be left out: an after-only sheet);
 //   [--crop me,foe,...] crop the union of these units' boxes (default me; hit systems, whose effect sits on the target: me,foe)
+//   [--note text] where --times came from, in the caption and the meta (underscores print as spaces: one shell word)
 //   [--pick-diff] pick by pixel difference even when the after gate.json has a layer timeline for --system
 // The peak frame: by default the frame of the after run's gate.json where --system has an attached layer on screen and
 // the most layers are up; without such frames, the frame where before and after differ most inside the area.
@@ -92,7 +93,8 @@ async function encode(base, name) {
   const g = after.gate ?? {};
   const commit = c => (c.gate?.checkout?.head ?? '?').slice(0, 8);
   const head = [
-    `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms by ${pickedBy.split(' ')[0]}, mean |before-after| ${best.toFixed(1)})`,
+    `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms by ${fixed?.length ? 'times' : pickedBy.split(' ')[0]}, mean |before-after| ${best.toFixed(1)})`,
+    ...(opt('note') ? [`times: ${opt('note').replace(/_/g, ' ')}`] : []),
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
@@ -119,6 +121,6 @@ async function encode(base, name) {
   }
   const whole = await encode(sharp({ create: { width: hw * per, height: capH + hh * fr, channels: 3, background: '#000' } }).composite(full), path.join(out, base + '-full.jpg'));
   fs.mkdirSync(path.join(out, 'meta'), { recursive: true });
-  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, crop: ids, window: [opt('from') ?? null, opt('to') ?? null], overhead, peak: after.frames[peak].t, pickedBy, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
+  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, crop: ids, window: [opt('from') ?? null, opt('to') ?? null], overhead, peak: after.frames[peak].t, pickedBy: fixed?.length ? `--times${opt('note') ? ': ' + opt('note').replace(/_/g, ' ') : ''}` : pickedBy, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
   console.log(JSON.stringify({ crop: crop.name, cropBytes: crop.bytes, full: whole.name, fullBytes: whole.bytes, peakMs: after.frames[peak].t }));
 })().catch(e => { console.error(e); process.exit(1); });

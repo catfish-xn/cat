@@ -1,0 +1,6 @@
+# Silco c7bb8557 key frames (Fable 11-12): cue silco-minion cast('c7bb8557', 0, 9) = 9 s from the minion spawn; measured start t0 = 33 ms
+# (Windows 619redo w-silco-after gate.json starts). Times t0+100, t0+4500, end-100 = 133, 4533, 8933; frame 0 for the cover check.
+v-capture.cjs silco w-silco-before --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --times 0,133,4533,8933 --systems c7bb8557 --column before --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-after --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --times 0,133,4533,8933 --systems c7bb8557 --column after --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-off --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --times 0,133,4533,8933 --systems c7bb8557 --column off --snapshot c1333710ad8e --attached off
+# sheet: --hero silco --system c7bb8557 --before w-silco-before --after w-silco-after --off w-silco-off --times 133,4533,8933 --note cue_t0=33ms_+100/+4500/end-100_(silco.ts_cast(c7bb8557,0,9))
