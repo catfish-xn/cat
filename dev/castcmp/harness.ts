@@ -64,10 +64,13 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
     let at = 0, carry = 0;
-    const playFrom = (i: number) => { at = i; carry = 0; show(i); };
+    // hold(): the replay stops short of the recorded cast's lead-in (v-capture --cold 1), so loading the page plays no
+    // cast of `me` and the recorded cast is the renderer's first: its effect files are fetched cold. Any playFrom() lifts it.
+    let limit = real.frames.length - 1;
+    const playFrom = (i: number) => { at = i; carry = 0; limit = real.frames.length - 1; show(i); };
     const advance = (ms: number) => {
       carry += ms;
-      while (carry >= 50 && at < real.frames.length - 1) {
+      while (carry >= 50 && at < limit) {
         carry -= 50; at++; show(at);
         const events = real.events[at]!;
         if (events.length) { listener.events(events); numbers?.add(events); }
@@ -80,6 +83,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
       cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - 10)); },
+      hold() { limit = Math.min(limit, Math.max(0, real.castIndex - 11)); return { at, limit }; },
       // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
       // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
       // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)

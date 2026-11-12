@@ -1,4 +1,4 @@
-// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--fresh 1] [--unbind 1] [--attached off|debug] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
+// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--fresh 1] [--cold 1] [--unbind 1] [--attached off|debug] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
 //   [--systems id,id|none --absent id,id --layers id,id|none --from MS --to MS --column before|after|off|debug --snapshot <asset snapshot>]:
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)
@@ -34,6 +34,12 @@ async function unbind(page, tick, rebind) {
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
   if (opt('real') && !(await page.evaluate(() => window.__h.real?.combatStart))) throw new Error('real combat without combat start: refusing to record');
   mark('harness ready');
+  // LOCAL: --cold 1 (real only) records the unit's first cast cold: the replay is held short of the cast's lead-in while
+  // the page loads, no warm cast is made (--warm is taken as 0), and fresh() then plays from the lead-in. Without it the
+  // loading steps alone replay the cast, so even --warm 0 recorded a warm second cast.
+  const cold = !!opt('cold');
+  if (cold && !opt('real')) throw new Error('--cold is for --real only: a dummy casts only when told to (use --warm 0)');
+  if (cold) { const h = await page.evaluate(() => window.__h.hold()); mark(`cold: held at tick ${h.at} of ${h.limit}`); }
   if (opt('kill') && opt('real')) throw new Error('--kill is for dummies only: a real combat decides who dies');
   const g = gate.createGate(opt, { page, repo: path.resolve(__dirname, '../..'), unit, real: !!opt('real'), times, actionAtMs: opt('real') ? 500 : 0 });
   await g.start();
@@ -44,7 +50,7 @@ async function unbind(page, tick, rebind) {
   await page.waitForTimeout(1500); // effect files / textures fetch
   // warm pass: load every effect file once, then reset the combat and cast for real
   // LOCAL: --warm N casts N times first (default 1); a multiple of 3 keeps a 3-phase hero on phase 0 for the real cast
-  for (let w = 0; w < Number(opt('warm') ?? 1); w++) { if (w) { for (let i = 0; i < 12; i++) await page.evaluate(() => window.__h.step(250)); } await (opt('unbind') ? unbind(page, 700000 + w * 1000, true) : page.evaluate(() => window.__h.cast())); }
+  for (let w = 0; w < (cold ? 0 : Number(opt('warm') ?? 1)); w++) { if (w) { for (let i = 0; i < 12; i++) await page.evaluate(() => window.__h.step(250)); } await (opt('unbind') ? unbind(page, 700000 + w * 1000, true) : page.evaluate(() => window.__h.cast())); }
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 800000, eventSeq: 800000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
   for (let i = 0; i < 12; i++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(700); }
   await page.evaluate(() => window.__h.step(3000)); await page.waitForTimeout(300);
