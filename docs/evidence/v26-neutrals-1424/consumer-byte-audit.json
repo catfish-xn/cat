@@ -3489,9 +3489,9 @@
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8783,
+      "currentBytes": 13255,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "78a9d85f2a2546b97c9bb55f73dd70dc9ae9ad4d99bb38fef41d777cd0a5f1ef",
+      "currentSha256": "e8e1dfacc50ede589f88bd1335bbb01d1a1b42cb458b88e0de9d003d98f1796d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {
@@ -3569,9 +3569,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 18829,
+      "currentBytes": 20245,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "068406496ba082b521290e8df0b7716f435b978865139ac643c16e5975e14bfc",
+      "currentSha256": "4198d75291d2bd505c0142f5a7212439cc7f8f3052eb41760f3e89c32ffe465e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {

@@ -1,0 +1,54 @@
+# #619 regression recordings, after / off column (checkout: this commit), plus Ambessa debug. One line per job for dev/castcmp/batch.cjs (run from the after / off checkout).
+# Parameters fixed per line and pre-flighted with `node dev/castcmp/jobs-check.mjs <this file>` (real lines: the cast,
+# its targets alive to the window's end, no other caster in the window, no foe next to the caster on its row or nearer
+# the camera). Star levels are chosen so the system shows and the targets live (a before/after regression, not a
+# comparison with the original); the keyframe caption carries the actual stars.
+# First line: Mordekaiser 3292fe09 as the smoke test (gate with assets known to pass, 11-12), not a list item.
+# Viktor: three ranged Twitches, so no foe stands next to him at the cast (two Garens covered 36.5% on Windows).
+# Not here, and why:
+#   sevika 95fb90ce, mel a111b8d1, sion revive 55e1a8e0, jayce hits e07c8088 / fb47ce66: no recording reaches them
+#     (gap list item 14); mel's other systems 4c885a29 (third cast) / 71e871c8 (shield hit) need a cast sequence the
+#     real replay (first cast only) does not record.
+#   maddie: no cued attached system in the 11-11 audit (scripts/assets3d/audit-attached-scale.mjs), so nothing to gate.
+#   jayce, silco, g23-sion run on dummies (no --real): marked "dummies (not real combat)" in the caption.
+v-capture.cjs mordekaiser w-mordekaiser-after --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 2 --ms 4000 --settle 12000 --systems 3292fe09 --column after --snapshot c1333710ad8e
+v-capture.cjs mordekaiser w-mordekaiser-off --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 2 --ms 4000 --settle 12000 --systems 3292fe09 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs vi w-vi-after --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9614ffb4 --column after --snapshot c1333710ad8e
+v-capture.cjs vi w-vi-off --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9614ffb4 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs jinx w-jinx-after --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 10fede7e --column after --snapshot c1333710ad8e
+v-capture.cjs jinx w-jinx-off --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 10fede7e --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs ambessa w-ambessa-after --real 1 --star 3 --target garen --nfoes 1 --foestar 2 --dist 3 --settle 3000 --systems c07aa972 --column after --snapshot c1333710ad8e
+v-capture.cjs ambessa w-ambessa-off --real 1 --star 3 --target garen --nfoes 1 --foestar 2 --dist 3 --settle 3000 --systems c07aa972 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs ambessa w-ambessa-debug --real 1 --star 3 --target garen --nfoes 1 --foestar 2 --dist 3 --settle 3000 --systems c07aa972 --column debug --snapshot c1333710ad8e --attached debug
+v-capture.cjs loris w-loris-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems c39ce57c --column after --snapshot c1333710ad8e
+v-capture.cjs loris w-loris-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems c39ce57c --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs drmundo w-drmundo-after --real 1 --star 3 --target amumu --nfoes 2 --foestar 3 --dist 3 --settle 3000 --systems 5443cd9f,4caada37 --column after --snapshot c1333710ad8e
+v-capture.cjs drmundo w-drmundo-off --real 1 --star 3 --target amumu --nfoes 2 --foestar 3 --dist 3 --settle 3000 --systems 5443cd9f,4caada37 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs ekko w-ekko-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 006b32b1 --column after --snapshot c1333710ad8e
+v-capture.cjs ekko w-ekko-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 006b32b1 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs smeech w-smeech-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 5cde9f59,17b8eb5c --column after --snapshot c1333710ad8e
+v-capture.cjs smeech w-smeech-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 5cde9f59,17b8eb5c --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs illaoi w-illaoi-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems eefae499 --column after --snapshot c1333710ad8e
+v-capture.cjs illaoi w-illaoi-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems eefae499 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs kogmaw w-kogmaw-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9f805f6e --column after --snapshot c1333710ad8e
+v-capture.cjs kogmaw w-kogmaw-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9f805f6e --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs leblanc w-leblanc-after --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 4ea54e59 --column after --snapshot c1333710ad8e
+v-capture.cjs leblanc w-leblanc-off --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 4ea54e59 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs leona w-leona-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 8d9a4ccc --column after --snapshot c1333710ad8e
+v-capture.cjs leona w-leona-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 8d9a4ccc --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs nami w-nami-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 03b4d6ac --column after --snapshot c1333710ad8e
+v-capture.cjs nami w-nami-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 03b4d6ac --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs nocturne w-nocturne-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 97366927 --column after --snapshot c1333710ad8e
+v-capture.cjs nocturne w-nocturne-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 97366927 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs warwick w-warwick-after --real 1 --star 3 --target urgot --nfoes 3 --foestar 3 --dist 3 --ms 2500 --settle 3000 --systems f7e4f133 --column after --snapshot c1333710ad8e
+v-capture.cjs warwick w-warwick-off --real 1 --star 3 --target urgot --nfoes 3 --foestar 3 --dist 3 --ms 2500 --settle 3000 --systems f7e4f133 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs viktor w-viktor-after --real 1 --star 3 --target twitch --nfoes 3 --foestar 3 --dist 3 --ms 2000 --settle 3000 --systems 37d3ac23 --column after --snapshot c1333710ad8e
+v-capture.cjs viktor w-viktor-off --real 1 --star 3 --target twitch --nfoes 3 --foestar 3 --dist 3 --ms 2000 --settle 3000 --systems 37d3ac23 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs scar w-scar-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems f4a6240a --column after --snapshot c1333710ad8e
+v-capture.cjs scar w-scar-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems f4a6240a --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs jayce w-jayce-after --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column after --snapshot c1333710ad8e
+v-capture.cjs jayce w-jayce-off --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs silco w-silco-after --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column after --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-off --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs g23-sion w-g23-sion-after --star 3 --one 1 --dist 1 --unbind 1 --settle 3000 --systems 5afb9708,9118f221 --column after --snapshot c1333710ad8e
+v-capture.cjs g23-sion w-g23-sion-off --star 3 --one 1 --dist 1 --unbind 1 --settle 3000 --systems 5afb9708,9118f221 --column off --snapshot c1333710ad8e --attached off
