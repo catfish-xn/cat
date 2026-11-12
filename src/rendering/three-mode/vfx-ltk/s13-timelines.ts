@@ -19,8 +19,11 @@ export const VI_ROW_SHOCKWAVE = {
   beyond: 0.5,
   /** At most this many cells (a whole row and its end), so a lost board still gives a bounded run. */
   cells: 7,
-  /** Fitted value, not original data: seconds its particles play out after it lands. */
-  linger: 0.3,
+  /**
+   * Fitted value, not original data: seconds its particles play out after it lands. Long enough for its ground trail
+   * (Trench) to fade by its own colour curve: a shorter run cut the still half-opaque trail off at once (11-12 probe).
+   */
+  linger: 0.6,
 } as const;
 const viRowTravel = VI_ROW_SHOCKWAVE.cells / VI_ROW_SHOCKWAVE.speed;
 const viRowCue = (rowSide: -1 | 1): TimelineCue => ({ system: '84b969e0', event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay,

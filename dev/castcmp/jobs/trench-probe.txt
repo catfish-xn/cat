@@ -1,5 +1,5 @@
-# Vi row shockwave Trench (84b969e0), probe round. Checkout: claude/vi-trench-soft at this commit = integration e690395d with
-# the Trench drawn again (cue-overrides MUTED_EMITTERS entry commented out: probe only, never merged like this).
+# Vi row shockwave Trench (84b969e0). Probe round: claude/vi-trench-soft @ aa620d9e = integration e690395d with
+# the Trench drawn again (probe only). Fix round: this branch head (Trench drawn, its run outlives its trail fade).
 # Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (PASS, 11-12, Linux).
 # 3-star Vi on one 3-star Sett, --dist 2, warm. Vi casts at 0.5 s (window), lands at about 1.07 s; the two row runs leave
 # at about 1.04 s and reach the row ends by about 1.5 s; the Trench trail lies along their paths until about 1.8 s.
