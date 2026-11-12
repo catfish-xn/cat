@@ -1,0 +1,15 @@
+{
+  "name": "plan-cait-bomb",
+  "note": "Caitlyn Air Raid comet (R_Bombardment_Mis 92bbeaf7): before = integration b590df74 (comet stands on her feet), after = the fix branch (it falls onto the target). Run with dev/castcmp/run-plan.cjs. Use the -full.jpg sheet (whole screen) for framing: the comet starts above the target, off the close crop.",
+  "batches": [
+    {
+      "name": "cait-bomb",
+      "before": { "src": "b590df74", "jobs": "dev/castcmp/jobs/cait-bomb-before.txt" },
+      "after": { "src": "cd8bb805", "jobs": "dev/castcmp/jobs/cait-bomb-after.txt" },
+      "keyframes": [
+        "--hero caitlyn --system 92bbeaf7 --before bomb-caitlyn-before --after bomb-caitlyn-after --from 500 --to 1300 --crop me,foe",
+        "--hero caitlyn --system 8d6e1c2e --before bomb-caitlyn-before --after bomb-caitlyn-after --from 900 --to 1400 --crop me,foe"
+      ]
+    }
+  ]
+}
