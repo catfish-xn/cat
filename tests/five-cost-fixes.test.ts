@@ -121,7 +121,8 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     expect(tasks).toHaveLength(5);expect(tasks.map(t=>[t.targetId,t.executeAtTick])).toEqual(Array(5).fill(['b',21]));
     const r=advance(opening.state,20);
     const pulses=damage(r.events).filter(d=>d.context.targetId==='b');
-    expect(pulses.map(d=>d.raw)).toEqual(Array(5).fill([14,21,400][star-1]));
+    // 14.24b InfectionDamage 15/22/400 (b-patch-overrides.json).
+    expect(pulses.map(d=>d.raw)).toEqual(Array(5).fill([15,22,400][star-1]));
     expect(pulses.every(d=>d.context.rootActionSeq===tasks[0].actionSeq)).toBe(true);
   });
   it('infection moves again when its new host dies, even if Malzahar has died',()=>{
