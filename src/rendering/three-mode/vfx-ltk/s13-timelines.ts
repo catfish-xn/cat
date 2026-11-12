@@ -20,8 +20,8 @@ export const VI_ROW_SHOCKWAVE = {
   /** At most this many cells (a whole row and its end), so a lost board still gives a bounded run. */
   cells: 7,
   /**
-   * Fitted value, not original data: seconds its particles play out after it lands. Long enough for its ground trail
-   * (Trench) to fade by its own colour curve: a shorter run cut the still half-opaque trail off at once (11-12 probe).
+   * Fitted value, not original data: seconds its particles play out after it lands. Long enough for its lingering trail
+   * particles to fade by their own colour curve: a shorter run cut them off at once while still half opaque (11-12 probe).
    */
   linger: 0.6,
 } as const;

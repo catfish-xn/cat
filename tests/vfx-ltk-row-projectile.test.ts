@@ -20,6 +20,7 @@ import { BOARD_LAYOUT } from '../src/rendering/layout-config';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { S13_TIMELINES, VI_ROW_SHOCKWAVE } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { constant, num, struct, syntheticSystem } from './vfx-ltk-synthetic';
+import { age01 } from '../src/rendering/three-mode/vfx-ltk/engine/simulation/particleRead';
 
 const cell = BOARD_CELL;
 const row = (rowSide: -1 | 1, rowCells = 2): TimelineCue =>
@@ -241,6 +242,35 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     for (let f = 0; f < 20; f++) { runtime.update(1 / 30, new Camera()); expect(rows()).toBe(0); }
     expect(runtime.queued).toBe(0); expect(runtime.active).toBe(1); expect(budget.live).toBeLessThanOrEqual(budget.max);
     runtime.dispose();
+  });
+
+  it('a row run lasts past its lingering trail: every particle has lived out its own fade before the run ends', async () => {
+    // A trail-like emitter that lingers once the flight stops: half-second particles, kept alive past the stop.
+    const trail = syntheticSystem({ rate: constant(num(60)), lifetime: num(1), particleLifetime: constant(num(0.5)), particleLinger: num(1.1) });
+    const oldestAtEnd = async (linger: number) => {
+      built.length = 0;
+      const cue: TimelineCue = { ...row(1, 2), system: 'trail', travelSeconds: 0.3, duration: 0.3 + linger };
+      const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+        ? { version: 1, systems: { trail: 'systems/trail.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: [cue] } }
+        : trail, readTexture: async () => new Texture() });
+      const units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 60, 0, 0); return [id, { root, body: null, alive: true }]; }));
+      const scene = new Scene(), runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+      await runtime.warm('vi');
+      expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+      let youngest = 1;
+      for (let f = 0; f < 120 && (f === 0 || runtime.active); f++) {
+        runtime.update(1 / 60, new Camera());
+        const fx = built[0]?.fx; if (!fx || !runtime.active) break;
+        const pool = fx.driver.pool; youngest = 1;
+        for (let i = 0; i < pool.count; i++) youngest = Math.min(youngest, age01(pool, i, fx.driver.time));
+      }
+      runtime.dispose();
+      return youngest; // the least-aged particle on the run's last frame
+    };
+    // Long enough: every particle has (all but) reached the end of its life, where its colour curve fades it.
+    expect(await oldestAtEnd(0.6)).toBeGreaterThan(0.95);
+    // Too short (the old 0.3): the run ends with particles still partway through their life, cut off at once.
+    expect(await oldestAtEnd(0.3)).toBeLessThan(0.7);
   });
 
   it('Vi: Landing_Mis is her row shockwave, both ways from the landing, and nothing else of hers flies it', () => {
