@@ -1,0 +1,6 @@
+# Vi current integration (recording only; branch claude/vi-live-rec = integration 5324bec0 plus this jobs file, never
+# merged): the live board as it is (Trench muted, flat child budget, row shockwave cut at its end).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# 3-star Vi on one 3-star Sett, --dist 2, warm, the whole cast drawn. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 / 2200 /
+# 2500 ms, wide (3 cells each side) and band crop, beside the candidate (vi-candidate.txt) and Qr1n.
+v-capture.cjs vi live --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2700 --settle 3000 --column after --snapshot c1333710ad8e
