@@ -3681,6 +3681,14 @@
       "currentSha256": "292fc3e30934007c3146cc5b8a813d9fe4bcb4a9ca00d6a5d59d196142b6941a",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-falling-projectile.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6473,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "93cc7d8de0aa724fc3a552459a13ed932cc4608f492dc7343b14e66e9eaa3bbf",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-features.test.ts": {
       "previousBytes": 10544,
       "currentBytes": 15312,
