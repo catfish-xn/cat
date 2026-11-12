@@ -3577,9 +3577,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 20245,
+      "currentBytes": 20900,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4198d75291d2bd505c0142f5a7212439cc7f8f3052eb41760f3e89c32ffe465e",
+      "currentSha256": "08673b2dc93bc7b4b19bb71bc46122f7dfd1dd5bd9789fa52db7cb184146ee55",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
@@ -3650,6 +3650,14 @@
       "currentSha256": "2836354550ea96f77aab1c94cce5c49f2dfd08897bac30a7dda0a5519c867081",
       "firstDifferentByte": 9055
     },
+    "tests/vfx-ltk-row-projectile.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 12984,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "378831929b6a975fefdfb11380fff9f3223ac31b1611122d6952f3fb4c5ba0f5",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3676,9 +3684,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 22949,
+      "currentBytes": 25745,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "8a1f49eab1f0fcf50bc6018c3af4eae7ac508175ce125ec9cfeed8d34f5d7de8",
+      "currentSha256": "406b4eeae0e5624af25088b3b827036a66d4d3e583d073974943384f486efee7",
       "firstDifferentByte": 84
     },
     "tests/vi-grab-slam.test.ts": {
