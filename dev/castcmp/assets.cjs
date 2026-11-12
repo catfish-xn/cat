@@ -6,7 +6,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
 const ROOT = path.resolve(opt('root') ?? process.env.CASTCMP_ASSET_ROOT ?? path.join(__dirname, '.asset-mirror'));
 const UPSTREAM = (opt('upstream') ?? process.env.CASTCMP_ASSET_UPSTREAM ?? 'none').replace(/\/$/, '');
-const OVERLAY = process.env.OVERLAY_DIR || null; // optional dir whose files replace the mirror's (previews)
+const OVERLAY = process.env.OVERLAY_DIR || null; // optional dir whose files replace the root's at the same path (previews, staged asset deltas)
 const inflight = new Map();
 function fetchUp(rel, file) {
   if (!inflight.has(rel)) inflight.set(rel, (async () => {
@@ -29,7 +29,9 @@ const TYPES = { '.json': 'application/json', '.png': 'image/png', '.ktx2': 'imag
 http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const over = OVERLAY && /^\/(ui\/)?[\w.-]+\.json$/.test(rel) && fs.existsSync(OVERLAY + rel) ? OVERLAY + rel : null;
+  // An overlay file replaces the root's at the same path (top-level or nested, e.g. vfx-ltk/batch2/tft13_jinx/index.json).
+  const overFile = OVERLAY ? path.resolve(OVERLAY, '.' + rel) : null;
+  const over = overFile && overFile.startsWith(path.resolve(OVERLAY) + path.sep) && fs.existsSync(overFile) && fs.statSync(overFile).isFile() ? overFile : null;
   const file = over ?? path.resolve(ROOT, '.' + rel);
   if (!over && !file.startsWith(ROOT + path.sep)) return res.writeHead(403).end();
   if (!fs.existsSync(file) && !(await fetchUp(rel, file))) return res.writeHead(404).end();
