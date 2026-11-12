@@ -2206,9 +2206,9 @@
     "tests/rendering3d-arena-lightmap.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4633,
+      "currentBytes": 5063,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "57528809ab587be0afac6cd6381dcdb666b3219a3050c80be46e7edff1effaa3",
+      "currentSha256": "0d6c5b4420b237946cb4589f740b4864bed061cd06d7d2a4e381d89b8b1f51b9",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-attack-release.test.ts": {

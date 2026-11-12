@@ -1,10 +1,10 @@
 /**
  * The original arena's baked lightmap (Map22 `BakedLight`). The converter keeps each lit mesh's lightmap UVs, already
  * placed on the shared atlas, as TEXCOORD_1 (`uv1`); meshes without it stay as they are. The arena is unlit, so the
- * light is multiplied into the diffuse colour in sRGB space: diffuse × pow(lightmap.rgb, gamma) × scale
+ * light is multiplied into the diffuse colour in sRGB space: diffuse × pow(lightmap.rgb, gamma) × scale (per channel)
  * (BoardLightmap in contracts.ts; gamma/scale are our fit to TFT footage of the same arena, not original data).
  */
-import { MeshBasicMaterial, NoColorSpace, type Material, type Mesh, type Object3D, type Texture } from 'three';
+import { MeshBasicMaterial, NoColorSpace, Vector3, type Material, type Mesh, type Object3D, type Texture } from 'three';
 import type { BoardLightmap } from '../../rendering3d';
 
 /** An alias of `uv1` under our own name, so the patched shader never collides with three's own `uv1` declaration. */
@@ -33,7 +33,8 @@ export function applyArenaLightmap(scene: Object3D, texture: Texture, decode: Pi
   // Atlas data, not colour: sampled as stored. A PNG must not be flipped (glTF UV origin is the top-left).
   texture.colorSpace = NoColorSpace; texture.flipY = false; texture.needsUpdate = true;
   const uniforms = {
-    arenaLightmap: { value: texture }, arenaLightmapGamma: { value: decode.gamma }, arenaLightmapScale: { value: decode.scale },
+    arenaLightmap: { value: texture }, arenaLightmapGamma: { value: decode.gamma },
+    arenaLightmapScale: { value: typeof decode.scale === 'number' ? new Vector3(decode.scale, decode.scale, decode.scale) : new Vector3(...decode.scale) },
   };
   const patched = new Map<MeshBasicMaterial, MeshBasicMaterial>(), restore: [Mesh, Material][] = [], clones: Material[] = [];
   const patch = (source: MeshBasicMaterial): MeshBasicMaterial => {
@@ -46,7 +47,7 @@ export function applyArenaLightmap(scene: Object3D, texture: Texture, decode: Pi
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = `attribute vec2 ${ARENA_LIGHTMAP_UV};\nvarying vec2 vArenaLightmapUv;\n`
         + shader.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>\n\tvArenaLightmapUv = ${ARENA_LIGHTMAP_UV};`);
-      shader.fragmentShader = 'uniform sampler2D arenaLightmap;\nuniform float arenaLightmapGamma;\nuniform float arenaLightmapScale;\n'
+      shader.fragmentShader = 'uniform sampler2D arenaLightmap;\nuniform float arenaLightmapGamma;\nuniform vec3 arenaLightmapScale;\n'
         + 'varying vec2 vArenaLightmapUv;\n' + shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
 	{
 		vec3 bakedLight = pow( texture2D( arenaLightmap, vArenaLightmapUv ).rgb, vec3( arenaLightmapGamma ) ) * arenaLightmapScale;

@@ -5,7 +5,7 @@
  */
 import { Group, Vector3, type Object3D, type Texture } from 'three';
 import { applyArenaLightmap, type ArenaLightmap } from './arena-lightmap';
-import type { BoardAlignment, BoardEntry } from '../../rendering3d';
+import type { BoardAlignment, BoardEntry, BoardLightmap } from '../../rendering3d';
 import type { ModelLease } from '../../rendering3d';
 
 /** The default arena key (first-visit asset root); other boards are optional roots chosen later. */
@@ -66,7 +66,7 @@ export interface BoardArena {
 
 /** Loads once (after a matching frame if grid is declared); a missing or placeholder model leaves no arena. */
 /** The arena's baked lightmap (arena-lightmap.ts): its texture is read once the model is in; failing that, none is drawn. */
-export interface ArenaLightmapSource { readonly gamma: number; readonly scale: number; load(): Promise<Texture> }
+export interface ArenaLightmapSource { readonly gamma: number; readonly scale: BoardLightmap['scale']; load(): Promise<Texture> }
 
 export function createBoardArena(parent: Group, alignment: BoardAlignment, load: () => Promise<ModelLease>, onReady: () => void, grid?: BoardEntry['grid'],
   lightmap?: ArenaLightmapSource): BoardArena {
