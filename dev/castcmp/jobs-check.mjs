@@ -4,7 +4,8 @@
 // second before the first cast of the unit): that cast, its targets alive at the end, no other unit casting, and no foe
 // next to the caster on its row or nearer the camera from the cast to the window's end (coarse: the browser gate's
 // box-overlap check is the authority on covering).
-// Lines without --real are listed as "dummy" (no rules run; nothing to check here). Exit 1 if any real line fails.
+// Lines without --real are listed as "dummy" (no rules run; nothing to check here; --kill is allowed there and only there).
+// Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -23,7 +24,8 @@ const results = [];
 for (const line of lines) {
   const [script, unit, name, ...rest] = line.split(/\s+/);
   const o = k => { const i = rest.indexOf('--' + k); return i >= 0 ? rest[i + 1] : undefined; };
-  if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true }); continue; }
+  if (o('kill') && o('real')) { results.push({ name, unit, mode: 'real', ok: false, why: ['--kill is for dummies only'] }); continue; }
+  if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}) }); continue; }
   const ms = Number(o('ms') ?? 3000);
   const setup = { unit, star: Number(o('star') ?? 3), form: o('form') ?? null, foe: o('target') ?? 'garen', dist: Number(o('dist') ?? 3),
     nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1) };

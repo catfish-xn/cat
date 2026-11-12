@@ -1,4 +1,6 @@
-// node dev/castcmp/keyframes.cjs --hero <name> --system <id> --before <dir> --after <dir> --off <dir> [--debug <dir>] --out <folder> [--prefix e138w]
+// node dev/castcmp/keyframes.cjs --hero <name> --system <id> --before <dir> --after <dir> [--off <dir>] [--debug <dir>] --out <folder> [--prefix e138w]
+//   [--from MS --to MS] pick the peak only inside this span; [--times a,b,c] use these frames instead of the peak;
+//   [--crop me,foe,...] crop the union of these units' boxes (default me)
 // One recorded job's before / after / off (and optional debug) frame folders (v-capture.cjs output) to two jpgs in --out:
 //   <prefix>-<hero>-<system>.jpg       the caster's area at native resolution, 3 rows (the frame where before and after
 //                                       differ most inside that area, and the frames either side) x one column per folder;
@@ -8,7 +10,7 @@
 const sharp = require('sharp');
 const fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
-for (const k of ['hero', 'system', 'before', 'after', 'off', 'out']) if (!opt(k)) { console.error(`--${k} required`); process.exit(2); }
+for (const k of ['hero', 'system', 'before', 'after', 'out']) if (!opt(k)) { console.error(`--${k} required`); process.exit(2); }
 const MAX_BYTES = 2 * 1024 * 1024;
 const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k => ({ key: k, dir: path.resolve(opt(k)) }));
 
@@ -34,29 +36,45 @@ async function encode(base, name) {
   const n = Math.min(...sets.map(s => s.frames.length));
   if (!n) throw new Error('no frames');
   const meta = await sharp(sets[0].frames[0].file).metadata();
-  // The caster's area: `me`'s box from the after run's boxes.json, padded, inside the frame.
-  const boxes = JSON.parse(fs.readFileSync(path.join(columns.find(c => c.key === 'after').dir, 'boxes.json'), 'utf8'));
-  const me = boxes.boxes[boxes.ids.indexOf('me')] ?? boxes.boxes[0];
-  // At least 400 px a side, at most 640, centred on the caster and kept inside the frame.
-  const side = (lo, hi, pad, limit) => { const size = Math.max(400, Math.min(640, Math.ceil(hi - lo + 2 * pad))), start = Math.round((lo + hi) / 2 - size / 2);
+  // The area: the union of the --crop units' boxes (default the caster), from the after run's gate.json frames when it has
+  // them (keyed by unit, at the first frame), else boxes.json (whose list skips missing units, so only `me`, first, is sure).
+  const afterDir = columns.find(c => c.key === 'after').dir, afterGate = gateOf(afterDir);
+  const ids = (opt('crop') ?? 'me').split(',');
+  const keyed = afterGate?.frames?.find(f => f.boxes)?.boxes;
+  const picked = keyed ? ids.map(id => keyed[id]).filter(Boolean) : [JSON.parse(fs.readFileSync(path.join(afterDir, 'boxes.json'), 'utf8')).boxes[0]];
+  const me = { left: Math.min(...picked.map(b => b.left)), right: Math.max(...picked.map(b => b.right)), top: Math.min(...picked.map(b => b.top)), bottom: Math.max(...picked.map(b => b.bottom)) };
+  // At least 400 px a side, at most 640 (960 wide for a union), centred on the caster and kept inside the frame.
+  const side = (lo, hi, pad, limit) => { const size = Math.max(400, Math.min(ids.length > 1 ? 960 : 640, Math.ceil(hi - lo + 2 * pad))), start = Math.round((lo + hi) / 2 - size / 2);
     return [Math.max(0, Math.min(limit - size, start)), Math.min(size, limit)]; };
   const [left, width] = side(me.left, me.right, Math.max(60, (me.right - me.left) * 0.6), meta.width);
   const [top, height] = side(me.top, me.bottom, Math.max(60, (me.bottom - me.top) * 0.4), meta.height);
   const area = { left, top, width, height };
   // The frame where before and after differ most inside that area (mean absolute difference).
   const before = sets.find(s => s.key === 'before'), after = sets.find(s => s.key === 'after');
-  let peak = 0, best = -1; const diffs = [];
+  const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
+  let peak = -1, best = -1; const diffs = [];
   for (let i = 0; i < n; i++) {
+    if (after.frames[i].t < from || after.frames[i].t > to) { diffs.push(null); continue; }
     const [a, b] = await Promise.all([grey(before.frames[i].file, area), grey(after.frames[i].file, area)]);
     let sum = 0; for (let p = 0; p < a.length; p++) sum += Math.abs(a[p] - b[p]);
     const d = sum / a.length; diffs.push(+d.toFixed(2)); if (d > best) { best = d; peak = i; }
   }
-  const rows = [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n);
+  if (peak < 0) throw new Error('no frame inside --from/--to');
+  const fixed = opt('times') ? opt('times').split(',').map(Number).map(t => after.frames.findIndex(f => f.t >= t)).filter(i => i >= 0 && i < n) : null;
+  const rows = fixed?.length ? fixed : [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n);
+  if (fixed?.length) peak = fixed[Math.floor(fixed.length / 2)];
+  // Overhead bar against the body (--probe overhead runs): |bar x - body x| per frame, before and after.
+  const ohOf = dir => { try { return Object.fromEntries(JSON.parse(fs.readFileSync(path.join(dir, 'overhead.json'), 'utf8')).map(o => [o.t, o.dx])); } catch { return null; } };
+  const ohBefore = ohOf(before.dir), ohAfter = ohOf(after.dir);
+  const ohAt = (oh, t) => oh && Number.isFinite(oh[t]) ? Math.abs(oh[t]).toFixed(0) : '?';
+  const ohMax = oh => { let m = null; for (const f of after.frames) if (f.t >= from && f.t <= to && oh && Number.isFinite(oh[f.t]) && (m === null || Math.abs(oh[f.t]) > m.dx)) m = { t: f.t, dx: Math.abs(oh[f.t]) }; return m; };
+  const overhead = ohBefore || ohAfter ? { before: ohMax(ohBefore), after: ohMax(ohAfter) } : null;
   const g = after.gate ?? {};
   const commit = c => (c.gate?.checkout?.head ?? '?').slice(0, 8);
   const head = [
     `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms, mean |before-after| ${best.toFixed(1)})`,
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
+    ...(overhead ? [`overhead |bar-body| max: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];
   const out = path.resolve(opt('out')); fs.mkdirSync(out, { recursive: true });
@@ -68,7 +86,8 @@ async function encode(base, name) {
   const tiles = [{ input: caption(W, head), left: 0, top: 0 }];
   for (const [r, i] of rows.entries()) for (const [c, s] of sets.entries()) {
     tiles.push({ input: await sharp(s.frames[i].file).extract(area).toBuffer(), left: c * area.width, top: capH + r * area.height });
-    tiles.push({ ...label(area.width, `${s.key} ${s.frames[i].t}ms`), left: c * area.width, top: capH + r * area.height });
+    const oh = s.key === 'before' ? ohBefore : s.key === 'after' ? ohAfter : null;
+    tiles.push({ ...label(area.width, `${s.key} ${s.frames[i].t}ms${oh ? ` dx ${ohAt(oh, s.frames[i].t)}px` : ''}`), left: c * area.width, top: capH + r * area.height });
   }
   const crop = await encode(sharp({ create: { width: W, height: H, channels: 3, background: '#000' } }).composite(tiles), path.join(out, base + '.jpg'));
   // 2) Whole screen at the peak frame, half size, two per row.
@@ -80,6 +99,6 @@ async function encode(base, name) {
   }
   const whole = await encode(sharp({ create: { width: hw * per, height: capH + hh * fr, channels: 3, background: '#000' } }).composite(full), path.join(out, base + '-full.jpg'));
   fs.mkdirSync(path.join(out, 'meta'), { recursive: true });
-  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, peak: after.frames[peak].t, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
+  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, crop: ids, window: [opt('from') ?? null, opt('to') ?? null], overhead, peak: after.frames[peak].t, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
   console.log(JSON.stringify({ crop: crop.name, cropBytes: crop.bytes, full: whole.name, fullBytes: whole.bytes, peakMs: after.frames[peak].t }));
 })().catch(e => { console.error(e); process.exit(1); });

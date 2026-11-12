@@ -1,18 +1,28 @@
-// The recording self-check behind v-capture.cjs --systems (writes gate.json; a failed gate exits non-zero, so batch.cjs
-// leaves no .ok). What it reads:
+// The recording self-check behind v-capture.cjs / v-capture-attack.cjs --systems (writes gate.json; a failed gate exits
+// non-zero, so batch.cjs leaves no .ok). What it reads:
 //   - the checkout: HEAD, a clean src/, and the page's own copy of two src files equal to HEAD's (the server is this tree);
-//   - the rules (--real 1, harness.ts __h.real.audit): combat start applied, the cast's targets alive at the window's end,
+//   - the rules (--real 1, harness.ts __h.audit): combat start applied, the cast's targets alive at the window's end,
 //     nobody but the recorded unit casting inside the window;
-//   - the renderer: which attached systems have a layer on screen, sampled per recorded frame from runtime.ts
-//     ATTACHED_LAYER_STATS (peak cleared before each step, so its peakSystems are that step's layers), and once before the
-//     recorded cast (a system already on screen then is the warm pass's, not this cast's).
-// Layer checks need a build with ATTACHED_LAYER_STATS and overlays on: the `before` column (older build) and `off`
-// (?attached=off) are exempt from them and say so; every other check still applies.
+//   - the vfx runtime, per recorded frame: every system running (harness probes.ts, any build) and the attached systems
+//     with a layer on screen (runtime.ts ATTACHED_LAYER_STATS, peak cleared before each step; builds that have it), plus
+//     one sample just before the recorded action (a system already running then is the warm pass's, not this action's);
+//   - covering: no foe's screen box over 30% of the caster's at the action frame;
+//   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame.
+// Options: --systems id,id|none (must run in the judged window), --absent id,id (must not run in it), --layers id,id|none
+// (which of --systems must also show an attached layer; default all of them), --from/--to ms (the judged window on the
+// recording's clock; default all of it), --column before|after|off|debug.
+// The `before` column (the older build) only records which systems ran: it is where they are expected to be missing or
+// different, so neither presence nor absence fails it. `off` (?attached=off) and `before` are exempt from layer checks.
+// Whether play() returned true is not read (that needs a hook in src/): a system that started is the evidence, since play
+// queues nothing unless it returns true.
 const { execFileSync } = require('child_process');
 const os = require('os');
 
 const SRC_PROBES = ['src/rendering/three-mode/vfx-ltk/runtime.ts', 'src/rendering/three-mode/placeholder-renderer.ts'];
 const git = (repo, ...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8', maxBuffer: 64 << 20 });
+const list = v => v === undefined || v === 'none' ? [] : v.split(',').filter(Boolean);
+/** A foe's box may cover at most this share of the caster's at the action frame. */
+const MAX_COVER = 0.3;
 
 async function checkout(page, repo) {
   const head = git(repo, 'rev-parse', 'HEAD').trim();
@@ -40,6 +50,8 @@ const readLayers = page => page.evaluate(async () => {
   // peakSystems keys are `<system>@<source>+<started>:<emitter>`.
   return { layers: s.peakLayers, systems: [...new Set(Object.keys(s.peakSystems).map(k => k.split('@')[0]))] };
 });
+/** Systems running now, and those that started since the last read (the harness probe). */
+const readRunning = page => page.evaluate(() => { const s = window.__h.systems?.(); window.__h.resetStarts?.(); return s ?? null; });
 
 /** Share of `me`'s screen box covered by each foe's box in one frame. */
 function cover(boxes) {
@@ -50,21 +62,71 @@ function cover(boxes) {
     return [id, +(area(i) / Math.max(1, area(me))).toFixed(3)];
   }));
 }
-/** A foe's box may cover at most this share of the caster's at the cast frame. */
-const MAX_COVER = 0.3;
 
-function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStats, boxes = [], castAtMs = 0 }) {
+/**
+ * One recording's gate. `opt` is the script's option reader; `ctx` = { page, repo, unit, real, times, actionAtMs }.
+ * Call pre() just before the recorded action, frame(t) after each recorded step, finish(record) at the end.
+ */
+function createGate(opt, ctx) {
+  const enabled = opt('systems') !== undefined;
+  const systems = list(opt('systems')), absent = list(opt('absent'));
+  const layerIds = opt('layers') === undefined ? systems : list(opt('layers'));
+  const column = opt('column') ?? (opt('attached') === 'off' ? 'off' : opt('attached') === 'debug' ? 'debug' : 'after');
+  const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
+  const probeOverhead = opt('probe') === 'overhead';
+  const frames = [];
+  let ckout = null, pre = { running: [], layers: [] }, sampleLayers = false;
+  return {
+    enabled, column,
+    async start() { if (enabled) ckout = await checkout(ctx.page, ctx.repo); },
+    async pre() {
+      if (!enabled) return;
+      sampleLayers = await resetLayers(ctx.page);
+      await ctx.page.evaluate(() => window.__h.step(100));
+      const running = await readRunning(ctx.page), layers = sampleLayers ? await readLayers(ctx.page) : null;
+      pre = { running: running?.live ?? [], layers: layers?.systems ?? [] };
+    },
+    async beforeStep() { if (enabled && sampleLayers) await resetLayers(ctx.page); },
+    async frame(t) {
+      if (!enabled && !probeOverhead) return;
+      const f = { t };
+      if (enabled) {
+        const running = await readRunning(ctx.page);
+        f.running = [...new Set([...(running?.live ?? []), ...(running?.started ?? []).map(s => s.system)])];
+        f.starts = (running?.started ?? []).map(s => `${s.system}@${s.source ?? ''}:${s.action ?? ''}`);
+        if (sampleLayers) { const l = await readLayers(ctx.page); f.layers = l?.layers ?? 0; f.layerSystems = l?.systems ?? []; }
+        f.boxes = await ctx.page.evaluate(() => Object.fromEntries(['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => [id, window.__h.box(id) ?? null])));
+      }
+      if (probeOverhead) f.overhead = await ctx.page.evaluate(() => window.__h.overhead?.('me') ?? null);
+      frames.push(f);
+    },
+    async finish(record) {
+      const fs = require('fs'), path = require('path');
+      if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) })), null, 2));
+      if (!enabled) return true;
+      const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
+      const v = verdict({ systems, absent, layerIds, column, real: ctx.real, ckout, audit, pre, frames, from, to, actionAtMs: ctx.actionAtMs, sampleLayers, probeOverhead });
+      const out = { ...v, unit: ctx.unit, column, systems, absent, layers: layerIds, window: { from: Number.isFinite(from) ? from : null, to: Number.isFinite(to) ? to : null },
+        snapshot: opt('snapshot') ?? null, machine: `${os.hostname()} ${process.platform}`, at: new Date().toISOString(), checkout: ckout, audit, preAction: pre, ...record.meta, frames };
+      fs.writeFileSync(path.join(record.out, 'gate.json'), JSON.stringify(out, null, 2));
+      console.log('gate', v.ok ? 'PASS' : 'FAIL', v.fails.join(' | '), v.exempt.length ? '(exempt: ' + v.exempt.join('; ') + ')' : '');
+      return v.ok;
+    },
+  };
+}
+
+function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead }) {
   const fails = [], exempt = [], notes = [];
-  // Whether the cast went to the new engine (runtime.play's return) is not read: the page cannot see it without a src
-  // hook. In after/debug columns a named system on screen is the indirect proof; in before/off nothing is.
-  notes.push('play() return: not checked (after/debug: inferred from the named systems being on screen)');
-  const castFrame = boxes.find(f => f.t >= castAtMs) ?? boxes[0];
-  if (castFrame) {
-    const c = cover(castFrame.boxes), worst = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
-    notes.push(`cover at ${castFrame.t}ms: ${JSON.stringify(c)}`);
-    if (worst && worst[1] > MAX_COVER) fails.push(`cover: ${worst[0]} covers ${(worst[1] * 100).toFixed(0)}% of the caster's box at the cast (${castFrame.t}ms; max ${MAX_COVER * 100}%)`);
+  notes.push('play() return: not read; a named system that started is the evidence that play() returned true');
+  const judged = frames.filter(f => f.t >= from && f.t <= to);
+  // Covering, at the action frame.
+  const actionFrame = frames.find(f => f.t >= actionAtMs) ?? frames[0];
+  if (actionFrame?.boxes) {
+    const c = cover(actionFrame.boxes), worst = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
+    notes.push(`cover at ${actionFrame.t}ms: ${JSON.stringify(c)}`);
+    if (worst && worst[1] > MAX_COVER) fails.push(`cover: ${worst[0]} covers ${(worst[1] * 100).toFixed(0)}% of the caster's box at the action (${actionFrame.t}ms; max ${MAX_COVER * 100}%)`);
   } else fails.push('cover: no boxes recorded');
-  if (!ckout.ok) fails.push(`checkout: src clean ${ckout.srcClean}, served src = HEAD ${ckout.probes.map(p => `${p.file.split('/').pop()}:${p.same}`).join(' ')}`);
+  if (!ckout?.ok) fails.push(`checkout: src clean ${ckout?.srcClean}, served src = HEAD ${(ckout?.probes ?? []).map(p => `${p.file.split('/').pop()}:${p.same}`).join(' ')}`);
   if (real) {
     if (!audit) fails.push('real: no audit from the page');
     else {
@@ -75,18 +137,37 @@ function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStat
       if (audit.otherCasts.length) fails.push(`real: others cast in window: ${audit.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
     }
   } else exempt.push('rules checks (not --real: dummies, no rules run)');
-  const layerColumn = column === 'after' || column === 'debug';
-  if (!layerColumn) exempt.push(`layer checks (column ${column})`);
-  else if (!layerStats) fails.push('layers: this build has no ATTACHED_LAYER_STATS');
+  // Running systems.
+  const ran = new Set(judged.flatMap(f => f.running ?? []));
+  const report = { ran: systems.filter(id => ran.has(id)), missing: systems.filter(id => !ran.has(id)), absentButRan: absent.filter(id => ran.has(id)), runningBeforeAction: [...systems, ...absent].filter(id => pre.running.includes(id)) };
+  notes.push(`systems: ${JSON.stringify(report)}`);
+  if (column === 'before') exempt.push('system presence/absence (column before: recorded only)');
   else {
-    const seen = new Set(timeline.flatMap(f => f.systems));
-    for (const id of systems) {
-      if (pre.systems.includes(id)) fails.push(`layers: ${id} already on screen before the cast (warm residue)`);
-      if (!seen.has(id)) fails.push(`layers: ${id} never on screen in the window`);
-    }
-    if (!timeline.some(f => f.layers > 0)) fails.push('layers: peakLayers 0 in the window');
+    for (const id of report.missing) fails.push(`systems: ${id} never ran in the judged window`);
+    for (const id of report.absentButRan) fails.push(`systems: ${id} ran in the judged window but must not`);
+    for (const id of systems) if (pre.running.includes(id)) fails.push(`systems: ${id} already running before the action (warm residue)`);
   }
-  return { ok: !fails.length, fails, exempt, notes };
+  // Attached layers, for the systems that carry them.
+  if (!(column === 'after' || column === 'debug')) exempt.push(`layer checks (column ${column})`);
+  else if (!layerIds.length) exempt.push('layer checks (no attached systems named)');
+  else if (!sampleLayers) fails.push('layers: this build has no ATTACHED_LAYER_STATS');
+  else {
+    const seen = new Set(judged.flatMap(f => f.layerSystems ?? []));
+    for (const id of layerIds) {
+      if (pre.layers.includes(id)) fails.push(`layers: ${id} already on screen before the action (warm residue)`);
+      if (!seen.has(id)) fails.push(`layers: ${id} never on screen in the judged window`);
+    }
+    if (!judged.some(f => f.layers > 0)) fails.push('layers: peakLayers 0 in the judged window');
+  }
+  // Overhead bar against the body (recorded; the before/after comparison is keyframes.cjs's).
+  let overhead = null;
+  if (probeOverhead) {
+    const pts = judged.filter(f => f.overhead && Number.isFinite(f.overhead.dx));
+    const worst = pts.reduce((w, f) => !w || Math.abs(f.overhead.dx) > Math.abs(w.overhead.dx) ? f : w, null);
+    overhead = worst ? { maxAbsDx: Math.abs(worst.overhead.dx), atMs: worst.t, frames: pts.length } : { maxAbsDx: null, frames: 0 };
+    if (!pts.length) fails.push('overhead: no bar/body point found in the judged window');
+  }
+  return { ok: !fails.length, fails, exempt, notes, overhead };
 }
 
-module.exports = { checkout, resetLayers, readLayers, verdict, machine: () => `${os.hostname()} ${process.platform}` };
+module.exports = { createGate, checkout, cover, verdict, MAX_COVER };
