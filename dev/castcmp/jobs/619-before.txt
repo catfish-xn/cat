@@ -29,5 +29,5 @@ v-capture.cjs warwick w-warwick-before --real 1 --star 3 --target urgot --nfoes 
 v-capture.cjs viktor w-viktor-before --real 1 --star 3 --target twitch --nfoes 3 --foestar 3 --dist 3 --ms 2000 --settle 3000 --systems 37d3ac23 --column before --snapshot c1333710ad8e
 v-capture.cjs scar w-scar-before --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems f4a6240a --column before --snapshot c1333710ad8e
 v-capture.cjs jayce w-jayce-before --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column before --snapshot c1333710ad8e
-v-capture.cjs silco w-silco-before --star 3 --one 1 --dist 2 --settle 3000 --systems c7bb8557 --column before --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-before --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column before --snapshot c1333710ad8e
 v-capture.cjs g23-sion w-g23-sion-before --star 3 --one 1 --dist 1 --unbind 1 --settle 3000 --systems 5afb9708,9118f221 --column before --snapshot c1333710ad8e

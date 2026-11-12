@@ -9,10 +9,14 @@ window.cancelAnimationFrame = id => { rafs.delete(id); };
 function step(ms: number) {
   while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 }
+import { installProbes } from './probes';
+// Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
+const probes = installProbes(() => clock);
 const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 (async () => {
   const unit = params.get('unit')!, dist = Number(params.get('dist') ?? 3), targetModel = params.get('target') ?? 'training-dummy';
   const w = Number(params.get('w') ?? 1920), h = Number(params.get('h') ?? 1080);
+  await probes.ready;
   const mod = await import('../../src/rendering/three-mode/placeholder-renderer');
   let listener: any;
   const controls = { hover() {}, select() {}, dragStart: () => false, dragMove: () => ({ allowed: false }), dragEnd() {}, dragCancel() {} };
@@ -76,16 +80,26 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
       cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - 10)); },
+      // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
+      // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
+      // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
+      // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
+      fresh() { const from = Math.max(0, real.castIndex - 10); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
       audit: (ms: number) => real.audit(ms),
+      systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached,
+      overhead: (id: string) => { const p: any = real.frames[at]!.find((x: any) => x.id === id); return p ? probes.overhead(p) : null; },
     };
     return;
   }
   (window as any).__h = {
     step,
     frame: () => listener.frame(frame(true)),
+    // v-capture --fresh 1 calls this (as fresh()) before the recorded cast: out of combat and back, so the warm pass's
+    // effects, summons (Silco's 12 s minions) and cast counts are gone.
+    fresh() { (window as any).__h.reset(); },
     reset() {
       listener.frame(frame(false));
       step(50);
@@ -112,6 +126,13 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       const evts = ids.map(id => { const s = ++seq; return { type: 'packetDamage', tick: s, eventSeq: s, sourceId: 'me', targetId: id, damageType: 'magic', sourceKind: 'ability', delivery: 'ability-direct', hit: true, amount: 60, mitigated: 60, hpDamage: 60, absorbed: 0 }; });
       listener.events(evts);
     },
+    // ?kill: these dummies drop dead (alive false, still drawn: the death plays and the body stays) before the action.
+    kill(ids: string[]) {
+      for (const id of ids) { const p: any = pieces.find(x => x.id === id); if (p) { p.alive = false; p.visible = true; p.meters = { ...p.meters, hp: 0 }; } }
+      listener.frame(frame(true));
+    },
+    systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached,
+    overhead: (id: string) => { const p: any = pieces.find(x => x.id === id); return p ? probes.overhead(p) : null; },
     clock: () => clock,
     status: r.status,
     detail: r.detail,
