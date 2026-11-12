@@ -118,7 +118,7 @@ function createGate(opt, ctx) {
   };
 }
 
-function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead }) {
+function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead, sampledRunning = true }) {
   const fails = [], exempt = [], notes = [], warnings = [];
   notes.push('play() return: not read; a named system that started is the evidence that play() returned true');
   const judged = frames.filter(f => f.t >= from && f.t <= to);
@@ -149,7 +149,8 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
   const ran = new Set(judged.flatMap(f => f.running ?? []));
   const report = { ran: systems.filter(id => ran.has(id)), missing: systems.filter(id => !ran.has(id)), absentButRan: absent.filter(id => ran.has(id)), runningBeforeAction: [...systems, ...absent].filter(id => pre.running.includes(id)) };
   notes.push(`systems: ${JSON.stringify(report)}`);
-  if (column === 'before') exempt.push('system presence/absence (column before: recorded only)');
+  if (!sampledRunning) exempt.push('running systems (gate.json from before the running-system probe: layers only)');
+  else if (column === 'before') exempt.push('system presence/absence (column before: recorded only)');
   else {
     for (const id of report.missing) fails.push(`systems: ${id} never ran in the judged window`);
     for (const id of report.absentButRan) fails.push(`systems: ${id} ran in the judged window but must not`);
@@ -179,13 +180,27 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
   return { ok: !fails.length, fails, exempt, notes, warnings, overhead };
 }
 
+/** A gate.json from before 5f8a3be8 (layerTimeline / boxTimeline / preCast, no running-system samples) in today's shape:
+ * frames from its two timelines, its systems as the layer ids, nothing to judge for running systems. */
+function upgradeOld(g) {
+  if (g.frames || !g.layerTimeline) return g;
+  // Builds without ATTACHED_LAYER_STATS (a before column) wrote an empty layerTimeline: their frames carry boxes only.
+  const boxes = new Map((g.boxTimeline ?? []).map(b => [b.t, b.boxes])), layers = new Map(g.layerTimeline.map(l => [l.t, l]));
+  const frames = [...new Set([...boxes.keys(), ...layers.keys()])].sort((a, b) => a - b).map(t => ({ t, boxes: boxes.get(t) ?? null,
+    ...(layers.has(t) ? { layers: layers.get(t).layers ?? 0, layerSystems: layers.get(t).systems ?? [] } : {}) }));
+  return { ...g, frames, layers: g.systems ?? [], absent: [], preAction: { running: [], layers: g.preCast?.systems ?? [] }, oldFormat: true };
+}
+
 /** A written gate.json judged again by this verdict(), with no recording: what it recorded (frames, pre-action sample,
- * audit, checkout) under today's rules. Files from before actionAtMs was stored: 500 ms for --real runs, else 0. */
-function regate(g) {
+ * audit, checkout) under today's rules. Files from before actionAtMs was stored: 500 ms for --real runs, else 0. Files from
+ * before the running-system probe (78b6adfc and older) are judged on layers, covering, checkout and rules only. */
+function regate(raw) {
+  const g = upgradeOld(raw);
   const v = verdict({ systems: g.systems ?? [], absent: g.absent ?? [], layerIds: g.layers ?? [], column: g.column, real: !!g.real, ckout: g.checkout,
     audit: g.audit, pre: g.preAction ?? { running: [], layers: [] }, frames: g.frames ?? [], from: g.window?.from ?? -Infinity, to: g.window?.to ?? Infinity,
-    actionAtMs: g.actionAtMs ?? (g.real ? 500 : 0), sampleLayers: (g.frames ?? []).some(f => 'layers' in f), probeOverhead: g.overhead != null });
-  return { ...g, ...v, regated: { at: new Date().toISOString(), was: { ok: g.ok, fails: g.fails } } };
+    actionAtMs: g.actionAtMs ?? (g.real ? 500 : 0), sampleLayers: (g.frames ?? []).some(f => 'layers' in f), probeOverhead: g.overhead != null,
+    sampledRunning: !g.oldFormat });
+  return { ...g, ...v, regated: { at: new Date().toISOString(), was: { ok: raw.ok, fails: raw.fails } } };
 }
 
 module.exports = { regate, createGate, checkout, cover, verdict, MAX_COVER, WARN_COVER };
