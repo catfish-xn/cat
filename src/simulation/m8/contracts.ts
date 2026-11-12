@@ -309,6 +309,12 @@ export interface CastReceipt {
   readonly actualManaSpent: number;
   readonly refundedMana: number;
   readonly completionCell: HexCell;
+  /**
+   * Display-only: this unit's cast number in this combat, counting this cast (runtime.castCount after the cast starts):
+   * 1 for its first cast, reset every combat. Every S13 cast counts: a cast that starts always completes in the same
+   * tick (combat-s13.ts), so there is no interrupted cast to skip. Optional only so older receipts still parse.
+   */
+  readonly castIndex?: number;
   /** Display-only: which branch this cast took, written where the rule chose it; absent when the ability has none. */
   readonly branch?: CastBranch;
 }

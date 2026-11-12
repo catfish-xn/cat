@@ -447,7 +447,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const targets = planS13Cast(ctx, unit, target, seq);
         const branch = ctx.castBranch; ctx.castBranch = undefined;
         const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell,
-          ...(branch !== undefined ? { branch: { castIndex: unit.runtime.castCount, branch } } : {}) }, cost.actualManaSpent);
+          castIndex: unit.runtime.castCount, ...(branch !== undefined ? { branch: { castIndex: unit.runtime.castCount, branch } } : {}) }, cost.actualManaSpent);
         (ctx.castReceipts ??= []).push(receipt);
         // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
         events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
