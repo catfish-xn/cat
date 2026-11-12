@@ -1929,8 +1929,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
       // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
-      // (a jump, a dash) on top of its spot; the knock-up lift is already in `lift`.
-      const travel = view.body ? view.follow.update(seconds, view.lungeWorld) : null;
+      // (a jump, a dash) and its body bone past that (overhead-follow.ts) on top of its spot; the knock-up lift is already in `lift`.
+      const travel = view.body ? view.follow.update(seconds, view.lungeWorld, height) : null;
       const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
       const overY = view.root.position.y + (travel?.y ?? 0);
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.

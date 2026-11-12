@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow } from '../src/rendering/three-mode/overhead-follow';
+import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow } from '../src/rendering/three-mode/overhead-follow';
 
 // Synthetic skeleton, made-up integers.
 const body = () => {
@@ -41,5 +41,40 @@ describe('overhead follow', () => {
     expect(first).toBeGreaterThan(2); expect(first).toBeLessThan(3);
     expect(plain.update(0, { x: 4, z: 0 }).x).toBe(first);
     expect(plain.update(0.001, { x: first + OVERHEAD_SNAP_DISTANCE + 5, z: 0 }).x).toBe(first + OVERHEAD_SNAP_DISTANCE + 5); // a jump: no lag
+  });
+
+  // Synthetic: a Pelvis under the travel bone (name given), idle stance from made-up integers.
+  const rig = (rootName: string) => {
+    const root = new Group(), root2 = new Bone(), pelvis = new Bone();
+    root2.name = rootName; pelvis.name = 'Pelvis'; pelvis.position.set(0, 50, 0);
+    root2.add(pelvis); root.add(root2);
+    const idle = new AnimationClip('idle', 1, [new VectorKeyframeTrack(`${rootName}.position`, [0], [0, 0, 0]),
+      new VectorKeyframeTrack('Pelvis.position', [0], [0, 50, 0])]);
+    root.updateMatrixWorld(true);
+    return { root, root2, pelvis, follow: OverheadFollow.of(root, [idle], 'idle') };
+  };
+  const settle = (follow: OverheadFollow, height: number) => { for (let i = 0; i < 20; i++) follow.update(1, null, height); return follow.offset; };
+
+  it('follows the body bone past its Root beyond the slack (Illaoi, Rumble, Nami: Root stays, the body moves)', () => {
+    const { root, pelvis, follow } = rig('Root'), height = 100;
+    pelvis.position.set(8, 70, 0); root.updateMatrixWorld(true); // inside the slack: an attack's lean, a hover's bob
+    expect(settle(follow, height).length()).toBeCloseTo(0, 6);
+    pelvis.position.set(40, 50 + 80, 0); root.updateMatrixWorld(true);
+    const offset = settle(follow, height);
+    expect(offset.x).toBeCloseTo(40 - BODY_SLACK.across * height);
+    expect(offset.y).toBeCloseTo(80 - BODY_SLACK.up * height);
+    expect(settle(follow, 0).length()).toBeCloseTo(0, 6); // no height given: the body bone is not followed
+  });
+
+  it('does not count the body twice when the Root carries it', () => {
+    const { root, root2, follow } = rig('Root');
+    root2.position.set(30, 0, 0); root.updateMatrixWorld(true);
+    expect(settle(follow, 100).x).toBeCloseTo(30);
+  });
+
+  it('finds a travel bone named in another case (Malzahar ROOT, Corki root)', () => {
+    const { root, root2, follow } = rig('ROOT');
+    root2.position.set(0, 0, 25); root.updateMatrixWorld(true);
+    expect(settle(follow, 100).z).toBeCloseTo(25);
   });
 });
