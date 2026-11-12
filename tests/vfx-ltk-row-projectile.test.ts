@@ -127,7 +127,7 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     // Killed by this very cast, its place kept (snapshotTargets): both runs start at that place.
     let { runtime, units } = await setup(0);
     units.get('target')!.alive = false;
-    expect(runtime.play('vi', 'caster', ['target'], 0, 'cast', { snapshotTargets: true })).toBe(true);
+    expect(runtime.play('vi', 'caster', ['target'], 'cast', { snapshotTargets: true })).toBe(true);
     runtime.update(1 / 30, new Camera());
     expect(built).toHaveLength(2);
     for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
@@ -157,7 +157,7 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     const live = (scene: Scene) => scene.children.filter(o => o.userData.ltkSystem === 'sample').length;
     // The filler holds its room until it ends at 0.2 s: the pair waits, then both start in the same frame.
     let { runtime, scene } = await make();
-    expect(runtime.play('vi', 'caster', ['target'], 0, 'cast', { skill: 'vi-filler' })).toBe(true);
+    expect(runtime.play('vi', 'caster', ['target'], 'cast', { skill: 'vi-filler' })).toBe(true);
     runtime.update(1 / 30, new Camera());
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
     runtime.update(1 / 30, new Camera());
@@ -167,7 +167,7 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     runtime.dispose();
     // A filler that outlasts the pair's 0.3 s window: neither half ever starts.
     ({ runtime, scene } = await make());
-    expect(runtime.play('vi', 'caster', ['target'], 0, 'cast', { skill: 'vi-long' })).toBe(true);
+    expect(runtime.play('vi', 'caster', ['target'], 'cast', { skill: 'vi-long' })).toBe(true);
     runtime.update(1 / 30, new Camera());
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
     for (let f = 0; f < 30; f++) { runtime.update(1 / 30, new Camera()); expect(live(scene)).toBe(0); }
