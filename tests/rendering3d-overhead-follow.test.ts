@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
+import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, mirrorName, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
 
 // Synthetic skeleton, made-up integers.
 const body = () => {
@@ -80,8 +80,52 @@ describe('overhead follow', () => {
 
   it('reports which bone and rule it picked', () => {
     const picked = pickFollowBones(rig('ROOT').root);
-    expect([picked.travel?.name, picked.travelRule, picked.body?.name, picked.bodyRule]).toEqual(['ROOT', 'case', 'Pelvis', 0]);
+    expect([picked.travel?.name, picked.travelRule, picked.body.map(b => b.name), picked.bodyRule, picked.side]).toEqual(['ROOT', 'case', ['Pelvis'], 0, null]);
     const plain = pickFollowBones(new Group());
-    expect([plain.travel, plain.travelRule, plain.body, plain.bodyRule]).toEqual([null, null, null, null]);
+    expect([plain.travel, plain.travelRule, plain.body, plain.bodyRule, plain.side]).toEqual([null, null, [], null, null]);
+  });
+
+  it('spells the other side of a side-marked bone', () => {
+    expect(['L_Front_Hip', 'Hip_R', 'Left_Hip', 'LeftHip', 'l_hip', 'Pelvis', 'Lhip'].map(mirrorName))
+      .toEqual(['R_Front_Hip', 'Hip_L', 'Right_Hip', 'RightHip', 'r_hip', null, null]);
+  });
+
+  // Synthetic four-legged rig: Root > Body > (L_Front_Hip, R_Front_Hip?) and the idle stance as loaded.
+  const legs = (options: { mirror: boolean; underBody: boolean }) => {
+    const root = new Group(), travel = new Bone(), trunk = new Bone(), left = new Bone(), right = new Bone();
+    travel.name = 'Root'; trunk.name = 'Body'; left.name = 'L_Front_Hip'; right.name = 'R_Front_Hip';
+    trunk.position.set(0, 40, 0); left.position.set(-10, 0, 10); right.position.set(10, 0, 10);
+    root.add(travel);
+    const parent = options.underBody ? trunk : travel;
+    if (options.underBody) travel.add(trunk);
+    parent.add(left); if (options.mirror) parent.add(right);
+    root.updateMatrixWorld(true);
+    const idle = new AnimationClip('idle', 1, [new VectorKeyframeTrack('Root.position', [0], [0, 0, 0])]);
+    return { root, trunk, left, right, picked: pickFollowBones(root), follow: OverheadFollow.of(root, [idle], 'idle') };
+  };
+
+  it('follows the midpoint of a hip and its mirror, so one leg swinging out moves the bars half as far', () => {
+    const { root, left, right, picked, follow } = legs({ mirror: true, underBody: true }), height = 100;
+    expect([picked.side, picked.body.map(b => b.name)]).toEqual(['pair', ['L_Front_Hip', 'R_Front_Hip']]);
+    left.position.x -= 60; right.position.x += 60; root.updateMatrixWorld(true); // legs splay: the midpoint stays
+    expect(settle(follow, height).length()).toBeCloseTo(0, 6);
+    left.position.x += 60 + 40; right.position.x -= 60 - 40; root.updateMatrixWorld(true); // both step 40 sideways
+    expect(settle(follow, height).x).toBeCloseTo(40 - BODY_SLACK.across * height);
+  });
+
+  it('follows the bone both hang from when the hip has no mirror', () => {
+    const { root, trunk, left, picked, follow } = legs({ mirror: false, underBody: true }), height = 100;
+    expect([picked.side, picked.body.map(b => b.name)]).toEqual(['parent', ['Body']]);
+    left.position.x -= 80; root.updateMatrixWorld(true); // the leg alone: no follow
+    expect(settle(follow, height).length()).toBeCloseTo(0, 6);
+    trunk.position.z += 50; root.updateMatrixWorld(true);
+    expect(settle(follow, height).z).toBeCloseTo(50 - BODY_SLACK.across * height);
+  });
+
+  it('follows only the Root when the shared parent is the Root itself', () => {
+    const { root, left, picked, follow } = legs({ mirror: false, underBody: false });
+    expect([picked.side, picked.body]).toEqual(['dropped', []]);
+    left.position.x -= 80; root.updateMatrixWorld(true);
+    expect(settle(follow, 100).length()).toBeCloseTo(0, 6);
   });
 });
