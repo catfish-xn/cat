@@ -320,8 +320,8 @@ export function cueAdditions(champion: string, systems: Readonly<Record<string, 
 }
 
 /**
- * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
- * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
+ * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
+ * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
@@ -332,6 +332,10 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
+  // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
+  // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
+  '84b969e0': ['Trench'],
 };
 
 /**

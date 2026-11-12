@@ -100,10 +100,17 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
   bodyGone?: boolean }
-/** A row projectile's two ends: where `root` stands and `cells` cells along the board row (world X) on `side`. */
-export function rowPath(root: Object3D, side: -1 | 1, cells: number): [WorldPoint, WorldPoint] {
-  const at = root.getWorldPosition(new Vector3()), reach = side * cells * CELL_LEAGUE_UNITS * ARENA_UNIT_SCALE;
-  return [[at.x, at.y, at.z], [at.x + reach, at.y, at.z]];
+/**
+ * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
+ * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
+ * x by its column and its y by its row alone, so one row is one world Z for either player.
+ */
+export function rowPath(from: WorldPoint, side: -1 | 1, cells: number): [WorldPoint, WorldPoint] {
+  return [from, [from[0] + side * cells * CELL_LEAGUE_UNITS * ARENA_UNIT_SCALE, from[1], from[2]]];
+}
+/** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
+export function standingPoint(root: Object3D): WorldPoint {
+  const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
@@ -346,6 +353,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
         if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
+        // A row projectile (TimelineCue.rowSide) runs between two board points taken now: where its target stands (its
+        // snapshot point once it is dead) and rowCells along the row. With neither it does not play: it never falls back
+        // to a flight from the caster.
+        const rowStart = spawn.event === 'projectile' && spawn.rowSide ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        if (spawn.event === 'projectile' && spawn.rowSide && !rowStart) continue;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -382,8 +394,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        // A row projectile (TimelineCue.rowSide) runs between two board points taken now: its target's place and rowCells along the row.
-        const rowEnds = spawn.event === 'projectile' && spawn.rowSide && target ? rowPath(target.root, spawn.rowSide, spawn.rowCells ?? 0) : null;
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, spawn.rowCells ?? 0) : null;
         const anchor = rowEnds ? pointAnchor(rowEnds[0]) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
