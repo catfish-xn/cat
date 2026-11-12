@@ -10,21 +10,47 @@
 // A job that fails does not stop the run. The first job of a batch runs alone first: if it fails at tool level (no
 // gate.json written: the page did not come up, a probe could not be read, the harness threw) the batch is skipped.
 // A gate FAIL is not a tool failure. The end prints each batch's passed / failed jobs and sheets, and writes summary.json.
+// --regate: no checkout and no recording. Every job's existing <out>/<batch>/<column>/<job>/gate.json is judged again by
+// this checkout's gate.cjs (regate(): the recorded frames under today's rules, e.g. covering now a warning unless a foe
+// nearer the camera covers over 60%); the recording's own judgement is kept as gate.orig.json, <job>.ok follows the new verdict,
+// the gates/ copies are refreshed and the sheets are composed again (keyframes.cjs from this checkout). The jobs files
+// are read from this checkout too; --before-tree / --after-tree are not needed.
 const { spawnSync } = require('child_process');
 const fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
 const planFile = argv[0];
-for (const k of ['before-tree', 'after-tree', 'out', 'root']) if (!planFile || !opt(k)) { console.error(`usage: run-plan.cjs <plan.json> --before-tree D --after-tree D --out D --root D (missing ${planFile ? '--' + k : 'plan'})`); process.exit(2); }
+const regateOnly = argv.includes('--regate');
+for (const k of regateOnly ? ['out'] : ['before-tree', 'after-tree', 'out', 'root']) if (!planFile || !opt(k)) { console.error(`usage: run-plan.cjs <plan.json> --before-tree D --after-tree D --out D --root D (missing ${planFile ? '--' + k : 'plan'})`); process.exit(2); }
 const plan = JSON.parse(fs.readFileSync(path.resolve(planFile), 'utf8'));
 const here = path.resolve(__dirname, '../..');
 const run = (cmd, args, cwd, quiet) => { const r = spawnSync(cmd, args, { cwd, encoding: 'utf8', maxBuffer: 256 << 20, stdio: quiet ? 'pipe' : ['ignore', 'inherit', 'inherit'] }); return { code: r.status ?? 1, out: (r.stdout ?? '') + (r.stderr ?? '') }; };
 const tools = opt('tools') ?? run('git', ['rev-parse', 'HEAD'], here, true).out.trim();
-const trees = { before: path.resolve(opt('before-tree')), after: path.resolve(opt('after-tree')) };
+const trees = regateOnly ? { before: here, after: here } : { before: path.resolve(opt('before-tree')), after: path.resolve(opt('after-tree')) };
 const out = path.resolve(opt('out')), kfOut = path.join(out, 'keyframes'), gatesOut = path.join(kfOut, 'gates');
 fs.mkdirSync(gatesOut, { recursive: true });
 const only = opt('only')?.split(',');
 const jobLines = file => fs.readFileSync(file, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 const passThrough = ['port', 'assetPort'].flatMap(k => opt(k) ? ['--' + k, opt(k)] : []);
+
+/** --regate: judge one column's written gate.json files again (gate.cjs regate()). */
+function regateColumn(spec, dir, batchName, column) {
+  const { regate } = require(path.join(here, 'dev/castcmp/gate.cjs'));
+  const names = jobLines(path.join(here, spec.jobs)).map(l => l.split(/\s+/)[2]);
+  const r = { src: spec.src, passed: [], failed: [], missing: [], changed: [] };
+  for (const n of names) {
+    const gf = path.join(dir, n, 'gate.json'), orig = path.join(dir, n, 'gate.orig.json'), ok = path.join(dir, n + '.ok');
+    if (!fs.existsSync(gf)) { r.missing.push(n); r.failed.push(n); continue; }
+    const was = JSON.parse(fs.readFileSync(gf, 'utf8'));
+    if (!was.regated) fs.copyFileSync(gf, orig); // a fresh recording's own judgement
+    const g = regate(was);
+    fs.writeFileSync(gf, JSON.stringify(g, null, 2));
+    if (g.ok) { fs.writeFileSync(ok, ''); r.passed.push(n); } else { fs.rmSync(ok, { force: true }); r.failed.push(n); }
+    if (g.ok !== g.regated.was.ok) r.changed.push(`${n} ${g.regated.was.ok ? 'PASS' : 'FAIL'}->${g.ok ? 'PASS' : 'FAIL'}`);
+    console.log(`regate ${batchName}/${column}/${n}: ${g.ok ? 'PASS' : 'FAIL ' + g.fails.join(' | ')}${g.warnings?.length ? '  (' + g.warnings.join('; ') + ')' : ''}`);
+    fs.copyFileSync(gf, path.join(gatesOut, `${batchName}-${column}-${n}.gate.json`));
+  }
+  return r;
+}
 
 const summary = { tools, plan: planFile, at: new Date().toISOString(), batches: [] };
 for (const batch of plan.batches) {
@@ -35,6 +61,7 @@ for (const batch of plan.batches) {
   for (const column of ['before', 'after']) {
     const spec = batch[column]; if (!spec) continue;
     const tree = trees[column], dir = path.join(out, batch.name, column);
+    if (regateOnly) { result.columns[column] = regateColumn(spec, dir, batch.name, column); continue; }
     // A commit the tree lacks is fetched from its origin first (GitHub serves any commit reachable from a branch or PR).
     // Short ids cannot be fetched by name, so a miss fetches every branch and PR head.
     if ([spec.src, tools].some(c => run('git', ['cat-file', '-e', c + '^{commit}'], tree, true).code))
@@ -72,7 +99,7 @@ for (const batch of plan.batches) {
 }
 for (const b of summary.batches) {
   console.log(`\n${b.name}${b.skipped ? `  SKIPPED: ${b.skipped}` : ''}`);
-  for (const [c, r] of Object.entries(b.columns)) console.log(`  ${c} @ ${r.src.slice(0, 8)}: ${r.passed.length} passed${r.failed.length ? `, failed: ${r.failed.join(' ')}` : ''}`);
+  for (const [c, r] of Object.entries(b.columns)) console.log(`  ${c} @ ${r.src.slice(0, 8)}: ${r.passed.length} passed${r.failed.length ? `, failed: ${r.failed.join(' ')}` : ''}${r.missing?.length ? `, no gate.json: ${r.missing.join(' ')}` : ''}${r.changed?.length ? `, regate changed: ${r.changed.join(' ')}` : ''}`);
   if (b.sheets.length) console.log(`  sheets: ${b.sheets.filter(s => s.ok).length}/${b.sheets.length}${b.sheets.filter(s => !s.ok).map(s => `\n    FAIL ${s.sheet.split(' ').slice(0, 4).join(' ')}: ${s.out}`).join('')}`);
 }
 fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2));

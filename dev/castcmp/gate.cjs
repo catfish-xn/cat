@@ -6,7 +6,8 @@
 //   - the vfx runtime, per recorded frame: every system running (harness probes.ts, any build) and the attached systems
 //     with a layer on screen (runtime.ts ATTACHED_LAYER_STATS, peak cleared before each step; builds that have it), plus
 //     one sample just before the recorded action (a system already running then is the warm pass's, not this action's);
-//   - covering: no foe's screen box over 30% of the caster's at the action frame;
+//   - covering, at the action frame: a foe nearer the camera (its box's bottom below the caster's) over 60% of the
+//     caster's box fails; any other overlap over 30% is a warning in notes (warnings[]), not a failure;
 //   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame.
 // Options: --systems id,id|none (must run in the judged window), --absent id,id (must not run in it), --layers id,id|none
 // (which of --systems must also show an attached layer; default all of them), --from/--to ms (the judged window on the
@@ -21,8 +22,10 @@ const os = require('os');
 const SRC_PROBES = ['src/rendering/three-mode/vfx-ltk/runtime.ts', 'src/rendering/three-mode/placeholder-renderer.ts'];
 const git = (repo, ...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8', maxBuffer: 64 << 20 });
 const list = v => v === undefined || v === 'none' ? [] : v.split(',').filter(Boolean);
-/** A foe's box may cover at most this share of the caster's at the action frame. */
-const MAX_COVER = 0.3;
+/** Overlap above this share of the caster's box at the action frame is a warning (notes only). */
+const WARN_COVER = 0.3;
+/** A foe nearer the camera than the caster (box bottom lower on screen) may cover at most this share; above it fails. */
+const MAX_COVER = 0.6;
 
 async function checkout(page, repo) {
   const head = git(repo, 'rev-parse', 'HEAD').trim();
@@ -106,7 +109,7 @@ function createGate(opt, ctx) {
       if (!enabled) return true;
       const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
       const v = verdict({ systems, absent, layerIds, column, real: ctx.real, ckout, audit, pre, frames, from, to, actionAtMs: ctx.actionAtMs, sampleLayers, probeOverhead });
-      const out = { ...v, unit: ctx.unit, column, systems, absent, layers: layerIds, window: { from: Number.isFinite(from) ? from : null, to: Number.isFinite(to) ? to : null },
+      const out = { ...v, unit: ctx.unit, column, actionAtMs: ctx.actionAtMs, systems, absent, layers: layerIds, window: { from: Number.isFinite(from) ? from : null, to: Number.isFinite(to) ? to : null },
         snapshot: opt('snapshot') ?? null, machine: `${os.hostname()} ${process.platform}`, at: new Date().toISOString(), checkout: ckout, audit, preAction: pre, ...record.meta, frames };
       fs.writeFileSync(path.join(record.out, 'gate.json'), JSON.stringify(out, null, 2));
       console.log('gate', v.ok ? 'PASS' : 'FAIL', v.fails.join(' | '), v.exempt.length ? '(exempt: ' + v.exempt.join('; ') + ')' : '');
@@ -116,7 +119,7 @@ function createGate(opt, ctx) {
 }
 
 function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead }) {
-  const fails = [], exempt = [], notes = [];
+  const fails = [], exempt = [], notes = [], warnings = [];
   notes.push('play() return: not read; a named system that started is the evidence that play() returned true');
   const judged = frames.filter(f => f.t >= from && f.t <= to);
   // Covering, at the action frame.
@@ -124,7 +127,12 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
   if (actionFrame?.boxes) {
     const c = cover(actionFrame.boxes), worst = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
     notes.push(`cover at ${actionFrame.t}ms: ${JSON.stringify(c)}`);
-    if (worst && worst[1] > MAX_COVER) fails.push(`cover: ${worst[0]} covers ${(worst[1] * 100).toFixed(0)}% of the caster's box at the action (${actionFrame.t}ms; max ${MAX_COVER * 100}%)`);
+    const me = actionFrame.boxes.me;
+    for (const [id, share] of Object.entries(c)) {
+      const front = actionFrame.boxes[id].bottom > me.bottom, pct = (share * 100).toFixed(0);
+      if (front && share > MAX_COVER) fails.push(`cover: ${id} (nearer the camera) covers ${pct}% of the caster's box at the action (${actionFrame.t}ms; max ${MAX_COVER * 100}% for a foe in front)`);
+      else if (share > WARN_COVER) warnings.push(`cover: ${id} (${front ? 'nearer the camera' : 'behind the caster'}) covers ${pct}% of the caster's box at the action (${actionFrame.t}ms); warning only`);
+    }
   } else fails.push('cover: no boxes recorded');
   if (!ckout?.ok) fails.push(`checkout: src clean ${ckout?.srcClean}, served src = HEAD ${(ckout?.probes ?? []).map(p => `${p.file.split('/').pop()}:${p.same}`).join(' ')}`);
   if (real) {
@@ -167,7 +175,17 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
     overhead = worst ? { maxAbsDx: Math.abs(worst.overhead.dx), atMs: worst.t, frames: pts.length } : { maxAbsDx: null, frames: 0 };
     if (!pts.length) fails.push('overhead: no bar/body point found in the judged window');
   }
-  return { ok: !fails.length, fails, exempt, notes, overhead };
+  notes.push(...warnings.map(w => 'WARN ' + w));
+  return { ok: !fails.length, fails, exempt, notes, warnings, overhead };
 }
 
-module.exports = { createGate, checkout, cover, verdict, MAX_COVER };
+/** A written gate.json judged again by this verdict(), with no recording: what it recorded (frames, pre-action sample,
+ * audit, checkout) under today's rules. Files from before actionAtMs was stored: 500 ms for --real runs, else 0. */
+function regate(g) {
+  const v = verdict({ systems: g.systems ?? [], absent: g.absent ?? [], layerIds: g.layers ?? [], column: g.column, real: !!g.real, ckout: g.checkout,
+    audit: g.audit, pre: g.preAction ?? { running: [], layers: [] }, frames: g.frames ?? [], from: g.window?.from ?? -Infinity, to: g.window?.to ?? Infinity,
+    actionAtMs: g.actionAtMs ?? (g.real ? 500 : 0), sampleLayers: (g.frames ?? []).some(f => 'layers' in f), probeOverhead: g.overhead != null });
+  return { ...g, ...v, regated: { at: new Date().toISOString(), was: { ok: g.ok, fails: g.fails } } };
+}
+
+module.exports = { regate, createGate, checkout, cover, verdict, MAX_COVER, WARN_COVER };

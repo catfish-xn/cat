@@ -1,9 +1,10 @@
 // node dev/castcmp/jobs-check.mjs <jobs.txt> [--out check.json]
 // Pre-flight for a jobs file, in node only (no browser, no assets): every `v-capture.cjs ... --real 1` line is simulated the
 // way harness.ts replays it (real-combat.ts) and must show, inside its recorded window (--ms, default 3000, from half a
-// second before the first cast of the unit): that cast, its targets alive at the end, no other unit casting, and no foe
-// next to the caster on its row or nearer the camera from the cast to the window's end (coarse: the browser gate's
-// box-overlap check is the authority on covering).
+// second before the first cast of the unit): that cast, its targets alive at the end and no other unit casting. A foe next
+// to the caster on its row or nearer the camera from the cast to the window's end is a warning only (WARN, never a
+// failure): the browser gate's box overlap is the authority, and it fails a job only when a foe nearer the camera covers
+// over 60% of the caster.
 // Lines without --real are listed as "dummy" (no rules run; nothing to check here; --kill is allowed there and only there).
 // Exit 1 if any real line fails.
 import { build } from 'esbuild';
@@ -48,9 +49,9 @@ for (const line of lines) {
   // the real screen boxes; this is the node stand-in, checked at the cast and through the window).
   const blockers = [...new Set([run.castIndex, ...Array.from({ length: a.to - run.castIndex + 1 }, (_, i) => run.castIndex + i)]
     .filter(t => cells[t]).flatMap(t => rc.frontBlockers(cells[t])))];
-  if (blockers.length) why.push(`may cover the caster: ${blockers.join(',')}`);
-  results.push({ name, unit, mode: 'real', ok: !why.length, why, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts });
+  const warn = blockers.length ? [`may cover the caster (warning; the browser gate decides): ${blockers.join(',')}`] : [];
+  results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts });
 }
-for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.castTick !== undefined ? ` cast@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}`);
+for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.castTick !== undefined ? ` cast@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}${r.warn?.length ? ' | WARN ' + r.warn.join('; ') : ''}`);
 if (opt('out')) writeFileSync(resolve(opt('out')), JSON.stringify(results, null, 2));
 process.exit(results.some(r => !r.ok) ? 1 : 0);

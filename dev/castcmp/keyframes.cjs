@@ -1,7 +1,10 @@
 // node dev/castcmp/keyframes.cjs --hero <name> --system <id> --before <dir> --after <dir> [--off <dir>] [--debug <dir>] --out <folder> [--prefix e138w]
 //   [--from MS --to MS] pick the peak only inside this span; [--times a,b,c] use these frames instead of the peak (then
 //   --before may be left out: an after-only sheet);
-//   [--crop me,foe,...] crop the union of these units' boxes (default me)
+//   [--crop me,foe,...] crop the union of these units' boxes (default me; hit systems, whose effect sits on the target: me,foe)
+//   [--pick-diff] pick by pixel difference even when the after gate.json has a layer timeline for --system
+// The peak frame: by default the frame of the after run's gate.json where --system has an attached layer on screen and
+// the most layers are up; without such frames, the frame where before and after differ most inside the area.
 // One recorded job's before / after / off (and optional debug) frame folders (v-capture.cjs output) to two jpgs in --out:
 //   <prefix>-<hero>-<system>.jpg       the caster's area at native resolution, 3 rows (the frame where before and after
 //                                       differ most inside that area, and the frames either side) x one column per folder;
@@ -60,6 +63,16 @@ async function encode(base, name) {
     let sum = 0; for (let p = 0; p < a.length; p++) sum += Math.abs(a[p] - b[p]);
     const d = sum / a.length; diffs.push(+d.toFixed(2)); if (d > best) { best = d; peak = i; }
   }
+  // Preferred pick: the after run's gate.json layer timeline. Among the frames where --system has an attached layer on
+  // screen (frames[].layerSystems), the one with the most layers (frames[].layers); the pixel difference is the fallback
+  // (systems without layers, builds without ATTACHED_LAYER_STATS, hit systems whose effect sits on the target).
+  let pickedBy = 'pixel-diff';
+  const timeline = (afterGate?.frames ?? []).filter(f => f.t >= from && f.t <= to && (f.layerSystems ?? []).includes(opt('system')));
+  if (timeline.length && !opt('pick-diff')) {
+    const top = timeline.reduce((w, f) => (f.layers ?? 0) > (w.layers ?? 0) ? f : w);
+    const i = after.frames.findIndex(f => f.t === top.t);
+    if (i >= 0 && i < n) { peak = i; pickedBy = `layers (${top.layers} at ${top.t}ms; ${timeline.length} frames with ${opt('system')} on screen)`; }
+  }
   if (peak < 0) throw new Error('no frame inside --from/--to');
   const fixed = opt('times') ? opt('times').split(',').map(Number).map(t => after.frames.findIndex(f => f.t >= t)).filter(i => i >= 0 && i < n) : null;
   const rows = fixed?.length ? fixed : [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n);
@@ -73,7 +86,7 @@ async function encode(base, name) {
   const g = after.gate ?? {};
   const commit = c => (c.gate?.checkout?.head ?? '?').slice(0, 8);
   const head = [
-    `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms, mean |before-after| ${best.toFixed(1)})`,
+    `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms by ${pickedBy.split(' ')[0]}, mean |before-after| ${best.toFixed(1)})`,
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
     ...(overhead ? [`overhead |bar-body| max: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
@@ -100,6 +113,6 @@ async function encode(base, name) {
   }
   const whole = await encode(sharp({ create: { width: hw * per, height: capH + hh * fr, channels: 3, background: '#000' } }).composite(full), path.join(out, base + '-full.jpg'));
   fs.mkdirSync(path.join(out, 'meta'), { recursive: true });
-  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, crop: ids, window: [opt('from') ?? null, opt('to') ?? null], overhead, peak: after.frames[peak].t, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
+  fs.writeFileSync(path.join(out, 'meta', base + '.json'), JSON.stringify({ hero: opt('hero'), system: opt('system'), area, crop: ids, window: [opt('from') ?? null, opt('to') ?? null], overhead, peak: after.frames[peak].t, pickedBy, rows: rows.map(i => after.frames[i].t), diffs, crop, whole, columns: sets.map(s => ({ key: s.key, dir: s.dir, gate: s.gate ? { ok: s.gate.ok, head: s.gate.checkout?.head } : null })) }, null, 2));
   console.log(JSON.stringify({ crop: crop.name, cropBytes: crop.bytes, full: whole.name, fullBytes: whole.bytes, peakMs: after.frames[peak].t }));
 })().catch(e => { console.error(e); process.exit(1); });
