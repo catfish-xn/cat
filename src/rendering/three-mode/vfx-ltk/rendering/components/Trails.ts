@@ -206,23 +206,27 @@ function strandInto(source: Source, emitter: EmitterModel, stamp: number, fadeHe
 const END_FADE_STOPPED = 0.05;
 const END_FADE_SPAN = 2;
 function endFade(emitter: EmitterModel, held: number): void {
-  const span = END_FADE_SPAN * STRAND.width[held - 1];
-  if (!(span > 0)) return;
   const premultiplied = emitter.blendMode === BLEND_MODE.add || emitter.blendMode === BLEND_MODE.subtract;
+  fadeHead(STRAND.position, STRAND.width, STRAND.color, held, premultiplied);
+}
+
+/**
+ * The fade `endFade` puts on a strand's first `held` points, born oldest first: back from the newest, over END_FADE_SPAN
+ * times its half-width, alpha (and the colour too where it is premultiplied) goes from nothing at the head to whole.
+ */
+export function fadeHead(position: Float32Array, width: Float32Array, color: Float32Array, held: number, premultiplied: boolean): void {
+  const span = END_FADE_SPAN * width[held - 1];
+  if (!(span > 0)) return;
   let walked = 0;
   for (let slot = held - 1; slot >= 0; slot -= 1) {
     if (slot < held - 1) {
       const a = slot * 3, b = (slot + 1) * 3;
-      walked += Math.hypot(
-        STRAND.position[a] - STRAND.position[b],
-        STRAND.position[a + 1] - STRAND.position[b + 1],
-        STRAND.position[a + 2] - STRAND.position[b + 2],
-      );
+      walked += Math.hypot(position[a] - position[b], position[a + 1] - position[b + 1], position[a + 2] - position[b + 2]);
     }
     if (walked >= span) break;
     const x = walked / span;
     const keep = x * x * (3 - 2 * x);
-    if (premultiplied) for (let channel = 0; channel < 4; channel += 1) STRAND.color[slot * 4 + channel] *= keep;
-    else STRAND.color[slot * 4 + 3] *= keep;
+    if (premultiplied) for (let channel = 0; channel < 4; channel += 1) color[slot * 4 + channel] *= keep;
+    else color[slot * 4 + 3] *= keep;
   }
 }

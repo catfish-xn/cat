@@ -5,6 +5,7 @@ import { CHILD_COUNT_CAP, CHILD_PARTICLES, CHILD_ROOM_CAP, childRoomOf, createLt
 import { drawnEmitters } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/definitions';
 import type { SystemModel } from '../src/rendering/three-mode/vfx-ltk/engine/model/model';
 import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
+import { fadeHead } from '../src/rendering/three-mode/vfx-ltk/rendering/components/Trails';
 
 describe('a run’s child room off what its system measured', () => {
   it('keeps the old flat room for a system never measured or spawning no child', () => {
@@ -58,5 +59,32 @@ describe('every child a moving run spawns fits the room its system measured', ()
     expect(fitted.parents).toBe(flat.parents);
     expect(fitted.spawned).toBe(fitted.parents);
     library.dispose();
+  });
+});
+
+describe('a stopped trail head fades out (TRAIL_END_FADE, a fit)', () => {
+  // Synthetic only: eight points one unit apart along X, the newest last, with a head half-width of 2 (span 4).
+  const strand = () => {
+    const position = new Float32Array(8 * 3), width = new Float32Array(8).fill(2), color = new Float32Array(8 * 4).fill(1);
+    for (let at = 0; at < 8; at++) position[at * 3] = at;
+    return { position, width, color };
+  };
+  it('goes from nothing at the head to whole at twice its half-width back, smoothly, the colour left alone', () => {
+    const { position, width, color } = strand();
+    fadeHead(position, width, color, 8, false);
+    const alpha = Array.from({ length: 8 }, (_, at) => color[at * 4 + 3]);
+    expect(alpha[7]).toBe(0);
+    expect(alpha[5]).toBeCloseTo(0.5);
+    expect(alpha.slice(0, 4)).toEqual([1, 1, 1, 1]);
+    for (let at = 4; at < 7; at++) expect(alpha[at]).toBeGreaterThan(alpha[at + 1]);
+    for (let at = 0; at < 8; at++) expect([color[at * 4], color[at * 4 + 1], color[at * 4 + 2]]).toEqual([1, 1, 1]);
+  });
+  it('fades the colour with it where the colour is premultiplied, and does nothing for a head of no width', () => {
+    const one = strand();
+    fadeHead(one.position, one.width, one.color, 8, true);
+    expect([...one.color.subarray(5 * 4, 6 * 4)].every(value => Math.abs(value - 0.5) < 1e-6)).toBe(true);
+    const none = strand(); none.width[7] = 0;
+    fadeHead(none.position, none.width, none.color, 8, false);
+    expect([...none.color].every(value => value === 1)).toBe(true);
   });
 });
