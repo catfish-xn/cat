@@ -14,7 +14,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime, MIN_RESERVE, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { FX_SCALE, measurePeak } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -204,6 +204,42 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
     runtime.update(1 / 30, new Camera());
     expect(budget.live).toBe(Math.min(250, Math.ceil(peak * 1.25)) + MIN_RESERVE);
+    runtime.dispose();
+  });
+
+  it('a first cast under a tight budget: a heavy landing keeps its room, the pair waits whole and starts or drops whole', async () => {
+    // Heavy systems (high rate) measure high in place, so even measured first plays can fill the budget.
+    const heavy = syntheticSystem({ rate: constant(num(200)), lifetime: num(1), particleLifetime: constant(num(0.6)) });
+    const rowSystem = syntheticSystem({ rate: constant(num(60)), lifetime: num(1), particleLifetime: constant(num(0.5)) });
+    const setup = async (landing: number, rowsDelay: number) => {
+      built.length = 0;
+      const cues: TimelineCue[] = [{ system: 'heavy', event: 'cast-start', delay: 0, duration: landing, main: true },
+        ...[-1, 1].map(side => ({ ...row(side as -1 | 1), system: 'rows', delay: rowsDelay, together: 'pair' }))];
+      const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+        ? { version: 1, systems: { heavy: 'systems/heavy.json', rows: 'systems/rows.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } }
+        : url.includes('heavy') ? heavy : rowSystem, readTexture: async () => new Texture() });
+      const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 60, 0, 0); return [id, { root, body: null, alive: true }]; }));
+      const reserve = (id: string, seconds: number) => Math.min(250, Math.max(MIN_RESERVE, Math.ceil(measurePeak(library.get(id)!, seconds) * 1.25)));
+      const budget = { live: 0, max: 0 }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+      await runtime.warm('vi');
+      const heavyRoom = reserve('heavy', landing), rowRoom = reserve('rows', 0.6);
+      budget.max = heavyRoom + 1.5 * rowRoom; // room for the heavy landing and one row run, never both rows beside it
+      const rows = () => scene.children.filter(o => o.userData.ltkSystem === 'rows').length;
+      return { runtime, scene, budget, rows, heavyRoom, rowRoom };
+    };
+    // The heavy landing ends at 0.2 s, inside the pair's 0.3 s: both rows start in one frame, after it.
+    let { runtime, budget, rows, heavyRoom, rowRoom } = await setup(0.2, 0);
+    expect(heavyRoom).toBeGreaterThan(rowRoom); expect(rowRoom).toBeGreaterThan(MIN_RESERVE);
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    let started = -1;
+    for (let f = 0; f < 15; f++) { runtime.update(1 / 30, new Camera()); expect([0, 2]).toContain(rows()); if (rows() && started < 0) started = f; }
+    expect(started).toBeGreaterThan(0); expect(budget.live).toBeLessThanOrEqual(budget.max);
+    runtime.dispose();
+    // The heavy landing outlasts the pair's window: neither row ever starts, and the landing plays on.
+    ({ runtime, budget, rows } = await setup(1, 0));
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    for (let f = 0; f < 20; f++) { runtime.update(1 / 30, new Camera()); expect(rows()).toBe(0); }
+    expect(runtime.queued).toBe(0); expect(runtime.active).toBe(1); expect(budget.live).toBeLessThanOrEqual(budget.max);
     runtime.dispose();
   });
 

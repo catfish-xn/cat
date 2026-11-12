@@ -3660,9 +3660,9 @@
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15774,
+      "currentBytes": 18924,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "95e1c8ef6c361682298920bbf74dac5724e0d826b694a086d0cb465583003acc",
+      "currentSha256": "631fd7212899e492d59be0ead67eac7ad6d91c9df7b9c524e3c297456b6eb180",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sevika-reels.test.ts": {
