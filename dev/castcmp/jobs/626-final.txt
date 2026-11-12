@@ -1,0 +1,6 @@
+# #626 (with #618) finished side-by-side for the user: our 3-star Vi grab, slam and row shockwave, 2.5 s from 0.5 s before
+# the cast. Checkout: branch claude/vi-landing-kf (this commit: #626 head cdd9c160 on #618, castcmp tools e998bf8b).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (PASS, 11-12, Linux).
+# One 3-star Sett, --dist 2: the lifted target stays on screen (11-12 #626b gate boxes: its top reaches y 12 at most);
+# damage numbers are on (--real). Warm (one warm cast first), as every recording so far.
+v-capture.cjs vi v626-final --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 9614ffb4 --layers 9614ffb4 --column after --snapshot c1333710ad8e
