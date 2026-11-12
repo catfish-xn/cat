@@ -383,6 +383,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
           run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP;
         }
+        // Playing out, it holds only what it still has live: its reserve shrinks as its particles die.
+        if (run.ending) {
+          const live = run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0);
+          if (live < run.reserved) { if (options.budget) options.budget.live -= run.reserved - live; run.reserved = live; }
+        }
         const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
         if (over) { release(run, run.stopped); running.delete(run); }
       }
@@ -435,8 +440,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
         const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
-        const blocked = () => running.size + partners.length >= MAX_LTK_SYSTEMS || starts + partners.length >= 6 || !!(options.budget
+        const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
+        const blocked = () => crowded() || starts + partners.length >= 6;
+        // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
+        // first, before anything still in its own time is weighed for eviction.
+        while (crowded()) {
+          let tail: Running | undefined;
+          for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
+          if (!tail) break;
+          release(tail); running.delete(tail);
+        }
         while (blocked()) {
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
