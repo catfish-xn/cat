@@ -10,6 +10,7 @@ import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
 import { admitEffect, effectImportance, type EffectImportance } from '../effect-budget';
 import { ATTACHED_SLOTS, ATTACHED_STATS, type AttachedDraw } from './rendering/components/AttachedMeshes';
+import { systemSpan } from './engine/model/systemModel';
 
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
@@ -366,15 +367,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
-        const tail = Math.min(0.25, spawn.duration / 4);
+        // A play-out cue runs for its system's own span, `duration` only capping it (TimelineCue.playOut).
+        const duration = spawn.playOut ? Math.min(spawn.duration, systemSpan(loaded.model)) : spawn.duration;
+        const tail = Math.min(0.25, duration / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
-          ? Math.max(spawn.duration - tail, spawn.stopAfter ?? 0) : undefined;
+          ? Math.max(duration - tail, spawn.stopAfter ?? 0) : undefined;
         const nextOptions = { anchor, attachment,
           target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
+          duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
@@ -390,7 +393,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += need;
-          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, span: spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + duration, started: clock, span: duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

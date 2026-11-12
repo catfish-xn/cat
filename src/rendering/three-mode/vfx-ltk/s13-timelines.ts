@@ -1,8 +1,11 @@
 /** 14.24 converted event IDs/bones from out/README.md. Seconds and script-only impacts are P conventions, 2026-10-26. */
 import type { TimelineCue } from './timeline';
+import { CAST_BODY_SECONDS } from '../effect-budget';
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
-const viFlight = frame(17) - frame(4.545000076293945);
+/** Vi lands on the export's frame 17, where her landing systems start. */
+export const VI_LANDING = frame(17);
+const viFlight = VI_LANDING - frame(4.545000076293945);
 export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   jinx: [
     { phase: 0, system: 'a6a2b1cc', event: 'cast-start', delay: frame(14), duration: 0.9, stopAfter: frame(25 - 14), bone: 'Cstm_Buffbone_Pistol' },
@@ -17,14 +20,20 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
   ],
   vi: [
     { system: 'c11e6814', event: 'cast-start', delay: 0, duration: 1.2, stopAfter: frame(17), fadeOut: true, bone: 'R_Buffbone_Glb_Hand_Loc' },
-    { system: '0314626c', event: 'cast-start', delay: 0, duration: 1, bone: ground },
+    // Jump dust: kept just under CAST_BODY_SECONDS so it ranks decorative, and the landing impacts may take its slot when
+    // the budget is full (a first cast reserves 250 slots per system). At the landing it has about 5 particles left
+    // (11-12 measurement); before, its 1 s made it a skill body that no impact could replace.
+    { system: '0314626c', event: 'cast-start', delay: 0, duration: CAST_BODY_SECONDS - frame(1), bone: ground },
     { system: '25afa6a6', event: 'cast-start', delay: 0, duration: 1, bone: ground }, // Original empty event: explicit no-op.
-    // Landing owns the debris/impact. Retaining the flight past frame 17 would
-    // occupy the sixth-system budget and drop the separate chest impact.
+    // The flight ends on arrival (the engine stops a missile where it lands). Its emitters are authored to run on past
+    // it: trench, dust, smoke and the fire-shaped spikes, plus its two rock and shard child systems (Landing_Mis_Child,
+    // _Child02). So the same system plays again where she lands, for its own span (playOut), as the original's fire,
+    // ground crack and dust after the slam show (11-12 FB7YoqakYqE third cast). `duration` 4 is only a cap.
     { system: '84b969e0', event: 'projectile', delay: frame(4.545000076293945), duration: viFlight, travelSeconds: viFlight, targetBone: ground },
     { system: '18e22631', event: 'cast-start', delay: frame(17), duration: 1.5, bone: ground },
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
     { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
+    { system: '84b969e0', event: 'hit', delay: VI_LANDING, duration: 4, bone: ground, primary: true, playOut: true },
     { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
   ],
 };

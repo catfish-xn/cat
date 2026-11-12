@@ -5,6 +5,7 @@ import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rende
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
+import { systemSpan } from '../src/rendering/three-mode/vfx-ltk/engine/model/systemModel';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
   { system: 'cast', event: 'cast-start', delay: 0, duration: 1, bone: 'R_Hand', stopAfter: 0.2 },
@@ -264,7 +265,7 @@ describe('cast timeline replacement and fallback', () => {
   });
 });
 
-it('expires Vi flight at landing even after a frame-quantized start, leaving room for every impact', async () => {
+it('ends Vi flight at landing and plays its landing out there; on a first cast the jump dust yields, warm every system fits', async () => {
   const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
   const library = createVfxLibrary('/root/', {
     readJson: async url => {
@@ -274,10 +275,28 @@ it('expires Vi flight at landing even after a frame-quantized start, leaving roo
   });
   const scene = new Scene(), source = { root: new Group(), body: null, alive: true }, budget = { live: 0, max: 1500 };
   const runtime = createLtkRuntime(library, scene, () => source, { budget });
-  await runtime.warm('vi'); expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+  const live = () => scene.children.map(o => o.userData.ltkSystem as string);
+  const landing = ['84b969e0', 'd27b3044', '18e22631', '66c600e8'];
+  await runtime.warm('vi');
+  // Cold: every system reserves its first-play 250 slots, so the landing needs a slot: the jump dust (decorative) gives it.
+  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
   for (let frame = 0; frame < 17; frame++) runtime.update(1 / 30, new Camera());
-  const live = scene.children.map(o => o.userData.ltkSystem);
-  expect(live).toContain('66c600e8'); expect(live).toContain('d27b3044'); expect(live).toContain('18e22631');
-  expect(live).not.toContain('84b969e0'); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);
+  for (const id of landing) expect(live()).toContain(id);
+  expect(live()).not.toContain('0314626c');
+  expect(live().filter(id => id === '84b969e0')).toHaveLength(1); // the flight ended where it landed; this is its play-out
+  expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  for (let frame = 0; frame < 300 && runtime.active; frame++) runtime.update(1 / 30, new Camera());
+  expect(runtime.active).toBe(0);
+  // Warm: each system now reserves what it was seen to need, and every landing system fits beside the jump dust.
+  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+  // 18 frames: on this second cast the landing starts one frame later (the clock is off the 1/30 grid by now).
+  for (let frame = 0; frame < 18; frame++) runtime.update(1 / 30, new Camera());
+  for (const id of [...landing, '0314626c']) expect(live()).toContain(id);
+  expect(runtime.active).toBe(7); expect(budget.live).toBe(846); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  // The play-out lasts its system's own span (systemSpan), under the cue's cap.
+  const cap = cues.find(c => c.playOut)!.duration, span = Math.min(cap, systemSpan(library.get('84b969e0')!.model));
+  let seconds = 0;
+  while (live().includes('84b969e0') && seconds < cap + 1) { runtime.update(1 / 30, new Camera()); seconds += 1 / 30; }
+  expect(seconds).toBeGreaterThan(span - 2 / 30); expect(seconds).toBeLessThan(span + 1 / 30); // it began with the landing
   runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
 });

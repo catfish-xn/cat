@@ -50,6 +50,12 @@ export interface TimelineCue {
    * cue covers (a Sevika spell's right reel under the rolled mod, which the mod's own layer draws there).
    */
   readonly hide?: readonly string[];
+  /**
+   * The run lasts its system's own span (systemSpan: each emitter's last birth plus its particles' longest life, from
+   * the definition), never more than `duration`, which is then only a cap. For a system the export cues as a flight that
+   * the engine ends on arrival, though its emitters are authored to keep going where it lands (Vi's Landing_Mis).
+   */
+  readonly playOut?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

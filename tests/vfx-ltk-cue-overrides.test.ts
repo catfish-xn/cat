@@ -33,6 +33,12 @@ describe('reviewed vfx-ltk cue overrides', () => {
     } finally { delete (CUE_OVERRIDES as Record<string, readonly TimelineCue[]>).probe; }
   });
 
+  it('Vi: the override is the repository timeline plus the exported attack hit, so the two never drift apart', () => {
+    // The live vi timeline comes from the asset index (skills.vi), which replaces S13_TIMELINES; this row is what plays.
+    expect(CUE_OVERRIDES.vi).toEqual([...S13_TIMELINES.vi,
+      { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.26666666666666666, duration: 1.5 }]);
+    expect(CUE_OVERRIDES.vi.filter(cue => cue.playOut).map(cue => [cue.system, cue.event])).toEqual([['84b969e0', 'hit']]);
+  });
   it('every shipped override is a well-formed timeline', () => {
     for (const [champion, cues] of Object.entries(CUE_OVERRIDES)) {
       const systems = Object.fromEntries(cues.map(cue => [cue.system, `${cue.system}.json`]));
