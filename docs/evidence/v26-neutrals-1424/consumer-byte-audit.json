@@ -3514,6 +3514,14 @@
       "currentSha256": "13b224ae631c8503c9e5f8c8b2050bbfad588517a0e6fec9e8e2fa98e6a5b893",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cast-branch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4945,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0b605099716bde988169cb066cba545b723c11e56cd1a601c2a246d85a55636d",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

@@ -11,6 +11,8 @@ export interface TimelineCue {
   readonly duration: number;
   readonly bone?: string;
   readonly targetBone?: string;
+  /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
+  readonly branch?: string;
   /** Zero-based cast rotation, selected from observed cast events, including catch-up events. */
   readonly phase?: 0 | 1 | 2;
   readonly primary?: boolean;

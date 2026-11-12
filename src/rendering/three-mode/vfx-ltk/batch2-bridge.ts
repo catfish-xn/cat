@@ -33,6 +33,8 @@ export function createBatch2VfxBridge(host: Host) {
       ...(action === 'attack' && release ? { release } : {}) });
   const bridge = {
     branch(cast: Cast): string | undefined {
+      // The rule's own branch output (cast event `branch`) wins; Sevika's roll still comes from her castOutcome.
+      if (cast.branch) return cast.branch.branch;
       const outcome = outcomes.get(`${cast.sourceId}:${cast.actionSeq}`);
       if (!outcome?.castVariant || host.unit(cast.sourceId)?.definitionId !== 'sevika') return;
       return outcome.outcome === 'jackpot' ? 'four' : ({ flamethrower: 'one', punch: 'two', chomp: 'three' } as Record<string,string>)[outcome.castVariant.move];
