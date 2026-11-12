@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkParticles, measurePeak, pointAnchor } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, VI_LANDING, VI_ROW_SHOCKWAVE, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
@@ -276,7 +277,25 @@ describe('cast timeline replacement and fallback', () => {
   });
 });
 
-it('Vi: her landing systems start on the landing frame; her row shockwave pair is dropped whole on a first cast, on time warm', async () => {
+it('warm measures each system in place, so a first play reserves what a run of it holds, not the full room', async () => {
+  const rich = syntheticSystem({ rate: constant(num(120)), lifetime: num(1), particleLifetime: constant(num(0.5)) });
+  const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+    ? { version: 1, systems: { rich: 'systems/rich.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { jinx: [{ system: 'rich', event: 'cast-start', delay: 0, duration: 1 }] } }
+    : rich, readTexture: async () => new Texture() });
+  const budget = { live: 0, max: 1500 }, scene = new Scene(), runtime = createLtkRuntime(library, scene, () => ({ root: new Group(), body: null, alive: true }), { budget });
+  await runtime.warm('jinx');
+  const measured = measurePeak(library.get('rich')!, 1);
+  expect(measured).toBeGreaterThan(MIN_RESERVE); expect(Math.ceil(measured * 1.25)).toBeLessThan(250);
+  expect(runtime.play('jinx', 'caster', [])).toBe(true);
+  runtime.update(1 / 30, new Camera());
+  expect(budget.live).toBe(Math.ceil(measured * 1.25));
+  // The measure is the engine's own run: a drawn run of the same system peaks the same.
+  const fx = createLtkParticles(library.get('rich')!, { anchor: pointAnchor([0, 0, 0]), target: null, joints: () => pointAnchor([0, 0, 0]), duration: 1, seed: 1 });
+  let drawn = 0; for (let f = 0; f < 30; f++) { fx.update(1 / 30, new Camera()); drawn = Math.max(drawn, fx.peak); }
+  expect(drawn).toBe(measured); fx.dispose(); runtime.dispose();
+});
+
+it('Vi: her landing systems start on the landing frame; her row shockwave pair starts whole on its own frame, the first cast like any later one', async () => {
   const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
   const library = createVfxLibrary('/root/', {
     readJson: async url => {
@@ -289,26 +308,22 @@ it('Vi: her landing systems start on the landing frame; her row shockwave pair i
   const live = () => scene.children.map(o => o.userData.ltkSystem as string).filter(Boolean);
   const rows = () => live().filter(id => id === '84b969e0').length;
   const step = (frames: number, each?: () => void) => { for (let f = 0; f < frames; f++) { runtime.update(1 / 30, new Camera()); each?.(); } };
-  const landing = Math.round(VI_LANDING * 30), launch = Math.ceil(VI_ROW_SHOCKWAVE.delay * 30);
+  const launch = Math.ceil(VI_ROW_SHOCKWAVE.delay * 30);
+  expect(VI_ROW_SHOCKWAVE.delay).toBeLessThanOrEqual(VI_LANDING); // launched with her landing
   await runtime.warm('vi');
-  // Cold: every system first reserves 250 slots, six of them fill the 1500 at the landing, and nothing there may give way
-  // to the pair: it waits whole and is dropped whole once overdue (never one side alone). Every other system still plays.
-  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  step(landing);
-  for (const id of ['d27b3044', '18e22631', '66c600e8', '0314626c', '9614ffb4', 'c11e6814']) expect(live()).toContain(id);
-  expect(rows()).toBe(0); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(runtime.queued).toBe(2);
-  step(12, () => expect(rows()).toBe(0));
-  expect(runtime.queued).toBe(0);
-  for (const id of ['d27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
-  expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
-  for (let f = 0; f < 300 && runtime.active; f++) { step(1); expect(rows()).toBe(0); }
-  expect(runtime.active).toBe(0);
-  // Warm: each system reserves what it was seen to need (the pair, never played, still its first 250 each); the pair
-  // starts on its own frame, both in that frame, beside every other system.
-  expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  step(launch + 1, () => expect([0, 2]).toContain(rows()));
-  expect(rows()).toBe(2);
-  for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
-  expect(runtime.active).toBe(8); expect(budget.live).toBe(1096); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  // Warm measured each system in place, so a first cast reserves what its systems hold, not 250 each (which filled the
+  // 1500 at six and dropped the pair on every first cast before 11-12): the first cast plays like any later one.
+  for (const first of [true, false]) {
+    expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+    step(launch - 1, () => expect(rows()).toBe(0));
+    step(2, () => expect([0, 2]).toContain(rows())); // both in one frame, never one side alone
+    expect(rows()).toBe(2);
+    for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live(), String(first)).toContain(id);
+    expect(runtime.active).toBe(8); expect(budget.live).toBe(8 * MIN_RESERVE); // every synthetic system measures below the floor
+    expect(budget.live).toBeLessThanOrEqual(budget.max);
+    for (let f = 0; f < 300 && runtime.active; f++) step(1);
+    expect(runtime.active).toBe(0);
+  }
   runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
 });
+
