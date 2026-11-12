@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_WHOLE_BODY, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -247,7 +247,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
       // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
       // static mesh of its own (attachedMeshOfItsOwn).
-      const muted = MUTED_EMITTERS[id] ?? [];
+      // Held-back attached overlays (cue-overrides.ts ATTACHED_HELD_BACK) are left undrawn the same way.
+      const muted = [...(MUTED_EMITTERS[id] ?? []), ...(ATTACHED_HELD_BACK[id] ?? [])];
       const notes: string[] = [];
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
