@@ -45,6 +45,14 @@ async function unbind(page, tick, rebind) {
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
   const clip = { x: Math.max(0, cx - half), y: Math.max(0, cy - half * 3 / 4), width: Math.min(960, half * 2), height: Math.min(720, half * 1.5) };
   const fullClip = { x: 0, y: 0, width: 1920, height: 1080 }; fs.writeFileSync(path.join(out, 'boxes.json'), JSON.stringify({ boxes, ids: ['me', 'foe', 'foe2', 'foe3', 'foe4'] }));
+  // The overlay counts below cover the recorded window only: peaks and counters the warm pass left are cleared here.
+  await page.evaluate(async () => {
+    const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+    const attached = await import('/src/rendering/three-mode/vfx-ltk/rendering/components/AttachedMeshes.ts').catch(() => null);
+    const s = runtime?.ATTACHED_LAYER_STATS;
+    if (s) Object.assign(s, { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {}, capEvents: 0, cappedFrames: 0 });
+    attached?.resetAttachedStats?.();
+  });
   await (opt('unbind') ? unbind(page, 900000, false) : page.evaluate(() => window.__h.cast()));
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
@@ -55,7 +63,7 @@ async function unbind(page, tick, rebind) {
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
-  // The overlay counts of the recorded build (vfx-ltk runtime.ts ATTACHED_LAYER_STATS; null on builds before it).
+  // The overlay counts of the recorded window (vfx-ltk runtime.ts ATTACHED_LAYER_STATS, cleared before the recorded cast; null on builds before it).
   fs.writeFileSync(path.join(out, 'attached-stats.json'), JSON.stringify(await page.evaluate(async () => {
     const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
     const attached = await import('/src/rendering/three-mode/vfx-ltk/rendering/components/AttachedMeshes.ts').catch(() => null);
