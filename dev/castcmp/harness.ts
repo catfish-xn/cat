@@ -80,6 +80,11 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
       cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - 10)); },
+      // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
+      // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
+      // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
+      // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
+      fresh() { const from = Math.max(0, real.castIndex - 10); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
@@ -92,6 +97,9 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   (window as any).__h = {
     step,
     frame: () => listener.frame(frame(true)),
+    // v-capture --fresh 1 calls this (as fresh()) before the recorded cast: out of combat and back, so the warm pass's
+    // effects, summons (Silco's 12 s minions) and cast counts are gone.
+    fresh() { (window as any).__h.reset(); },
     reset() {
       listener.frame(frame(false));
       step(50);

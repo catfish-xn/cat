@@ -1,4 +1,4 @@
-// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--unbind 1] [--attached off|debug] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
+// node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--fresh 1] [--unbind 1] [--attached off|debug] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
 //   [--systems id,id|none --absent id,id --layers id,id|none --from MS --to MS --column before|after|off|debug --snapshot <asset snapshot>]:
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)
@@ -50,6 +50,9 @@ async function unbind(page, tick, rebind) {
   await page.evaluate(() => window.__h.step(3000)); await page.waitForTimeout(300);
   // LOCAL: --settle MS lets a lasting effect of the warm cast (Mordekaiser's 10 s aura) run out before the recorded cast.
   if (opt('settle')) { for (let left = Number(opt('settle')); left > 0; left -= 500) { await page.evaluate(ms => window.__h.step(ms), Math.min(500, left)); await page.waitForTimeout(50); } }
+  // A fresh combat before the recorded cast (harness fresh(): what the warm pass left is cleared and cast counts restart,
+  // as a game combat starts): always for --real, with --fresh 1 for dummies. Loaded effect files stay loaded.
+  if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
