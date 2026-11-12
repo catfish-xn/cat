@@ -91,7 +91,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       strike(t,mag('YellowDamage'));applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);break;
     }
     case 'jinx': {
-      const phase=(u.runtime.castCount-1)%3;
+      const phase=(u.runtime.castCount-1)%3;ctx.castBranch=(['zap','chompers','rocket'] as const)[phase];
       if(phase===0){const cells=u.starLevel===3?null:path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells?cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row):lineContains(u.cell,t.cell,x.cell,1,14))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
       else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
       else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
