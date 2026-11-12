@@ -173,7 +173,7 @@ function strandInto(source: Source, emitter: EmitterModel, stamp: number): void 
     premultiplyInto(emitter, DRAWN.color);
     drawnPlaceInto(pool, at, frame, PLACED);
     STRAND.position.set(PLACED.place, slot * 3);
-    STRAND.width[slot] = DRAWN.scale[0];
+    STRAND.width[slot] = DRAWN.scale[0] / 2; // EVIDENCE ONLY (claude/vi-trench-iso-half): scale0.x as the full width, never merged
     STRAND.color.set(DRAWN.color, slot * 4);
     STRAND.tiling.set(pool.tiling.subarray(at * 2, at * 2 + 2), slot * 2);
     STRAND.odometer[slot] = pool.odometer[at];

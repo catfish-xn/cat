@@ -1,8 +1,8 @@
-# Vi row shockwave Trench, isolated (evidence only; branch claude/vi-trench-iso, never merged): #636 head f2511cc3 (runs
+# Vi row shockwave Trench, isolated, FULL-WIDTH variant (evidence only; branch claude/vi-trench-iso-half: every trail drawn half as wide as on claude/vi-trench-iso; never merged): #636 head f2511cc3 (runs
 # outlive their trail fade) with Vi playing only her two row shockwaves and, of their system 84b969e0, only the Trench
 # drawn (every other emitter and both child systems muted).
 # Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (PASS, 11-12, Linux).
 # 3-star Vi on one 3-star Sett, --dist 2, warm. The runs leave at about 1.04 s (window), reach the row ends by about 1.5 s;
 # the trail fades by about 2.1 s. Keyframes 1300-1900 ms every 67 ms, wide (3 cells each side) and zoomed on the band;
 # --probe emitters --emitters Trench writes the Trench draw's state per frame.
-v-capture.cjs vi trench-iso --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --probe emitters --emitters Trench --column after --snapshot c1333710ad8e
+v-capture.cjs vi trench-iso-half --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --probe emitters --emitters Trench --column after --snapshot c1333710ad8e
