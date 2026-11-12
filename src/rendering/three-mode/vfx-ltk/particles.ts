@@ -255,10 +255,6 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
 }
 export type LtkParticles = ReturnType<typeof createLtkParticles>;
 /**
- * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
- * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
- */
-/**
  * What a run of `prepared` takes in child systems when nothing refuses one: the room their pools hold, the live child
  * systems and their particles, each at its most, run in place at 1/60 s steps (a child spawns off a parent particle's
  * birth, and the engine's birth count truncates per step, so a coarser step spawns fewer). `stopAt` stops the rig there,
@@ -289,6 +285,10 @@ export function childRoomOf(measured: { room: number; live: number } | null): Ch
   if (!measured || measured.live === 0) return DEFAULT_CHILD_ROOM;
   return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, Math.ceil(measured.room * 1.5))), most: Math.min(CHILD_COUNT_CAP, Math.max(8, Math.ceil(measured.live * 1.5))) };
 }
+/**
+ * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
+ * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
+ */
 export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
   const anchor = pointAnchor([0, 0, 0]);
   const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
