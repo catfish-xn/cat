@@ -291,5 +291,5 @@ describe('v19 emblem replacement and schema',()=>{
     let c:CombatState=idle(start(s).state);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,maxMana:100,mana:0}:u)};
     for(let i=0;i<19;i++)c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(0);c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(3);
   });
-  it('retains v19 rules in v26-neutrals-1424 schema/save/replay 12/9/8',()=>expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:9,replayFormatVersion:8,rulesVersion:'s13-g2-3-v26-neutrals-1424'}));
+  it('retains v19 rules in v26-neutrals-1424 schema/save/replay 12/9/9',()=>expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:9,replayFormatVersion:9,rulesVersion:'s13-g2-3-v26-neutrals-1424'}));
 });

@@ -11,7 +11,7 @@
     "scripts/record-v26-neutrals-1424-battle-start.cjs": "f30ae29342e18bb5737b8a1adcfcc66c2a39d7d3558071d1db112efa20b6c7c4",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
     "scripts/record-v26-neutrals-1424-live-reveal.cjs": "31947ea0d22495b9898817d2b05ee18b6077c636763626c0a7345111a84ff3d3",
-    "scripts/record-v26-neutrals-1424-release.cjs": "53483a8413a460a51e1782556464b1e23fff55c617631ab3d0c850b8e5b3a7dc",
+    "scripts/record-v26-neutrals-1424-release.cjs": "31487cb10ed6197b78ca4c2c18a9fa5cc380a942a8321ecfe016ff4dc146ce40",
     "scripts/record-v26-neutrals-1424-transfer.cjs": "62948d5cb84d2209d89087fe19b510ff316fd39f3b74f4a14c1f341fcf758ca9",
     "scripts/v26-neutrals-1424-fixture-audit.cjs": "72c6468d2315799a6944b813ca69f768ae301394fe04fbe008eb5137042c90ab",
     "scripts/v26-neutrals-1424-rageblade-route.cjs": "72dfab79c3330d0ecedc6f3970f4aa20f1bc5fa38ef9242c4b6d27b3af33c352",
@@ -172,10 +172,10 @@
     "src/simulation/combat-effects.ts": "a90aa6949eb007e5f3433f980a9ed2b4266ae9764e88a15aac5f7d482996ba88",
     "src/simulation/combat-experiment-clone.ts": "56381b803d0bc57f9b58fb00b058a18f792c0a3df8fefd45e6a4ce1aead815b4",
     "src/simulation/combat-family-reunion.ts": "1e5ab0c14f86d583d9b83cfc6b6ddc9fba293710c1fefc1c29c248c9bfb1c6ae",
-    "src/simulation/combat-g2-2.ts": "7400d34a9fe1b65e2c4435c618df4df37d7ad50c82b08f9757911f6ca8dcf921",
+    "src/simulation/combat-g2-2.ts": "2b684a7010e24a131967791e78fcb96fcad164c4a33886f1128911001c770b22",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
     "src/simulation/combat-g2-3-summons.ts": "674da09bfb74f3cf835acf4a53837c22ca753993d840595fdaea60039d4af57d",
-    "src/simulation/combat-g2-3.ts": "adebf977b2c0ed936aa5d8bd0cffd413e270eb65f92f812e4dd017cce215eb73",
+    "src/simulation/combat-g2-3.ts": "3a21d10407639561a07896ed05c2a9f8c3b1ea23be67ada9b0be3aae1fdf172c",
     "src/simulation/combat-g2-4b-trench.ts": "c4957265097e620890d6c91b33f2eeb68b5c67da04d726b4839ca250912d5d8f",
     "src/simulation/combat-g2-4b.ts": "dd3028d2977f1d31ab0a4064740ffde11cf51bbbeedb33bf24a20d0b66dc32b7",
     "src/simulation/combat-g2.ts": "f2c3259602725c15681394c3c2c783eae55697eaf20c4c065f223763e9806de1",
@@ -185,12 +185,12 @@
     "src/simulation/combat-movement.ts": "65d2e21f9908422b13e59f36d1eb4560a36eeaba48fa321db85a08261b0ea2df",
     "src/simulation/combat-opening-crabs.ts": "c1d00a0a86a411c35a744f45587a89dd350dddfd5ee8d801247ab1e15c8c793f",
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
-    "src/simulation/combat-replay-view.ts": "409c15cf483bdf3373c5fb41957bfed9f21a8eb4405f5c3601d93d48352a685e",
+    "src/simulation/combat-replay-view.ts": "14e182ae889ca4cf522ad228d0e6c7e38fa3e9e1bb317e7fdc63b38c4e3ef8b4",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "932c956ce788c5572bb28e27900e911855dc4380b1d5bdc54b72d907393ff1c6",
     "src/simulation/combat-s13-state.ts": "79839b1df406583f40f4b3cc3db20e4a5fccbc9c3c090586bfdac1a267c71680",
-    "src/simulation/combat-s13.ts": "7819eb138a4e4f8aa4ce4eefe18fb5c5dd2cf09e79dc651d2b4e6dbc8859b075",
-    "src/simulation/combat-six-cost.ts": "0eaae8ef1bbe29ea9ea834142d58e9ce5528628e7064dc46112f4788c857b523",
+    "src/simulation/combat-s13.ts": "c9383c297ea9c6f0f755f88e408cce0be41b5fe9e71e7f1fca3281adfb77a8b1",
+    "src/simulation/combat-six-cost.ts": "b39df5cbc230995b0c9ed9aae27852e648182951ad774e10d66cc84fa5eddb49",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
@@ -306,7 +306,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "0ebecc2f5d352ad87ea00c73a3fdb37af230cc51a0f8ddf03342dd29c72c3ade",
+    "src/simulation/content/identity-constants.ts": "67f5db5317884b5668c9cea913532e1f775d942c42b94a93d94b114c375fd406",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -458,7 +458,7 @@
     "src/simulation/m8/combat-item-grants.ts": "69d8daafb214f806ca9e2645ac66995010abc9f262b03ee2aa68fe0438c1f0a4",
     "src/simulation/m8/combat-item-programs.ts": "f0c7fa561177bc5728b93695694afaf4edd0975596b4e6ad6a2d8e01b93368d3",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "92ae8320972ca2851ed16dd08a8046585e443e70704ffc4d404b7285eb726111",
+    "src/simulation/m8/contracts.ts": "fdfed7ef0f0d39757fb53e1255e60dfd2a740de97d8accb3e7e3cf92d76d21e8",
     "src/simulation/m8/crit.ts": "d33d59260051b80be2875a287174e1362241599a986169b2746c7b5b8e242472",
     "src/simulation/m8/damage.ts": "58140e89d2c2f30610fe8d50b33b04b8b5fac76fdd2b3a52a84c89c2d8d14bc8",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -485,7 +485,7 @@
     "src/simulation/m8/triggers.ts": "611d8c15d4eca4c8496a7ce962e2f45840521e7ee35f37ee3e37ee697c6652cc",
     "src/simulation/m8/ui-contracts.ts": "178f754d533b83560e73bec1573c9a6994749809a726ed30d3e79e48a88b797d",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "a2e513fe3cab0bb4714b675af1e99f86326824fa2e61468a45f3ddbc38c734e4",
+    "src/simulation/m8/version.ts": "8afe276aaf552db73e7cb97a286eb1ebfed399689cb47b3bf7ab1af6221b13d8",
     "src/simulation/masterwork-choice.ts": "52f9227528e0ac99ed6f79c6e8ff44c89a62b5c50b76c64e2b2b7a81ab8ca63e",
     "src/simulation/match-rules.ts": "e0ca00e28f6c79d7f978a61963ea7c2872517a81feb53b68fb1ada0500d9181b",
     "src/simulation/match-types.ts": "4fcaa7d7b39337638fe32917f4def50b96a745cd039a34e71275a5e42e29e31b",
@@ -658,69 +658,69 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:db6dc9b6",
+  "contentDigest": "fnv1a32-utf16:d94c78f1",
   "files": {
     "tests/fixtures/v26-neutrals-1424-c19-seed-9-minimal.json": {
       "previousBytes": 32276,
       "currentBytes": 32276,
       "previousSha256": "391b99e10aaafdc17b9ec1498a80726d7503baa482b5383547cba1f3e6ad67fa",
-      "currentSha256": "5709398a2fbcf9735d1735f889c96c55922f64f79516c85c8b55b02e8b67bc37",
+      "currentSha256": "83e03e9cc466e8e0feb1fe5e71d9df0efdffe4b509fbac76f514d382566d9082",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v26-neutrals-1424-b8-fingerprints.json": {
       "previousBytes": 474,
       "currentBytes": 474,
       "previousSha256": "20fc86ce164415c0c1d7fe5018cf5c088717c8d35cf30f84047efe3e72936f06",
-      "currentSha256": "722fcc3f8dc74ca8eaacfeb79a32ab95ef6bbb5e5e2aaf179592e145800807f7",
+      "currentSha256": "ce6b6a74143f8455e781ef980e1276dd71d08c2f3b4e9b0919824229da495425",
       "firstDifferentByte": 173
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark.json": {
       "previousBytes": 180985,
       "currentBytes": 293133,
       "previousSha256": "a2a1dadae43bec9c4b921eef603effb03b6cf6e9892f9f7a9bf8726df041cfd3",
-      "currentSha256": "52c3516f1a6fe1bdd80264e97f0729ebd23c0274c9efd1f31bf0d4f161a69bfe",
+      "currentSha256": "232e068cc5d2c5ca6f424b9ff3cc5d5e0557d5d781696eea006f08cd2a990eda",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
       "previousBytes": 181029,
       "currentBytes": 293134,
       "previousSha256": "0045d02b81a54cd16901692e87c59552c31e3aebcf7fbc13d0d318f296414174",
-      "currentSha256": "549362e4126ccb75129d64ce58b03c58492537372f48fc38417f3725c892226c",
+      "currentSha256": "c19d213e8324f79da26e6851a81b5434cad1d8234c0cb19d59804bf4fe572958",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 181021,
       "currentBytes": 293219,
       "previousSha256": "593b4d6e19f5412a3478057401aa75bc73c320c1a4fd745a0a3335152a5300ff",
-      "currentSha256": "acb50d55e2bc2181deef1b53216b97a3591aa4794ca1807c186d8babc681579e",
+      "currentSha256": "43295ad0d233e8ce0432fc1b710d7e7b47db6cd28622ea578a62548066ed0710",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
       "previousBytes": 181033,
       "currentBytes": 293142,
       "previousSha256": "73ffe3ed81f5b3e51a7a52c6f9ccd06924334f55339166c851fa1631749d6869",
-      "currentSha256": "305bdffb0c9505315ded8441e64680d8a75955b835f86e6929d6a09f68053ff2",
+      "currentSha256": "d1363661b4ec620c8a2b7d591d0f60f4a33eba8cd2e18d3778d6f39ced74325a",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/edge-of-night.json": {
       "previousBytes": 181037,
       "currentBytes": 294101,
       "previousSha256": "8af029aa7ba1ce7296e779a257893f8f8ba2fa9397db8611ebba9aa3c80e438e",
-      "currentSha256": "ae21efce7657be22c0f5feaccd001b841b19b68d27f0dc095b7021aa9b9c5089",
+      "currentSha256": "6d1ea2a9ebae7142381be6320f82611766dd693faffe687c97aa4fb56346ca63",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
       "previousBytes": 66919,
       "currentBytes": 69515,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "4b66e87d786c12388c8192af62af29b1bd821821c188afcff5c2915b5de5e230",
+      "currentSha256": "5a4b199721b54ffec8280f903610a763473ea1a4ba195fb7a62a315effe4b0c5",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
       "previousBytes": 328556,
       "currentBytes": 335739,
       "previousSha256": "b031eaa686e577b32a517374fdb9452107679a68d42ba23096b165b4123b19fd",
-      "currentSha256": "0fa3e1365e80bc79ece57491a6d65ca069c9f55f35f32d4ba1a9a5366572c9ed",
+      "currentSha256": "41732e463cd49748a5e78769c94551056ca40fd8542e3a51e9f20d8d723c3994",
       "firstDifferentByte": 42
     }
   },
@@ -788,7 +788,7 @@
       "unit-48": 344
     },
     "terminalHash": "e83ecb8f80b7c550a8d2836b5036191363fff2cc3fe6203070314463a595a58a",
-    "eventsHash": "40ca432c5d8d40c98ed86ea8ed95e0122d8cfe3e1387006b6227092118b30548",
+    "eventsHash": "5bd7a38bbb695220037e619d07c481c37a09d74ed6210c5b26226fac903832b1",
     "truePulseHash": "066c88ef52a6491c6f9010240b71be7bd1a27312de225bb0d2b4f3988cbaac67",
     "independentBurnIntervalChecks": true
   }

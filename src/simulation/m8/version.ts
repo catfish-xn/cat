@@ -13,11 +13,13 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
  * The optional engaged-target fact is authenticated by combat replay. No new commands/events.
  * Anomaly: planning, shared eligibility, initial-twelve quote protection and R5 sale-persistent entitlement.
  * D5: D0–D5 actual PvP damage, four augment registrations, stage bans, and over-encumbered bench capacity.
- * Schema/save/replay/command remain 12/9/8/7. Save 9 adds optional compact battle encoding on export; replay semantics unchanged. Older identities are rejected.
+ * Schema/save/replay/command 12/9/9/7. Save 9 adds optional compact battle encoding on export. Replay 9 (2026-11-12, PR #628): every
+ * cast receipt and cast event carries castIndex (and branch where the rule picks one); replay-8 files are rejected as
+ * unsupported-version (their battle records lack the fields, so re-validation could only call them damaged). Older identities are rejected.
  * targeting-p0, targeting-p1, melee pathing, anomaly-ui and d5-register labeled this s13-g2-3-v26-online-rules; epoch re-record stays with the execution side. */
 export const M8_VERSION = {
   schemaVersion: 12, rulesVersion: 's13-g2-3-v26-neutrals-1424', contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424',
-  saveFormatVersion: 9, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
+  saveFormatVersion: 9, replayFormatVersion: 9, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** Last on-disk save revision before compact battle export (save 9). Still imported when identity matches; never carried compression markers. */
 export const PRIOR_M8_SAVE_FORMAT_VERSION = 8 as const;
