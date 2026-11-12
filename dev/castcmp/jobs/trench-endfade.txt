@@ -1,0 +1,7 @@
+# Vi row shockwave Trench, isolated, END-FADE variant (evidence only; branch claude/vi-trench-iso-endfade, never merged):
+# claude/vi-trench-iso (4859d6da) plus one change in Trails.ts: once a trail strand stops growing (newest point older
+# than 0.05 s), its head fades out (smoothstep alpha) over twice the head's drawn half-width instead of ending on a flat cut.
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (Linux).
+# Same setup as trench-iso.txt, so the two columns compare on one machine: 3-star Vi on one 3-star Sett, --dist 2, warm,
+# --probe emitters --emitters Trench. Keyframes 1433 / 1567 / 1700 ms, wide (3 cells each side) and zoomed on the band.
+v-capture.cjs vi trench-endfade --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 84b969e0 --layers none --probe emitters --emitters Trench --column after --snapshot c1333710ad8e
