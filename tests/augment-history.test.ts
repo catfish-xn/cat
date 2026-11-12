@@ -575,7 +575,7 @@ it('keeps the existing save/replay envelope versions and authenticates a carried
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,
     runId:'augment-history-envelope',createdAt:'2026-10-27T00:00:00.000Z',match:s,battles:history.completedRecords,currentBattle:null};
-  expect(envelope.saveFormatVersion).toBe(9);expect(envelope.replayFormatVersion).toBe(8);
+  expect(envelope.saveFormatVersion).toBe(9);expect(envelope.replayFormatVersion).toBe(9);
   expect(await validateFile(exportFile(envelope),()=>{})).toEqual(envelope);
   const bad:any=structuredClone(envelope);delete bad.match.augmentHistory;
   await expect(validateFile(exportFile(bad),()=>{})).rejects.toThrow('missing augment-history-v1');

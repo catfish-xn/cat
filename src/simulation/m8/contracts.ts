@@ -509,7 +509,7 @@ export interface M8Version {
   readonly contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424';
   readonly contentDigest: string;
   readonly saveFormatVersion: 9;
-  readonly replayFormatVersion: 8;
+  readonly replayFormatVersion: 9;
   readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
