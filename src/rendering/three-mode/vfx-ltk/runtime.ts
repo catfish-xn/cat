@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -172,7 +172,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * dropped whatever came seventh (Vi's row shockwave, 11-12).
    */
   const needs = new Map<string, number>();
-  const reserveOf = (peak: number, children: boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25) + (children ? CHILD_PARTICLES : 0)));
+  /**
+   * Each system's child room, measured when its champion warms (measureChildren): a run gets what its system's children
+   * take rather than one flat CHILD_PARTICLES, bounded by CHILD_ROOM_CAP and CHILD_COUNT_CAP. The shared budget still
+   * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
+   */
+  const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
+  /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
+  const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
+    + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
@@ -184,7 +192,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     if (options.budget) options.budget.live -= run.reserved;
     // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet. The need only
     // grows: a low-peaking seed or a shorter cue on a shared system (Zyra's 857fe049 at 0.6 and 0.7 s) never lowers it.
-    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children)));
+    if (run.fx.finished) {
+      const kids = run.fx.children ? Math.max(childLive.get(run.system) ?? 0, run.fx.childPeak) : 0;
+      if (run.fx.children) childLive.set(run.system, kids);
+      needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children && !rooms.has(run.system) ? true : kids)));
+    }
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
@@ -211,8 +223,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const prepared = catalog.get(id);
         if (closed || needs.has(id) || !prepared || prepared.empty) continue;
         const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
-        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), longest.fadeOut ? undefined : longest.stopAfter),
-          prepared.drawn.some(definition => !!definition.path)));
+        const stopAt = longest.fadeOut ? undefined : longest.stopAfter;
+        // A missile stops emitting where it lands, so its children are measured stopped at its flight.
+        const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
+        if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
+        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
@@ -440,14 +455,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // before it, so the cue stays at full strength up to its stop.
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
+        const room = rooms.get(spawn.system);
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
+        // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
+        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}\n${room?.budget ?? ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {

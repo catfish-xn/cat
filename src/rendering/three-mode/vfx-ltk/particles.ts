@@ -25,6 +25,16 @@ import { withDrawFade } from './engine/simulation/particleRead';
 export const FX_SCALE = 0.44;
 export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
 /**
+ * The most child room (pool slots, as the engine's child budget counts them) and live child systems one run may take,
+ * however much its system measures (measureChildren). A run whose system was never measured keeps CHILD_PARTICLES and 8.
+ * One flat 100 refused the second and third of the rock children every FillMouth particle of Vi's row shockwave
+ * spawns (84b969e0 -> db4240a5 -> 4e1dc787, 11-12): only one of about three appeared, near the row's start.
+ */
+export const CHILD_ROOM_CAP = 512, CHILD_COUNT_CAP = 24;
+/** The child room a run of one system gets: pool slots for the engine's child budget, and live child systems. */
+export interface ChildRoom { readonly budget: number; readonly most: number }
+export const DEFAULT_CHILD_ROOM: ChildRoom = { budget: CHILD_PARTICLES, most: 8 };
+/**
  * A fading cue's alpha at `elapsed` seconds: full until `stopAfter`, then easing to nothing at `duration`, so particles
  * that outlive the cue leave with it instead of being cut off at full strength. 1 without a soft stop.
  */
@@ -105,6 +115,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   fadeFrom?: number;
   /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
   scale?: number;
+  /** The run's child room (measureChildren); DEFAULT_CHILD_ROOM when omitted. Fixed for the life of the driver. */
+  childRoom?: ChildRoom;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
   const resolveFadeFrom = (next: typeof options) => 'fadeFrom' in next ? next.fadeFrom : next.fadeOut ? next.stopAfter : undefined;
@@ -120,7 +132,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
   const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
-  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  const room = options.childRoom ?? DEFAULT_CHILD_ROOM;
+  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: room.budget, maxChildren: room.most });
   driver.setScale(spec.scale);
   let rig = rigFor();
   driver.swap(prepared.model);
@@ -173,7 +186,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
-  let elapsed = 0, closed = false, peak = 0;
+  let elapsed = 0, closed = false, peak = 0, childPeak = 0;
+  const hasChildren = prepared.drawn.some(definition => !!definition.path);
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
@@ -181,15 +195,19 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     attached: overlays,
     /** Most root particles live at once in this play, which the runtime reserves for the system's next play. */
     get peak() { return peak; },
-    /** It runs child systems, whose room (CHILD_PARTICLES) the root count does not show. */
-    children: prepared.drawn.some(definition => !!definition.path),
+    /** It runs child systems, whose particles the root count does not show (childPeak does). */
+    children: hasChildren,
+    /** Most child particles live at once in this play. */
+    get childPeak() { return childPeak; },
+    /** The child room this run was built with. */
+    childRoom: room,
     /** Play the same prepared system again. The caller only does this for the same attachment. */
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; childPeak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
@@ -199,6 +217,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
       driver.advance(Math.min(seconds, 0.1));
       peak = Math.max(peak, driver.pool.count);
+      if (hasChildren) childPeak = Math.max(childPeak, driver.childRoom().particles);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
@@ -213,6 +232,34 @@ export type LtkParticles = ReturnType<typeof createLtkParticles>;
  * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
  * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
  */
+/**
+ * What a run of `prepared` takes in child systems when nothing refuses one: the room their pools hold, the live child
+ * systems and their particles, each at its most, run in place at 1/60 s steps (a child spawns off a parent particle's
+ * birth, and the engine's birth count truncates per step, so a coarser step spawns fewer). `stopAt` stops the rig there,
+ * which is where a missile stops emitting. Null for a system that spawns no children. The run itself is bounded by
+ * CHILD_ROOM_CAP and CHILD_COUNT_CAP, so a system that wants more measures at the cap.
+ */
+export function measureChildren(prepared: PreparedVfx, seconds: number, stopAt?: number): { room: number; live: number; particles: number } | null {
+  if (!prepared.drawn.some(definition => !!definition.path)) return null;
+  const anchor = pointAnchor([0, 0, 0]);
+  const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_ROOM_CAP, maxChildren: CHILD_COUNT_CAP });
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt, motion: { kind: 'bone', anchor, target: null } });
+  let room = 0, live = 0, particles = 0;
+  for (let at = 0; at < seconds; at += 1 / 60) {
+    driver.advance(1 / 60);
+    const now = driver.childRoom();
+    room = Math.max(room, now.held); live = Math.max(live, driver.liveChildren()); particles = Math.max(particles, now.particles);
+  }
+  return { room, live, particles };
+}
+/** A run's child room off what its system measured: the measured room and count with one more child's worth, capped. */
+export function childRoomOf(measured: { room: number; live: number } | null): ChildRoom {
+  if (!measured || measured.live === 0) return DEFAULT_CHILD_ROOM;
+  const each = Math.ceil(measured.room / measured.live);
+  return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, measured.room + each)), most: Math.min(CHILD_COUNT_CAP, Math.max(8, measured.live + 1)) };
+}
 export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
   const anchor = pointAnchor([0, 0, 0]);
   const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
