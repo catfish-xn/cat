@@ -27,3 +27,12 @@ describe('champion bodies at the arena scale', () => {
       for (const cue of sevikaSkills[id]!.filter(c => c.bone === 'L_ClampB')) expect(cue.scale ?? 1).toBe(1);
   });
 });
+
+describe('carousel, scout stage and legends (off by default, Fable 11-12)', () => {
+  it('keep their FX_SCALE bodies and the fixed legend baseline until switched on', async () => {
+    const fit = await import('../src/rendering/three-mode/model-fit');
+    expect(fit.STAGE_ARENA_SCALE).toBe(false);
+    expect(fit.STAGE_SOURCE_SCALE).toBe(FX_SOURCE_SCALE);
+    expect(fit.STAGE_BODY_FACTOR).toBe(1);
+  });
+});

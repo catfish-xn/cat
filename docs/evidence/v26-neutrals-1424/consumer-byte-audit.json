@@ -2175,9 +2175,9 @@
     "tests/rendering3d-champion-arena-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1895,
+      "currentBytes": 2306,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ee16a52adc28e7a1f4b3796188f657be406e9ab4154923d8a8bdabba97429516",
+      "currentSha256": "4b00af77946184a22487e72a83986adb0662cbc1a18df115293e62d9ccf3d11d",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-champion-lighting.test.ts": {

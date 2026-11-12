@@ -55,7 +55,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
@@ -492,7 +492,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
     return effects.load(id, maxDuration, maxParticles);
   } : null;
-  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: defaultLegendId(),
+  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, championWidth: MODEL_WIDTH * STAGE_BODY_FACTOR, sourceScale: STAGE_SOURCE_SCALE, legendModel: defaultLegendId(),
     font: canvasFont, ui: originalUi,
     loadModel: loadLit, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
@@ -512,7 +512,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : defaultLegendId();
     return hasLegendModel(id) ? id : defaultLegendId();
   };
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, effectScale: FX_SCALE, own, legendModel,
     loadModel: legendModelsAvailable() ? loadModel : null,
     loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
   // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
@@ -745,8 +745,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
   // surroundings and effects are hidden meanwhile and the board takes no input.
-  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
-    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
+  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, championWidth: MODEL_WIDTH * STAGE_BODY_FACTOR, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: STAGE_SOURCE_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
     loadModel: loadLit, legendModel: legend => {
       if (!legendModelsAvailable()) return null;
       const id = legend ? `little-legend-${legend}` : defaultLegendId();

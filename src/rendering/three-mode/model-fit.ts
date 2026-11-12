@@ -8,6 +8,7 @@
  * and its x/z box to `width` exactly as before.
  */
 import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
+import { BODY_TO_FX as BODY_FACTOR, CHAMPION_SOURCE_SCALE as BODY_SCALE, FX_SOURCE_SCALE } from './vfx-ltk/fx-size';
 export { CHAMPION_SOURCE_SCALE, BODY_TO_FX } from './vfx-ltk/fx-size';
 import { createSupportSampler, registerModelGrounding, supportRotation, supportVertexSteps, MESH_PENETRATION_RATIO, type ModelSupport } from './model-grounding';
 
@@ -17,6 +18,17 @@ import { createSupportSampler, registerModelGrounding, supportRotation, supportV
  */
 export const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
 export const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
+
+/**
+ * Whether the carousel, the scout stage and the little legends (tabletop, carousel, scout) take the board's champion
+ * scale too. Off until the carousel stage is measured against the original on its own (Fable 11-12): those keep the
+ * FX_SCALE bodies and the 92-unit legend baseline they had.
+ */
+export const STAGE_ARENA_SCALE = false;
+/** League units → board units for a body on the carousel and the scout stage. */
+export const STAGE_SOURCE_SCALE = STAGE_ARENA_SCALE ? BODY_SCALE : FX_SOURCE_SCALE;
+/** Factor on the fixed champion baseline (legends, stand-ins, carousel tethers) on those stages and the tabletop. */
+export const STAGE_BODY_FACTOR = STAGE_ARENA_SCALE ? BODY_FACTOR : 1;
 
 /** Little-legend body height as a fraction of a one-star champion (carousel, scout, tabletop). */
 export const LEGEND_HEIGHT_RATIO = 0.6;
