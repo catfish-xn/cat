@@ -53,7 +53,10 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
     basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
 }
-/** Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet). */
+/**
+ * Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet).
+ * Fitted values, not 14.24 data: chosen to sit near where those locators are on the models that have them.
+ */
 const MISSING_LOCATOR_SHARE: readonly [RegExp, number][] = [
   [/^c?_?buffbone_glb_chest_loc$/i, 0.6], [/^c?_?buffbone_glb_center_loc$/i, 0.5], [/^c?_?buffbone_glb_head_loc$/i, 0.9],
   [/^c?_?buffbone_glb_overhead_loc$/i, 1],

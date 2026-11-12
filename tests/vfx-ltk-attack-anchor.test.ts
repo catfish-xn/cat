@@ -40,6 +40,18 @@ const NO_TARGET_ANCHOR: Readonly<Record<string, string>> = {
   'swain.ts:swain.swain|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
 };
 
+/**
+ * Fable 11-12: the pending list may only shrink. These are the twelve keys it held when the guard landed (#627); a key
+ * outside this set cannot be parked in NO_TARGET_ANCHOR, so any new attack cue must name its anchor. Remove a key here
+ * when its cue is fixed; never add one.
+ */
+const PENDING_AT_627: ReadonlySet<string> = new Set([
+  'CUE_OVERRIDES.scar|0f2af66b|hit', 'CUE_OVERRIDES.irelia|0f2af66b|hit', 'elise.ts:elise.elise|a0484f04|projectile',
+  'elise.ts:elise.elise|0f2af66b|hit', 'illaoi.ts:illaoi.illaoi|0f2af66b|hit', 'loris.ts:loris.loris|0f2af66b|hit',
+  'rell.ts:rell.rell|0f2af66b|hit', 'silco.ts:silco.silco|a6bde11c|projectile', 'silco.ts:silco.silco|0f2af66b|hit',
+  'sion.ts:sion.g23-sion|0f2af66b|hit', 'swain.ts:swain.swain|f4e3e1bc|projectile', 'swain.ts:swain.swain|0f2af66b|hit',
+]);
+
 describe('basic-attack hits and flights anchor on the target body', () => {
   const attacks = collect().filter(({ cue }) => cue.action === 'attack' && (cue.event === 'hit' || cue.event === 'projectile'));
 
@@ -53,6 +65,12 @@ describe('basic-attack hits and flights anchor on the target body', () => {
       .map(({ where, cue }) => `${where}|${cue.system}|${cue.event}`);
     expect(missing.filter(key => !NO_TARGET_ANCHOR[key])).toEqual([]);
     for (const key of Object.keys(NO_TARGET_ANCHOR)) expect(missing, `stale NO_TARGET_ANCHOR entry ${key}`).toContain(key);
+  });
+
+  it('the pending list only shrinks: every parked key was pending when the guard landed (#627)', () => {
+    const added = Object.keys(NO_TARGET_ANCHOR).filter(key => !PENDING_AT_627.has(key));
+    expect(added, 'NO_TARGET_ANCHOR may not grow; name the anchor on the new cue instead').toEqual([]);
+    expect(PENDING_AT_627.size).toBeLessThanOrEqual(12);
   });
 
   it('the six champions fixed on 11-12 hit and aim at the chest (14.24 BasicAttack mHitBoneName)', () => {
