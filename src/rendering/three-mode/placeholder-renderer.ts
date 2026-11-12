@@ -1906,7 +1906,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
       portal.apply(id);
-      lighting.update(view);
+      lighting.update(view, view.starHeight - STAR_GAP); // the contact shadow follows the drawn body
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;

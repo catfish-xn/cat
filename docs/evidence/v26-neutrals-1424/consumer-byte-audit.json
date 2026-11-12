@@ -2334,9 +2334,9 @@
     "tests/rendering3d-presentation-lighting.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10408,
+      "currentBytes": 10965,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0514166e5b762def1ef0e4087189269b55c2dfefc5ea0136291086f95abe002e",
+      "currentSha256": "245bc3855cb2cfb551893ea42ee665deb5f4d51618159fc7bef8ca4a8380877d",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-pvp-portal.test.ts": {
