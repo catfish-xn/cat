@@ -8,7 +8,7 @@ import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevi
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { ARENA_UNIT_SCALE, BODY_TO_FX, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { ARENA_UNIT_SCALE, BODY_TO_FX, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, measuredOnBody, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -51,7 +51,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')!.delay);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredAtFxScale(0.7));
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
     // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
     const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
@@ -202,7 +202,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
     expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe about 3 cells
-    for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
+    for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(BODY_TO_FX, 12); // shield wraps her, so it shrinks with her body
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).
     const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
@@ -216,7 +216,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cast.length).toBeGreaterThan(0);
     for (const cue of cast) {
       const drawn = (cue.scale ?? 1) * cueSize(cue);
-      const measured = cue.system === 'b888a24f' ? 1.6 : cue.system === '7ce6b652' ? 0.5 : 1;
+      // The chest hit hugs each rooted target's body, so it shrinks with the body; the ground cues are ranges.
+      const measured = cue.system === 'b888a24f' ? 1.6 : cue.system === '7ce6b652' ? 0.5 : cue.system === '9d413df0' ? BODY_TO_FX : 1;
       expect(drawn, cue.system).toBeCloseTo(measured, 12);
     }
   });

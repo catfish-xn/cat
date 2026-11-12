@@ -26,6 +26,12 @@ export const BODY_TO_FX = CHAMPION_SOURCE_SCALE / FX_SOURCE_SCALE;
 /** A cue size measured against footage before SKILL_FX_SIZE existed, kept as drawn. Not for weapon-held cues. */
 export const measuredAtFxScale = (scale: number): number => scale / SKILL_FX_SIZE;
 /**
+ * A cue size measured against footage at the 0.44 base to wrap or hug a body (a shield round the shoulders, a bind on
+ * the chest): that body now draws at BODY_TO_FX of its old size, so the wrap shrinks with it. Range-sized cues (a ground
+ * ring or blast measured in cells) stay on measuredAtFxScale: the board did not change.
+ */
+export const measuredOnBody = (scale: number): number => measuredAtFxScale(scale) * BODY_TO_FX;
+/**
  * What is fitted to a model mesh follows the body; everything else takes the arena's scale.
  *
  * A system held on a weapon or hand bone is authored against that mesh (Jinx's muzzle flash, Twitch's crossbow glow,

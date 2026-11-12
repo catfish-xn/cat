@@ -2175,9 +2175,9 @@
     "tests/rendering3d-champion-arena-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2306,
+      "currentBytes": 3541,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4b00af77946184a22487e72a83986adb0662cbc1a18df115293e62d9ccf3d11d",
+      "currentSha256": "54a755de00653c83facef62b9423ecbd98f3861b21814b6c5c5a0e76fccae603",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-champion-lighting.test.ts": {
@@ -3525,9 +3525,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 18994,
+      "currentBytes": 19234,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d07bf4c2763146d0f0713dd2ba08deff2253504d45e313423699ac22c6e82464",
+      "currentSha256": "f7713cb0b962ade9145b9e88fce2557665eed775306466c624c779f57856d8cb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {

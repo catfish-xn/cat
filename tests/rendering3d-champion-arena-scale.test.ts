@@ -35,4 +35,20 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     expect(fit.STAGE_SOURCE_SCALE).toBe(FX_SOURCE_SCALE);
     expect(fit.STAGE_BODY_FACTOR).toBe(1);
   });
+
+  it('shrinks body-hugging hand sizes with the body and keeps range sizes in cells', async () => {
+    const { CUE_OVERRIDES } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    const { measuredAtFxScale, measuredOnBody } = await import('../src/rendering/three-mode/vfx-ltk/fx-size');
+    expect(measuredOnBody(1)).toBeCloseTo(measuredAtFxScale(1) * BODY_TO_FX);
+    const scaleOf = (champion: string, system: string) => CUE_OVERRIDES[champion]!.filter(cue => cue.system === system).map(cue => cue.scale);
+    // Hugging a body: Lux's shield, Zyra's chest hit on each rooted target, Nunu's per-target splash.
+    expect(scaleOf('lux', '44c9516a')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
+    expect(scaleOf('zyra', '9d413df0')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
+    expect(scaleOf('nunu', '5dfd387b')).toEqual([measuredOnBody(0.7)]);
+    // Ranges measured in cells: unchanged.
+    expect(scaleOf('nunu', '78d04f27')).toEqual([measuredAtFxScale(0.43)]);
+    expect(scaleOf('nunu', '8c256426')).toEqual([measuredAtFxScale(0.43)]);
+    expect(scaleOf('irelia', '08b7a939')).toEqual([measuredAtFxScale(1)]);
+    expect(scaleOf('garen', '5bbccb8c')).toEqual([measuredAtFxScale(0.45)]);
+  });
 });
