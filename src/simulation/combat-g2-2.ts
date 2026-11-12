@@ -12,6 +12,12 @@ import { modifier, stat } from './content/item-programs';
 import { lineContains, lineDirections } from './combat-skill-lines';
 /** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
 export const VI_ROW_KNOCKUP_TICKS = 10;
+/**
+ * User-approved 2026-11-11 (original footage FB7YoqakYqE, three 3-star casts: damage 0.61-0.67 s after the shield):
+ * Vi grabs her target and slams 12 ticks (0.6 s) after the cast. The target is held (a knock-up) until the slam; damage,
+ * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚).
+ */
+export const VI_SLAM_TICKS = 12;
 /** User-approved 10-24: Ambessa's gauntlet slam stuns its target for 1 s (was 0.25 s); the slam↔gauntlet link is inferred (P). */
 export const AMBESSA_SLAM_STUN_TICKS = 20;
 import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
@@ -34,9 +40,14 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   switch(champion(u)) {
     case 'camille': strike(t,ad('PercentAttackDamage','APDamage'),t.armor<t.magicResist?'physical':'magic');break;
     case 'vi':
+      // The shield lands now; she holds the channel and the grabbed target until the slam (g22ViSlam, executeG22Task).
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,ad('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);
-      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
+      applyStatus(u,origin(u),'channel',0,VI_SLAM_TICKS,ctx.tick,ctx.events,true,'',seq);
+      applyStatus(t,origin(u),'stun',0,VI_SLAM_TICKS,ctx.tick,ctx.events,false,JSON.stringify([seq,t.id,'vi-grab']),undefined,true);
+      // Amounts are taken at the cast; ordinal 0 is the target's slam, 1 the row shockwave on the row recorded now.
+      schedule(u,'g22ViSlam',ctx.tick+VI_SLAM_TICKS,t,ad('PercentAttackDamage'),seq,0,2,t.cell);
+      schedule(u,'g22ViSlam',ctx.tick+VI_SLAM_TICKS,t,ad('PercentAttackDamage_SecondaryDamage'),seq,1,2,t.cell);
+      ids.push(t.id);break;
     case 'akali':
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;
@@ -133,6 +144,14 @@ export function planG22Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number)
 }
 export function executeG22Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):void {
   if(task.kind==='g22Vex') {for(const [i,t] of enemies(u,ctx.units).filter(t=>task.cell&&hexDistance(t.cell,task.cell)<=1).entries())hit(ctx,u,t,task.amount,task.actionSeq,100+i,'magic',true);}
+  else if(task.kind==='g22ViSlam') {
+    // Runs only while Vi is alive (the tasks of a dead unit never run); a control on Vi ends her channel, not the slam.
+    if(task.ordinal===0){const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);
+      // A target that died while held keeps no share: the slam does not pick another one.
+      if(t){hit(ctx,u,t,task.amount,task.actionSeq,0,'physical');applyStatus(t,task.source,'stun',0,Math.round(variable(u,'StunDuration')*20),ctx.tick,ctx.events);}}
+    else for(const [i,other] of byDistance(u,enemies(u,ctx.units)).filter(x=>x.id!==task.targetId&&x.cell.row===task.cell!.row).entries()) {
+      hit(ctx,u,other,task.amount,task.actionSeq,1+i,'physical',true);applyStatus(other,task.source,'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);} // the row shockwave knocks up
+  }
   else {const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);if(t)hit(ctx,u,t,task.amount,task.actionSeq,100+task.ordinal);}
 }
 export function recordG22Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet):void {

@@ -13,6 +13,8 @@ export interface TimelineCue {
   readonly duration: number;
   readonly bone?: string;
   readonly targetBone?: string;
+  /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
+  readonly branch?: string;
   /** Zero-based cast rotation, selected from observed cast events, including catch-up events. */
   readonly phase?: 0 | 1 | 2;
   readonly primary?: boolean;
@@ -52,6 +54,36 @@ export interface TimelineCue {
    * cue covers (a Sevika spell's right reel under the rolled mod, which the mod's own layer draws there).
    */
   readonly hide?: readonly string[];
+  /**
+   * A cast-start buff that a recast refreshes rather than stacks: when this cue starts while the same system from the
+   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura).
+   */
+  readonly refresh?: boolean;
+  /**
+   * A projectile that starts where its target stands and runs along the board row (world X) to `rowCells` cells on the
+   * `rowSide` side, instead of flying from the caster to the target: a line missile the original casts at a location
+   * (Vi's row shockwave). Both points are taken when it spawns.
+   */
+  readonly rowSide?: -1 | 1;
+  /** With `rowSide`: how many cells the row projectile runs (with `rowToEnd`, at most this many). */
+  readonly rowCells?: number;
+  /**
+   * With `rowSide`: it runs to the end of its row on that side (the board's own geometry: the last cell's centre plus
+   * `rowBeyond` cells), capped by `rowCells`.
+   */
+  readonly rowToEnd?: boolean;
+  /** With `rowToEnd`: cells past the last cell's centre the row ends at (0 to 1). */
+  readonly rowBeyond?: number;
+  /**
+   * With `rowSide`: cells per second. The flight then takes its cells / rowSpeed, and the run lasts that plus what the cue
+   * keeps after its nominal flight (`duration` − `travelSeconds`), so a short run near the board's edge ends sooner.
+   */
+  readonly rowSpeed?: number;
+  /**
+   * Cues of one play with the same key start together or not at all: they wait for room for all of them and are all
+   * dropped once overdue, so one half of a pair never shows without the other (Vi's two row shockwaves).
+   */
+  readonly together?: string;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

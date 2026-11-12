@@ -12,6 +12,7 @@
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
+import { S13_TIMELINES } from './s13-timelines';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -281,7 +282,32 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '95bbab3d', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
     { system: '03b4d6ac', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
   ],
+  // The asset root's exported list is S13_TIMELINES.vi as of 10-27 plus its attack hit (copied unchanged from the
+  // export); this replaces it so the landing play-out (s13-timelines.ts) reaches the live board without an asset rebuild.
+  vi: [
+    ...S13_TIMELINES.vi,
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
+  ],
 };
+
+/**
+ * Which rule branch each cast system belongs to, by champion and system. Tags only: the exported timing stays as it is.
+ * A tagged cue plays only when the cast event names its branch (TimelineCue.branch), so one cast no longer plays every
+ * branch's effects at once. Untagged cues play on every cast. Applied only when every tagged system is in the list.
+ */
+export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  // Ambessa: odd casts chain (Q: the chain swipe and its hit), even casts fist (R: dash, ground, weapon and slam hit).
+  // Rule side: combat-g2-2.ts writes the branch (PR #623); the 11-11 live index played all six on every cast.
+  ambessa: { '3b4c15e0': 'chain', '8a64f4dd': 'chain', '754b6c78': 'fist', 'a429a900': 'fist', '6390530e': 'fist', 'cba05b6e': 'fist' },
+};
+/** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
+export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {
+  const tags = Object.hasOwn(CUE_BRANCHES, champion) ? CUE_BRANCHES[champion] : undefined;
+  if (!tags || !cues) return undefined;
+  const cast = new Set(cues.filter(cue => (cue.action ?? 'cast') === 'cast').map(cue => cue.system));
+  if (!Object.keys(tags).every(system => cast.has(system))) return undefined;
+  return cues.map(cue => (cue.action ?? 'cast') === 'cast' && Object.hasOwn(tags, cue.system) ? { ...cue, branch: tags[cue.system] } : cue);
+}
 
 /** The override for `champion` when every system it names is present in `systems`. */
 export function cueOverride(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] | undefined {
@@ -290,8 +316,31 @@ export function cueOverride(champion: string, systems: Readonly<Record<string, s
 }
 
 /**
- * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
- * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
+ * Cues added to a champion's list (exported or replaced above), each only when its system is in the loaded index.
+ * For a layer the export never cued, where copying the champion's whole list into CUE_OVERRIDES would freeze the rest.
+ * Times are measured on the original, with 0 at the mana bar emptying.
+ */
+export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
+  // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
+  ambessa: [
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+  ],
+  // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
+  // The original keeps it for about as long as the empower lasts (sweep thread side by side, 11-11). Our rule holds the
+  // empower for EmpowerDuration, so the layer runs that long and fades over its last half second (our fit). A recast refreshes the
+  // empower, so it refreshes the layer rather than stacking a second (refresh).
+  mordekaiser: [
+    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest, refresh: true },
+  ],
+};
+export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
+  return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
+}
+
+/**
+ * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
+ * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
@@ -302,6 +351,10 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, drew as one dark straight-edged band
+  // between the two shockwaves where the original shows loose brown dust (#626 Windows keyframes, 11-12). Not yet found
+  // whether its erosion, its navmesh mask (unsupported here) or the trail's UV is the cause: held back until checked.
+  '84b969e0': ['Trench'],
 };
 
 /**
@@ -313,6 +366,21 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+};
+
+/**
+ * Attached-mesh emitters held off screen, by system and emitter name, until their look is checked against the original.
+ * The rest of each system draws as before. Only for an overlay measured to draw wrong on the board.
+ */
+export const ATTACHED_HELD_BACK: Readonly<Record<string, readonly string[]>> = {
+  // Jayce R_Melee_LightningCall: Avatar_Fresnel is a black-based layer lit only by its rim, and our rim leaves it unlit, so
+  // the layer adds nothing (#619 Windows probe, 11-12). Held with Avatar_Hammer until the rim is checked against an
+  // original of the same star.
+  '8d9d784b': ['Avatar_Hammer', 'Avatar_Fresnel'],
+  // Jayce E_Knockback_Wave, which plays with it: Avatar_Dark is a near-black copy of the body, meant to sit under
+  // Avatar_Orange and Avatar_Yellow, black-based layers lit only by their rims; with those unlit, the dark copy alone drew
+  // a black shell over Jayce (#619 Windows probe, 11-12).
+  'e07c8088': ['Avatar_Dark', 'Avatar_Orange', 'Avatar_Yellow'],
 };
 
 /**
