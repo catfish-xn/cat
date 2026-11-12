@@ -1,0 +1,7 @@
+# #634 first-play reservation, probe round, before column. Before: #635 head 0569414e (integration cf79f7e7 + the
+# --probe emitters tool). After: claude/ltk-cold-reserve-rec (#634 + the same tool; recording only, never merged).
+# Pre-flighted: node dev/castcmp/jobs-check.mjs <this file> (PASS, 11-12, Linux). Copy this file to the before checkout.
+# Vi first cast cold (--cold 1), 3-star on one 3-star Sett, --dist 2, with every running system's draws per frame
+# (emitters.json). Expected (Linux, 60 fps steps): before, the two row shockwaves (84b969e0) start a frame ahead of the
+# landing and take the room, so d27b3044 (landing burst) and 66c600e8 (target hit) never start; after, all start.
+v-capture.cjs vi v634p-before-vi-cold --real 1 --cold 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2500 --systems none --probe emitters --column before --snapshot c1333710ad8e
