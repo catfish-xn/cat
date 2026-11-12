@@ -1712,3 +1712,4 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
   - 第 12 tick（砸地，新任务 `g22ViSlam`）：主目标受伤并开始原时长眩晕（`StunDuration`）；施法当刻记下的那一排上其他敌人受副伤害并被击飞 `VI_ROW_KNOCKUP_TICKS`。伤害数值在施法当刻计算。
   - 中途情况：蔚在砸地前阵亡——砸地取消（主目标的抓起控制按原 12 tick 自然结束）；蔚被控——按现有 channel 机制结束引导，砸地照常落地；主目标在砸地前死亡——不换目标，主目标那份伤害作废，同排溅射仍按记下的那一排结算。
 - 实现：`src/simulation/combat-g2-2.ts` `case 'vi'` 与 `executeG22Task`；任务类型 `g22ViSlam`（combat-types、serialization-structure 任务校验）。测试 `tests/vi-grab-slam.test.ts`。
+- **已知差异，原版行为未核实**（2026-11-12，Fable 定案：本次不改规则）：蔚在砸地前阵亡时，砸地取消，但主目标的 12 tick 抓起控制不提前解除（现有机制没有"施法者死亡提前解除他人状态"的通道）。3D 画面上主目标仍被举在空中，到 0.6 秒自己落下，没有伤害数字和眩晕。原版此时是否立即放下目标没有录像核实。若要改成立即放下，需要先在规则层提前解除抓起控制，再让渲染（`ControlMotion.grab`）跟随。
