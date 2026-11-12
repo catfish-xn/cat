@@ -39,8 +39,29 @@ const readLayers = page => page.evaluate(async () => {
   return { layers: s.peakLayers, systems: [...new Set(Object.keys(s.peakSystems).map(k => k.split('@')[0]))] };
 });
 
-function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStats }) {
-  const fails = [], exempt = [];
+/** Share of `me`'s screen box covered by each foe's box in one frame. */
+function cover(boxes) {
+  const me = boxes.me; if (!me) return {};
+  const area = b => Math.max(0, b.right - b.left) * Math.max(0, b.bottom - b.top);
+  return Object.fromEntries(Object.entries(boxes).filter(([id, b]) => id !== 'me' && b).map(([id, b]) => {
+    const i = { left: Math.max(me.left, b.left), right: Math.min(me.right, b.right), top: Math.max(me.top, b.top), bottom: Math.min(me.bottom, b.bottom) };
+    return [id, +(area(i) / Math.max(1, area(me))).toFixed(3)];
+  }));
+}
+/** A foe's box may cover at most this share of the caster's at the cast frame. */
+const MAX_COVER = 0.3;
+
+function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStats, boxes = [], castAtMs = 0 }) {
+  const fails = [], exempt = [], notes = [];
+  // Whether the cast went to the new engine (runtime.play's return) is not read: the page cannot see it without a src
+  // hook. In after/debug columns a named system on screen is the indirect proof; in before/off nothing is.
+  notes.push('play() return: not checked (after/debug: inferred from the named systems being on screen)');
+  const castFrame = boxes.find(f => f.t >= castAtMs) ?? boxes[0];
+  if (castFrame) {
+    const c = cover(castFrame.boxes), worst = Object.entries(c).sort((x, y) => y[1] - x[1])[0];
+    notes.push(`cover at ${castFrame.t}ms: ${JSON.stringify(c)}`);
+    if (worst && worst[1] > MAX_COVER) fails.push(`cover: ${worst[0]} covers ${(worst[1] * 100).toFixed(0)}% of the caster's box at the cast (${castFrame.t}ms; max ${MAX_COVER * 100}%)`);
+  } else fails.push('cover: no boxes recorded');
   if (!ckout.ok) fails.push(`checkout: src clean ${ckout.srcClean}, served src = HEAD ${ckout.probes.map(p => `${p.file.split('/').pop()}:${p.same}`).join(' ')}`);
   if (real) {
     if (!audit) fails.push('real: no audit from the page');
@@ -63,7 +84,7 @@ function verdict({ systems, column, real, ckout, audit, pre, timeline, layerStat
     }
     if (!timeline.some(f => f.layers > 0)) fails.push('layers: peakLayers 0 in the window');
   }
-  return { ok: !fails.length, fails, exempt };
+  return { ok: !fails.length, fails, exempt, notes };
 }
 
 module.exports = { checkout, resetLayers, readLayers, verdict, machine: () => `${os.hostname()} ${process.platform}` };

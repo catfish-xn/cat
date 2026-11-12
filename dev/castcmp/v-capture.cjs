@@ -66,11 +66,12 @@ async function unbind(page, tick, rebind) {
   await (opt('unbind') ? unbind(page, 900000, false) : page.evaluate(() => window.__h.cast()));
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
-  let at = 0; const files = [], layerTimeline = [];
+  let at = 0; const files = [], layerTimeline = [], boxTimeline = [];
   for (const t of times) {
     const sampling = gated && await gate.resetLayers(page);
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     if (sampling) layerTimeline.push({ t, ...(await gate.readLayers(page)) });
+    if (gated) boxTimeline.push({ t, boxes: await page.evaluate(() => Object.fromEntries(['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => [id, window.__h.box(id) ?? null]))) });
     await page.waitForTimeout(t === times[0] ? 400 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
@@ -85,10 +86,10 @@ async function unbind(page, tick, rebind) {
     const real = !!opt('real');
     const audit = real ? await page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, times[times.length - 1]) : null;
     const layerStats = await page.evaluate(async () => !!(await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null))?.ATTACHED_LAYER_STATS);
-    const v = gate.verdict({ systems, column, real, ckout, audit, pre, timeline: layerTimeline, layerStats });
+    const v = gate.verdict({ systems, column, real, ckout, audit, pre, timeline: layerTimeline, layerStats, boxes: boxTimeline, castAtMs: real ? 500 : 0 });
     const record = { ...v, unit, column, systems, snapshot: opt('snapshot') ?? null, machine: gate.machine(), gl: launch.gl, at: new Date().toISOString(),
       checkout: ckout, foe: { model: target, n: Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) }, star: Number(opt('star') ?? 3), dist: Number(dist),
-      ms: times[times.length - 1], real, args: args.slice(2), audit, preCast: pre, layerTimeline, errors: errors.length };
+      ms: times[times.length - 1], real, args: args.slice(2), audit, preCast: pre, layerTimeline, boxTimeline, errors: errors.length };
     fs.writeFileSync(path.join(out, 'gate.json'), JSON.stringify(record, null, 2));
     console.log('gate', v.ok ? 'PASS' : 'FAIL', v.fails.join(' | '), v.exempt.length ? '(exempt: ' + v.exempt.join('; ') + ')' : '');
     if (!v.ok) process.exit(1);

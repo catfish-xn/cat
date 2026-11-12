@@ -3,7 +3,7 @@
 import { createCombatWithEvents, stepCombat } from '../../src/simulation/combat';
 import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
 import { DEFAULT_BOARD } from '../../src/simulation/board';
-import { toDisplayEvents } from '../../src/presentation/combat-display';
+import { toDisplayEvents, toCombatViewState } from '../../src/presentation/combat-display';
 
 export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number }
 /** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
@@ -60,4 +60,22 @@ export function auditWindow(events: readonly (readonly any[])[], alive: readonly
   const myCasts = events.slice(from, to + 1).flat().filter(e => e.type === 'cast' && e.sourceId === 'me').length;
   return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets,
     targetsAliveAtEnd: Object.fromEntries(targets.map(id => [id, !!alive[end]?.[id]])), otherCasts, myCasts };
+}
+
+/** Every unit's board cell this tick. */
+export function cellsOf(state: any): Record<string, { row: number; col: number; alive: boolean }> {
+  return Object.fromEntries(toCombatViewState(state).units.map((u: any) => [u.id, { row: u.cell.row, col: u.cell.col, alive: !!u.alive }]));
+}
+/** Hex distance on the harness's board (odd rows shifted half a cell right, as harness.ts hexOf draws them). */
+export function hexDistance(a: { row: number; col: number }, b: { row: number; col: number }): number {
+  const cube = (c: { row: number; col: number }) => { const x = c.col - (c.row - (c.row & 1)) / 2, z = c.row; return [x, z, -x - z]; };
+  const [p, q] = [cube(a), cube(b)];
+  return Math.max(Math.abs(p[0] - q[0]), Math.abs(p[1] - q[1]), Math.abs(p[2] - q[2]));
+}
+/** Foes that may hide the caster on screen when `me` casts: alive, next to `me`, on its row or nearer the camera
+ * (the camera looks from the player's side, so a larger row is drawn lower and in front). Node's stand-in for the
+ * browser's box-overlap check in gate.cjs. */
+export function frontBlockers(cells: Record<string, { row: number; col: number; alive: boolean }>): string[] {
+  const me = cells.me; if (!me) return [];
+  return Object.entries(cells).filter(([id, c]) => id !== 'me' && c.alive && c.row >= me.row && hexDistance(c, me) <= 1).map(([id]) => id);
 }
