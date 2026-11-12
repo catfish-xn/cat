@@ -93,7 +93,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
       audit: (ms: number) => real.audit(ms),
-      systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached,
+      systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached, emitters: probes.emitters,
       overhead: (id: string) => { const p: any = real.frames[at]!.find((x: any) => x.id === id); return p ? probes.overhead(p) : null; },
     };
     return;
@@ -135,7 +135,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       for (const id of ids) { const p: any = pieces.find(x => x.id === id); if (p) { p.alive = false; p.visible = true; p.meters = { ...p.meters, hp: 0 }; } }
       listener.frame(frame(true));
     },
-    systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached,
+    systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached, emitters: probes.emitters,
     overhead: (id: string) => { const p: any = pieces.find(x => x.id === id); return p ? probes.overhead(p) : null; },
     clock: () => clock,
     status: r.status,

@@ -165,6 +165,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
       if (draw) {
+        // Named for dev probes only (dev/castcmp probes.ts emitters()); nothing in the renderer reads it.
+        draw.object.name = `${emitter.name ?? '?'}#${definition.rank}`;
         draw.object.layers.disableAll(); for (const layer of layers) draw.object.layers.enable(layer);
         const phases = drawPhases(emitter); passes.early ||= phases.warpsEarly; passes.late ||= phases.warpsLate; passes.soft ||= fades(emitter);
         draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
