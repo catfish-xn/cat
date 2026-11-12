@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow } from '../src/rendering/three-mode/overhead-follow';
+import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
 
 // Synthetic skeleton, made-up integers.
 const body = () => {
@@ -76,5 +76,12 @@ describe('overhead follow', () => {
     const { root, root2, follow } = rig('ROOT');
     root2.position.set(0, 0, 25); root.updateMatrixWorld(true);
     expect(settle(follow, 100).z).toBeCloseTo(25);
+  });
+
+  it('reports which bone and rule it picked', () => {
+    const picked = pickFollowBones(rig('ROOT').root);
+    expect([picked.travel?.name, picked.travelRule, picked.body?.name, picked.bodyRule]).toEqual(['ROOT', 'case', 'Pelvis', 0]);
+    const plain = pickFollowBones(new Group());
+    expect([plain.travel, plain.travelRule, plain.body, plain.bodyRule]).toEqual([null, null, null, null]);
   });
 });

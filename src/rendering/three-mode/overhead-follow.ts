@@ -13,9 +13,8 @@ export const TRAVEL_BONE = 'Root';
 export const BODY_BONES: readonly RegExp[] = [/^pelvis$/i, /pelvis/i, /hip/i];
 /**
  * How far the body bone may leave the travel bone, as a share of the drawn height, before the bars follow it: an
- * attack's lean or a hover's bob stays inside, a body that walks away from its Root goes past it (2026-11-12 GLB
- * check of asset-root-live, 1★ board units: every other clip ≤ 8.4 sideways against heights of ~90–105; Malzahar's
- * idle bobs 20.9 up). Only the part beyond is followed. Fitted values, not original data.
+ * attack's lean or a hover's bob stays inside, a body that walks away from its Root goes past it. Only the part beyond
+ * is followed. Fitted values (2026-11-12), not original data.
  */
 export const BODY_SLACK = { across: 0.1, up: 0.3 } as const;
 
@@ -28,6 +27,22 @@ const idleLocal = (clip: AnimationClip | undefined, node: Object3D): Matrix4 => 
   const p = first(trackOf(clip, node, 'position'), 3), q = first(trackOf(clip, node, 'quaternion'), 4), s = first(trackOf(clip, node, 'scale'), 3);
   return new Matrix4().compose(p ? new Vector3(...p) : node.position, q ? new Quaternion(...q) : node.quaternion, s ? new Vector3(...s) : node.scale);
 };
+
+/**
+ * The bones the bars follow and the rule that picked each: the travel bone (`Root` exactly, else the same name in
+ * another case) and the body bone (the first BODY_BONES pattern with a match). Exported for the per-model audit.
+ */
+export function pickFollowBones(body: Object3D): { travel: Object3D | null; travelRule: 'exact' | 'case' | null;
+  body: Object3D | null; bodyRule: number | null } {
+  const exact = body.getObjectByName(TRAVEL_BONE);
+  const travel = exact?.parent ? exact : findBone(body, name => name.toLowerCase() === TRAVEL_BONE.toLowerCase());
+  const travelRule = travel ? (travel === exact ? 'exact' : 'case') : null;
+  for (let rule = 0; rule < BODY_BONES.length; rule++) {
+    const hip = findBone(body, name => BODY_BONES[rule]!.test(name));
+    if (hip) return { travel, travelRule, body: hip, bodyRule: rule };
+  }
+  return { travel, travelRule, body: null, bodyRule: null };
+}
 
 const findBone = (body: Object3D, test: (name: string) => boolean): Object3D | null => {
   let found: Object3D | null = null;
@@ -56,10 +71,7 @@ export class OverheadFollow {
   /** A body with no travel or body bone (a pawn, a model without a League skeleton) follows its lunge only. */
   static of(body: Object3D, animations: readonly AnimationClip[], idle: string | undefined): OverheadFollow {
     const clip = animations.find(c => c.name === idle);
-    const exact = body.getObjectByName(TRAVEL_BONE);
-    const bone = exact?.parent ? exact : findBone(body, name => name.toLowerCase() === TRAVEL_BONE.toLowerCase());
-    let hip: Object3D | null = null;
-    for (const pattern of BODY_BONES) if ((hip = findBone(body, name => pattern.test(name)))) break;
+    const { travel: bone, body: hip } = pickFollowBones(body);
     const frame = bone?.parent ? bone : body;
     let tracked: { bone: Object3D; frame: Object3D; rest: Vector3 } | null = null;
     if (hip && hip !== frame) {
