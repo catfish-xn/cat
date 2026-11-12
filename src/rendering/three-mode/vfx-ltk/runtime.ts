@@ -1,6 +1,6 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
-import { ARENA_UNIT_SCALE, CELL_LEAGUE_UNITS, cueSize } from './fx-size';
+import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
@@ -108,7 +108,7 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
  * x by its column and its y by its row alone, so one row is one world Z for either player.
  */
 export function rowPath(from: WorldPoint, side: -1 | 1, cells: number): [WorldPoint, WorldPoint] {
-  return [from, [from[0] + side * cells * CELL_LEAGUE_UNITS * ARENA_UNIT_SCALE, from[1], from[2]]];
+  return [from, [from[0] + side * cells * BOARD_CELL, from[1], from[2]]];
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {

@@ -11,8 +11,11 @@
  * Kept free of the particle bundle so cue tables can import it.
  */
 export const FX_SOURCE_SCALE = 0.44; // Must equal particles.ts FX_SCALE.
-/** League units across one board cell: the arena alignment maps this many to a cell's width (see above). */
-export const CELL_LEAGUE_UNITS = 178;
+/**
+ * Board units across one cell of the board: √3 × the hex radius of the board layout (layout-config.ts BOARD_LAYOUT,
+ * 34), in which pieces stand. Kept here because a 3D module does not import that 2D module; a test keeps the two equal.
+ */
+export const BOARD_CELL = Math.sqrt(3) * 34;
 /** League units → board units for the default arena model (boardAlignment 0.3306 × alignmentScale 7.2 / 8.48). */
 export const ARENA_UNIT_SCALE = 0.3306 * (7.2 / 8.48);
 /** Multiplies a cue's scale (see cueSize for the weapon-bone exception). */

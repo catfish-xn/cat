@@ -13,13 +13,13 @@ export const VI_LANDING = frame(17);
  */
 export const VI_ROW_SHOCKWAVE = {
   /** Fitted value, not original data: seconds after the cast it leaves the landing point. */
-  delay: VI_LANDING + 0.15,
+  delay: VI_LANDING + 0.13,
   /** Fitted value, not original data: how many cells each side it runs. */
-  cells: 2.5,
+  cells: 3.4,
   /** Fitted value, not original data: seconds it takes to get there. */
-  travel: 0.3,
+  travel: 0.55,
   /** Fitted value, not original data: seconds its particles play out after it lands. */
-  linger: 1,
+  linger: 0.3,
 } as const;
 const viRowCue = (rowSide: -1 | 1): TimelineCue => ({ system: '84b969e0', event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay,
   duration: VI_ROW_SHOCKWAVE.travel + VI_ROW_SHOCKWAVE.linger, travelSeconds: VI_ROW_SHOCKWAVE.travel, bone: ground, targetBone: ground,

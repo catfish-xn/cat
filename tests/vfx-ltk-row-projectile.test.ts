@@ -15,17 +15,22 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime, rowPath, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
-import { ARENA_UNIT_SCALE, CELL_LEAGUE_UNITS } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { BOARD_LAYOUT } from '../src/rendering/layout-config';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { S13_TIMELINES, VI_ROW_SHOCKWAVE } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
-const cell = CELL_LEAGUE_UNITS * ARENA_UNIT_SCALE;
+const cell = BOARD_CELL;
 const row = (rowSide: -1 | 1, rowCells = 2): TimelineCue =>
   ({ system: 'sample', event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.3, bone: 'ground', targetBone: 'ground', primary: true, rowSide, rowCells });
 const index = (cues: readonly TimelineCue[]) => ({ version: 1, systems: { sample: 'systems/sample.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } });
 
 describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
+  it('a board cell is the cell of the board layout: √3 × its hex radius', () => {
+    expect(BOARD_CELL).toBeCloseTo(Math.sqrt(3) * BOARD_LAYOUT.hexRadius, 12);
+  });
+
   it('runs from a point along the board row (world X), rowCells cells to either side', () => {
     expect(rowPath([12, 3, -40], 1, 2.5)).toEqual([[12, 3, -40], [12 + 2.5 * cell, 3, -40]]);
     expect(rowPath([12, 3, -40], -1, 1)).toEqual([[12, 3, -40], [12 - cell, 3, -40]]);

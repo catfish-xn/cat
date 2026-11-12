@@ -3645,9 +3645,9 @@
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9769,
+      "currentBytes": 9952,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ce6de27fe3cecda8990486e7e736f092b4f052ffd46be3166017595612ea8f01",
+      "currentSha256": "a60dda03b34971ddcb70457c02263acf45a07e5c9cff7416325390cb1d075531",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sevika-reels.test.ts": {
@@ -3678,7 +3678,7 @@
       "previousBytes": 9657,
       "currentBytes": 25667,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "75a1b28efd74973157277499e51ff1545d8f013d0b21e4b4ce7c190a039623c4",
+      "currentSha256": "6d49cdd84b958955f25a0b599798f0269eadb44c76809897dec4333aa8aaa030",
       "firstDifferentByte": 84
     },
     "tests/vi-grab-slam.test.ts": {
