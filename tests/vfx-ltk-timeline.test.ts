@@ -319,7 +319,8 @@ it('Vi: her landing systems start on the landing frame; her row shockwave pair s
     step(2, () => expect([0, 2]).toContain(rows())); // both in one frame, never one side alone
     expect(rows()).toBe(2);
     for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live(), String(first)).toContain(id);
-    expect(runtime.active).toBe(8); expect(budget.live).toBe(8 * MIN_RESERVE); // every synthetic system measures below the floor expect(budget.live).toBeLessThanOrEqual(budget.max);
+    expect(runtime.active).toBe(8); expect(budget.live).toBe(8 * MIN_RESERVE); // every synthetic system measures below the floor
+    expect(budget.live).toBeLessThanOrEqual(budget.max);
     for (let f = 0; f < 300 && runtime.active; f++) step(1);
     expect(runtime.active).toBe(0);
   }
