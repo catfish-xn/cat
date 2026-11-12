@@ -153,6 +153,7 @@ describe('cast timeline replacement and fallback', () => {
     const index = { ...syntheticIndex(), systems: { '84b969e0': 'systems/landing_mis.json' }, skills: {} };
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : doc, readTexture: async () => new Texture() });
     const pool = await library.load('84b969e0');
+    expect(pool.model.emitters).toHaveLength(3);
     expect(pool.drawn.map(d => d.emitter.name)).toEqual(['SpikeShapes1', 'Dust', 'Trench']);
   });
   it('keeps legacy during missing manifest/load, then owns a ready cast, starts/stops/disposes it', async () => {
