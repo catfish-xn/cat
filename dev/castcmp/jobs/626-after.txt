@@ -4,7 +4,7 @@
 #   jump dust at +300/+600/+900 ms after the cast (window 800/1100/1400 ms) and the shield fresnel at 0.5-1.1 s (one foe, so the
 #   cover gate should pass). --ms 2500: Garen casts at window 2.65 s, so a longer window fails the "others cast" check.
 # Line 2: same, on one 3-star Sett, --ms 5000, so the whole landing play-out (to about 4.4 s after the cast in the after column)
-#   fits; Garen cannot be used for this length (see above). Sett's cast is first at tick 135, Vi's at 135 here (jobs-check).
+#   fits; Garen cannot be used for this length (see above). Vi casts at tick 135 here and no other unit casts in the window (jobs-check).
 # --systems 9614ffb4,84b969e0: the shield and the landing system must both run (84b969e0 runs as the flight in both columns).
 v-capture.cjs vi v626-after-garen --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 2 --ms 2500 --settle 3000 --systems 9614ffb4,84b969e0 --column after --snapshot c1333710ad8e
 v-capture.cjs vi v626-after-sett --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 5000 --settle 3000 --systems 9614ffb4,84b969e0 --column after --snapshot c1333710ad8e
