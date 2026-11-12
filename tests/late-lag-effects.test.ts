@@ -350,7 +350,8 @@ describe('late-game effect budget', () => {
     expect(runtime.play('darius', 'darius-0', ['dead'])).toBe(true);
     runtime.update(0.01, camera);
     expect(shown(scene)).toEqual(['deco']);
-    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(false);
+    // A required hit is not optional: it stays, placed at the dead body's last point (gap list item 13).
+    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(true);
     runtime.dispose();
   });
 

@@ -227,7 +227,7 @@ describe('batch 3 display lifecycle', () => {
   });
 });
 
-it('keeps variant windup and living targets when one target is dead, and still rejects the atomic action', async () => {
+it('keeps variant windup and living targets when one target is dead, and a plain cast keeps the hit on the dead target', async () => {
   const cues = [
     { system: 'start', event: 'cast-start' as const, delay: 0, duration: 1 },
     { system: 'hit', event: 'hit' as const, delay: 0, duration: 1 },
@@ -248,8 +248,9 @@ it('keeps variant windup and living targets when one target is dead, and still r
   runtime.update(.01, new Camera());
   expect(scene.children.map(child => child.userData.ltkSystem).sort()).toEqual(['hit', 'hit', 'start']);
   runtime.clear();
-  expect(runtime.play('hero', 'self', ['self', 'ally', 'enemy'])).toBe(false);
-  expect(runtime.queued).toBe(0);
+  // A plain cast now keeps the dead ally's hit at its last point instead of falling back as a whole.
+  expect(runtime.play('hero', 'self', ['self', 'ally', 'enemy'])).toBe(true);
+  expect(runtime.queued).toBe(4); runtime.clear();
   units.get('enemy')!.alive = false;
   expect(runtime.playVariant('hero', 'hero', 'self', ['ally', 'enemy'])).toBe(true);
   expect(runtime.queued).toBe(1);

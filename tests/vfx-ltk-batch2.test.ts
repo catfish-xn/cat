@@ -240,9 +240,9 @@ describe('batch 2 runtime boundaries', () => {
     const skill = starLevel >= 3 ? 'viktor-slam-3star' : 'viktor-slam';
     const boardSystem = starLevel >= 3 ? 'efdd9461' : 'c4ef93f3';
     await runtime.warm('viktor');
-    // Default runtime atomicity stays intact for callers that pass an invalid target.
-    expect(runtime.play('viktor', 'v', c.targetIds, 0, 'cast', { skill, board: point })).toBe(false);
-    expect(runtime.queued).toBe(0);
+    // A direct cast keeps the board layer and the dead body's hit; only the missing and disposed targets lose theirs.
+    expect(runtime.play('viktor', 'v', c.targetIds, 0, 'cast', { skill, board: point })).toBe(true);
+    expect(runtime.queued).toBe(3); runtime.clear();
     b.begin([c]); b.event(c, false);
     b.begin([stormDamage()]); b.event(stormDamage(), true);
     expect(play.mock.calls[0]?.[2]).toEqual(['target']);
@@ -321,7 +321,7 @@ describe('batch 2 runtime boundaries', () => {
     const library=createVfxLibrary('/root/',{...reader,readBinary:async()=>binaryFixture('mesh',false)});
     const prepared=await library.load('a');expect(prepared.surfaces?.get('')?.get(0)?.mesh).toBeDefined();library.dispose();
   });
-  it('allows a board-only save without a caster; snapshots an already dead victim; preserves default dead-target fallback', async () => {
+  it('allows a board-only save without a caster; snapshots an already dead victim with or without the snapshot flag', async () => {
     const skills={mel:melSkills['mel-save'],'mel-save':melSkills['mel-save'],warwick:warwickSkills['warwick-devour'],'warwick-devour':warwickSkills['warwick-devour']};
     const systems=Object.fromEntries(Object.values(skills).flatMap(c=>c.map(x=>[x.system,'a.json'])));
     const library=createVfxLibrary('/root/',{readJson:async url=>url.endsWith('index.json')?{version:1,systems,assets:{'synthetic.tex':'a.png'},skills}:syntheticSystem(),readTexture:async()=>new Texture()});
@@ -332,7 +332,8 @@ describe('batch 2 runtime boundaries', () => {
     runtime.clear(true); // Settlement feedback survives the following preparation frame.
     runtime.update(.01,new Camera());expect(runtime.active).toBe(1);
     runtime.clear(true);expect(runtime.active).toBe(1);runtime.clear();expect(runtime.active).toBe(0);
-    expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour'})).toBe(false);
+    // A dead victim is snapshotted for any cast now; the explicit snapshot flag stays accepted.
+    expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour'})).toBe(true);runtime.clear();
     expect(runtime.play('warwick','w',['dead'],0,'cast',{skill:'warwick-devour',snapshotTargets:true})).toBe(true);
     runtime.stopUnit('dead'); // The next frame reports the victim dead as well.
     runtime.update(.01,new Camera());expect(runtime.active).toBe(2);expect(budget.live).toBe(500);

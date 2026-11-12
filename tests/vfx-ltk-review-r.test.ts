@@ -109,12 +109,13 @@ describe('review R: whole-action target coverage', () => {
     expect(runtime.play('vander', 'self', ['self'], 1, 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
-  it.each(['missing', 'dead', 'disposed'] as const)('keeps the whole multi-target action on fallback for a %s ally', async reason => {
+  // A dead target keeps its hit at the body's last point; a target whose model is gone loses only its own hit.
+  it.each([['missing', 3], ['dead', 4], ['disposed', 3]] as const)('keeps the multi-target cast for a %s ally (%i cues)', async (reason, queued) => {
     const { runtime, units } = await setup([start, hit]);
     if (reason === 'missing') units.delete('ally');
     else if (reason === 'dead') units.get('ally')!.alive = false;
     else units.get('ally')!.disposed = true;
-    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(true); expect(runtime.queued).toBe(queued);
   });
 
   it('does not own a disposed caster or an action with an unloaded impact', async () => {
