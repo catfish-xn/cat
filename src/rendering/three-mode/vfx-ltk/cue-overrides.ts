@@ -33,10 +33,10 @@ export const CAITLYN_COMET = {
   from: [-1, 5, -1.5] as const,
   /** Seconds after the cast it lands: when the exported impact (R_Bombardment_Impact) starts. */
   lands: 1,
-  /** Seconds it falls, close to the footage. */
-  fall: 0.25,
-  /** Seconds its trail plays on after it lands. */
-  linger: 0.25,
+  /** Seconds it falls, fitted to the footage. */
+  fall: 0.3,
+  /** Seconds its trail fades out over once it lands (fitted: in the footage the column is gone soon after the burst). */
+  linger: 0.15,
 } as const;
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
@@ -110,7 +110,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
     { system: '92bbeaf7', action: 'cast', event: 'projectile', targetBone: ground, primary: true,
-      delay: CAITLYN_COMET.lands - CAITLYN_COMET.fall, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger, travelSeconds: CAITLYN_COMET.fall, fromAbove: CAITLYN_COMET.from },
+      delay: CAITLYN_COMET.lands - CAITLYN_COMET.fall, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger, travelSeconds: CAITLYN_COMET.fall,
+      stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
     { system: '8d6e1c2e', action: 'cast', event: 'hit', delay: 1, duration: 1.5 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.

@@ -3,6 +3,7 @@ import { Box3, BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeom
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
+import type { MissileFlight } from './engine/model/missile';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
 import { createQuads } from './rendering/components/Quads';
@@ -121,6 +122,10 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
     return held;
   };
 }
+/** A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. */
+export function projectileFlight(seconds: number): MissileFlight {
+  return { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
+}
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
@@ -138,8 +143,11 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
     // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
     return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
+      // Fixed time, not fixed speed: the engine's missile speed is horizontal (a straight line at a constant ground
+      // speed), so a speed from the 3D distance landed early by the drop's share of the path, and the landing stops
+      // the emitters there (11-12: Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds).
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: projectileFlight(spec.projectileSeconds) }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.

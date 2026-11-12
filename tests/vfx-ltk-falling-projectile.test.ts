@@ -14,7 +14,8 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 });
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime, dropStart } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { FX_SCALE, projectileFlight } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { flightTime } from '../src/rendering/three-mode/vfx-ltk/engine/model/rig';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { CAITLYN_COMET, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
@@ -40,6 +41,13 @@ async function setup(cues: readonly TimelineCue[]) {
 describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
   it('starts its offset in cells from where the target stands', () => {
     expect(dropStart([10, 0, -20], [-1, 5, -1.5])).toEqual([10 - cell, 5 * cell, -20 - 1.5 * cell]);
+  });
+
+  it('lands its travelSeconds after launch though most of its path is a drop (the engine\'s missile speed is horizontal)', () => {
+    const from = [-cell / FX_SCALE, 5 * cell / FX_SCALE, -1.5 * cell / FX_SCALE] as const, to = [0, 0, 0] as const;
+    for (const seconds of [0.15, 0.3]) expect(flightTime({ kind: 'missile', from, to, flight: projectileFlight(seconds) } as any)).toBeCloseTo(seconds, 2);
+    // A level shot lands on time as well.
+    expect(flightTime({ kind: 'missile', from: [200, 100, 0], to: [0, 100, 0], flight: projectileFlight(0.3) } as any)).toBeCloseTo(0.3, 2);
   });
 
   it('falls from above its target onto it, unattached and never from the caster', async () => {
@@ -90,6 +98,8 @@ describe('Caitlyn Air Raid comet override', () => {
 
   it('falls onto the primary target and lands as the impact starts, instead of standing on her feet', () => {
     expect(comet).toMatchObject({ action: 'cast', event: 'projectile', primary: true, fromAbove: CAITLYN_COMET.from, travelSeconds: CAITLYN_COMET.fall });
+    // Its trail fades out over the linger once it lands, rather than hanging in the sky.
+    expect(comet).toMatchObject({ stopAfter: CAITLYN_COMET.fall, fadeOut: true, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger });
     expect(comet.delay + comet.travelSeconds!).toBeCloseTo(impact.delay, 9);
     // The exported row this replaces: a boneless cast-start, which plays on the caster's origin.
     expect(CUE_OVERRIDES.caitlyn.filter(cue => cue.event === 'cast-start' && !cue.bone)).toEqual([]);
