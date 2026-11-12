@@ -8,7 +8,8 @@
 //     one sample just before the recorded action (a system already running then is the warm pass's, not this action's);
 //   - covering, at the action frame: a foe nearer the camera (its box's bottom below the caster's) over 60% of the
 //     caster's box fails; any other overlap over 30% is a warning in notes (warnings[]), not a failure;
-//   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame; (--probe attached)
+//   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame, as drift from the
+//     standing pose at t=0 (ddx, ddy; overheadDrift()); (--probe attached)
 //     every attached overlay drawn, per frame: tint, blend state, textures and whether each has loaded (recorded only).
 //     Both: --probe overhead,attached.
 // Options: --systems id,id|none (must run in the judged window), --absent id,id (must not run in it), --layers id,id|none
@@ -109,7 +110,7 @@ function createGate(opt, ctx) {
     async finish(record) {
       const fs = require('fs'), path = require('path');
       if (probeAttached) fs.writeFileSync(path.join(record.out, 'attached.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.attachedDraws ?? {}) })), null, 2));
-      if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) })), null, 2));
+      if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(overheadDrift(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) }))).points, null, 2));
       if (!enabled) return true;
       const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
       const v = verdict({ systems, absent, layerIds, column, real: ctx.real, ckout, audit, pre, frames, from, to, actionAtMs: ctx.actionAtMs, sampleLayers, probeOverhead });
@@ -172,16 +173,29 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
     }
     if (!judged.some(f => f.layers > 0)) fails.push('layers: peakLayers 0 in the judged window');
   }
-  // Overhead bar against the body (recorded; the before/after comparison is keyframes.cjs's).
+  // Overhead bar against the body, as drift from the standing pose (recorded; the before/after comparison is keyframes.cjs's).
   let overhead = null;
   if (probeOverhead) {
-    const pts = judged.filter(f => f.overhead && Number.isFinite(f.overhead.dx));
-    const worst = pts.reduce((w, f) => !w || Math.abs(f.overhead.dx) > Math.abs(w.overhead.dx) ? f : w, null);
-    overhead = worst ? { maxAbsDx: Math.abs(worst.overhead.dx), atMs: worst.t, frames: pts.length } : { maxAbsDx: null, frames: 0 };
+    const d = overheadDrift(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) })));
+    const pts = d.points.filter(p => p.t >= from && p.t <= to && Number.isFinite(p.ddx));
+    const worst = (k) => pts.reduce((w, p) => !w || Math.abs(p[k]) > Math.abs(w[k]) ? p : w, null);
+    const wx = worst('ddx'), wy = worst('ddy');
+    overhead = { baseline: d.baseline, frames: pts.length,
+      maxAbsDdx: wx ? Math.abs(wx.ddx) : null, ddxAtMs: wx?.t ?? null, maxAbsDdy: wy ? Math.abs(wy.ddy) : null, ddyAtMs: wy?.t ?? null };
     if (!pts.length) fails.push('overhead: no bar/body point found in the judged window');
   }
   notes.push(...warnings.map(w => 'WARN ' + w));
   return { ok: !fails.length, fails, exempt, notes, warnings, overhead };
+}
+
+/** Overhead points ({ t, dx, barY, bodyY } from probes.ts) as drift from the standing pose: the baseline is the earliest
+ * recorded point (t=0, before the action moves anyone); ddx = dx - its dx, ddy = (barY - bodyY) - its (barY - bodyY), px. */
+function overheadDrift(points) {
+  const ok = points.filter(p => Number.isFinite(p.dx) && Number.isFinite(p.barY) && Number.isFinite(p.bodyY)).sort((a, b) => a.t - b.t);
+  if (!ok.length) return { baseline: null, points: points.map(p => ({ ...p, ddx: null, ddy: null })) };
+  const base = { t: ok[0].t, dx: ok[0].dx, dy: +(ok[0].barY - ok[0].bodyY).toFixed(1) };
+  return { baseline: base, points: points.map(p => Number.isFinite(p.dx) && Number.isFinite(p.barY) && Number.isFinite(p.bodyY)
+    ? { ...p, ddx: +(p.dx - base.dx).toFixed(1), ddy: +((p.barY - p.bodyY) - base.dy).toFixed(1) } : { ...p, ddx: null, ddy: null }) };
 }
 
 /** A gate.json from before 5f8a3be8 (layerTimeline / boxTimeline / preCast, no running-system samples) in today's shape:
@@ -207,4 +221,4 @@ function regate(raw) {
   return { ...g, ...v, regated: { at: new Date().toISOString(), was: { ok: raw.ok, fails: raw.fails } } };
 }
 
-module.exports = { regate, createGate, checkout, cover, verdict, MAX_COVER, WARN_COVER };
+module.exports = { overheadDrift, regate, createGate, checkout, cover, verdict, MAX_COVER, WARN_COVER };

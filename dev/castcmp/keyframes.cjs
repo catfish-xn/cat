@@ -77,18 +77,24 @@ async function encode(base, name) {
   const fixed = opt('times') ? opt('times').split(',').map(Number).map(t => after.frames.findIndex(f => f.t >= t)).filter(i => i >= 0 && i < n) : null;
   const rows = fixed?.length ? fixed : [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n);
   if (fixed?.length) peak = fixed[Math.floor(fixed.length / 2)];
-  // Overhead bar against the body (--probe overhead runs): |bar x - body x| per frame, before and after.
-  const ohOf = dir => { try { return Object.fromEntries(JSON.parse(fs.readFileSync(path.join(dir, 'overhead.json'), 'utf8')).map(o => [o.t, o.dx])); } catch { return null; } };
+  // Overhead bar against the body (--probe overhead runs): drift from the standing pose at t=0 (gate.cjs overheadDrift),
+  // dx and dy per frame, before and after. The pick and the caption use |ddx|; the meta has both.
+  const { overheadDrift } = require('./gate.cjs');
+  const drift = dir => { try { return overheadDrift(JSON.parse(fs.readFileSync(path.join(dir, 'overhead.json'), 'utf8'))); } catch { return null; } };
+  const ohOf = dir => { const d = drift(dir); return d ? Object.fromEntries(d.points.map(o => [o.t, o.ddx])) : null; };
+  const dyOf = dir => { const d = drift(dir); return d ? Object.fromEntries(d.points.map(o => [o.t, o.ddy])) : null; };
   const ohBefore = before ? ohOf(before.dir) : null, ohAfter = ohOf(after.dir);
   const ohAt = (oh, t) => oh && Number.isFinite(oh[t]) ? Math.abs(oh[t]).toFixed(0) : '?';
   const ohMax = oh => { let m = null; for (const f of after.frames) if (f.t >= from && f.t <= to && oh && Number.isFinite(oh[f.t]) && (m === null || Math.abs(oh[f.t]) > m.dx)) m = { t: f.t, dx: Math.abs(oh[f.t]) }; return m; };
-  const overhead = ohBefore || ohAfter ? { before: ohMax(ohBefore), after: ohMax(ohAfter) } : null;
+  const dyBefore = before ? dyOf(before.dir) : null, dyAfter = dyOf(after.dir);
+  const overhead = ohBefore || ohAfter ? { measure: 'drift from t=0 (ddx; ddy alongside)', before: ohMax(ohBefore), after: ohMax(ohAfter), dyBefore: ohMax(dyBefore), dyAfter: ohMax(dyAfter),
+    baseline: { before: before ? drift(before.dir)?.baseline ?? null : null, after: drift(after.dir)?.baseline ?? null } } : null;
   const g = after.gate ?? {};
   const commit = c => (c.gate?.checkout?.head ?? '?').slice(0, 8);
   const head = [
     `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms by ${pickedBy.split(' ')[0]}, mean |before-after| ${best.toFixed(1)})`,
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
-    ...(overhead ? [`overhead |bar-body| max: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms`] : []),
+    ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];
   const out = path.resolve(opt('out')); fs.mkdirSync(out, { recursive: true });
@@ -100,8 +106,8 @@ async function encode(base, name) {
   const tiles = [{ input: caption(W, head), left: 0, top: 0 }];
   for (const [r, i] of rows.entries()) for (const [c, s] of sets.entries()) {
     tiles.push({ input: await sharp(s.frames[i].file).extract(area).toBuffer(), left: c * area.width, top: capH + r * area.height });
-    const oh = s.key === 'before' ? ohBefore : s.key === 'after' ? ohAfter : null;
-    tiles.push({ ...label(area.width, `${s.key} ${s.frames[i].t}ms${oh ? ` dx ${ohAt(oh, s.frames[i].t)}px` : ''}`), left: c * area.width, top: capH + r * area.height });
+    const oh = s.key === 'before' ? ohBefore : s.key === 'after' ? ohAfter : null, dy = s.key === 'before' ? dyBefore : s.key === 'after' ? dyAfter : null;
+    tiles.push({ ...label(area.width, `${s.key} ${s.frames[i].t}ms${oh ? ` drift dx ${ohAt(oh, s.frames[i].t)} dy ${ohAt(dy, s.frames[i].t)}px` : ''}`), left: c * area.width, top: capH + r * area.height });
   }
   const crop = await encode(sharp({ create: { width: W, height: H, channels: 3, background: '#000' } }).composite(tiles), path.join(out, base + '.jpg'));
   // 2) Whole screen at the peak frame, half size, two per row.
