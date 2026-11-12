@@ -11,7 +11,10 @@
 //   - optionally (--probe overhead) the caster's overhead bar against its body on screen, per frame, as drift from the
 //     standing pose at t=0 (ddx, ddy; overheadDrift()); (--probe attached)
 //     every attached overlay drawn, per frame: tint, blend state, textures and whether each has loaded (recorded only).
-//     Both: --probe overhead,attached.
+//     (--probe emitters [--emitters name,name]) every particle draw of the running systems, per frame, to emitters.json:
+//     blend and depth state, alphaTest / alphaRef, defines with values, textures (map, mapErosion, ...) and whether each has
+//     loaded, other small uniforms; --emitters keeps draws whose emitter name contains one of the names (recorded only).
+//     Several: --probe overhead,attached,emitters.
 // Options: --systems id,id|none (must run in the judged window), --absent id,id (must not run in it), --layers id,id|none
 // (which of --systems must also show an attached layer; default all of them), --from/--to ms (the judged window on the
 // recording's clock; default all of it), --column before|after|off|debug.
@@ -79,7 +82,8 @@ function createGate(opt, ctx) {
   const layerIds = opt('layers') === undefined ? systems : list(opt('layers'));
   const column = opt('column') ?? (opt('attached') === 'off' ? 'off' : opt('attached') === 'debug' ? 'debug' : 'after');
   const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
-  const probeList = list(opt('probe')), probeOverhead = probeList.includes('overhead'), probeAttached = probeList.includes('attached');
+  const probeList = list(opt('probe')), probeOverhead = probeList.includes('overhead'), probeAttached = probeList.includes('attached'), probeEmitters = probeList.includes('emitters');
+  const emitterNames = list(opt('emitters'));
   const frames = [];
   let ckout = null, pre = { running: [], layers: [] }, sampleLayers = false;
   return {
@@ -94,7 +98,7 @@ function createGate(opt, ctx) {
     },
     async beforeStep() { if (enabled && sampleLayers) await resetLayers(ctx.page); },
     async frame(t) {
-      if (!enabled && !probeOverhead && !probeAttached) return;
+      if (!enabled && !probeOverhead && !probeAttached && !probeEmitters) return;
       const f = { t };
       if (enabled) {
         const running = await readRunning(ctx.page);
@@ -105,11 +109,13 @@ function createGate(opt, ctx) {
       }
       if (probeOverhead) f.overhead = await ctx.page.evaluate(() => window.__h.overhead?.('me') ?? null);
       if (probeAttached) f.attachedDraws = await ctx.page.evaluate(() => window.__h.attached?.() ?? null);
+      if (probeEmitters) f.emitterDraws = await ctx.page.evaluate(names => window.__h.emitters?.(names) ?? null, emitterNames);
       frames.push(f);
     },
     async finish(record) {
       const fs = require('fs'), path = require('path');
       if (probeAttached) fs.writeFileSync(path.join(record.out, 'attached.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.attachedDraws ?? {}) })), null, 2));
+      if (probeEmitters) fs.writeFileSync(path.join(record.out, 'emitters.json'), JSON.stringify(frames.map(f => ({ t: f.t, ...(f.emitterDraws ?? {}) })), null, 2));
       if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(overheadDrift(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) }))).points, null, 2));
       if (!enabled) return true;
       const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
