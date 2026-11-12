@@ -22,7 +22,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?board=${board}&foes=${foes}&star=${star}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 180000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
-  const info = await page.evaluate(() => window.__h.board); mark(`harness ready: ${info.ticks} ticks, ${info.casts} casts`);
+  const info = await page.evaluate(() => window.__h.board); if (!info.combatStart) throw new Error('board combat without combat start'); mark(`harness ready: ${info.ticks} ticks, ${info.casts} casts`);
   for (let i = 0; i < 60; i++) { await page.evaluate(() => { window.__h.frame(); window.__h.step(32); }); await page.waitForTimeout(250);
     if (i > 8 && await page.evaluate(() => !!window.__render3dLoad)) break; }
   const seconds = Math.ceil(info.ticks * 50 / 1000) + 2;

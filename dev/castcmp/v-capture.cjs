@@ -26,6 +26,8 @@ async function unbind(page, tick, rebind) {
   await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
+  // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
+  if (opt('real') && !(await page.evaluate(() => window.__h.real?.combatStart))) throw new Error('real combat without combat start: refusing to record');
   mark('harness ready');
   // let models load: real time passes while the virtual clock idles
   for (let i = 0; i < 60; i++) { await page.evaluate(() => { window.__h.frame(); window.__h.step(32); }); await page.waitForTimeout(250);

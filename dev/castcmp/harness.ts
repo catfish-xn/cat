@@ -40,7 +40,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     (window as any).__h = {
       step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; listener.frame(frameOf(0)); },
       clock: () => clock, tick: () => at, status: r.status, detail: r.detail,
-      board: { ticks: replay.frames.length, casts: replay.casts, result: replay.result },
+      board: { ticks: replay.frames.length, casts: replay.casts, result: replay.result, combatStart: replay.combatStart },
     };
     return;
   }
@@ -77,7 +77,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       // A cast replays from half a second before the first cast of `me` in the real combat.
       cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - 10)); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
-      clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length },
+      clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length, combatStart: real.combatStart },
     };
     return;
   }
@@ -119,10 +119,21 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
+/** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
+ * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
+async function startRealCombat(units: any[]) {
+  const [{ createCombatWithEvents }, { buildStrategySnapshot }, { DEFAULT_BOARD }] = await Promise.all([
+    import('../../src/simulation/combat'), import('../../src/simulation/strategy-snapshot'), import('../../src/simulation/board')]);
+  const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+  const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items: [], temporaryEquipment: [],
+    augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'castcmp', 42);
+  // Self-check: a replay that skipped combat start would silently change who casts and when.
+  if (!(started.state as any).startEffectsApplied) throw new Error('real combat: combat-start hooks not applied');
+  return started as { state: any; events: any[] };
+}
 async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number) {
-  const [{ createCombat, stepCombat }, { DEFAULT_BOARD }, display, control] = await Promise.all([
-    import('../../src/simulation/combat'), import('../../src/simulation/board'),
-    import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
+  const [{ stepCombat }, display, control] = await Promise.all([
+    import('../../src/simulation/combat'), import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
   const foe = foeModel === 'training-dummy' ? 'garen' : foeModel;
   // Combat cells (player rows 4-7, enemy rows 0-3); the harness draws a cell at hex(row, col).
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, dist)));
@@ -131,7 +142,8 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4)))).map(([id, col, row]) =>
       ({ id, definitionId: foe, team: 'enemy', starLevel: Number(params.get('foestar') ?? 1), location: { kind: 'board', cell: { col, row } } })),
   ];
-  let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units } as any);
+  const started = await startRealCombat(units);
+  let state: any = started.state;
   const frames: Piece[][] = [], events: any[][] = [];
   let castIndex = -1;
   const snapshot = () => display.toCombatViewState(state).units.map((u: any) => ({
@@ -140,7 +152,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     ...(u.id === 'me' && form ? { form } : {}),
     ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
   }));
-  frames.push(snapshot()); events.push([]);
+  frames.push(snapshot()); events.push(display.toDisplayEvents(started.events as any));
   // Up to 30 s, or 3 s past the first cast of `me`.
   while (state.status !== 'finished' && frames.length < 600 && (castIndex < 0 || frames.length < castIndex + 60)) {
     const stepped = stepCombat(state); state = stepped.state;
@@ -149,31 +161,31 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     frames.push(snapshot()); events.push(shown);
   }
   if (castIndex < 0) throw new Error(`real combat: ${unit} never cast in ${frames.length} ticks`);
-  return { frames, events, castIndex };
+  return { frames, events, castIndex, combatStart: !!state.startEffectsApplied };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {
-  const [{ createCombat, stepCombat }, { DEFAULT_BOARD }, display, control] = await Promise.all([
-    import('../../src/simulation/combat'), import('../../src/simulation/board'),
-    import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
+  const [{ stepCombat }, display, control] = await Promise.all([
+    import('../../src/simulation/combat'), import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
   const COLS = [1, 3, 5, 2, 4, 0, 6];
   const place = (ids: string[], team: string, rows: [number, number]) => ids.slice(0, 8).map((definitionId, i) =>
     ({ id: `${team === 'player' ? 'p' : 'e'}${i}-${definitionId}`, definitionId, team, starLevel: star,
       location: { kind: 'board', cell: { col: COLS[i % 4]!, row: rows[i < 4 ? 0 : 1] } } }));
-  let state: any = createCombat({ board: DEFAULT_BOARD, benchSize: 7, units: [...place(mine, 'player', [4, 6]), ...place(theirs, 'enemy', [3, 1])] } as any);
+  const started = await startRealCombat([...place(mine, 'player', [4, 6]), ...place(theirs, 'enemy', [3, 1])]);
+  let state: any = started.state;
   const snapshot = () => display.toCombatViewState(state).units.map((u: any) => ({
     id: u.id, definitionId: u.definitionId, team: u.team, starLevel: u.starLevel, ...hexOf(u.cell.row, u.cell.col),
     alive: u.alive, visible: u.alive, meters: { hp: u.hp, maxHp: u.maxHp, mana: u.mana, maxMana: u.maxMana, shield: u.shield ?? 0 },
     ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
   }));
-  const frames: Piece[][] = [snapshot()], events: any[][] = [[]]; let casts = 0;
+  const frames: Piece[][] = [snapshot()], events: any[][] = [display.toDisplayEvents(started.events as any)]; let casts = 0;
   while (state.status !== 'finished' && frames.length < 1200) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = display.toDisplayEvents(stepped.events as any);
     casts += shown.filter((e: any) => e.type === 'cast').length;
     frames.push(snapshot()); events.push(shown);
   }
-  return { frames, events, casts, result: state.result ?? null };
+  return { frames, events, casts, result: state.result ?? null, combatStart: !!state.startEffectsApplied };
 }
 const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 
