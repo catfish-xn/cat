@@ -355,10 +355,9 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Vi's row shockwave (Landing_Mis): its Trench, a ground-layer trail along the path, draws as a crisp dark crack band
   // where the original shows loose dust and rock slabs (11-12 keyframes). Its fade-out is right since its run outlives the
   // trail's own fade; its shape is still under study (with the rock layer): held back until checked.
-  // EVIDENCE ONLY (claude/vi-dust-iso, never merged): only the dust and smoke layers are drawn (Dust, Smoke, Alpha_Dust and
-  // the rock child's Smoke_Burst and SmokeRing_rocks); the Trench, spikes, rocks, fill and shards are muted.
-  '84b969e0': ['FillMouth', 'Rock_Mesh_Large', 'Rock_Mesh_Large1', 'SpikeShapes1', 'StrokeDissolve_Right', 'Trench',
-    'iceshard_center', 'iceshard_center1'],
+  // EVIDENCE ONLY (claude/vi-dust-rubble-iso, never merged): the dust and smoke layers plus every layer of the rock child
+  // db4240a5 and its shard child 4e1dc787 are drawn; only the Trench and SpikeShapes1 are muted (both FillMouth glows stay).
+  '84b969e0': ['SpikeShapes1', 'Trench'],
 };
 
 /**
