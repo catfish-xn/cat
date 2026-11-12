@@ -276,7 +276,7 @@ describe('cast timeline replacement and fallback', () => {
   });
 });
 
-it('Vi: her landing systems start on the landing frame; her row shockwave pair starts whole, late on a first cast, on time warm', async () => {
+it('Vi: her landing systems start on the landing frame; her row shockwave pair is dropped whole on a first cast, on time warm', async () => {
   const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
   const library = createVfxLibrary('/root/', {
     readJson: async url => {
@@ -291,25 +291,24 @@ it('Vi: her landing systems start on the landing frame; her row shockwave pair s
   const step = (frames: number, each?: () => void) => { for (let f = 0; f < frames; f++) { runtime.update(1 / 30, new Camera()); each?.(); } };
   const landing = Math.round(VI_LANDING * 30), launch = Math.ceil(VI_ROW_SHOCKWAVE.delay * 30);
   await runtime.warm('vi');
-  // Cold: every system first reserves 250 slots, six of them fill the 1500 at the landing.
+  // Cold: every system first reserves 250 slots, six of them fill the 1500 at the landing, and nothing there may give way
+  // to the pair: it waits whole and is dropped whole once overdue (never one side alone). Every other system still plays.
   expect(runtime.play('vi', 'source', ['target'])).toBe(true);
   step(landing);
-  for (const id of ['d27b3044', '18e22631', '66c600e8', '0314626c', '9614ffb4']) expect(live()).toContain(id);
-  expect(rows()).toBe(0); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);
-  // The pair waits whole (never one side alone); the hand trail (decorative, done emitting) gives way, the jump dust does not.
-  let late = 0;
-  step(launch - landing, () => expect(rows()).toBe(0));
-  step(12, () => { expect([0, 2]).toContain(rows()); if (!rows()) late++; });
-  expect(rows()).toBe(2); expect(live()).not.toContain('c11e6814');
-  expect(late).toBe(8); // about 0.27 s, inside the 0.3 s a critical cue may wait
+  for (const id of ['d27b3044', '18e22631', '66c600e8', '0314626c', '9614ffb4', 'c11e6814']) expect(live()).toContain(id);
+  expect(rows()).toBe(0); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(runtime.queued).toBe(2);
+  step(12, () => expect(rows()).toBe(0));
+  expect(runtime.queued).toBe(0);
+  for (const id of ['d27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
   expect(runtime.active).toBe(6); expect(budget.live).toBe(1500); expect(budget.live).toBeLessThanOrEqual(budget.max);
-  for (let f = 0; f < 300 && runtime.active; f++) step(1);
+  for (let f = 0; f < 300 && runtime.active; f++) { step(1); expect(rows()).toBe(0); }
   expect(runtime.active).toBe(0);
-  // Warm: each system reserves what it was seen to need; the pair starts on its own frame, beside every other system.
+  // Warm: each system reserves what it was seen to need (the pair, never played, still its first 250 each); the pair
+  // starts on its own frame, both in that frame, beside every other system.
   expect(runtime.play('vi', 'source', ['target'])).toBe(true);
-  step(launch + 1);
+  step(launch + 1, () => expect([0, 2]).toContain(rows()));
   expect(rows()).toBe(2);
   for (const id of ['c11e6814', '0314626c', '9614ffb4', 'd27b3044', '18e22631', '66c600e8']) expect(live()).toContain(id);
-  expect(runtime.active).toBe(8); expect(budget.live).toBe(870); expect(budget.live).toBeLessThanOrEqual(budget.max);
+  expect(runtime.active).toBe(8); expect(budget.live).toBe(1096); expect(budget.live).toBeLessThanOrEqual(budget.max);
   runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
 });

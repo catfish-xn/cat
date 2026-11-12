@@ -107,8 +107,19 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
  * x by its column and its y by its row alone, so one row is one world Z for either player.
  */
-export function rowPath(from: WorldPoint, side: -1 | 1, cells: number): [WorldPoint, WorldPoint] {
-  return [from, [from[0] + side * cells * BOARD_CELL, from[1], from[2]]];
+export function rowPath(from: WorldPoint, side: -1 | 1, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] {
+  return [from, [from[0] + side * cells * cell, from[1], from[2]]];
+}
+/** The board's cell geometry (board-feed BoardFrame: columns, hexRadius, origin), in the units pieces stand in. */
+export interface RowBoard { readonly columns: number; readonly radius: number; readonly origin: { readonly x: number; readonly y: number } }
+/**
+ * Cells from `at` to the centre of the last cell of its row on `side` (0 at that cell or past it). Its row is the one its
+ * world Z falls in; odd rows sit half a cell to the right (hex-layout.ts).
+ */
+export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number {
+  const cell = Math.sqrt(3) * board.radius, row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  const first = board.origin.x + cell * (((row % 2) + 2) % 2) / 2, last = first + cell * (board.columns - 1);
+  return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
@@ -138,6 +149,8 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
   return view;
 }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
+  /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
+  board?: () => RowBoard | null;
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
   foe?: (sourceId: string) => Object3D | null;
   /** False hides every host-body overlay (attached mesh): reduced motion, `?skillfx=off`. Omitted means shown. */
@@ -361,6 +374,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // to a flight from the caster.
         const rowStart = spawn.event === 'projectile' && spawn.rowSide ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.rowSide && !rowStart) continue;
+        // How far it runs: to the end of its row when asked (and the board is known), at most rowCells; nothing to run, no run.
+        const board = rowStart && spawn.rowToEnd ? options.board?.() ?? null : null;
+        const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
+        if (rowStart && !(rowCells > 0.05)) continue;
+        const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
+        const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -397,20 +416,20 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, spawn.rowCells ?? 0) : null;
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
         const anchor = rowEnds ? pointAnchor(rowEnds[0]) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
-        const tail = Math.min(0.25, spawn.duration / 4);
+        const tail = Math.min(0.25, runFor / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
-          ? Math.max(spawn.duration - tail, spawn.stopAfter ?? 0) : undefined;
+          ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
@@ -426,7 +445,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, span: spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

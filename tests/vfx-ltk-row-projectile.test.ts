@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, rowPath, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
@@ -36,6 +36,37 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(rowPath([12, 3, -40], -1, 1)).toEqual([[12, 3, -40], [12 - cell, 3, -40]]);
   });
 
+  it('measures to the last cell centre of the row on each side, odd rows half a cell over, never below 0', () => {
+    const board = { columns: 7, radius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin }, at = (col: number, row: number) =>
+      [board.origin.x + cell * (col + (row % 2) / 2), 0, board.origin.y + 1.5 * board.radius * row] as const;
+    for (const row of [0, 1, 2, 5]) for (const col of [0, 3, 6]) {
+      expect(rowReach(at(col, row), -1, board)).toBeCloseTo(col, 9);
+      expect(rowReach(at(col, row), 1, board)).toBeCloseTo(6 - col, 9);
+    }
+    expect(rowReach([board.origin.x - cell, 0, board.origin.y], -1, board)).toBe(0);
+  });
+
+  it('runs to the end of its row on each side at rowSpeed, so a landing by the edge runs further one way', async () => {
+    built.length = 0;
+    const board = { columns: 7, radius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin };
+    const cues = [-1, 1].map(side => ({ ...row(side as -1 | 1, 7), rowToEnd: true, rowBeyond: 0.5, rowSpeed: 10, travelSeconds: 0.7, duration: 1, together: 'pair' }));
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index(cues) : syntheticSystem(), readTexture: async () => new Texture() });
+    const scene = new Scene(), target = new Group(); target.position.set(board.origin.x + cell * 5, 0, board.origin.y + 1.5 * board.radius * 2);
+    const units = new Map([['caster', { root: new Group(), body: null, alive: true }], ['target', { root: target, body: null, alive: true }]]);
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), { board: () => board });
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(2);
+    const [left, right] = built.map(entry => entry.options);
+    const toSystem = (x: number) => x * AXIS_SIGN[0] / FX_SCALE;
+    expect(left.target.originAt(0)[0]).toBeCloseTo(toSystem(target.position.x - 5.5 * cell), 6);
+    expect(right.target.originAt(0)[0]).toBeCloseTo(toSystem(target.position.x + 1.5 * cell), 6);
+    expect(left.projectileSeconds).toBeCloseTo(0.55, 9); expect(right.projectileSeconds).toBeCloseTo(0.15, 9);
+    expect(left.duration).toBeCloseTo(0.55 + 0.3, 9); expect(right.duration).toBeCloseTo(0.15 + 0.3, 9);
+    runtime.dispose();
+  });
+
   it('starts where its target stands: a knocked-up body under the root does not lift the start', () => {
     const root = new Group(), body = new Group(); root.add(body); root.position.set(5, 0, 7);
     body.position.y = 40; // the renderer lifts the body, never the root (placeholder-renderer setLiftOffset)
@@ -50,6 +81,11 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(() => parseIndex(index([{ ...row(1), rowCells: 0.2 }]))).toThrow();
     expect(() => parseIndex(index([{ ...row(1), rowCells: 9 }]))).toThrow();
     expect(() => parseIndex(index([{ ...row(1), rowCells: undefined }]))).toThrow();
+    expect(() => parseIndex(index([{ ...row(1), rowToEnd: true, rowBeyond: 0.5, rowSpeed: 8 }]))).not.toThrow();
+    expect(() => parseIndex(index([{ ...row(1), rowSpeed: 0.5 }]))).toThrow();
+    expect(() => parseIndex(index([{ ...row(1), rowBeyond: 0.5 }]))).toThrow(); // only with rowToEnd
+    expect(() => parseIndex(index([{ ...row(1), rowToEnd: true, rowBeyond: 2 }]))).toThrow();
+    expect(() => parseIndex(index([{ system: 'sample', event: 'hit', delay: 0, duration: 1, rowToEnd: true }]))).toThrow();
   });
 
   it('builds each run between two fixed board points taken at the spawn, unattached, flying its travelSeconds', async () => {
@@ -143,9 +179,10 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     const cues = S13_TIMELINES.vi.filter(cue => cue.system === '84b969e0');
     expect(cues.map(cue => cue.rowSide)).toEqual([-1, 1]);
     for (const cue of cues) {
-      expect(cue).toMatchObject({ event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay, travelSeconds: VI_ROW_SHOCKWAVE.travel,
-        rowCells: VI_ROW_SHOCKWAVE.cells, primary: true, together: 'row' });
-      expect(cue.duration).toBeCloseTo(VI_ROW_SHOCKWAVE.travel + VI_ROW_SHOCKWAVE.linger, 12);
+      expect(cue).toMatchObject({ event: 'projectile', delay: VI_ROW_SHOCKWAVE.delay, rowCells: VI_ROW_SHOCKWAVE.cells, rowToEnd: true,
+        rowBeyond: VI_ROW_SHOCKWAVE.beyond, rowSpeed: VI_ROW_SHOCKWAVE.speed, primary: true, together: 'row' });
+      expect(cue.travelSeconds).toBeCloseTo(VI_ROW_SHOCKWAVE.cells / VI_ROW_SHOCKWAVE.speed, 12);
+      expect(cue.duration).toBeCloseTo(cue.travelSeconds! + VI_ROW_SHOCKWAVE.linger, 12);
     }
   });
 });
