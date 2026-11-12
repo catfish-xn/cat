@@ -1,14 +1,21 @@
 {
   "name": "plan-cait-bomb",
-  "note": "Caitlyn Air Raid comet (R_Bombardment_Mis 92bbeaf7): before = integration b590df74 (comet stands on her feet), after = the fix branch (it falls onto the target). Run with dev/castcmp/run-plan.cjs. Use the -full.jpg sheet (whole screen) for framing: the comet starts above the target, off the close crop.",
+  "note": "Caitlyn Air Raid comet (R_Bombardment_Mis 92bbeaf7): before = integration b590df74 (comet stands on her feet), after = 34850508 (it falls whole onto the target, lands as the burst 8d6e1c2e starts at 1000 ms, trail fades by about 1150 ms). Run with dev/castcmp/run-plan.cjs. Use the -full.jpg sheets (whole screen) for framing: the comet starts above the target, off the close crop. The third sheet is the after column frame by frame, 700-1200 ms.",
   "batches": [
     {
       "name": "cait-bomb",
-      "before": { "src": "b590df74", "jobs": "dev/castcmp/jobs/cait-bomb-before.txt" },
-      "after": { "src": "cd8bb805", "jobs": "dev/castcmp/jobs/cait-bomb-after.txt" },
+      "before": {
+        "src": "b590df74",
+        "jobs": "dev/castcmp/jobs/cait-bomb-before.txt"
+      },
+      "after": {
+        "src": "34850508",
+        "jobs": "dev/castcmp/jobs/cait-bomb-after.txt"
+      },
       "keyframes": [
-        "--hero caitlyn --system 92bbeaf7 --before bomb-caitlyn-before --after bomb-caitlyn-after --from 500 --to 1300 --crop me,foe",
-        "--hero caitlyn --system 8d6e1c2e --before bomb-caitlyn-before --after bomb-caitlyn-after --from 900 --to 1400 --crop me,foe"
+        "--hero caitlyn --system 92bbeaf7 --before bomb-caitlyn-before --after bomb-caitlyn-after --from 700 --to 1200 --crop me,foe",
+        "--hero caitlyn --system 8d6e1c2e --before bomb-caitlyn-before --after bomb-caitlyn-after --from 900 --to 1400 --crop me,foe",
+        "--hero caitlyn --system 92bbeaf7 --after bomb-caitlyn-after --times 700,733,767,800,833,867,900,933,967,1000,1033,1067,1100,1133,1167,1200 --crop me,foe --prefix seq --note after_column_every_frame_700-1200ms"
       ]
     }
   ]
