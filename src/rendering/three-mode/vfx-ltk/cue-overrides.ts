@@ -348,6 +348,10 @@ export const ATTACHED_HELD_BACK: Readonly<Record<string, readonly string[]>> = {
   // (fresnel 0.1); our rim at that exponent stays near zero, so the layer adds nothing, and the board showed a near-black
   // shell (#619 Windows probe, 11-12). Held with Avatar_Hammer until the rim is checked against an original of the same star.
   '8d9d784b': ['Avatar_Hammer', 'Avatar_Fresnel'],
+  // Jayce E_Knockback_Wave, which plays with it: Avatar_Dark is a 90% near-black normal-blend copy of the body, meant to be
+  // lit by Avatar_Orange and Avatar_Yellow, which are authored black too and light only through their rims (fresnel
+  // 0.15 / 0.07; reflections with no cube map); alone, the dark copy drew the black shell (#619 Windows probe, 11-12).
+  'e07c8088': ['Avatar_Dark', 'Avatar_Orange', 'Avatar_Yellow'],
 };
 
 /**
