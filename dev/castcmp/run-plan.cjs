@@ -54,7 +54,8 @@ for (const batch of plan.batches) {
       result.skipped = `${column}: first job ${first} failed before writing gate.json (tool level; see ${path.join(dir, first + '.log')})`;
       console.log(`skip ${batch.name}: ${result.skipped}`); break;
     }
-    run(process.execPath, batchArgs(jobs), tree);
+    // The rest of the batch (the first job is not run twice).
+    if (lines.length > 1) { const restJobs = path.join(dir, '_rest.txt'); fs.writeFileSync(restJobs, lines.slice(1).join('\n') + '\n'); run(process.execPath, batchArgs(restJobs), tree); }
     const names = lines.map(l => l.split(/\s+/)[2]);
     result.columns[column] = { src: spec.src, passed: names.filter(n => fs.existsSync(path.join(dir, n + '.ok'))), failed: names.filter(n => !fs.existsSync(path.join(dir, n + '.ok'))) };
     for (const n of names) for (const [from, to] of [[path.join(dir, n, 'gate.json'), 'gate.json'], [path.join(dir, n, 'overhead.json'), 'overhead.json'], [path.join(dir, n + '.log'), 'log']])
