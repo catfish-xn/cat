@@ -1048,7 +1048,7 @@
       "previousBytes": 0,
       "currentBytes": 69382,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7f32ed160ac6969e2b8099a804a9ffa2818638ab0ef7bd1a17614ea97378402c",
+      "currentSha256": "03b11197280982b9d5e4de7967ad7697987cc79c5cfd797d57141013014d7a4e",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
