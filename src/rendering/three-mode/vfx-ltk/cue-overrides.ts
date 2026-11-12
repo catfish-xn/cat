@@ -408,12 +408,14 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
  * under a second, not worth the run (Fable 11-12).
  * Each entry ends its play-out on its own clock: gone `seconds` after landing, every draw fading out over the last `fade`.
  */
-export interface PlayOut { readonly seconds: number; readonly fade: number }
+export interface PlayOut { readonly seconds: number; readonly fade: number; /** RECORDING VARIANT C: clock rate during play-out. */ readonly speed?: number }
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage, not the original's own values. Its scorch strand lives and erodes on its authored 4.2 s
   // curves here (fully dark well past a second, gone after about three); in the original's footage the scorch has broken
   // up and gone a little over a second after the line lands. Why the original ends it sooner is not known.
-  '20cd67dc': { seconds: 1.1, fade: 0.3 },
+  // RECORDING VARIANT C (never merged): no fade fit; the system's own clock runs 2.3x after landing so its erosion breaks
+  // the scorch up by itself. seconds/fade only as a safety stop.
+  '20cd67dc': { seconds: 1.6, fade: 0.1, speed: 2.3 },
 };
 
 /**

@@ -199,7 +199,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     run.fx.stop(); run.ending = true;
     const own = run.playOutEnd;
     run.until = clock + (own?.seconds ?? PLAY_OUT_CAP);
-    if (own) run.fx.endWithin(own.seconds, own.fade);
+    if (own) run.fx.endWithin(own.seconds, own.fade, own.speed);
   };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */

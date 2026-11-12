@@ -213,6 +213,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   let elapsed = 0, closed = false, peak = 0, childPeak = 0;
   /** endWithin: from when, and by when, every draw has faded to nothing. */
   let ending: { from: number; to: number } | null = null;
+  /** RECORDING VARIANT C only: how fast the system's own clock runs once endWithin is called. */
+  let rate = 1;
   const hasChildren = prepared.drawn.some(definition => !!definition.path);
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
@@ -233,19 +235,19 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; childPeak = 0; ending = null; rate = 1; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
     /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
     get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     /** Fade every draw to nothing over the last `over` of the next `seconds` (a play-out that must end by then). */
-    endWithin(seconds: number, over: number) { ending = { from: elapsed + Math.max(0, seconds - over), to: elapsed + seconds }; },
+    endWithin(seconds: number, over: number, speed = 1) { ending = { from: elapsed + Math.max(0, seconds - over), to: elapsed + seconds }; rate = speed; },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
-      driver.advance(Math.min(seconds, 0.1));
+      driver.advance(Math.min(seconds, 0.1) * rate);
       peak = Math.max(peak, driver.pool.count);
       if (hasChildren) childPeak = Math.max(childPeak, driver.childRoom().particles);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
