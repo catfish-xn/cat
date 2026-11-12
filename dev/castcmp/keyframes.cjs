@@ -1,5 +1,6 @@
 // node dev/castcmp/keyframes.cjs --hero <name> --system <id> --before <dir> --after <dir> [--off <dir>] [--debug <dir>] --out <folder> [--prefix e138w]
-//   [--from MS --to MS] pick the peak only inside this span; [--times a,b,c] use these frames instead of the peak;
+//   [--from MS --to MS] pick the peak only inside this span; [--times a,b,c] use these frames instead of the peak (then
+//   --before may be left out: an after-only sheet);
 //   [--crop me,foe,...] crop the union of these units' boxes (default me)
 // One recorded job's before / after / off (and optional debug) frame folders (v-capture.cjs output) to two jpgs in --out:
 //   <prefix>-<hero>-<system>.jpg       the caster's area at native resolution, 3 rows (the frame where before and after
@@ -10,7 +11,7 @@
 const sharp = require('sharp');
 const fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
-for (const k of ['hero', 'system', 'before', 'after', 'out']) if (!opt(k)) { console.error(`--${k} required`); process.exit(2); }
+for (const k of ['hero', 'system', 'after', 'out', ...(opt('times') ? [] : ['before'])]) if (!opt(k)) { console.error(`--${k} required`); process.exit(2); }
 const MAX_BYTES = 2 * 1024 * 1024;
 const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k => ({ key: k, dir: path.resolve(opt(k)) }));
 
@@ -54,7 +55,7 @@ async function encode(base, name) {
   const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
   let peak = -1, best = -1; const diffs = [];
   for (let i = 0; i < n; i++) {
-    if (after.frames[i].t < from || after.frames[i].t > to) { diffs.push(null); continue; }
+    if (!before || after.frames[i].t < from || after.frames[i].t > to) { diffs.push(null); if (!before && peak < 0) peak = i; continue; }
     const [a, b] = await Promise.all([grey(before.frames[i].file, area), grey(after.frames[i].file, area)]);
     let sum = 0; for (let p = 0; p < a.length; p++) sum += Math.abs(a[p] - b[p]);
     const d = sum / a.length; diffs.push(+d.toFixed(2)); if (d > best) { best = d; peak = i; }
@@ -65,7 +66,7 @@ async function encode(base, name) {
   if (fixed?.length) peak = fixed[Math.floor(fixed.length / 2)];
   // Overhead bar against the body (--probe overhead runs): |bar x - body x| per frame, before and after.
   const ohOf = dir => { try { return Object.fromEntries(JSON.parse(fs.readFileSync(path.join(dir, 'overhead.json'), 'utf8')).map(o => [o.t, o.dx])); } catch { return null; } };
-  const ohBefore = ohOf(before.dir), ohAfter = ohOf(after.dir);
+  const ohBefore = before ? ohOf(before.dir) : null, ohAfter = ohOf(after.dir);
   const ohAt = (oh, t) => oh && Number.isFinite(oh[t]) ? Math.abs(oh[t]).toFixed(0) : '?';
   const ohMax = oh => { let m = null; for (const f of after.frames) if (f.t >= from && f.t <= to && oh && Number.isFinite(oh[f.t]) && (m === null || Math.abs(oh[f.t]) > m.dx)) m = { t: f.t, dx: Math.abs(oh[f.t]) }; return m; };
   const overhead = ohBefore || ohAfter ? { before: ohMax(ohBefore), after: ohMax(ohAfter) } : null;

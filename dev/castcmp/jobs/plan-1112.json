@@ -1,0 +1,73 @@
+{
+  "name": "plan-1112",
+  "note": "Recording plan of 11-12 (#620, #622, #624, #618), run with dev/castcmp/run-plan.cjs. Each batch: src commits per column, the jobs files (dev/castcmp/jobs/), and the keyframe sheets (--before/--after name job folders; --out/--prefix are the driver's).",
+  "batches": [
+    {
+      "name": "620",
+      "before": {
+        "src": "46a8b0d5",
+        "jobs": "dev/castcmp/jobs/620-before.txt"
+      },
+      "after": {
+        "src": "f9add346",
+        "jobs": "dev/castcmp/jobs/620-after.txt"
+      },
+      "keyframes": [
+        "--hero illaoi --system overhead --before bar-illaoi-before --after bar-illaoi-after --from 500 --to 4000 --crop me",
+        "--hero rumble --system overhead --before bar-rumble-before --after bar-rumble-after --from 500 --to 3000 --crop me",
+        "--hero nami --system overhead --before bar-nami-before --after bar-nami-after --from 500 --to 3000 --crop me",
+        "--hero corki --system overhead --before bar-corki-before --after bar-corki-after --from 500 --to 3000 --crop me",
+        "--hero malzahar --system overhead --before bar-malzahar-before --after bar-malzahar-after --from 500 --to 4000 --crop me",
+        "--hero vi --system overhead --before bar-vi-before --after bar-vi-after --from 500 --to 3000 --crop me",
+        "--hero leona --system overhead --before bar-leona-before --after bar-leona-after --from 500 --to 3000 --crop me",
+        "--hero urgot --system overhead --before bar-urgot-before --after bar-urgot-after --from 500 --to 3000 --crop me",
+        "--hero jayce --system overhead --before bar-jayce-before --after bar-jayce-after --from 500 --to 3000 --crop me",
+        "--hero nocturne --system overhead --before bar-nocturne-before --after bar-nocturne-after --from 0 --to 3000 --crop me"
+      ]
+    },
+    {
+      "name": "622",
+      "before": {
+        "src": "46a8b0d5",
+        "jobs": "dev/castcmp/jobs/622-before.txt"
+      },
+      "after": {
+        "src": "c2af12a7",
+        "jobs": "dev/castcmp/jobs/622-after.txt"
+      },
+      "keyframes": [
+        "--hero corki --system 444c30d5 --before d-corki-before --after d-corki-after --from 600 --to 1200 --crop me,foe",
+        "--hero jinx --system cd05488e --before d-jinx1-before --after d-jinx1-after --from 400 --to 1000 --crop me,foe",
+        "--hero caitlyn --system a1ab2507 --before d-caitlyn-before --after d-caitlyn-after --from 0 --to 600 --crop me,foe",
+        "--hero darius --system a5373796 --before d-darius3-before --after d-darius3-after --from 400 --to 1000 --crop me,foe,foe2,foe3",
+        "--hero viktor --system a7e3596a --before d-viktor-atk-before --after d-viktor-atk-after --from 0 --to 1100 --crop me,foe",
+        "--hero tristana --system 0f2af66b --before d-tristana-atk-before --after d-tristana-atk-after --from 200 --to 800 --crop me,foe"
+      ]
+    },
+    {
+      "name": "624",
+      "before": {
+        "src": "75f557c7",
+        "jobs": "dev/castcmp/jobs/624-before.txt"
+      },
+      "after": {
+        "src": "d37ce921",
+        "jobs": "dev/castcmp/jobs/624-after.txt"
+      },
+      "keyframes": [
+        "--hero ambessa --system 3b4c15e0 --before w-ambessa-chain-before --after w-ambessa-chain-after --from 500 --to 2500 --crop me,foe",
+        "--hero ambessa --system 754b6c78 --before w-ambessa-fist-before --after w-ambessa-fist-after --from 9300 --to 10300 --crop me,foe"
+      ]
+    },
+    {
+      "name": "618",
+      "after": {
+        "src": "2f5f9885",
+        "jobs": "dev/castcmp/jobs/618-after.txt"
+      },
+      "keyframes": [
+        "--hero vi --system 9614ffb4 --after kf-vi3-after --times 467,500,533,1067,1100,1133 --crop me,foe,foe2"
+      ]
+    }
+  ]
+}
