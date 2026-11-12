@@ -77,6 +77,8 @@ export interface LtkPlayOptions {
   delay?: number;
   /** Timeline variant (empowered, a form), as the string argument would name it. */
   variant?: TimelineVariant;
+  /** The cast event's rule branch (`branch.branch`); never inferred from a cast count. Branched cues need it. */
+  branch?: string;
   /**
    * Seconds (held to −2..2) every attack cue moves by, none earlier than the start: the original release lands `windupRatio`
    * of the interval after the swing starts, while the exported cues assume the clip's release frame at 1× (AttackRelease).
@@ -218,6 +220,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const available = catalog.index?.skills[skill];
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
         && cue.variant === form
+        && (cue.branch === undefined || cue.branch === context.branch)
         && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {
