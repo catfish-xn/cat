@@ -164,7 +164,7 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('queues a hit behind 12 fresh bodies and drops the hit after 0.3 s while all bodies stay', async () => {
+  it('queues a hit behind a full board (MAX_LTK_SYSTEMS) of fresh bodies and drops the hit after 0.3 s while all bodies stay', async () => {
     const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
     fill(runtime, camera, 0.01);
@@ -197,7 +197,7 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('evicts the oldest body for a hit once 12 three-second bodies have played 70% of their span', async () => {
+  it('evicts the oldest body for a hit once a full board (MAX_LTK_SYSTEMS) of three-second bodies have played 70% of their span', async () => {
     const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
     expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
     runtime.update(0.1, camera);
