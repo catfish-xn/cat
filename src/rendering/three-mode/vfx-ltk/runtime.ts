@@ -224,6 +224,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
+  /**
+   * A run playing out that gives way to a newcomer lacking room. A listed projectile marked `hold` (cue-overrides.ts
+   * PLAY_OUT_SYSTEMS) does not: playing out it is weighed only by the usual eviction, at its own importance.
+   */
+  const yields = (run: Running) => !!run.ending && !run.playOutEnd?.hold;
   /** A run that plays out reaches its end: it stops emitting and stays until played out, by its own end or PLAY_OUT_CAP. */
   const beginEnding = (run: Running) => {
     run.fx.stop(); run.ending = true; run.heldAtEnd = run.reserved;
@@ -531,7 +536,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // freed are the groups with a tail in them and the room freed is every run of those groups, tail or not.
         const tailsAdmit = () => {
           const gone = new Set<Running>(); let groups = 0;
-          for (const run of running) if (run.ending && !gone.has(run)) {
+          for (const run of running) if (yields(run) && !gone.has(run)) {
             groups++;
             for (const other of running) if (other === run || (run.together && other.together === run.together)) gone.add(other);
           }
@@ -541,9 +546,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           return groups > 0 && slotsNow() - groups + slotAfter + heldSlots <= MAX_LTK_SYSTEMS
             && !(options.budget && (shared ? options.budget.live : reservedNow()) - room + need + heldNeed > options.budget.max);
         };
-        while (crowded() && tailsAdmit()) {
+        // Only a critical or body newcomer takes a tail's place: a plain attack or a flourish never ends one early (Fable 11-13:
+        // Gangplank's scorch gave way the frame it began to play out, both times, in an 8 v 8).
+        const takesTails = importance === 'critical' || importance === 'body';
+        while (takesTails && crowded() && tailsAdmit()) {
           let tail: Running | undefined;
-          for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
+          for (const run of running) if (yields(run) && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
           leave(tail);
         }

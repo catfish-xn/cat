@@ -480,12 +480,20 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
  *   line stays on the ground well after it is drawn, then chars and fades (11-12 footage).
  * Each entry ends its play-out on its own clock: gone `seconds` after landing, every draw fading out over the last `fade`.
  */
-export interface PlayOut { readonly seconds: number; readonly fade: number }
+export interface PlayOut {
+  readonly seconds: number; readonly fade: number;
+  /**
+   * Playing out, it does not give way to a newcomer that lacks room, as other tails do; it is weighed by the usual
+   * eviction at its own importance instead, and its reserve still follows what it has live.
+   */
+  readonly hold?: boolean;
+}
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
   // that time changes with the star level is not checked yet.
-  '20cd67dc': { seconds: 2.3, fade: 0.5 },
+  // hold: it lasts as the original's does (11-13 Node 8 v 8: without it, it gave way the frame it began to play out).
+  '20cd67dc': { seconds: 2.3, fade: 0.5, hold: true },
 };
 
 /**

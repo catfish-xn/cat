@@ -21,7 +21,7 @@ const index = (cues: readonly TimelineCue[], filler: readonly TimelineCue[]) => 
   assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler } : {}) } });
 
 // `filler` plays first, from another champion's list, so the board is already holding it when the cast lands.
-async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }) {
+async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }, attack = false) {
   built.length = 0;
   const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index(cues, filler) : syntheticSystem(), readTexture: async () => new Texture() });
   const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
@@ -32,6 +32,7 @@ async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAI
   await runtime.warm('gangplank');
   if (filler.length) { await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true); }
   expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
+  if (attack) expect(runtime.play('gangplank', 'caster', ['target'], 'attack')).toBe(true);
   // At most six starts a frame: a full board takes two.
   runtime.update(1 / 30, new Camera()); runtime.update(1 / 30, new Camera());
   const listed = built.find(fx => fx.object.userData.ltkSystem === LISTED);
@@ -96,13 +97,26 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
   // Eleven long cast cues beside the listed projectile: with its tail the board holds every one of MAX_LTK_SYSTEMS (12).
   const held = Array.from({ length: 11 }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
   const late = (together?: string): TimelineCue => ({ system: LATE, event: 'cast-start', delay: 0.8, duration: 0.5, bone: 'ground', ...(together ? { together } : {}) });
-  it('a tail gives way to a new run that giving it up lets in', async () => {
-    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late()], held);
+  // A critical hit due while every slot is held: the listed projectile's tail would make room, but it is marked hold.
+  const strike = (action?: 'attack'): TimelineCue => ({ system: LATE, event: 'hit', delay: 0.8, duration: 0.5, ...(action ? { action } : {}) });
+  it('a hold tail does not give way, even to a critical newcomer its place would let in', async () => {
+    expect(END.hold).toBe(true);
+    const { runtime, scene, listed, advance } = await setup([flight(LISTED), strike()], held);
+    advance(0.7);
+    expect(listed.object.parent).toBe(scene);
+    advance(0.2);
+    expect(listed.object.parent).toBe(scene);
+    runtime.dispose();
+  });
+
+  it('a hold tail is still weighed by the usual eviction, at its own importance', async () => {
+    // The same listed system fired as a plain attack: its run ranks as an attack, which any skill newcomer may evict.
+    const { runtime, scene, listed, advance } = await setup([{ ...flight(LISTED), action: 'attack' }, strike()], held, undefined, true);
     advance(0.7);
     expect(listed.object.parent).toBe(scene);
     advance(0.2);
     expect(listed.object.parent).toBeNull();
-    expect(built.filter(fx => fx.object.parent === scene)).toHaveLength(12);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(1);
     runtime.dispose();
   });
 
