@@ -34,7 +34,7 @@ describe('vfx-ltk trail joints', () => {
   it('a point on (or all but on) the last is merged: no pair on it and no turn of the ribbon there', () => {
     const plain = written([[0, 0, 0], [0, 200, 0], [0, 400, 0]]);
     expect(plain.pairs).toHaveLength(3);
-    // The middle point is 1.5 units from the last on a 200-wide ribbon (the 11-13 Caitlyn comet trail).
+    // Synthetic: the middle point is 1.5 units from the last on a 200-wide ribbon, the shape the comet trail's step had.
     const near = written([[0, 0, 0], [0, 200, 0], [1.5, 200.5, 0], [0, 400, 0]]);
     expect(near.pairs).toHaveLength(3);
     expect(near.triangles).toBe(plain.triangles);

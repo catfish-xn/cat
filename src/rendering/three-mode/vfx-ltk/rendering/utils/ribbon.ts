@@ -197,7 +197,7 @@ export function writeTrail(
     if (!first) gap = Math.hypot(POINT[0] - LAST[0], POINT[1] - LAST[1], POINT[2] - LAST[2]);
     /* A point all but on the last one has no direction of its own: its tangent is noise. Where that noise turns the
        ribbon's side (camera trails) past MERGE_TURN, the joint is dropped: an interior point is merged into the last, the
-       final one keeps the last side (11-13: Caitlyn's comet trail, two particles 1.5 units apart on a 250-wide ribbon,
+       final one keeps the last side (11-13: Caitlyn's comet trail, two particles all but on each other,
        turned the ribbon there into a skewed step). A near point that turns the side less draws as before. */
     const near = !first && gap < Math.max(MERGE_FLOOR, MERGE_SHARE * held.width[at]);
 
