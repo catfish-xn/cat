@@ -99,7 +99,7 @@ async function encode(base, name) {
     ...(opt('note') ? [`times: ${opt('note').replace(/_/g, ' ')}`] : []),
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
-    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
+    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex${g.pinFoe2 ? ` + ${g.pinFoe2} hex in line` : ''} (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];
   const out = path.resolve(opt('out')); fs.mkdirSync(out, { recursive: true });
   const base = `${opt('prefix') ?? 'e138w'}-${opt('hero')}-${opt('system')}`;

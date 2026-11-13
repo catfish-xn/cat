@@ -66,10 +66,21 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   // stays on its cell; only the recorded cast events play.
   const pin = params.get('pinfoe') ? Number(params.get('pinfoe')) : null;
   if (pin !== null && !(Number.isInteger(pin) && pin >= 1 && pin <= 5)) throw new Error(`?pinfoe must be 1-5 (hexes ahead of the caster on row 5), got ${params.get('pinfoe')}`);
-  const pieces = pin !== null ? [me, foe('foe', 5 - pin, 3)]
+  // ?pinfoe2=M (v-capture --pin-foe2 M, with --pin-foe N, M > N): a second still dummy on the same straight line from the
+  // caster through the first one, at about M hexes: the board cell nearest that point (the cast still targets the first).
+  const pin2 = params.get('pinfoe2') ? Number(params.get('pinfoe2')) : null;
+  if (pin2 !== null && (pin === null || !(Number.isInteger(pin2) && pin2 > pin && pin2 <= 5))) throw new Error(`?pinfoe2 needs ?pinfoe and must be above it, at most 5, got ${params.get('pinfoe2')}`);
+  const along = (() => {
+    if (pin === null || pin2 === null) return null;
+    const a = hex(5, 3), b = hex(5 - pin, 3), want = { x: a.x + (b.x - a.x) * pin2 / pin, y: a.y + (b.y - a.y) * pin2 / pin };
+    let best = { row: 0, col: 0 }, d = Infinity;
+    for (let row = 0; row < 8; row++) for (let col = 0; col < 7; col++) { const c = hex(row, col), dd = (c.x - want.x) ** 2 + (c.y - want.y) ** 2; if (dd < d) { d = dd; best = { row, col }; } }
+    return best;
+  })();
+  const pieces = pin !== null ? [me, foe('foe', 5 - pin, 3), ...(along ? [foe('foe2', along.row, along.col)] : [])]
     : [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
   // The labels these modes put on every frame (and keyframes.cjs repeats them in its caption).
-  const tags = [...(pin !== null ? [`pinned dummy ${pin} hex (假人)`] : []), ...(hideUnits ? ['units hidden (单位已隐藏)'] : [])];
+  const tags = [...(pin !== null ? [`pinned dummy ${pin} hex${pin2 !== null ? ` + ${pin2} hex in line` : ''} (假人)`] : []), ...(hideUnits ? ['units hidden (单位已隐藏)'] : [])];
   if (tags.length) { const tag = document.createElement('div'); tag.id = 'castcmp-tag'; tag.textContent = tags.join('  |  ');
     Object.assign(tag.style, { position: 'absolute', left: '8px', top: '8px', padding: '2px 8px', font: '16px "Noto Sans CJK SC",sans-serif', color: '#ff0', background: 'rgba(0,0,0,0.6)', zIndex: '60', pointerEvents: 'none' });
     host.style.position = 'relative'; host.append(tag); }

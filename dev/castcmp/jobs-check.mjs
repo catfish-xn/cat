@@ -31,9 +31,11 @@ for (const line of lines) {
   const pinWhy = o('pin-foe') === undefined ? [] : [
     ...(o('real') ? ['--pin-foe is for dummies only (a real combat moves the foes and they hit back)'] : []),
     ...(!/^[1-5]$/.test(o('pin-foe')) ? [`--pin-foe must be 1-5, got ${o('pin-foe')}`] : []),
-    ...(o('nfoes') !== undefined && o('nfoes') !== '1' ? ['--pin-foe places exactly one dummy: drop --nfoes'] : [])];
+    ...(o('nfoes') !== undefined && o('nfoes') !== '1' ? ['--pin-foe places its own dummies: drop --nfoes'] : []),
+    ...(o('pin-foe2') !== undefined && !(/^[2-5]$/.test(o('pin-foe2')) && Number(o('pin-foe2')) > Number(o('pin-foe'))) ? [`--pin-foe2 must be above --pin-foe and at most 5, got ${o('pin-foe2')}`] : [])];
+  if (o('pin-foe2') !== undefined && o('pin-foe') === undefined) { results.push({ name, unit, mode: 'dummy', ok: false, why: ['--pin-foe2 needs --pin-foe'] }); continue; }
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
-  const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
+  const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   const ms = Number(o('ms') ?? 3000);
@@ -61,6 +63,6 @@ for (const line of lines) {
   const warn = blockers.length ? [`may cover the caster (warning; the browser gate decides): ${blockers.join(',')}`] : [];
   results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts, ...modeTags });
 }
-for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.pinFoe ? ` pinned dummy ${r.pinFoe} hex` : ''}${r.hideUnits ? ' units hidden' : ''}${r.castTick !== undefined ? ` cast@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}${r.warn?.length ? ' | WARN ' + r.warn.join('; ') : ''}`);
+for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.pinFoe ? ` pinned dummy ${r.pinFoe} hex${r.pinFoe2 ? ` + ${r.pinFoe2} in line` : ''}` : ''}${r.hideUnits ? ' units hidden' : ''}${r.castTick !== undefined ? ` cast@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}${r.warn?.length ? ' | WARN ' + r.warn.join('; ') : ''}`);
 if (opt('out')) writeFileSync(resolve(opt('out')), JSON.stringify(results, null, 2));
 process.exit(results.some(r => !r.ok) ? 1 : 0);
