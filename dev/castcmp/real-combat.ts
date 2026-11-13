@@ -5,20 +5,39 @@ import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
 import { DEFAULT_BOARD } from '../../src/simulation/board';
 import { toDisplayEvents, toCombatViewState } from '../../src/presentation/combat-display';
 
-export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number }
+export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number;
+  /** v-capture --foe-offset K: every foe K columns to the side (+ right), so the target stands ahead and to the side. */
+  foeOffset?: number }
 /** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
 export const DEFAULT_AFTER_TICKS = 60;
 /** The replay starts this many ticks before the first cast of `me` (half a second). */
 export const LEAD_TICKS = 10;
+/** The recorded window of a real combat is chosen around one anchor cast of `me`: its first by default, its N-th with
+ * castNumber (v-capture --cast-index N, ?castindex=N). Where the window starts, in ticks before that cast: LEAD_TICKS
+ * (half a second) unless asked: fromStart (--from-start 1, ?fromstart=1) starts at combat start (tick 0, so the attacks
+ * and casts before the anchor are in the window); leadMs (--lead-ms MS, ?leadms=MS) starts MS before the anchor cast,
+ * never before combat start. */
+export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number }
+export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
+  if (start.fromStart) return Math.max(0, castIndex);
+  if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
+  return LEAD_TICKS;
+}
+/** Ticks to replay past the anchor cast for a window of `windowMs`: from the default lead-in as before; with an asked-for
+ * window the replay keeps windowMs past the anchor at least (a superset; extra ticks are never shown). */
+export function afterTicksFor(windowMs: number, start: WindowStart = {}): number {
+  return start.fromStart || start.leadMs != null || (start.castNumber ?? 1) !== 1 ? Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) + 1)
+    : Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - LEAD_TICKS + 1);
+}
 
-/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen). */
+/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0). */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
   return [
     { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
-      ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col, row } } })),
+      ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col: (col as number) + (s.foeOffset ?? 0), row } } })),
   ];
 }
 
@@ -33,25 +52,26 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
   return started as { state: any; events: any[] };
 }
 
-/** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the first cast of `me`. `onTick` sees every tick's
- * state and display events (tick 0 carries the combat-start events). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void) {
+/** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
+ * `castNumber`-th: v-capture --cast-index N). `onTick` sees every tick's state and display events (tick 0 carries the
+ * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1) {
   const started = startRealCombat(units);
-  let state = started.state, castIndex = -1, ticks = 1;
+  let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = toDisplayEvents(stepped.events as any) as any[];
-    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me')) castIndex = ticks;
+    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me') && ++casts === castNumber) castIndex = ticks;
     onTick(state, shown); ticks++;
   }
   return { castIndex, ticks, combatStart: !!state.startEffectsApplied, finished: state.status === 'finished' };
 }
 
-/** What the recorded window [castIndex - LEAD_TICKS, + windowMs] holds: the first cast of `me`, its targets, whether they
- * are alive at the end of the window, and every other unit's cast inside it. */
-export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number) {
-  const from = Math.max(0, castIndex - LEAD_TICKS), to = from + Math.ceil(windowMs / 50);
+/** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
+ * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS) {
+  const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
   const cast = (events[castIndex] ?? []).find(e => e.type === 'cast' && e.sourceId === 'me');
   const targets: string[] = [...(cast?.targetIds ?? [])];
   const end = Math.min(to, alive.length - 1);
@@ -79,4 +99,10 @@ export function hexDistance(a: { row: number; col: number }, b: { row: number; c
 export function frontBlockers(cells: Record<string, { row: number; col: number; alive: boolean }>): string[] {
   const me = cells.me; if (!me) return [];
   return Object.entries(cells).filter(([id, c]) => id !== 'me' && c.alive && c.row >= me.row && hexDistance(c, me) <= 1).map(([id]) => id);
+}
+/** Why a --foe-offset cannot be used with this many foes (every shifted foe must stay on the board's columns 0-6), or null. */
+export function foeOffsetProblem(offset: number, nfoes: number): string | null {
+  if (!Number.isInteger(offset)) return `--foe-offset must be a whole number of columns, got ${offset}`;
+  const cols = [3, 2, 4, 3].slice(0, Math.max(1, Math.min(4, nfoes))).map(c => c + offset);
+  return cols.every(c => c >= 0 && c <= 6) ? null : `--foe-offset ${offset} puts a foe off the board (columns ${cols.join(',')}; use --nfoes 1 or a smaller offset)`;
 }
