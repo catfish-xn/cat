@@ -1,0 +1,10 @@
+# Gangplank ground-fire line, gpline4 (Fable 11-13). Recording only, never merged.
+# Code: #644 head 620de8fb — 20cd67dc runs on the floor along the way from Gangplank to the target, starting
+# GP_GROUND_LINE_BACK behind him, GP_GROUND_LINE_CELLS long (fits); plays out after landing, clear for a while then fades
+# (fit); arbitrary-trail width without the system scale. dev/castcmp from 560aa8a4 (worldBox over drawn vertices, units'
+# contact shadows hidden with --hide-units, --pin-foe2).
+# 3-star Gangplank, two still dummies in one line ahead of him (1 and about 2 hexes), the cast on the near one. Landing
+# ~900 ms: keyframes 1600 / 2200 / 2700 / 3200 ms (landing +0.7 / +1.3 / +1.8 / +2.3 s), beside the 3-star original
+# (536c5Tklplk 427-431 s) at the same offsets from its landing. Two lines: units hidden, units drawn.
+v-capture.cjs gangplank gpline4-hide --pin-foe 1 --pin-foe2 2 --star 3 --ms 3500 --hide-units 1 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank gpline4-units --pin-foe 1 --pin-foe2 2 --star 3 --ms 3500 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e

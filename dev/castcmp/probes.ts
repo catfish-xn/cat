@@ -68,6 +68,24 @@ export function installProbes(clock: () => number) {
      * Draws are named `<emitter>#<rank>` from the build that added this probe on (older builds: '(unnamed)', so filter by
      * --systems there). */
     emitters(names?: string[]) {
+      // Each draw's geometry bounds in world (board) units, over the vertices it actually draws: an indexed geometry's
+      // drawn index range (a ribbon keeps stale vertices past its live strand, which sat at the origin), else its drawn
+      // vertex range. Null for an instanced draw (its per-instance matrices are not read here) or nothing drawn.
+      const worldBoxOf = (o: any) => {
+        const g = o.geometry, pos = g?.attributes?.position; if (!pos || o.isInstancedMesh) return null;
+        const index = g.index, start = g.drawRange?.start ?? 0, count = g.drawRange?.count ?? Infinity;
+        const end = Math.min(index ? index.count : pos.count, start + count); if (end <= start) return null;
+        o.updateWorldMatrix(true, false); const e = o.matrixWorld.elements; const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+        let first: number[] | null = null, last: number[] | null = null, used = 0;
+        const seen = new Set<number>();
+        for (let k = start; k < end; k++) { const i = index ? index.getX(k) : k; if (seen.has(i)) continue; seen.add(i); used++;
+          const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+          const w = [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]];
+          if (first === null || i < first[3]!) first = [...w, i]; if (last === null || i > last[3]!) last = [...w, i];
+          for (let c = 0; c < 3; c++) { lo[c] = Math.min(lo[c], w[c]!); hi[c] = Math.max(hi[c], w[c]!); } }
+        if (!used) return null;
+        return { min: num(lo), max: num(hi), vertices: used, firstVertex: num(first!.slice(0, 3)), lastVertex: num(last!.slice(0, 3)) };
+      };
       const want = (names ?? []).map(n => n.toLowerCase()).filter(Boolean);
       const out: any[] = [];
       for (const rec of live) {
@@ -91,10 +109,15 @@ export function installProbes(clock: () => number) {
             count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
             material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
             transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),
-            defines: { ...(m.defines ?? {}) }, textures, uniforms });
+            defines: { ...(m.defines ?? {}) }, textures, uniforms, worldBox: worldBoxOf(o) });
         });
       }
-      return { draws: out };
+      // Where each unit stands now (its root, world/board units), so a draw's worldBox can be read against the caster and
+      // its target. Needs the renderer's debug hook (?debug3d, which --hide-units and --probe emitters both set).
+      const d3 = (window as any).__render3d;
+      const units = d3?.pieces ? [...d3.pieces.entries()].map(([id, v]: [string, any]) => { v.root.updateWorldMatrix(true, false); const e = v.root.matrixWorld.elements;
+        return { id, root: num([e[12], e[13], e[14]]), alive: !!v.alive }; }) : null;
+      return { draws: out, units };
     },
     attached() {
       if (!scene) return { missing: ['scene'] };
