@@ -54,13 +54,13 @@ const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, dec
 /** The fewest slots a system reserves, whatever its measured peak. */
 export const MIN_RESERVE = 24;
 /**
- * At this many live systems the extra depth and distortion passes are skipped.
+ * At this many live systems the extra depth and distortion passes are skipped (a together group counts as one: slots).
  * Colour particles still draw in the single board pass.
  */
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
-export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[]): { early: boolean; late: boolean; soft: boolean } {
-  if (systems.length >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
+export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
+  if (slots >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
@@ -105,7 +105,9 @@ export interface LtkPlayOptions {
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
-  together?: string }
+  together?: string;
+  /** The clock of the first frame it was put back to wait for room. */
+  waitingSince?: number }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
   bodyGone?: boolean;
@@ -114,7 +116,11 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   /** Its end came and it is playing out. */
   ending?: boolean;
   /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
-  heldAtEnd?: number }
+  heldAtEnd?: number;
+  /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
+  together?: string }
+/** Importance as a rank, for which waiting group a freed slot goes to first. */
+const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /**
  * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
  * past its landing, and none of its own particles' curves run longer.
@@ -205,6 +211,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
+  /**
+   * The system slots in use, as MAX_LTK_SYSTEMS and LTK_PASS_DEGRADE_AT count them: the runs of one together group
+   * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
+   * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
+   */
+  const slotsNow = () => { let n = 0; const groups = new Set<string>();
+    for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
+  const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
   const spareFx: LtkParticles[] = [];
@@ -406,6 +421,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (over) { release(run, run.stopped); running.delete(run); }
       }
       let starts = 0;
+      // Groups that have waited for room since an earlier frame (a group is its together key, or the row itself): room
+      // freed this frame goes to them before any newcomer of no higher importance (Fable 11-13: Vi's pair waited while
+      // single rows due a few frames later took every slot that freed).
+      const heldRoom: { rank: number; key: unknown; need: number }[] = [];
       for (let at = 0; at < waiting.length;) {
         const row = waiting[at], { at: when, spawn, library: catalog, snapshot, persistent, group } = row;
         if (when > clock) { at++; continue; }
@@ -454,13 +473,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // other LTK reservations; fallback then stops spawning until it drains. A plain attack still waits for shared room.
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
-        const shared = importance === 'attack' && running.size >= ATTACK_FREE_SLOTS;
+        const shared = importance === 'attack' && slotsNow() >= ATTACK_FREE_SLOTS;
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
         const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
-        const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
-          && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
+        // A together group takes one slot: none more once one of its rows runs. The particle budget still counts every row.
+        const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
+        const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
+        let heldSlots = 0, heldNeed = 0;
+        for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
+        const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
+          && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
         // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
@@ -469,7 +493,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           let tail: Running | undefined;
           for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
-          release(tail); running.delete(tail);
+          leave(tail);
         }
         while (blocked()) {
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
@@ -478,13 +502,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
-          release(victim); running.delete(victim);
+          leave(victim);
         }
         if (blocked()) {
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
-          if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
+          if (!overdue && (importance === 'critical' || importance === 'body')) {
+            row.waitingSince ??= clock;
+            if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
+            waiting.splice(at, 0, row); at++;
+          }
           else { countDrop(spawn.system); for (const other of partners) { countDrop(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
@@ -525,7 +553,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, together: row.together }); starts++;
           LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
@@ -582,7 +610,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
       liveFx.length = 0;
       for (const { fx } of running) liveFx.push(fx);
-      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx));
+      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow()));
     },
     get active() { return running.size; },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
