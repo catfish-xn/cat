@@ -3842,14 +3842,6 @@
       "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
       "firstDifferentByte": 84
     },
-    "tests/vfx-ltk-trail-width.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 5651,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1958fb7bcb784b63f6a142a5b14b38e7d0f5d43a29c6cb6be9d47349f7e8cd23",
-      "firstDifferentByte": 0
-    },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
