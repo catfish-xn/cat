@@ -18,13 +18,21 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 }
 
 /**
- * At most 12 systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what it was
- * seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The shared
- * budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07 brawl:
- * every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen particles).
+ * At most MAX_LTK_SYSTEMS systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what
+ * it was seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The
+ * shared budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07
+ * brawl: every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen
+ * particles).
+ *
+ * 24, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
+ * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
+ * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
+ * 8 v 8 and 60% in a late-game 9 v 9. At 24 they were 98% and 93%, and finished basic-attack visuals went from 36 to 103
+ * of 170 and from 42 to 87 of 212. From 20 up in the 9 v 9 (24 up in the 8 v 8) the budget starts refusing too.
  */
-export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
-/** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+export const MAX_LTK_SYSTEMS = 24, MAX_LTK_QUEUED = 64;
+/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 24: the
+ * audit above measured 24 with six. */
 const ATTACK_FREE_SLOTS = 6;
 /**
  * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in

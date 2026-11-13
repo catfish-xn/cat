@@ -1370,9 +1370,9 @@
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23160,
+      "currentBytes": 22891,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ddef9ceb2469caca8f54e40955dcc4b00ae41db7e09a36083996f28056253653",
+      "currentSha256": "472a57d6b0b938947c95295dacefee7c8527d3ab61e12ee19fd80c32108f82b9",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
@@ -3813,9 +3813,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 27184,
+      "currentBytes": 27351,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
+      "currentSha256": "72f06142da416ed220a122fdf261c3e1abeb3b04fde51621a5109f606f368f15",
       "firstDifferentByte": 84
     },
     "tests/vi-grab-slam.test.ts": {
