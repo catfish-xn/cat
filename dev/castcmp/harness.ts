@@ -50,6 +50,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     listener.frame(frameOf(0));
     (window as any).__h = {
       step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; listener.frame(frameOf(0)); },
+      // Rec branch: a unit's screen box, for board-frames.cjs crops.
+      box: (id: string) => listener.screenBox?.(id),
       clock: () => clock, tick: () => at, status: r.status, detail: r.detail,
       board: { ticks: replay.frames.length, casts: replay.casts, result: replay.result, combatStart: replay.combatStart },
     };
