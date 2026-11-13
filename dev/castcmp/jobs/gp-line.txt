@@ -1,0 +1,6 @@
+# Gangplank ground-fire line as a ground line (lineCells), real combat. Recording only, never merged.
+# Branch claude/proj-tail-rec-line = claude/proj-tail-gp-viktor 41e95af5 (20cd67dc runs on the floor from Gangplank's feet
+# through the target, GP_GROUND_LINE_CELLS cells, a fit; plays out after landing and fades over its last 0.3 s, gone 1.1 s
+# after landing) + this file. 1-star Gangplank against one 1-star dummy at about one cell, as in the original's clip
+# (cyB8 251-253 s). Keyframes from the cast: landing +0.3 / +0.5 / +0.7 / +1.0 s, original on top, ours below.
+v-capture.cjs gangplank gpline-real-1s --real 1 --star 1 --dist 2 --nfoes 1 --foestar 1 --ms 3000 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
