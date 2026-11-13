@@ -3683,9 +3683,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5039,
+      "currentBytes": 5241,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b854d0973fdad2c1aca665a2f7b2a6ceb708e4e4632a92a9719a813b9c9c3cbd",
+      "currentSha256": "ecb28763da1164ed3e82ec279f848bffd3629f1ade2258aefe46cf5f8aab110d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
@@ -3825,6 +3825,14 @@
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
       "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
       "firstDifferentByte": 84
+    },
+    "tests/vfx-ltk-twitch-cast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1976,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "34abf1fe66f51258e7762609c31d0f7a20ab43d8fa638fc527e71d2504cf844c",
+      "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
