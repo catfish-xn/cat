@@ -37,21 +37,26 @@ const stats = ms => { const s = [...ms].sort((a, b) => a - b), q = p => +s[Math.
     const seconds = Math.ceil(info.ticks * 50 / 1000) + 2;
     await page.evaluate(() => window.__h.reset());
     for (let s = 0; s < seconds * 4; s++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(60); }
-    await page.evaluate(() => window.__h.reset());
+    await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; });
     const ms = await page.evaluate(seconds => {
       const c = document.querySelector('#host canvas'); const gl = c && (c.getContext('webgl2') || c.getContext('webgl')); const px = new Uint8Array(4);
       const out = []; const n = Math.round(seconds * 60);
       for (let i = 0; i < n; i++) { const t0 = window.__realNow(); window.__h.step(1000 / 60); if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); out.push(window.__realNow() - t0); }
       return out;
     }, seconds);
-    const row = { ...cell, combat: info, ...stats(ms), errors: [...new Set(errors)].slice(0, 5), ms: ms.map(x => +x.toFixed(2)) };
-    results.push(row); mark(`cap ${cell.cap} budget ${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} p99 ${row.p99} >16.7 ${row.over16_7}`);
+    // Admission over the measured pass (runtime.ts rec counters, keyed unit|action|system[:part]; unit ids end in the champion).
+    const admit = await page.evaluate(() => globalThis.__LTK_STATS ?? {});
+    const sum = pick => Object.entries(admit).filter(([k]) => pick(k)).reduce((t, [, v]) => ({ asked: t.asked + v.asked, started: t.started + v.started, dropped: t.dropped + v.dropped }), { asked: 0, started: 0, dropped: 0 });
+    const admission = { all: sum(() => true), viktorAttack: sum(k => /-viktor\|attack\|/.test(k)),
+      viktorAttackBySystem: Object.fromEntries([...new Set(Object.keys(admit).filter(k => /-viktor\|attack\|/.test(k)).map(k => k.split('|')[2]))].map(sys => [sys, sum(k => /-viktor\|attack\|/.test(k) && k.split('|')[2] === sys)])) };
+    const row = { ...cell, combat: info, admission, ...stats(ms), errors: [...new Set(errors)].slice(0, 5), ms: ms.map(x => +x.toFixed(2)) };
+    results.push(row); mark(`cap ${cell.cap} budget ${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} p99 ${row.p99} >16.7 ${row.over16_7} viktor attack rows ${JSON.stringify(admission.viktorAttack)}`);
     await page.close();
   }
   const summary = cells.map(c => { const rs = results.filter(r => r.cap === c.cap && r.budget === c.budget);
-    return { ...c, ...stats(rs.flatMap(r => r.ms)), perRound: rs.map(r => ({ round: r.round, mean: r.mean, p95: r.p95, p99: r.p99, over16_7: r.over16_7 })) }; });
+    return { ...c, ...stats(rs.flatMap(r => r.ms)), viktorAttack: rs.map(r => r.admission.viktorAttack), perRound: rs.map(r => ({ round: r.round, mean: r.mean, p95: r.p95, p99: r.p99, over16_7: r.over16_7 })) }; });
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, summary, results }, null, 1));
-  console.table(summary.map(({ perRound, ...s }) => s));
+  console.table(summary.map(({ perRound, viktorAttack, ...s }) => ({ ...s, vkDropped: viktorAttack.map(v => v.dropped).join('/'), vkAsked: viktorAttack.map(v => v.asked).join('/') })));
   await browser.close(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });

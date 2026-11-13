@@ -30,6 +30,9 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * 8 v 8 and 60% in a late-game 9 v 9. At 24 they were 98% and 93%, and finished basic-attack visuals went from 36 to 103
  * of 170 and from 42 to 87 of 212. From 20 up in the 9 v 9 (24 up in the 8 v 8) the budget starts refusing too.
  */
+// REC BRANCH ONLY (never merge): per-row admission counts for dev/castcmp/frame-time.cjs, keyed unit|action|system[:part].
+const __recKey = (row: { spawn: TimelineSpawn; part?: string }) => `${row.spawn.sourceId}|${row.spawn.action ?? 'cast'}|${row.spawn.system}${row.part ? ':' + row.part : ''}`;
+const __rec = (row: any, field: 'asked' | 'started' | 'dropped') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = __recKey(row); (all[k] ??= { asked: 0, started: 0, dropped: 0 })[field]++; };
 export const MAX_LTK_SYSTEMS = 24, MAX_LTK_QUEUED = 64;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 24: the
  * audit above measured 24 with six. */
@@ -412,6 +415,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
+        if (!(row as any).__asked) { (row as any).__asked = true; __rec(row, 'asked'); }
         // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
         // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
         const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
@@ -425,7 +429,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // attack runs were live at critical drops). A late attack or flourish is simply dropped: replayed late, a hit spark
         // reads as lag (eab51a1e: 0f2af66b replayed 9 times).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) continue;
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { __rec(row, 'dropped'); continue; }
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
@@ -487,7 +491,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
           if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
-          else for (const other of partners) waiting.splice(waiting.indexOf(other), 1);
+          else { __rec(row, 'dropped'); for (const other of partners) { if (!(other as any).__asked) { (other as any).__asked = true; __rec(other, 'asked'); } __rec(other, 'dropped'); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -527,7 +531,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++; __rec(row, 'started');
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.
