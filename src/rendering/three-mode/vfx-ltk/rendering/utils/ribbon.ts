@@ -201,6 +201,12 @@ export function writeTrail(
       ACROSS[0] = held.side[at * 3];
       ACROSS[1] = held.side[at * 3 + 1];
       ACROSS[2] = held.side[at * 3 + 2];
+      /* Port: the side lends only its direction. Its length is the system transform's scale (the particle's frame), which
+         would widen the strand past its own scale, as the camera-facing branch below never does: Gangplank's 20cd67dc,
+         a system with a scaled transform, drew its scorch far wider than the original. That the original leaves the
+         system scale out of the width is inferred (11-13: the width without it matches the original's in footage). A side
+         of nothing keeps nothing, as before. */
+      unit(ACROSS);
     } else {
       cross(build.view, TANGENT, ACROSS);
       /* A point on top of the last, or a strand seen along its own length, crosses to

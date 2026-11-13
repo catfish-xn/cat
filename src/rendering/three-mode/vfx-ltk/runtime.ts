@@ -104,6 +104,8 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   bodyGone?: boolean;
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
   playOut?: boolean;
+  /** How a listed projectile's play-out ends (cue-overrides.ts PLAY_OUT_SYSTEMS); PLAY_OUT_CAP with none. */
+  playOutEnd?: PreparedVfx['playOut'];
   /** Its end came and it is playing out. */
   ending?: boolean;
   /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
@@ -137,6 +139,15 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
+/**
+ * A ground line's two ends (TimelineCue.lineCells): from `from` on the floor toward `toward`, `cells` cells in all, at
+ * `from`'s height. Null when the two stand on one spot, which gives it no direction.
+ */
+export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] | null {
+  const dx = toward[0] - from[0], dz = toward[2] - from[2], length = Math.hypot(dx, dz);
+  if (!(length > 1e-3)) return null;
+  return [[from[0], from[1], from[2]], [from[0] + dx / length * cells * cell, from[1], from[2] + dz / length * cells * cell]];
+}
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
@@ -198,6 +209,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
+  /** A run that plays out reaches its end: it stops emitting and stays until played out, by its own end or PLAY_OUT_CAP. */
+  const beginEnding = (run: Running) => {
+    run.fx.stop(); run.ending = true; run.heldAtEnd = run.reserved;
+    const own = run.playOutEnd;
+    run.until = clock + (own?.seconds ?? PLAY_OUT_CAP);
+    if (own) run.fx.endWithin(own.seconds, own.fade);
+  };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
   const spareFx: LtkParticles[] = [];
@@ -372,6 +390,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
+        // A run that plays out does so from here too: a killing hit lands as its unit dies, and the landed projectile's
+        // tail must not go whole with it.
+        if (run.playOut && !run.ending) beginEnding(run);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
       for (let index = spareFx.length - 1; index >= 0; index--) {
@@ -387,7 +408,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
         // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
-          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP; run.heldAtEnd = run.reserved;
+          beginEnding(run);
         }
         // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
         // (a child may still emit through its own short life after the stop), never above what it held at its end.
@@ -439,6 +460,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
         const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
+        // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
+        // on one spot, it does not play: it never falls back to a flight from the caster's bone.
+        const lineEnds = spawn.event === 'projectile' && spawn.lineCells && source && !source.disposed
+          ? (() => { const toward = snapshot ?? (target ? standingPoint(target.root) : undefined);
+            return toward ? groundLine(standingPoint(source.root), toward, spawn.lineCells!) : null; })() : null;
+        if (spawn.event === 'projectile' && spawn.lineCells && !lineEnds) continue;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
@@ -456,9 +484,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
-        // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
-        // its rock children and smoke included: what was left of it disappears in that frame.
-        while (crowded()) {
+        // first, before anything still in its own time is weighed for eviction. Only when giving up every tail would let the
+        // new run in: one that stays out anyway is weighed below as before, and no tail is cut for it (Fable 11-12, a
+        // Gangplank cast's own hits filled every system slot and took its landed ground-fire line for nothing). Giving way
+        // removes the whole tail at once, its rock children and smoke included: what was left of it disappears in that frame.
+        const tailsAdmit = () => {
+          let tails = 0, room = 0;
+          for (const run of running) if (run.ending) { tails++; room += run.reserved; }
+          return tails > 0 && running.size - tails + partners.length < MAX_LTK_SYSTEMS
+            && !(options.budget && (shared ? options.budget.live : reservedNow()) - room + need > options.budget.max);
+        };
+        while (crowded() && tailsAdmit()) {
           let tail: Running | undefined;
           for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
@@ -487,7 +523,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
+        // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
         const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
@@ -518,7 +555,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.
