@@ -247,9 +247,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A skill system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and
         // reserves what it holds there; a plain attack's system keeps ROOT_PARTICLES (its spawns never take the room).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
-        const wide = skill ? rootRoomOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt, ROOT_PARTICLES_MOST)) : ROOT_PARTICLES;
+        const seconds = Math.min(longest.duration, 10);
+        const unlimited = skill ? measurePeak(prepared, seconds, stopAt, ROOT_PARTICLES_MOST) : 0, wide = skill ? rootRoomOf(unlimited) : ROOT_PARTICLES;
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
-        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt, wide), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
+        // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
+        const peak = skill && wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide);
+        needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;

@@ -69,7 +69,7 @@ export function emit(
   step: SystemStep,
   rng: Rng,
   dragMotion: DragMotion,
-  othersPending?: () => number,
+  siblings?: { readonly emitters: readonly EmitterModel[]; readonly states: readonly EmitterState[] },
 ): void {
   const cue = cueScale(step.scale);
   if (emitter.disabled || state.absent) return;
@@ -87,8 +87,8 @@ export function emit(
      one-shot keeps at least its own (11-13: Caitlyn's burst filled its 150 places with debris on its first frame, and the
      seventeen emitters after it, the flash and the smoke among them, never spawned). Only a step that would fill the
      pool is touched. */
-  if (count > 0 && othersPending && pool.count + count >= pool.capacity) {
-    const held = othersPending();
+  if (count > 0 && siblings && pool.count + count >= pool.capacity) {
+    const held = oneShotsPending(siblings.emitters, siblings.states, index);
     if (held > 0) count = Math.max(Math.min(count, pool.capacity - pool.count - held), emitter.singleParticle ? 1 : 0);
   }
   if (count <= 0) return;
@@ -259,6 +259,18 @@ export function emit(
 
   state.emitted = true;
   state.lastSpawn = now;
+}
+
+/** One-shot (`isSingleParticle`) emitters of the system other than `except` that are still to spawn. */
+function oneShotsPending(emitters: readonly EmitterModel[], states: readonly EmitterState[], except: number): number {
+  let pending = 0;
+  for (let at = 0; at < emitters.length; at += 1) {
+    const other = emitters[at], own = states[at];
+    if (at === except || !other.singleParticle || own.emitted || own.absent || other.disabled) continue;
+    if (emissionEnded(other, own.age)) continue;
+    pending += 1;
+  }
+  return pending;
 }
 
 /**
