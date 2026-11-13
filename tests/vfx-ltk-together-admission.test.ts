@@ -99,11 +99,14 @@ describe('vfx-ltk together admission', () => {
     runtime.dispose();
   });
 
-  it('counts a together group once for the pass degrade threshold', () => {
+  it('counts a together group once for the pass degrade threshold, while early stays on', () => {
     const fx = { passes: { early: true, late: false, soft: true } };
     const systems = Array.from({ length: LTK_PASS_DEGRADE_AT }, () => fx);
-    expect(ltkRenderNeeds(systems)).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds(systems)).toEqual({ early: true, late: false, soft: false });
     // The same runs, one of them the second row of a pair: one slot fewer, under the threshold.
     expect(ltkRenderNeeds(systems, LTK_PASS_DEGRADE_AT - 1)).toEqual({ early: true, late: false, soft: true });
+    const withLate = Array.from({ length: LTK_PASS_DEGRADE_AT }, () => ({ passes: { early: true, late: true, soft: false } }));
+    expect(ltkRenderNeeds(withLate)).toEqual({ early: true, late: false, soft: false });
+    expect(ltkRenderNeeds(withLate, LTK_PASS_DEGRADE_AT - 1)).toEqual({ early: true, late: true, soft: false });
   });
 });
