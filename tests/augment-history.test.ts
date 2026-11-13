@@ -469,7 +469,7 @@ it('keeps the real battle ledger and terminal save identical to the independent 
   // pathing (c64a756a; m01@155). Same values as tests/v26-anomaly-identity-audit.test.ts. Were
   // 0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324 and 99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431.
   expect(s.combat!.tick).toBe(274);expect(events).toHaveLength(153);
-  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('536cc14b0a3d4245d616eef7a92bb33769fca3e5ea2228c56bdb17cb508ddb83');
+  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('f7e27bc0bb88aa0289c0268bee4aa19e3d7d19a904b90f738a527380ec0b7a8e');
   expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('fc3de4605395549c665e4cbbb9a2f50fee4d9bd97806f8f6320bbe2c87ac6c8f');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
@@ -575,7 +575,7 @@ it('keeps the existing save/replay envelope versions and authenticates a carried
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,
     runId:'augment-history-envelope',createdAt:'2026-10-27T00:00:00.000Z',match:s,battles:history.completedRecords,currentBattle:null};
-  expect(envelope.saveFormatVersion).toBe(9);expect(envelope.replayFormatVersion).toBe(8);
+  expect(envelope.saveFormatVersion).toBe(9);expect(envelope.replayFormatVersion).toBe(9);
   expect(await validateFile(exportFile(envelope),()=>{})).toEqual(envelope);
   const bad:any=structuredClone(envelope);delete bad.match.augmentHistory;
   await expect(validateFile(exportFile(bad),()=>{})).rejects.toThrow('missing augment-history-v1');

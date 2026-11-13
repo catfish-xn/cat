@@ -45,6 +45,7 @@ import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL, minesFrameFor } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
+import { DEFAULT_FAR, farToCover } from './camera-far';
 import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
 // Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
@@ -59,8 +60,8 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
@@ -396,7 +397,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const sun = new DirectionalLight(0xffffff, 1.5);
   sun.position.set(-200, 600, 300);
   scene.add(sun);
-  const camera = new PerspectiveCamera(36, 1, 1, 5000);
+  const camera = new PerspectiveCamera(36, 1, 1, DEFAULT_FAR);
   const quality = readQuality3d(typeof location === 'undefined' ? '' : location.search);
   const lighting = createPresentationLighting(scene, quality), portal = createPvpPortal(scene);
   const arrivalsEnabled = () => quality !== 'off' && !reducedMotion() && !visiting() && !stage.active;
@@ -520,7 +521,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
     font: canvasFont, ui: originalUi,
     loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
-  const boardGroup = new Group(), boardBox = new Box3();
+  const boardGroup = new Group(), boardBox = new Box3(), arenaBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
   // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the drop marker by the
@@ -566,6 +567,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // The last shift moved the extents: back off just enough that they still fit.
     for (let i = 0; i < 16 && !fits(distance); i++) distance *= 1.02;
     place(distance);
+    // Reach the arena's skybox from wherever the framing put the camera (camera-far.ts).
+    const far = farToCover(camera.position, arena?.ready ? arenaBox.setFromObject(arenaGroup) : arenaBox.makeEmpty());
+    if (far !== camera.far) { camera.far = far; camera.updateProjectionMatrix(); }
   };
   scene.add(boardGroup);
   // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
@@ -701,7 +705,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
-    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe }) : null;
+    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
+    board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
@@ -1183,7 +1189,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1475,6 +1481,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ltkCastCounts.set(event.sourceId, castIndex + 1);
         face(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.
+        if (current && pieces.get(event.sourceId)?.definitionId === 'vi') { const held = pieces.get(event.targetIds[0]); if (held?.alive) held.control.grab(GRAB_3D.viSlamTicks / 20); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);

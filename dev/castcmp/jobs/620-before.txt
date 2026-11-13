@@ -1,0 +1,17 @@
+# #620 血条跟随 回归录制（定稿 2026-11-12），before 列：代码 46a8b0d5，工具 dev/castcmp 取 5f8a3be8（附着网格线）覆盖：
+#   git checkout 46a8b0d5 && tar xzf /mnt/project-files/castcmp-tools/castcmp-5f8a3be8.tar.gz -C <仓库根>   （sha256 92c83e1b…f34b；gate 的 checkout 检查只看 src/）
+#   5f8a3be8 推到 GitHub 后也可以 git checkout 5f8a3be8 -- dev/castcmp，提交号不变。
+# --systems none：层检查豁免，checkout/规则/遮挡照查。--probe overhead：每帧记血条锚点和身体屏幕坐标到 overhead.json，gate.json 给窗口内 maxAbsDx。
+# --from/--to：判定窗口（毫秒，录制从首次施法前 0.5 s 开始）。施法英雄 500→结束；夜曲看悬浮待机，0→结束。
+# 预检：node dev/castcmp/jobs-check.mjs <本文件> 10/10 PASS（2026-11-12，Linux，在 46a8b0d5 + 5f8a3be8 工具上跑）。
+# 迅捷蟹、虚空生物是 PvE，不录：PvE 单位未做画面验证，依据执行端骨骼位移与重心对照表（Fable 同意）。
+v-capture.cjs illaoi bar-illaoi-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 2 --ms 4000 --settle 3000 --systems none --probe overhead --from 500 --to 4000 --column before --snapshot c1333710ad8e
+v-capture.cjs rumble bar-rumble-before --real 1 --star 2 --target amumu --nfoes 2 --foestar 3 --dist 2 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs nami bar-nami-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 2 --dist 3 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs corki bar-corki-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 3 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs malzahar bar-malzahar-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 3 --ms 4000 --settle 3000 --systems none --probe overhead --from 500 --to 4000 --column before --snapshot c1333710ad8e
+v-capture.cjs vi bar-vi-before --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 3 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs leona bar-leona-before --real 1 --star 2 --target garen --nfoes 1 --foestar 3 --dist 2 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs urgot bar-urgot-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 2 --dist 3 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs jayce bar-jayce-before --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 3 --ms 3000 --settle 3000 --systems none --probe overhead --from 500 --to 3000 --column before --snapshot c1333710ad8e
+v-capture.cjs nocturne bar-nocturne-before --real 1 --star 2 --target garen --nfoes 1 --foestar 3 --dist 2 --ms 3000 --settle 3000 --systems none --probe overhead --from 0 --to 3000 --column before --snapshot c1333710ad8e

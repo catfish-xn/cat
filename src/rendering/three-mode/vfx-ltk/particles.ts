@@ -1,8 +1,9 @@
 /** Bare Three.js host over the upstream simulation and original GPU buffer writers. */
-import { BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
+import { Box3, BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
+import type { MissileFlight } from './engine/model/missile';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
 import { createQuads } from './rendering/components/Quads';
@@ -12,7 +13,7 @@ import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
 import { borrowMeshBuffers } from './rendering/utils/drawBufferPool';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
-import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
+import { createAttachedMeshes, type AttachedDraw } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
 import type { ParticleDraw, DrawFrameState } from './rendering/lifetime';
 import { meshPose } from './rendering/utils/meshPose';
@@ -24,6 +25,16 @@ import { withDrawFade } from './engine/simulation/particleRead';
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
 export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
+/**
+ * The most child room (pool slots, as the engine's child budget counts them) and live child systems one run may take,
+ * however much its system measures (measureChildren). A run whose system was never measured keeps CHILD_PARTICLES and 8.
+ * One flat 100 refused the second and third of the rock children every FillMouth particle of Vi's row shockwave
+ * spawns (84b969e0 -> db4240a5 -> 4e1dc787, 11-12): only one of about three appeared, near the row's start.
+ */
+export const CHILD_ROOM_CAP = 1024, CHILD_COUNT_CAP = 32;
+/** The child room a run of one system gets: pool slots for the engine's child budget, and live child systems. */
+export interface ChildRoom { readonly budget: number; readonly most: number }
+export const DEFAULT_CHILD_ROOM: ChildRoom = { budget: CHILD_PARTICLES, most: 8 };
 /**
  * A fading cue's alpha at `elapsed` seconds: full until `stopAfter`, then easing to nothing at `duration`, so particles
  * that outlive the cue leave with it instead of being cut off at full strength. 1 without a soft stop.
@@ -53,6 +64,28 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
     basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
 }
+/**
+ * Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet).
+ * Fitted values, not 14.24 data: chosen to sit near where those locators are on the models that have them.
+ */
+const MISSING_LOCATOR_SHARE: readonly [RegExp, number][] = [
+  [/^c?_?buffbone_glb_chest_loc$/i, 0.6], [/^c?_?buffbone_glb_center_loc$/i, 0.5], [/^c?_?buffbone_glb_head_loc$/i, 0.9],
+  [/^c?_?buffbone_glb_overhead_loc$/i, 1],
+];
+/**
+ * Height above the unit's origin for a requested bone the model does not have. Body locators (chest, centre, head,
+ * overhead) take their share of `bodyHeight`; any other missing bone (ground, a weapon) stays on the origin, as before.
+ */
+export function missingLocatorLift(bone: string, bodyHeight: number): number {
+  const share = MISSING_LOCATOR_SHARE.find(([pattern]) => pattern.test(bone))?.[1];
+  return share === undefined || !(bodyHeight > 0) ? 0 : share * bodyHeight;
+}
+const box = new Box3();
+/** World height of the body's top above the unit's origin (bind-pose bounds), 0 without geometry. */
+function bodyHeightAbove(root: Object3D, body: Object3D): number {
+  box.setFromObject(body); if (box.isEmpty()) return 0;
+  return box.max.y - root.getWorldPosition(new Vector3()).y;
+}
 /** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: the ground
  * locator's +Z faces forward on Zyra but backward on Irelia, Kog'Maw and Akali; Kog'Maw's head and chest locators face
  * backward too, Irelia's chest sideways), while bins author "in front" as the unit's facing. Weapon and named bones keep
@@ -67,8 +100,10 @@ export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string,
   let attachment: Object3D | undefined;
   if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
   const node = () => attachment ?? root;
+  // A body locator the model lacks stands in at its share of the body's height above the unit, not on the floor.
+  const lift = !attachment && bone && body ? missingLocatorLift(bone, bodyHeightAbove(root, body)) : 0;
   return {
-    originAt() { node().getWorldPosition(point); return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
+    originAt() { node().getWorldPosition(point); point.y += lift; return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
       // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
       const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
@@ -97,14 +132,22 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
     return held;
   };
 }
+/** A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. */
+export function projectileFlight(seconds: number): MissileFlight {
+  return { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
+}
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** The projectile lands exactly `projectileSeconds` after launch (projectileFlight), however steep its path. */
+  fixedTime?: boolean;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
   fadeFrom?: number;
   /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
   scale?: number;
+  /** The run's child room (measureChildren); DEFAULT_CHILD_ROOM when omitted. Fixed for the life of the driver. */
+  childRoom?: ChildRoom;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
   const resolveFadeFrom = (next: typeof options) => 'fadeFrom' in next ? next.fadeFrom : next.fadeOut ? next.stopAfter : undefined;
@@ -114,20 +157,25 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
     // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
     return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
+      // The engine's missile speed is horizontal (a straight line at a constant ground speed), so a speed from the 3D
+      // distance lands a flight early by its drop's share of the path, and the landing stops the emitters there (11-12:
+      // Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds). A falling projectile (fixedTime) flies a
+      // fixed time instead; every other cue projectile keeps its speed until that change is reviewed on its own.
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.fixedTime ? projectileFlight(spec.projectileSeconds) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
   const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
-  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  const room = options.childRoom ?? DEFAULT_CHILD_ROOM;
+  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: room.budget, maxChildren: room.most });
   driver.setScale(spec.scale);
   let rig = rigFor();
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
-  const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
+  const draws: ParticleDraw[] = [], overlays: AttachedDraw[] = [], rootSources: Source[] = [driver];
   const passes = { early: false, late: false, soft: false };
   try {
     for (const definition of prepared.drawn) {
@@ -145,7 +193,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
-          draws.push(held); object.add(held.object);
+          draws.push(held); overlays.push(held); object.add(held.object);
           const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: held.material });
         }
       } else if (drawsAsMesh(emitter)) {
@@ -161,33 +209,44 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
           });
         }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
-      else if (drawsAsTrail(emitter)) draw = createTrails(props);
+      else if (drawsAsTrail(emitter)) draw = createTrails({ ...props, endFade: prepared.endFade?.has(emitter.name ?? '') ?? false });
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
       if (draw) {
+        // Named for dev probes only (dev/castcmp probes.ts emitters()); nothing in the renderer reads it.
+        draw.object.name = `${emitter.name ?? '?'}#${definition.rank}`;
         draw.object.layers.disableAll(); for (const layer of layers) draw.object.layers.enable(layer);
         const phases = drawPhases(emitter); passes.early ||= phases.warpsEarly; passes.late ||= phases.warpsLate; passes.soft ||= fades(emitter);
         draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
       }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
-  let elapsed = 0, closed = false, peak = 0;
+  let elapsed = 0, closed = false, peak = 0, childPeak = 0;
+  const hasChildren = prepared.drawn.some(definition => !!definition.path);
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
     object, driver, draws, stencils, passes,
+    /** The host-body overlays among `draws`, which the runtime counts against its screen cap. */
+    attached: overlays,
     /** Most root particles live at once in this play, which the runtime reserves for the system's next play. */
     get peak() { return peak; },
-    /** It runs child systems, whose room (CHILD_PARTICLES) the root count does not show. */
-    children: prepared.drawn.some(definition => !!definition.path),
+    /** It runs child systems, whose particles the root count does not show (childPeak does). */
+    children: hasChildren,
+    /** Most child particles live at once in this play. */
+    get childPeak() { return childPeak; },
+    /** The child room this run was built with. */
+    childRoom: room,
     /** Play the same prepared system again. The caller only does this for the same attachment. */
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; peak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; childPeak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
+    /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
+    get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
@@ -195,6 +254,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       // Bound a tab-resume frame; old queued bursts are discarded by the timeline host.
       driver.advance(Math.min(seconds, 0.1));
       peak = Math.max(peak, driver.pool.count);
+      if (hasChildren) childPeak = Math.max(childPeak, driver.childRoom().particles);
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
@@ -205,3 +265,48 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   };
 }
 export type LtkParticles = ReturnType<typeof createLtkParticles>;
+/**
+ * What a run of `prepared` takes in child systems when nothing refuses one: the room their pools hold, the live child
+ * systems and their particles, each at its most, run in place at 1/60 s steps (a child spawns off a parent particle's
+ * birth, and the engine's birth count truncates per step, so a coarser step spawns fewer). `stopAt` stops the rig there,
+ * which is where a missile stops emitting. Null for a system that spawns no children. The run itself is bounded by
+ * CHILD_ROOM_CAP and CHILD_COUNT_CAP, so a system that wants more measures at the cap.
+ */
+export function measureChildren(prepared: PreparedVfx, seconds: number, stopAt?: number): { room: number; live: number; particles: number } | null {
+  if (!prepared.drawn.some(definition => !!definition.path)) return null;
+  const anchor = pointAnchor([0, 0, 0]);
+  const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_ROOM_CAP, maxChildren: CHILD_COUNT_CAP });
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt, motion: { kind: 'bone', anchor, target: null } });
+  let room = 0, live = 0, particles = 0;
+  for (let at = 0; at < seconds; at += 1 / 60) {
+    driver.advance(1 / 60);
+    const now = driver.childRoom();
+    room = Math.max(room, now.held); live = Math.max(live, driver.liveChildren()); particles = Math.max(particles, now.particles);
+  }
+  return { room, live, particles };
+}
+/**
+ * A run's child room off what its system measured: half again the measured room and count, capped. The measure stands
+ * still and stops at the cue's nominal flight; a real run moves, and on Vi's longest row (6.5 cells) it held one more
+ * rock child than the measure did, which a single child's margin refused (11-12, measured).
+ */
+export function childRoomOf(measured: { room: number; live: number } | null): ChildRoom {
+  if (!measured || measured.live === 0) return DEFAULT_CHILD_ROOM;
+  return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, Math.ceil(measured.room * 1.5))), most: Math.min(CHILD_COUNT_CAP, Math.max(8, Math.ceil(measured.live * 1.5))) };
+}
+/**
+ * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
+ * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
+ */
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
+  const anchor = pointAnchor([0, 0, 0]);
+  const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  driver.swap(prepared.model);
+  if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
+  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: { kind: 'bone', anchor, target: null } });
+  let peak = 0;
+  for (let at = 0; at < seconds; at += 1 / 30) { driver.advance(1 / 30); peak = Math.max(peak, driver.pool.count); }
+  return peak;
+}

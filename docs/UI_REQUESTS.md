@@ -4,6 +4,13 @@
 
 # 界面数据需求（Claude → Codex）
 
+## CAST-BRANCH-FIELD（2026-11-12，已完成：用户决定不经 Codex，由 Claude 实现，PR #623）
+
+- 字段：`CastReceipt.branch?: { castIndex, branch }`，回放视图 `cast` 事件透传为 `branch`；`castIndex` 即结算后的 `runtime.castCount`（从 1 起）。只在规则写了分支时出现，其余施法字节不变。
+- 写出：能力在自己已有的分支判定处写 `ctx.castBranch`（安蓓萨 `combat-g2-2.ts`：第 1、3、5… 次 `chain`，第 2、4… 次 `fist`），不写死英雄名，只加输出、不动结算。
+- 用途：渲染端按 `branch` 选 `castVariants.branch` 的动作并只放该分支特效，不自己数施法次数。
+- 验收：`tests/ambessa-cast-branch.test.ts`；零漂移跑 `tests/server`、restore-audit、augment-pool、tamper；`consumer-byte-audit` 同步、`--check` 通过；纪元随本批重录。
+
 ## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 已修：boardUnitAt 对不可装备的可见单位返回原 id，走 unknown-unit 提示；U3 10/10）
 
 - 离线 Chromium 对照：`83fd7fa5` 的 `verify-m8-u3-dynamic.cjs` 10/10 通过；PR9 原 HEAD `f879b2b2` 为 9/10，唯一失败为 `drag-enemy`，与本次体积优化无关。

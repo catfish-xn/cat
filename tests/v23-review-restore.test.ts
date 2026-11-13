@@ -77,7 +77,9 @@ beforeAll(() => {
   s = accepted(startMatchCombat(s));
   for (let n = 0; n < 250 && s.phase === 'combat'; n++) {
     s = stepMatch(s).state;
-    if (s.combat!.units.some(u => u.mechanismState?.statuses.some(g => g.contributions.some(c => c.application.knockup)))) {
+    // Vi grabs at the cast and slams VI_SLAM_TICKS later: the save is taken once the slam's plain stun sits beside a knock-up.
+    const stunned = s.combat!.units.flatMap(u => u.mechanismState?.statuses ?? []).filter(g => g.kind === 'stun').flatMap(g => g.contributions);
+    if (stunned.some(c => c.application.knockup === true) && stunned.some(c => c.application.knockup === undefined)) {
       knockupSave = s; break;
     }
   }

@@ -1,7 +1,7 @@
-import type { Camera, Material, Object3D, Scene, WebGLRenderer } from 'three';
+import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
-import { cueSize } from './fx-size';
-import { createLtkParticles, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
+import { BOARD_CELL, cueSize } from './fx-size';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -9,6 +9,7 @@ import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
 import { admitEffect, effectImportance, type EffectImportance } from '../effect-budget';
+import { ATTACHED_SLOTS, ATTACHED_STATS, type AttachedDraw } from './rendering/components/AttachedMeshes';
 
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
@@ -25,6 +26,24 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
 /** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
 const ATTACK_FREE_SLOTS = 6;
+/**
+ * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
+ * play (the build before it had no cap). A layer is one live particle of an attached emitter, drawn once per skinned
+ * part of its host. Measured 11-11 (asset-root-live c1333710ad8e, dev/castcmp/board-load.cjs, SwiftShader): a whole
+ * 8 v 8 3-star combat of attached-heavy champions (Mundo, Vi, Jinx, Leona, Mordekaiser, Ambessa, Jayce, Loris against
+ * Kog'Maw and the same) peaks at 13 layers / 61 draws, Mundo's R alone at 5 / 29, cap untouched; frame time within
+ * noise of the uncapped build. 24 leaves that peak almost twice over.
+ */
+export const ATTACHED_LAYER_CAP = 24;
+/**
+ * Every runtime's overlay counts (the castcmp board-load harness reads them): layers on screen in the latest frame (one
+ * per live particle of an attached emitter) and the skinned draws they cost, the peaks, what made the peak layer count
+ * (`system@unit+start:emitter` → layers), and how often the cap tripped. Read by dev tools only: every runtime writes
+ * to it, so with several runtimes `layers`/`draws` are the last one's.
+ */
+export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
+/** Which overlays the screen cap keeps first. */
+const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
 export const MIN_RESERVE = 24;
 /**
@@ -58,6 +77,8 @@ export interface LtkPlayOptions {
   delay?: number;
   /** Timeline variant (empowered, a form), as the string argument would name it. */
   variant?: TimelineVariant;
+  /** The cast event's rule branch (`branch.branch`); never inferred from a cast count. Branched cues need it. */
+  branch?: string;
   /**
    * Seconds (held to −2..2) every attack cue moves by, none earlier than the start: the original release lands `windupRatio`
    * of the interval after the swing starts, while the exported cues assume the clip's release frame at 1× (AttackRelease).
@@ -75,8 +96,50 @@ export interface LtkPlayOptions {
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
 }
-interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance }
+interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
+  /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
+  together?: string }
+interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
+  /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
+  bodyGone?: boolean;
+  /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
+  playOut?: boolean;
+  /** Its end came and it is playing out. */
+  ending?: boolean;
+  /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
+  heldAtEnd?: number }
+/**
+ * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
+ * past its landing, and none of its own particles' curves run longer.
+ */
+export const PLAY_OUT_CAP = 2;
+/**
+ * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
+ * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
+ * x by its column and its y by its row alone, so one row is one world Z for either player.
+ */
+export function rowPath(from: WorldPoint, side: -1 | 1, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] {
+  return [from, [from[0] + side * cells * cell, from[1], from[2]]];
+}
+/** Where a projectile falling onto a target standing at `at` starts (TimelineCue.fromAbove): `offset` cells from there. */
+export function dropStart(at: WorldPoint, offset: readonly [number, number, number], cell = BOARD_CELL): WorldPoint {
+  return [at[0] + offset[0] * cell, at[1] + offset[1] * cell, at[2] + offset[2] * cell];
+}
+/** The board's cell geometry (board-feed BoardFrame: columns, hexRadius, origin), in the units pieces stand in. */
+export interface RowBoard { readonly columns: number; readonly radius: number; readonly origin: { readonly x: number; readonly y: number } }
+/**
+ * Cells from `at` to the centre of the last cell of its row on `side` (0 at that cell or past it). Its row is the one its
+ * world Z falls in; odd rows sit half a cell to the right (hex-layout.ts).
+ */
+export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number {
+  const cell = Math.sqrt(3) * board.radius, row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  const first = board.origin.x + cell * (((row % 2) + 2) % 2) / 2, last = first + cell * (board.columns - 1);
+  return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
+}
+/** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
+export function standingPoint(root: Object3D): WorldPoint {
+  const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
+}
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
   // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
@@ -101,15 +164,38 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
   return view;
 }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
+  /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
+  board?: () => RowBoard | null;
   /** The nearest live foe of a caster, for a cast on itself (Irelia's W): its cast-start then faces that foe. */
-  foe?: (sourceId: string) => Object3D | null } = {}) {
-  let clock = 0, closed = false, seed = 1;
+  foe?: (sourceId: string) => Object3D | null;
+  /** False hides every host-body overlay (attached mesh): reduced motion, `?skillfx=off`. Omitted means shown. */
+  attachedLayers?: () => boolean;
+  /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
+  layerCap?: number } = {}) {
+  let clock = 0, closed = false, seed = 1, plays = 0;
+  const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
+  const layerBuf: { key: string; draws: AttachedDraw[]; rank: number; started: number; system: string }[] = [];
+  const attachedStats = { capEvents: 0, cappedFrames: 0, peakLayers: 0 };
+  let capped = false;
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
-  /** Slots each system was seen to need, from its last finished play. */
+  /**
+   * Slots each system needs: measured in place when its champion warms (measurePeak), then raised by what each finished
+   * play held. A first play used to reserve the full 250 instead: six systems filled the shared 1500, so a first cast
+   * dropped whatever came seventh (Vi's row shockwave, 11-12).
+   */
   const needs = new Map<string, number>();
+  /**
+   * Each system's child room, measured when its champion warms (measureChildren): a run gets what its system's children
+   * take rather than one flat CHILD_PARTICLES, bounded by CHILD_ROOM_CAP and CHILD_COUNT_CAP. The shared budget still
+   * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
+   */
+  const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
+  /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
+  const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
+    + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
@@ -121,8 +207,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     if (options.budget) options.budget.live -= run.reserved;
     // A play that ran to its end shows what the system needs; a cut-short play may not have peaked yet. The need only
     // grows: a low-peaking seed or a shorter cue on a shared system (Zyra's 857fe049 at 0.6 and 0.7 s) never lowers it.
-    if (run.fx.finished) needs.set(run.system, Math.max(needs.get(run.system) ?? 0,
-      Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(run.fx.peak * 1.25) + (run.fx.children ? CHILD_PARTICLES : 0)))));
+    if (run.fx.finished) {
+      const kids = run.fx.children ? Math.max(childLive.get(run.system) ?? 0, run.fx.childPeak) : 0;
+      if (run.fx.children) childLive.set(run.system, kids);
+      needs.set(run.system, Math.max(needs.get(run.system) ?? 0, reserveOf(run.fx.peak, run.fx.children && !rooms.has(run.system) ? true : kids)));
+    }
     if (retire) { run.fx.dispose(); return; }
     // Least recently parked goes first: a full pool keeps the newest finished systems.
     while (spareFx.length >= SPARE_FX) spareFx.shift()!.dispose();
@@ -142,6 +231,19 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       catalogs.set(champion, catalog);
       const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
+      // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
+      // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
+      for (const id of new Set(cues.map(cue => cue.system))) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const prepared = catalog.get(id);
+        if (closed || needs.has(id) || !prepared || prepared.empty) continue;
+        const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
+        const stopAt = longest.fadeOut ? undefined : longest.stopAfter;
+        // A missile stops emitting where it lands, so its children are measured stopped at its flight.
+        const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
+        if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
+        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
+      }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };
@@ -191,6 +293,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const available = catalog.index?.skills[skill];
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
         && cue.variant === form
+        && (cue.branch === undefined || cue.branch === context.branch)
         && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {
@@ -233,6 +336,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const target = findUnit(spawn.targetId);
         return !target || target.disposed || (!target.alive && !context.snapshotTargets);
       })) return false;
+      const play = ++plays;
       for (const spawn of spawns) {
         let snapshot: WorldPoint | undefined;
         if (context.snapshotTargets && spawn.targetId) {
@@ -241,7 +345,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const engine = p.originAt(0);
           snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
         }
-        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}) });
+        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
+          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}) });
       }
       return true;
     },
@@ -253,7 +358,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     /** True while a cue of this action from the source is queued or running. */
     playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
       for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.ending) return true;
       return false;
     },
     stopUnit(id: string) {
@@ -262,8 +367,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
-        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park.
-        run.fx.stop(); run.stopped = true;
+        // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
+        // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
+        run.fx.stop(); run.stopped = true; run.bodyGone = true;
+        for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
@@ -277,7 +384,19 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
         run.fx.update(seconds, camera);
-        if (run.fx.finished || clock + 1e-9 >= run.until) { release(run, run.stopped); running.delete(run); }
+        // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
+        // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
+        if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
+          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP; run.heldAtEnd = run.reserved;
+        }
+        // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
+        // (a child may still emit through its own short life after the stop), never above what it held at its end.
+        if (run.ending) {
+          const live = Math.min(run.heldAtEnd ?? run.reserved, run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0));
+          if (live !== run.reserved) { if (options.budget) options.budget.live += live - run.reserved; run.reserved = live; }
+        }
+        const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
+        if (over) { release(run, run.stopped); running.delete(run); }
       }
       let starts = 0;
       for (let at = 0; at < waiting.length;) {
@@ -303,6 +422,25 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
         const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
+        // and frees that run's room before this one asks for its own.
+        if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
+        // A row projectile (TimelineCue.rowSide) runs between two board points taken now: where its target stands (its
+        // snapshot point once it is dead) and rowCells along the row. With neither it does not play: it never falls back
+        // to a flight from the caster.
+        const rowStart = spawn.event === 'projectile' && spawn.rowSide ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        if (spawn.event === 'projectile' && spawn.rowSide && !rowStart) continue;
+        // How far it runs: to the end of its row when asked (and the board is known), at most rowCells; nothing to run, no run.
+        const board = rowStart && spawn.rowToEnd ? options.board?.() ?? null : null;
+        const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
+        if (rowStart && !(rowCells > 0.05)) continue;
+        // A falling projectile (TimelineCue.fromAbove) starts above where its target stands (its snapshot point once it is
+        // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
+        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
+        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
+        const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
         // (250 slots at once) never finds room again (11-06 field: 537 drops, all on the budget, live 1499–1500 with 4 running).
         // A skill system is all-or-nothing while fallback particles shed one by one, so a skill only has to fit beside the
@@ -310,9 +448,22 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
         const shared = importance === 'attack' && running.size >= ATTACK_FREE_SLOTS;
-        const need = reserveFor(spawn.system);
-        const blocked = () => running.size >= MAX_LTK_SYSTEMS || !!(options.budget
+        // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
+        // all dropped once overdue: one side of a pair never plays without the other.
+        const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
+        const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
+        const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
+        const blocked = () => crowded() || starts + partners.length >= 6;
+        // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
+        // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
+        // its rock children and smoke included: what was left of it disappears in that frame.
+        while (crowded()) {
+          let tail: Running | undefined;
+          for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
+          if (!tail) break;
+          release(tail); running.delete(tail);
+        }
         while (blocked()) {
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
@@ -327,6 +478,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
           if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
+          else for (const other of partners) waiting.splice(waiting.indexOf(other), 1);
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -335,23 +487,26 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        const anchor = fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
-        const attachment = fixed && spawn.event !== 'projectile' ? undefined : host;
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
-        const tail = Math.min(0.25, spawn.duration / 4);
+        const tail = Math.min(0.25, runFor / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
-          ? Math.max(spawn.duration - tail, spawn.stopAfter ?? 0) : undefined;
+          ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
+        const room = rooms.get(spawn.system);
         const nextOptions = { anchor, attachment,
-          target: fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
-          joints: fixed && spawn.event !== 'projectile' ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? spawn.travelSeconds : undefined,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale };
+          target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}`;
+        // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
+        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -362,10 +517,47 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.ltkSystem = spawn.system;
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
-          if (options.budget) options.budget.live += need;
-          running.add({ reserved: need, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + spawn.duration, started: clock, span: spawn.duration, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance }); starts++;
+          if (options.budget) options.budget.live += own;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
+      // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.
+      // A layer is one live particle of an attached emitter: it draws once per skinned part of its host (Mundo's model is
+      // 7 parts), and is kept or hidden whole, so the cap never leaves a body half covered.
+      // Over the cap the lowest importance goes first (attack, flourish, body, then damage), the newest of a rank before
+      // the oldest, so what is already showing stays. Only the overlay is hidden; the system's other emitters still draw.
+      const showAttached = options.attachedLayers?.() ?? true;
+      layerBuf.length = 0; let drawsOn = 0;
+      for (const run of running) {
+        const first = layerBuf.length;
+        for (const draw of run.fx.attached) if (draw.object.visible) {
+          if (!showAttached || run.bodyGone) { draw.object.visible = false; continue; }
+          drawsOn++;
+          let layer: (typeof layerBuf)[number] | undefined;
+          for (let at = first; at < layerBuf.length && !layer; at++) if (layerBuf[at].key === draw.object.name) layer = layerBuf[at];
+          if (layer) layer.draws.push(draw);
+          else layerBuf.push({ key: draw.object.name, draws: [draw], rank: LAYER_RANK[run.persistent ? 'critical' : run.importance], started: run.started,
+            system: `${run.system}@${run.source}+${run.started}:${draw.object.name.split('#')[0]}` });
+        }
+      }
+      attachedStats.peakLayers = Math.max(attachedStats.peakLayers, layerBuf.length);
+      ATTACHED_LAYER_STATS.layers = layerBuf.length; ATTACHED_LAYER_STATS.draws = drawsOn;
+      ATTACHED_LAYER_STATS.peakDraws = Math.max(ATTACHED_LAYER_STATS.peakDraws, drawsOn);
+      if (layerBuf.length > ATTACHED_LAYER_STATS.peakLayers) {
+        ATTACHED_LAYER_STATS.peakLayers = layerBuf.length; ATTACHED_LAYER_STATS.peakSystems = {};
+        for (const layer of layerBuf) ATTACHED_LAYER_STATS.peakSystems[layer.system] = (ATTACHED_LAYER_STATS.peakSystems[layer.system] ?? 0) + 1;
+      }
+      if (layerBuf.length > layerCap) {
+        layerBuf.sort((a, b) => b.rank - a.rank || a.started - b.started);
+        for (let at = layerCap; at < layerBuf.length; at++) for (const draw of layerBuf[at].draws) draw.object.visible = false;
+        attachedStats.cappedFrames++; ATTACHED_LAYER_STATS.cappedFrames++;
+        if (!capped) {
+          // The cap is a fuse: it should never trip in play, so the first trip of each runtime says so in the console.
+          if (attachedStats.capEvents === 0) console.warn(`vfx-ltk:attached-cap:${layerBuf.length}>${layerCap}`);
+          attachedStats.capEvents++; ATTACHED_LAYER_STATS.capEvents++;
+        }
+        capped = true;
+      } else capped = false;
       claimBuf.length = 0;
       for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);
       if (claimBuf.length) {
@@ -384,6 +576,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx));
     },
     get active() { return running.size; },
+    /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
+    get attachedStats() { return { ...attachedStats, layerCap, slots: ATTACHED_SLOTS, peakAlive: ATTACHED_STATS.peakAlive, overSlotFrames: ATTACHED_STATS.overSlotFrames }; },
     get queued() { return waiting.length; },
     dispose() { if (closed) return; closed = true; clear(); warming.clear(); catalogs.clear(); passes?.dispose(); flushDrawBufferPool(); flushFrameTargetPool(); library.dispose(); },
   };

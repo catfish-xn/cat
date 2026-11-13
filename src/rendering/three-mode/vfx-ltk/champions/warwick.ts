@@ -1,8 +1,10 @@
 import type { TimelineCue } from '../timeline';
+import { CHEST } from '../timeline';
+// Attack: 14.24 TFT13_WarwickBasicAttack hits C_BUFFBONE_GLB_CHEST_LOC.
 export const warwickSkills: Record<string, readonly TimelineCue[]> = {
   warwick: [
     { system: '6b46d17d', action: 'attack', event: 'cast-start', delay: 0, duration: .4 },
-    { system: '9371a532', action: 'attack', event: 'hit', delay: .2, duration: .5 },
+    { system: '9371a532', action: 'attack', event: 'hit', bone: CHEST, delay: .2, duration: .5 },
     { system: '8c054bed', event: 'cast-start', delay: 0, duration: 1, stopAfter: .3 },
     { system: 'f7e4f133', event: 'cast-start', delay: .1, duration: 1, stopAfter: .3 },
   ],

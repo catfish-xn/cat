@@ -189,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 8, 8, 7, 9, 8, 8]); // v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-recording (2026-11-11)
+        .toEqual([8, 8, 8, 7, 8, 8, 8]); // v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-recording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;
