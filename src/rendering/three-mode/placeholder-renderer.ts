@@ -57,7 +57,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
-import { CastTravel, OverheadFollow, barsFollow, overheadHeights } from './overhead-follow';
+import { OverheadFollow, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
@@ -346,8 +346,6 @@ interface PieceView {
   lungeWorld: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
   follow: OverheadFollow;
-  /** Whether its current cast moved it in the rules: only such a cast moves its bars (overhead-follow.ts CastTravel). */
-  castTravel: CastTravel;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -986,7 +984,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), castTravel: new CastTravel() };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow() };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1452,9 +1450,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // A forced move is no run: the moved unit hops along the slide and keeps its action (its stun stops that).
-      // The caster's own move in the rules (a leap, a dash) is what lets a cast's bars travel; a forced move is not.
-      if (event.type === 'movement' && !DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) pieces.get(event.unitId)?.castTravel.movement(tickOf(event));
-      if (event.type === 'cast') pieces.get(event.sourceId)?.castTravel.cast(tickOf(event));
       if (event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) {
         const view = pieces.get(event.unitId);
         if (view) { cancelLunge(view); view.hop = 0; }
@@ -1941,12 +1936,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
-      // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
-      // (a jump, a dash) and its body bone past that (overhead-follow.ts) on top of its spot, during a cast that moved the
-      // piece in the rules only (Fable 11-13: an in-place cast, an attack's sway or an idle leaves the bars put, as in the
-      // original); the knock-up lift is already in `lift`.
-      const moving = barsFollow(output.state, view.castTravel);
-      const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
+      // The bars, star row and stun ring stand over the piece's spot (its root, which slides to a new cell when the rules
+      // move it: a step, a leap, a dash) plus the knock-up lift in `lift`. A cast's clip travel and lunge are not followed
+      // (Fable 11-13): an in-place cast whose Root rises and falls leaves the bars put, as the original's does, and a
+      // walk during or just before a cast can no longer be mistaken for the cast's own travel. A jump's arc is not
+      // followed either; the bars follow the cell the jump lands on.
+      const travel = view.body ? view.follow.update(seconds, null, height, false) : null;
       const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
       const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
         headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
