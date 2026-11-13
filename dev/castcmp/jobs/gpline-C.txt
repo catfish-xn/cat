@@ -1,8 +1,9 @@
-# Gangplank ground-fire line, one round for path + ending (Fable 11-13). Recording only, never merged.
-# Four columns: original (cyB8 1-star 251-253 s) | L-A | L-B | L-C. All three on claude/proj-tail-gp-viktor 41e95af5 (20cd67dc
-# runs on the floor from Gangplank's feet through the target, GP_GROUND_LINE_CELLS cells, a fit); they differ only in the ending.
-# This column, L-C: plays out after landing with the system's own clock at 2.3x, so its erosion breaks the scorch up by itself; safety stop 1.6 s after landing, last 0.1 s faded (fit).
-# Real combat, 1-star Gangplank against one 1-star Sett at about one cell (jobs-check: no other cast in the window). The window
-# opens 0.5 s before the cast, so landing is at about 1400 ms: keyframes 1700 / 1900 / 2100 / 2400 ms (landing +0.3 / +0.5 /
-# +0.7 / +1.0 s) against the original's 251.8 / 252.0 / 252.2 / 252.5 s.
-v-capture.cjs gangplank gpline-C --real 1 --star 1 --dist 2 --nfoes 1 --foestar 1 --target sett --ms 3000 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+# Gangplank ground-fire line, one round for path / length / width / ending (Fable 11-13). Recording only, never merged.
+# Four columns: original (cyB8 1-star 251-253 s) | L-A | L-B | L-C, all on claude/proj-tail-gp-viktor 80b1e05a: 20cd67dc runs on
+# the floor from Gangplank's feet through the target (GP_GROUND_LINE_CELLS 2.7, a fit; scorch ~2 cells), arbitrary-trail width
+# without the system scale; dev/castcmp from d00ea8a8 (--hide-units) plus the worldBox probe. Columns differ only in the ending.
+# This column, L-C: plays out with the system's own clock at 2.3x, so its erosion breaks the scorch up; safety stop 1.6 s after landing (fit).
+# Two lines: units hidden (path, length, width, ending), and units drawn (how much line shows outside the target's body).
+# Real combat, 1-star Gangplank against one 1-star Sett at about one cell. Landing ~1400 ms: keyframes 1700 / 1900 / 2100 / 2400 ms.
+v-capture.cjs gangplank gpline-C-hide --real 1 --star 1 --dist 2 --nfoes 1 --foestar 1 --target sett --ms 3000 --hide-units 1 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank gpline-C-units --real 1 --star 1 --dist 2 --nfoes 1 --foestar 1 --target sett --ms 3000 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
