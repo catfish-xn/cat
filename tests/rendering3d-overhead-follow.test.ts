@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, mirrorName, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
+import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, mirrorName, overheadHeights, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
+import { CONTROL_3D, ControlMotion } from '../src/rendering/three-mode/unit-control';
 
 // Synthetic skeleton, made-up integers.
 const body = () => {
@@ -127,5 +128,50 @@ describe('overhead follow', () => {
     expect([picked.side, picked.body]).toEqual(['dropped', []]);
     left.position.x -= 80; root.updateMatrixWorld(true);
     expect(settle(follow, 100).length()).toBeCloseTo(0, 6);
+  });
+
+  it('follows only a cast: an attack or idle sway leaves the bars over the spot, and the cast path is unchanged', () => {
+    const height = 100, steps = 20;
+    const run = (casting: boolean | undefined) => {
+      const { root, root2, pelvis, follow } = rig('Root');
+      root2.position.set(30, 0, 0); pelvis.position.set(40, 50 + 80, 0); root.updateMatrixWorld(true);
+      for (let i = 0; i < steps; i++) casting === undefined ? follow.update(1, null, height) : follow.update(1, null, height, casting);
+      return follow.offset.clone();
+    };
+    const old = run(undefined), cast = run(true), attack = run(false);
+    expect(cast.toArray()).toEqual(old.toArray()); // the cast path is the old path, frame for frame
+    expect(cast.x).toBeGreaterThan(30);
+    expect(attack.length()).toBe(0);
+    // Back from a cast to an attack: the bars ease (or snap) back over the spot, never stay out.
+    const { root, root2, follow } = rig('Root');
+    root2.position.set(30, 0, 0); root.updateMatrixWorld(true);
+    for (let i = 0; i < steps; i++) follow.update(1, null, height, true);
+    expect(follow.offset.x).toBeCloseTo(30);
+    for (let i = 0; i < steps; i++) follow.update(1, null, height, false);
+    expect(follow.offset.length()).toBeCloseTo(0, 6);
+  });
+
+  it('keeps the lunge outside a cast too (only a cast starts one)', () => {
+    const plain = new OverheadFollow();
+    for (let i = 0; i < 20; i++) plain.update(1, { x: 7, z: -3 }, 100, false);
+    expect(plain.offset.x).toBeCloseTo(7); expect(plain.offset.z).toBeCloseTo(-3);
+  });
+
+  it('lifts the star row, bar and stun ring with a knock-up or grab whatever the body plays', () => {
+    const control = new ControlMotion();
+    control.set('airborne');
+    let top = 0;
+    for (let i = 0; i < 40; i++) top = Math.max(top, control.update(0.05));
+    expect(top).toBeGreaterThan(0);
+    const height = 100, lift = top * height * CONTROL_3D.liftShare;
+    const at = (followY: number, l: number) => overheadHeights({ rootY: 0, followY, starHeight: 112, lift: l, headHeight: height * CONTROL_3D.headShare,
+      stars: true, starSize: 12, starGap: 12 });
+    // Not casting: the follow gives 0, the lift still carries every row up by its full height.
+    const ground = at(0, 0), held = at(0, lift);
+    expect(held.stars - ground.stars).toBeCloseTo(lift); expect(held.bar - ground.bar).toBeCloseTo(lift); expect(held.halo - ground.halo).toBeCloseTo(lift);
+    expect(at(0, 0)).toEqual(ground); // back on the floor: back where it was
+    expect(ground.bar).toBeCloseTo(112 + 12 / 2 + 3); expect(at(0, 0).halo).toBeCloseTo(height * CONTROL_3D.headShare);
+    const noStars = overheadHeights({ rootY: 5, followY: 2, starHeight: 112, lift: 0, headHeight: 60, stars: false, starSize: 12, starGap: 12 });
+    expect(noStars.bar).toBeCloseTo(5 + 2 + 112 - 6);
   });
 });

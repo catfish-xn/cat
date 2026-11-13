@@ -118,15 +118,20 @@ export class OverheadFollow {
 
   /**
    * `lunge`: the world (x, z) the renderer's lunge has moved the body by. `height`: the drawn body height in world
-   * units (sets the body bone's slack; without it the body bone is not followed). Returns the eased world offset.
+   * units (sets the body bone's slack; without it the body bone is not followed). `casting`: whether the body plays a
+   * cast now. Only a cast's own travel is followed: in the original an attack, an idle sway or a hit reaction moves the
+   * body under a bar that stays put (2026-11-13 footage check, Malzahar and Garen), so outside a cast the clip's travel
+   * is dropped and the bars ease back over the spot. The lunge (a cast's only) and the renderer's knock-up and grab
+   * lift (added by the caller, not here) are unaffected. Returns the eased world offset.
    */
-  update(seconds: number, lunge: { readonly x: number; readonly z: number } | null, height = 0): Vector3 {
-    if (this.bone?.parent) {
+  update(seconds: number, lunge: { readonly x: number; readonly z: number } | null, height = 0, casting = true): Vector3 {
+    if (!casting) this.raw.set(0, 0, 0);
+    else if (this.bone?.parent) {
       this.bone.getWorldPosition(this.at);
       this.bone.parent.localToWorld(this.rest.copy(this.restLocal));
       this.raw.subVectors(this.at, this.rest);
     } else this.raw.set(0, 0, 0);
-    if (this.body && height > 0) {
+    if (casting && this.body && height > 0) {
       // The body bone's world move past the frame, beyond the slack (sideways and upward apart).
       const { frame, parts } = this.body;
       this.extra.set(0, 0, 0);
@@ -147,4 +152,15 @@ export class OverheadFollow {
     return this.offset;
   }
 
+}
+
+/**
+ * Heights over a piece's spot for its overhead row: the star row, the bar above it (or, with no star row, just under
+ * where it would stand) and the stun ring at head level. `followY` is OverheadFollow's offset; `lift` is the renderer's
+ * knock-up, grab or displacement hop, which every one of them rides whatever the body is playing.
+ */
+export function overheadHeights(o: { rootY: number; followY: number; starHeight: number; lift: number; headHeight: number;
+  stars: boolean; starSize: number; starGap: number }): { stars: number; bar: number; halo: number } {
+  const base = o.rootY + o.followY + o.lift;
+  return { stars: base + o.starHeight, bar: base + o.starHeight + (o.stars ? o.starSize / 2 + 3 : -o.starGap / 2), halo: base + o.headHeight };
 }
