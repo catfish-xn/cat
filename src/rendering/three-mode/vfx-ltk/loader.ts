@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, TRAIL_END_FADE, withCueBranches } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, TRAIL_END_FADE, withCueBranches } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -202,7 +202,8 @@ export function parseIndex(raw: unknown): VfxIndex {
 
 /**
  * The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines, and
- * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands.
+ * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands, and display branches the export never had
+ * (CUE_EXTRA_SKILLS) are added beside their champion's list.
  */
 export function withCueOverrides(index: VfxIndex): VfxIndex {
   let skills: VfxIndex['skills'] | null = null;
@@ -211,6 +212,11 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
     const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
     if (branched) (skills ??= { ...index.skills })[champion] = branched;
+  }
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
+    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
   }
   return skills ? { ...index, skills } : index;
 }

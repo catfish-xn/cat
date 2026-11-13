@@ -18,7 +18,7 @@ import { FX_SCALE, projectileFlight } from '../src/rendering/three-mode/vfx-ltk/
 import { flightTime } from '../src/rendering/three-mode/vfx-ltk/engine/model/rig';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
-import { CAITLYN_COMET, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CAITLYN_COMET, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 const cell = BOARD_CELL;
@@ -92,21 +92,14 @@ describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
   });
 });
 
-describe('Caitlyn Air Raid comet override', () => {
-  const comet = CUE_OVERRIDES.caitlyn.find(cue => cue.system === '92bbeaf7')!;
-  const impact = CUE_OVERRIDES.caitlyn.find(cue => cue.system === '8d6e1c2e')!;
-
-  it('falls onto the primary target and lands as the impact starts, instead of standing on her feet', () => {
-    expect(comet).toMatchObject({ action: 'cast', event: 'projectile', primary: true, fromAbove: CAITLYN_COMET.from, travelSeconds: CAITLYN_COMET.fall });
-    // Its trail fades out over the linger once it lands, rather than hanging in the sky.
-    expect(comet).toMatchObject({ stopAfter: CAITLYN_COMET.fall, fadeOut: true, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger });
-    expect(comet.delay + comet.travelSeconds!).toBeCloseTo(impact.delay, 9);
-    // The exported row this replaces: a boneless cast-start, which plays on the caster's origin.
+describe('Caitlyn Air Raid override', () => {
+  it('keeps no boneless cast-start (the exported comet stood on her feet); her comets fall per shot (vfx-ltk-caitlyn-shots)', () => {
     expect(CUE_OVERRIDES.caitlyn.filter(cue => cue.event === 'cast-start' && !cue.bone)).toEqual([]);
+    expect(CUE_EXTRA_SKILLS['caitlyn-shot'].find(cue => cue.system === '92bbeaf7')).toMatchObject({ event: 'projectile', fromAbove: CAITLYN_COMET.from });
   });
 
   it('applies over the exported list when every system is loaded', () => {
-    const systems = Object.fromEntries(CUE_OVERRIDES.caitlyn.map(cue => [cue.system, `systems/${cue.system}.json`]));
+    const systems = Object.fromEntries([...CUE_OVERRIDES.caitlyn, { system: '92bbeaf7' }].map(cue => [cue.system, `systems/${cue.system}.json`]));
     const exported: TimelineCue[] = [{ system: '92bbeaf7', action: 'cast', event: 'cast-start', delay: 0.5, duration: 0.5 }];
     expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn).toEqual(CUE_OVERRIDES.caitlyn);
   });
