@@ -60,19 +60,19 @@ const countDraws = () => {
     const seconds = Math.ceil(info.ticks * 50 / 1000) + 2;
     await page.evaluate(() => window.__h.reset());
     for (let s = 0; s < seconds * 4; s++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(60); }
-    await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; });
+    await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; globalThis.__LTK_BUDGET_REFUSED = 0; globalThis.__LTK_BUDGET_ROWS = 0; });
     const per = await page.evaluate(seconds => {
       const c = document.querySelector('#host canvas'); const gl = c && (c.getContext('webgl2') || c.getContext('webgl')); const px = new Uint8Array(4);
       const sync = () => { if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
       // The first frame after reset rebuilds the board; it is stepped untimed.
       window.__h.step(1000 / 60); sync();
-      const ms = [], ltk = [], draws = [], live = []; const n = Math.round(seconds * 60);
+      const ms = [], ltk = [], draws = [], live = [], particles = []; const n = Math.round(seconds * 60);
       for (let i = 0; i < n; i++) {
-        globalThis.__LTK_UPD_MS = 0; globalThis.__LTK_ACTIVE = 0; window.__draws = 0;
+        globalThis.__LTK_UPD_MS = 0; globalThis.__LTK_ACTIVE = 0; globalThis.__FX_LIVE = 0; window.__draws = 0;
         const t0 = window.__realNow(); window.__h.step(1000 / 60); sync(); ms.push(window.__realNow() - t0);
-        ltk.push(globalThis.__LTK_UPD_MS ?? 0); draws.push(window.__draws); live.push(globalThis.__LTK_ACTIVE ?? 0);
+        ltk.push(globalThis.__LTK_UPD_MS ?? 0); draws.push(window.__draws); live.push(globalThis.__LTK_ACTIVE ?? 0); particles.push(globalThis.__FX_LIVE ?? 0);
       }
-      return { ms, ltk, draws, live };
+      return { ms, ltk, draws, live, particles, budgetRefusedRowFrames: globalThis.__LTK_BUDGET_REFUSED ?? 0, budgetRefusedRows: globalThis.__LTK_BUDGET_ROWS ?? 0 };
     }, seconds);
     const admit = await page.evaluate(() => globalThis.__LTK_STATS ?? {});
     const F = ['asked', 'started', 'dropped', 'gaveWay', 'evicted'];
@@ -82,12 +82,13 @@ const countDraws = () => {
       return [`${c}:${a}`, { total: sum(pick), bySystem: Object.fromEntries([...new Set(Object.keys(admit).filter(pick).map(k => k.split('|')[2]))].map(sys => [sys, sum(k => pick(k) && k.split('|')[2] === sys)])) }]; })) };
     admission.viktorAttack = admission.tracked['viktor:attack']?.total ?? null;
     const row = { ...cell, combat: info, ...frameStats(per.ms, per.ltk, per.draws), livePeak: Math.max(...per.live), liveMean: r2(per.live.reduce((a, b) => a + b, 0) / per.live.length),
+      particlePeak: Math.max(...per.particles), particleP95: [...per.particles].sort((a, b) => a - b)[Math.floor(per.particles.length * 0.95)], budgetRefusedRows: per.budgetRefusedRows, budgetRefusedRowFrames: per.budgetRefusedRowFrames,
       admission, errors: [...new Set(errors)].slice(0, 5), ms: per.ms.map(r2), ltkMs: per.ltk.map(r2), draws: per.draws, live: per.live };
     results.push(row);
-    mark(`${cell.variant} cap ${cell.cap}/${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} >33 ${row.over33_3} ltk ${row.ltkMean} draws ${row.drawsMean} live ${row.livePeak} tracked ${JSON.stringify(Object.fromEntries(Object.entries(admission.tracked).map(([k, v]) => [k, v.total])))}`);
+    mark(`${cell.variant} cap ${cell.cap}/${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} >33 ${row.over33_3} ltk ${row.ltkMean} draws ${row.drawsMean} live ${row.livePeak} particles ${row.particlePeak} budgetRefused ${row.budgetRefusedRows} tracked ${JSON.stringify(Object.fromEntries(Object.entries(admission.tracked).map(([k, v]) => [k, v.total])))}`);
     await page.close();
   }
-  const keys = ['mean', 'p95', 'p99', 'over33_3', 'over16_7', 'ltkMean', 'ltkP95', 'drawsMean', 'drawsMax', 'livePeak', 'liveMean'];
+  const keys = ['mean', 'p95', 'p99', 'over33_3', 'over16_7', 'ltkMean', 'ltkP95', 'drawsMean', 'drawsMax', 'livePeak', 'liveMean', 'particlePeak', 'particleP95', 'budgetRefusedRows', 'budgetRefusedRowFrames'];
   const summary = cells.map(c => { const rs = results.filter(r => r.variant === c.variant && r.cap === c.cap && r.budget === c.budget);
     return { ...c, rounds: rs.length, ...Object.fromEntries(keys.map(k => [k, median(rs.map(r => r[k]))])),
       range: Object.fromEntries(['mean', 'p95', 'over33_3', 'ltkMean', 'drawsMean'].map(k => [k, [Math.min(...rs.map(r => r[k])), Math.max(...rs.map(r => r[k]))]])),
@@ -95,6 +96,6 @@ const countDraws = () => {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, variants, order: order.map(o => `${o.variant}/${o.cap}/${o.budget}#${o.round}`), summary, results }, null, 1));
   console.table(summary.map(s => ({ variant: s.variant, cap: s.cap, budget: s.budget, mean: s.mean, meanRange: s.range.mean.join('–'), p95: s.p95, p95Range: s.range.p95.join('–'),
-    over33: s.over33_3, over33Range: s.range.over33_3.join('–'), ltkMs: s.ltkMean, draws: s.drawsMean, livePeak: s.livePeak, vkDropped: s.viktorAttack.map(v => v?.dropped).join('/'), viStarted: (s.tracked['vi:cast'] ?? []).map(v => v.started).join('/'), viCut: (s.tracked['vi:cast'] ?? []).map(v => v.gaveWay + v.evicted).join('/') })));
+    over33: s.over33_3, over33Range: s.range.over33_3.join('–'), ltkMs: s.ltkMean, draws: s.drawsMean, livePeak: s.livePeak, particlePeak: s.particlePeak, budgetRefused: s.budgetRefusedRows, vkDropped: s.viktorAttack.map(v => v?.dropped).join('/'), viStarted: (s.tracked['vi:cast'] ?? []).map(v => v.started).join('/'), viCut: (s.tracked['vi:cast'] ?? []).map(v => v.gaveWay + v.evicted).join('/') })));
   await browser.close(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
