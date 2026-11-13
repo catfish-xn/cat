@@ -57,7 +57,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
-import { OverheadFollow } from './overhead-follow';
+import { OverheadFollow, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
@@ -1936,27 +1936,29 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
       // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
-      // (a jump, a dash) on top of its spot; the knock-up lift is already in `lift`.
-      const travel = view.body ? view.follow.update(seconds, view.lungeWorld) : null;
+      // (a jump, a dash) and its body bone past that (overhead-follow.ts) on top of its spot, during a cast only (an attack's
+      // sway leaves the bars put, as in the original); the knock-up lift is already in `lift`.
+      const travel = view.body ? view.follow.update(seconds, view.lungeWorld, height, output.state === 'cast') : null;
       const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
-      const overY = view.root.position.y + (travel?.y ?? 0);
+      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
+        headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
       const benchedInCombat = !!fighting && view.onBench;
       view.overhead.setBarsHidden(benchedInCombat);
       if (view.stars) {
         view.stars.setLevel(starUps.level(id, view.starLevel));
         view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
-        view.stars.object.position.set(overX, overY + view.starHeight + lift, overZ);
+        view.stars.object.position.set(overX, over.stars, overZ);
         // The original star emblem on the bar replaces the star row (as in the client); the row stays as a fallback.
         view.stars.object.visible = view.root.visible && !view.overhead.tiered && !benchedInCombat && view.alive;
       }
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
-      view.overhead.object.position.set(overX, overY + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2), overZ);
+      view.overhead.object.position.set(overX, over.bar, overZ);
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.set(overX, overY + height * CONTROL_3D.headShare + lift, overZ);
+        view.halo.object.position.set(overX, over.halo, overZ);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).

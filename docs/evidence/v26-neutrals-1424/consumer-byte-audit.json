@@ -2364,9 +2364,9 @@
     "tests/rendering3d-overhead-follow.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2543,
+      "currentBytes": 10791,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5f30ea522907656e03cbfc1b95274020672c5caf2c7a152842cb007c274e54c0",
+      "currentSha256": "f947a35202fe93aa26ff586eaa60f60aaf6a4aa40423a7a7ecc5f2646e61d7d5",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-overhead.test.ts": {
