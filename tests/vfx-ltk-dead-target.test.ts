@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, LTK_RUN_STATS, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -28,8 +28,11 @@ const skills: Record<string, TimelineCue[]> = {
   missile: [shot],
   swing: [{ ...hit('spark', 0), action: 'attack' }],
   curse: [hit('curse', 0.3, { livingTarget: true }), hit('boom', 0.3)],
+  // A long flourish (decorative): a living target's hit may evict it, a hit at a dead target's place may not.
+  glow: [{ system: 'glow', action: 'passive', event: 'cast-start', delay: 0, duration: 5 }],
+  pair: [hit('boom', 0)],
 };
-const systems = ['flourish', 'boom', 'shot', 'spark', 'curse'];
+const systems = ['flourish', 'boom', 'shot', 'spark', 'curse', 'glow'];
 const toSystem = (p: { x: number; y: number; z: number }) => [p.x * AXIS_SIGN[0] / FX_SCALE, p.y / FX_SCALE, p.z / FX_SCALE];
 
 async function setup() {
@@ -149,6 +152,41 @@ describe('vfx-ltk casts at dead targets', () => {
     expect(() => parseIndex(index({ ...shot, system: 'boom', livingTarget: true }))).not.toThrow();
     expect(() => parseIndex(index({ ...hit('boom', 0), event: 'cast-start', livingTarget: true }))).toThrow();
     expect(() => parseIndex(index({ ...hit('boom', 0), livingTarget: 1 }))).toThrow();
+  });
+
+  // Fable 11-13 (A): a row at a dead target's place only takes free room. It never waits, never evicts, so it only adds.
+  it('on a full board a hit at a dead target\'s place is dropped and evicts nothing; the living target\'s hit starts that frame', async () => {
+    const { runtime, scene, units, step, of } = await setup();
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+    step(3 / 60); // at most six starts a frame
+    expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS);
+    for (const key of Object.keys(LTK_RUN_STATS.placeDropped)) delete LTK_RUN_STATS.placeDropped[key];
+    const dropped = LTK_RUN_STATS.dropped.boom ?? 0;
+    // The dead target first: its row is weighed first and must not take the slot the living one then needs.
+    units.get('b')!.alive = false;
+    expect(runtime.play('pair', 'caster', ['b', 'a'])).toBe(true);
+    step(1 / 60);
+    const booms = of('boom').filter(entry => entry.fx.object.parent === scene);
+    expect(booms).toHaveLength(1);
+    expect(booms[0].options.attachment).toBe(units.get('a'));
+    expect(LTK_RUN_STATS.placeDropped.boom).toBe(1);
+    expect(LTK_RUN_STATS.dropped.boom ?? 0).toBe(dropped);
+    // The living hit made its own room (one flourish evicted); the dead one's made none.
+    expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 1);
+    expect(runtime.queued).toBe(0);
+    runtime.dispose();
+  });
+
+  it('with free room a hit at a dead target\'s place plays, counted apart from the rows that compete for room', async () => {
+    const { runtime, units, step, of } = await setup();
+    const started = LTK_RUN_STATS.placeStarted.boom ?? 0, competing = LTK_RUN_STATS.started.boom ?? 0;
+    units.get('b')!.alive = false;
+    expect(runtime.play('pair', 'caster', ['b'])).toBe(true);
+    step(1 / 60);
+    expect(of('boom')).toHaveLength(1);
+    expect(LTK_RUN_STATS.placeStarted.boom).toBe(started + 1);
+    expect(LTK_RUN_STATS.started.boom ?? 0).toBe(competing);
+    runtime.dispose();
   });
 
   it('a projectile in flight when its target dies flies on to where the target was and is not cut', async () => {

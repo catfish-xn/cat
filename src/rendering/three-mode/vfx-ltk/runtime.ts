@@ -52,7 +52,12 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
   /** Cues a cast played without, by `${system} ${reason}` (LtkSkipReason): the rest of that cast still played. */
   skipped: {} as Record<string, number>,
   /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
-  refused: {} as Record<string, number> };
+  refused: {} as Record<string, number>,
+  /**
+   * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
+   * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
+   */
+  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number> };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
  * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
@@ -64,6 +69,7 @@ const countSkips = (skipped: readonly { system: string; reason: LtkSkipReason }[
 };
 const refuse = (why: 'not-ready' | 'no-target' | 'nothing-left' | 'queue-full' | 'caster-dead') => { LTK_RUN_STATS.refused[why] = (LTK_RUN_STATS.refused[why] ?? 0) + 1; return false; };
 const countDrop = (system: string) => { LTK_RUN_STATS.dropped[system] = (LTK_RUN_STATS.dropped[system] ?? 0) + 1; };
+const countPlaceDrop = (system: string) => { LTK_RUN_STATS.placeDropped[system] = (LTK_RUN_STATS.placeDropped[system] ?? 0) + 1; };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
@@ -124,6 +130,8 @@ export interface LtkPlayOptions {
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
+  /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
+  atPlace?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
   together?: string }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
@@ -285,7 +293,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   // (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
   const keepsPlace = (spawn: TimelineSpawn) => (spawn.action ?? 'cast') !== 'attack' && (spawn.event === 'hit' || spawn.event === 'projectile')
     && !spawn.livingTarget && spawn.targetId !== spawn.sourceId;
-  type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint };
+  type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean };
   /**
    * Which of a cast's spawns play, and at what. A living target is followed as before, with its place noted for a cast cue;
    * a dead target whose unit is still there gets each cast cue at its place now; a target whose unit is gone loses its rows.
@@ -301,7 +309,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!target || target.disposed) { skipped.push({ system: spawn.system, reason: 'target-gone' }); continue; }
       if (snapshotAll) placed.push({ spawn, snapshot: placeOf(target, spawn) });
       else if (target.alive) placed.push(keepsPlace(spawn) ? { spawn, place: placeOf(target, spawn) } : { spawn });
-      else if (keepsPlace(spawn)) placed.push({ spawn, snapshot: placeOf(target, spawn) });
+      else if (keepsPlace(spawn)) placed.push({ spawn, snapshot: placeOf(target, spawn), atPlace: true });
       else { skipped.push({ system: spawn.system, reason: 'target-dead' }); continue; }
       usable = true;
     }
@@ -339,7 +347,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!chosen.length) return refuse('nothing-left');
       if (waiting.length + chosen.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
-      for (const { spawn, snapshot, place } of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group, ...(snapshot ? { snapshot } : {}), ...(place ? { place } : {}) });
+      for (const { spawn, snapshot, place, atPlace } of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group, ...(snapshot ? { snapshot } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       return true;
   };
   return {
@@ -407,9 +415,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (spawns.some(({ spawn }) => needsLivingSource(spawn)) && (!source?.alive || source.disposed)) return refuse('caster-dead');
       countSkips(skipped);
       const play = ++plays;
-      for (const { spawn, snapshot, place } of spawns) {
+      for (const { spawn, snapshot, place, atPlace } of spawns) {
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
-          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}), ...(place ? { place } : {}) });
+          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       }
       return true;
     },
@@ -486,8 +494,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // attack runs were live at critical drops). A late attack or flourish is simply dropped: replayed late, a hit spark
         // reads as lag (eab51a1e: 0f2af66b replayed 9 times).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countDrop(spawn.system); continue; }
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+        // A row at a dead target's place (placeTargets) only takes free room: it never waits in line, never makes a tail give
+        // way and never evicts a run, so it can only add to what plays (Fable 11-13: it pushed living targets' hits out).
+        const atPlace = !!row.atPlace || (!!row.place && !snapshot && !!spawn.targetId && (!target?.alive || !!target.disposed));
+        const countMiss = atPlace ? countPlaceDrop : countDrop;
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
@@ -531,13 +543,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
         // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
         // its rock children and smoke included: what was left of it disappears in that frame.
-        while (crowded()) {
+        while (!atPlace && crowded()) {
           let tail: Running | undefined;
           for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
           release(tail); running.delete(tail);
         }
-        while (blocked()) {
+        while (!atPlace && blocked()) {
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
@@ -550,8 +562,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
-          if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
-          else { countDrop(spawn.system); for (const other of partners) { countDrop(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          if (!atPlace && !overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
+          else { countMiss(spawn.system); for (const other of partners) { (other.atPlace ? countPlaceDrop : countDrop)(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -592,7 +604,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, ...(lands ? { lands } : {}) }); starts++;
-          LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
+          if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
+          else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
