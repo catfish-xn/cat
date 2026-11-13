@@ -207,6 +207,10 @@ export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
   }
   return Math.min(PLAY_OUT_CAP, end);
 }
+/** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from the run counter's. */
+export function beamSeed(flight: number): number {
+  return (Math.imul(flight, 0x9e3779b1) ^ 0x5bd1e995) >>> 0 || 1;
+}
 /** An anchor that follows `live` until `hold` freezes it where it stands then. */
 function holdable(live: Anchor): { anchor: Anchor; hold: () => void } {
   let at: ReturnType<Anchor['originAt']> | null = null, basis: Float32Array | null = null;
@@ -225,6 +229,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
   layerCap?: number } = {}) {
   let clock = 0, closed = false, seed = 1, plays = 0;
+  /**
+   * The seed each started flight row (Waiting.part 'flight') took, by its together key, for its beam row to derive its
+   * own from. The split must not take a seed of its own: every later run's seed would move one on, and with it the
+   * random shape of whatever plays next (Fable 11-13 keyframes: Viktor's storm cast after a split attack came out with
+   * a different pattern).
+   */
+  const flightSeeds = new Map<string, number>();
   const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
@@ -571,11 +582,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const room = rooms.get(spawn.system);
         // A pinned beam reaches for its living target; when the target dies its far end holds where it last stood.
         const held = row.part === 'beam' && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
+        // A beam row started beside its flight row takes a seed derived from the flight's; the pair spends one seed, as the
+        // unsplit projectile did. A beam row with no flight (a system of beams only) is the projectile and takes the next.
+        const flightSeed = row.part === 'beam' && row.together ? flightSeeds.get(row.together) : undefined;
+        if (flightSeed !== undefined) flightSeeds.delete(row.together!);
+        const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : seed++;
+        if (row.part === 'flight' && row.together) flightSeeds.set(row.together, runSeed);
         const nextOptions = { anchor, attachment,
           target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.

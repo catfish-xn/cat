@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { beamSeconds, beamSplit, createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { beamSeed, beamSeconds, beamSplit, createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { UNPINNED_BEAM_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -163,5 +163,24 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
       expect(built[0].options).toMatchObject({ duration: 0.3, projectileSeconds: 0.3 });
       runtime.dispose();
     }
+  });
+  it('the split spends one seed as the unsplit projectile did: what plays next draws the same random shape', async () => {
+    const storm: TimelineCue = { system: 'plain', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5 };
+    const seedsAfter = async (system: string) => {
+      const { runtime } = await setup([{ ...laser, system }, storm]);
+      runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
+      runtime.play('tester', 'caster', ['target'], 'cast'); runtime.update(1 / 60, new Camera());
+      const seeds = built.map(b => ({ draws: names(b.prepared), seed: b.options.seed }));
+      runtime.dispose();
+      return seeds;
+    };
+    const split = await seedsAfter('mixed'), whole = await seedsAfter('plain');
+    // The cast after a split attack takes the seed it takes after an unsplit one.
+    expect(split.at(-1)).toEqual({ draws: ['Trail'], seed: whole.at(-1)!.seed });
+    // The flight keeps the projectile's seed; the beams take one derived from it, never the next one in line.
+    const flight = split.find(r => r.draws.includes('Trail') && r !== split.at(-1))!, beams = split.find(r => r.draws.includes('BeamA'))!;
+    expect(flight.seed).toBe(whole[0]!.seed);
+    expect(beams.seed).toBe(beamSeed(flight.seed));
+    expect(beams.seed).not.toBe(whole.at(-1)!.seed);
   });
 });
