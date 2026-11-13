@@ -3,6 +3,10 @@ import type { TimelineAction, TimelineVariant } from './timeline';
 
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
+  /** A display branch of the champion's catalogue (LtkPlayOptions.skill) instead of its own list. */
+  skill?: string;
+  /** Its targets' places are taken when it plays, alive or not (LtkPlayOptions.snapshotTargets): a hit that may have killed them. */
+  snapshotTargets?: boolean;
 }
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
@@ -16,8 +20,35 @@ const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne'
  * Nocturne six seconds after cast. Catch-up events advance this memory without playback.
  * The wire omits packet provenance: Amumu only uses magic packets on ticks without an
  * observed basic attack, avoiding re-playing W for every ordinary on-hit item proc. */
-export function createBatch1VfxEvents(definition: (id: string) => string | undefined) {
+/**
+ * Caitlyn's Air Raid lands as TotalShots separate shots over RaidDuration (combat-s13-abilities.ts executeTask 'caitlyn'):
+ * each picks a random enemy centre and sends one ability-direct physical packet to every enemy within a cell of it, then
+ * a second one (the headshot) to the centre. So one shot is her ability-direct packets of one tick, and its centre is the
+ * enemy struck twice in it (the last one struck, should none be). Visual only: the shot is drawn where the packets landed.
+ * Premise: a batch holds whole ticks. The replay keeps one record per combat step with all of that step's events
+ * (combat-replay-view.ts recorder.record), the online session plays whole records (remote-session.ts advanceDisplay) and
+ * offline passes the ledger of whole steps (BoardScene.ts), so a shot's packets never straddle two batches
+ * (tests/vfx-ltk-caitlyn-shots.test.ts).
+ */
+/** Caitlyn's shots planned, and how many found no enemy struck twice and fell back to the last one struck (dev load harness). */
+export const CAITLYN_SHOT_STATS = { shots: 0, fallback: 0 };
+export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: number, sourceId: string): string | undefined {
+  const hits = new Map<string, number>(); let last: string | undefined;
+  for (const event of events) {
+    if (event.type !== 'packetDamage' || event.tick !== tick || event.sourceId !== sourceId || !isAbilityDirect(event)) continue;
+    hits.set(event.targetId, (hits.get(event.targetId) ?? 0) + 1); last = event.targetId;
+  }
+  for (const [id, count] of hits) if (count >= 2) return id;
+  if (last !== undefined) CAITLYN_SHOT_STATS.fallback++;
+  return last;
+}
+const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
+  (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
+
+export function createBatch1VfxEvents(definition: (id: string) => string | undefined, star: (id: string) => number | undefined = () => undefined) {
   const units = new Map<string, SeenUnit>();
+  /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
+  const shots = new Map<string, { count: number; tick: number }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -25,7 +56,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -47,6 +78,19 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if ('eventSeq' in event) {
           if (event.eventSeq <= lastSeq) { plan.fresh = !tracked; return plan; }
           lastSeq = event.eventSeq;
+        }
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'caitlyn') shots.set(event.sourceId, { count: 0, tick: -1 });
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'caitlyn') {
+          const seen = shots.get(event.sourceId) ?? { count: 0, tick: -1 };
+          if (seen.tick !== event.tick) {
+            const centre = caitlynShotCentre(events, event.tick, event.sourceId);
+            if (centre !== undefined) {
+              CAITLYN_SHOT_STATS.shots++;
+              const skill = star(event.sourceId) === 3 ? (seen.count % 2 === 0 ? 'caitlyn-shot-3-comet' : 'caitlyn-shot-3') : 'caitlyn-shot';
+              plan.extra.push({ champion: 'caitlyn', sourceId: event.sourceId, targets: [centre], action: 'passive', skill, snapshotTargets: true });
+            }
+            shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
+          }
         }
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {

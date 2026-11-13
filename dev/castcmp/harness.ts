@@ -6,8 +6,15 @@ const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };
+// ?hideunits=1 (v-capture --hide-units 1): every unit's model and its contact shadow are hidden before each frame draws; bars, stars and
+// effects (attached overlays follow the hidden skeleton) still draw. Needs ?debug3d (the renderer's piece views).
+const hideUnits = params.get('hideunits') === '1';
+// The units' blob contact shadows (presentation-lighting.ts, one group) go too: the lighting re-shows each blob every frame
+// from its unit's root, so the whole group is hidden instead.
+const hideBodies = () => { const d = (window as any).__render3d; if (!d?.pieces) return; for (const v of d.pieces.values()) if (v.body && v.body.visible) v.body.visible = false;
+  const blobs = d.scene?.getObjectByName?.('render3d-contact-shadows'); if (blobs?.visible) blobs.visible = false; };
 function step(ms: number) {
-  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
+  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; if (hideUnits) hideBodies(); const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 }
 import { installProbes } from './probes';
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
@@ -54,12 +61,39 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });
   const tRow = Math.max(0, 5 - dist);
   // ?nfoes=N (1-4): how many dummies stand in front of the caster.
-  const pieces = [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
+  // ?pinfoe=N (v-capture --pin-foe N): one dummy only, N hexes straight ahead of the caster (row 5 - N, column 3; on this
+  // board's offset rows that is hex distance N). Dummy mode: no rules run, so it never moves or hits back and the caster
+  // stays on its cell; only the recorded cast events play.
+  const pin = params.get('pinfoe') ? Number(params.get('pinfoe')) : null;
+  if (pin !== null && !(Number.isInteger(pin) && pin >= 1 && pin <= 5)) throw new Error(`?pinfoe must be 1-5 (hexes ahead of the caster on row 5), got ${params.get('pinfoe')}`);
+  // ?pinfoe2=M (v-capture --pin-foe2 M, with --pin-foe N, M > N): a second still dummy on the same straight line from the
+  // caster through the first one, at about M hexes: the board cell nearest that point (the cast still targets the first).
+  const pin2 = params.get('pinfoe2') ? Number(params.get('pinfoe2')) : null;
+  if (pin2 !== null && (pin === null || !(Number.isInteger(pin2) && pin2 > pin && pin2 <= 5))) throw new Error(`?pinfoe2 needs ?pinfoe and must be above it, at most 5, got ${params.get('pinfoe2')}`);
+  const along = (() => {
+    if (pin === null || pin2 === null) return null;
+    const a = hex(5, 3), b = hex(5 - pin, 3), want = { x: a.x + (b.x - a.x) * pin2 / pin, y: a.y + (b.y - a.y) * pin2 / pin };
+    let best = { row: 0, col: 0 }, d = Infinity;
+    for (let row = 0; row < 8; row++) for (let col = 0; col < 7; col++) { const c = hex(row, col), dd = (c.x - want.x) ** 2 + (c.y - want.y) ** 2; if (dd < d) { d = dd; best = { row, col }; } }
+    return best;
+  })();
+  const pieces = pin !== null ? [me, foe('foe', 5 - pin, 3), ...(along ? [foe('foe2', along.row, along.col)] : [])]
+    : [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
+  // The labels these modes put on every frame (and keyframes.cjs repeats them in its caption).
+  const tags = [...(pin !== null ? [`pinned dummy ${pin} hex${pin2 !== null ? ` + ${pin2} hex in line` : ''} (假人)`] : []), ...(hideUnits ? ['units hidden (单位已隐藏)'] : [])];
+  if (tags.length) { const tag = document.createElement('div'); tag.id = 'castcmp-tag'; tag.textContent = tags.join('  |  ');
+    Object.assign(tag.style, { position: 'absolute', left: '8px', top: '8px', padding: '2px 8px', font: '16px "Noto Sans CJK SC",sans-serif', color: '#ff0', background: 'rgba(0,0,0,0.6)', zIndex: '60', pointerEvents: 'none' });
+    host.style.position = 'relative'; host.append(tag); }
   const frame = (fighting: boolean) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces, fighting, dragging: null });
   listener.frame(frame(false)); step(50); listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
   // enemies' own attacks all come from the rules' event stream, replayed tick by tick on the virtual clock.
-  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000)) : null;
+  if (pin !== null && params.get('real')) throw new Error('?pinfoe is for dummies only: a real combat moves and fights back');
+  // ?fromstart=1 / ?leadms=MS / ?castindex=N (v-capture --from-start 1 / --lead-ms MS / --cast-index N): the replay window
+  // (real-combat.ts leadTicksFor); without them it starts LEAD_TICKS (half a second) before the first cast of `me`, as before.
+  const start = { fromStart: params.get('fromstart') === '1', leadMs: params.get('leadms') !== null ? Number(params.get('leadms')) : null,
+    castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1 };
+  const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
@@ -82,15 +116,15 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       step: realStep, frame: () => show(at), reset: () => playFrom(0),
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
-      cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - 10)); },
-      hold() { limit = Math.min(limit, Math.max(0, real.castIndex - 11)); return { at, limit }; },
+      cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - real.lead)); },
+      hold() { limit = Math.min(limit, Math.max(0, real.castIndex - real.lead - 1)); return { at, limit }; },
       // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
       // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
       // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
       // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
-      fresh() { const from = Math.max(0, real.castIndex - 10); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); },
+      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
-      clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, ticks: real.frames.length, combatStart: real.combatStart },
+      clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, startTick: Math.max(0, real.castIndex - real.lead), ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
       audit: (ms: number) => real.audit(ms),
       systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached, emitters: probes.emitters,
@@ -113,7 +147,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     box: (id: string) => listener.screenBox?.(id),
     cast() {
       const s = ++seq;
-      const targetIds = params.get('one') ? ['foe'] : ['foe', 'foe2', 'foe3'];
+      const targetIds = params.get('one') || pin !== null ? ['foe'] : ['foe', 'foe2', 'foe3'];
       const move = params.get('move');
       // LOCAL: Sevika needs her castOutcome receipt (move + outcome) in the same batch as the cast.
       const pre = move ? [{ type: 'castOutcome', tick: s, eventSeq: s, unitId: 'me', abilityKey: 'sevika-ability', outcome: params.get('outcome') ?? 'none', subOutcomes: [], castVariant: { actionSeq: s, move, channelTicks: 0 } }] : [];
@@ -146,13 +180,16 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
-async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number) {
+async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number, start: { fromStart?: boolean; leadMs?: number | null; castNumber?: number } = {}) {
   const [rc, display, control] = await Promise.all([import('./real-combat'),
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
-  const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes: Number(params.get('nfoes') ?? 4), foestar: Number(params.get('foestar') ?? 1) });
+  const nfoes = Number(params.get('nfoes') ?? 4), foeOffset = params.get('foeoffset') !== null ? Number(params.get('foeoffset')) : 0;
+  // ?foeoffset=K (v-capture --foe-offset K): the foes K columns to the side, the target ahead and to the side of the caster.
+  if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }
+  const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
-  // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast) or 3 s.
-  const after = Math.max(rc.DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - rc.LEAD_TICKS + 1);
+  // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
+  const after = rc.afterTicksFor(windowMs, start);
   const run = rc.runRealCombat(units, after, (state, shown) => {
     frames.push(display.toCombatViewState(state).units.map((u: any) => ({
       id: u.id, definitionId: u.definitionId, team: u.team, starLevel: u.starLevel, ...hexOf(u.cell.row, u.cell.col),
@@ -161,9 +198,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
       ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
     })));
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
-  });
-  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never cast in ${frames.length} ticks`);
-  return { frames, events, castIndex: run.castIndex, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms) };
+  }, start.castNumber ?? 1);
+  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never cast${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
+  const lead = rc.leadTicksFor(run.castIndex, start);
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {
