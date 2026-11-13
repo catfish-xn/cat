@@ -6,3 +6,6 @@ v-capture.cjs viktor beamtrim-viktor-after --real 1 --from-start 1 --star 2 --di
 v-capture.cjs blitzcrank beamtrim-blitz-after --star 2 --pin-foe 4 --times 0,33,67,100,133,167,200,233,267,300,333,367,400,433,467,500,533,567,600 --systems 9d35c42d --layers none --from 150 --to 433 --probe emitters --column after --snapshot c1333710ad8e
 # LeBlanc 2★ on one dummy pinned 4 hexes ahead: her chain link 29d01632 (delay 0.78, up to 5 s).
 v-capture.cjs leblanc beamtrim-leblanc-after --star 2 --pin-foe 4 --times 0,33,67,100,133,167,200,233,267,300,333,367,400,433,467,500,533,567,600,633,667,700,733,767,800,833,867,900,933,967,1000,1033,1067,1100,1133,1167,1200,1233,1267,1300,1333,1367,1400,1433,1467,1500,1533,1567,1600,1633,1667,1700,1733,1767,1800,1833,1867,1900,1933,1967,2000,2033,2067,2100 --systems 29d01632 --layers none --from 800 --to 2100 --probe emitters --column after --snapshot c1333710ad8e
+# Illaoi 2★ real combat vs one 2★ Twitch (dummies cannot trigger her drain link): her drain link 2c23a200 plays on each
+# true-damage tick of her channel, about 1500 and 2500 ms into the window (0.65 s each); Twitch first casts at 3550 ms.
+v-capture.cjs illaoi beamtrim-illaoi-after --real 1 --star 2 --dist 3 --nfoes 1 --foestar 2 --target twitch --ms 3200 --systems 2c23a200 --layers none --from 1500 --to 3150 --probe emitters --column after --snapshot c1333710ad8e
