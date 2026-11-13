@@ -139,6 +139,15 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
+/**
+ * A ground line's two ends (TimelineCue.lineCells): from `from` on the floor toward `toward`, `cells` cells in all, at
+ * `from`'s height. Null when the two stand on one spot, which gives it no direction.
+ */
+export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] | null {
+  const dx = toward[0] - from[0], dz = toward[2] - from[2], length = Math.hypot(dx, dz);
+  if (!(length > 1e-3)) return null;
+  return [[from[0], from[1], from[2]], [from[0] + dx / length * cells * cell, from[1], from[2] + dz / length * cells * cell]];
+}
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
@@ -451,6 +460,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
         const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
+        // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
+        // on one spot, it does not play: it never falls back to a flight from the caster's bone.
+        const lineEnds = spawn.event === 'projectile' && spawn.lineCells && source && !source.disposed
+          ? (() => { const toward = snapshot ?? (target ? standingPoint(target.root) : undefined);
+            return toward ? groundLine(standingPoint(source.root), toward, spawn.lineCells!) : null; })() : null;
+        if (spawn.event === 'projectile' && spawn.lineCells && !lineEnds) continue;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
@@ -507,7 +523,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
+        // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
         const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
