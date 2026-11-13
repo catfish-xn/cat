@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -21,14 +21,14 @@ const index = (cues: readonly TimelineCue[], filler: readonly TimelineCue[]) => 
   assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler } : {}) } });
 
 // `filler` plays first, from another champion's list, so the board is already holding it when the cast lands.
-async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = []) {
+async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }) {
   built.length = 0;
   const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index(cues, filler) : syntheticSystem(), readTexture: async () => new Texture() });
   const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
     const root = new Group(); root.position.set(i * 20 + 5, 0, i * 30); scene.add(root); root.updateMatrixWorld();
     return [id, { root, body: null, alive: true }];
   }));
-  const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+  const runtime = createLtkRuntime(library, scene, id => units.get(id), budget ? { budget } : {});
   await runtime.warm('gangplank');
   if (filler.length) { await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true); }
   expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
@@ -107,8 +107,9 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
   });
 
   it('a tail stays when giving it up would not let the new run in either', async () => {
-    // A pair that starts together: eleven long runs and two more overfill the slots, tail or no tail.
-    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held);
+    // A pair that starts together takes one slot but its two runs' particles: with the budget at twelve runs' reserve,
+    // eleven long runs and the pair overfill it, tail or no tail.
+    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held, { live: 0, max: 12 * MIN_RESERVE });
     advance(0.9);
     expect(listed.object.parent).toBe(scene);
     expect(built).toHaveLength(12);
