@@ -1,0 +1,6 @@
+# Mel R explosion body vs original (Fable 11-13), after column = #645 + per-target cue (5d29cf8b). Units hidden (--hide-units 1).
+# Mel 2★ real combat vs three 2★ Garens 3 hexes out (the original's explosion lands on three targets), window anchored on
+# her 3rd cast (branch third, tick 185) from 1000 ms before it (--cast-index 3 --lead-ms 1000, dev/castcmp from 9a31e56e):
+# 3857e78b is revealed about 2200 ms. Frames at 30 fps from 0 to 3050; the sheet takes every 2nd from 2167 (one frame
+# before the reveal) to 2967 (+800 ms). jobs-check PASS (Linux, 9a31e56e); its cover WARN (foe3) is moot with units hidden.
+v-capture.cjs mel melbody-mel-after --real 1 --cast-index 3 --lead-ms 1000 --star 2 --dist 3 --nfoes 3 --foestar 2 --hide-units 1 --ms 3050 --systems 3857e78b --layers none --from 2167 --to 3000 --probe emitters --column after --snapshot c1333710ad8e
