@@ -14,6 +14,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { beamSeconds, beamSplit, createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { UNPINNED_BEAM_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
 import { constant, num, struct, vec } from './vfx-ltk-synthetic';
@@ -35,6 +36,8 @@ const SYSTEMS: Record<string, VfxSystem> = {
   mixed: system([emitter('Trail', {}), beam('BeamA', 0.5), beam('BeamB', 0.8, { timeBeforeFirstEmission: num(0.05) })]),
   beams: system([beam('BeamA', 0.6)]),
   plain: system([emitter('Trail', {})]),
+  // Same shape as `mixed`, under an id on the unpinned list.
+  '7029bc3c': system([emitter('Trail', {}), beam('BeamA', 0.5)]),
 };
 const laser: TimelineCue = { system: 'mixed', action: 'attack', event: 'projectile', delay: 0, duration: 0.3, travelSeconds: 0.3, targetBone: 'chest' };
 const index = (cues: readonly TimelineCue[]) => ({ version: 1, systems: Object.fromEntries(Object.keys(SYSTEMS).map(id => [id, `systems/${id}.json`])),
@@ -115,6 +118,46 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
     ({ runtime } = await setup([{ ...laser, system: 'plain' }]));
     runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
     expect(built.map(b => names(b.prepared))).toEqual([['Trail']]);
+    expect(built[0].options).toMatchObject({ duration: 0.3, projectileSeconds: 0.3 });
+    runtime.dispose();
+  });
+  it('a target that dies mid-beam: the beams play their own life out toward where it fell, the flight still stops', async () => {
+    const { runtime, units } = await setup([laser]);
+    runtime.play('tester', 'caster', ['target'], 'attack');
+    for (let f = 0; f < 10; f++) runtime.update(1 / 60, new Camera());
+    const flight = built.find(b => names(b.prepared).includes('Trail'))!, pinned = built.find(b => names(b.prepared).includes('BeamA'))!;
+    const target = units.get('target')!, fell = toEngine(target.root.position);
+    target.alive = false; runtime.stopUnit('target');
+    target.root.position.set(900, 0, -400); target.root.updateMatrixWorld();
+    runtime.update(1 / 60, new Camera());
+    expect(pinned.options.target.originAt(0)).toEqual(fell);
+    expect(pinned.fx.object.parent).not.toBeNull();
+    expect(pinned.fx.driver.pool.count).toBeGreaterThan(0);
+    for (let f = 0; f < 30; f++) runtime.update(1 / 60, new Camera());
+    expect(flight.fx.object.parent).toBeNull();
+    expect(pinned.fx.object.parent).not.toBeNull();
+    expect(pinned.fx.driver.pool.count).toBeGreaterThan(0);
+    for (let f = 0; f < 15; f++) runtime.update(1 / 60, new Camera());
+    expect(pinned.fx.object.parent).toBeNull();
+    runtime.dispose();
+  });
+
+  it('a caster that dies still ends its beams', async () => {
+    const { runtime, units } = await setup([laser]);
+    runtime.play('tester', 'caster', ['target'], 'attack');
+    for (let f = 0; f < 10; f++) runtime.update(1 / 60, new Camera());
+    const pinned = built.find(b => names(b.prepared).includes('BeamA'))!;
+    units.get('caster')!.alive = false; runtime.stopUnit('caster');
+    runtime.update(1 / 60, new Camera());
+    expect(pinned.fx.driver.pool.count).toBe(0);
+    runtime.dispose();
+  });
+
+  it('a system on the unpinned list flies whole as it was, Sevika\'s chomp first among them', async () => {
+    expect(Object.keys(UNPINNED_BEAM_SYSTEMS)).toContain('7029bc3c');
+    const { runtime } = await setup([{ ...laser, system: '7029bc3c' }]);
+    runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
+    expect(built.map(b => names(b.prepared))).toEqual([['Trail', 'BeamA']]);
     expect(built[0].options).toMatchObject({ duration: 0.3, projectileSeconds: 0.3 });
     runtime.dispose();
   });

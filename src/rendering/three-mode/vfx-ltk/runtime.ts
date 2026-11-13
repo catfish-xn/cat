@@ -3,6 +3,8 @@ import { applyStencil, stencilStates, type StencilClaim } from './rendering/util
 import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
+import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import type { Anchor } from './engine/model/rig';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -110,7 +112,9 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   /** Its end came and it is playing out. */
   ending?: boolean;
   /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
-  heldAtEnd?: number }
+  heldAtEnd?: number;
+  /** A pinned beam run (Waiting.part 'beam'): its target died, so its far end stays where the target last stood. */
+  holdTarget?: () => void }
 /**
  * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
  * past its landing, and none of its own particles' curves run longer.
@@ -173,7 +177,7 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
  *
  * A beam reaches from the system to its target. Flown as one missile, the system's end of every beam rode the missile
  * head, so the beam shrank to nothing over the flight, and the run was removed whole on landing while the beam
- * particles' own lives ran past it (Viktor's basic-attack laser: 0.3 s of a 0.5–0.8 s life; Fable 11-13). The beams
+ * particles' own lives ran past it (Viktor's basic-attack laser; Fable 11-13). The beams
  * play as a run of their own instead: pinned to the caster's bone, reaching for the target unit where it stands, for
  * as long as the asset gives them (beamSeconds). Only the drawing changes; the cue's timing does not.
  */
@@ -202,6 +206,14 @@ export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
     end = Math.max(end, e.timeBeforeFirstEmission + (e.singleParticle ? 0 : Math.min(e.lifetime ?? flightSeconds, PLAY_OUT_CAP)) + peak(e.particleLifetime));
   }
   return Math.min(PLAY_OUT_CAP, end);
+}
+/** An anchor that follows `live` until `hold` freezes it where it stands then. */
+function holdable(live: Anchor): { anchor: Anchor; hold: () => void } {
+  let at: ReturnType<Anchor['originAt']> | null = null, basis: Float32Array | null = null;
+  return {
+    anchor: { originAt: time => at ?? live.originAt(time), basisInto: (time, out) => { if (basis) { out.set(basis); return out; } return live.basisInto(time, out); } },
+    hold: () => { if (at) return; at = live.originAt(0); basis = live.basisInto(0, new Float32Array(9)); },
+  };
 }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
@@ -381,7 +393,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // to the caster for their own life. They start together or not at all.
       const rows: { spawn: TimelineSpawn; part?: 'flight' | 'beam'; together?: string }[] = [];
       for (const spawn of spawns) {
-        const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove ? catalog.get(spawn.system) : undefined;
+        const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove && !Object.hasOwn(UNPINNED_BEAM_SYSTEMS, spawn.system)
+          ? catalog.get(spawn.system) : undefined;
         const split = loaded ? beamSplit(spawn.hide ? withHidden(loaded, spawn.hide) : loaded) : null;
         if (!split) { rows.push({ spawn }); continue; }
         const together = spawn.together ? undefined : `beam${rows.length}`;
@@ -420,6 +433,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
+        // A pinned beam whose target died plays its own life out toward where the target fell (Fable 11-13).
+        if (run.holdTarget && run.target === id && !(run.boundToSource && run.source === id)) { run.holdTarget(); run.target = undefined; continue; }
         // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
         // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
@@ -554,8 +569,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
+        // A pinned beam reaches for its living target; when the target dies its far end holds where it last stood.
+        const held = row.part === 'beam' && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
         const nextOptions = { anchor, attachment,
-          target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
@@ -574,7 +591,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, ...(held ? { holdTarget: held.hold } : {}) }); starts++;
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

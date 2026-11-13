@@ -408,6 +408,16 @@ export function cueAdditions(champion: string, systems: Readonly<Record<string, 
 }
 
 /**
+ * Projectile systems whose beams keep flying with the system instead of being pinned between caster and target
+ * (runtime beamSplit), each with why. The pin is the default for every projectile beam (Fable 11-13).
+ * - 7029bc3c Sevika's chomp: its beam is a streamed mesh rope that may belong to the flying head rather than to her;
+ *   held at its old behaviour until it is checked against the original.
+ */
+export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
+  '7029bc3c': 'streamed rope, not checked against the original',
+};
+
+/**
  * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
  * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
