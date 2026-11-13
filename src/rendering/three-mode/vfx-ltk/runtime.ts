@@ -424,7 +424,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Groups that have waited for room since an earlier frame (a group is its together key, or the row itself): room
       // freed this frame goes to them before any newcomer of no higher importance (Fable 11-13: Vi's pair waited while
       // single rows due a few frames later took every slot that freed).
-      const held: { rank: number; key: unknown; need: number }[] = [];
+      const heldRoom: { rank: number; key: unknown; need: number }[] = [];
       for (let at = 0; at < waiting.length;) {
         const row = waiting[at], { at: when, spawn, library: catalog, snapshot, persistent, group } = row;
         if (when > clock) { at++; continue; }
@@ -482,7 +482,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
         const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
-        for (const wait of held) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
+        for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
         const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
@@ -510,7 +510,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
           if (!overdue && (importance === 'critical' || importance === 'body')) {
             row.waitingSince ??= clock;
-            if (row.waitingSince < clock && !held.some(wait => wait.key === groupKey)) held.push({ rank, key: groupKey, need });
+            if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
           else { countDrop(spawn.system); for (const other of partners) { countDrop(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
