@@ -32,6 +32,9 @@ function textureState(t: any) {
  * - mute: leave these emitters' draws out.  solo: of the systems they belong to, draw these emitters alone.
  * - nocolor: these emitters write no colour (their depth and stencil writes stay): what a stencil writer does unseen.
  * - noerode: these emitters draw without their alpha erosion (the EROSION define taken out of their material).
+ * Limits (dev only, for looking at one recording): a draw a system makes after it starts running is not filtered;
+ * nocolor/noerode change the material, so other emitters sharing it change too; and those material changes stay on a
+ * pooled object when it is reused (the layer mask is set again each time a system starts).
  */
 export interface DrawFilter { only: string | null; mute: string[]; solo: string[]; nocolor: string[]; noerode: string[] }
 export function drawFilterOf(search: string, only?: string | null): DrawFilter {
@@ -67,7 +70,8 @@ const filtering = (f: DrawFilter) => f.only !== null || f.mute.length + f.solo.l
 export function installProbes(clock: () => number) {
   const live = new Set<Rec>(), started: { t: number; system: string; source?: string; action?: string }[] = [];
   const add = Set.prototype.add, del = Set.prototype.delete;
-  const filter = drawFilterOf(location.search, (window as any).__only ?? null);
+  // Read only where there is a page (node tests import this module with neither).
+  const filter = drawFilterOf(typeof location === 'undefined' ? '' : location.search, typeof window === 'undefined' ? null : (window as any).__only ?? null);
   Set.prototype.add = function (this: Set<unknown>, value: unknown) {
     if (looksRunning(value) && this !== (live as unknown)) {
       live.add(value); started.push({ t: clock(), system: value.system, source: value.source, action: value.action });
