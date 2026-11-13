@@ -1,0 +1,5 @@
+# Vi 3-star slam, uncrowded: #644's tail give-way rule must not change it (Fable 11-13). Recording only, never merged.
+# This column (after): #644 head 8b24fb97 (tails give way only when that admits the newcomer); dev/castcmp from d00ea8a8. Same line in both columns, only the output name and --column differ.
+# 3-star Vi on one 3-star Sett, --dist 2, warm, units drawn. Keyframes 1433 / 1567 / 1700 / 1833 / 2000 / 2200 / 2500 ms,
+# before | after side by side; they must match.
+v-capture.cjs vi vi3-after --real 1 --star 3 --target sett --nfoes 1 --foestar 3 --dist 2 --ms 2700 --settle 3000 --systems 84b969e0 --layers none --column after --snapshot c1333710ad8e
