@@ -24,9 +24,14 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
         camera.layers.disableAll(); for (const layer of held) camera.layers.enable(layer);
         gl.autoClear = over ? false : autoClear; scene.background = over ? null : background; gl.render(scene, camera);
       };
+      // REC BRANCH ONLY: with globalThis.__PASS_SYNC each optional pass is fenced by a 1-pixel read-back and timed on the
+      // real clock into globalThis.__PASS_MS (soft = depth grab; early / late = frame grab + their extra draws).
+      const g = globalThis as any, fence = g.__PASS_SYNC ? (() => { const c = gl.getContext(); c.readPixels(0, 0, 1, 1, c.RGBA, c.UNSIGNED_BYTE, new Uint8Array(4)); }) : null;
+      const now = () => (g.__realNow ?? (() => performance.now()))();
+      const timed = (key: 'soft' | 'early' | 'late', run: () => void) => { if (!fence) return run(); fence(); const t0 = now(); run(); fence(); g.__PASS_MS ??= { soft: 0, early: 0, late: 0 }; g.__PASS_MS[key] += now() - t0; };
       try {
         bindFrameTargets(gl);
-        if (needs.soft) grabDepth(gl, scene, camera);
+        if (needs.soft) timed('soft', () => grabDepth(gl, scene, camera));
         const first = needs.late ? [UNDER_LAYER] : [UNDER_LAYER, PARTICLE_LAYER];
         walkDrawable(scene, node => {
           if (!node.layers.isEnabled(GROUND_LAYER)) return;
@@ -43,7 +48,7 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
             if ((node as { isLight?: boolean }).isLight) { masks.set(node, node.layers.mask); node.layers.enable(FLOOR_LAYER); }
           });
           draw([FLOOR_LAYER]);
-          if (needs.early) { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); }
+          if (needs.early) timed('early', () => { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); });
           // Keep the authored depth test so arena walls still occlude ground. A small
           // polygon offset avoids coplanar hex/floor flicker; no ground depth can hide units.
           for (const one of ground.keys()) { one.depthWrite = false; one.polygonOffset = true; one.polygonOffsetFactor = -1; one.polygonOffsetUnits = -1; }
@@ -51,9 +56,9 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           for (const [one, state] of ground) Object.assign(one, state);
           draw([SCENE_LAYER, ...first], true);
         } else if (needs.early) {
-          draw([SCENE_LAYER]); grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); draw(first, true);
+          draw([SCENE_LAYER]); timed('early', () => { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); }); draw(first, true);
         } else draw([SCENE_LAYER, ...first]);
-        if (needs.late) { grabFrame(gl); draw([DISTORTION_LAYER], true); draw([PARTICLE_LAYER], true); }
+        if (needs.late) timed('late', () => { grabFrame(gl); draw([DISTORTION_LAYER], true); draw([PARTICLE_LAYER], true); });
         // A subtract (and every mode that writes alpha down) leaves holes in the canvas's alpha.
         sealCanvasAlpha(gl);
       } finally {

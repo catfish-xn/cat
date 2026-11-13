@@ -66,7 +66,8 @@ export const MIN_RESERVE = 24;
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[]): { early: boolean; late: boolean; soft: boolean } {
-  if (systems.length >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
+  // REC BRANCH ONLY: dev/castcmp/frame-time.cjs sets the degrade threshold per run (?degrade=4|8|off).
+  if (systems.length >= ((globalThis as any).__LTK_DEGRADE ?? LTK_PASS_DEGRADE_AT)) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
@@ -635,7 +636,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
       liveFx.length = 0;
       for (const { fx } of running) liveFx.push(fx);
-      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx));
+      { const needs = ltkRenderNeeds(liveFx), g = globalThis as any; g.__LTK_PASSES_ON = { early: (g.__LTK_PASSES_ON?.early ?? 0) + Number(needs.early), late: (g.__LTK_PASSES_ON?.late ?? 0) + Number(needs.late), soft: (g.__LTK_PASSES_ON?.soft ?? 0) + Number(needs.soft) };
+        passes.render(scene as Scene, camera, needs); }
     },
     get active() { return running.size; },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */

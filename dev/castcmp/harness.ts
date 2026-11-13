@@ -8,6 +8,8 @@ const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
 (window as any).__realNow = performance.now.bind(performance);
 if (params0().get('ltkcap')) (globalThis as any).__LTK_CAP = Number(params0().get('ltkcap'));
 if (params0().get('fxbudget')) (globalThis as any).__FX_BUDGET = Number(params0().get('fxbudget'));
+if (params0().get('degrade')) (globalThis as any).__LTK_DEGRADE = params0().get('degrade') === 'off' ? Infinity : Number(params0().get('degrade'));
+if (params0().get('passsync') === '1') (globalThis as any).__PASS_SYNC = true;
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };
