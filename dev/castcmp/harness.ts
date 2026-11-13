@@ -186,7 +186,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const nfoes = Number(params.get('nfoes') ?? 4), foeOffset = params.get('foeoffset') !== null ? Number(params.get('foeoffset')) : 0;
   // ?foeoffset=K (v-capture --foe-offset K): the foes K columns to the side, the target ahead and to the side of the caster.
   if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }
-  const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}) });
+  // ?ally=X&allystar=N (v-capture --ally X --allystar N): a front-liner of `me`'s team one row ahead of it.
+  const ally = params.get('ally');
+  const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
+    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
   const after = rc.afterTicksFor(windowMs, start);
