@@ -3,6 +3,7 @@ import { applyStencil, stencilStates, type StencilClaim } from './rendering/util
 import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import { AXIS_SIGN } from './space';
+import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
@@ -98,7 +99,9 @@ export interface LtkPlayOptions {
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
-  together?: string }
+  together?: string;
+  /** One side of a projectile split by beamSplit: its flight, or its beams pinned between caster and target. */
+  part?: 'flight' | 'beam' }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
   bodyGone?: boolean;
@@ -162,6 +165,43 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
     view = { ...prepared, drawn: prepared.drawn.filter(d => !roots.has(d.root)) }; views.set(key, view);
   }
   return view;
+}
+/**
+ * A projectile system's beams apart from its flight: `beam` keeps only the top-level beam emitters (VfxPrimitiveBeam,
+ * its mesh and camera-segment kinds) and everything under them, `flight` keeps the rest (null when nothing else draws).
+ * Each view disables the other side's emitters outright, so they neither emit nor draw. Null for a system with no beam.
+ *
+ * A beam reaches from the system to its target. Flown as one missile, the system's end of every beam rode the missile
+ * head, so the beam shrank to nothing over the flight, and the run was removed whole on landing while the beam
+ * particles' own lives ran past it (Viktor's basic-attack laser: 0.3 s of a 0.5–0.8 s life; Fable 11-13). The beams
+ * play as a run of their own instead: pinned to the caster's bone, reaching for the target unit where it stands, for
+ * as long as the asset gives them (beamSeconds). Only the drawing changes; the cue's timing does not.
+ */
+export interface BeamSplit { readonly beam: PreparedVfx; readonly flight: PreparedVfx | null }
+const BEAM_SPLITS = new WeakMap<PreparedVfx, BeamSplit | null>();
+export function beamSplit(prepared: PreparedVfx): BeamSplit | null {
+  if (BEAM_SPLITS.has(prepared)) return BEAM_SPLITS.get(prepared)!;
+  const beams = new Set(prepared.model.emitters.filter(e => e.beam !== null && !e.disabled).map(e => e.index));
+  const drawsBeam = prepared.drawn.some(d => beams.has(d.root) && !d.emitter.disabled);
+  const view = (keep: (index: number) => boolean): PreparedVfx => ({ ...prepared,
+    model: { ...prepared.model, emitters: prepared.model.emitters.map(e => keep(e.index) || e.disabled ? e : { ...e, disabled: true }) },
+    drawn: prepared.drawn.filter(d => keep(d.root)) });
+  const flight = view(index => !beams.has(index));
+  const split = drawsBeam ? { beam: view(index => beams.has(index)), flight: flight.drawn.some(d => !d.emitter.disabled) ? flight : null } : null;
+  BEAM_SPLITS.set(prepared, split);
+  return split;
+}
+/**
+ * How long a projectile's beams play, read from the asset: the latest any beam emitter's last particle dies. A single
+ * particle is born at the emitter's start; a stream emits over its emitter's lifetime (the flight where it has none).
+ * At most PLAY_OUT_CAP.
+ */
+export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
+  let end = 0;
+  for (const e of beam.model.emitters) if (e.beam !== null && !e.disabled) {
+    end = Math.max(end, e.timeBeforeFirstEmission + (e.singleParticle ? 0 : Math.min(e.lifetime ?? flightSeconds, PLAY_OUT_CAP)) + peak(e.particleLifetime));
+  }
+  return Math.min(PLAY_OUT_CAP, end);
 }
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
@@ -337,7 +377,20 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         return !target || target.disposed || (!target.alive && !context.snapshotTargets);
       })) return false;
       const play = ++plays;
+      // A flying projectile whose system draws beams plays as two rows (beamSplit): the flight as cued, the beams pinned
+      // to the caster for their own life. They start together or not at all.
+      const rows: { spawn: TimelineSpawn; part?: 'flight' | 'beam'; together?: string }[] = [];
       for (const spawn of spawns) {
+        const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove ? catalog.get(spawn.system) : undefined;
+        const split = loaded ? beamSplit(spawn.hide ? withHidden(loaded, spawn.hide) : loaded) : null;
+        if (!split) { rows.push({ spawn }); continue; }
+        const together = spawn.together ? undefined : `beam${rows.length}`;
+        if (split.flight) rows.push({ spawn, part: 'flight', together });
+        rows.push({ spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
+          part: 'beam', together: split.flight ? together : undefined });
+      }
+      if (waiting.length + rows.length > MAX_LTK_QUEUED) return false;
+      for (const { spawn, part, together } of rows) {
         let snapshot: WorldPoint | undefined;
         if (context.snapshotTargets && spawn.targetId) {
           const p = unitAnchor(findUnit(spawn.targetId)!.root, findUnit(spawn.targetId)!.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone);
@@ -346,7 +399,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
-          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}) });
+          ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}) });
       }
       return true;
     },
@@ -421,7 +474,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
-        const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
+        const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
         if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
@@ -451,7 +505,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
-        const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
+        // A beam run (Waiting.part) holds its few beam particles, not its whole system's reserve.
+        const reserveOfRow = (other: Waiting) => other.part === 'beam' ? MIN_RESERVE : reserveFor(other.spawn.system);
+        const own = reserveOfRow(row), need = own + partners.reduce((sum, other) => sum + reserveOfRow(other), 0);
         const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
@@ -501,12 +557,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
+        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
