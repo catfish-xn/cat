@@ -3842,6 +3842,14 @@
       "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
       "firstDifferentByte": 84
     },
+    "tests/vfx-ltk-together-admission.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7388,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6af7352fa8de16debb26f4fca35573ebc6a23a51d7e7b8df75552e1fecbc652e",
+      "firstDifferentByte": 0
+    },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
