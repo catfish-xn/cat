@@ -455,10 +455,10 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
  */
 export interface PlayOut { readonly seconds: number; readonly fade: number }
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
-  // A FIT to original footage, not the original's own values: on its authored curves the scorch strand stays dark and
-  // erodes away far later than the original shows it, which breaks it up and clears it soon after the line lands. Why
-  // the original ends it sooner is not known.
-  '20cd67dc': { seconds: 1.1, fade: 0.3 },
+  // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
+  // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
+  // that time changes with the star level is not checked yet.
+  '20cd67dc': { seconds: 2.3, fade: 0.5 },
 };
 
 /**
