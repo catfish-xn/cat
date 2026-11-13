@@ -147,6 +147,8 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   heldAtEnd?: number;
   /** A cast's projectile at a living target: if that target dies it flies on to the last place it saw it, and lands there. */
   lands?: boolean;
+  /** It plays at a dead target's place (Waiting.atPlace): it gives way to any row that lacks room, before anything else. */
+  atPlace?: boolean;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
   together?: string }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
@@ -551,7 +553,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // other LTK reservations; fallback then stops spawning until it drains. A plain attack still waits for shared room.
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
-        const shared = importance === 'attack' && slotsNow() >= ATTACK_FREE_SLOTS;
+        // Runs at a dead target's place are left out of the count: they only hold spare room (Running.atPlace).
+        const shared = importance === 'attack' && slotsNow() - [...running].filter(run => run.atPlace).length >= ATTACK_FREE_SLOTS;
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
@@ -574,6 +577,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           leave(tail);
         }
         while (!atPlace && blocked()) {
+          // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
+          let spare: Running | undefined;
+          for (const run of running) if (run.atPlace && (!spare || run.started < spare.started)) spare = run;
+          if (spare && crowded()) { leave(spare); continue; }
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
@@ -631,7 +638,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, together: row.together, ...(lands ? { lands } : {}) }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, together: row.together, ...(lands ? { lands } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);

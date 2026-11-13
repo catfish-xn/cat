@@ -177,6 +177,28 @@ describe('vfx-ltk casts at dead targets', () => {
     runtime.dispose();
   });
 
+  it('a run at a dead target\'s place gives way first, to a living target\'s hit and to a plain attack', async () => {
+    for (const newcomer of ['pair', 'swing'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      // One hit at a dead target's place, then flourishes up to the cap.
+      units.get('b')!.alive = false;
+      expect(runtime.play('pair', 'caster', ['b'])).toBe(true);
+      step(1 / 60);
+      for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+      step(3 / 60);
+      expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+      const [spare] = of('boom');
+      expect(spare.fx.object.parent).toBe(scene);
+      expect(runtime.play(newcomer, 'caster', ['a'], newcomer === 'swing' ? 'attack' : 'cast')).toBe(true);
+      step(1 / 60);
+      // The spare run left; no flourish did; the newcomer runs.
+      expect(spare.fx.object.parent).toBeNull();
+      expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 1);
+      expect(of(newcomer === 'swing' ? 'spark' : 'boom').filter(entry => entry.fx.object.parent === scene && entry !== spare)).toHaveLength(1);
+      runtime.dispose();
+    }
+  });
+
   it('with free room a hit at a dead target\'s place plays, counted apart from the rows that compete for room', async () => {
     const { runtime, units, step, of } = await setup();
     const started = LTK_RUN_STATS.placeStarted.boom ?? 0, competing = LTK_RUN_STATS.started.boom ?? 0;
