@@ -1,0 +1,5 @@
+# Build-up singles (single particles born at zero, whole life inside buildUpTime, now born at reveal), before column.
+# Mel 2★ real combat as in vkbeam3: her third cast (branch third) about 7750 ms into the window; its R explosion
+# 3857e78b (hit cue, delay 1.2) is revealed about 8950 ms. Frames at 30 fps from 0 so every cue starts on time.
+# jobs-check FAILs this line for the two Garens' casts at about 3900 ms, long before the judged 8850–9300 ms.
+v-capture.cjs mel buildup-mel-before --real 1 --star 2 --dist 3 --nfoes 2 --foestar 3 --ms 9300 --systems 3857e78b --layers none --from 8850 --to 9300 --probe emitters --column before --snapshot c1333710ad8e
