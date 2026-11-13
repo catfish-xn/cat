@@ -73,6 +73,8 @@ export interface SystemStep extends Step {
    * It does not scale `origin` or `moved`.
    */
   readonly scale?: number;
+  /** Emitters, by index, that this step leaves out of emission (heldUntilReveal, during a build-up). */
+  readonly heldBack?: ReadonlySet<number>;
 }
 
 /** The definition's `transform` as a particle takes it: a basis, and an offset after it. */
@@ -255,6 +257,7 @@ export function stepEmitters(
   }
 
   for (let index = 0; index < emitters.length; index += 1) {
+    if (step.heldBack?.has(index)) continue;
     emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion);
   }
   for (let index = 0; index < emitters.length; index += 1) {

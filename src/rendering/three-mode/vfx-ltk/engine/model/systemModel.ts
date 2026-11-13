@@ -310,6 +310,28 @@ export function lingerSeconds(emitter: EmitterModel): number {
   return Math.min(lifetime + LINGER_GRACE, Math.max(emitter.particleLinger, 0));
 }
 
+/**
+ * Single-particle emitters a build-up holds back until the system is revealed, by index.
+ *
+ * OUR OWN HANDLING, not the engine's (Fable 11-13). Simulated as authored, a single particle born at the system's
+ * start whose whole life fits inside `buildUpTime` is born and gone before the system is ever drawn. In the original,
+ * Mel's R explosion (3857e78b) shows its ground decal on the first frame it is seen, so such an
+ * emitter is held out of the build-up and born when the system appears instead. Only an emitter born at zero
+ * (`timeBeforeFirstEmission` at or below 0) is held: its sky beam, born a little later, shows nothing in the original's
+ * first frame and stays consumed. An emitter whose own `lifetime` ends inside the build-up is not held.
+ */
+export function heldUntilReveal(system: SystemModel): ReadonlySet<number> {
+  let held = HELD.get(system);
+  if (held) return held;
+  const buildUp = system.buildUpTime;
+  held = new Set(buildUp > 0 ? system.emitters.flatMap((emitter, index) =>
+    emitter.singleParticle && !emitter.disabled && emitter.timeBeforeFirstEmission <= 0
+      && peak(emitter.particleLifetime) <= buildUp && (emitter.lifetime === null || emitter.lifetime > buildUp) ? [index] : []) : []);
+  HELD.set(system, held);
+  return held;
+}
+const HELD = new WeakMap<SystemModel, ReadonlySet<number>>();
+
 /** The largest value a curve reaches, over its constant and every key of it. */
 export function peak(value: ValueCurve): number {
   let most = Math.max(...value.constant, 0);

@@ -24,6 +24,7 @@ import {
   addressTheSame,
   DEFAULT_STEPPING,
   emptySystem,
+  heldUntilReveal,
   lingerTail,
   simulationEquals,
   steppingEquals,
@@ -457,6 +458,8 @@ export function createDriver(
 
     orientInto(reached);
     const stood = stand(world, origin);
+    // Our own handling, not the engine's: see heldUntilReveal.
+    const held = heldUntilReveal(system);
     for (let at = 1; at <= steps; at += 1) {
       const now = until - (steps - at) * SEEK_STEP;
       building = { now, age: at * SEEK_STEP };
@@ -471,6 +474,7 @@ export function createDriver(
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
         scale: lineage.scale,
+        ...(held.size > 0 ? { heldBack: held } : {}),
       };
       stepEmitters(pool, system, placed, rng, states);
       children.step(driver, system, SEEK_STEP, now);
