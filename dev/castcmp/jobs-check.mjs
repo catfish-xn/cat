@@ -58,7 +58,7 @@ for (const line of lines) {
   if (startWhy.length) { results.push({ name, unit, mode: 'real', ok: false, why: startWhy }); continue; }
   const custom = start.fromStart || start.leadMs !== null || o('cast-index') !== undefined;
   const setup = { unit, star: Number(o('star') ?? 3), form: o('form') ?? null, foe: o('target') ?? 'garen', dist: Number(o('dist') ?? 3),
-    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}) , foeCells: o('foes') ?? null };
+    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}) , foeCells: o('foes') ?? null, foe2: o('foe2') ?? null };
   const events = [], alive = [], cells = [];
   let run;
   try {

@@ -1,0 +1,3 @@
+v-capture.cjs gangplank uC-hide --real 1 --star 3 --target leona --foestar 2 --foes 1,0;1,1 --foe2 kogmaw:1 --ms 3300 --layers none --column after --snapshot c1333710ad8e --hide-units 1 --systems 20cd67dc --probe emitters --emitters MakerTrench1
+v-capture.cjs gangplank uC-units --real 1 --star 3 --target leona --foestar 2 --foes 1,0;1,1 --foe2 kogmaw:1 --ms 3300 --layers none --column after --snapshot c1333710ad8e --systems 20cd67dc --probe emitters --emitters MakerTrench1
+v-capture.cjs gangplank uC-ref --real 1 --star 3 --target leona --foestar 2 --foes 1,0;1,1 --foe2 kogmaw:1 --ms 3300 --layers none --column after --snapshot c1333710ad8e --hide-units 1 --systems none --mute 20cd67dc

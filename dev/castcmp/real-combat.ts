@@ -36,6 +36,12 @@ export function realUnits(s: RealSetup): any[] {
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
   // RECORDING ONLY (never merged): v-capture --foes "row,col;row,col" puts the foes on those cells, in order foe, foe2, ...
   const cells = (s as any).foeCells ? String((s as any).foeCells).split(';').map(pair => pair.split(',').map(Number)) : null;
+  // RECORDING ONLY: v-capture --foe2 "model:star" makes the second foe another unit (a ranged one that holds its cell).
+  const second = (s as any).foe2 ? String((s as any).foe2).split(':') : null;
+  if (cells && second) return [
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
+    ...cells.map(([row, col], i) => ({ id: i === 0 ? 'foe' : `foe${i + 1}`, definitionId: i === 1 ? second[0] : foe, team: 'enemy', starLevel: i === 1 ? Number(second[1] ?? 1) : s.foestar, location: { kind: 'board', cell: { col, row } } })),
+  ];
   if (cells) return [
     { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
     ...cells.map(([row, col], i) => ({ id: i === 0 ? 'foe' : `foe${i + 1}`, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col, row } } })),
