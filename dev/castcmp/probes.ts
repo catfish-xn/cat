@@ -114,7 +114,7 @@ export function installProbes(clock: () => number) {
       }
       // Where each unit stands now (its root, world/board units), so a draw's worldBox can be read against the caster and
       // its target. Needs the renderer's debug hook (?debug3d, which --hide-units and --probe emitters both set).
-      const d3 = (window as any).__render3d;
+      const d3 = typeof window === 'undefined' ? null : (window as any).__render3d;
       const units = d3?.pieces ? [...d3.pieces.entries()].map(([id, v]: [string, any]) => { v.root.updateWorldMatrix(true, false); const e = v.root.matrixWorld.elements;
         return { id, root: num([e[12], e[13], e[14]]), alive: !!v.alive }; }) : null;
       return { draws: out, units };
