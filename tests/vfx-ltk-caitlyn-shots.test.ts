@@ -4,6 +4,10 @@ import { caitlynShotCentre, createBatch1VfxEvents } from '../src/rendering/three
 import { CAITLYN_COMET, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
+import { createCombatReplayRecorder } from '../src/simulation/combat-replay-view';
+import { stepCombat } from '../src/simulation/combat';
+import { createMatch, startMatchCombat } from '../src/simulation/match';
+import type { CombatState } from '../src/simulation/combat-types';
 
 // Event shapes as the combat view sends them (combat-replay-view.ts packetDamage: sourceKind and delivery tags).
 const cast = (sourceId: string, eventSeq: number, tick = eventSeq): DisplayCombatEvent => ({ type: 'cast', sourceId, eventSeq, tick,
@@ -74,5 +78,35 @@ describe('Caitlyn Air Raid: one comet and burst per shot, where its damage lands
     expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { vex: [{ system: '92bbeaf7', event: 'hit', delay: 0, duration: 1 }] } })).skills['caitlyn-shot']).toBeUndefined();
     const { ['92bbeaf7']: _, ...without } = systems;
     expect(withCueOverrides(parseIndex({ version: 1, systems: without, assets: {}, skills: { caitlyn: CUE_OVERRIDES.caitlyn } })).skills['caitlyn-shot']).toBeUndefined();
+  });
+});
+
+describe('a shot\'s packets reach the planner in one batch (the premise of caitlynShotCentre)', () => {
+  it('the replay holds one record per tick with all of that tick\'s events, so a whole tick is always in one batch', () => {
+    const base = createMatch(42);
+    const started = startMatchCombat({ ...base, preparation: { ...base.preparation, units: [{ id: 'cait', definitionId: 'caitlyn', team: 'player', starLevel: 1,
+      location: { kind: 'board', cell: { col: 3, row: 6 } } }, ...base.preparation.units.filter(u => u.team === 'enemy')] } });
+    if (!started.ok || !started.state.combat) throw Error('no combat');
+    let state: CombatState = { ...started.state.combat, units: started.state.combat.units.map(u => u.team === 'player' ? { ...u, mana: u.maxMana }
+      : { ...u, hp: 100000, maxHp: 100000, attackDamage: 1 }) };
+    const recorder = createCombatReplayRecorder(state, []), records = [recorder.initialFrame];
+    const isShot = (event: { type: string; sourceId?: string; delivery?: string }) => event.type === 'packetDamage' && event.sourceId === 'cait' && event.delivery === 'ability-direct';
+    let seen = 0;
+    for (let i = 0; i < 120 && state.status === 'running' && seen < 2; i++) {
+      const next = stepCombat(state), record = recorder.record(state, next);
+      records.push(record); state = next.state; if (record.events.some(e => isShot(e as never))) seen++;
+    }
+    const shotTicks = new Set<number>();
+    for (const record of records) for (const event of record.events) {
+      // Every event of a record is of that record's tick, and no tick has two records.
+      if ('tick' in event) expect(event.tick, event.type).toBe(record.tick);
+      if (isShot(event as never) && 'tick' in event) shotTicks.add(event.tick);
+    }
+    expect(new Set(records.map(r => r.tick)).size).toBe(records.length);
+    expect(shotTicks.size).toBeGreaterThanOrEqual(2);
+    // Batched one record at a time, as the online session plays them back (remote-session.ts advanceDisplay): one shot per tick.
+    const events = createBatch1VfxEvents(id => id === 'cait' ? 'caitlyn' : 'enemy', () => 1);
+    const shots = records.flatMap(record => events.batch(record.events as DisplayCombatEvent[]).flatMap(plan => plan.extra));
+    expect(shots).toHaveLength(shotTicks.size);
   });
 });

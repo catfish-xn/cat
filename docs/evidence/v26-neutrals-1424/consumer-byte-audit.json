@@ -3652,9 +3652,9 @@
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6155,
+      "currentBytes": 8732,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8e9c0764955b652dd500f5197596b0a0caf5c000514116ce159f58be9af5c719",
+      "currentSha256": "a0886dbb06224912d2bf2c08a3e961aad89d0b338dd763afaee910edde0d0117",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cast-branch.test.ts": {

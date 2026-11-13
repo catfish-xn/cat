@@ -25,7 +25,13 @@ const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne'
  * each picks a random enemy centre and sends one ability-direct physical packet to every enemy within a cell of it, then
  * a second one (the headshot) to the centre. So one shot is her ability-direct packets of one tick, and its centre is the
  * enemy struck twice in it (the last one struck, should none be). Visual only: the shot is drawn where the packets landed.
+ * Premise: a batch holds whole ticks. The replay keeps one record per combat step with all of that step's events
+ * (combat-replay-view.ts recorder.record), the online session plays whole records (remote-session.ts advanceDisplay) and
+ * offline passes the ledger of whole steps (BoardScene.ts), so a shot's packets never straddle two batches
+ * (tests/vfx-ltk-caitlyn-shots.test.ts).
  */
+/** Caitlyn's shots planned, and how many found no enemy struck twice and fell back to the last one struck (dev load harness). */
+export const CAITLYN_SHOT_STATS = { shots: 0, fallback: 0 };
 export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: number, sourceId: string): string | undefined {
   const hits = new Map<string, number>(); let last: string | undefined;
   for (const event of events) {
@@ -33,6 +39,7 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
     hits.set(event.targetId, (hits.get(event.targetId) ?? 0) + 1); last = event.targetId;
   }
   for (const [id, count] of hits) if (count >= 2) return id;
+  if (last !== undefined) CAITLYN_SHOT_STATS.fallback++;
   return last;
 }
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
@@ -78,6 +85,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (seen.tick !== event.tick) {
             const centre = caitlynShotCentre(events, event.tick, event.sourceId);
             if (centre !== undefined) {
+              CAITLYN_SHOT_STATS.shots++;
               const skill = star(event.sourceId) === 3 ? (seen.count % 2 === 0 ? 'caitlyn-shot-3-comet' : 'caitlyn-shot-3') : 'caitlyn-shot';
               plan.extra.push({ champion: 'caitlyn', sourceId: event.sourceId, targets: [centre], action: 'passive', skill, snapshotTargets: true });
             }

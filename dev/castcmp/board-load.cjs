@@ -1,7 +1,9 @@
 // node dev/castcmp/board-load.cjs <out.json> --board a,b,... [--foes c,d,...] [--star 3] [--port 5311] [--assetPort 5419] [--warm 1] [--gl gpu|swift]
 // One whole real combat (up to 8 against 8, src/simulation) on the 3D renderer, for the host-body overlay load: per second of
 // combat, the wall time of its ~62 frames (GPU synced each second), the overlays on screen, and the cap counters of
-// vfx-ltk (runtime.ts ATTACHED_LAYER_STATS; absent on builds before it, which then report frame time only).
+// vfx-ltk (runtime.ts ATTACHED_LAYER_STATS; absent on builds before it, which then report frame time only), and the measured
+// pass's admission counters (runtime.ts LTK_RUN_STATS: peak systems running, starts and drops by system; batch1-events.ts
+// CAITLYN_SHOT_STATS: Caitlyn's shots and centre fallbacks).
 // A warm pass plays the combat once first so effect files and shaders are loaded; the measured pass replays it from tick 0.
 // Frame times are only comparable between builds on the same machine and --gl; SwiftShader is not a player's GPU.
 const { chromium } = require('playwright');
@@ -41,6 +43,16 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   }
   const afterWarm = await stats();
   await page.evaluate(() => window.__h.reset()); await sync();
+  // Admission counters (runtime.ts LTK_RUN_STATS) and Caitlyn's shot fallbacks (batch1-events.ts CAITLYN_SHOT_STATS) for the
+  // measured pass only; absent on builds before them.
+  const admission = (reset = false) => page.evaluate(async clear => {
+    const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+    const events = await import('/src/rendering/three-mode/vfx-ltk/batch1-events.ts').catch(() => null);
+    const run = runtime?.LTK_RUN_STATS, shots = events?.CAITLYN_SHOT_STATS;
+    if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {} }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
+    return { run: run ? JSON.parse(JSON.stringify(run)) : null, caitlynShots: shots ? { ...shots } : null };
+  }, reset);
+  await admission(true);
   const perSecond = [];
   for (let s = 0; s < seconds; s++) {
     const t0 = Date.now(); await page.evaluate(() => window.__h.step(1000)); await sync(); const wall = Date.now() - t0;
@@ -50,10 +62,13 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   mark('measured pass');
   const frame = perSecond.map(r => r.frameMs).sort((a, b) => a - b);
   const final = await stats();
+  const counters = await admission();
   const report = { board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
     frameMs: { mean: +(frame.reduce((a, b) => a + b, 0) / frame.length).toFixed(1), median: frame[frame.length >> 1], p95: frame[Math.floor(frame.length * 0.95)], max: frame[frame.length - 1] },
-    afterWarm, final, perSecond, warnings: [...new Set(warnings)], errors };
+    afterWarm, final, admission: counters, perSecond, warnings: [...new Set(warnings)], errors };
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2));
-  console.log(JSON.stringify({ frameMs: report.frameMs, peakLayers: final?.peakLayers ?? null, cappedFrames: final?.cappedFrames ?? null, capEvents: final?.capEvents ?? null, errors: errors.length }));
+  console.log(JSON.stringify({ frameMs: report.frameMs, peakLayers: final?.peakLayers ?? null, cappedFrames: final?.cappedFrames ?? null, capEvents: final?.capEvents ?? null,
+    peakRunning: counters.run?.peakRunning ?? null, caitlynBurst: counters.run ? { started: counters.run.started['8d6e1c2e'] ?? 0, dropped: counters.run.dropped['8d6e1c2e'] ?? 0 } : null,
+    caitlynShots: counters.caitlynShots, errors: errors.length }));
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
