@@ -295,7 +295,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   type Over = { overhead: { object: import('three').Object3D }; root: import('three').Object3D };
   const over = (id: string) => debug().pieces.get(id) as unknown as Over;
   // Fable 11-13: the bars follow a cast's lunge and its clip's own travel only for a listed cast clip (overhead-follow.ts
-  // CAST_TRAVEL_CLIPS: a dash or leap inside the clip); any other cast leaves them over the piece's spot (its root, which
+  // CAST_TRAVEL_CLIPS: the body leaves its cell whole); any other cast leaves them over the piece's spot (its root, which
   // slides when the rules move it) plus the knock-up lift. #620 read `expect(farthest).toBeGreaterThan(20)` (a cast
   // lunge) and `expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5)` (a jumping clip) for every cast; the
   // listed clips below keep those assertions, the unlisted jumping clip now stays within 0.5 of its spot.

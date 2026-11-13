@@ -5,12 +5,14 @@ import { CAST_TRAVEL_CLIPS, castMovesBars, missingCastTravelClips } from '../src
 
 // #657: the cast clips whose travel the bars follow, listed by model and clip name (our own judgement, not original data).
 describe('cast clips that move the bars', () => {
-  it('is the reviewed list: Ambessa both branches, Smeech, Sevika punch branch only, Mel unchanged', () => {
+  it('is the reviewed list: Ambessa both branches, Smeech, Sevika punch branch only, Mel unchanged, Vi, Renni', () => {
     expect(CAST_TRAVEL_CLIPS).toEqual({
       ambessa: ['tft13_ambessa_spellfist_dash', 'tft13_ambessa_spellfist_throw', 'tft13_ambessa_spellchain_strike'],
       smeech: ['spell'],
       sevika: ['spell2_dash', 'spell2_punch', 'spell2_slam'],
       mel: ['spell1_dash.tft_set13_evolved', 'spell1_blast.tft_set13_evolved'],
+      vi: ['vi_spell4_hit'],
+      renni: ['spell1_stun', 'spell1_throw'],
     });
   });
 
@@ -20,7 +22,10 @@ describe('cast clips that move the bars', () => {
     expect(castMovesBars('sevika', ['spell3'])).toBe(false);
     expect(castMovesBars('smeech', ['spell'])).toBe(true);
     expect(castMovesBars('ziggs', ['spell'])).toBe(false); // same clip name, unlisted model
-    for (const id of ['warwick', 'vi', 'rell', 'renni', 'leblanc', 'trundle', 'jinx', 'twitch']) expect(castMovesBars(id, ['spell'])).toBe(false);
+    for (const id of ['warwick', 'rell', 'leblanc', 'trundle', 'jinx', 'twitch']) expect(castMovesBars(id, ['spell'])).toBe(false);
+    expect(castMovesBars('vi', ['vi_spell4_hit'])).toBe(true);
+    expect(castMovesBars('renni', ['spell1_stun', 'spell1_throw'])).toBe(true);
+    expect(castMovesBars('rell', ['tft13_rell_spell', 'tft13_rell_spell_out'])).toBe(false);
     expect(castMovesBars('ambessa', undefined)).toBe(false);
     expect(castMovesBars(null, ['spell'])).toBe(false);
   });

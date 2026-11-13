@@ -1941,8 +1941,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
       // The bars, star row and stun ring stand over the piece's spot (its root, which slides to a new cell when the rules
-      // move it: a step, a leap, a dash) plus the knock-up lift in `lift`. Only a listed cast clip (a dash or leap inside
-      // the clip: overhead-follow.ts CAST_TRAVEL_CLIPS) also moves them with the body's clip travel and lunge; any other
+      // move it: a step, a leap, a dash) plus the knock-up lift in `lift`. Only a listed cast clip (one whose body leaves
+      // its cell whole: overhead-follow.ts CAST_TRAVEL_CLIPS) also moves them with the body's clip travel and lunge; any other
       // cast leaves them put, as the original's in-place casts do. The list is per clip, so a walk during or just before
       // a cast changes nothing.
       const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);

@@ -2251,16 +2251,16 @@
     "tests/rendering3d-cast-travel-clips.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3516,
+      "currentBytes": 3823,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8dcdd322e8037185319b7aadd82b3bbfd3fd466328cdad16ea623fe8303b9987",
+      "currentSha256": "7e6a84388cc7dd83dc43150b2b0d00b56480d7ed1a7d6c45bbc607f229b28c5f",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
       "currentBytes": 45116,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "e874fd2baffea6baeaea2033d63149ca6278eda100e64d775ac0992fd148d9df",
+      "currentSha256": "853f5c8113ae1b6be5cd9062104beb2700e2838d700a3b02c9d68277a5cc1f58",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-lighting.test.ts": {
