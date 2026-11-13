@@ -1,1 +1,11 @@
+# Projectile beams pinned (PR #641), after column. Same machine, same asset snapshot; only --column and output names differ.
+# Viktor 2★ basic attack on dummies: beam 87913524 fires about 540 ms after the attack.
 v-capture-attack.cjs viktor vkbeam-viktor-after --star 2 --dist 3 --ms 2000 --systems 87913524 --layers none --from 500 --to 1450 --probe emitters --column after --snapshot c1333710ad8e
+# Viktor 2★ real combat vs a 2★ Garen: his 6th attack (2350 ms into the window) fires the beam about 2890 ms.
+v-capture.cjs viktor vkbeam-viktor-real-after --real 1 --star 2 --dist 3 --nfoes 1 --foestar 2 --ms 4000 --systems 87913524 --layers none --from 2800 --to 3900 --probe emitters --column after --snapshot c1333710ad8e
+# Mel 2★ real combat vs two 3★ Garens: her third cast (branch third, 7750 ms into the window) plays 4f2eb343 from about 8150 ms.
+# jobs-check FAILs this line on purpose: both Garens cast about 3900 ms into the window, long before the judged 8050–8950 ms.
+v-capture.cjs mel vkbeam-mel-real-after --real 1 --star 2 --dist 3 --nfoes 2 --foestar 3 --ms 9050 --systems 4f2eb343 --layers none --from 8050 --to 8950 --probe emitters --column after --snapshot c1333710ad8e
+# Zeri 2★ on dummies (she never casts in a castcmp real combat, so a real window cannot be anchored): two warm attacks,
+# so the recorded one is her third, the empowered shot d160dfa9.
+v-capture-attack.cjs zeri vkbeam-zeri-after --star 2 --dist 3 --warm 2 --ms 1500 --systems d160dfa9 --layers none --from 250 --to 1000 --probe emitters --column after --snapshot c1333710ad8e
