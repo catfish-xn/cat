@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -18,7 +18,7 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 const LISTED = Object.keys(PLAY_OUT_SYSTEMS)[0]!, END = PLAY_OUT_SYSTEMS[LISTED]!, PLAIN = 'sample', HELD = 'held', LATE = 'late';
 const flight = (system: string): TimelineCue => ({ system, event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.6, bone: 'ground', targetBone: 'ground' });
 const index = (cues: readonly TimelineCue[], filler: readonly TimelineCue[]) => ({ version: 1, systems: Object.fromEntries([LISTED, PLAIN, HELD, LATE].map(id => [id, `systems/${id}.json`])),
-  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler } : {}) } });
+  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler.slice(0, 10), ...(filler.length > 10 ? { 'vi-b': filler.slice(10) } : {}) } : {}) } });
 
 // `filler` plays first, from another champion's list, so the board is already holding it when the cast lands.
 async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }, attack = false) {
@@ -30,7 +30,12 @@ async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAI
   }));
   const runtime = createLtkRuntime(library, scene, id => units.get(id), budget ? { budget } : {});
   await runtime.warm('gangplank');
-  if (filler.length) { await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true); }
+  // A skill list holds at most 12 cues: a filler longer than ten plays as two casts. All of it is running before the cast.
+  if (filler.length) {
+    await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    if (filler.length > 10) expect(runtime.play('vi', 'caster', ['target'], 'cast', { skill: 'vi-b' })).toBe(true);
+    for (let i = 0; i < Math.ceil(filler.length / 6); i++) runtime.update(1 / 30, new Camera());
+  }
   expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
   if (attack) expect(runtime.play('gangplank', 'caster', ['target'], 'attack')).toBe(true);
   // At most six starts a frame: a full board takes two.
@@ -94,25 +99,28 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     runtime.dispose();
   });
 
-  // Eleven long cast cues beside the listed projectile: with its tail the board holds every one of MAX_LTK_SYSTEMS (12).
-  const held = Array.from({ length: 11 }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
+  // MAX_LTK_SYSTEMS − 1 long cast cues beside the listed projectile: with its tail the board holds every slot.
+  const held = Array.from({ length: MAX_LTK_SYSTEMS - 1 }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
   const late = (together?: string): TimelineCue => ({ system: LATE, event: 'cast-start', delay: 0.8, duration: 0.5, bone: 'ground', ...(together ? { together } : {}) });
   // A critical hit due while every slot is held: the listed projectile's tail would make room, but it is marked hold.
   const strike = (action?: 'attack'): TimelineCue => ({ system: LATE, event: 'hit', delay: 0.8, duration: 0.5, ...(action ? { action } : {}) });
-  it('a hold tail does not give way, even to a critical newcomer its place would let in', async () => {
+  // Fable 11-13: a hold tail playing out takes no system slot, so it neither gives way nor keeps a newcomer out.
+  it('a hold tail does not give way, and a critical newcomer gets in beside it (the tail takes no slot)', async () => {
     expect(END.hold).toBe(true);
     const { runtime, scene, listed, advance } = await setup([flight(LISTED), strike()], held);
     advance(0.7);
     expect(listed.object.parent).toBe(scene);
     advance(0.2);
     expect(listed.object.parent).toBe(scene);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(1);
     runtime.dispose();
   });
 
-  it('a hold tail is still weighed by the usual eviction, at its own importance', async () => {
-    // The same listed system fired as a plain attack: its run ranks as an attack, which any skill newcomer may evict.
-    const { runtime, scene, listed, advance } = await setup([{ ...flight(LISTED), action: 'attack' }, strike()], held, undefined, true);
-    advance(0.7);
+  it('a hold tail is still weighed by the usual eviction, at its own importance, while it holds a slot (in its own time)', async () => {
+    // The same listed system fired as a plain attack: its run ranks as an attack, which any skill newcomer may evict. Its
+    // opening (before its end) holds a slot as any run does, so a strike due then evicts it.
+    const { runtime, scene, listed, advance } = await setup([{ ...flight(LISTED), action: 'attack' }, { ...strike(), delay: 0.4 }], held, undefined, true);
+    advance(0.3);
     expect(listed.object.parent).toBe(scene);
     advance(0.2);
     expect(listed.object.parent).toBeNull();
@@ -120,13 +128,27 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     runtime.dispose();
   });
 
+  it('only HOLD_FREE_TAILS hold tails at once take no slot: one more holds a slot as before', async () => {
+    // HOLD_FREE_TAILS + 1 listed flights beside long runs fill every slot; once they all play out, HOLD_FREE_TAILS of them
+    // free their slots and the last keeps its own, so exactly HOLD_FREE_TAILS flourishes due then get in, not one more.
+    const tails = HOLD_FREE_TAILS + 1, flourish = { system: LATE, event: 'cast-start' as const, delay: 1, duration: 0.5, bone: 'ground' };
+    const filler = Array.from({ length: MAX_LTK_SYSTEMS - tails }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
+    const { runtime, scene, advance } = await setup([...Array.from({ length: tails }, () => flight(LISTED)), ...Array.from({ length: tails }, () => flourish)], filler);
+    // None plays out on its own here, so each stays through its end.
+    for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });
+    advance(1.1);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LISTED && fx.object.parent === scene)).toHaveLength(tails);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(HOLD_FREE_TAILS);
+    runtime.dispose();
+  });
+
   it('a tail stays when giving it up would not let the new run in either', async () => {
-    // A pair that starts together takes one slot but its two runs' particles: with the budget at twelve runs' reserve,
-    // eleven long runs and the pair overfill it, tail or no tail.
-    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held, { live: 0, max: 12 * MIN_RESERVE });
+    // A pair that starts together takes one slot but its two runs' particles: with the budget at MAX_LTK_SYSTEMS runs'
+    // reserve, MAX_LTK_SYSTEMS − 1 long runs and the pair overfill it, tail or no tail.
+    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held, { live: 0, max: MAX_LTK_SYSTEMS * MIN_RESERVE });
     advance(0.9);
     expect(listed.object.parent).toBe(scene);
-    expect(built).toHaveLength(12);
+    expect(built).toHaveLength(MAX_LTK_SYSTEMS);
     runtime.dispose();
   });
 });

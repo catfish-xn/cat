@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
 import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
@@ -21,13 +21,25 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 }
 
 /**
- * At most 12 systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what it was
- * seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The shared
- * budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07 brawl:
- * every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen particles).
+ * At most MAX_LTK_SYSTEMS systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what
+ * it was seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The
+ * shared budget (effect-library.ts MAX_LIVE_PARTICLES) is apart from the cap, so a cap lets more small systems play, never
+ * more particles (11-07 brawl: every critical drop was on six full 250-slot reservations while most of those systems drew
+ * a few dozen particles).
+ *
+ * 20, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
+ * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
+ * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
+ * 8 v 8 and 60% in a late-game 9 v 9; at 20 they were 91% and 90%, and finished basic-attack visuals went from 36 to 82
+ * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
+ * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
+ * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
-export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
-/** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
+export const HOLD_FREE_TAILS = 4;
+/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
+ * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
 /**
  * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
@@ -314,6 +326,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
    */
   const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
+  /** Root places of each skill system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
+  const roots = new Map<string, number>();
   /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
   const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
     + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
@@ -336,8 +350,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
    * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
    */
-  const slotsNow = () => { let n = 0; const groups = new Set<string>();
-    for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  // Hold tails (cue-overrides.ts PlayOut.hold) playing out take no system slot, the earliest HOLD_FREE_TAILS of them; their
+  // particles still count against the budget (Fable 11-13: Gangplank's scorch held a slot through its 2.3 s end and kept
+  // others' hits out at cap 20).
+  const freeTails = () => {
+    let free: Running[] | undefined;
+    for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
+    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+  };
+  const slotsNow = () => { let n = 0; const groups = new Set<string>(), free = freeTails();
+    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
@@ -390,7 +412,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A missile stops emitting where it lands, so its children are measured stopped at its flight.
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
-        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
+        // A skill system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and
+        // reserves what it holds there; a plain attack's system keeps ROOT_PARTICLES (its spawns never take the room).
+        const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
+        const seconds = Math.min(longest.duration, 10);
+        const unlimited = skill ? measurePeak(prepared, seconds, stopAt, ROOT_PARTICLES_MOST) : 0, wide = skill ? rootRoomOf(unlimited) : ROOT_PARTICLES;
+        if (wide > ROOT_PARTICLES) roots.set(id, wide);
+        // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
+        const peak = skill && wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide);
+        needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
@@ -400,9 +430,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone).originAt(0);
     return [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
   };
-  // A cast's hit or projectile still plays where a dead target stood. A plain attack, a link, a state its target carries
-  // (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
-  const keepsPlace = (spawn: TimelineSpawn) => (spawn.action ?? 'cast') !== 'attack' && (spawn.event === 'hit' || spawn.event === 'projectile')
+  // A cast's hit or projectile still plays where a dead target stood, and so does an empowered attack's (a variant: Twitch's
+  // bolts after his cast, Zeri's third shot; Fable 11-13, a killing bolt drew nothing). A plain attack, a link, a state its
+  // target carries (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
+  const keepsPlace = (spawn: TimelineSpawn) => ((spawn.action ?? 'cast') !== 'attack' || !!spawn.variant) && (spawn.event === 'hit' || spawn.event === 'projectile')
     && !spawn.livingTarget && spawn.targetId !== spawn.sourceId;
   type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean };
   /**
@@ -777,6 +808,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
+        const rootRoom = (spawn.action ?? 'cast') === 'attack' && !spawn.variant ? undefined : roots.get(spawn.system);
         // A pinned beam reaches for its living target, as does a cast's projectile that kept its target's place (lands); when the
         // target dies its far end holds where it last stood.
         const held = (row.part === 'beam' || lands) && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
@@ -790,11 +822,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
-        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
+        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}${rootRoom ? `\nroot ${rootRoom}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {

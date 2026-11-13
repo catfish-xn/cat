@@ -7,7 +7,10 @@ import { toDisplayEvents, toCombatViewState } from '../../src/presentation/comba
 
 export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number;
   /** v-capture --foe-offset K: every foe K columns to the side (+ right), so the target stands ahead and to the side. */
-  foeOffset?: number }
+  foeOffset?: number;
+  /** v-capture --ally X (--allystar N, default 2): one more of `me`'s team, a front-liner one row ahead of it (user rule 11-13:
+   * a ranged caster is recorded behind a tank, its target at least 3 rows away). */
+  ally?: string; allystar?: number }
 /** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
 export const DEFAULT_AFTER_TICKS = 60;
 /** The replay starts this many ticks before the first cast of `me` (half a second). */
@@ -30,7 +33,8 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
     : Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - LEAD_TICKS + 1);
 }
 
-/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0). */
+/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0);
+ * an `ally` one row in front of `me`. */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
@@ -50,6 +54,7 @@ export function realUnits(s: RealSetup): any[] {
     { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
       ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col: (col as number) + (s.foeOffset ?? 0), row } } })),
+    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { col: 3, row: meRow - 1 } } }] : []),
   ];
 }
 

@@ -15,8 +15,13 @@ import type { BufferGeometry, Texture } from 'three';
 import { ParticleMaterialPool, loadParticleEffect, readParticleMesh, type AssetManifest, type ParticleBudget, type ParticleEffect } from '../../rendering3d';
 import type { AssetReader } from './asset-reader';
 
-/** Live particles across every effect on the renderer at most; past it new particles are not born. */
-export const MAX_LIVE_PARTICLES = 1500;
+/**
+ * Live particles across every effect on the renderer at most; past it new particles are not born. 2250, not 1500 (Fable
+ * 11-13, with MAX_LTK_SYSTEMS 20): at cap 20 the 1500 budget was what refused LTK runs in a late-game 9 v 9, and the
+ * frame-time v2.1 budget run (1500 / 2250 / 3000 alternated at cap 20) is the basis. Measured on one GTX 1080 only; the
+ * LTK pass degrade stays for weaker GPUs.
+ */
+export const MAX_LIVE_PARTICLES = 2250;
 /** An effect resource no live effect uses is released after this long. */
 export const EFFECT_IDLE_MS = 120_000;
 
