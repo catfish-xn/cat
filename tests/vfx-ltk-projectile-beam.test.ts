@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { beamSeed, beamSeconds, beamSplit, createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { beamSeed, beamSeconds, beamSplit, createLtkRuntime, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { UNPINNED_BEAM_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -183,5 +183,37 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
     expect(flight.seed).toBe(whole[0]!.seed);
     expect(beams.seed).toBe(beamSeed(flight.seed));
     expect(beams.seed).not.toBe(whole.at(-1)!.seed);
+  });
+
+  // #655 x #642 (review 11-13): a cast's split projectile at a dead target plays both rows at its place, both spare
+  // (Waiting.atPlace), and with a target that dies in flight both hold its last place (one mechanism, Running.holdTarget).
+  it('a dead target: the flight and the beam row of a split cast both go to its place, both counted spare', async () => {
+    const cast: TimelineCue = { ...laser, action: 'cast' };
+    for (const when of ['at play', 'before start'] as const) {
+      const { runtime, units } = await setup([{ ...cast, delay: when === 'at play' ? 0 : 0.1 }]);
+      const spare = LTK_RUN_STATS.placeStarted.mixed ?? 0, competing = LTK_RUN_STATS.started.mixed ?? 0;
+      const at = units.get('target')!.root.position.clone();
+      if (when === 'at play') units.get('target')!.alive = false;
+      expect(runtime.play('tester', 'caster', ['target'])).toBe(true);
+      if (when === 'before start') { units.get('target')!.alive = false; runtime.stopUnit('target'); }
+      for (let f = 0; f < 10; f++) runtime.update(1 / 60, new Camera());
+      expect(built).toHaveLength(2);
+      for (const entry of built) expect(entry.options.target.originAt(0)).toEqual(toEngine(at));
+      expect(LTK_RUN_STATS.placeStarted.mixed).toBe(spare + 2);
+      expect(LTK_RUN_STATS.started.mixed ?? 0).toBe(competing);
+      runtime.dispose();
+    }
+  });
+
+  it('a target that dies in flight: the flight and the beam of a split cast both hold where it was', async () => {
+    const { runtime, units } = await setup([{ ...laser, action: 'cast', duration: 0.6, travelSeconds: 0.6 }]);
+    expect(runtime.play('tester', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 60, new Camera()); runtime.update(1 / 60, new Camera());
+    expect(built).toHaveLength(2);
+    const at = units.get('target')!.root.position.clone();
+    units.get('target')!.alive = false; runtime.stopUnit('target');
+    units.get('target')!.root.position.x += 100; units.get('target')!.root.updateMatrixWorld();
+    for (const entry of built) { expect(entry.options.target.originAt(0)).toEqual(toEngine(at)); expect(entry.fx.object.parent).not.toBeNull(); }
+    runtime.dispose();
   });
 });

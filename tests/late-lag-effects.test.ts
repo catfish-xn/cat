@@ -341,7 +341,8 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('drops an optional hit on a recipient this cast already killed and keeps the caster cues', async () => {
+  // Fable 11-13: a recipient this cast already killed still gets its hit, at the place it stood (before, the hit was dropped).
+  it('plays an optional hit on a recipient this cast already killed at its place, with the caster cues', async () => {
     const { runtime, scene, units, camera } = await setup({ darius: [
       { system: 'deco', event: 'cast-start' as const, delay: 0, duration: 1 },
       { system: 'blow', event: 'hit' as const, delay: 0, duration: 1, optional: true },
@@ -349,8 +350,9 @@ describe('late-game effect budget', () => {
     units.set('dead', { root: new Group(), body: null, alive: false });
     expect(runtime.play('darius', 'darius-0', ['dead'])).toBe(true);
     runtime.update(0.01, camera);
-    expect(shown(scene)).toEqual(['deco']);
-    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(false);
+    expect(shown(scene)).toEqual(['deco', 'blow']);
+    // A required hit too: the cast plays at its place rather than falling back whole.
+    expect(runtime.play('vi', 'vi-0', ['dead'])).toBe(true);
     runtime.dispose();
   });
 

@@ -240,11 +240,13 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(completed.length).toBeGreaterThanOrEqual(4);
   });
 
+  // Fable 11-13: a cue the timeline cannot map is played without, not the whole cast (before, the last two fell back whole):
+  // with no target only the start plays; a flight from the caster to itself is left out and its landing hit plays at launch.
   it.each([
-    { champion: 'vander', targets: ['a'], converted: true },
-    { champion: 'vander', targets: [], converted: false },
-    { champion: 'kogmaw', targets: ['a'], converted: false },
-  ])('online replay keeps self targets and uses whole-action fallback: $champion / $targets', async ({ champion, targets, converted }) => {
+    { champion: 'vander', targets: ['a'], converted: true, shown: ['start', 'hit'] },
+    { champion: 'vander', targets: [], converted: true, shown: ['start'] },
+    { champion: 'kogmaw', targets: ['a'], converted: true, shown: ['start', 'hit'] },
+  ])('online replay keeps self targets and plays what it can map: $champion / $targets', async ({ champion, targets, converted, shown }) => {
     // Synthetic legacy IDs have no champion-specific skill-feel trimming entries.
     vi.stubGlobal('location', { search: '?debug3d&skillfx=off' });
     const board = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }] };
@@ -261,11 +263,11 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     const events = session.advanceDisplay(REPLAY_OPENING_MS); // Advance the opening transition using synthetic time.
     expect(events).toContainEqual(event);
     listener.events!(events);
-    expect(debug().ltk.queued).toBe(converted ? 2 : 0);
+    expect(debug().ltk.queued).toBe(converted ? shown.length : 0);
     await advance(16); await advance(100);
     if (converted) {
       expect(loads).not.toHaveBeenCalled();
-      expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['start', 'hit']);
+      expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(shown);
     } else {
       expect(loads).toHaveBeenCalledExactlyOnceWith('flash', 1, undefined, { quadReach: 2 });
       expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(0);
