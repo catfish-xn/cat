@@ -27,15 +27,17 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * brawl: every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen
  * particles).
  *
- * 24, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
+ * 20, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
  * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
  * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
- * 8 v 8 and 60% in a late-game 9 v 9. At 24 they were 98% and 93%, and finished basic-attack visuals went from 36 to 103
- * of 170 and from 42 to 87 of 212. From 20 up in the 9 v 9 (24 up in the 8 v 8) the budget starts refusing too.
+ * 8 v 8 and 60% in a late-game 9 v 9; at 20 they were 91% and 90%, and finished basic-attack visuals went from 36 to 82
+ * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
+ * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refuses first (43 rows in the
+ * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
-export const MAX_LTK_SYSTEMS = 24, MAX_LTK_QUEUED = 64;
-/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 24: the
- * audit above measured 24 with six. */
+export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
+ * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
 /**
  * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
