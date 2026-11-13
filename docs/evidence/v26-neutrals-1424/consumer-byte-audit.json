@@ -3765,6 +3765,14 @@
       "currentSha256": "20ff90086467c20c67a21b6d6bedb4ffc111b99104d4df6ca3fb259a07480406",
       "firstDifferentByte": 37
     },
+    "tests/vfx-ltk-projectile-beam.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10747,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "c33d4fc91862a615276fbe723b47976876dee33467b221b2e1a7bb1bab873676",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
       "currentBytes": 9710,
