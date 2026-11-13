@@ -4,4 +4,4 @@
 # B: claude/proj-tail-gp-viktor 98493cba — plays out after landing, all draws fade over 0.3 s, gone 1.1 s after landing (fit).
 # C: claude/proj-tail-rec-c — plays out with the system clock at 2.3x after landing, so its own erosion breaks the scorch up.
 # One target, one dummy, 1-star (original: cyB8 1-star close-up 251.0-252.8 s). Landing ~900 ms; keyframes 1200-2500 ms.
-v-capture.cjs gangplank gpt-B --one 1 --nfoes 1 --star 1 --dist 2 --ms 3000 --systems 20cd67dc --layers none --from 1100 --to 1700 --probe emitters --column  --snapshot c1333710ad8e
+v-capture.cjs gangplank gpt-B --one 1 --nfoes 1 --star 1 --dist 2 --ms 3000 --systems 20cd67dc --layers none --from 1100 --to 1700 --probe emitters --column after --snapshot c1333710ad8e
