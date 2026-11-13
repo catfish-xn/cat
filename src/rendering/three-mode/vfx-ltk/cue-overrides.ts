@@ -40,10 +40,11 @@ export const CAITLYN_COMET = {
 } as const;
 
 /**
- * Cells Gangplank's ground-fire line runs from his feet through the target. A FIT, not the original's value: in footage
- * the line runs on past the target and out of frame, so its full length is not yet measured and this is provisional.
+ * Cells Gangplank's ground-fire line runs from his feet through the target. A FIT, not the original's value: its scorch
+ * strand emits for only part of the flight, so the line runs this far for the scorch it leaves to reach about as far past
+ * the target as it does in footage (11-13).
  */
-export const GP_GROUND_LINE_CELLS = 2;
+export const GP_GROUND_LINE_CELLS = 2.7;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
