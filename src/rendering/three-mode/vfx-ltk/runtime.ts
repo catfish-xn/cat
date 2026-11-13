@@ -21,13 +21,23 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 }
 
 /**
- * At most 12 systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what it was
- * seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The shared
- * budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07 brawl:
- * every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen particles).
+ * At most MAX_LTK_SYSTEMS systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what
+ * it was seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The
+ * shared budget (effect-library.ts MAX_LIVE_PARTICLES) is apart from the cap, so a cap lets more small systems play, never
+ * more particles (11-07 brawl: every critical drop was on six full 250-slot reservations while most of those systems drew
+ * a few dozen particles).
+ *
+ * 20, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
+ * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
+ * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
+ * 8 v 8 and 60% in a late-game 9 v 9; at 20 they were 91% and 90%, and finished basic-attack visuals went from 36 to 82
+ * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
+ * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
+ * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
-export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
-/** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
+ * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
 /**
  * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
@@ -77,17 +87,20 @@ const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, dec
 /** The fewest slots a system reserves, whatever its measured peak. */
 export const MIN_RESERVE = 24;
 /**
- * At this many live systems the extra depth and distortion passes are skipped (a together group counts as one: slots).
- * Colour particles still draw in the single board pass.
+ * At this many live systems the late distortion and soft (depth) passes are skipped (a together group counts as one:
+ * slots). Colour particles still draw in the single board pass. The early distortion pass is never skipped: it costs about
+ * 1 ms where it runs (frame-time.cjs v2 passSync, one GTX 1080), and a real 8 v 8 has four or more live systems on 87–91% of
+ * its frames (11-13 audit), so its systems were drawn wrong almost every time they played in a fight (Viktor's storm
+ * c4ef93f3 as a blue-white band with a round hole; Fable 11-13).
  */
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
+  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
@@ -385,9 +398,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone).originAt(0);
     return [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
   };
-  // A cast's hit or projectile still plays where a dead target stood. A plain attack, a link, a state its target carries
-  // (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
-  const keepsPlace = (spawn: TimelineSpawn) => (spawn.action ?? 'cast') !== 'attack' && (spawn.event === 'hit' || spawn.event === 'projectile')
+  // A cast's hit or projectile still plays where a dead target stood, and so does an empowered attack's (a variant: Twitch's
+  // bolts after his cast, Zeri's third shot; Fable 11-13, a killing bolt drew nothing). A plain attack, a link, a state its
+  // target carries (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
+  const keepsPlace = (spawn: TimelineSpawn) => ((spawn.action ?? 'cast') !== 'attack' || !!spawn.variant) && (spawn.event === 'hit' || spawn.event === 'projectile')
     && !spawn.livingTarget && spawn.targetId !== spawn.sourceId;
   type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean };
   /**
