@@ -343,7 +343,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // Gangplank to the target, starting a little behind him (TimelineCue.lineCells, lineBack); it flew from his weapon bone
     // to the target's feet before and its scorch hid under both bodies (11-13 A/B/C keyframes). GP_GROUND_LINE_CELLS and
     // GP_GROUND_LINE_BACK are FITS, not the original's values.
+    // RECORDING ONLY (never merged): ?mute=20cd67dc leaves the ground-fire line out, the reference for occlusion.cjs.
+    ...(typeof location !== 'undefined' && new URLSearchParams(location.search).get('mute') === '20cd67dc' ? [] : [
     { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7, lineCells: GP_GROUND_LINE_CELLS, lineBack: GP_GROUND_LINE_BACK },
+    ] as TimelineCue[]),
     { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
     { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
     { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },

@@ -1,0 +1,3 @@
+v-capture.cjs gangplank ugpreal-hide --real 1 --star 3 --target kogmaw --foestar 1 --foes 3,2;1,1 --target-may-die 1 --ms 4000 --hide-units 1 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank ugpreal-units --real 1 --star 3 --target kogmaw --foestar 1 --foes 3,2;1,1 --target-may-die 1 --ms 4000 --systems 20cd67dc --layers none --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank ugpreal-ref --real 1 --star 3 --target kogmaw --foestar 1 --foes 3,2;1,1 --target-may-die 1 --ms 4000 --hide-units 1 --systems none --layers none --column after --mute 20cd67dc --snapshot c1333710ad8e

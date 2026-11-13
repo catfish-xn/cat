@@ -34,6 +34,12 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
+  // RECORDING ONLY (never merged): v-capture --foes "row,col;row,col" puts the foes on those cells, in order foe, foe2, ...
+  const cells = (s as any).foeCells ? String((s as any).foeCells).split(';').map(pair => pair.split(',').map(Number)) : null;
+  if (cells) return [
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
+    ...cells.map(([row, col], i) => ({ id: i === 0 ? 'foe' : `foe${i + 1}`, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col, row } } })),
+  ];
   return [
     { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>

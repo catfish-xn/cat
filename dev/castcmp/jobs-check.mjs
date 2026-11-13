@@ -58,7 +58,7 @@ for (const line of lines) {
   if (startWhy.length) { results.push({ name, unit, mode: 'real', ok: false, why: startWhy }); continue; }
   const custom = start.fromStart || start.leadMs !== null || o('cast-index') !== undefined;
   const setup = { unit, star: Number(o('star') ?? 3), form: o('form') ?? null, foe: o('target') ?? 'garen', dist: Number(o('dist') ?? 3),
-    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}) };
+    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}) , foeCells: o('foes') ?? null };
   const events = [], alive = [], cells = [];
   let run;
   try {
@@ -72,7 +72,7 @@ for (const line of lines) {
   if (!run.combatStart) why.push('combat start not applied');
   if (!a.coversWindow) why.push(`combat ends at tick ${a.replayEnds}, window ends at ${a.to}`);
   const dead = Object.entries(a.targetsAliveAtEnd).filter(([, up]) => !up).map(([id]) => id);
-  if (dead.length) why.push(`target dead by window end: ${dead.join(',')}`);
+  if (dead.length) (o('target-may-die') === '1' ? [] : why).push(`target dead by window end: ${dead.join(',')}`);
   if (a.otherCasts.length) why.push(`others cast in window: ${a.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
   // A foe next to the caster on its row or nearer the camera may cover it (the browser gate measures
   // the real screen boxes; this is the node stand-in, checked at the cast and through the window).
