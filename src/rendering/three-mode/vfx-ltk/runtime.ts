@@ -57,17 +57,20 @@ const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, dec
 /** The fewest slots a system reserves, whatever its measured peak. */
 export const MIN_RESERVE = 24;
 /**
- * At this many live systems the extra depth and distortion passes are skipped (a together group counts as one: slots).
- * Colour particles still draw in the single board pass.
+ * At this many live systems the late distortion and soft (depth) passes are skipped (a together group counts as one:
+ * slots). Colour particles still draw in the single board pass. The early distortion pass is never skipped: it costs about
+ * 1 ms where it runs (frame-time.cjs v2 passSync, one GTX 1080), and a real 8 v 8 has four or more live systems on 87–91% of
+ * its frames (11-13 audit), so its systems were drawn wrong almost every time they played in a fight (Viktor's storm
+ * c4ef93f3 as a blue-white band with a round hole; Fable 11-13).
  */
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
+  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
