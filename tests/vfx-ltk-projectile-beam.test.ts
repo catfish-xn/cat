@@ -78,7 +78,7 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
 
   it('plays the flight as cued and the beams pinned from the caster to the target for their own life, together', async () => {
     const { runtime, units } = await setup([laser]);
-    expect(runtime.play('tester', 'caster', ['target'], 0, 'attack')).toBe(true);
+    expect(runtime.play('tester', 'caster', ['target'], 'attack')).toBe(true);
     runtime.update(1 / 60, new Camera());
     expect(built).toHaveLength(2);
     const flight = built.find(b => names(b.prepared).includes('Trail'))!, pinned = built.find(b => names(b.prepared).includes('BeamA'))!;
@@ -103,17 +103,17 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
 
   it('a system of beams alone plays only the pinned run; a stationary cue and a beamless projectile are left as they were', async () => {
     let { runtime } = await setup([{ ...laser, system: 'beams' }]);
-    runtime.play('tester', 'caster', ['target'], 0, 'attack'); runtime.update(1 / 60, new Camera());
+    runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
     expect(built.map(b => names(b.prepared))).toEqual([['BeamA']]);
     expect(built[0].options.projectileSeconds).toBeUndefined();
     runtime.dispose();
     ({ runtime } = await setup([{ ...laser, stationary: true }]));
-    runtime.play('tester', 'caster', ['target'], 0, 'attack'); runtime.update(1 / 60, new Camera());
+    runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
     expect(built.map(b => names(b.prepared))).toEqual([['Trail', 'BeamA', 'BeamB']]);
     expect(built[0].options.duration).toBe(0.3);
     runtime.dispose();
     ({ runtime } = await setup([{ ...laser, system: 'plain' }]));
-    runtime.play('tester', 'caster', ['target'], 0, 'attack'); runtime.update(1 / 60, new Camera());
+    runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
     expect(built.map(b => names(b.prepared))).toEqual([['Trail']]);
     expect(built[0].options).toMatchObject({ duration: 0.3, projectileSeconds: 0.3 });
     runtime.dispose();
