@@ -68,6 +68,16 @@ describe('Caitlyn Air Raid: one comet and burst per shot, where its damage lands
     expect(CUE_OVERRIDES.caitlyn.filter(cue => ['92bbeaf7', '8d6e1c2e'].includes(cue.system))).toEqual([]);
   });
 
+  it('a shot lands when it did: the comet starts at the shot\'s event and lands as its burst starts, the fall unchanged', () => {
+    // Its start may move (CAITLYN_COMET.from); the landing, relative to the shot's damage, may not.
+    expect(CAITLYN_COMET.fall).toBe(0.15);
+    for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
+      const burst = cues.find(cue => cue.system === '8d6e1c2e')!, comet = cues.find(cue => cue.system === '92bbeaf7');
+      expect(burst.delay, key).toBe(0.15);
+      if (comet) { expect(comet.delay, key).toBe(0); expect(comet.travelSeconds, key).toBe(0.15); }
+    }
+  });
+
   it('the shot branches join a loaded index that has Caitlyn and their systems, and only then', () => {
     const cues = [...CUE_OVERRIDES.caitlyn, ...Object.values(CUE_EXTRA_SKILLS).flat()];
     const systems = Object.fromEntries(cues.map(cue => [cue.system, `systems/${cue.system}.json`]));
