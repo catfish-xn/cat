@@ -27,6 +27,8 @@ const skills: Record<string, TimelineCue[]> = {
   later: [hit('boom', 0.3)],
   missile: [shot],
   swing: [{ ...hit('spark', 0), action: 'attack' }],
+  // An attack and its empowered form (a variant), each landing 0.3 s in.
+  bolt: [{ ...hit('spark', 0.3), action: 'attack' }, { ...hit('boom', 0.3), action: 'attack', variant: 'empowered' }],
   curse: [hit('curse', 0.3, { livingTarget: true }), hit('boom', 0.3)],
   // A long flourish (decorative): a living target's hit may evict it, a hit at a dead target's place may not.
   glow: [{ system: 'glow', action: 'passive', event: 'cast-start', delay: 0, duration: 5 }],
@@ -276,6 +278,44 @@ describe('vfx-ltk casts at dead targets', () => {
     step(1 / 60);
     expect(of('boom')).toHaveLength(1);
     expect(of('boom')[0].options.anchor.originAt(0)).toEqual(toSystem(units.get('a')!.root.position));
+    runtime.dispose();
+  });
+
+  // Fable 11-13: an empowered attack (a variant) keeps a dead target's place like a cast; a plain attack does not.
+  it('an empowered attack that kills its target still draws, at the target\'s place, now or by the time it lands', async () => {
+    for (const when of ['at play', 'before it lands'] as const) {
+      const { runtime, units, step, of } = await setup();
+      const at = units.get('a')!.root.position.clone(), spare = LTK_RUN_STATS.placeStarted.boom ?? 0;
+      if (when === 'at play') units.get('a')!.alive = false;
+      expect(runtime.play('bolt', 'caster', ['a'], 'attack', 'empowered')).toBe(true);
+      step(0.1);
+      if (when === 'before it lands') { units.get('a')!.alive = false; runtime.stopUnit('a'); units.get('a')!.root.position.x += 40; units.get('a')!.root.updateMatrixWorld(); }
+      step(0.3);
+      expect(of('boom')).toHaveLength(1);
+      expect(of('boom')[0].options.attachment).toBeUndefined();
+      expect(of('boom')[0].options.anchor.originAt(0)).toEqual(toSystem(at));
+      expect(LTK_RUN_STATS.placeStarted.boom).toBe(spare + 1);
+      runtime.dispose();
+    }
+  });
+
+  it('a plain attack is unchanged: refused at a dead target, not drawn when its target dies before it lands, on its unit when alive', async () => {
+    let { runtime, units, step, of } = await setup();
+    units.get('a')!.alive = false;
+    expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(false);
+    runtime.dispose();
+    ({ runtime, units, step, of } = await setup());
+    expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(true);
+    step(0.1);
+    units.get('a')!.alive = false; runtime.stopUnit('a');
+    step(0.3);
+    expect(of('spark')).toHaveLength(0);
+    runtime.dispose();
+    ({ runtime, units, step, of } = await setup());
+    expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(true);
+    step(0.4);
+    expect(of('spark')).toHaveLength(1);
+    expect(of('spark')[0].options.attachment).toBe(units.get('a'));
     runtime.dispose();
   });
 });
