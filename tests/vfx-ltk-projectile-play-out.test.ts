@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -104,24 +104,41 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
   const late = (together?: string): TimelineCue => ({ system: LATE, event: 'cast-start', delay: 0.8, duration: 0.5, bone: 'ground', ...(together ? { together } : {}) });
   // A critical hit due while every slot is held: the listed projectile's tail would make room, but it is marked hold.
   const strike = (action?: 'attack'): TimelineCue => ({ system: LATE, event: 'hit', delay: 0.8, duration: 0.5, ...(action ? { action } : {}) });
-  it('a hold tail does not give way, even to a critical newcomer its place would let in', async () => {
+  // Fable 11-13: a hold tail playing out takes no system slot, so it neither gives way nor keeps a newcomer out.
+  it('a hold tail does not give way, and a critical newcomer gets in beside it (the tail takes no slot)', async () => {
     expect(END.hold).toBe(true);
     const { runtime, scene, listed, advance } = await setup([flight(LISTED), strike()], held);
     advance(0.7);
     expect(listed.object.parent).toBe(scene);
     advance(0.2);
     expect(listed.object.parent).toBe(scene);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(1);
     runtime.dispose();
   });
 
-  it('a hold tail is still weighed by the usual eviction, at its own importance', async () => {
-    // The same listed system fired as a plain attack: its run ranks as an attack, which any skill newcomer may evict.
-    const { runtime, scene, listed, advance } = await setup([{ ...flight(LISTED), action: 'attack' }, strike()], held, undefined, true);
-    advance(0.7);
+  it('a hold tail is still weighed by the usual eviction, at its own importance, while it holds a slot (in its own time)', async () => {
+    // The same listed system fired as a plain attack: its run ranks as an attack, which any skill newcomer may evict. Its
+    // opening (before its end) holds a slot as any run does, so a strike due then evicts it.
+    const { runtime, scene, listed, advance } = await setup([{ ...flight(LISTED), action: 'attack' }, { ...strike(), delay: 0.4 }], held, undefined, true);
+    advance(0.3);
     expect(listed.object.parent).toBe(scene);
     advance(0.2);
     expect(listed.object.parent).toBeNull();
     expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(1);
+    runtime.dispose();
+  });
+
+  it('only HOLD_FREE_TAILS hold tails at once take no slot: one more holds a slot as before', async () => {
+    // HOLD_FREE_TAILS + 1 listed flights beside long runs fill every slot; once they all play out, HOLD_FREE_TAILS of them
+    // free their slots and the last keeps its own, so exactly HOLD_FREE_TAILS flourishes due then get in, not one more.
+    const tails = HOLD_FREE_TAILS + 1, flourish = { system: LATE, event: 'cast-start' as const, delay: 1, duration: 0.5, bone: 'ground' };
+    const filler = Array.from({ length: MAX_LTK_SYSTEMS - tails }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
+    const { runtime, scene, advance } = await setup([...Array.from({ length: tails }, () => flight(LISTED)), ...Array.from({ length: tails }, () => flourish)], filler);
+    // None plays out on its own here, so each stays through its end.
+    for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });
+    advance(1.1);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LISTED && fx.object.parent === scene)).toHaveLength(tails);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(HOLD_FREE_TAILS);
     runtime.dispose();
   });
 

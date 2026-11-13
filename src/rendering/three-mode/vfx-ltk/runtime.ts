@@ -36,6 +36,8 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
+export const HOLD_FREE_TAILS = 4;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -348,8 +350,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
    * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
    */
-  const slotsNow = () => { let n = 0; const groups = new Set<string>();
-    for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  // Hold tails (cue-overrides.ts PlayOut.hold) playing out take no system slot, the earliest HOLD_FREE_TAILS of them; their
+  // particles still count against the budget (Fable 11-13: Gangplank's scorch held a slot through its 2.3 s end and kept
+  // others' hits out at cap 20).
+  const freeTails = () => {
+    let free: Running[] | undefined;
+    for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
+    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+  };
+  const slotsNow = () => { let n = 0; const groups = new Set<string>(), free = freeTails();
+    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
