@@ -30,13 +30,14 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.queued).toBe(0); expect(runtime.active).toBe(0); expect(budget.live).toBe(0); expect(scene.children).toEqual([]); runtime.dispose();
   });
   it('binds the real export IDs, cast rotation and original source/target bones with explicit visual timing', () => {
-    const jinx = S13_TIMELINES.jinx;
-    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0).spawns.map(c => c.system)).toEqual(['a6a2b1cc', '3496e112', '10fede7e', '10fede7e']);
-    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 1).spawns.map(c => c.system)).toEqual(['9bd80364', 'cd05488e', 'cd05488e']);
-    const rocket = mapSkillTimeline(jinx, 'j', ['a', 'b'], 2).spawns;
+    // The cast's branch comes from the rule's cast event; the runtime keeps only that branch's cues (and untagged ones).
+    const jinxCues = S13_TIMELINES.jinx, jinx = (branch: string) => jinxCues.filter(c => c.branch === undefined || c.branch === branch);
+    expect(mapSkillTimeline(jinx('zap'), 'j', ['a', 'b']).spawns.map(c => c.system)).toEqual(['a6a2b1cc', '3496e112', '10fede7e', '10fede7e']);
+    expect(mapSkillTimeline(jinx('chompers'), 'j', ['a', 'b']).spawns.map(c => c.system)).toEqual(['9bd80364', 'cd05488e', 'cd05488e']);
+    const rocket = mapSkillTimeline(jinx('rocket'), 'j', ['a', 'b']).spawns;
     expect(rocket.map(c => c.system)).toEqual(['7e6f06b5', '449d6617', '8b59c09d', '809da1b1']);
     expect(rocket.find(c => c.system === '8b59c09d')).toMatchObject({ bone: 'Cstm_Buffbone_Rocket_Launcher', targetBone: 'BUFFBONE_GLB_GROUND_LOC', targetId: 'a' });
-    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 3)).toEqual(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0));
+    expect(new Set(jinxCues.map(c => c.branch))).toEqual(new Set(['zap', 'chompers', 'rocket']));
     const vi = mapSkillTimeline(S13_TIMELINES.vi, 'v', ['a', 'b']).spawns;
     expect(vi.find(c => c.system === 'c11e6814')).toMatchObject({ bone: 'R_Buffbone_Glb_Hand_Loc', stopAfter: 17 / 30 });
     expect(vi.find(c => c.system === '18e22631')).toMatchObject({ bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 17 / 30 });
@@ -52,7 +53,7 @@ describe('cast timeline replacement and fallback', () => {
     expect(parseIndex({ version: 1, systems, assets: {}, skills: { jinx: explicit } }).skills.jinx).toEqual(explicit);
     delete systems['3496e112']; expect(convertedTimelines(systems).jinx).toBeUndefined();
     expect(convertedTimelines(systems).vi).toEqual(S13_TIMELINES.vi);
-    expect(() => parseIndex({ version: 1, systems, assets: {}, skills: { vi: [{ ...explicit[0], system: '0314626c', phase: 4 }] } })).toThrow('timeline-cue');
+    expect(() => parseIndex({ version: 1, systems, assets: {}, skills: { vi: [{ ...explicit[0], system: '0314626c', branch: 'not a branch' }] } })).toThrow('timeline-cue');
   });
   it('maps cast start, primary projectile, unique per-target impacts without creating gameplay commands', () => {
     const mapped = mapSkillTimeline(cues, 'caster', ['target', 'target', 'other', 'caster']);
@@ -186,14 +187,14 @@ describe('cast timeline replacement and fallback', () => {
     const runtime = createLtkRuntime(library, new Scene(), id => id === 'caster' || id === 'target' ? source : undefined, { budget });
     await library.load('sample');
     // Below half: a hit takes a free LTK slot even when fallback particles fill the shared budget.
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
+    runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(1); expect(budget.live).toBe(1749);
     runtime.clear(); expect(budget.live).toBe(1499);
     // From half the systems on (six), it waits for shared room; a larger shared budget lets six first plays in.
     budget.live = 0; budget.max = 3000;
     for (let i = 0; i < 6; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
     expect(runtime.active).toBe(6); budget.live += 1251;
-    runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
-    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 0, 'attack'); runtime.update(0.01, camera);
+    runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera); expect(runtime.active).toBe(6); expect(budget.live).toBe(2751);
+    budget.live = 2700; runtime.play('jinx', 'caster', ['target'], 'attack'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(7); expect(budget.live).toBe(2950);
     runtime.clear(); expect(budget.live).toBe(1200); runtime.dispose(); runtime.dispose(); expect(budget.live).toBe(1200);
   });

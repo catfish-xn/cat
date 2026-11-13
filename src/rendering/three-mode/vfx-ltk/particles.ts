@@ -3,6 +3,7 @@ import { Box3, BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeom
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
+import type { MissileFlight } from './engine/model/missile';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
 import { createQuads } from './rendering/components/Quads';
@@ -131,8 +132,14 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
     return held;
   };
 }
+/** A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. */
+export function projectileFlight(seconds: number): MissileFlight {
+  return { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
+}
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  /** The projectile lands exactly `projectileSeconds` after launch (projectileFlight), however steep its path. */
+  fixedTime?: boolean;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
@@ -150,8 +157,12 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     const distance = Math.hypot(...from.map((value, index) => value - to[index]));
     // Emitters without particleLinger vanish on a rig stop, so fadeOut keeps emitting and only fades alpha past stopAfter.
     return { life: 'once', height: 0, joints: spec.joints, stopAt: spec.fadeOut ? undefined : spec.stopAfter,
+      // The engine's missile speed is horizontal (a straight line at a constant ground speed), so a speed from the 3D
+      // distance lands a flight early by its drop's share of the path, and the landing stops the emitters there (11-12:
+      // Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds). A falling projectile (fixedTime) flies a
+      // fixed time instead; every other cue projectile keeps its speed until that change is reviewed on its own.
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.fixedTime ? projectileFlight(spec.projectileSeconds) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
@@ -231,7 +242,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },

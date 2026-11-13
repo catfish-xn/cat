@@ -19,7 +19,7 @@ describe('per champion converter catalogues', () => {
     expect(runtime.play('lux', 'source', [])).toBe(false);
     await runtime.warm('lux');
     expect(readJson.mock.calls.some(([url]) => url.includes('nami'))).toBe(false);
-    expect(runtime.play('lux', 'source', [], 0, 'attack')).toBe(true);
+    expect(runtime.play('lux', 'source', [], 'attack')).toBe(true);
     expect(runtime.play('nami', 'source', [])).toBe(false);
     await runtime.warm('nami');
     const lux = await library.champion('lux'), nami = await library.champion('nami');
@@ -41,7 +41,7 @@ describe('per champion converter catalogues', () => {
     const source = { root: new Group(), body: null, alive: true }, runtime = createLtkRuntime(library, new Scene(), () => source);
     await runtime.warm('lux');
     expect(runtime.play('lux', 'source', [])).toBe(false);
-    expect(runtime.play('lux', 'source', [], 0, 'attack')).toBe(true); runtime.dispose();
+    expect(runtime.play('lux', 'source', [], 'attack')).toBe(true); runtime.dispose();
   });
   it('rejects invalid catalogue paths and preserves per-index resource limits', () => {
     const root = { version: 1, systems: {}, assets: {}, skills: {} };

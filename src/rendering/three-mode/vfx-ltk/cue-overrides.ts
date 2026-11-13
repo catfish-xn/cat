@@ -24,6 +24,21 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
+/**
+ * Caitlyn's Air Raid comet, falling onto its target (TimelineCue.fromAbove). Every value is a fitted value, not original
+ * data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
+ */
+export const CAITLYN_COMET = {
+  /** Cells from where the target stands: left on screen, up, and toward the top of the screen. Steep, as in the footage. */
+  from: [-1, 5, -1.5] as const,
+  /** Seconds after the cast it lands: when the exported impact (R_Bombardment_Impact) starts. */
+  lands: 1,
+  /** Seconds it falls, fitted to the footage. */
+  fall: 0.3,
+  /** Seconds its trail fades out over once it lands (fitted: in the footage the column is gone soon after the burst). */
+  linger: 0.15,
+} as const;
+
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
@@ -81,6 +96,23 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '98c2c347', action: 'cast', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', targetBone: chest, delay: 0.2, duration: 0.5, travelSeconds: 0.3, primary: true },
     { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: 0.5, duration: 0.8, primary: true },
     { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: 0.5, duration: 0.7, primary: true },
+  ],
+  // R (Air Raid): the exported list, except the comet (R_Bombardment_Mis). The export kept it as a cast-start with no bone,
+  // so it stood on Caitlyn's feet for half a second: the missile mesh in its orange glow, never reaching anyone (11-03
+  // castcmp review; #622 keyframes). The source table had it as a flight whose path the host supplies, from a blimp her
+  // skeleton does not have. In 14.24 footage it falls steeply from high up and screen left onto the target and bursts
+  // there, so here it falls onto the primary target (CAITLYN_COMET) and lands as the impact starts.
+  caitlyn: [
+    { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
+    { system: '3a811b77', action: 'attack', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0.3333333333333333, duration: 1.5 },
+    { system: 'ce2a567b', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0, duration: 0.4 },
+    { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
+    { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
+    { system: '92bbeaf7', action: 'cast', event: 'projectile', targetBone: ground, primary: true,
+      delay: CAITLYN_COMET.lands - CAITLYN_COMET.fall, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger, travelSeconds: CAITLYN_COMET.fall,
+      stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'cast', event: 'hit', delay: 1, duration: 1.5 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
@@ -153,9 +185,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
     { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 0 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 1 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', phase: 2, targetLimit: 3 },
+    // Branch from the rule's cast event (combat-g2-3.ts): `single` hits the primary target, `splash` every third cast.
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, branch: 'single' },
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', branch: 'splash', targetLimit: 3 },
   ],
   // E: run/dash dust on self, fast shuriken, gold hit ~0.3s, mark on primary, blue dash hit ~1.1s (no back-dash motion in harness).
   akali: [
@@ -316,6 +348,11 @@ export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, strin
   // Ambessa: odd casts chain (Q: the chain swipe and its hit), even casts fist (R: dash, ground, weapon and slam hit).
   // Rule side: combat-g2-2.ts writes the branch (PR #623); the 11-11 live index played all six on every cast.
   ambessa: { '3b4c15e0': 'chain', '8a64f4dd': 'chain', '754b6c78': 'fist', 'a429a900': 'fist', '6390530e': 'fist', 'cba05b6e': 'fist' },
+  // Jinx W/E/R (combat writes zap/chompers/rocket). The live batch-2 index was staged from the old jinx.ts and still tags
+  // these cues with the dropped `phase` 0/1/2 instead of a branch, so without these tags every cast played all three
+  // (11-12 #629 Windows run). Same systems as champions/jinx.ts.
+  jinx: { a6a2b1cc: 'zap', '3496e112': 'zap', '10fede7e': 'zap', '40140250': 'zap', '9bd80364': 'chompers', cd05488e: 'chompers',
+    '7e6f06b5': 'rocket', '449d6617': 'rocket', '8b59c09d': 'rocket', '809da1b1': 'rocket' },
 };
 /** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
 export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {

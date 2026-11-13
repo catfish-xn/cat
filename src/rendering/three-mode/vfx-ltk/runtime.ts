@@ -107,7 +107,9 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   /** How a listed projectile's play-out ends (cue-overrides.ts PLAY_OUT_SYSTEMS); PLAY_OUT_CAP with none. */
   playOutEnd?: PreparedVfx['playOut'];
   /** Its end came and it is playing out. */
-  ending?: boolean }
+  ending?: boolean;
+  /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
+  heldAtEnd?: number }
 /**
  * The longest a run that plays out stays past its end. Vi's row shockwave keeps its rock children's smoke about 1.3 s
  * past its landing, and none of its own particles' curves run longer.
@@ -120,6 +122,10 @@ export const PLAY_OUT_CAP = 2;
  */
 export function rowPath(from: WorldPoint, side: -1 | 1, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] {
   return [from, [from[0] + side * cells * cell, from[1], from[2]]];
+}
+/** Where a projectile falling onto a target standing at `at` starts (TimelineCue.fromAbove): `offset` cells from there. */
+export function dropStart(at: WorldPoint, offset: readonly [number, number, number], cell = BOARD_CELL): WorldPoint {
+  return [at[0] + offset[0] * cell, at[1] + offset[1] * cell, at[2] + offset[2] * cell];
 }
 /** The board's cell geometry (board-feed BoardFrame: columns, hexRadius, origin), in the units pieces stand in. */
 export interface RowBoard { readonly columns: number; readonly radius: number; readonly origin: { readonly x: number; readonly y: number } }
@@ -196,7 +202,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   /** A run that plays out reaches its end: it stops emitting and stays until played out, by its own end or PLAY_OUT_CAP. */
   const beginEnding = (run: Running) => {
-    run.fx.stop(); run.ending = true;
+    run.fx.stop(); run.ending = true; run.heldAtEnd = run.reserved;
     const own = run.playOutEnd;
     run.until = clock + (own?.seconds ?? PLAY_OUT_CAP);
     if (own) run.fx.endWithin(own.seconds, own.fade);
@@ -250,7 +256,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };
-  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], castIndex: number, action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
+  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
@@ -258,7 +264,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues || !source?.alive || source.disposed) return false;
-      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
+      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds);
       if (unsupported.length || !spawns.length) return false;
       const living = (spawn: TimelineSpawn) => {
         if (spawn.targetId === undefined) return true;
@@ -277,15 +283,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warm,
     /** Variants live inside the champion's own catalogue; no global ID flattening. */
     playVariant(champion: string, variant: string, sourceId: string, targetIds: readonly string[] = [], group?: string): boolean {
-      return enqueue(champion, variant, sourceId, targetIds, 0, 'cast', group, true);
+      return enqueue(champion, variant, sourceId, targetIds, 'cast', group, true);
     },
     stopGroup(group: string) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].group === group) waiting.splice(at, 1);
       for (const run of running) if (run.group === group) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** True means every active cue is covered and queued. Partial/unsupported actions
-     * return false without enqueueing anything, so the host runs its entire fallback. */
-    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
+     * return false without enqueueing anything, so the host runs its entire fallback. Which cues a cast plays comes from
+     * the rule's cast event (`extra.branch`), never from a count. */
+    play(champion: string, sourceId: string, targetIds: readonly string[], action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
       if (closed) return false;
       void warm(champion);
       const context: LtkPlayOptions = extra !== undefined && typeof extra !== 'string' ? extra : {};
@@ -297,7 +304,6 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
         && cue.variant === form
         && (cue.branch === undefined || cue.branch === context.branch)
-        && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {
         if (!Number.isFinite(context.channelSeconds) || context.channelSeconds <= 0 || context.channelSeconds > 10) return false;
@@ -322,7 +328,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues) return false;
-      const mapped = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board), { unsupported } = mapped;
+      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board), { unsupported } = mapped;
       // An optional target cue whose recipient is already gone (often killed by this very cast) is dropped, not fatal.
       const spawns = mapped.spawns.filter(spawn => {
         if (!spawn.optional || spawn.targetId === undefined || context.snapshotTargets) return true;
@@ -395,10 +401,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
           beginEnding(run);
         }
-        // Playing out, it holds only what it still has live: its reserve shrinks as its particles die.
+        // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
+        // (a child may still emit through its own short life after the stop), never above what it held at its end.
         if (run.ending) {
-          const live = run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0);
-          if (live < run.reserved) { if (options.budget) options.budget.live -= run.reserved - live; run.reserved = live; }
+          const live = Math.min(run.heldAtEnd ?? run.reserved, run.fx.driver.pool.count + (run.fx.children ? run.fx.driver.childRoom().particles : 0));
+          if (live !== run.reserved) { if (options.budget) options.budget.live += live - run.reserved; run.reserved = live; }
         }
         const over = run.ending ? run.fx.playedOut || clock + 1e-9 >= run.until : run.fx.finished || clock + 1e-9 >= run.until;
         if (over) { release(run, run.stopped); running.delete(run); }
@@ -439,6 +446,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const board = rowStart && spawn.rowToEnd ? options.board?.() ?? null : null;
         const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
         if (rowStart && !(rowCells > 0.05)) continue;
+        // A falling projectile (TimelineCue.fromAbove) starts above where its target stands (its snapshot point once it is
+        // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
+        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
+        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
@@ -458,7 +470,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
         // first, before anything still in its own time is weighed for eviction. Only when giving up every tail would let the
         // new run in: one that stays out anyway is weighed below as before, and no tail is cut for it (Fable 11-12, a
-        // Gangplank cast's own hits filled every system slot and took its landed ground-fire line for nothing).
+        // Gangplank cast's own hits filled every system slot and took its landed ground-fire line for nothing). Giving way
+        // removes the whole tail at once, its rock children and smoke included: what was left of it disappears in that frame.
         const tailsAdmit = () => {
           let tails = 0, room = 0;
           for (const run of running) if (run.ending) { tails++; room += run.reserved; }
@@ -495,8 +508,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
-        const attachment = rowEnds || (fixed && spawn.event !== 'projectile') ? undefined : host;
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
         const tail = Math.min(0.25, runFor / 4);
@@ -507,8 +520,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const room = rooms.get(spawn.system);
         const nextOptions = { anchor, attachment,
           target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
-          joints: rowEnds || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined,
+          joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.

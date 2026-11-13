@@ -26,20 +26,24 @@ const cast = { type: 'cast', sourceId: 'alpha' } as const;
 describe('cast rotation entries that are whole sequences', () => {
   it('selects a string entry as a single main and a sequence entry as itself', () => {
     const { metadata } = fixture();
-    expect(selectCastSequence(metadata, 0)).toEqual({ main: 'zap' });
-    expect(selectCastSequence(metadata, 2)).toEqual({ in: 'wind', main: 'fire', out: 'after' });
-    expect(selectCastSequence(metadata, 5)).toEqual({ in: 'wind', main: 'fire', out: 'after' });
+    // castIndex is the rule's cast number from the cast event (1 = first cast); 0 = not reported, so no rotation guess.
+    expect(selectCastSequence(metadata, 1)).toEqual({ main: 'zap' });
+    expect(selectCastSequence(metadata, 3)).toEqual({ in: 'wind', main: 'fire', out: 'after' });
+    expect(selectCastSequence(metadata, 6)).toEqual({ in: 'wind', main: 'fire', out: 'after' });
+    expect(selectCastSequence(metadata, 0)).toBeUndefined();
     // An explicit star3 variant still wins over the rotation; star level alone does not change it.
-    expect(selectCastSequence({ castVariants: { ...metadata.castVariants, star3: { main: 'long' } } }, 2, { starLevel: 3 })).toEqual({ main: 'long' });
-    expect(selectCastSequence(metadata, 2, { starLevel: 3 })).toEqual({ in: 'wind', main: 'fire', out: 'after' });
+    expect(selectCastSequence({ castVariants: { ...metadata.castVariants, star3: { main: 'long' } } }, 3, { starLevel: 3 })).toEqual({ main: 'long' });
+    expect(selectCastSequence(metadata, 3, { starLevel: 3 })).toEqual({ in: 'wind', main: 'fire', out: 'after' });
   });
   it('plays every stage of the rotating sequence in order on the third cast', () => {
     const f = fixture();
-    const state = new UnitActionState('alpha', { blendSeconds: 0, resolvePlayback: (a, i) => f.mixer.resolvePlayback(a, i) });
+    // The board hands the cast event's castIndex to the resolver; the state machine itself counts nothing.
+    let castIndex = 0;
+    const state = new UnitActionState('alpha', { blendSeconds: 0, resolvePlayback: a => f.mixer.resolvePlayback(a, castIndex) });
     f.mixer.apply(state.output);
-    expect(state.consume(cast).playback?.clips).toEqual(['zap']);
-    expect(state.consume(cast).playback?.clips).toEqual(['chomp']);
-    const output = state.consume(cast);
+    castIndex = 1; expect(state.consume(cast).playback?.clips).toEqual(['zap']);
+    castIndex = 2; expect(state.consume(cast).playback?.clips).toEqual(['chomp']);
+    castIndex = 3; const output = state.consume(cast);
     expect(output.playback).toEqual({ clips: ['wind', 'fire', 'after'], durationSeconds: 2 });
     f.mixer.apply(output);
     f.mixer.update(0.25); expect(f.bone.position.x).toBeCloseTo(10.5);
@@ -52,7 +56,7 @@ describe('cast rotation entries that are whole sequences', () => {
     const f = fixture();
     const metadata = { castVariants: { rotate: ['zap', { in: 'wind', main: 'long', out: 'after' }] } };
     const mixer = new UnitAnimationMixer(f.root, f.clips, { idle: 'rest' }, metadata);
-    const playback = mixer.resolvePlayback('cast', 1)!;
+    const playback = mixer.resolvePlayback('cast', 2)!;
     expect(playback).toEqual({ clips: ['wind', 'long', 'after'], durationSeconds: 2.5 });
     mixer.apply({ state: 'cast', previous: 'idle', revision: 1, loop: false, blendSeconds: 0, playback });
     mixer.update(2.5 * 0.5 / 3 + 2.5 * 1 / 3); expect(f.bone.position.x).toBeCloseTo(42);
@@ -62,7 +66,7 @@ describe('cast rotation entries that are whole sequences', () => {
     const f = fixture();
     const metadata = { castVariants: { rotate: [{ in: 'wind', main: 'fire', layers: ['glow'] }] } };
     const mixer = new UnitAnimationMixer(f.root, f.clips, { idle: 'rest' }, metadata);
-    const playback = mixer.resolvePlayback('cast', 0)!;
+    const playback = mixer.resolvePlayback('cast', 1)!;
     expect(playback).toEqual({ clips: ['wind', 'fire'], durationSeconds: 2 });
     mixer.apply({ state: 'cast', previous: 'idle', revision: 1, loop: false, blendSeconds: 0, playback });
     const glow = mixer.mixer.clipAction(f.clips.find(c => c.name === 'glow')!);

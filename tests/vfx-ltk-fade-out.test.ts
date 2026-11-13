@@ -97,9 +97,9 @@ describe('a board-timed receipt delay', () => {
     const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), camera = new Camera();
     const runtime = createLtkRuntime(library, scene, () => source);
     await library.load('sample');
-    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: 3 })).toBe(false);
-    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: -0.1 })).toBe(false);
-    expect(runtime.play('jinx', 'caster', [], 0, 'cast', { delay: 0.5 })).toBe(true);
+    expect(runtime.play('jinx', 'caster', [], 'cast', { delay: 3 })).toBe(false);
+    expect(runtime.play('jinx', 'caster', [], 'cast', { delay: -0.1 })).toBe(false);
+    expect(runtime.play('jinx', 'caster', [], 'cast', { delay: 0.5 })).toBe(true);
     runtime.update(0.45, camera); expect(runtime.active).toBe(0);
     runtime.update(0.1, camera); expect(runtime.active).toBe(1);
     runtime.dispose(); library.dispose();
