@@ -251,6 +251,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const slotsNow = () => { let n = 0; const groups = new Set<string>();
     for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
+  // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
+  const spareSlots = () => { let n = 0; const groups = new Set<string>();
+    for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -337,6 +340,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     let last: ReturnType<Anchor['originAt']> | undefined;
     return { originAt(time) { const unit = findUnit(id); if (!last || (unit?.alive && !unit.disposed)) last = live.originAt(time); return last; },
       basisInto: (time, out) => live.basisInto(time, out) };
+  };
+  // A waiting row at a dead target's place: taken so when the cast played (Waiting.atPlace), or its target has died since.
+  const placeRow = (row: Waiting) => {
+    if (row.atPlace) return true;
+    if (!row.place || row.snapshot || !row.spawn.targetId) return false;
+    const unit = findUnit(row.spawn.targetId);
+    return !unit?.alive || !!unit.disposed;
   };
   const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
@@ -518,7 +528,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         // A row at a dead target's place (placeTargets) only takes free room: it never waits in line, never makes a tail give
         // way and never evicts a run, so it can only add to what plays (Fable 11-13: it pushed living targets' hits out).
-        const atPlace = !!row.atPlace || (!!row.place && !snapshot && !!spawn.targetId && (!target?.alive || !!target.disposed));
+        // A together group is at a dead target's place only whole: one row at a living target makes all of it ordinary rows,
+        // so a spare group never takes a living row with it when it gives way or is dropped.
+        const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
+          && [...running].every(run => run.together !== row.together || run.atPlace)));
         const countMiss = atPlace ? countPlaceDrop : countDrop;
         if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
@@ -554,7 +567,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
         // Runs at a dead target's place are left out of the count: they only hold spare room (Running.atPlace).
-        const shared = importance === 'attack' && slotsNow() - [...running].filter(run => run.atPlace).length >= ATTACK_FREE_SLOTS;
+        const shared = importance === 'attack' && slotsNow() - spareSlots() >= ATTACK_FREE_SLOTS;
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
@@ -598,7 +611,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
-          else { countMiss(spawn.system); for (const other of partners) { (other.atPlace ? countPlaceDrop : countDrop)(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          else { countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
