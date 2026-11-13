@@ -3649,6 +3649,14 @@
       "currentSha256": "13b224ae631c8503c9e5f8c8b2050bbfad588517a0e6fec9e8e2fa98e6a5b893",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-beam-trim.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2870,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "3a872679362bdaaace0ba9296ef2848927324d76977fa4a622aeef9493a8071e",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
