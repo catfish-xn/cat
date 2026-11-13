@@ -15,16 +15,19 @@
 // to the caster->first target line in the window ("clear": never between them); under 0.5 is a WARN.
 // Only the recorded window counts: a tank that stands on the line at combat start and walks off before the window opens
 // gives no warning.
+// --form takes melee or ranged (any line): anything else fails, since the renderer would draw the ranged form.
 // Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
 if (!argv[0]) { console.error('usage: jobs-check.mjs <jobs.txt> [--out check.json]'); process.exit(2); }
 const here = dirname(fileURLToPath(import.meta.url));
+const { formProblem } = createRequire(import.meta.url)('./common.cjs');
 const bundle = join(mkdtempSync(join(tmpdir(), 'castcmp-')), 'real-combat.mjs');
 await build({ entryPoints: [join(here, 'real-combat.ts')], outfile: bundle, bundle: true, format: 'esm', platform: 'node', logLevel: 'silent' });
 const rc = await import(pathToFileURL(bundle).href);
@@ -34,6 +37,8 @@ const results = [];
 for (const line of lines) {
   const [script, unit, name, ...rest] = line.split(/\s+/);
   const o = k => { const i = rest.indexOf('--' + k); return i >= 0 ? rest[i + 1] : undefined; };
+  // --form melee | ranged only (common.cjs formProblem): any other value records the ranged form. Dummy and real lines alike.
+  { const why = formProblem(o('form')); if (why) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [why] }); continue; } }
   if (o('kill') && o('real')) { results.push({ name, unit, mode: 'real', ok: false, why: ['--kill is for dummies only'] }); continue; }
   // --pin-foe N: dummies only, exactly one dummy N hexes ahead (1-5); --hide-units 1: unit models not drawn (labelled).
   const pinWhy = o('pin-foe') === undefined ? [] : [
