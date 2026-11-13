@@ -3,6 +3,8 @@ const params = new URLSearchParams(location.search);
 let clock = 0;
 let seq = 100;
 const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
+// Rec branch: ?degrade= read before the renderer mounts.
+if (new URLSearchParams(location.search).get('degrade')) (globalThis as any).__LTK_DEGRADE = new URLSearchParams(location.search).get('degrade') === 'off' ? Infinity : Number(new URLSearchParams(location.search).get('degrade'));
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };

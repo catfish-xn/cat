@@ -83,7 +83,8 @@ export const MIN_RESERVE = 24;
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
+  // REC BRANCH ONLY (never merge): ?degrade=N|off sets the threshold per capture (1 = every optional pass off, off = never).
+  if (slots >= ((globalThis as any).__LTK_DEGRADE ?? LTK_PASS_DEGRADE_AT)) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
