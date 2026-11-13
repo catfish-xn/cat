@@ -164,3 +164,32 @@ export function overheadHeights(o: { rootY: number; followY: number; starHeight:
   const base = o.rootY + o.followY + o.lift;
   return { stars: base + o.starHeight, bar: base + o.starHeight + (o.stars ? o.starSize / 2 + 3 : -o.starGap / 2), halo: base + o.headHeight };
 }
+
+/**
+ * Whether the cast a piece is playing moved it in the rules (Fable 11-13): only then do its bars follow the clip's
+ * travel and the lunge. A cast that stays on its cell (Twitch's Spray and Pray hops its Root by about two thirds of
+ * its height) leaves the bars over the spot, as an attack, an idle or a hit reaction does (the original's bar did not
+ * move over Twitch's cast, FB7YoqakYqE 3★). The rules' own `movement` event of the caster (a leap, a dash, a swap;
+ * forced displacements are not this) at or after its cast tick, or in the same tick just before it, marks the cast.
+ */
+export class CastTravel {
+  private castTick = Number.NEGATIVE_INFINITY;
+  private lastMoveTick = Number.NEGATIVE_INFINITY;
+  private moved = false;
+  /** The piece's cast event (`tick` null when the event carries none: such a cast never counts as moved). */
+  cast(tick: number | null): void {
+    this.castTick = tick ?? Number.POSITIVE_INFINITY;
+    this.moved = tick !== null && this.lastMoveTick === tick;
+  }
+  /** One of the piece's own movement events. */
+  movement(tick: number | null): void {
+    if (tick === null) return;
+    this.lastMoveTick = tick;
+    if (tick >= this.castTick) this.moved = true;
+  }
+  /** The cast now playing has moved the piece. */
+  get travelling(): boolean { return this.moved; }
+}
+/** The bars follow the clip's travel and the lunge only while the piece plays a cast that moved it in the rules. */
+export const barsFollow = (state: string, travel: Pick<CastTravel, 'travelling'>): boolean => state === 'cast' && travel.travelling;
+

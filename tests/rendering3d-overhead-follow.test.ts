@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
-import { BODY_SLACK, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, mirrorName, overheadHeights, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
+import { BODY_SLACK, CastTravel, OVERHEAD_FOLLOW_SECONDS, OVERHEAD_SNAP_DISTANCE, OverheadFollow, barsFollow, mirrorName, overheadHeights, pickFollowBones } from '../src/rendering/three-mode/overhead-follow';
 import { CONTROL_3D, ControlMotion } from '../src/rendering/three-mode/unit-control';
 
 // Synthetic skeleton, made-up integers.
@@ -175,3 +175,43 @@ describe('overhead follow', () => {
     expect(noStars.bar).toBeCloseTo(5 + 2 + 112 - 6);
   });
 });
+
+// Fable 11-13: a cast moves the bars only when it moved the piece in the rules (its own `movement` event). Twitch's
+// Spray and Pray hops its Root by about two thirds of its height on its cell; the original bar stays put over it
+// (FB7YoqakYqE 170.8–172.0 s, 3★ Twitch: name card, the only unit on its side, three-star bar).
+describe('cast travel: only a cast that moved the piece in the rules moves its bars', () => {
+  it('an in-place cast does not travel; a movement of its own at or after the cast tick does', () => {
+    const t = new CastTravel();
+    t.cast(100); expect(t.travelling).toBe(false);
+    t.movement(102); expect(t.travelling).toBe(true);           // a leap 100 ms into the cast (Smeech)
+    t.cast(200); expect(t.travelling).toBe(false);              // the next cast starts clean
+    t.movement(199); t.cast(199); expect(t.travelling).toBe(true); // the move came first in the same tick (Ambessa's chain dash)
+    t.movement(150); t.cast(300); expect(t.travelling).toBe(false); // an older step does not count
+    t.cast(null); t.movement(400); expect(t.travelling).toBe(false);  // a cast with no tick never counts as moved
+  });
+
+  it('barsFollow: only a moving cast, never an attack or idle', () => {
+    const moved = new CastTravel(); moved.cast(10); moved.movement(10);
+    const still = new CastTravel(); still.cast(10);
+    expect(barsFollow('cast', moved)).toBe(true);
+    expect(barsFollow('cast', still)).toBe(false);
+    expect(barsFollow('attack', moved)).toBe(false);
+    expect(barsFollow('idle', moved)).toBe(false);
+  });
+
+  it('an in-place cast whose Root hops leaves the bars over the spot (Twitch); a moving cast still follows it', () => {
+    const height = 100, steps = 20;
+    const hop = (moving: boolean) => {
+      const { root, scene, bone, idle } = body();
+      const follow = OverheadFollow.of(scene, [idle], 'idle');
+      bone.position.set(1, 10 + 33, 2); root.updateMatrixWorld(true); // the Root up 66 world units (two thirds of the height), as in Twitch's cast
+      const t = new CastTravel(); t.cast(1); if (moving) t.movement(2);
+      for (let i = 0; i < steps; i++) { const f = barsFollow('cast', t); follow.update(1, f ? { x: 5, z: 0 } : null, height, f); }
+      return follow.offset.clone();
+    };
+    expect(hop(false).length()).toBe(0);
+    const moved = hop(true);
+    expect(moved.y).toBeCloseTo(66); expect(moved.x).toBeCloseTo(5);
+  });
+});
+

@@ -288,30 +288,37 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   // User 11-11: the bar stayed put while the model moved. Bars, star row and stun ring follow the drawn body.
   type Over = { overhead: { object: import('three').Object3D }; root: import('three').Object3D };
   const over = (id: string) => debug().pieces.get(id) as unknown as Over;
-  it('the bar follows a cast lunge out and back', async () => {
+  // Fable 11-13: a cast moves the bar only when it moved the piece in the rules (its own `movement` event, a leap or a
+  // dash). Before: any cast's lunge and clip travel moved it (`farthest > 20`, `rise > 5 && shift > 5`). Now an in-place
+  // cast leaves the bar over the spot, and the same cast with its own movement event still moves it as before.
+  const moved = (tick: number) => ({ type: 'movement', tick, eventSeq: tick + 1, unitId: 'a', from: { col: 0, row: 0 }, to: { col: 0, row: 0 } }) as unknown as DisplayCombatEvent;
+  it.each([{ moving: true }, { moving: false }])('the bar follows a cast lunge out and back only when the cast moved the piece (moving=$moving)', async ({ moving }) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'ambessa' }, { ...frame.pieces[0], id: 'b', team: 'enemy', x: 350 }] };
     listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); await advance();
     const spot = over('a').overhead.object.position.clone(), root = over('a').root.position.clone();
-    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    // The move comes first in the tick, as Ambessa's chain dash does (a move after the cast would end the lunge at once).
+    listener.events([...(moving ? [moved(1)] : []), { ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
     let farthest = 0;
     for (let i = 0; i < 20; i++) { await advance(30); farthest = Math.max(farthest, over('a').overhead.object.position.distanceTo(spot)); }
-    expect(over('a').root.position.distanceTo(root)).toBe(0); // the rules keep the piece on its cell
-    expect(farthest).toBeGreaterThan(20);
+    expect(over('a').root.position.distanceTo(root)).toBe(0); // the frame keeps the piece on its cell
+    if (moving) expect(farthest).toBeGreaterThan(20);
+    else expect(farthest).toBeLessThan(0.5);
     for (let i = 0; i < 20; i++) await advance(50);
     expect(over('a').overhead.object.position.distanceTo(spot)).toBeLessThan(1);
   });
 
-  it('the bar follows the clip\'s own root travel and jump height, and comes back after', async () => {
+  it.each([{ moving: true }, { moving: false }])('the bar follows the clip\'s own root travel and jump height only when the cast moved the piece, and comes back after (moving=$moving)', async ({ moving }) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'jumper' }] };
     listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); await advance();
     const spot = over('a').overhead.object.position.clone();
-    listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]);
+    listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent, ...(moving ? [moved(1)] : [])]);
     let rise = 0, shift = 0;
     for (let i = 0; i < 20; i++) {
       await advance(40); const at = over('a').overhead.object.position;
       rise = Math.max(rise, at.y - spot.y); shift = Math.max(shift, Math.hypot(at.x - spot.x, at.z - spot.z));
     }
-    expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5);
+    if (moving) { expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5); }
+    else { expect(rise).toBeLessThan(0.5); expect(shift).toBeLessThan(0.5); }
     for (let i = 0; i < 30; i++) await advance(50);
     expect(over('a').overhead.object.position.distanceTo(spot)).toBeLessThan(1);
   });
