@@ -464,7 +464,7 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
   // RECORDING PROBE ONLY, never merged: this emitter off to see whether it draws the artefact.
-  '92bbeaf7': ['Fire_Trail', 'Fire_Trail1'],
+  '92bbeaf7': ['Center_Trail2'],
 };
 
 /**
