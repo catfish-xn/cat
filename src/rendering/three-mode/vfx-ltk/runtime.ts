@@ -32,7 +32,9 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  */
 // REC BRANCH ONLY (never merge): per-row admission counts for dev/castcmp/frame-time.cjs, keyed unit|action|system[:part].
 const __recKey = (row: { spawn: TimelineSpawn; part?: string }) => `${row.spawn.sourceId}|${row.spawn.action ?? 'cast'}|${row.spawn.system}${row.part ? ':' + row.part : ''}`;
-const __rec = (row: any, field: 'asked' | 'started' | 'dropped') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = __recKey(row); (all[k] ??= { asked: 0, started: 0, dropped: 0 })[field]++; };
+const __rec = (row: any, field: 'asked' | 'started' | 'dropped') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = __recKey(row); (all[k] ??= { asked: 0, started: 0, dropped: 0, gaveWay: 0, evicted: 0 })[field]++; };
+/** A started run cut early: a tail that gave way, or a run evicted for a more important one (keyed like its row, no part). */
+const __recRun = (run: { source: string; action: string; system: string }, field: 'gaveWay' | 'evicted') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = `${run.source}|${run.action}|${run.system}`; (all[k] ??= { asked: 0, started: 0, dropped: 0, gaveWay: 0, evicted: 0 })[field]++; };
 export const MAX_LTK_SYSTEMS = 24, MAX_LTK_QUEUED = 64;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 24: the
  * audit above measured 24 with six. */
@@ -477,6 +479,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           let tail: Running | undefined;
           for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
+          __recRun(tail, 'gaveWay');
           release(tail); running.delete(tail);
         }
         while (blocked()) {
@@ -486,6 +489,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
+          __recRun(victim, 'evicted');
           release(victim); running.delete(victim);
         }
         if (blocked()) {
