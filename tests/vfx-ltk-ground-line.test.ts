@@ -46,6 +46,10 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     // The height of the start is kept even when the other point stands higher.
     expect(groundLine([0, 3, 0], [5, 9, 0], 1)![1]).toEqual([cell, 3, 0]);
     expect(groundLine([1, 0, 1], [1, 5, 1], 2)).toBeNull();
+    // Starting back cells behind the first point, away from the second; the length stays cells.
+    const [start, end] = groundLine([10, 0, 20], [40, 0, 60], 2, 0.5)!;
+    expect(start[0]).toBeCloseTo(10 - 0.5 * cell * 0.6, 9); expect(start[2]).toBeCloseTo(20 - 0.5 * cell * 0.8, 9);
+    expect(Math.hypot(end[0] - start[0], end[2] - start[2])).toBeCloseTo(2 * cell, 9);
   });
 
   it('is checked when loaded: a projectile only, not with a row or a fall, half a cell to eight', () => {
@@ -57,6 +61,9 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     expect(() => parseIndex(index([line(9)]))).toThrow();
     expect(() => parseIndex(index([{ ...line(), rowSide: 1, rowCells: 2 }]))).toThrow();
     expect(() => parseIndex(index([{ ...line(), fromAbove: [0, 3, 0] }]))).toThrow();
+    expect(() => parseIndex(index([{ ...line(), lineBack: 0.5 }]))).not.toThrow();
+    expect(() => parseIndex(index([{ ...line(), lineBack: 3 }]))).toThrow();
+    expect(() => parseIndex(index([{ system: 'sample', event: 'projectile', delay: 0, duration: 0.7, travelSeconds: 0.7, lineBack: 0.5 } as TimelineCue]))).toThrow();
   });
 
   it('starts where the caster stands, runs through where the target stands, on neither unit, and stays put after', async () => {
@@ -76,6 +83,17 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     for (const unit of units.values()) unit.root.updateMatrixWorld();
     expect(options.anchor.originAt(0)).toEqual(toSystem(from));
     expect(options.target.originAt(0)).toEqual(toSystem(to));
+    runtime.dispose();
+  });
+
+  it('starts lineBack cells behind the caster, away from the target', async () => {
+    const { runtime } = await setup([{ ...line(2), lineBack: 0.5 }]);
+    expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    const [from, to] = groundLine([10, 0, 20], [40, 0, 60], 2, 0.5)!;
+    const close = (got: number[], want: readonly number[]) => got.forEach((value, axis) => expect(value).toBeCloseTo(toSystem(want)[axis]!, 6));
+    close(built[0]!.options.anchor.originAt(0), from);
+    close(built[0]!.options.target.originAt(0), to);
     runtime.dispose();
   });
 
@@ -100,6 +118,7 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     const cue = CUE_OVERRIDES.gangplank!.find(entry => entry.system === '20cd67dc')!;
     expect(cue.event).toBe('projectile');
     expect(cue.lineCells).toBeGreaterThan(0);
+    expect(cue.lineBack).toBeGreaterThan(0);
     expect(cue.bone).toBeUndefined();
   });
 });

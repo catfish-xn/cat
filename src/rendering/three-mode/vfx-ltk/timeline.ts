@@ -95,6 +95,8 @@ export interface TimelineCue {
    * location with no start bone (Gangplank's ground-fire line). Both ends are taken when it spawns; it never follows.
    */
   readonly lineCells?: number;
+  /** With `lineCells`: how many cells behind the caster (away from the target) the line starts; its length is unchanged. */
+  readonly lineBack?: number;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

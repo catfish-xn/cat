@@ -140,13 +140,15 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 /**
- * A ground line's two ends (TimelineCue.lineCells): from `from` on the floor toward `toward`, `cells` cells in all, at
- * `from`'s height. Null when the two stand on one spot, which gives it no direction.
+ * A ground line's two ends (TimelineCue.lineCells): on the floor along the way from `from` toward `toward`, starting
+ * `back` cells behind `from` (TimelineCue.lineBack) and running `cells` cells in all, at `from`'s height. Null when the two
+ * stand on one spot, which gives it no direction.
  */
-export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, cell = BOARD_CELL): [WorldPoint, WorldPoint] | null {
+export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, back = 0, cell = BOARD_CELL): [WorldPoint, WorldPoint] | null {
   const dx = toward[0] - from[0], dz = toward[2] - from[2], length = Math.hypot(dx, dz);
   if (!(length > 1e-3)) return null;
-  return [[from[0], from[1], from[2]], [from[0] + dx / length * cells * cell, from[1], from[2] + dz / length * cells * cell]];
+  const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
+  return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
 }
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
@@ -466,7 +468,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // on one spot, it does not play: it never falls back to a flight from the caster's bone.
         const lineEnds = spawn.event === 'projectile' && spawn.lineCells && source && !source.disposed
           ? (() => { const toward = snapshot ?? (target ? standingPoint(target.root) : undefined);
-            return toward ? groundLine(standingPoint(source.root), toward, spawn.lineCells!) : null; })() : null;
+            return toward ? groundLine(standingPoint(source.root), toward, spawn.lineCells!, spawn.lineBack ?? 0) : null; })() : null;
         if (spawn.event === 'projectile' && spawn.lineCells && !lineEnds) continue;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;

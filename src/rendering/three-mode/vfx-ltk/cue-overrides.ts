@@ -45,6 +45,11 @@ export const CAITLYN_COMET = {
  * the target as it does in footage (11-13).
  */
 export const GP_GROUND_LINE_CELLS = 2.7;
+/**
+ * Cells behind Gangplank (away from the target) his ground-fire line starts. A FIT, not the original's value: in the
+ * 3-star full-board footage the scorch starts on his far side and runs through the target (11-13).
+ */
+export const GP_GROUND_LINE_BACK = 0.5;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
@@ -311,10 +316,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
     { system: '80ab2d1b', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'r_hand', travelSeconds: 0.7 },
     // Ground-fire line: in the original a line missile cast at a location, with no start bone and not following its target
-    // (14.24 spell data), whose scorch lies flat on the ground through the target. Played from Gangplank's feet along the
-    // floor through the target (TimelineCue.lineCells); it flew from his weapon bone to the target's feet before and its
-    // scorch hid under both bodies (11-13 A/B/C keyframes). GP_GROUND_LINE_CELLS is a FIT, not the original's value.
-    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7, lineCells: GP_GROUND_LINE_CELLS },
+    // (14.24 spell data), whose scorch lies flat on the ground through the target. Played on the floor along the way from
+    // Gangplank to the target, starting a little behind him (TimelineCue.lineCells, lineBack); it flew from his weapon bone
+    // to the target's feet before and its scorch hid under both bodies (11-13 A/B/C keyframes). GP_GROUND_LINE_CELLS and
+    // GP_GROUND_LINE_BACK are FITS, not the original's values.
+    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7, lineCells: GP_GROUND_LINE_CELLS, lineBack: GP_GROUND_LINE_BACK },
     { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
     { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
     { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },
