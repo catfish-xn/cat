@@ -414,10 +414,13 @@ export function cueAdditions(champion: string, systems: Readonly<Record<string, 
  *   held at its old behaviour until it is checked against the original.
  * - 92d79254 Jayce's back-form forge: it plays only when his cast buffs an ally, which no recording setup can stage yet;
  *   it cannot be checked on screen, so it is not changed for now (Fable 11-13).
+ * - 4f2eb343 Mel's third cast: before and after show no difference that can be judged on screen, so it is not changed
+ *   (Fable 11-13).
  */
 export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
   '7029bc3c': 'streamed rope, not checked against the original',
   '92d79254': 'cannot be recorded to check, not changed for now',
+  '4f2eb343': 'no difference that can be checked on screen, not changed',
 };
 
 /**

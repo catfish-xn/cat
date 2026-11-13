@@ -39,6 +39,7 @@ const SYSTEMS: Record<string, VfxSystem> = {
   // Same shape as `mixed`, under an id on the unpinned list.
   '7029bc3c': system([emitter('Trail', {}), beam('BeamA', 0.45)]),
   '92d79254': system([emitter('Trail', {}), beam('BeamA', 0.45)]),
+  '4f2eb343': system([emitter('Trail', {}), beam('BeamA', 0.45)]),
 };
 const laser: TimelineCue = { system: 'mixed', action: 'attack', event: 'projectile', delay: 0, duration: 0.3, travelSeconds: 0.3, targetBone: 'chest' };
 const index = (cues: readonly TimelineCue[]) => ({ version: 1, systems: Object.fromEntries(Object.keys(SYSTEMS).map(id => [id, `systems/${id}.json`])),
@@ -154,9 +155,9 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
     runtime.dispose();
   });
 
-  it('a system on the unpinned list flies whole as it was: Sevika\'s chomp and Jayce\'s back-form forge', async () => {
-    expect(Object.keys(UNPINNED_BEAM_SYSTEMS).sort()).toEqual(['7029bc3c', '92d79254']);
-    for (const system of ['7029bc3c', '92d79254']) {
+  it('a system on the unpinned list flies whole as it was: Sevika\'s chomp, Jayce\'s back-form forge, Mel\'s third cast', async () => {
+    expect(Object.keys(UNPINNED_BEAM_SYSTEMS).sort()).toEqual(['4f2eb343', '7029bc3c', '92d79254']);
+    for (const system of ['7029bc3c', '92d79254', '4f2eb343']) {
       const { runtime } = await setup([{ ...laser, system }]);
       runtime.play('tester', 'caster', ['target'], 'attack'); runtime.update(1 / 60, new Camera());
       expect(built.map(b => names(b.prepared))).toEqual([['Trail', 'BeamA']]);
