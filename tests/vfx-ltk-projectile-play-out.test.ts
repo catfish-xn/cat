@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -18,7 +18,7 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 const LISTED = Object.keys(PLAY_OUT_SYSTEMS)[0]!, END = PLAY_OUT_SYSTEMS[LISTED]!, PLAIN = 'sample', HELD = 'held', LATE = 'late';
 const flight = (system: string): TimelineCue => ({ system, event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.6, bone: 'ground', targetBone: 'ground' });
 const index = (cues: readonly TimelineCue[], filler: readonly TimelineCue[]) => ({ version: 1, systems: Object.fromEntries([LISTED, PLAIN, HELD, LATE].map(id => [id, `systems/${id}.json`])),
-  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler } : {}) } });
+  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler.slice(0, 10), ...(filler.length > 10 ? { 'vi-b': filler.slice(10) } : {}) } : {}) } });
 
 // `filler` plays first, from another champion's list, so the board is already holding it when the cast lands.
 async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }, attack = false) {
@@ -30,7 +30,12 @@ async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAI
   }));
   const runtime = createLtkRuntime(library, scene, id => units.get(id), budget ? { budget } : {});
   await runtime.warm('gangplank');
-  if (filler.length) { await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true); }
+  // A skill list holds at most 12 cues: a filler longer than ten plays as two casts. All of it is running before the cast.
+  if (filler.length) {
+    await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    if (filler.length > 10) expect(runtime.play('vi', 'caster', ['target'], 'cast', { skill: 'vi-b' })).toBe(true);
+    for (let i = 0; i < Math.ceil(filler.length / 6); i++) runtime.update(1 / 30, new Camera());
+  }
   expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
   if (attack) expect(runtime.play('gangplank', 'caster', ['target'], 'attack')).toBe(true);
   // At most six starts a frame: a full board takes two.
@@ -94,8 +99,8 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     runtime.dispose();
   });
 
-  // Eleven long cast cues beside the listed projectile: with its tail the board holds every one of MAX_LTK_SYSTEMS (12).
-  const held = Array.from({ length: 11 }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
+  // MAX_LTK_SYSTEMS − 1 long cast cues beside the listed projectile: with its tail the board holds every slot.
+  const held = Array.from({ length: MAX_LTK_SYSTEMS - 1 }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
   const late = (together?: string): TimelineCue => ({ system: LATE, event: 'cast-start', delay: 0.8, duration: 0.5, bone: 'ground', ...(together ? { together } : {}) });
   // A critical hit due while every slot is held: the listed projectile's tail would make room, but it is marked hold.
   const strike = (action?: 'attack'): TimelineCue => ({ system: LATE, event: 'hit', delay: 0.8, duration: 0.5, ...(action ? { action } : {}) });
@@ -121,12 +126,12 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
   });
 
   it('a tail stays when giving it up would not let the new run in either', async () => {
-    // A pair that starts together takes one slot but its two runs' particles: with the budget at twelve runs' reserve,
-    // eleven long runs and the pair overfill it, tail or no tail.
-    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held, { live: 0, max: 12 * MIN_RESERVE });
+    // A pair that starts together takes one slot but its two runs' particles: with the budget at MAX_LTK_SYSTEMS runs'
+    // reserve, MAX_LTK_SYSTEMS − 1 long runs and the pair overfill it, tail or no tail.
+    const { runtime, scene, listed, advance } = await setup([flight(LISTED), late('pair'), late('pair')], held, { live: 0, max: MAX_LTK_SYSTEMS * MIN_RESERVE });
     advance(0.9);
     expect(listed.object.parent).toBe(scene);
-    expect(built).toHaveLength(12);
+    expect(built).toHaveLength(MAX_LTK_SYSTEMS);
     runtime.dispose();
   });
 });
