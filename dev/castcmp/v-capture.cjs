@@ -30,7 +30,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') ? 'hideunits=1&debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -101,7 +101,7 @@ async function unbind(page, tick, rebind) {
     return runtime?.ATTACHED_LAYER_STATS ? { ...JSON.parse(JSON.stringify(runtime.ATTACHED_LAYER_STATS)), cap: runtime.ATTACHED_LAYER_CAP, ...attached?.ATTACHED_STATS } : null;
   }), null, 2));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: opt('pin-foe') ? 1 : Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('hide-units') ? { hideUnits: true } : {}), args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);
