@@ -271,11 +271,14 @@ describe('cast timeline replacement and fallback', () => {
     runtime.clear(); runtime.play('jinx', 'caster', []); runtime.stopUnit('caster'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(0); runtime.dispose();
   });
-  it('drops distortion and soft passes once four systems are live, and keeps them below that', () => {
+  it('drops the late distortion and soft passes once four systems are live, keeps them below that, and always keeps the early pass', () => {
     const heavy = { passes: { early: true, late: true, soft: true } };
     expect(LTK_PASS_DEGRADE_AT).toBe(4);
     expect(ltkRenderNeeds([heavy, heavy, heavy])).toEqual({ early: true, late: true, soft: true });
-    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: true, late: false, soft: false });
+    // Early is still only drawn when a live system asks for it.
+    const soft = { passes: { early: false, late: true, soft: true } };
+    expect(ltkRenderNeeds([soft, soft, soft, soft])).toEqual({ early: false, late: false, soft: false });
     expect(ltkRenderNeeds([{ passes: { early: false, late: false, soft: true } }])).toEqual({ early: false, late: false, soft: true });
   });
 });
