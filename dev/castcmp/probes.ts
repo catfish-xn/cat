@@ -24,11 +24,56 @@ function textureState(t: any) {
   return { ready: has(img), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: t.version };
 }
 
+/**
+ * Which draws a recording keeps, from the page URL (v-capture --only / --mute / --solo / --nocolor / --noerode) and
+ * window.__only (v-capture --only, set before the page loads). Each emitter list is comma separated; an entry is an
+ * emitter name, or `system:emitter` for that system's emitter alone. Dev only: nothing in src/ reads these.
+ * - only: draw this system alone (every other running system's draws are left out).
+ * - mute: leave these emitters' draws out.  solo: of the systems they belong to, draw these emitters alone.
+ * - nocolor: these emitters write no colour (their depth and stencil writes stay): what a stencil writer does unseen.
+ * - noerode: these emitters draw without their alpha erosion (the EROSION define taken out of their material).
+ */
+export interface DrawFilter { only: string | null; mute: string[]; solo: string[]; nocolor: string[]; noerode: string[] }
+export function drawFilterOf(search: string, only?: string | null): DrawFilter {
+  const params = new URLSearchParams(search), list = (key: string) => (params.get(key) ?? '').split(',').map(x => x.trim()).filter(Boolean);
+  return { only: params.get('only') ?? only ?? null, mute: list('mute'), solo: list('solo'), nocolor: list('nocolor'), noerode: list('noerode') };
+}
+/** Whether `entry` (`name` or `system:name`) names the emitter `emitter` of `system`. */
+const names = (entry: string, system: string, emitter: string) => {
+  const at = entry.indexOf(':');
+  return at < 0 ? entry === emitter : entry.slice(0, at) === system && entry.slice(at + 1) === emitter;
+};
+/** Applies `filter` to one running record's draws: their layer mask (left out = 0), colour writes and erosion. */
+export function applyDrawFilter(filter: DrawFilter, rec: { system: string; fx?: any }): void {
+  const draws: any[] = rec.fx?.draws ?? [];
+  const soloHere = filter.solo.some(entry => entry.includes(':') ? entry.startsWith(rec.system + ':') : draws.some(d => names(entry, rec.system, (d?.object?.name ?? '').split('#')[0])));
+  for (const d of draws) {
+    const o = d?.object; if (!o) continue;
+    const emitter = (o.name ?? '').split('#')[0];
+    if (o.userData.__castcmpMask === undefined) o.userData.__castcmpMask = o.layers.mask;
+    const out = (filter.only !== null && rec.system !== filter.only) || filter.mute.some(e => names(e, rec.system, emitter))
+      || (soloHere && !filter.solo.some(e => names(e, rec.system, emitter)));
+    o.layers.mask = out ? 0 : o.userData.__castcmpMask;
+    const mats: any[] = d.material ? [d.material] : Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (!m) continue;
+      if (filter.nocolor.some(e => names(e, rec.system, emitter)) && m.colorWrite !== false) m.colorWrite = false;
+      if (filter.noerode.some(e => names(e, rec.system, emitter)) && m.defines && 'EROSION' in m.defines) { delete m.defines.EROSION; m.needsUpdate = true; }
+    }
+  }
+}
+const filtering = (f: DrawFilter) => f.only !== null || f.mute.length + f.solo.length + f.nocolor.length + f.noerode.length > 0;
+
 export function installProbes(clock: () => number) {
   const live = new Set<Rec>(), started: { t: number; system: string; source?: string; action?: string }[] = [];
   const add = Set.prototype.add, del = Set.prototype.delete;
+  const filter = drawFilterOf(location.search, (window as any).__only ?? null);
   Set.prototype.add = function (this: Set<unknown>, value: unknown) {
-    if (looksRunning(value) && this !== (live as unknown)) { live.add(value); started.push({ t: clock(), system: value.system, source: value.source, action: value.action }); }
+    if (looksRunning(value) && this !== (live as unknown)) {
+      live.add(value); started.push({ t: clock(), system: value.system, source: value.source, action: value.action });
+      // A system is added to the runtime's running set before the frame it first draws in, so it is filtered from its first frame.
+      if (filtering(filter)) applyDrawFilter(filter, value);
+    }
     return add.call(this, value) as any;
   };
   Set.prototype.delete = function (this: Set<unknown>, value: unknown) {
@@ -55,6 +100,8 @@ export function installProbes(clock: () => number) {
   });
   return {
     ready: three,
+    /** The draw filter this page records with (DrawFilter), as read from its URL and window.__only. */
+    filter,
     /** Systems running now, and every start since the last reset (t on the harness clock, ms). */
     systems: () => ({ live: [...new Set([...live].map(r => r.system))], started: started.slice() }),
     resetStarts: () => { started.length = 0; },

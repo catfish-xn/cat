@@ -9,6 +9,9 @@
 //     cast is the N-th cast of the unit (default 1st); the recorded window starts at combat start / MS before the anchor
 //     (default: 500 ms before it). --times must start at 0 for --real (jobs-check.mjs fails it otherwise).
 //   [--ally X --allystar N]: --real only; one front-liner of the caster's team a row ahead of it (default star 2).
+//   [--only SYSTEM] [--mute E,..] [--solo E,..] [--nocolor E,..] [--noerode E,..]: draw one system alone, leave emitters
+//     out, draw emitters alone, take their colour writes out (stencil/depth stay), or their erosion out (probes.ts DrawFilter;
+//     E is an emitter name or system:emitter).
 //   [--foe-offset K]: --real only; every foe K columns to the side (+ right; all must stay on columns 0-6), so the target
 //     stands ahead and to the side of the caster (e.g. a beam crossing the screen instead of foreshortened straight ahead)
 //   [--pin-foe2 M]: with --pin-foe N (M > N, at most 5): a second still dummy on the line from the caster through the first, about M hexes out
@@ -37,7 +40,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
