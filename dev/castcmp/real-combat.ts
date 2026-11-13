@@ -10,7 +10,24 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
   foeOffset?: number;
   /** v-capture --ally X (--allystar N, default 2): one more of `me`'s team, a front-liner one row ahead of it (user rule 11-13:
    * a ranged caster is recorded behind a tank, its target at least 3 rows away). */
-  ally?: string; allystar?: number }
+  ally?: string; allystar?: number;
+  /** v-capture --ally-cell R,C: the ally on this cell instead of one row straight ahead of `me` (row 4, col 3), e.g. ahead
+   * and one column to the side, off the line from `me` to its target. */
+  allyCell?: Cell;
+  /** v-capture --foe-cell R,C: the target `foe` on this cell (any row, e.g. on `me`'s own row), not `dist` rows ahead. */
+  foeCell?: Cell;
+  /** v-capture --foe2 X / --foe2star N / --foe2-cell R,C: the second foe as another hero, of its own star, on its own cell
+   * (e.g. a melee foe far off for the ally to walk to, so it leaves the caster's line). Needs --nfoes 2 or more. */
+  foe2?: string; foe2star?: number; foe2Cell?: Cell }
+export interface Cell { row: number; col: number }
+/** The board (src/simulation/board.ts DEFAULT_BOARD): rows 0-7, columns 0-6; `me` stands on row 5, column 3. */
+const ROWS = 8, COLS = 7;
+export const ME_CELL: Cell = { row: 5, col: 3 };
+/** "R,C" (v-capture --ally-cell / --foe-cell / --foe2-cell) as a cell, or null when it is not two whole numbers. */
+export function parseCell(text: string | null | undefined): Cell | null {
+  const m = /^(-?[0-9]+),(-?[0-9]+)$/.exec(text ?? '');
+  return m ? { row: Number(m[1]), col: Number(m[2]) } : null;
+}
 /** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
 export const DEFAULT_AFTER_TICKS = 60;
 /** The replay starts this many ticks before the first cast of `me` (half a second). */
@@ -34,16 +51,45 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
 }
 
 /** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0);
- * an `ally` one row in front of `me`. */
+ * an `ally` one row in front of `me`. --foe-cell / --foe2-cell / --ally-cell put those units on given cells instead. */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
-  const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
-  return [
-    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
+  const meRow = ME_CELL.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
+  const asked: Record<string, Cell | undefined> = { foe: s.foeCell, foe2: s.foe2Cell };
+  const units = [
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...ME_CELL } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
-      ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col: (col as number) + (s.foeOffset ?? 0), row } } })),
-    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { col: 3, row: meRow - 1 } } }] : []),
+      ({ id, definitionId: id === 'foe2' && s.foe2 ? s.foe2 : foe, team: 'enemy', starLevel: id === 'foe2' && s.foe2star !== undefined ? s.foe2star : s.foestar,
+        location: { kind: 'board', cell: asked[id as string] ? { ...asked[id as string]! } : { col: (col as number) + (s.foeOffset ?? 0), row } } })),
+    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: ME_CELL.col }) } } }] : []),
   ];
+  const why = layoutProblem(s, units);
+  if (why) throw new Error(why);
+  return units;
+}
+/** Why this layout cannot be placed (a cell option without its unit, a unit off the board, two on one cell), or null. */
+export function layoutProblem(s: RealSetup, units: any[]): string | null {
+  if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
+  if ((s.foe2 || s.foe2star !== undefined || s.foe2Cell) && s.nfoes < 2) return '--foe2 / --foe2star / --foe2-cell need --nfoes 2 or more';
+  const seen = new Map<string, string>();
+  for (const u of units) {
+    const c: Cell = u.location.cell, key = `${c.row},${c.col}`;
+    if (!Number.isInteger(c.row) || !Number.isInteger(c.col) || c.row < 0 || c.row >= ROWS || c.col < 0 || c.col >= COLS) return `${u.id} at ${key} is off the board (rows 0-${ROWS - 1}, columns 0-${COLS - 1})`;
+    if (seen.has(key)) return `${u.id} and ${seen.get(key)} both on ${key}`;
+    seen.set(key, u.id);
+  }
+  return null;
+}
+/** A cell's centre in hex widths (the renderer's layout, harness.ts hexOf: odd rows half a column to the right). */
+export function hexCenter(c: Cell): { x: number; y: number } { return { x: c.col + (c.row % 2) / 2, y: c.row * Math.sqrt(3) / 2 }; }
+/** How far `c` stands from the segment from `a` to `b`, in hex widths (centre to centre; Infinity when it is not between
+ * them, i.e. its foot falls outside the segment). Under about 0.5 its body stands on the line. */
+export function lineClearance(a: Cell, b: Cell, c: Cell): number {
+  const p = hexCenter(a), q = hexCenter(b), r = hexCenter(c), dx = q.x - p.x, dy = q.y - p.y, len2 = dx * dx + dy * dy;
+  if (!len2) return Infinity;
+  const t = ((r.x - p.x) * dx + (r.y - p.y) * dy) / len2;
+  if (t <= 0 || t >= 1) return Infinity;
+  return Math.abs((r.x - p.x) * dy - (r.y - p.y) * dx) / Math.sqrt(len2);
 }
 
 /** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
