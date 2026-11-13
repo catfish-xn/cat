@@ -8,6 +8,7 @@ import type { EmitterModel, SystemModel, ValueCurve } from "../model/model";
 import type { Point } from "../model/rig";
 import {
   emissionEnd,
+  emissionEnded,
   emitterPhase,
   lingerSeconds,
   ROTATION_RATE,
@@ -235,6 +236,18 @@ function frameInto(emitter: EmitterModel, state: EmitterState, step: SystemStep)
  * The engine spawns before it updates, and moves a particle born during the step by no
  * time at all, so a newborn stands where it was placed with its matrix built.
  */
+/** One-shot (`isSingleParticle`) emitters of the system other than `except` that are still to spawn. */
+function oneShotsPending(emitters: readonly EmitterModel[], state: readonly EmitterState[], except: number): number {
+  let pending = 0;
+  for (let index = 0; index < emitters.length; index += 1) {
+    const emitter = emitters[index], own = state[index];
+    if (index === except || !emitter.singleParticle || own.emitted || own.absent || emitter.disabled) continue;
+    if (emissionEnded(emitter, own.age)) continue;
+    pending += 1;
+  }
+  return pending;
+}
+
 export function stepEmitters(
   pool: Pool,
   system: SystemModel,
@@ -255,7 +268,7 @@ export function stepEmitters(
   }
 
   for (let index = 0; index < emitters.length; index += 1) {
-    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion);
+    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion, () => oneShotsPending(emitters, state, index));
   }
   for (let index = 0; index < emitters.length; index += 1) {
     settle(pool, emitters[index], index, state[index], step);

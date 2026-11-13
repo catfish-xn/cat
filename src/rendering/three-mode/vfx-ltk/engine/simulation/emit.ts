@@ -69,6 +69,7 @@ export function emit(
   step: SystemStep,
   rng: Rng,
   dragMotion: DragMotion,
+  othersPending?: () => number,
 ): void {
   const cue = cueScale(step.scale);
   if (emitter.disabled || state.absent) return;
@@ -81,7 +82,15 @@ export function emit(
 
   const phase = emitterPhase(emitter, now);
   const pinned = step.pinned ?? null;
-  const count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  let count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  /* Ours: a burst that would fill the pool leaves one place for each one-shot emitter of the system still to spawn, and a
+     one-shot keeps at least its own (11-13: Caitlyn's burst filled its 150 places with debris on its first frame, and the
+     seventeen emitters after it, the flash and the smoke among them, never spawned). Only a step that would fill the
+     pool is touched. */
+  if (count > 0 && othersPending && pool.count + count >= pool.capacity) {
+    const held = othersPending();
+    if (held > 0) count = Math.max(Math.min(count, pool.capacity - pool.count - held), emitter.singleParticle ? 1 : 0);
+  }
   if (count <= 0) return;
 
   travel(state, step);
