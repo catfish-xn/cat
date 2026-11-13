@@ -8,7 +8,7 @@
 // Lines without --real are listed as "dummy" (no rules run; nothing to check here; --kill and --pin-foe are allowed there and only there).
 // --pin-foe N must be 1-5 and comes without --nfoes (or with --nfoes 1); --hide-units takes 1. Both are echoed per line.
 // --cast-index N / --from-start 1 / --lead-ms MS (real only) choose the window (anchor = the N-th cast; start = combat start or
-// MS before the anchor); a real line's --times must start at 0.
+// MS before the anchor); a real line's --times must start at 0, and that t=0 frame is the start only, never a keyframe (WARN).
 // Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -76,6 +76,8 @@ for (const line of lines) {
   const blockers = [...new Set([run.castIndex, ...Array.from({ length: a.to - run.castIndex + 1 }, (_, i) => run.castIndex + i)]
     .filter(t => cells[t]).flatMap(t => rc.frontBlockers(cells[t])))];
   const warn = blockers.length ? [`may cover the caster (warning; the browser gate decides): ${blockers.join(',')}`] : [];
+  // Rule (11-13): t=0 is the window's start only (the replay was just reset; the units are stand-in pawns there).
+  if (o('times') !== undefined && o('times').split(',').some(t => Number(t) === 0)) warn.push('t=0 is the window start (stand-in pawns), not a keyframe: keyframes.cjs skips it');
   // With an asked-for window the anchor cast may fall after it (fine when the attacks are the point): say so.
   if (custom && a.castTick > a.to) warn.push(`anchor cast (#${start.castNumber}) at tick ${a.castTick} is after the window (ticks ${a.from}-${a.to})`);
   results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts, ...modeTags, ...(custom ? { anchorCast: start.castNumber, windowStart: start.fromStart ? 'combat start' : `${start.leadMs ?? 500} ms before the anchor cast` } : {}) });
