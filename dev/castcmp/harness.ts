@@ -6,10 +6,13 @@ const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };
-// ?hideunits=1 (v-capture --hide-units 1): every unit's model is hidden before each frame draws; bars, stars, shadows and
+// ?hideunits=1 (v-capture --hide-units 1): every unit's model and its contact shadow are hidden before each frame draws; bars, stars and
 // effects (attached overlays follow the hidden skeleton) still draw. Needs ?debug3d (the renderer's piece views).
 const hideUnits = params.get('hideunits') === '1';
-const hideBodies = () => { const d = (window as any).__render3d; if (!d?.pieces) return; for (const v of d.pieces.values()) if (v.body && v.body.visible) v.body.visible = false; };
+// The units' blob contact shadows (presentation-lighting.ts, one group) go too: the lighting re-shows each blob every frame
+// from its unit's root, so the whole group is hidden instead.
+const hideBodies = () => { const d = (window as any).__render3d; if (!d?.pieces) return; for (const v of d.pieces.values()) if (v.body && v.body.visible) v.body.visible = false;
+  const blobs = d.scene?.getObjectByName?.('render3d-contact-shadows'); if (blobs?.visible) blobs.visible = false; };
 function step(ms: number) {
   while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; if (hideUnits) hideBodies(); const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 }
