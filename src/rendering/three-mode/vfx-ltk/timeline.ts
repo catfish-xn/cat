@@ -89,6 +89,11 @@ export interface TimelineCue {
    * the board never shows (Caitlyn's Air Raid comet, dropped from a blimp off screen).
    */
   readonly fromAbove?: readonly [number, number, number];
+  /**
+   * A state its target carries (a curse, a shield): once that target is dead it is not played where the target stood, as a
+   * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
+   */
+  readonly livingTarget?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
@@ -122,6 +127,15 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (!pool.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     for (const targetId of cue.primary ? pool.slice(0, 1) : cue.targetLimit ? pool.slice(0, cue.targetLimit) : cue.event === 'projectile' ? pool.slice(0, 1) : pool) {
       spawns.push({ ...cue, sourceId, targetId });
+    }
+  }
+  // A projectile from the caster to itself is left out (self-projectile). The hit on the caster that lands when it would have
+  // landed plays when it would have left instead (Fable 11-13: Lux's shield on herself, Twitch's own cast).
+  for (const { cue, reason } of unsupported) if (reason === 'self-projectile') {
+    const lands = cue.delay + (cue.travelSeconds ?? cue.duration);
+    for (let at = 0; at < spawns.length; at++) {
+      const spawn = spawns[at]!;
+      if (spawn.event === 'hit' && spawn.targetId === sourceId && Math.abs(spawn.delay - lands) < 1e-6) spawns[at] = { ...spawn, delay: cue.delay };
     }
   }
   return { spawns, unsupported };
