@@ -40,7 +40,7 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  if ((o('from-start') !== undefined || o('lead-ms') !== undefined || o('cast-index') !== undefined || o('foe-offset') !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: ['--from-start / --lead-ms / --cast-index / --foe-offset are for v-capture.cjs --real only'] }); continue; }
+  if ((o('from-start') !== undefined || o('lead-ms') !== undefined || o('cast-index') !== undefined || o('foe-offset') !== undefined || o('ally') !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: ['--from-start / --lead-ms / --cast-index / --foe-offset are for v-capture.cjs --real only'] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
   const ms = o('times') !== undefined ? Number(o('times').split(',').at(-1)) : Number(o('ms') ?? 3000);
@@ -58,7 +58,8 @@ for (const line of lines) {
   if (startWhy.length) { results.push({ name, unit, mode: 'real', ok: false, why: startWhy }); continue; }
   const custom = start.fromStart || start.leadMs !== null || o('cast-index') !== undefined;
   const setup = { unit, star: Number(o('star') ?? 3), form: o('form') ?? null, foe: o('target') ?? 'garen', dist: Number(o('dist') ?? 3),
-    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}) };
+    nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}),
+    ...(o('ally') !== undefined ? { ally: o('ally'), allystar: Number(o('allystar') ?? 2) } : {}) };
   const events = [], alive = [], cells = [];
   let run;
   try {
