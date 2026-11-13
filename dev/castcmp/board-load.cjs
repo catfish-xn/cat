@@ -55,15 +55,20 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   await admission(true);
   const perSecond = [];
   for (let s = 0; s < seconds; s++) {
+    // REC BRANCH ONLY: the shared budget's live particles, peak over this second (runtime.ts rec probe __FX_LIVE; null without it).
+    await page.evaluate(() => { if ('__FX_LIVE' in globalThis) globalThis.__FX_LIVE = 0; });
     const t0 = Date.now(); await page.evaluate(() => window.__h.step(1000)); await sync(); const wall = Date.now() - t0;
+    const budgetLive = await page.evaluate(() => ('__FX_LIVE' in globalThis) ? globalThis.__FX_LIVE : null);
     const now = await stats();
-    perSecond.push({ second: s + 1, tick: await page.evaluate(() => window.__h.tick()), frameMs: +(wall / 62.5).toFixed(1), layers: now?.layers ?? null, peakLayers: now?.peakLayers ?? null, cappedFrames: now?.cappedFrames ?? null });
+    perSecond.push({ second: s + 1, tick: await page.evaluate(() => window.__h.tick()), frameMs: +(wall / 62.5).toFixed(1), layers: now?.layers ?? null, peakLayers: now?.peakLayers ?? null, cappedFrames: now?.cappedFrames ?? null , budgetLivePeak: budgetLive });
   }
   mark('measured pass');
   const frame = perSecond.map(r => r.frameMs).sort((a, b) => a - b);
   const final = await stats();
   const counters = await admission();
   const report = { board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
+    budget: { max: await page.evaluate(() => globalThis.__FX_BUDGET ?? 1500), livePeak: perSecond.some(r => r.budgetLivePeak !== null) ? Math.max(...perSecond.map(r => r.budgetLivePeak ?? 0)) : null,
+      livePeakPerSecond: perSecond.map(r => r.budgetLivePeak) },
     frameMs: { mean: +(frame.reduce((a, b) => a + b, 0) / frame.length).toFixed(1), median: frame[frame.length >> 1], p95: frame[Math.floor(frame.length * 0.95)], max: frame[frame.length - 1] },
     afterWarm, final, admission: counters, perSecond, warnings: [...new Set(warnings)], errors };
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2));
