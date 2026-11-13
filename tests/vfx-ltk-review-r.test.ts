@@ -109,12 +109,13 @@ describe('review R: whole-action target coverage', () => {
     expect(runtime.play('vander', 'self', ['self'], 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
-  it.each(['missing', 'dead', 'disposed'] as const)('keeps the whole multi-target action on fallback for a %s ally', async reason => {
+  // Fable 11-13: one unusable target no longer sends the whole action back to the host (before, all three were refused).
+  it.each(['missing', 'dead', 'disposed'] as const)('plays a multi-target action with a %s ally: a dead one at its place, a gone one left out', async reason => {
     const { runtime, units } = await setup([start, hit]);
     if (reason === 'missing') units.delete('ally');
     else if (reason === 'dead') units.get('ally')!.alive = false;
     else units.get('ally')!.disposed = true;
-    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(true); expect(runtime.queued).toBe(reason === 'dead' ? 4 : 3);
   });
 
   it('does not own a disposed caster or an action with an unloaded impact', async () => {

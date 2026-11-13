@@ -89,6 +89,11 @@ export interface TimelineCue {
    * the board never shows (Caitlyn's Air Raid comet, dropped from a blimp off screen).
    */
   readonly fromAbove?: readonly [number, number, number];
+  /**
+   * A state its target carries (a curse, a shield): once that target is dead it is not played where the target stood, as a
+   * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
+   */
+  readonly livingTarget?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
