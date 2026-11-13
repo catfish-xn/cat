@@ -239,7 +239,11 @@ export function emit(
       scaleAxes(pool.birthAcceleration, slot, cue);
       // An attached mesh is the host's own mesh: it draws at the host's size whatever the cue's (a chest cue's
       // SKILL_FX_SIZE 0.64 shrank Mordekaiser's aura toward his feet and left a slab on his arm and mace).
-      if (emitter.quadType !== QUAD_TYPE.attachedMesh) scaleAxes(pool.birthScale, slot, cue);
+      // A ribbon beam's scale0 y and z are the shares of its length kept from each end (ribbon.ts writeBeam), not lengths:
+      // only its width takes the cue's size. Scaled, both ends drew in toward the middle (Viktor's basic-attack laser
+      // at SKILL_FX_SIZE was a short bar touching neither unit, Fable 11-13).
+      if (emitter.beam !== null && emitter.mesh === null) pool.birthScale[slot] *= cue;
+      else if (emitter.quadType !== QUAD_TYPE.attachedMesh) scaleAxes(pool.birthScale, slot, cue);
       scaleAxes(BORN.offset, 0, cue);
     }
     for (let axis = 0; axis < 3; axis += 1) {
