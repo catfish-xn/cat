@@ -254,8 +254,9 @@ export function stepEmitters(
     scaleAxes(own.position, 0, cueScale(step.scale));
   }
 
+  const siblings = { emitters, states: state };
   for (let index = 0; index < emitters.length; index += 1) {
-    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion);
+    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion, siblings);
   }
   for (let index = 0; index < emitters.length; index += 1) {
     settle(pool, emitters[index], index, state[index], step);
