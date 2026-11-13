@@ -49,7 +49,7 @@ describe('Sevika slot reels (14.24 map22.bin Slots_*_Mirrored, particleUVScrollR
         readTexture: async () => new Texture() });
       await library.load('a');
       const scene = new Scene(), runtime = createLtkRuntime(library, scene, () => unit);
-      expect(runtime.play('jinx', 'u', ['u'], 0, 'cast', { skill })).toBe(true);
+      expect(runtime.play('jinx', 'u', ['u'], 'cast', { skill })).toBe(true);
       runtime.update(0.1, new Camera());
       const group = scene.children.find(child => child.name === 'ltk-vfx');
       const count = group?.children.length ?? -1; runtime.dispose(); return count;

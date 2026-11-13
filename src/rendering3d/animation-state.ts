@@ -20,7 +20,8 @@ export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetD
  */
 export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number; release?: { atSeconds: number; headSpeed: number; tailSpeed: number } }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
-export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
+/** The cast's own number comes from the rule's cast event (the resolver reads it); this state machine counts nothing. */
+export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn') => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
 export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
 const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
@@ -34,7 +35,6 @@ export class UnitActionState {
   private durations: typeof defaults;
   private resolvePlayback?: ResolveActionPlayback;
   private playback?: ActionPlayback;
-  private castIndex = 0;
   /** Crowd control (presentation): the flinch pose is held until recover(), and no event but death moves it. */
   private held = false;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
@@ -53,7 +53,7 @@ export class UnitActionState {
   setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
   /** A summon rising (it appears or is revived) plays its spawn clip once, when its model names one. */
   spawn(): ActionOutput {
-    const playback = this.resolvePlayback?.('spawn', 0);
+    const playback = this.resolvePlayback?.('spawn');
     if (!playback || this.state === 'death') return this.output;
     if (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0) throw new Error('invalid-playback');
     this.playback = playback;
@@ -63,8 +63,7 @@ export class UnitActionState {
   private enter(state: ActionState): void {
     let playback: ActionPlayback | undefined;
     if (state === 'cast' || state === 'attack') {
-      const resolved = this.resolvePlayback?.(state, this.castIndex);
-      if (state === 'cast') this.castIndex++;
+      const resolved = this.resolvePlayback?.(state);
       if (resolved === null) return;
       playback = resolved;
       if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0
