@@ -40,6 +40,8 @@ const stats = ms => { const s = [...ms].sort((a, b) => a - b), q = p => +s[Math.
     await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; });
     const ms = await page.evaluate(seconds => {
       const c = document.querySelector('#host canvas'); const gl = c && (c.getContext('webgl2') || c.getContext('webgl')); const px = new Uint8Array(4);
+      // The first frame after reset rebuilds the board (seconds on SwiftShader); it is stepped untimed.
+      window.__h.step(1000 / 60); if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
       const out = []; const n = Math.round(seconds * 60);
       for (let i = 0; i < n; i++) { const t0 = window.__realNow(); window.__h.step(1000 / 60); if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); out.push(window.__realNow() - t0); }
       return out;
