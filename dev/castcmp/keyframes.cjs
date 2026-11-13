@@ -22,8 +22,10 @@ const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k =>
 const { frames } = require('./frames.cjs');
 const gateOf = dir => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'gate.json'), 'utf8')); } catch { return null; } };
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+// A caption with CJK text (the --pin-foe / --hide-units labels) names CJK fallback fonts too; plain ASCII captions are unchanged.
+const captionFont = lines => lines.some(l => /[^\x00-\x7f]/.test(l)) ? 'DejaVu Sans Mono, Consolas, Noto Sans CJK SC, Microsoft YaHei, monospace' : 'DejaVu Sans Mono, Consolas, monospace';
 const caption = (w, lines) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${lines.length * 22 + 10}">
-  <rect width="100%" height="100%" fill="#111"/>${lines.map((l, i) => `<text x="8" y="${22 * i + 22}" font-family="DejaVu Sans Mono, Consolas, monospace" font-size="16" fill="#eee">${esc(l)}</text>`).join('')}</svg>`);
+  <rect width="100%" height="100%" fill="#111"/>${lines.map((l, i) => `<text x="8" y="${22 * i + 22}" font-family="${captionFont(lines)}" font-size="16" fill="#eee">${esc(l)}</text>`).join('')}</svg>`);
 
 async function grey(file, box) {
   return sharp(file).extract(box).greyscale().raw().toBuffer();
@@ -97,7 +99,7 @@ async function encode(base, name) {
     ...(opt('note') ? [`times: ${opt('note').replace(/_/g, ' ')}`] : []),
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
-    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
+    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex${g.pinFoe2 ? ` + ${g.pinFoe2} hex in line` : ''} (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];
   const out = path.resolve(opt('out')); fs.mkdirSync(out, { recursive: true });
   const base = `${opt('prefix') ?? 'e138w'}-${opt('hero')}-${opt('system')}`;

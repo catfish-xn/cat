@@ -42,6 +42,13 @@ export const ATTACHED_LAYER_CAP = 24;
  * to it, so with several runtimes `layers`/`draws` are the last one's.
  */
 export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
+/**
+ * Admission counters across every runtime, for the dev load harness (dev/castcmp/board-load.cjs), which resets them after
+ * its warm pass: the most systems running at once, and starts and drops by system. A drop is a cue that missed its
+ * moment (overdue) or found no room and could not wait. Counting only; nothing reads them to decide.
+ */
+export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, number>, dropped: {} as Record<string, number> };
+const countDrop = (system: string) => { LTK_RUN_STATS.dropped[system] = (LTK_RUN_STATS.dropped[system] ?? 0) + 1; };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
@@ -441,7 +448,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // attack runs were live at critical drops). A late attack or flourish is simply dropped: replayed late, a hit spark
         // reads as lag (eab51a1e: 0f2af66b replayed 9 times).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) continue;
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countDrop(spawn.system); continue; }
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
@@ -517,7 +524,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
           if (!overdue && (importance === 'critical' || importance === 'body')) { waiting.splice(at, 0, row); at++; }
-          else for (const other of partners) waiting.splice(waiting.indexOf(other), 1);
+          else { countDrop(spawn.system); for (const other of partners) { countDrop(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -560,6 +567,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
             playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined }); starts++;
+          LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
+          LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }
       // Host-body overlays across every running system: off when the host says so, else at most ATTACHED_LAYER_CAP on screen.

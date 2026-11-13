@@ -25,18 +25,21 @@ const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
 /**
- * Caitlyn's Air Raid comet, falling onto its target (TimelineCue.fromAbove). Every value is a fitted value, not original
- * data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
+ * Caitlyn's Air Raid comet, one per shot, falling onto that shot's damage centre (TimelineCue.fromAbove). Every value is a
+ * fitted value, not original data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
  */
 export const CAITLYN_COMET = {
   /** Cells from where the target stands: left on screen, up, and toward the top of the screen. Steep, as in the footage. */
   from: [-1, 5, -1.5] as const,
-  /** Seconds after the cast it lands: when the exported impact (R_Bombardment_Impact) starts. */
-  lands: 1,
-  /** Seconds it falls, fitted to the footage. */
-  fall: 0.3,
+  /**
+   * Seconds it falls. Fitted: a shot's damage is already settled when its event arrives, so the comet starts then and
+   * lands this much later, short enough to read as the cause of that hit.
+   */
+  fall: 0.15,
   /** Seconds its trail fades out over once it lands (fitted: in the footage the column is gone soon after the burst). */
   linger: 0.15,
+  /** Seconds a 3-star shot's burst (R_Bombardment_Impact) plays, eased out from its middle: twenty shots in five seconds. */
+  burst3: 0.6,
 } as const;
 
 /**
@@ -50,6 +53,28 @@ export const GP_GROUND_LINE_CELLS = 2.7;
  * 3-star full-board footage the scorch starts on his far side and runs through the target (11-13).
  */
 export const GP_GROUND_LINE_BACK = 0.5;
+/**
+ * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
+ * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
+ */
+export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
+  'caitlyn-shot': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: 1.5 },
+  ],
+  // 3 stars (twenty shots): every shot bursts, shorter; every other shot also shows its comet.
+  'caitlyn-shot-3': [
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+  'caitlyn-shot-3-comet': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+};
+
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
@@ -108,11 +133,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: 0.5, duration: 0.8, primary: true },
     { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: 0.5, duration: 0.7, primary: true },
   ],
-  // R (Air Raid): the exported list, except the comet (R_Bombardment_Mis). The export kept it as a cast-start with no bone,
-  // so it stood on Caitlyn's feet for half a second: the missile mesh in its orange glow, never reaching anyone (11-03
-  // castcmp review; #622 keyframes). The source table had it as a flight whose path the host supplies, from a blimp her
-  // skeleton does not have. In 14.24 footage it falls steeply from high up and screen left onto the target and bursts
-  // there, so here it falls onto the primary target (CAITLYN_COMET) and lands as the impact starts.
+  // R (Air Raid): the exported list without the comet (R_Bombardment_Mis) and its burst (R_Bombardment_Impact). The export
+  // kept the comet as a cast-start with no bone, so it stood on Caitlyn's feet (11-03 castcmp review; #622 keyframes), and
+  // it played one comet and one burst on the cast target at 1 s, while the rule drops TotalShots shots over RaidDuration,
+  // each on a random enemy centre. Each shot now plays its own comet and burst where its damage lands (CUE_EXTRA_SKILLS
+  // caitlyn-shot, driven by the shot's packetDamage events in batch1-events.ts).
   caitlyn: [
     { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
@@ -120,10 +145,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'ce2a567b', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0, duration: 0.4 },
     { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
-    { system: '92bbeaf7', action: 'cast', event: 'projectile', targetBone: ground, primary: true,
-      delay: CAITLYN_COMET.lands - CAITLYN_COMET.fall, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger, travelSeconds: CAITLYN_COMET.fall,
-      stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
-    { system: '8d6e1c2e', action: 'cast', event: 'hit', delay: 1, duration: 1.5 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
