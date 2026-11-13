@@ -3837,17 +3837,17 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 27184,
+      "currentBytes": 27992,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
+      "currentSha256": "a914d06042aa0fcd59efd9b8d364987468fa4f3e22f141c7fcc28129a0672238",
       "firstDifferentByte": 84
     },
     "tests/vfx-ltk-together-admission.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7388,
+      "currentBytes": 7387,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6af7352fa8de16debb26f4fca35573ebc6a23a51d7e7b8df75552e1fecbc652e",
+      "currentSha256": "825ef61c39f4eb2c69b909037c22d2eae65a19bcf0bd59ca5cae4e2f8693dcce",
       "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {

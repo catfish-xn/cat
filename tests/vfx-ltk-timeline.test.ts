@@ -270,12 +270,20 @@ describe('cast timeline replacement and fallback', () => {
     runtime.clear(); runtime.play('jinx', 'caster', []); runtime.stopUnit('caster'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(0); runtime.dispose();
   });
-  it('drops distortion and soft passes once four systems are live, and keeps them below that', () => {
+  it('drops late distortion and soft passes once four systems are live, and keeps them below that', () => {
     const heavy = { passes: { early: true, late: true, soft: true } };
     expect(LTK_PASS_DEGRADE_AT).toBe(4);
     expect(ltkRenderNeeds([heavy, heavy, heavy])).toEqual({ early: true, late: true, soft: true });
-    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: true, late: false, soft: false });
     expect(ltkRenderNeeds([{ passes: { early: false, late: false, soft: true } }])).toEqual({ early: false, late: false, soft: true });
+  });
+  it('keeps the early pass on above the degrade threshold while degrading only late and soft', () => {
+    const earlyOnly = { passes: { early: true, late: false, soft: false } };
+    const lateAndSoft = { passes: { early: false, late: true, soft: true } };
+    expect(ltkRenderNeeds([lateAndSoft, lateAndSoft, lateAndSoft, earlyOnly])).toEqual({ early: true, late: false, soft: false });
+    expect(ltkRenderNeeds(Array.from({ length: MAX_LTK_SYSTEMS }, () => earlyOnly))).toEqual({ early: true, late: false, soft: false });
+    expect(ltkRenderNeeds(Array.from({ length: LTK_PASS_DEGRADE_AT }, () => lateAndSoft))).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([lateAndSoft, earlyOnly], LTK_PASS_DEGRADE_AT - 1)).toEqual({ early: true, late: true, soft: true });
   });
 });
 
