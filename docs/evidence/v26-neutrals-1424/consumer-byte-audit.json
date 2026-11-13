@@ -3743,6 +3743,14 @@
       "currentSha256": "fe9cfcddd15f19cd58925c247d8a1c4fcd35525be9fab0eff6fcc12ed0076bb2",
       "firstDifferentByte": 7204
     },
+    "tests/vfx-ltk-ground-line.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6233,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "44a217d4461d6f444b4e5ae2a2ec1125ac80e1facaca44e3d8e8d0bda030b28d",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-ground-pass.test.ts": {
       "previousBytes": 3207,
       "currentBytes": 4582,
@@ -3764,6 +3772,14 @@
       "previousSha256": "1b209ea8e6d949df2a2cee76f043afeea326bc0b881406a9aaadff76339c665d",
       "currentSha256": "20ff90086467c20c67a21b6d6bedb4ffc111b99104d4df6ca3fb259a07480406",
       "firstDifferentByte": 37
+    },
+    "tests/vfx-ltk-projectile-play-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7012,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "fc8064d31aca48fed8464d8a01d21405bbe66bcad4b459a0fa7331a3c3acacd4",
+      "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
@@ -3817,6 +3833,14 @@
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
       "currentSha256": "72f06142da416ed220a122fdf261c3e1abeb3b04fde51621a5109f606f368f15",
       "firstDifferentByte": 84
+    },
+    "tests/vfx-ltk-trail-width.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2324,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1cb884aee21f4e04d696a621efcd391cac3fef943d3673f693a2cc75a36b1a6f",
+      "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,

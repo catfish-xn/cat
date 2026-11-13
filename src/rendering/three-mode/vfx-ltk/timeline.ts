@@ -89,6 +89,12 @@ export interface TimelineCue {
    * the board never shows (Caitlyn's Air Raid comet, dropped from a blimp off screen).
    */
   readonly fromAbove?: readonly [number, number, number];
+  /**
+   * A projectile that starts where its caster stands and runs on the floor toward where its target stands, through it,
+   * `lineCells` cells in all, instead of flying from a caster bone to the target: a line missile the original casts at a
+   * location with no start bone (Gangplank's ground-fire line). Both ends are taken when it spawns; it never follows.
+   */
+  readonly lineCells?: number;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
