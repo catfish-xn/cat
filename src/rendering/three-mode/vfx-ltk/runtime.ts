@@ -390,11 +390,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
-        // A run that plays out does so from here too: a killing hit lands as its unit dies, and the landed projectile's
-        // tail must not go whole with it. This also changes Vi's row shockwave on purpose: when its caster or target goes,
-        // it used to keep its planned end with emission stopped; it now plays out what it has (PLAY_OUT_CAP at most), the
-        // same ending it gets when it reaches its end with both units alive.
-        if (run.playOut && !run.ending) beginEnding(run);
+        // A listed projectile (cue-overrides.ts PLAY_OUT_SYSTEMS) plays out from here too: a killing hit lands as its unit
+        // dies, and the landed projectile's tail must not go whole with it. Only those: Vi's row shockwave, accepted as it
+        // is (Fable 11-13), keeps its planned end with emission stopped when its caster or target goes.
+        if (run.playOutEnd && !run.ending) beginEnding(run);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
       for (let index = spareFx.length - 1; index >= 0; index--) {
