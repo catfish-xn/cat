@@ -5,7 +5,9 @@ import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
 import { DEFAULT_BOARD } from '../../src/simulation/board';
 import { toDisplayEvents, toCombatViewState } from '../../src/presentation/combat-display';
 
-export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number }
+export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number;
+  /** v-capture --foe-offset K: every foe K columns to the side (+ right), so the target stands ahead and to the side. */
+  foeOffset?: number }
 /** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
 export const DEFAULT_AFTER_TICKS = 60;
 /** The replay starts this many ticks before the first cast of `me` (half a second). */
@@ -28,14 +30,14 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
     : Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - LEAD_TICKS + 1);
 }
 
-/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen). */
+/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0). */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
   const meRow = 5, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
   return [
     { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { col: 3, row: meRow } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
-      ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col, row } } })),
+      ({ id, definitionId: foe, team: 'enemy', starLevel: s.foestar, location: { kind: 'board', cell: { col: (col as number) + (s.foeOffset ?? 0), row } } })),
   ];
 }
 
@@ -97,4 +99,10 @@ export function hexDistance(a: { row: number; col: number }, b: { row: number; c
 export function frontBlockers(cells: Record<string, { row: number; col: number; alive: boolean }>): string[] {
   const me = cells.me; if (!me) return [];
   return Object.entries(cells).filter(([id, c]) => id !== 'me' && c.alive && c.row >= me.row && hexDistance(c, me) <= 1).map(([id]) => id);
+}
+/** Why a --foe-offset cannot be used with this many foes (every shifted foe must stay on the board's columns 0-6), or null. */
+export function foeOffsetProblem(offset: number, nfoes: number): string | null {
+  if (!Number.isInteger(offset)) return `--foe-offset must be a whole number of columns, got ${offset}`;
+  const cols = [3, 2, 4, 3].slice(0, Math.max(1, Math.min(4, nfoes))).map(c => c + offset);
+  return cols.every(c => c >= 0 && c <= 6) ? null : `--foe-offset ${offset} puts a foe off the board (columns ${cols.join(',')}; use --nfoes 1 or a smaller offset)`;
 }

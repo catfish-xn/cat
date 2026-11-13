@@ -50,4 +50,6 @@ node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 
 实战（`--real 1`）的录制窗口用同一套参数选：`--cast-index N` 以本单位第 N 次施法为锚点（默认第 1 次）；`--from-start 1` 从开战（第 0 tick）开始录，锚点之前的普攻和施法都在窗口里；`--lead-ms MS` 从锚点前 MS 毫秒开始（不早于开战）；都不带时和以前一样，从锚点前 0.5 秒开始。`--from-start` 和 `--lead-ms` 只能选一个。实战录制的 `--times` 必须从 0 开始（jobs-check 不符合判 FAIL）。gate.json 记 `window`（锚点和起点），`actionAtMs` 是锚点施法在录制时钟上的位置。
 
+`--foe-offset K`（只用于 `--real 1`）：所有目标整体横移 K 列（正数往右），让目标站在施法者侧前方，比如光束横着出现在画面里，而不是正对镜头被透视压短。平移后每个目标都要在第 0–6 列（`--nfoes 1` 时最好用）；不带时站位不变。
+
 录的是当前检出的代码。如果要录测试服上的版本，先检出测试服的 SHA 再录。
