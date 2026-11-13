@@ -2251,9 +2251,9 @@
     "tests/rendering3d-cast-travel-clips.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3823,
+      "currentBytes": 4971,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7e6a84388cc7dd83dc43150b2b0d00b56480d7ed1a7d6c45bbc607f229b28c5f",
+      "currentSha256": "a4d494fce77ba90f2b61033f802af540fda4646917f631f089e3db93d04ebd8a",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-catchup.test.ts": {

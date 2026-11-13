@@ -5,7 +5,7 @@ import { CAST_TRAVEL_CLIPS, castMovesBars, missingCastTravelClips } from '../src
 
 // #657: the cast clips whose travel the bars follow, listed by model and clip name (our own judgement, not original data).
 describe('cast clips that move the bars', () => {
-  it('is the reviewed list: Ambessa both branches, Smeech, Sevika punch branch only, Mel unchanged, Vi, Renni', () => {
+  it('is the reviewed list: Ambessa both branches, Smeech, Sevika punch branch only, Mel unchanged, Vi, Renni, Jayce back jump, Zoe, LeBlanc, Garen, Trundle', () => {
     expect(CAST_TRAVEL_CLIPS).toEqual({
       ambessa: ['tft13_ambessa_spellfist_dash', 'tft13_ambessa_spellfist_throw', 'tft13_ambessa_spellchain_strike'],
       smeech: ['spell'],
@@ -13,6 +13,11 @@ describe('cast clips that move the bars', () => {
       mel: ['spell1_dash.tft_set13_evolved', 'spell1_blast.tft_set13_evolved'],
       vi: ['vi_spell4_hit'],
       renni: ['spell1_stun', 'spell1_throw'],
+      jayce: ['tft13_jayce_spell2_ranged_jump'],
+      zoe: ['spell1_base'],
+      leblanc: ['tft13_leblanc_spell'],
+      garen: ['tft13_garen_spell'],
+      trundle: ['bite'],
     });
   });
 
@@ -22,7 +27,14 @@ describe('cast clips that move the bars', () => {
     expect(castMovesBars('sevika', ['spell3'])).toBe(false);
     expect(castMovesBars('smeech', ['spell'])).toBe(true);
     expect(castMovesBars('ziggs', ['spell'])).toBe(false); // same clip name, unlisted model
-    for (const id of ['warwick', 'rell', 'leblanc', 'trundle', 'jinx', 'twitch']) expect(castMovesBars(id, ['spell'])).toBe(false);
+    for (const id of ['warwick', 'rell', 'jinx', 'twitch', 'ekko', 'sett']) expect(castMovesBars(id, ['spell'])).toBe(false);
+    expect(castMovesBars('steb', ['spell'])).toBe(false);
+    expect(castMovesBars('jinx', ['tft13_jinx_spell_deathrocket', 'tft13_jinx_spell_deathrocket2', 'tft13_jinx_afterdeathrocket'])).toBe(false);
+    expect(castMovesBars('ekko', ['tft13_ekko_spell_start', 'tft13_ekko_spell_attack_2', 'tft13_ekko_spell_teleport_out'])).toBe(false);
+    expect(castMovesBars('sett', ['tft13_sett_spell3_back_start', 'tft13_sett_spell3_back_end'])).toBe(false); // the rules never pick this branch yet
+    expect(castMovesBars('jayce', ['tft13_jayce_spell2_knockhexcrystals', 'tft13_jayce_spell2_ranged_jump'])).toBe(true);
+    expect(castMovesBars('jayce', ['tft13_jayce_spell1_right', 'tft13_jayce_spell1_gainshield'])).toBe(false); // front form
+    for (const [id, clip] of [['zoe', 'spell1_base'], ['leblanc', 'tft13_leblanc_spell'], ['garen', 'tft13_garen_spell'], ['trundle', 'bite']]) expect(castMovesBars(id, [clip!])).toBe(true);
     expect(castMovesBars('vi', ['vi_spell4_hit'])).toBe(true);
     expect(castMovesBars('renni', ['spell1_stun', 'spell1_throw'])).toBe(true);
     expect(castMovesBars('rell', ['tft13_rell_spell', 'tft13_rell_spell_out'])).toBe(false);
