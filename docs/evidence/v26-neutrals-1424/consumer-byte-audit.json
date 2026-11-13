@@ -3759,6 +3759,14 @@
       "currentSha256": "fe9cfcddd15f19cd58925c247d8a1c4fcd35525be9fab0eff6fcc12ed0076bb2",
       "firstDifferentByte": 7204
     },
+    "tests/vfx-ltk-ground-line.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7816,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0a9c2a86ba1278b5d6a1e04125f318b91ea18ac63e212f70980583e47414f881",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-ground-pass.test.ts": {
       "previousBytes": 3207,
       "currentBytes": 4582,
@@ -3781,6 +3789,14 @@
       "currentSha256": "20ff90086467c20c67a21b6d6bedb4ffc111b99104d4df6ca3fb259a07480406",
       "firstDifferentByte": 37
     },
+    "tests/vfx-ltk-projectile-play-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 8190,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "94301023cfc07a8695f23e0286c78452adf32665502a6d1cde25e72f55a6eb61",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
       "currentBytes": 9710,
@@ -3798,9 +3814,9 @@
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 22973,
+      "currentBytes": 24550,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b7bb57ca57033847faf9c5e13886ee1cc1e510caf2b56201564ef62c2f4ef858",
+      "currentSha256": "0866f81bded5220af6a28a1a15a41385897fef0d5202c4d773274f95c90a0f99",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sevika-reels.test.ts": {
@@ -3825,6 +3841,14 @@
       "currentBytes": 9236,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "927f3c2f40d2b8132c3170b12226705d6014ebd344b8fda6a62fe9c80250a2a8",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-tail-groups.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6208,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "394388e635d0e1c2fa50bb1e82076693bbe3aac1443f9d7f1fca54e876e8e33a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-timeline.test.ts": {
