@@ -13,9 +13,16 @@ const hideUnits = params.get('hideunits') === '1';
 // from its unit's root, so the whole group is hidden instead.
 const hideBodies = () => { const d = (window as any).__render3d; if (!d?.pieces) return; for (const v of d.pieces.values()) if (v.body && v.body.visible) v.body.visible = false;
   const blobs = d.scene?.getObjectByName?.('render3d-contact-shadows'); if (blobs?.visible) blobs.visible = false; };
+function frameAfter(ms: number) { clock += ms; if (hideUnits) hideBodies(); const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 function step(ms: number) {
-  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; if (hideUnits) hideBodies(); const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
+  while (ms > 0) { const d = Math.min(ms, 16); ms -= d; frameAfter(d); }
 }
+// After a rewind the renderer glides each model from where the warm pass left it back to its start cell (placeholder-
+// renderer FOLLOW_SECONDS, 0.12 s time constant; Warwick took ~530 ms to slide one cell) and turns it back (HeadingTurn).
+// settle() runs the renderer's frame loop in 250 ms frames (its per-frame cap) with the replay held, so the glide and turn
+// are done before the recorded t=0: 8 frames leave 0.125^8 of the distance (17 units -> under 0.0001).
+const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
+function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
 const probes = installProbes(() => clock);
@@ -122,7 +129,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
       // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
       // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
-      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); },
+      // settle(): the models stand on their start cells, turned as there, at t=0 (no glide back from the warm pass's end).
+      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); settle(); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, startTick: Math.max(0, real.castIndex - real.lead), ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
@@ -188,8 +196,13 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }
   // ?ally=X&allystar=N (v-capture --ally X --allystar N): a front-liner of `me`'s team one row ahead of it.
   const ally = params.get('ally');
+  // ?allycell=R,C / ?foecell=R,C / ?foe2=X&foe2star=N&foe2cell=R,C (v-capture --ally-cell / --foe-cell / --foe2 --foe2star
+  // --foe2-cell): those units on given cells, the second foe another hero (real-combat.ts realUnits; layoutProblem throws).
+  const cellParam = (k: string) => { const v = params.get(k); if (v === null) return undefined; const c = rc.parseCell(v); if (!c) throw new Error(`?${k} must be R,C, got ${v}`); return c; };
+  const allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
   const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
-    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}) });
+    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(foeCell ? { foeCell } : {}),
+    ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
   const after = rc.afterTicksFor(windowMs, start);
