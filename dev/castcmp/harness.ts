@@ -6,8 +6,12 @@ const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };
+// ?hideunits=1 (v-capture --hide-units 1): every unit's model is hidden before each frame draws; bars, stars, shadows and
+// effects (attached overlays follow the hidden skeleton) still draw. Needs ?debug3d (the renderer's piece views).
+const hideUnits = params.get('hideunits') === '1';
+const hideBodies = () => { const d = (window as any).__render3d; if (!d?.pieces) return; for (const v of d.pieces.values()) if (v.body && v.body.visible) v.body.visible = false; };
 function step(ms: number) {
-  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
+  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; if (hideUnits) hideBodies(); const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 }
 import { installProbes } from './probes';
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
@@ -54,11 +58,23 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });
   const tRow = Math.max(0, 5 - dist);
   // ?nfoes=N (1-4): how many dummies stand in front of the caster.
-  const pieces = [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
+  // ?pinfoe=N (v-capture --pin-foe N): one dummy only, N hexes straight ahead of the caster (row 5 - N, column 3; on this
+  // board's offset rows that is hex distance N). Dummy mode: no rules run, so it never moves or hits back and the caster
+  // stays on its cell; only the recorded cast events play.
+  const pin = params.get('pinfoe') ? Number(params.get('pinfoe')) : null;
+  if (pin !== null && !(Number.isInteger(pin) && pin >= 1 && pin <= 5)) throw new Error(`?pinfoe must be 1-5 (hexes ahead of the caster on row 5), got ${params.get('pinfoe')}`);
+  const pieces = pin !== null ? [me, foe('foe', 5 - pin, 3)]
+    : [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
+  // The labels these modes put on every frame (and keyframes.cjs repeats them in its caption).
+  const tags = [...(pin !== null ? [`pinned dummy ${pin} hex (假人)`] : []), ...(hideUnits ? ['units hidden (单位已隐藏)'] : [])];
+  if (tags.length) { const tag = document.createElement('div'); tag.id = 'castcmp-tag'; tag.textContent = tags.join('  |  ');
+    Object.assign(tag.style, { position: 'absolute', left: '8px', top: '8px', padding: '2px 8px', font: '16px "Noto Sans CJK SC",sans-serif', color: '#ff0', background: 'rgba(0,0,0,0.6)', zIndex: '60', pointerEvents: 'none' });
+    host.style.position = 'relative'; host.append(tag); }
   const frame = (fighting: boolean) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces, fighting, dragging: null });
   listener.frame(frame(false)); step(50); listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
   // enemies' own attacks all come from the rules' event stream, replayed tick by tick on the virtual clock.
+  if (pin !== null && params.get('real')) throw new Error('?pinfoe is for dummies only: a real combat moves and fights back');
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000)) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
@@ -113,7 +129,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     box: (id: string) => listener.screenBox?.(id),
     cast() {
       const s = ++seq;
-      const targetIds = params.get('one') ? ['foe'] : ['foe', 'foe2', 'foe3'];
+      const targetIds = params.get('one') || pin !== null ? ['foe'] : ['foe', 'foe2', 'foe3'];
       const move = params.get('move');
       // LOCAL: Sevika needs her castOutcome receipt (move + outcome) in the same batch as the cast.
       const pre = move ? [{ type: 'castOutcome', tick: s, eventSeq: s, unitId: 'me', abilityKey: 'sevika-ability', outcome: params.get('outcome') ?? 'none', subOutcomes: [], castVariant: { actionSeq: s, move, channelTicks: 0 } }] : [];

@@ -1,0 +1,5 @@
+# Gangplank ranged crit missile 80ab2d1b (system transform 1.5x, arbitrary trail Trail2), arbitrary-trail width before | after.
+# Recording only, never merged. before: claude/proj-tail-rec-crit-before = claude/proj-tail-gp-viktor c9811e0c (no width fix);
+# after: claude/proj-tail-rec-line-b (80b1e05a, the width fix). Same line in both; dev/castcmp from d00ea8a8 plus the worldBox probe.
+# One still dummy three hexes ahead (--pin-foe 3), units hidden, 1-star. The missile flies ~0.2-0.9 s: keyframes 400 / 600 / 800 ms.
+v-capture.cjs gangplank gpcrit-after --pin-foe 3 --star 1 --ms 1500 --hide-units 1 --systems 80ab2d1b --layers none --probe emitters --emitters Trail2 --column after --snapshot c1333710ad8e
