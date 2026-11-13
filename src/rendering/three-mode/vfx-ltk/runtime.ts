@@ -281,8 +281,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     spareFx.push(run.fx);
   };
   const drainSpare = () => { for (const fx of spareFx) fx.dispose(); spareFx.length = 0; };
+  /** Seeds kept for a beam row that no longer waits (dropped with its target, or cleared) are let go. */
+  const pruneFlightSeeds = () => { for (const key of flightSeeds.keys()) if (!waiting.some(row => row.together === key)) flightSeeds.delete(key); };
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
+    pruneFlightSeeds();
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
@@ -443,6 +446,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const row = waiting[at];
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
+      pruneFlightSeeds();
       for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
         // A pinned beam whose target died plays its own life out toward where the target fell (Fable 11-13).
         if (run.holdTarget && run.target === id && !(run.boundToSource && run.source === id)) { run.holdTarget(); run.target = undefined; continue; }
