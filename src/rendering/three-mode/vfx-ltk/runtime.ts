@@ -391,6 +391,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
+      // REC BRANCH ONLY: real-clock update time and live systems for dev/castcmp/frame-time.cjs (summed / maxed over runtimes).
+      const __t0 = ((globalThis as any).__realNow ?? (() => performance.now()))();
       clock += seconds;
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
@@ -577,6 +579,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const states = stencilStates(claimBuf);
         for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
       }
+      { const g = globalThis as any; g.__LTK_UPD_MS = (g.__LTK_UPD_MS ?? 0) + ((g.__realNow ?? (() => performance.now()))() - __t0); g.__LTK_ACTIVE = Math.max(g.__LTK_ACTIVE ?? 0, running.size); }
     },
     clear,
     render(camera: Camera) {
