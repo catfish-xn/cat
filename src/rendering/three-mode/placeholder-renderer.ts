@@ -685,7 +685,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
-  const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId);
+  const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.starLevel);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -1433,7 +1433,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
-      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, fx.action, fx.variant);
+      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, fx.action,
+        fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);

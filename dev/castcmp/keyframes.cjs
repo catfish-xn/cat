@@ -22,8 +22,10 @@ const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k =>
 const { frames } = require('./frames.cjs');
 const gateOf = dir => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'gate.json'), 'utf8')); } catch { return null; } };
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+// A caption with CJK text (the --pin-foe / --hide-units labels) names CJK fallback fonts too; plain ASCII captions are unchanged.
+const captionFont = lines => lines.some(l => /[^\x00-\x7f]/.test(l)) ? 'DejaVu Sans Mono, Consolas, Noto Sans CJK SC, Microsoft YaHei, monospace' : 'DejaVu Sans Mono, Consolas, monospace';
 const caption = (w, lines) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${lines.length * 22 + 10}">
-  <rect width="100%" height="100%" fill="#111"/>${lines.map((l, i) => `<text x="8" y="${22 * i + 22}" font-family="DejaVu Sans Mono, Consolas, monospace" font-size="16" fill="#eee">${esc(l)}</text>`).join('')}</svg>`);
+  <rect width="100%" height="100%" fill="#111"/>${lines.map((l, i) => `<text x="8" y="${22 * i + 22}" font-family="${captionFont(lines)}" font-size="16" fill="#eee">${esc(l)}</text>`).join('')}</svg>`);
 
 async function grey(file, box) {
   return sharp(file).extract(box).greyscale().raw().toBuffer();
@@ -57,8 +59,13 @@ async function encode(base, name) {
   // The frame where before and after differ most inside that area (mean absolute difference).
   const before = sets.find(s => s.key === 'before'), after = sets.find(s => s.key === 'after');
   const from = Number(opt('from') ?? -Infinity), to = Number(opt('to') ?? Infinity);
+  // Rule (11-13): in a real-combat recording (--real 1) the t=0 frame is only the window's start: the replay has just been
+  // reset (harness fresh()) and the units are still stand-in pawns there. It is never a keyframe: not picked as the peak,
+  // not a neighbour row, and dropped from --times with a warning. Dummy recordings are unchanged.
+  const startOnly = i => !!afterGate?.real && after.frames[i]?.t === 0;
   let peak = -1, best = -1; const diffs = [];
   for (let i = 0; i < n; i++) {
+    if (startOnly(i)) { diffs.push(null); continue; }
     if (!before || after.frames[i].t < from || after.frames[i].t > to) { diffs.push(null); if (!before && peak < 0) peak = i; continue; }
     const [a, b] = await Promise.all([grey(before.frames[i].file, area), grey(after.frames[i].file, area)]);
     let sum = 0; for (let p = 0; p < a.length; p++) sum += Math.abs(a[p] - b[p]);
@@ -68,7 +75,7 @@ async function encode(base, name) {
   // screen (frames[].layerSystems), the one with the most layers (frames[].layers); the pixel difference is the fallback
   // (systems without layers, builds without ATTACHED_LAYER_STATS, hit systems whose effect sits on the target).
   let pickedBy = 'pixel-diff';
-  const timeline = (afterGate?.frames ?? []).filter(f => f.t >= from && f.t <= to && (f.layerSystems ?? []).includes(opt('system')));
+  const timeline = (afterGate?.frames ?? []).filter(f => f.t >= from && f.t <= to && !(afterGate?.real && f.t === 0) && (f.layerSystems ?? []).includes(opt('system')));
   if (timeline.length && !opt('pick-diff')) {
     const top = timeline.reduce((w, f) => (f.layers ?? 0) > (w.layers ?? 0) ? f : w);
     const i = after.frames.findIndex(f => f.t === top.t);
@@ -76,7 +83,8 @@ async function encode(base, name) {
   }
   if (peak < 0) throw new Error('no frame inside --from/--to');
   const fixed = opt('times') ? opt('times').split(',').map(Number).map(t => after.frames.findIndex(f => f.t >= t)).filter(i => i >= 0 && i < n) : null;
-  const rows = fixed?.length ? fixed : [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n);
+  if (fixed && fixed.some(startOnly)) { console.warn('keyframes: t=0 of a real-combat recording is the window start (stand-in pawns), not a keyframe: dropped from --times'); fixed.splice(0, fixed.length, ...fixed.filter(i => !startOnly(i))); }
+  const rows = fixed?.length ? fixed : [peak - 1, peak, peak + 1].filter(i => i >= 0 && i < n && !startOnly(i));
   if (fixed?.length) peak = fixed[Math.floor(fixed.length / 2)];
   // Overhead bar against the body (--probe overhead runs): drift from the standing pose at t=0 (gate.cjs overheadDrift),
   // dx and dy per frame, before and after. The pick and the caption use |ddx|; the meta has both.
@@ -97,7 +105,7 @@ async function encode(base, name) {
     ...(opt('note') ? [`times: ${opt('note').replace(/_/g, ' ')}`] : []),
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
-    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : 'dummies (not real combat)'}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
+    `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex${g.pinFoe2 ? ` + ${g.pinFoe2} hex in line` : ''} (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];
   const out = path.resolve(opt('out')); fs.mkdirSync(out, { recursive: true });
   const base = `${opt('prefix') ?? 'e138w'}-${opt('hero')}-${opt('system')}`;

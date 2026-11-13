@@ -25,19 +25,50 @@ const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
 /**
- * Caitlyn's Air Raid comet, falling onto its target (TimelineCue.fromAbove). Every value is a fitted value, not original
- * data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
+ * Caitlyn's Air Raid comet, one per shot, falling onto that shot's damage centre (TimelineCue.fromAbove). Every value is a
+ * fitted value, not original data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
  */
 export const CAITLYN_COMET = {
-  /** Cells from where the target stands: left on screen, up, and toward the top of the screen. Steep, as in the footage. */
-  from: [-1, 5, -1.5] as const,
-  /** Seconds after the cast it lands: when the exported impact (R_Bombardment_Impact) starts. */
-  lands: 1,
-  /** Seconds it falls, fitted to the footage. */
-  fall: 0.3,
+  /**
+   * Cells from where the target stands: left on screen, up, and toward the top of the screen. Fitted, not original data:
+   * far enough and slanted enough that the comet comes in from the upper left at about the angle the 14.24 footage shows,
+   * with the long streak it leaves there (the board camera looks down along -Z, so screen left is -X and screen up is
+   * mostly +Y and -Z). It still falls in CAITLYN_COMET.fall, so it lands when it did; it reads faster than the footage's,
+   * whose shot the renderer cannot see coming (a shot's centre is drawn by the rule when the shot executes).
+   */
+  from: [-4, 6, -2.5] as const,
+  /**
+   * Seconds it falls. Fitted: a shot's damage is already settled when its event arrives, so the comet starts then and
+   * lands this much later, short enough to read as the cause of that hit.
+   */
+  fall: 0.15,
   /** Seconds its trail fades out over once it lands (fitted: in the footage the column is gone soon after the burst). */
   linger: 0.15,
+  /** Seconds a 3-star shot's burst (R_Bombardment_Impact) plays, eased out from its middle: twenty shots in five seconds. */
+  burst3: 0.6,
 } as const;
+
+/**
+ * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
+ * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
+ */
+export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
+  'caitlyn-shot': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: 1.5 },
+  ],
+  // 3 stars (twenty shots): every shot bursts, shorter; every other shot also shows its comet.
+  'caitlyn-shot-3': [
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+  'caitlyn-shot-3-comet': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+};
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
@@ -97,11 +128,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: 0.5, duration: 0.8, primary: true },
     { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: 0.5, duration: 0.7, primary: true },
   ],
-  // R (Air Raid): the exported list, except the comet (R_Bombardment_Mis). The export kept it as a cast-start with no bone,
-  // so it stood on Caitlyn's feet for half a second: the missile mesh in its orange glow, never reaching anyone (11-03
-  // castcmp review; #622 keyframes). The source table had it as a flight whose path the host supplies, from a blimp her
-  // skeleton does not have. In 14.24 footage it falls steeply from high up and screen left onto the target and bursts
-  // there, so here it falls onto the primary target (CAITLYN_COMET) and lands as the impact starts.
+  // R (Air Raid): the exported list without the comet (R_Bombardment_Mis) and its burst (R_Bombardment_Impact). The export
+  // kept the comet as a cast-start with no bone, so it stood on Caitlyn's feet (11-03 castcmp review; #622 keyframes), and
+  // it played one comet and one burst on the cast target at 1 s, while the rule drops TotalShots shots over RaidDuration,
+  // each on a random enemy centre. Each shot now plays its own comet and burst where its damage lands (CUE_EXTRA_SKILLS
+  // caitlyn-shot, driven by the shot's packetDamage events in batch1-events.ts).
   caitlyn: [
     { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
@@ -109,10 +140,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'ce2a567b', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0, duration: 0.4 },
     { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
-    { system: '92bbeaf7', action: 'cast', event: 'projectile', targetBone: ground, primary: true,
-      delay: CAITLYN_COMET.lands - CAITLYN_COMET.fall, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger, travelSeconds: CAITLYN_COMET.fall,
-      stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
-    { system: '8d6e1c2e', action: 'cast', event: 'hit', delay: 1, duration: 1.5 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
@@ -406,6 +433,22 @@ export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
 export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
   return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
 }
+
+/**
+ * Projectile systems whose beams keep flying with the system instead of being pinned between caster and target
+ * (runtime beamSplit), each with why. The pin is the default for every projectile beam (Fable 11-13).
+ * - 7029bc3c Sevika's chomp: its beam is a streamed mesh rope that may belong to the flying head rather than to her;
+ *   held at its old behaviour until it is checked against the original.
+ * - 92d79254 Jayce's back-form forge: it plays only when his cast buffs an ally, which no recording setup can stage yet;
+ *   it cannot be checked on screen, so it is not changed for now (Fable 11-13).
+ * - 4f2eb343 Mel's third cast: before and after show no difference that can be judged on screen, so it is not changed
+ *   (Fable 11-13).
+ */
+export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
+  '7029bc3c': 'streamed rope, not checked against the original',
+  '92d79254': 'cannot be recorded to check, not changed for now',
+  '4f2eb343': 'no difference that can be checked on screen, not changed',
+};
 
 /**
  * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
