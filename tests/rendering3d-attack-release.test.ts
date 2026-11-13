@@ -34,13 +34,13 @@ describe('attack release timing (AttackRelease)', () => {
     expect(playback.release!.headSpeed).toBeCloseTo(4);
     expect(playback.release!.tailSpeed).toBe(1);
     expect(playback.durationSeconds).toBeCloseTo(0.4);
-    const state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 1 }) });
+    const state = new UnitActionState('a', { resolvePlayback: action => f.mixer.resolvePlayback(action, 0, { attackIntervalSeconds: 1 }) });
     f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);
     f.mixer.update(0.1); expect(f.swing().time).toBeCloseTo(0.4);
     f.mixer.update(0.1); expect(f.swing().time).toBeCloseTo(0.8);
     f.mixer.update(0.1); expect(f.swing().time).toBeCloseTo(0.9);
     // One update across the release splits at it.
-    const g = fixture(RELEASE), other = new UnitActionState('a', { resolvePlayback: (action, index) => g.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 1 }) });
+    const g = fixture(RELEASE), other = new UnitActionState('a', { resolvePlayback: action => g.mixer.resolvePlayback(action, 0, { attackIntervalSeconds: 1 }) });
     g.mixer.apply(other.output); other.consume(attack); g.mixer.apply(other.output);
     g.mixer.update(0.25); expect(g.swing().time).toBeCloseTo(0.85);
   });
@@ -57,7 +57,7 @@ describe('attack release timing (AttackRelease)', () => {
   });
 
   it('keeps the crossfade into a sped-up head within half of it', () => {
-    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 0.5 }) });
+    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: action => f.mixer.resolvePlayback(action, 0, { attackIntervalSeconds: 0.5 }) });
     f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);
     expect(state.output.blendSeconds).toBeGreaterThan(0.05);
     f.mixer.update(0.05); // release at 0.1 s: the 0.05 s crossfade is over
@@ -65,7 +65,7 @@ describe('attack release timing (AttackRelease)', () => {
   });
 
   it('drops the two-speed timing when another action interrupts the swing', () => {
-    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: 1 }) });
+    const f = fixture(RELEASE), state = new UnitActionState('a', { resolvePlayback: action => f.mixer.resolvePlayback(action, 0, { attackIntervalSeconds: 1 }) });
     f.mixer.apply(state.output); state.consume(attack); f.mixer.apply(state.output);
     f.mixer.update(0.1);
     f.mixer.apply({ state: 'idle', previous: 'attack', blendSeconds: 0, loop: true, revision: 99 });
@@ -102,7 +102,7 @@ describe('attack cues follow the release (releaseShift)', () => {
     const units = new Map<string, VfxUnit>([['caster', { root: new Group(), body: new Group(), alive: true }], ['target', { root: new Group(), body: new Group(), alive: true }]]);
     for (const unit of units.values()) unit.root.add(unit.body!);
     const scene = new Scene(), camera = new Camera(), runtime = createLtkRuntime(library, scene, id => units.get(id));
-    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', options)).toBe(true);
+    expect(runtime.play('jinx', 'caster', ['target'], 'attack', options)).toBe(true);
     let first = -1;
     for (let step = 0; step < 100 && first < 0; step++) {
       runtime.update(0.01, camera);
@@ -127,7 +127,7 @@ describe('attack cues follow the release (releaseShift)', () => {
     expect(await firstDrawnStep([{ ...hit, delay: 0 }], { releaseShift: 5 })).toBe(-1); // 2 s later: past the 1 s probe window
     const library = createVfxLibrary('/root/', { readJson: async () => ({ version: 1, systems: {}, assets: {}, skills: { jinx: [hit] } }), readTexture: async () => new Texture() });
     const runtime = createLtkRuntime(library, new Scene(), () => undefined);
-    expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', { releaseShift: Number.NaN })).toBe(false);
+    expect(runtime.play('jinx', 'caster', ['target'], 'attack', { releaseShift: Number.NaN })).toBe(false);
     runtime.dispose(); library.dispose();
   });
 

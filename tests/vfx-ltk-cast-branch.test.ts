@@ -46,15 +46,15 @@ describe('cast branch: effects follow the rule branch', () => {
 
   it.each([['chain', 2], ['fist', 4]] as const)('a %s cast plays only its %i systems', async (branch, count) => {
     const runtime = await setup(cues);
-    expect(runtime.play('ambessa', 'self', ['enemy'], 0, 'cast', { branch })).toBe(true);
+    expect(runtime.play('ambessa', 'self', ['enemy'], 'cast', { branch })).toBe(true);
     expect(runtime.queued).toBe(count);
   });
 
   it('never picks a branch from the cast count: without the event branch no branched system plays', async () => {
     const runtime = await setup(cues);
     // Returning false hands the cast to the host's older path (a replay recorded before the field still draws a cast).
-    for (const index of [0, 1, 2, 3]) { expect(runtime.play('ambessa', 'self', ['enemy'], index, 'cast')).toBe(false); expect(runtime.queued).toBe(0); }
-    expect(runtime.play('ambessa', 'self', ['enemy'], 0, 'attack')).toBe(true); expect(runtime.queued).toBe(1);
+    for (let i = 0; i < 4; i++) { expect(runtime.play('ambessa', 'self', ['enemy'], 'cast')).toBe(false); expect(runtime.queued).toBe(0); }
+    expect(runtime.play('ambessa', 'self', ['enemy'], 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
   it('the bridge reads the rule branch off the cast event, and the animation picks the same branch', () => {

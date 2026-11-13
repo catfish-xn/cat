@@ -13,7 +13,7 @@ function fixture(castSequence: CastSequence = { main: 'activate', out: 'toidle',
     clip('flinch', 0.5, -1, -1), clip('fall', 0.5, -2, -2), clip('run', 1, 20, 20)];
   const names = { idle: 'rest', move: 'run', cast: 'activate', attack: 'swing', hit: 'flinch', death: 'fall' };
   const mixer = new UnitAnimationMixer(root, clips, names, { castSequence });
-  const state = new UnitActionState('nunu', { blendSeconds: 0, resolvePlayback: (a, i) => mixer.resolvePlayback(a, i) });
+  const state = new UnitActionState('nunu', { blendSeconds: 0, resolvePlayback: a => mixer.resolvePlayback(a, 0) });
   mixer.apply(state.output);
   const step = (seconds: number) => { mixer.update(seconds); return state.update(seconds); };
   return { bone, mixer, state, step };

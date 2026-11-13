@@ -287,7 +287,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
   };
-  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], castIndex: number, action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
+  const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
@@ -295,7 +295,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues || !source?.alive || source.disposed) return false;
-      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
+      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds);
       if (unsupported.length || !spawns.length) return false;
       const living = (spawn: TimelineSpawn) => {
         if (spawn.targetId === undefined) return true;
@@ -314,15 +314,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warm,
     /** Variants live inside the champion's own catalogue; no global ID flattening. */
     playVariant(champion: string, variant: string, sourceId: string, targetIds: readonly string[] = [], group?: string): boolean {
-      return enqueue(champion, variant, sourceId, targetIds, 0, 'cast', group, true);
+      return enqueue(champion, variant, sourceId, targetIds, 'cast', group, true);
     },
     stopGroup(group: string) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].group === group) waiting.splice(at, 1);
       for (const run of running) if (run.group === group) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** True means every active cue is covered and queued. Partial/unsupported actions
-     * return false without enqueueing anything, so the host runs its entire fallback. */
-    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
+     * return false without enqueueing anything, so the host runs its entire fallback. Which cues a cast plays comes from
+     * the rule's cast event (`extra.branch`), never from a count. */
+    play(champion: string, sourceId: string, targetIds: readonly string[], action: TimelineAction = 'cast', extra?: TimelineVariant | LtkPlayOptions): boolean {
       if (closed) return false;
       void warm(champion);
       const context: LtkPlayOptions = extra !== undefined && typeof extra !== 'string' ? extra : {};
@@ -334,7 +335,6 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       let selected = available?.filter(cue => (cue.action ?? 'cast') === action
         && cue.variant === form
         && (cue.branch === undefined || cue.branch === context.branch)
-        && (cue.phase === undefined || cue.phase === castIndex % 3)
         && (!context.boardOnly || cue.location === 'board'));
       if (context.channelSeconds !== undefined) {
         if (!Number.isFinite(context.channelSeconds) || context.channelSeconds <= 0 || context.channelSeconds > 10) return false;
@@ -359,7 +359,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues) return false;
-      const mapped = mapSkillTimeline(cues, sourceId, targetIds, castIndex, context.board), { unsupported } = mapped;
+      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board), { unsupported } = mapped;
       // An optional target cue whose recipient is already gone (often killed by this very cast) is dropped, not fatal.
       const spawns = mapped.spawns.filter(spawn => {
         if (!spawn.optional || spawn.targetId === undefined || context.snapshotTargets) return true;

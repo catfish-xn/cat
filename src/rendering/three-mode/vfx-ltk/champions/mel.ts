@@ -26,4 +26,5 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: '56881fb1', event: 'cast-start', location: 'board', delay: .3, duration: 1.7, stopAfter: .6 },
   ],
 };
-export const melSkill = (castIndex: number) => castIndex % 3 === 2 ? 'mel-third' : 'mel';
+/** The rule reports Mel's third cast as branch `third` (combat-six-cost.ts); any other cast, or none reported, is plain. */
+export const melSkill = (branch: string | undefined) => branch === 'third' ? 'mel-third' : 'mel';

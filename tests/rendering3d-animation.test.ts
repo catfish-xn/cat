@@ -104,7 +104,7 @@ function fixture() {
     cast: clips[3].name, hit: clips[4].name, death: clips[5].name };
   const mixer = new UnitAnimationMixer(root, clips, names);
   const state = new UnitActionState('toy-unit', { blendSeconds: 0, durations: { move: 0.3 },
-    resolvePlayback: (action, index) => mixer.resolvePlayback(action, index) });
+    resolvePlayback: action => mixer.resolvePlayback(action, 0) });
   mixer.apply(state.output);
   const advance = (seconds: number) => { mixer.update(seconds); return mixer.apply(state.update(seconds)); };
   return { root, bone, clips, names, mixer, state, advance };

@@ -155,7 +155,6 @@ export function parseIndex(raw: unknown): VfxIndex {
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
-        || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
         || (cue.location !== undefined && cue.location !== 'board')
         || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))
