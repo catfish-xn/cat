@@ -129,6 +129,15 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       spawns.push({ ...cue, sourceId, targetId });
     }
   }
+  // A projectile from the caster to itself is left out (self-projectile). The hit on the caster that lands when it would have
+  // landed plays when it would have left instead (Fable 11-13: Lux's shield on herself, Twitch's own cast).
+  for (const { cue, reason } of unsupported) if (reason === 'self-projectile') {
+    const lands = cue.delay + (cue.travelSeconds ?? cue.duration);
+    for (let at = 0; at < spawns.length; at++) {
+      const spawn = spawns[at]!;
+      if (spawn.event === 'hit' && spawn.targetId === sourceId && Math.abs(spawn.delay - lands) < 1e-6) spawns[at] = { ...spawn, delay: cue.delay };
+    }
+  }
   return { spawns, unsupported };
 }
 /** Replacement is atomic: a missing/not-yet-loaded system keeps the entire old action.

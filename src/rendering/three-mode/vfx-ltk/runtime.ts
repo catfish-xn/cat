@@ -62,7 +62,7 @@ export type LtkSkipReason = 'missing-target' | 'self-projectile' | 'missing-poin
 const countSkips = (skipped: readonly { system: string; reason: LtkSkipReason }[]) => {
   for (const { system, reason } of skipped) LTK_RUN_STATS.skipped[`${system} ${reason}`] = (LTK_RUN_STATS.skipped[`${system} ${reason}`] ?? 0) + 1;
 };
-const refuse = (why: 'not-ready' | 'unsupported' | 'no-target' | 'nothing-left' | 'queue-full' | 'caster-dead') => { LTK_RUN_STATS.refused[why] = (LTK_RUN_STATS.refused[why] ?? 0) + 1; return false; };
+const refuse = (why: 'not-ready' | 'no-target' | 'nothing-left' | 'queue-full' | 'caster-dead') => { LTK_RUN_STATS.refused[why] = (LTK_RUN_STATS.refused[why] ?? 0) + 1; return false; };
 const countDrop = (system: string) => { LTK_RUN_STATS.dropped[system] = (LTK_RUN_STATS.dropped[system] ?? 0) + 1; };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
@@ -323,8 +323,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!cues) return refuse('not-ready');
       if (!source?.alive || source.disposed) return refuse('caster-dead');
       const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds);
-      if (unsupported.length) return refuse('unsupported');
-      const skipped: { system: string; reason: LtkSkipReason }[] = [];
+      // A cue the timeline cannot map is played without, never the whole cast (Fable 11-13).
+      const skipped = unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
       if (!spawns.length) return refuse('nothing-left');
       const living = (spawn: TimelineSpawn) => {
         if (spawn.targetId === undefined) return true;
@@ -392,8 +392,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const source = findUnit(sourceId);
       if (!cues) return refuse('not-ready');
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
-      if (mapped.unsupported.length) return refuse('unsupported');
-      const skipped: { system: string; reason: LtkSkipReason }[] = [];
+      // A cue the timeline cannot map (timeline.ts unsupported) is played without; the rest of the cast plays (Fable 11-13:
+      // one such cue sent the whole cast back to the host's own effect).
+      const skipped = mapped.unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
       // Targets: a living one is followed, a dead one whose unit is still there gets the cast's hits and projectiles at its
       // place, a gone one loses its rows (placeTargets). The cast is refused only when none of its targets is usable, or
       // nothing is left of it, or its caster is dead and it rides on the caster.
