@@ -19,6 +19,8 @@ const board = opt('board'), foes = opt('foes') ?? board, star = opt('star') ?? '
 if (!board) throw Error('--board required');
 const caps = (opt('caps') ?? '12,16,20,24').split(',').map(Number), budgets = (opt('budgets') ?? '1500').split(',').map(Number);
 const rounds = Number(opt('rounds') ?? 3);
+// Champion/action pairs whose LTK rows are counted (asked / started / dropped, and runs that gave way as tails or were evicted).
+const track = (opt('track') ?? 'viktor:attack,vi:cast').split(',').map(t => t.split(':'));
 const [W, H] = (opt('size') ?? '1920x1080').split('x').map(Number); // smaller only for smoke tests
 const variants = Object.fromEntries((opt('variants') ?? `before=${opt('port') ?? 5311}`).split(',').map(kv => kv.split('=')).map(([k, v]) => [k, Number(v)]));
 const variantCaps = Object.fromEntries((opt('variantCaps') ?? '').split(',').filter(Boolean).map(kv => kv.split('=')).map(([k, v]) => [k, v.split('/').map(Number)]));
@@ -73,24 +75,26 @@ const countDraws = () => {
       return { ms, ltk, draws, live };
     }, seconds);
     const admit = await page.evaluate(() => globalThis.__LTK_STATS ?? {});
-    const sum = pick => Object.entries(admit).filter(([k]) => pick(k)).reduce((t, [, v]) => ({ asked: t.asked + v.asked, started: t.started + v.started, dropped: t.dropped + v.dropped }), { asked: 0, started: 0, dropped: 0 });
-    const vk = k => /-viktor\|attack\|/.test(k);
-    const admission = { all: sum(() => true), viktorAttack: sum(vk),
-      viktorAttackBySystem: Object.fromEntries([...new Set(Object.keys(admit).filter(vk).map(k => k.split('|')[2]))].map(sys => [sys, sum(k => vk(k) && k.split('|')[2] === sys)])) };
+    const F = ['asked', 'started', 'dropped', 'gaveWay', 'evicted'];
+    const sum = pick => Object.entries(admit).filter(([k]) => pick(k)).reduce((t, [, v]) => Object.fromEntries(F.map(f => [f, t[f] + (v[f] ?? 0)])), Object.fromEntries(F.map(f => [f, 0])));
+    const of = (champion, action) => k => k.split('|')[0].endsWith('-' + champion) && k.split('|')[1] === action;
+    const admission = { all: sum(() => true), tracked: Object.fromEntries(track.map(([c, a]) => { const pick = of(c, a);
+      return [`${c}:${a}`, { total: sum(pick), bySystem: Object.fromEntries([...new Set(Object.keys(admit).filter(pick).map(k => k.split('|')[2]))].map(sys => [sys, sum(k => pick(k) && k.split('|')[2] === sys)])) }]; })) };
+    admission.viktorAttack = admission.tracked['viktor:attack']?.total ?? null;
     const row = { ...cell, combat: info, ...frameStats(per.ms, per.ltk, per.draws), livePeak: Math.max(...per.live), liveMean: r2(per.live.reduce((a, b) => a + b, 0) / per.live.length),
       admission, errors: [...new Set(errors)].slice(0, 5), ms: per.ms.map(r2), ltkMs: per.ltk.map(r2), draws: per.draws, live: per.live };
     results.push(row);
-    mark(`${cell.variant} cap ${cell.cap}/${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} >33 ${row.over33_3} ltk ${row.ltkMean} draws ${row.drawsMean} live ${row.livePeak} vk ${JSON.stringify(admission.viktorAttack)}`);
+    mark(`${cell.variant} cap ${cell.cap}/${cell.budget} round ${cell.round}: mean ${row.mean} p95 ${row.p95} >33 ${row.over33_3} ltk ${row.ltkMean} draws ${row.drawsMean} live ${row.livePeak} tracked ${JSON.stringify(Object.fromEntries(Object.entries(admission.tracked).map(([k, v]) => [k, v.total])))}`);
     await page.close();
   }
   const keys = ['mean', 'p95', 'p99', 'over33_3', 'over16_7', 'ltkMean', 'ltkP95', 'drawsMean', 'drawsMax', 'livePeak', 'liveMean'];
   const summary = cells.map(c => { const rs = results.filter(r => r.variant === c.variant && r.cap === c.cap && r.budget === c.budget);
     return { ...c, rounds: rs.length, ...Object.fromEntries(keys.map(k => [k, median(rs.map(r => r[k]))])),
       range: Object.fromEntries(['mean', 'p95', 'over33_3', 'ltkMean', 'drawsMean'].map(k => [k, [Math.min(...rs.map(r => r[k])), Math.max(...rs.map(r => r[k]))]])),
-      viktorAttack: rs.map(r => r.admission.viktorAttack) }; });
+      viktorAttack: rs.map(r => r.admission.viktorAttack), tracked: Object.fromEntries(track.map(([c, a]) => [`${c}:${a}`, rs.map(r => r.admission.tracked[`${c}:${a}`].total)])) }; });
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, variants, order: order.map(o => `${o.variant}/${o.cap}/${o.budget}#${o.round}`), summary, results }, null, 1));
   console.table(summary.map(s => ({ variant: s.variant, cap: s.cap, budget: s.budget, mean: s.mean, meanRange: s.range.mean.join('–'), p95: s.p95, p95Range: s.range.p95.join('–'),
-    over33: s.over33_3, over33Range: s.range.over33_3.join('–'), ltkMs: s.ltkMean, draws: s.drawsMean, livePeak: s.livePeak, vkDropped: s.viktorAttack.map(v => v.dropped).join('/') })));
+    over33: s.over33_3, over33Range: s.range.over33_3.join('–'), ltkMs: s.ltkMean, draws: s.drawsMean, livePeak: s.livePeak, vkDropped: s.viktorAttack.map(v => v?.dropped).join('/'), viStarted: (s.tracked['vi:cast'] ?? []).map(v => v.started).join('/'), viCut: (s.tracked['vi:cast'] ?? []).map(v => v.gaveWay + v.evicted).join('/') })));
   await browser.close(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
