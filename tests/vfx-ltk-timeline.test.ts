@@ -216,7 +216,8 @@ describe('cast timeline replacement and fallback', () => {
     runtime.update(0.35, camera); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
     runtime.clear();
     // Slots that end within the wait let the queued hit in.
-    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('ezreal', 'caster', ['target']); runtime.update(0.01, camera); }
+    // Six start per frame, so the board fills in a few frames, well inside the 0.15 s these hits last.
+    for (let i = 0; i < MAX_LTK_SYSTEMS; i++) { runtime.play('ezreal', 'caster', ['target']); if (i % 6 === 5 || i === MAX_LTK_SYSTEMS - 1) runtime.update(0.01, camera); }
     runtime.play('vi', 'caster', ['target']); runtime.update(0.01, camera); expect(runtime.queued).toBe(1);
     runtime.update(0.12, camera); runtime.update(0.01, camera);
     expect(runtime.queued).toBe(0); expect(runtime.active).toBeGreaterThanOrEqual(1);
@@ -236,7 +237,7 @@ describe('cast timeline replacement and fallback', () => {
     runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); expect(budget.live).toBe(250);
     runtime.update(1.2, camera); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
     // The synthetic system peaks at a few particles: later plays reserve the floor, not 250 each.
-    for (let i = 0; i < 20; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
+    for (let i = 0; i < MAX_LTK_SYSTEMS + 8; i++) { runtime.play('jinx', 'caster', []); runtime.update(0.01, camera); }
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(budget.live).toBe(MAX_LTK_SYSTEMS * MIN_RESERVE);
     // Every slot comes back, and a play cut short (cleared before its end) records nothing.
     runtime.clear(); expect(budget.live).toBe(0);

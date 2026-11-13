@@ -646,6 +646,14 @@
       "currentSha256": "25c00d52a9b694028a8bdb8a0615a6fbc1bec2903e549c549580a7e21d3fae43",
       "firstDifferentByte": 0
     },
+    "tests/castcmp-draw-filter.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3298,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "11ac73b6fc34ca2a1b227541224e0abfc6f14941cc4e14afde4a74f917ff42a2",
+      "firstDifferentByte": 0
+    },
     "tests/castcmp-frames.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -1370,9 +1378,9 @@
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23391,
+      "currentBytes": 23184,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c6baaea65db8f86dc1fd99912357e6e7daf41c8b4e8442dca89c9e9061040608",
+      "currentSha256": "6f4d210a309cdc043f4c401c17907954d4cbe1de1f3f5d0eb539e6250e40e99d",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
@@ -3715,9 +3723,9 @@
     "tests/vfx-ltk-dead-target.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 18036,
+      "currentBytes": 18242,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4fbb831c34a67467589d222e54d4250ed934b53b55f251e96a1cf43a0e951031",
+      "currentSha256": "95f0c13bf381654710e15a81da1fd3932395c70db679fd218622a6ec455477d4",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
@@ -3853,9 +3861,9 @@
     },
     "tests/vfx-ltk-timeline.test.ts": {
       "previousBytes": 9657,
-      "currentBytes": 27463,
+      "currentBytes": 27630,
       "previousSha256": "f222ea6755e56dab2a93910584a2e98cdc06dba6b27f0cfd1a7a2403692f7a71",
-      "currentSha256": "b464d774cccc7d3f68fe2c1fb14bbaecb70cc784c978eba697c7c0cc4d5badd6",
+      "currentSha256": "9778f4a0d821be35f95c1e217826a94528df894d98fe7a68d5e6cd4b3b1e9fc7",
       "firstDifferentByte": 84
     },
     "tests/vfx-ltk-together-admission.test.ts": {
