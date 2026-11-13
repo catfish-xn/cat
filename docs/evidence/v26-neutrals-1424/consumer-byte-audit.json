@@ -3707,9 +3707,9 @@
     "tests/vfx-ltk-dead-target.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12206,
+      "currentBytes": 13450,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "21a0448fae67c0e01882f1a625833cada98c8025f5b88ef969449db3be8130eb",
+      "currentSha256": "07a2b8990a33e8cd96f787d529eeb32dae1be9625c474fc9dfaf34195a7d66cb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
