@@ -68,6 +68,16 @@ export function installProbes(clock: () => number) {
      * Draws are named `<emitter>#<rank>` from the build that added this probe on (older builds: '(unnamed)', so filter by
      * --systems there). */
     emitters(names?: string[]) {
+      // RECORDING PROBE (never merged): the draw's geometry bounds in world (board) units, drawn range only.
+      const worldBoxOf = (o: any) => {
+        const pos = o.geometry?.attributes?.position; if (!pos || o.isInstancedMesh) return null;
+        const n = Math.min(pos.count, o.geometry.drawRange?.count ?? pos.count); if (!n) return null;
+        o.updateWorldMatrix(true, false); const e = o.matrixWorld.elements; const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+        for (let i = 0; i < n; i++) { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+          const w = [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]];
+          for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], w[k]); hi[k] = Math.max(hi[k], w[k]); } }
+        return { min: num(lo), max: num(hi) };
+      };
       const want = (names ?? []).map(n => n.toLowerCase()).filter(Boolean);
       const out: any[] = [];
       for (const rec of live) {
@@ -91,7 +101,7 @@ export function installProbes(clock: () => number) {
             count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
             material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
             transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),
-            defines: { ...(m.defines ?? {}) }, textures, uniforms });
+            defines: { ...(m.defines ?? {}) }, textures, uniforms, worldBox: worldBoxOf(o) });
         });
       }
       return { draws: out };

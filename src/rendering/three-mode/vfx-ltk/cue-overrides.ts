@@ -268,16 +268,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '4f440b84', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
   ],
   // 弹道发射骨骼按原版 mStartBoneName
+  // RECORDING PROBE (never merged): only 20cd67dc, and of it only MakerTrench1 (the scorch strand). Path chosen by
+  // ?gpPath= on the page: 'ground' runs root to root on the floor; anything else keeps the live weapon-bone start.
   gangplank: [
-    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
-    { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
-    { system: '80ab2d1b', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'r_hand', travelSeconds: 0.7 },
-    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'Buffbone_Glb_Weapon_2', travelSeconds: 0.7 },
-    { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
-    { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
-    { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },
-    { system: '5d21d7bb', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
-    { system: 'f9ead72c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7,
+      hide: ['MakerSparks1', 'MakerSparks2', 'Mesh', 'SideSparks', 'sideSpparks', 'Temp_Ray2'],
+      ...(typeof location !== 'undefined' && new URLSearchParams(location.search).get('gpPath') === 'ground' ? {} : { bone: 'Buffbone_Glb_Weapon_2' }) },
   ],
   // 弹道发射骨骼按原版 mStartBoneName
   nami: [

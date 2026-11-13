@@ -1,0 +1,9 @@
+# Gangplank scorch strand probe (Fable 11-13). Recording only, never merged. Branch claude/proj-tail-rec-mt1 = 98493cba
+# (B: plays out after landing) + probe: only 20cd67dc runs, and of it only MakerTrench1 is drawn; probes.ts emitters()
+# adds each draw's world bounding box (worldBox, board units) so the strand's height and length are measured.
+# P1 live path: weapon bone (Buffbone_Glb_Weapon_2) to the target's feet. P2 --gpPath ground: caster root to target root,
+# on the floor. dist 2 is about 1 cell between the two (as the original, ~1 cell, close); dist 4 gives a longer line.
+# Landing ~900 ms. Keyframe 1200 ms (= original cyB8 251.8 s); also look at 1000 and 1600.
+v-capture.cjs gangplank mt1-p1-d2 --one 1 --nfoes 1 --star 1 --dist 2 --ms 1700 --systems 20cd67dc --layers none --from 950 --to 1300 --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank mt1-p2-d2 --one 1 --nfoes 1 --star 1 --dist 2 --ms 1700 --gpPath ground --systems 20cd67dc --layers none --from 950 --to 1300 --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
+v-capture.cjs gangplank mt1-p2-d4 --one 1 --nfoes 1 --star 1 --dist 4 --ms 1700 --gpPath ground --systems 20cd67dc --layers none --from 950 --to 1300 --probe emitters --emitters MakerTrench1 --column after --snapshot c1333710ad8e
