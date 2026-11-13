@@ -162,7 +162,7 @@ describe('vfx-ltk casts at dead targets', () => {
   it('on a full board a hit at a dead target\'s place is dropped and evicts nothing; the living target\'s hit starts that frame', async () => {
     const { runtime, scene, units, step, of } = await setup();
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
-    step(3 / 60); // at most six starts a frame
+    step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
     expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS);
     for (const key of Object.keys(LTK_RUN_STATS.placeDropped)) delete LTK_RUN_STATS.placeDropped[key];
     const dropped = LTK_RUN_STATS.dropped.boom ?? 0;
@@ -189,7 +189,7 @@ describe('vfx-ltk casts at dead targets', () => {
       expect(runtime.play('pair', 'caster', ['b'])).toBe(true);
       step(1 / 60);
       for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
-      step(3 / 60);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
       expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
       const [spare] = of('boom');
       expect(spare.fx.object.parent).toBe(scene);
@@ -213,7 +213,7 @@ describe('vfx-ltk casts at dead targets', () => {
       const group = of('boom').filter(entry => entry.fx.object.parent === scene);
       expect(group).toHaveLength(2);
       for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
-      step(3 / 60);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
       // A plain attack on the full board: nothing is spare, so it is dropped and the group stays whole.
       expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
       step(1 / 60);
@@ -227,7 +227,7 @@ describe('vfx-ltk casts at dead targets', () => {
     for (const order of [['a', 'b'], ['b', 'a']]) {
       const { runtime, scene, units, step, of } = await setup();
       for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
-      step(3 / 60);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
       units.get('b')!.alive = false;
       const placeDropped = LTK_RUN_STATS.placeDropped.boom ?? 0;
       expect(runtime.play('duo', 'caster', order)).toBe(true);
