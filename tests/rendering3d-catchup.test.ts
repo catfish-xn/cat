@@ -43,7 +43,10 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: { ...Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+      // Listed cast clips (overhead-follow.ts CAST_TRAVEL_CLIPS): Ambessa's chain strike, Smeech's leap on the jumper's skeleton.
+      ambessa: { path: 'ambessa.glb', animations: { idle: 'idle', attack: 'attack', cast: 'tft13_ambessa_spellchain_strike', death: 'death' } },
+      smeech: { path: 'smeech.glb', animations: { idle: 'idle', attack: 'attack', cast: 'spell', death: 'death' } } },
       effects: { flash: { path: 'flash.json' }, [SINGED_BUFF]: { path: 'buff.json' } },
       actionEffects: { ...Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])), singed: { attack: ['flash'], cast: [SINGED_BUFF] } } };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
@@ -68,11 +71,12 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
         : ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
       readTexture: async () => { const texture = new three.Texture(); texture.addEventListener('dispose', textureDisposed); return texture; },
       readModel: async (url: string) => { const scene = new three.Group(); scene.add(new three.Mesh(new three.BoxGeometry(20, 40, 20), new three.MeshBasicMaterial()));
-        if (!url.endsWith('jumper.glb')) return { scene, animations: ['idle', 'attack', 'cast', 'death'].map(name => new three.AnimationClip(name, 1, [])) };
+        const castName = url.endsWith('ambessa.glb') ? 'tft13_ambessa_spellchain_strike' : url.endsWith('smeech.glb') ? 'spell' : 'cast';
+        if (!url.endsWith('jumper.glb') && !url.endsWith('smeech.glb')) return { scene, animations: ['idle', 'attack', castName, 'death'].map(name => new three.AnimationClip(name, 1, [])) };
         // Synthetic League-like skeleton: its cast carries the Root bone forward and up (made-up integers).
         const bone = new three.Bone(); bone.name = 'Root'; bone.position.set(0, 10, 0); scene.add(bone);
         const travel = new three.VectorKeyframeTrack('Root.position', [0, 0.5, 1], [0, 10, 0, 0, 60, -40, 0, 10, 0]);
-        return { scene, animations: [...['idle', 'attack', 'death'].map(name => new three.AnimationClip(name, 1, [])), new three.AnimationClip('cast', 1, [travel])] }; },
+        return { scene, animations: [...['idle', 'attack', 'death'].map(name => new three.AnimationClip(name, 1, [])), new three.AnimationClip(castName, 1, [travel])] }; },
       dispose() {},
     }) }));
     const libraries = await import('../src/rendering/three-mode/effect-library'), create = libraries.createEffectLibrary;
@@ -290,21 +294,27 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   // User 11-11: the bar stayed put while the model moved. Bars, star row and stun ring follow the drawn body.
   type Over = { overhead: { object: import('three').Object3D }; root: import('three').Object3D };
   const over = (id: string) => debug().pieces.get(id) as unknown as Over;
-  it('the bar follows a cast lunge out and back', async () => {
+  // Fable 11-13: the bars follow a cast's lunge and its clip's own travel only for a listed cast clip (overhead-follow.ts
+  // CAST_TRAVEL_CLIPS: the body leaves its cell whole); any other cast leaves them over the piece's spot (its root, which
+  // slides when the rules move it) plus the knock-up lift. #620 read `expect(farthest).toBeGreaterThan(20)` (a cast
+  // lunge) and `expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5)` (a jumping clip) for every cast; the
+  // listed clips below keep those assertions, the unlisted jumping clip now stays within 0.5 of its spot.
+  const moved = (tick: number, to = { col: 0, row: 0 }) => ({ type: 'movement', tick, eventSeq: tick + 1, unitId: 'a', from: { col: 0, row: 0 }, to }) as unknown as DisplayCombatEvent;
+  it.each([{ moving: true }, { moving: false }])('a listed cast clip\'s lunge moves the bar out and back (move in the same tick: $moving)', async ({ moving }) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'ambessa' }, { ...frame.pieces[0], id: 'b', team: 'enemy', x: 350 }] };
     listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); await advance();
     const spot = over('a').overhead.object.position.clone(), root = over('a').root.position.clone();
-    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    listener.events([...(moving ? [moved(1)] : []), { ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
     let farthest = 0;
     for (let i = 0; i < 20; i++) { await advance(30); farthest = Math.max(farthest, over('a').overhead.object.position.distanceTo(spot)); }
-    expect(over('a').root.position.distanceTo(root)).toBe(0); // the rules keep the piece on its cell
-    expect(farthest).toBeGreaterThan(20);
+    expect(over('a').root.position.distanceTo(root)).toBe(0); // the frame keeps the piece on its cell
+    expect(farthest).toBeGreaterThan(20); // as #620
     for (let i = 0; i < 20; i++) await advance(50);
     expect(over('a').overhead.object.position.distanceTo(spot)).toBeLessThan(1);
   });
 
-  it('the bar follows the clip\'s own root travel and jump height, and comes back after', async () => {
-    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'jumper' }] };
+  it.each([{ model: 'smeech', listed: true }, { model: 'jumper', listed: false }])('a jumping cast clip moves the bar only when listed, and it comes back after ($model)', async ({ model, listed }) => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: model }] };
     listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); await advance();
     const spot = over('a').overhead.object.position.clone();
     listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]);
@@ -313,9 +323,27 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
       await advance(40); const at = over('a').overhead.object.position;
       rise = Math.max(rise, at.y - spot.y); shift = Math.max(shift, Math.hypot(at.x - spot.x, at.z - spot.z));
     }
-    expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5);
+    if (listed) { expect(rise).toBeGreaterThan(5); expect(shift).toBeGreaterThan(5); } // as #620
+    else { expect(rise).toBeLessThan(0.5); expect(shift).toBeLessThan(0.5); } // #620: rise > 5 and shift > 5
     for (let i = 0; i < 30; i++) await advance(50);
     expect(over('a').overhead.object.position.distanceTo(spot)).toBeLessThan(1);
+  });
+
+  // The two cases the #657 review raised, on an unlisted cast clip: (a) the piece walks on while its cast clip still
+  // plays, (b) it steps and casts in one tick. Either way the bar stays over the piece's root as it slides, with no clip
+  // travel on top.
+  it.each([{ order: 'cast, then a step while the clip plays' }, { order: 'a step, then the cast in the same tick' }])('the bar rides the root only: $order', async ({ order }) => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'jumper' }] };
+    listener.frame({ ...board, fighting: false }); await flush(); listener.frame(board); await advance();
+    const step = { ...board, pieces: [{ ...board.pieces[0], x: board.pieces[0].x + 60 }] };
+    const offset = () => { const o = over('a'); return Math.hypot(o.overhead.object.position.x - o.root.position.x, o.overhead.object.position.z - o.root.position.z); };
+    const base = offset();
+    if (order.startsWith('cast')) { listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]); await advance(40); listener.frame(step); listener.events([moved(2, { col: 1, row: 0 })]); }
+    else { listener.frame(step); listener.events([moved(1, { col: 1, row: 0 }), { ...cast(1), targetIds: [] } as DisplayCombatEvent]); }
+    expect(debug().pieces.get('a')!.state.output.state).toBe('cast'); // the clip keeps playing through the step
+    let worst = 0;
+    for (let i = 0; i < 20; i++) { await advance(40); worst = Math.max(worst, Math.abs(offset() - base)); }
+    expect(worst).toBeLessThan(0.5);
   });
 
   it('the bar rises with a knock-up and comes back down', async () => {

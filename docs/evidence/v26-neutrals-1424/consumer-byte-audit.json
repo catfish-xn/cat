@@ -2256,11 +2256,19 @@
       "currentSha256": "83afbdc4766812e50d17f435a66576c3f76800d70bf5be4bb155fd95a2e37b2e",
       "firstDifferentByte": 1358
     },
+    "tests/rendering3d-cast-travel-clips.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4971,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a4d494fce77ba90f2b61033f802af540fda4646917f631f089e3db93d04ebd8a",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 41834,
+      "currentBytes": 45116,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "9ad91e783bfc489fef1d8824dadf473d0cb3f21a7d9a22562e21a94604613710",
+      "currentSha256": "853f5c8113ae1b6be5cd9062104beb2700e2838d700a3b02c9d68277a5cc1f58",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-lighting.test.ts": {

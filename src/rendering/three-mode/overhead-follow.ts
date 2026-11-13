@@ -18,6 +18,36 @@ export const BODY_BONES: readonly RegExp[] = [/^pelvis$/i, /pelvis/i, /hip/i];
  */
 export const BODY_SLACK = { across: 0.1, up: 0.3 } as const;
 
+/**
+ * The cast clips during which the bars follow the drawn body (its clip travel, body bone and lunge), by model id: the
+ * clips whose body leaves its own cell whole (a dash, a leap, a jump into the air), whether or not the rules move the
+ * piece. A clip that only twists or sways around its cell is not listed. Every other cast leaves the bars over the
+ * piece's spot and lift, as an attack or an idle does. A cast whose sequence holds a listed clip follows for the whole
+ * sequence (Jayce's back cast: the crystal knock, then the jump). Our own judgement (Fable 2026-11-13), not original data.
+ */
+export const CAST_TRAVEL_CLIPS: Readonly<Record<string, readonly string[]>> = {
+  ambessa: ['tft13_ambessa_spellfist_dash', 'tft13_ambessa_spellfist_throw', 'tft13_ambessa_spellchain_strike'],
+  smeech: ['spell'],
+  sevika: ['spell2_dash', 'spell2_punch', 'spell2_slam'],
+  mel: ['spell1_dash.tft_set13_evolved', 'spell1_blast.tft_set13_evolved'],
+  vi: ['vi_spell4_hit'],
+  renni: ['spell1_stun', 'spell1_throw'],
+  jayce: ['tft13_jayce_spell2_ranged_jump'],
+  zoe: ['spell1_base'],
+  leblanc: ['tft13_leblanc_spell'],
+  garen: ['tft13_garen_spell'],
+  trundle: ['bite'],
+};
+/** Whether a cast playing these clips on this model moves the bars with the body (CAST_TRAVEL_CLIPS). */
+export function castMovesBars(modelId: string | null | undefined, clips: readonly string[] | undefined): boolean {
+  const listed = modelId ? CAST_TRAVEL_CLIPS[modelId] : undefined;
+  return !!listed && !!clips && clips.some(clip => listed.includes(clip));
+}
+/** The listed clips this model's loaded animations lack (a renamed or dropped clip), for a dev warning. */
+export function missingCastTravelClips(modelId: string, animations: readonly { readonly name: string }[]): string[] {
+  return (CAST_TRAVEL_CLIPS[modelId] ?? []).filter(clip => !animations.some(a => a.name === clip));
+}
+
 const trackOf = (clip: AnimationClip | undefined, node: Object3D, property: string): KeyframeTrack | undefined =>
   clip?.tracks.find(t => t.name === `${PropertyBinding.sanitizeNodeName(node.name)}.${property}` || t.name === `${node.name}.${property}`);
 const first = (track: KeyframeTrack | undefined, size: number): number[] | null =>
