@@ -97,7 +97,7 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     runtime.dispose();
   });
 
-  it('a dead target: toward its snapshot point when the cast keeps it, else not at all, never from the caster\'s bone', async () => {
+  it('a dead target: toward where it stood when the cast came, never from the caster\'s bone', async () => {
     let { runtime, units } = await setup([line(2)]);
     units.get('target')!.alive = false;
     expect(runtime.play('gangplank', 'caster', ['target'], 'cast', { snapshotTargets: true })).toBe(true);
@@ -106,11 +106,13 @@ describe('vfx-ltk ground line (TimelineCue.lineCells)', () => {
     const end = toSystem(groundLine([10, 0, 20], [40, 0, 60], 2)![1]);
     built[0]!.options.target.originAt(0).forEach((value: number, axis: number) => expect(value).toBeCloseTo(end[axis]!, 6));
     runtime.dispose();
+    // Killed after the cast but before the line starts (a killing slash): the line still runs toward where it stood.
     ({ runtime, units } = await setup([{ ...line(2), delay: 0.1 }]));
     expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
     units.get('target')!.alive = false;
     for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
-    expect(built).toHaveLength(0);
+    expect(built).toHaveLength(1);
+    built[0]!.options.target.originAt(0).forEach((value: number, axis: number) => expect(value).toBeCloseTo(end[axis]!, 6));
     runtime.dispose();
   });
 

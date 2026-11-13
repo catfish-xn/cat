@@ -371,6 +371,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Snapshot as a world point, rather than retaining the dead object's bones.
           const engine = p.originAt(0);
           snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
+        } else if (spawn.lineCells && spawn.targetId) {
+          // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
+          // so a cast that kills its target still draws its line (11-13, Gangplank's killing slash drew nothing).
+          const unit = findUnit(spawn.targetId);
+          if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}) });
