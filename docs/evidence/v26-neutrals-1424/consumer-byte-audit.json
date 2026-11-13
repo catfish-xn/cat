@@ -3818,6 +3818,14 @@
       "currentSha256": "01c7e1f889481c39e25c7469070a4fa98beb7b84d1039d2d018b9f047adfe315",
       "firstDifferentByte": 84
     },
+    "tests/vfx-ltk-trail-joints.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6298,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "76a8de1b7f0d5f8eae713ae48ab947bddd13225d1572e042ab66a18a0766384f",
+      "firstDifferentByte": 0
+    },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

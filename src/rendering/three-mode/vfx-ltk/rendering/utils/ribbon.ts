@@ -138,9 +138,18 @@ export interface Cursor {
 /** What a wake's `u` is brought back by, which keeps mirrored-repeat parity. */
 const WAKE_MODULUS = 2;
 
+/**
+ * Two points nearer than this share of the point's half-width (and at least `MERGE_FLOOR`) are one point to the walk.
+ * Ours, not the engine's: what it does with them is not known.
+ */
+const MERGE_SHARE = 0.05, MERGE_FLOOR = 1e-3;
+/** The cosine of the most a near point's side may turn from the last before its joint is dropped (30 degrees). Ours. */
+const MERGE_TURN = Math.cos(Math.PI / 6);
+
 /** Scratch the trail walk reuses, so a frame allocates nothing per point. */
 const POINT = new Float32Array(3);
 const NEXT = new Float32Array(3);
+const FAR = new Float32Array(3);
 const TANGENT = new Float32Array(3);
 const ACROSS = new Float32Array(3);
 const RAW_ACROSS = new Float32Array(3);
@@ -184,14 +193,29 @@ export function writeTrail(
     /* The oldest particle is never filtered, and neither is the first of the walk. */
     placed(held, at, smoothed && !first && at !== 0 ? build.reach : 0, POINT);
 
-    if (!first) {
-      walked += Math.hypot(POINT[0] - LAST[0], POINT[1] - LAST[1], POINT[2] - LAST[2]);
-      if (build.cutoff > 0 && build.cutoff <= walked) break;
-    }
+    let gap = 0;
+    if (!first) gap = Math.hypot(POINT[0] - LAST[0], POINT[1] - LAST[1], POINT[2] - LAST[2]);
+    /* A point all but on the last one has no direction of its own: its tangent is noise. Where that noise turns the
+       ribbon's side (camera trails) past MERGE_TURN, the joint is dropped: an interior point is merged into the last, the
+       final one keeps the last side (11-13: Caitlyn's comet trail, two particles 1.5 units apart on a 250-wide ribbon,
+       turned the ribbon there into a skewed step). A near point that turns the side less draws as before. */
+    const near = !first && gap < Math.max(MERGE_FLOOR, MERGE_SHARE * held.width[at]);
 
     if (first) {
       placed(held, at + step, 0, NEXT);
       for (let axis = 0; axis < 3; axis += 1) TANGENT[axis] = NEXT[axis] - POINT[axis];
+      /* The head on its neighbour: aim at the first point past it when the neighbour would turn the side. */
+      if (build.view !== null && points > 2
+        && Math.hypot(TANGENT[0], TANGENT[1], TANGENT[2]) < Math.max(MERGE_FLOOR, MERGE_SHARE * held.width[at])) {
+        let toward = at + step;
+        while (toward + step >= 0 && toward + step < points
+          && Math.hypot(NEXT[0] - POINT[0], NEXT[1] - POINT[1], NEXT[2] - POINT[2]) < Math.max(MERGE_FLOOR, MERGE_SHARE * held.width[at])) {
+          toward += step; placed(held, toward, 0, NEXT);
+        }
+        for (let axis = 0; axis < 3; axis += 1) FAR[axis] = NEXT[axis] - POINT[axis];
+        unit(FAR); unit(TANGENT);
+        if (TANGENT[0] * FAR[0] + TANGENT[1] * FAR[1] + TANGENT[2] * FAR[2] < MERGE_TURN) TANGENT.set(FAR);
+      }
     } else {
       for (let axis = 0; axis < 3; axis += 1) TANGENT[axis] = POINT[axis] - LAST[axis];
     }
@@ -209,6 +233,15 @@ export function writeTrail(
         if (first) sideOf(build.view, ACROSS);
         else ACROSS.set(LAST_ACROSS);
       }
+      if (near && ACROSS[0] * LAST_ACROSS[0] + ACROSS[1] * LAST_ACROSS[1] + ACROSS[2] * LAST_ACROSS[2] < MERGE_TURN) {
+        if (seen < points - 1) continue;
+        ACROSS.set(LAST_ACROSS);
+      }
+    }
+
+    if (!first) {
+      walked += gap;
+      if (build.cutoff > 0 && build.cutoff <= walked) break;
     }
 
     /* The joint's own two sides, kept unmitered, because the bisector below is between a

@@ -75,13 +75,16 @@ export function emit(
   if (emitter.singleParticle && state.emitted) return;
 
   const now = state.age;
-  if (step.stopped && now > stopWaitSeconds(emitter)) return;
+  /* A trail's last point on its missile's arrival (SystemStep.landing), though the stop has begun and its rate owes none. */
+  const landing = !!step.landing && emitter.trail !== null && !emitter.singleParticle;
+  if (step.stopped && now > stopWaitSeconds(emitter) && !landing) return;
   if (now < emitter.timeBeforeFirstEmission || emissionEnded(emitter, now)) return;
   if (!periodActive(emitter.period, now)) return;
 
   const phase = emitterPhase(emitter, now);
   const pinned = step.pinned ?? null;
-  const count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  const owed = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  const count = landing ? Math.max(owed, 1) : owed;
   if (count <= 0) return;
 
   travel(state, step);

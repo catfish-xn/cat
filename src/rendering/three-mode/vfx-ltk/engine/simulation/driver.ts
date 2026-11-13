@@ -354,6 +354,7 @@ export function createDriver(
         world,
         stopped:
           (rig.stopAt != null && reached >= rig.stopAt) || landed(rig.motion, reached, rig.height),
+        landing: landed(rig.motion, reached, rig.height) && !landed(rig.motion, Math.max(0, reached - step.dt), rig.height),
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
         scale: lineage.scale,
