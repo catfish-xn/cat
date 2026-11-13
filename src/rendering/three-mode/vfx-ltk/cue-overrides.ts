@@ -459,7 +459,7 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage, not the original's own values. Its scorch strand lives and erodes on its authored 4.2 s
   // curves here (fully dark well past a second, gone after about three); in the original's footage the scorch has broken
   // up and gone a little over a second after the line lands. Why the original ends it sooner is not known.
-  '20cd67dc': { seconds: 1.1, fade: 0.3 },
+  // RECORDING VARIANT L-A (never merged): as live today, removed whole when it lands; no play-out entry.
 };
 
 /**
