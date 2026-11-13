@@ -234,6 +234,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
   let elapsed = 0, closed = false, peak = 0, childPeak = 0;
+  /** endWithin: from when, and by when, every draw has faded to nothing. */
+  let ending: { from: number; to: number } | null = null;
   const hasChildren = prepared.drawn.some(definition => !!definition.path);
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
@@ -254,12 +256,14 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; peak = 0; childPeak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
     /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
     get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
+    /** Fade every draw to nothing over the last `over` of the next `seconds` (a play-out that must end by then). */
+    endWithin(seconds: number, over: number) { ending = { from: elapsed + Math.max(0, seconds - over), to: elapsed + seconds }; },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;
@@ -270,7 +274,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
-      const fade = spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1;
+      const fade = (spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1) * (ending ? fadeAt(elapsed, ending.to, ending.from) : 1);
       withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },

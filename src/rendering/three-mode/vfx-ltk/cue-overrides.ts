@@ -49,6 +49,17 @@ export const CAITLYN_COMET = {
 } as const;
 
 /**
+ * Cells Gangplank's ground-fire line runs from his feet through the target. A FIT, not the original's value: its scorch
+ * strand emits for only part of the flight, so the line runs this far for the scorch it leaves to reach about as far past
+ * the target as it does in footage (11-13).
+ */
+export const GP_GROUND_LINE_CELLS = 2.7;
+/**
+ * Cells behind Gangplank (away from the target) his ground-fire line starts. A FIT, not the original's value: in the
+ * 3-star full-board footage the scorch starts on his far side and runs through the target (11-13).
+ */
+export const GP_GROUND_LINE_BACK = 0.5;
+/**
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
@@ -333,7 +344,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
     { system: '80ab2d1b', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'r_hand', travelSeconds: 0.7 },
-    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'Buffbone_Glb_Weapon_2', travelSeconds: 0.7 },
+    // Ground-fire line: in the original a line missile cast at a location, with no start bone and not following its target
+    // (14.24 spell data), whose scorch lies flat on the ground through the target. Played on the floor along the way from
+    // Gangplank to the target, starting a little behind him (TimelineCue.lineCells, lineBack); it flew from his weapon bone
+    // to the target's feet before and its scorch hid under both bodies (11-13 A/B/C keyframes). GP_GROUND_LINE_CELLS and
+    // GP_GROUND_LINE_BACK are FITS, not the original's values.
+    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7, lineCells: GP_GROUND_LINE_CELLS, lineBack: GP_GROUND_LINE_BACK },
     { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
     { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
     { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },
@@ -476,6 +492,32 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
  */
 export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
   '84b969e0': ['Trench'],
+};
+
+/**
+ * Projectile systems that play out when they land: emission stops at arrival and the run stays until its particles have
+ * finished their own curves (runtime PLAY_OUT_CAP at most), instead of being removed whole at the cue's end. Particles of
+ * emitters without particleLinger still go at the stop, as the engine does for any stopped system, so a beam or missile
+ * head still ends on the hit. Decided system by system against original footage (Fable 11-12): on some projectiles the
+ * hit effect taking over at once is the original's own design, so this is no default.
+ * - 20cd67dc Gangplank's ground-fire line: its ground strand carries a long particleLinger; in the original the burning
+ *   line stays on the ground well after it is drawn, then chars and fades (11-12 footage).
+ * Each entry ends its play-out on its own clock: gone `seconds` after landing, every draw fading out over the last `fade`.
+ */
+export interface PlayOut {
+  readonly seconds: number; readonly fade: number;
+  /**
+   * Playing out, it does not give way to a newcomer that lacks room, as other tails do; it is weighed by the usual
+   * eviction at its own importance instead, and its reserve still follows what it has live.
+   */
+  readonly hold?: boolean;
+}
+export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
+  // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
+  // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
+  // that time changes with the star level is not checked yet.
+  // hold: it lasts as the original's does (11-13 Node 8 v 8: without it, it gave way the frame it began to play out).
+  '20cd67dc': { seconds: 2.3, fade: 0.5, hold: true },
 };
 
 /**

@@ -90,6 +90,14 @@ export interface TimelineCue {
    */
   readonly fromAbove?: readonly [number, number, number];
   /**
+   * A projectile that starts where its caster stands and runs on the floor toward where its target stands, through it,
+   * `lineCells` cells in all, instead of flying from a caster bone to the target: a line missile the original casts at a
+   * location with no start bone (Gangplank's ground-fire line). Both ends are taken when it spawns; it never follows.
+   */
+  readonly lineCells?: number;
+  /** With `lineCells`: how many cells behind the caster (away from the target) the line starts; its length is unchanged. */
+  readonly lineBack?: number;
+  /**
    * A state its target carries (a curse, a shield): once that target is dead it is not played where the target stood, as a
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
