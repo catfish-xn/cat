@@ -23,16 +23,16 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 /**
  * At most MAX_LTK_SYSTEMS systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what
  * it was seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The
- * shared budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07
- * brawl: every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen
- * particles).
+ * shared budget (effect-library.ts MAX_LIVE_PARTICLES) is apart from the cap, so a cap lets more small systems play, never
+ * more particles (11-07 brawl: every critical drop was on six full 250-slot reservations while most of those systems drew
+ * a few dozen particles).
  *
  * 20, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
  * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
  * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
  * 8 v 8 and 60% in a late-game 9 v 9; at 20 they were 91% and 90%, and finished basic-attack visuals went from 36 to 82
  * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
- * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refuses first (43 rows in the
+ * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
