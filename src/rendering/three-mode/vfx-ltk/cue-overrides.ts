@@ -29,8 +29,14 @@ const center = 'C_BUFFBONE_GLB_CENTER_LOC';
  * fitted value, not original data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
  */
 export const CAITLYN_COMET = {
-  /** Cells from where the target stands: left on screen, up, and toward the top of the screen. Steep, as in the footage. */
-  from: [-1, 5, -1.5] as const,
+  /**
+   * Cells from where the target stands: left on screen, up, and toward the top of the screen. Fitted, not original data:
+   * far enough and slanted enough that the comet comes in from the upper left at about the angle the 14.24 footage shows,
+   * with the long streak it leaves there (the board camera looks down along -Z, so screen left is -X and screen up is
+   * mostly +Y and -Z). It still falls in CAITLYN_COMET.fall, so it lands when it did; it reads faster than the footage's,
+   * whose shot the renderer cannot see coming (a shot's centre is drawn by the rule when the shot executes).
+   */
+  from: [-4, 6, -2.5] as const,
   /**
    * Seconds it falls. Fitted: a shot's damage is already settled when its event arrives, so the comet starts then and
    * lands this much later, short enough to read as the cause of that hit.
