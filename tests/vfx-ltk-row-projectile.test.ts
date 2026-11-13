@@ -198,7 +198,7 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     runtime.dispose();
   });
 
-  it('a dead target: from its snapshot point when the cast keeps it, else not at all, never from the caster', async () => {
+  it('a dead target: from its snapshot point, or from where it stood when the cast played; never from the caster', async () => {
     const setup = async (delay: number) => {
       built.length = 0;
       const cues = [row(-1), row(1)].map(cue => ({ ...cue, delay }));
@@ -217,12 +217,14 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(built).toHaveLength(2);
     for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
     runtime.dispose();
-    // Dead before it starts, no place kept: neither run plays.
+    // Dead before it starts (its body moved after the cast): both runs start where it stood when the cast played (Fable 11-13;
+    // before, neither played).
     ({ runtime, units } = await setup(0.1));
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
-    units.get('target')!.alive = false;
+    units.get('target')!.alive = false; units.get('target')!.root.position.set(80, 0, 10);
     for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
-    expect(built).toHaveLength(0);
+    expect(built).toHaveLength(2);
+    for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
     runtime.dispose();
   });
 

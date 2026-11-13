@@ -284,7 +284,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1) } : cue),
+  // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
@@ -301,7 +302,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5333333333333333, duration: 1.5 },
     { system: '809dc7ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'Buffbone_Glb_Weapon_1', targetBone: chest },
     { system: '9d79232b', action: 'cast', event: 'hit', delay: 0.6, duration: 1.5, primary: true },
-    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true },
+    // The curse rides its target: it is not drawn where a dead target stood (livingTarget).
+    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true, livingTarget: true },
   ],
   // The export carries Renata's attack only, so every cast fell back to the procedural shot (11-06 field: 4/4 no-cues).
   // Order and timing follow the system names and the handwritten shot: canisters fire, the missile flies 0.3–0.9 s,
