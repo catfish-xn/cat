@@ -67,7 +67,7 @@ describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
   it('a dead target: from above its snapshot point when the cast keeps it, else not at all', async () => {
     let { runtime, units } = await setup([drop]);
     units.get('target')!.alive = false;
-    expect(runtime.play('caitlyn', 'caster', ['target'], 0, 'cast', { snapshotTargets: true })).toBe(true);
+    expect(runtime.play('caitlyn', 'caster', ['target'], 'cast', { snapshotTargets: true })).toBe(true);
     runtime.update(1 / 30, new Camera());
     expect(built).toHaveLength(1);
     expect(built[0].options.anchor.originAt(0)).toEqual(toSystem(205 - cell, 5 * cell, 90 - 1.5 * cell));
