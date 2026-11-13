@@ -1,71 +1,71 @@
 # pass on (?degrade=off): one job per pass-dependent system (11-13 scan: 79 systems; 70 here pass jobs-check or are dummies)
-v-capture.cjs akali pd-akali-bc4a9e0d --real 1 --star 2 --ms 1500 --systems bc4a9e0d --degrade off
-v-capture.cjs ambessa pd-ambessa-6390530e --real 1 --star 2 --ms 2000 --systems 6390530e --degrade off
-v-capture.cjs ambessa pd-ambessa-754b6c78 --real 1 --star 2 --ms 2000 --systems 754b6c78 --degrade off
-v-capture.cjs ambessa pd-ambessa-a429a900 --real 1 --star 2 --ms 2000 --systems a429a900 --degrade off
-v-capture.cjs ambessa pd-ambessa-cba05b6e --real 1 --star 2 --ms 2000 --systems cba05b6e --degrade off
-v-capture.cjs caitlyn pd-caitlyn-8d6e1c2e --real 1 --star 2 --ms 2000 --systems 8d6e1c2e --degrade off
-v-capture.cjs corki pd-corki-022fe9ec --real 1 --star 2 --ms 2000 --systems 022fe9ec --degrade off
-v-capture.cjs corki pd-corki-0e89bea0 --real 1 --star 2 --ms 2000 --systems 0e89bea0 --degrade off
-v-capture.cjs corki pd-corki-444c30d5 --real 1 --star 2 --ms 2000 --systems 444c30d5 --degrade off
-v-capture-attack.cjs draven pd-draven-617e850e --star 2 --dist 3 --ms 2000 --systems 617e850e --degrade off
-v-capture.cjs drmundo pd-drmundo-5443cd9f --real 1 --star 2 --ms 3000 --systems 5443cd9f --degrade off --nfoes 1
-v-capture.cjs elise pd-elise-4997b033 --real 1 --form back --star 2 --ms 2000 --systems 4997b033 --degrade off
-v-capture.cjs elise pd-elise-6d6525e8 --real 1 --form front --star 2 --ms 2000 --systems 6d6525e8 --degrade off
-v-capture.cjs elise pd-elise-9e530234 --real 1 --form back --star 2 --ms 2000 --systems 9e530234 --degrade off
-v-capture.cjs elise pd-elise-cb30a8ce --real 1 --form front --star 2 --ms 2000 --systems cb30a8ce --degrade off
-v-capture.cjs ezreal pd-ezreal-d7fee2d8 --real 1 --star 2 --ms 2000 --systems d7fee2d8 --degrade off
-v-capture.cjs ezreal pd-ezreal-e4979a04 --real 1 --star 2 --ms 2000 --systems e4979a04 --degrade off
-v-capture.cjs gangplank pd-gangplank-8da84aa4 --real 1 --star 2 --ms 1500 --systems 8da84aa4 --degrade off
-v-capture.cjs garen pd-garen-5bbccb8c --real 1 --star 2 --ms 2000 --systems 5bbccb8c --degrade off
-v-capture.cjs heimerdinger pd-heimerdinger-07c9833a --real 1 --star 2 --ms 3000 --systems 07c9833a --degrade off
-v-capture.cjs illaoi pd-illaoi-aca297da --real 1 --star 2 --ms 2000 --systems aca297da --degrade off
-v-capture.cjs illaoi pd-illaoi-deeb59f2 --real 1 --star 2 --ms 2000 --systems deeb59f2 --degrade off
-v-capture.cjs illaoi pd-illaoi-e7b648e7 --real 1 --star 2 --ms 2000 --systems e7b648e7 --degrade off
-v-capture.cjs irelia pd-irelia-08b7a939 --real 1 --star 2 --ms 3000 --systems 08b7a939 --degrade off
-v-capture.cjs irelia pd-irelia-67665513 --real 1 --star 2 --ms 3000 --systems 67665513 --degrade off
-v-capture.cjs jayce pd-jayce-f7fa1af5 --real 1 --form front --star 2 --ms 1500 --systems f7fa1af5 --degrade off
-v-capture.cjs jinx pd-jinx-7e6f06b5 --real 1 --star 2 --ms 3000 --systems 7e6f06b5 --degrade off
-v-capture.cjs jinx pd-jinx-809da1b1 --real 1 --star 2 --ms 3000 --systems 809da1b1 --degrade off
-v-capture.cjs jinx pd-jinx-cd05488e --real 1 --star 2 --ms 3000 --systems cd05488e --degrade off
-v-capture.cjs leona pd-leona-8d9a4ccc --real 1 --star 2 --ms 3000 --systems 8d9a4ccc --degrade off
-v-capture.cjs loris pd-loris-e22b48b0 --real 1 --star 2 --ms 3000 --systems e22b48b0 --degrade off
-v-capture.cjs maddie pd-maddie-b1b77889 --real 1 --star 2 --ms 3000 --systems b1b77889 --degrade off --nfoes 1
-v-capture-attack.cjs malzahar pd-malzahar-3c65ee71 --star 2 --dist 3 --ms 2000 --systems 3c65ee71 --degrade off
-v-capture.cjs malzahar pd-malzahar-6d06c644 --real 1 --star 2 --ms 2000 --systems 6d06c644 --degrade off
-v-capture.cjs morgana pd-morgana-7fb1a74c --real 1 --star 2 --ms 3000 --systems 7fb1a74c --degrade off
-v-capture.cjs morgana pd-morgana-809dc7ac --real 1 --star 2 --ms 3000 --systems 809dc7ac --degrade off
-v-capture.cjs nami pd-nami-03b4d6ac --real 1 --star 2 --ms 3000 --systems 03b4d6ac --degrade off
-v-capture-attack.cjs nami pd-nami-952026ec --star 2 --dist 3 --ms 2000 --systems 952026ec --degrade off
-v-capture.cjs nami pd-nami-e4b6f1a3 --real 1 --star 2 --ms 3000 --systems e4b6f1a3 --degrade off
-v-capture.cjs nocturne pd-nocturne-3e224f4a --real 1 --star 2 --ms 3000 --systems 3e224f4a --degrade off
-v-capture.cjs nocturne pd-nocturne-97366927 --real 1 --star 2 --ms 3000 --systems 97366927 --degrade off
-v-capture.cjs nunu pd-nunu-5dfd387b --real 1 --star 2 --ms 3000 --systems 5dfd387b --degrade off
-v-capture.cjs nunu pd-nunu-8c256426 --real 1 --star 2 --ms 3000 --systems 8c256426 --degrade off
-v-capture.cjs rell pd-rell-6b3b977c --real 1 --star 2 --ms 3000 --systems 6b3b977c --degrade off
-v-capture.cjs rell pd-rell-d3831a9d --real 1 --star 2 --ms 3000 --systems d3831a9d --degrade off
-v-capture.cjs renata pd-renata-f9926ae8 --real 1 --star 2 --ms 3000 --systems f9926ae8 --degrade off
-v-capture.cjs sett pd-sett-0856b131 --real 1 --star 2 --ms 3000 --systems 0856b131 --degrade off
-v-capture.cjs sett pd-sett-c6d42f70 --real 1 --star 2 --ms 3000 --systems c6d42f70 --degrade off
-v-capture.cjs sevika pd-sevika-2ef508db --move flamethrower --star 2 --ms 3000 --systems 2ef508db --degrade off
-v-capture.cjs sevika pd-sevika-38d5b37a --move chomp --star 2 --ms 3000 --systems 38d5b37a --degrade off
-v-capture.cjs sevika pd-sevika-5d6a1033 --move flamethrower --star 2 --ms 3000 --systems 5d6a1033 --degrade off
-v-capture.cjs sevika pd-sevika-8ccb497d --move punch --star 2 --ms 3000 --systems 8ccb497d --degrade off
-v-capture.cjs silco pd-silco-2276fa35 --real 1 --star 2 --ms 3000 --systems 2276fa35 --degrade off
-v-capture.cjs steb pd-steb-36c79ae9 --real 1 --star 2 --ms 2000 --systems 36c79ae9 --degrade off
-v-capture.cjs tristana pd-tristana-5930ca7b --real 1 --star 2 --ms 3000 --systems 5930ca7b --degrade off
-v-capture.cjs twistedfate pd-twistedfate-8740c168 --real 1 --star 2 --ms 3000 --systems 8740c168 --degrade off
-v-capture.cjs twistedfate pd-twistedfate-e6795c96 --real 1 --star 2 --ms 3000 --systems e6795c96 --degrade off
-v-capture.cjs twitch pd-twitch-2beb0657 --real 1 --star 2 --ms 3000 --systems 2beb0657 --degrade off
-v-capture.cjs twitch pd-twitch-4e7cc3b1 --real 1 --star 2 --ms 3000 --systems 4e7cc3b1 --degrade off
-v-capture.cjs vander pd-vander-68e8ca37 --real 1 --star 2 --ms 3000 --systems 68e8ca37 --degrade off
-v-capture.cjs vex pd-vex-c4da788c --real 1 --star 2 --ms 1200 --systems c4da788c --degrade off
-v-capture.cjs vi pd-vi-0314626c --real 1 --star 2 --ms 2000 --systems 0314626c --degrade off
-v-capture.cjs vi pd-vi-84b969e0 --real 1 --star 2 --ms 2000 --systems 84b969e0 --degrade off
-v-capture.cjs vi pd-vi-d27b3044 --real 1 --star 2 --ms 2000 --systems d27b3044 --degrade off
-v-capture.cjs viktor pd-viktor-12ac9712 --real 1 --star 2 --ms 3000 --systems 12ac9712 --degrade off
-v-capture.cjs viktor pd-viktor-607d7b6b --real 1 --star 2 --ms 2000 --systems 607d7b6b --degrade off
-v-capture.cjs viktor pd-viktor-c4ef93f3 --real 1 --star 2 --ms 2000 --systems c4ef93f3 --degrade off
-v-capture.cjs viktor pd-viktor-efdd9461 --real 1 --star 3 --ms 2000 --systems efdd9461 --degrade off --foestar 3
-v-capture.cjs ziggs pd-ziggs-04c3cba0 --real 1 --star 2 --ms 3000 --systems 04c3cba0 --degrade off
-v-capture.cjs zoe pd-zoe-0d265d98 --real 1 --star 2 --ms 2000 --systems 0d265d98 --degrade off
+v-capture.cjs akali pd-akali-bc4a9e0d --real 1 --star 2 --ms 1500 --systems bc4a9e0d --degrade off --layers none
+v-capture.cjs ambessa pd-ambessa-6390530e --real 1 --star 2 --ms 2000 --systems 6390530e --degrade off --cast-index 2 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs ambessa pd-ambessa-754b6c78 --real 1 --star 2 --ms 2000 --systems 754b6c78 --degrade off --cast-index 2 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs ambessa pd-ambessa-a429a900 --real 1 --star 2 --ms 2000 --systems a429a900 --degrade off --cast-index 2 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs ambessa pd-ambessa-cba05b6e --real 1 --star 2 --ms 2000 --systems cba05b6e --degrade off --cast-index 2 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs caitlyn pd-caitlyn-8d6e1c2e --real 1 --star 2 --ms 2000 --systems 8d6e1c2e --degrade off --layers none
+v-capture.cjs corki pd-corki-022fe9ec --real 1 --star 2 --ms 2000 --systems 022fe9ec --degrade off --layers none
+v-capture.cjs corki pd-corki-0e89bea0 --real 1 --star 2 --ms 2000 --systems 0e89bea0 --degrade off --layers none
+v-capture.cjs corki pd-corki-444c30d5 --real 1 --star 2 --ms 2000 --systems 444c30d5 --degrade off --layers none
+v-capture-attack.cjs draven pd-draven-617e850e --star 2 --dist 3 --ms 2000 --systems 617e850e --degrade off --layers none
+v-capture.cjs drmundo pd-drmundo-5443cd9f --real 1 --star 2 --ms 3000 --systems 5443cd9f --degrade off --nfoes 1 --layers none
+v-capture.cjs elise pd-elise-4997b033 --real 1 --form ranged --star 2 --ms 2000 --systems 4997b033 --degrade off --layers none
+v-capture.cjs elise pd-elise-6d6525e8 --real 1 --form melee --star 2 --ms 2000 --systems 6d6525e8 --degrade off --layers none
+v-capture.cjs elise pd-elise-9e530234 --real 1 --form ranged --star 2 --ms 2000 --systems 9e530234 --degrade off --layers none
+v-capture.cjs elise pd-elise-cb30a8ce --real 1 --form melee --star 2 --ms 2000 --systems cb30a8ce --degrade off --layers none
+v-capture.cjs ezreal pd-ezreal-d7fee2d8 --real 1 --star 2 --ms 2000 --systems d7fee2d8 --degrade off --layers none
+v-capture.cjs ezreal pd-ezreal-e4979a04 --real 1 --star 2 --ms 2000 --systems e4979a04 --degrade off --layers none
+v-capture.cjs gangplank pd-gangplank-8da84aa4 --real 1 --star 2 --ms 1500 --systems 8da84aa4 --degrade off --layers none
+v-capture.cjs garen pd-garen-5bbccb8c --real 1 --star 2 --ms 2000 --systems 5bbccb8c --degrade off --layers none
+v-capture.cjs heimerdinger pd-heimerdinger-07c9833a --real 1 --star 2 --ms 3000 --systems 07c9833a --degrade off --layers none
+v-capture.cjs illaoi pd-illaoi-aca297da --real 1 --star 2 --ms 4500 --systems aca297da --degrade off --nfoes 1 --foestar 1 --target leona --layers none
+v-capture.cjs illaoi pd-illaoi-deeb59f2 --real 1 --star 2 --ms 2000 --systems deeb59f2 --degrade off --layers none
+v-capture.cjs illaoi pd-illaoi-e7b648e7 --real 1 --star 2 --ms 4500 --systems e7b648e7 --degrade off --nfoes 1 --foestar 1 --target leona --layers none
+v-capture.cjs irelia pd-irelia-08b7a939 --real 1 --star 2 --ms 3000 --systems 08b7a939 --degrade off --layers none
+v-capture.cjs irelia pd-irelia-67665513 --real 1 --star 2 --ms 3000 --systems 67665513 --degrade off --layers none
+v-capture.cjs jayce pd-jayce-f7fa1af5 --real 1 --form melee --star 2 --ms 1500 --systems f7fa1af5 --degrade off --layers none
+v-capture.cjs jinx pd-jinx-7e6f06b5 --real 1 --star 2 --ms 3000 --systems 7e6f06b5 --degrade off --cast-index 3 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs jinx pd-jinx-809da1b1 --real 1 --star 2 --ms 3000 --systems 809da1b1 --degrade off --cast-index 3 --nfoes 1 --foestar 2 --layers none
+v-capture.cjs jinx pd-jinx-cd05488e --real 1 --star 2 --ms 3000 --systems cd05488e --degrade off --cast-index 2 --nfoes 1 --foestar 1 --layers none
+v-capture.cjs leona pd-leona-8d9a4ccc --real 1 --star 2 --ms 3000 --systems 8d9a4ccc --degrade off --layers none
+v-capture.cjs loris pd-loris-e22b48b0 --real 1 --star 2 --ms 3000 --systems e22b48b0 --degrade off --layers none
+v-capture.cjs maddie pd-maddie-b1b77889 --real 1 --star 2 --ms 3000 --systems b1b77889 --degrade off --nfoes 1 --layers none
+v-capture-attack.cjs malzahar pd-malzahar-3c65ee71 --star 2 --dist 3 --ms 2000 --systems 3c65ee71 --degrade off --layers none
+v-capture.cjs malzahar pd-malzahar-6d06c644 --real 1 --star 2 --ms 2000 --systems 6d06c644 --degrade off --layers none
+v-capture.cjs morgana pd-morgana-7fb1a74c --real 1 --star 2 --ms 3000 --systems 7fb1a74c --degrade off --layers none
+v-capture.cjs morgana pd-morgana-809dc7ac --real 1 --star 2 --ms 3000 --systems 809dc7ac --degrade off --layers none
+v-capture.cjs nami pd-nami-03b4d6ac --real 1 --star 2 --ms 3000 --systems 03b4d6ac --degrade off --layers none
+v-capture-attack.cjs nami pd-nami-952026ec --star 2 --dist 3 --ms 2000 --systems 952026ec --degrade off --layers none
+v-capture.cjs nami pd-nami-e4b6f1a3 --real 1 --star 2 --ms 3000 --systems e4b6f1a3 --degrade off --layers none
+v-capture.cjs nocturne pd-nocturne-3e224f4a --real 1 --star 2 --ms 3000 --systems 3e224f4a --degrade off --layers none
+v-capture.cjs nocturne pd-nocturne-97366927 --real 1 --star 2 --ms 3000 --systems 97366927 --degrade off --layers none
+v-capture.cjs nunu pd-nunu-5dfd387b --real 1 --star 2 --ms 4500 --systems 5dfd387b --degrade off --nfoes 1 --foestar 1 --target leona --layers none
+v-capture.cjs nunu pd-nunu-8c256426 --real 1 --star 2 --ms 4500 --systems 8c256426 --degrade off --nfoes 1 --foestar 1 --target leona --layers none
+v-capture.cjs rell pd-rell-6b3b977c --real 1 --star 2 --ms 3000 --systems 6b3b977c --degrade off --layers none
+v-capture.cjs rell pd-rell-d3831a9d --real 1 --star 2 --ms 3000 --systems d3831a9d --degrade off --layers none
+v-capture.cjs renata pd-renata-f9926ae8 --real 1 --star 2 --ms 3000 --systems f9926ae8 --degrade off --layers none
+v-capture.cjs sett pd-sett-0856b131 --real 1 --star 2 --ms 3000 --systems 0856b131 --degrade off --layers none
+v-capture.cjs sett pd-sett-c6d42f70 --real 1 --star 2 --ms 3000 --systems c6d42f70 --degrade off --layers none
+v-capture.cjs sevika pd-sevika-2ef508db --move flamethrower --star 2 --ms 3000 --systems 2ef508db --degrade off --layers none
+v-capture.cjs sevika pd-sevika-38d5b37a --move chomp --star 2 --ms 3000 --systems 38d5b37a --degrade off --layers none
+v-capture.cjs sevika pd-sevika-5d6a1033 --move flamethrower --star 2 --ms 3000 --systems 5d6a1033 --degrade off --layers none
+v-capture.cjs sevika pd-sevika-8ccb497d --move punch --star 2 --ms 3000 --systems 8ccb497d --degrade off --layers none
+v-capture.cjs silco pd-silco-2276fa35 --real 1 --star 2 --ms 3000 --systems 2276fa35 --degrade off --layers none
+v-capture.cjs steb pd-steb-36c79ae9 --real 1 --star 2 --ms 2000 --systems 36c79ae9 --degrade off --layers none
+v-capture.cjs tristana pd-tristana-5930ca7b --real 1 --star 2 --ms 3000 --systems 5930ca7b --degrade off --layers none
+v-capture.cjs twistedfate pd-twistedfate-8740c168 --real 1 --star 2 --ms 3000 --systems 8740c168 --degrade off --layers none
+v-capture.cjs twistedfate pd-twistedfate-e6795c96 --real 1 --star 2 --ms 3000 --systems e6795c96 --degrade off --layers none
+v-capture.cjs twitch pd-twitch-2beb0657 --real 1 --star 2 --ms 3000 --systems 2beb0657 --degrade off --layers none
+v-capture.cjs twitch pd-twitch-4e7cc3b1 --real 1 --star 2 --ms 3000 --systems 4e7cc3b1 --degrade off --layers none
+v-capture.cjs vander pd-vander-68e8ca37 --real 1 --star 2 --ms 3000 --systems 68e8ca37 --degrade off --layers none
+v-capture.cjs vex pd-vex-c4da788c --real 1 --star 2 --ms 1200 --systems c4da788c --degrade off --layers none
+v-capture.cjs vi pd-vi-0314626c --real 1 --star 2 --ms 2000 --systems 0314626c --degrade off --layers none
+v-capture.cjs vi pd-vi-84b969e0 --real 1 --star 2 --ms 2000 --systems 84b969e0 --degrade off --layers none
+v-capture.cjs vi pd-vi-d27b3044 --real 1 --star 2 --ms 2000 --systems d27b3044 --degrade off --layers none
+v-capture.cjs viktor pd-viktor-12ac9712 --real 1 --star 2 --ms 3000 --systems 12ac9712 --degrade off --layers none
+v-capture.cjs viktor pd-viktor-607d7b6b --real 1 --star 2 --ms 2000 --systems 607d7b6b --degrade off --layers none
+v-capture.cjs viktor pd-viktor-c4ef93f3 --real 1 --star 2 --ms 2000 --systems c4ef93f3 --degrade off --layers none
+v-capture.cjs viktor pd-viktor-efdd9461 --real 1 --star 3 --ms 2000 --systems efdd9461 --degrade off --foestar 3 --layers none
+v-capture.cjs ziggs pd-ziggs-04c3cba0 --real 1 --star 2 --ms 3000 --systems 04c3cba0 --degrade off --layers none
+v-capture.cjs zoe pd-zoe-0d265d98 --real 1 --star 2 --ms 2000 --systems 0d265d98 --degrade off --layers none
