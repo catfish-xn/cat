@@ -2,7 +2,7 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { createLtkRuntime, MAX_LTK_QUEUED, MIN_RESERVE, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, LTK_RUN_STATS, MAX_LTK_QUEUED, MIN_RESERVE, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import * as particles from '../src/rendering/three-mode/vfx-ltk/particles';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 import { stepCombat } from '../src/simulation/combat';
@@ -82,22 +82,34 @@ describe('review R: whole-action target coverage', () => {
     expect(runtime.play('vander', 'self', ['ally', 'self', 'ally'])).toBe(true); expect(runtime.queued).toBe(4);
   });
 
-  it.each([['self'], ['self', 'ally'], ['self', 'enemy']])('rejects self flight without retargeting %j', async (...targets) => {
+  // Fable 11-13: a cue the timeline cannot map is played without, never the whole cast (before, these casts were refused).
+  it.each([['self'], ['self', 'ally'], ['self', 'enemy']])('skips a self flight without retargeting %j: its own landing hit plays at the launch', async (...targets) => {
     const mapped = mapSkillTimeline([start, flight, hit], 'self', targets);
     expect(mapped.unsupported).toEqual([{ cue: flight, reason: 'self-projectile' }]);
     expect(mapped.spawns.some(c => c.event === 'projectile')).toBe(false);
     expect(mapped.spawns.filter(c => c.event === 'hit').map(c => c.targetId)).toEqual(targets);
-    const { runtime, scene, camera, budget } = await setup([start, flight, hit]);
-    expect(runtime.play('vander', 'self', targets)).toBe(false);
-    expect(runtime.queued).toBe(0); runtime.update(.2, camera);
-    expect(runtime.active).toBe(0); expect(scene.children).toEqual([]); expect(budget.live).toBe(0);
+    // The caster's hit where the flight would have landed moves to where it would have left; other hits keep their time.
+    expect(mapped.spawns.filter(c => c.event === 'hit').map(c => c.delay)).toEqual(targets.map(id => id === 'self' ? flight.delay : hit.delay));
+    const { runtime, scene, camera } = await setup([start, flight, hit]);
+    const skipped = LTK_RUN_STATS.skipped['flight self-projectile'] ?? 0;
+    expect(runtime.play('vander', 'self', targets)).toBe(true);
+    expect(runtime.queued).toBe(1 + targets.length);
+    expect(LTK_RUN_STATS.skipped['flight self-projectile']).toBe(skipped + 1);
+    runtime.update(.15, camera);
+    expect(scene.children.map(o => o.userData.ltkSystem)).toEqual(['start', 'hit']);
+    expect(scene.children.some(o => o.userData.ltkSystem === 'flight')).toBe(false);
   });
 
-  it.each([hit, { ...hit, primary: true }, flight])('rejects start plus targetless $event atomically', async cue => {
+  it.each([hit, { ...hit, primary: true }, flight])('plays the start of a cast whose $event has no target, without that cue', async cue => {
     const { runtime, scene, camera } = await setup([start, cue]);
     expect(mapSkillTimeline([start, cue], 'self', []).unsupported).toEqual([{ cue, reason: 'missing-target' }]);
-    expect(runtime.play('vander', 'self', [])).toBe(false);
-    expect(runtime.queued).toBe(0); runtime.update(.01, camera); expect(scene.children).toEqual([]);
+    const skipped = LTK_RUN_STATS.skipped[`${cue.system} missing-target`] ?? 0;
+    expect(runtime.play('vander', 'self', [])).toBe(true);
+    expect(runtime.queued).toBe(1); runtime.update(.01, camera); expect(scene.children.map(o => o.userData.ltkSystem)).toEqual(['start']);
+    expect(LTK_RUN_STATS.skipped[`${cue.system} missing-target`]).toBe(skipped + 1);
+    // Nothing left of it: refused whole.
+    const only = await setup([cue]);
+    expect(only.runtime.play('vander', 'self', [])).toBe(false); expect(only.runtime.queued).toBe(0);
   });
 
   it('checks only the active branch for missing targets and keeps attack coverage separate', async () => {
@@ -109,12 +121,13 @@ describe('review R: whole-action target coverage', () => {
     expect(runtime.play('vander', 'self', ['self'], 'attack')).toBe(true); expect(runtime.queued).toBe(1);
   });
 
-  it.each(['missing', 'dead', 'disposed'] as const)('keeps the whole multi-target action on fallback for a %s ally', async reason => {
+  // Fable 11-13: one unusable target no longer sends the whole action back to the host (before, all three were refused).
+  it.each(['missing', 'dead', 'disposed'] as const)('plays a multi-target action with a %s ally: a dead one at its place, a gone one left out', async reason => {
     const { runtime, units } = await setup([start, hit]);
     if (reason === 'missing') units.delete('ally');
     else if (reason === 'dead') units.get('ally')!.alive = false;
     else units.get('ally')!.disposed = true;
-    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('vander', 'self', ['self', 'ally', 'enemy'])).toBe(true); expect(runtime.queued).toBe(reason === 'dead' ? 4 : 3);
   });
 
   it('does not own a disposed caster or an action with an unloaded impact', async () => {

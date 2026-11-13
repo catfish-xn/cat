@@ -227,7 +227,7 @@ describe('batch 3 display lifecycle', () => {
   });
 });
 
-it('keeps variant windup and living targets when one target is dead, and still rejects the atomic action', async () => {
+it('keeps variant windup and living targets when one target is dead, a dead one\'s hit at its place, as play() does', async () => {
   const cues = [
     { system: 'start', event: 'cast-start' as const, delay: 0, duration: 1 },
     { system: 'hit', event: 'hit' as const, delay: 0, duration: 1 },
@@ -242,18 +242,25 @@ it('keeps variant windup and living targets when one target is dead, and still r
   }
   const scene = new Scene(), runtime = createLtkRuntime(createVfxLibrary('/', reader), scene, id => units.get(id));
   await runtime.warm('hero');
+  // Fable 11-13: a dead target's hit plays at its place (before, the variant dropped it and play() refused the whole action).
   units.get('ally')!.alive = false;
   expect(runtime.playVariant('hero', 'hero', 'self', ['self', 'ally', 'enemy'])).toBe(true);
-  expect(runtime.queued).toBe(3);
+  expect(runtime.queued).toBe(4);
   runtime.update(.01, new Camera());
-  expect(scene.children.map(child => child.userData.ltkSystem).sort()).toEqual(['hit', 'hit', 'start']);
+  expect(scene.children.map(child => child.userData.ltkSystem).sort()).toEqual(['hit', 'hit', 'hit', 'start']);
   runtime.clear();
-  expect(runtime.play('hero', 'self', ['self', 'ally', 'enemy'])).toBe(false);
-  expect(runtime.queued).toBe(0);
+  expect(runtime.play('hero', 'self', ['self', 'ally', 'enemy'])).toBe(true);
+  expect(runtime.queued).toBe(4);
+  runtime.clear();
   units.get('enemy')!.alive = false;
   expect(runtime.playVariant('hero', 'hero', 'self', ['ally', 'enemy'])).toBe(true);
+  expect(runtime.queued).toBe(3);
+  runtime.clear();
+  expect(runtime.playVariant('hero', 'hero-hits', 'self', ['ally'])).toBe(true);
   expect(runtime.queued).toBe(1);
   runtime.clear();
+  // A target whose unit is gone is still left out, and with no usable target the variant is refused.
+  units.delete('ally');
   expect(runtime.playVariant('hero', 'hero-hits', 'self', ['ally'])).toBe(false);
   expect(runtime.queued).toBe(0);
   expect(runtime.playVariant('hero', 'hero-burst', 'self')).toBe(true);
