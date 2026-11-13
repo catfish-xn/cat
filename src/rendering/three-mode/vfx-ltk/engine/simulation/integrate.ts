@@ -66,6 +66,11 @@ export interface SystemStep extends Step {
   readonly world: World;
   /** The rig has soft-stopped the system, as the engine does. */
   readonly stopped: boolean;
+  /**
+   * This is the step its missile arrives in. A trail emitter then lays one last point there, so the ribbon reaches the
+   * landing point instead of ending where its rate last spawned (11-13: Caitlyn's comet trail stopped short of the ground).
+   */
+  readonly landing?: boolean;
   /** The number every birth reads its tables at in place of its own, while the reader pins one. */
   readonly pinned?: number | null;
   /**
