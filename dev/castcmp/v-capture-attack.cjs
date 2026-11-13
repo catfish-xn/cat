@@ -2,11 +2,12 @@
 //   [--systems/--absent/--layers/--from/--to/--column/--snapshot, --probe overhead, --kill/--killlead, --hide-units, --pin-foe N]: as v-capture.cjs
 // Records one attack as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
-const { launchOptions, timeline, timer } = require('./common.cjs');
+const { launchOptions, timeline, timer, formProblem } = require('./common.cjs');
 const gate = require('./gate.cjs');
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2); const unit = args[0], out = path.resolve(args[1]);
 const opt = k => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : undefined; };
+{ const why = formProblem(opt('form')); if (why) throw new Error(why); }
 const port = Number(opt('port') ?? 5301), dist = opt('dist') ?? '3', target = opt('target') ?? 'garen';
 const assetPort = Number(opt('assetPort') ?? 5390);
 const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Number(opt('ms') ?? 1500));
