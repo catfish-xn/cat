@@ -13,6 +13,8 @@
 // --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
 // cell; --foe2* need --nfoes 2+). With --ally the line prints "ally line D": how near (hex widths, cell centres) the ally came
 // to the caster->first target line in the window ("clear": never between them); under 0.5 is a WARN.
+// Only the recorded window counts: a tank that stands on the line at combat start and walks off before the window opens
+// gives no warning.
 // Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
