@@ -1,10 +1,12 @@
-import { Camera, Group, Scene, Texture } from 'three';
+import { Camera, Group, PerspectiveCamera, Scene, Texture, Vector2 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { DISTORTION_MODE } from '../src/rendering/three-mode/vfx-ltk/engine/model/enums';
+import { DISTORTION_LAYER, EARLY_DISTORTION_LAYER, PARTICLE_LAYER, SCENE_LAYER, UNDER_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
 import { mapSkillTimeline, selectTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createLtkRuntime, ltkRenderNeeds, LTK_PASS_DEGRADE_AT, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { createLtkParticles, measurePeak, pointAnchor } from '../src/rendering/three-mode/vfx-ltk/particles';
-import { constant, num, syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
+import { constant, num, syntheticIndex, syntheticSystem, struct, vec } from './vfx-ltk-synthetic';
 import { S13_TIMELINES, VI_LANDING, VI_ROW_SHOCKWAVE, convertedTimelines } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 const cues: TimelineCue[] = [
@@ -270,12 +272,100 @@ describe('cast timeline replacement and fallback', () => {
     runtime.clear(); runtime.play('jinx', 'caster', []); runtime.stopUnit('caster'); runtime.update(0.01, camera);
     expect(runtime.active).toBe(0); runtime.dispose();
   });
-  it('drops distortion and soft passes once four systems are live, and keeps them below that', () => {
+  it('drops late distortion and soft passes once four systems are live, while keeping early on whenever needed', async () => {
     const heavy = { passes: { early: true, late: true, soft: true } };
+    const softLate = { passes: { early: false, late: true, soft: true } };
     expect(LTK_PASS_DEGRADE_AT).toBe(4);
     expect(ltkRenderNeeds([heavy, heavy, heavy])).toEqual({ early: true, late: true, soft: true });
-    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([heavy, heavy, heavy, heavy])).toEqual({ early: true, late: false, soft: false });
+    expect(ltkRenderNeeds([softLate, softLate, softLate])).toEqual({ early: false, late: true, soft: true });
+    expect(ltkRenderNeeds([softLate, softLate, softLate, softLate])).toEqual({ early: false, late: false, soft: false });
+    expect(ltkRenderNeeds([softLate, softLate, softLate, { passes: { early: true, late: false, soft: false } }])).toEqual({ early: true, late: false, soft: false });
     expect(ltkRenderNeeds([{ passes: { early: false, late: false, soft: true } }])).toEqual({ early: false, late: false, soft: true });
+
+    const emitter = (extra: Record<string, ReturnType<typeof struct>>) => struct('VfxEmitterDefinitionData', {
+      emitterName: { type: 'string', value: 'synthetic-only' },
+      rate: constant(num(30)), lifetime: num(0.5), particleLifetime: constant(num(0.5)),
+      birthScale0: constant(vec(4, 4, 4)), birthVelocity: constant(vec(12, 0, 0)),
+      birthColor: constant(vec(0.5, 0.75, 1, 1)),
+      texture: { type: 'asset', path: 'synthetic.tex', asset: null },
+      ...extra,
+    });
+    const sysDoc = {
+      ...syntheticSystem(),
+      root: struct('VfxSystemDefinitionData', {
+        complexEmitterDefinitionData: {
+          type: 'container',
+          items: [
+            emitter({
+              distortionDefinition: struct('VfxDistortionDefinitionData', {
+                distortion: num(0.4), distortionMode: num(DISTORTION_MODE.noCharacter),
+              }),
+            }),
+            emitter({
+              distortionDefinition: struct('VfxDistortionDefinitionData', {
+                distortion: num(0.4), distortionMode: num(DISTORTION_MODE.all),
+              }),
+            }),
+            emitter({
+              softParticleParams: struct('VfxSoftParticleDefinitionData', {
+                beginIn: num(2), deltaIn: num(4), beginOut: num(20), deltaOut: num(5),
+              }),
+            }),
+          ],
+        },
+      }),
+    };
+    const calls: [number, boolean][] = [];
+    let target: unknown = null;
+    const context = {
+      TEXTURE0: 0, COLOR_BUFFER_BIT: 0x4000, COLOR_CLEAR_VALUE: 0x0c22, isContextLost: () => false,
+      getParameter: () => new Float32Array(4), colorMask: vi.fn(), clearColor: vi.fn(),
+      clear: vi.fn(() => { calls.push([-1, target !== null]); }),
+    };
+    const gl = {
+      autoClear: true, outputColorSpace: '', properties: { has: () => false },
+      state: { activeTexture: vi.fn(), buffers: { color: { setMask: vi.fn(), setLocked: vi.fn(), reset: vi.fn() } } },
+      getContext: () => context, copyFramebufferToTexture: vi.fn(),
+      getDrawingBufferSize: (out: InstanceType<typeof Vector2>) => out.set(128, 64),
+      getRenderTarget: () => target,
+      setRenderTarget: (value: unknown) => { target = value; },
+      render: vi.fn(() => { calls.push([cam.layers.mask, target !== null]); }),
+    };
+    const cam = new PerspectiveCamera(45, 1, 4.4, 440);
+    const lib = createVfxLibrary('/root/', {
+      readJson: async url => url.endsWith('index.json') ? syntheticIndex() : sysDoc,
+      readTexture: async () => new Texture(),
+    });
+    await lib.load('sample');
+    const source = { root: new Group(), body: null, alive: true };
+    const rt = createLtkRuntime(lib, new Scene(), () => source, { renderer: gl as never });
+    for (let i = 0; i < 3; i++) rt.play('jinx', 'caster', []);
+    rt.update(1 / 60, cam);
+    expect(rt.active).toBe(3);
+    rt.render(cam);
+    expect(calls).toEqual([
+      [1 << SCENE_LAYER, true],
+      [1 << SCENE_LAYER, false],
+      [1 << EARLY_DISTORTION_LAYER, false],
+      [1 << UNDER_LAYER, false],
+      [1 << DISTORTION_LAYER, false],
+      [1 << PARTICLE_LAYER, false],
+      [-1, false],
+    ]);
+
+    calls.length = 0;
+    rt.play('jinx', 'caster', []);
+    rt.update(1 / 60, cam);
+    expect(rt.active).toBe(4);
+    rt.render(cam);
+    expect(calls).toEqual([
+      [1 << SCENE_LAYER, false],
+      [1 << EARLY_DISTORTION_LAYER, false],
+      [(1 << UNDER_LAYER) | (1 << PARTICLE_LAYER), false],
+      [-1, false],
+    ]);
+    rt.dispose(); lib.dispose();
   });
 });
 
