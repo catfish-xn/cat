@@ -3837,9 +3837,9 @@
     "tests/vfx-ltk-trail-width.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2324,
+      "currentBytes": 5651,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1cb884aee21f4e04d696a621efcd391cac3fef943d3673f693a2cc75a36b1a6f",
+      "currentSha256": "1958fb7bcb784b63f6a142a5b14b38e7d0f5d43a29c6cb6be9d47349f7e8cd23",
       "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {

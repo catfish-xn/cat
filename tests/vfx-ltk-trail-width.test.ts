@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { Camera, Group, Scene, Texture } from 'three';
+import { describe, expect, it, vi } from 'vitest';
+import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { nameHash } from '../src/rendering/three-mode/vfx-ltk/binHash';
+import { constant, num, struct, syntheticSystem, vec } from './vfx-ltk-synthetic';
 import { ribbonBuffers, strand, writeTrail, type TrailBuild } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/ribbon';
 import { plainUvLayer } from '../src/rendering/three-mode/vfx-ltk/engine/model/model';
 import { TRAIL_SMOOTHING } from '../src/rendering/three-mode/vfx-ltk/engine/model/enums';
@@ -43,5 +49,49 @@ describe('vfx-ltk trail width (ribbon.ts writeTrail)', () => {
 
   it('a camera-facing trail was never scaled by it either', () => {
     for (const width of ribs([0, 1, 0], 2)) expect(width).toBeCloseTo(10, 6);
+  });
+});
+
+// Through the runtime: two systems alike but for a scaled system transform, each one arbitrary trail flown from caster
+// to target. The strand must come out as wide in both (Gangplank's 80ab2d1b and 20cd67dc are such scaled systems live).
+const built: any[] = [];
+vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal => {
+  const real: any = await importOriginal();
+  return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
+});
+
+function trailSystem(scale: number) {
+  const system = syntheticSystem({ primitive: struct('VfxPrimitiveArbitraryTrail', {}), birthVelocity: constant(vec(0, 0, 0)),
+    birthScale0: constant(vec(10, 1, 1)), rate: constant(num(60)), lifetime: num(0.5), particleLifetime: constant(num(1)) });
+  (system.root as { fields: unknown[] }).fields.push({ hash: nameHash('transform'), name: 'transform',
+    value: { type: 'matrix', values: [scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1] } });
+  return system;
+}
+
+describe('vfx-ltk trail width through the runtime', () => {
+  it('a scaled system transform leaves an arbitrary trail as wide as the same system unscaled', async () => {
+    built.length = 0;
+    const flight = (system: string): TimelineCue => ({ system, event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.6 });
+    const index = { version: 1, systems: { scaled: 'systems/scaled.json', plain: 'systems/plain.json' }, assets: { 'synthetic.tex': 'texture.png' },
+      skills: { gangplank: [flight('scaled'), flight('plain')] } };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : trailSystem(url.includes('scaled') ? 1.5 : 1),
+      readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
+      const root = new Group(); root.position.set(0, 0, i * 120); scene.add(root); root.updateMatrixWorld();
+      return [id, { root, body: null, alive: true }];
+    }));
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+    await runtime.warm('gangplank');
+    expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
+    for (let t = 0; t < 0.4; t += 1 / 60) runtime.update(1 / 60, new Camera());
+    const widths = (['scaled', 'plain'] as const).map(name => {
+      const fx = built.find(entry => entry.object.userData.ltkSystem === name);
+      const draw = fx.draws.find((d: any) => d.object.geometry?.index);
+      const pos = draw.object.geometry.attributes.position;
+      return Math.hypot(pos.getX(0) - pos.getX(1), pos.getY(0) - pos.getY(1), pos.getZ(0) - pos.getZ(1));
+    });
+    expect(widths[1]).toBeGreaterThan(0);
+    expect(widths[0]).toBeCloseTo(widths[1]!, 6);
+    runtime.dispose();
   });
 });
