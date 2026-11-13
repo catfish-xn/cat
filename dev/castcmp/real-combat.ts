@@ -10,6 +10,23 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
 export const DEFAULT_AFTER_TICKS = 60;
 /** The replay starts this many ticks before the first cast of `me` (half a second). */
 export const LEAD_TICKS = 10;
+/** The recorded window of a real combat is chosen around one anchor cast of `me`: its first by default, its N-th with
+ * castNumber (v-capture --cast-index N, ?castindex=N). Where the window starts, in ticks before that cast: LEAD_TICKS
+ * (half a second) unless asked: fromStart (--from-start 1, ?fromstart=1) starts at combat start (tick 0, so the attacks
+ * and casts before the anchor are in the window); leadMs (--lead-ms MS, ?leadms=MS) starts MS before the anchor cast,
+ * never before combat start. */
+export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number }
+export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
+  if (start.fromStart) return Math.max(0, castIndex);
+  if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
+  return LEAD_TICKS;
+}
+/** Ticks to replay past the anchor cast for a window of `windowMs`: from the default lead-in as before; with an asked-for
+ * window the replay keeps windowMs past the anchor at least (a superset; extra ticks are never shown). */
+export function afterTicksFor(windowMs: number, start: WindowStart = {}): number {
+  return start.fromStart || start.leadMs != null || (start.castNumber ?? 1) !== 1 ? Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) + 1)
+    : Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - LEAD_TICKS + 1);
+}
 
 /** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen). */
 export function realUnits(s: RealSetup): any[] {
@@ -33,25 +50,26 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
   return started as { state: any; events: any[] };
 }
 
-/** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the first cast of `me`. `onTick` sees every tick's
- * state and display events (tick 0 carries the combat-start events). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void) {
+/** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
+ * `castNumber`-th: v-capture --cast-index N). `onTick` sees every tick's state and display events (tick 0 carries the
+ * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1) {
   const started = startRealCombat(units);
-  let state = started.state, castIndex = -1, ticks = 1;
+  let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = toDisplayEvents(stepped.events as any) as any[];
-    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me')) castIndex = ticks;
+    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me') && ++casts === castNumber) castIndex = ticks;
     onTick(state, shown); ticks++;
   }
   return { castIndex, ticks, combatStart: !!state.startEffectsApplied, finished: state.status === 'finished' };
 }
 
-/** What the recorded window [castIndex - LEAD_TICKS, + windowMs] holds: the first cast of `me`, its targets, whether they
- * are alive at the end of the window, and every other unit's cast inside it. */
-export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number) {
-  const from = Math.max(0, castIndex - LEAD_TICKS), to = from + Math.ceil(windowMs / 50);
+/** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
+ * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS) {
+  const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
   const cast = (events[castIndex] ?? []).find(e => e.type === 'cast' && e.sourceId === 'me');
   const targets: string[] = [...(cast?.targetIds ?? [])];
   const end = Math.min(to, alive.length - 1);

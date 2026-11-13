@@ -3,6 +3,9 @@
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)
 //   [--kill foe,foe2 --killlead MS]: dummies only; these drop dead (still drawn) MS before the recorded action
+//   [--cast-index N] [--from-start 1 | --lead-ms MS]: --real only; one window choice (real-combat.ts leadTicksFor): the anchor
+//     cast is the N-th cast of the unit (default 1st); the recorded window starts at combat start / MS before the anchor
+//     (default: 500 ms before it). --times must start at 0 for --real (jobs-check.mjs fails it otherwise).
 // Records one cast as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
 const { launchOptions, timeline, timer } = require('./common.cjs');
@@ -28,7 +31,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -41,7 +44,14 @@ async function unbind(page, tick, rebind) {
   if (cold && !opt('real')) throw new Error('--cold is for --real only: a dummy casts only when told to (use --warm 0)');
   if (cold) { const h = await page.evaluate(() => window.__h.hold()); mark(`cold: held at tick ${h.at} of ${h.limit}`); }
   if (opt('kill') && opt('real')) throw new Error('--kill is for dummies only: a real combat decides who dies');
-  const g = gate.createGate(opt, { page, repo: path.resolve(__dirname, '../..'), unit, real: !!opt('real'), times, actionAtMs: opt('real') ? 500 : 0 });
+  const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined;
+  if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index are for --real only: a dummy cast has no combat before it');
+  if (opt('cast-index') !== undefined && !/^[1-9][0-9]*$/.test(opt('cast-index'))) throw new Error(`--cast-index must be 1, 2, ..., got ${opt('cast-index')}`);
+  if (opt('from-start') === '1' && opt('lead-ms') !== undefined) throw new Error('--from-start and --lead-ms: give one');
+  if (opt('lead-ms') !== undefined && !(Number(opt('lead-ms')) >= 0)) throw new Error(`--lead-ms must be a number of ms >= 0, got ${opt('lead-ms')}`);
+  // Where the (anchor) cast falls on the recorded clock: 500 ms in by default; with an asked-for window, (cast - start) ticks of 50 ms.
+  const actionAtMs = !opt('real') ? 0 : customStart ? await page.evaluate(() => (window.__h.real.castTick - window.__h.real.startTick) * 50) : 500;
+  const g = gate.createGate(opt, { page, repo: path.resolve(__dirname, '../..'), unit, real: !!opt('real'), times, actionAtMs });
   await g.start();
   // let models load: real time passes while the virtual clock idles
   for (let i = 0; i < 60; i++) { await page.evaluate(() => { window.__h.frame(); window.__h.step(32); }); await page.waitForTimeout(250);
@@ -97,7 +107,7 @@ async function unbind(page, tick, rebind) {
     return runtime?.ATTACHED_LAYER_STATS ? { ...JSON.parse(JSON.stringify(runtime.ATTACHED_LAYER_STATS)), cap: runtime.ATTACHED_LAYER_CAP, ...attached?.ATTACHED_STATS } : null;
   }), null, 2));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor cast` } } : {}), args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);
