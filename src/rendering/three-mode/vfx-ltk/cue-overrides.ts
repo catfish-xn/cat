@@ -29,8 +29,14 @@ const center = 'C_BUFFBONE_GLB_CENTER_LOC';
  * fitted value, not original data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
  */
 export const CAITLYN_COMET = {
-  /** Cells from where the target stands: left on screen, up, and toward the top of the screen. Steep, as in the footage. */
-  from: [-1, 5, -1.5] as const,
+  /**
+   * Cells from where the target stands: left on screen, up, and toward the top of the screen. Fitted, not original data:
+   * far enough and slanted enough that the comet comes in from the upper left at about the angle the 14.24 footage shows,
+   * with the long streak it leaves there (the board camera looks down along -Z, so screen left is -X and screen up is
+   * mostly +Y and -Z). It still falls in CAITLYN_COMET.fall, so it lands when it did; it reads faster than the footage's,
+   * whose shot the renderer cannot see coming (a shot's centre is drawn by the rule when the shot executes).
+   */
+  from: [-4, 6, -2.5] as const,
   /**
    * Seconds it falls. Fitted: a shot's damage is already settled when its event arrives, so the comet starts then and
    * lands this much later, short enough to read as the cause of that hit.
@@ -284,7 +290,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1) } : cue),
+  // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
@@ -301,7 +308,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5333333333333333, duration: 1.5 },
     { system: '809dc7ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'Buffbone_Glb_Weapon_1', targetBone: chest },
     { system: '9d79232b', action: 'cast', event: 'hit', delay: 0.6, duration: 1.5, primary: true },
-    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true },
+    // The curse rides its target: it is not drawn where a dead target stood (livingTarget).
+    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true, livingTarget: true },
   ],
   // The export carries Renata's attack only, so every cast fell back to the procedural shot (11-06 field: 4/4 no-cues).
   // Order and timing follow the system names and the handwritten shot: canisters fire, the missile flies 0.3–0.9 s,
@@ -443,6 +451,22 @@ export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
 export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
   return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
 }
+
+/**
+ * Projectile systems whose beams keep flying with the system instead of being pinned between caster and target
+ * (runtime beamSplit), each with why. The pin is the default for every projectile beam (Fable 11-13).
+ * - 7029bc3c Sevika's chomp: its beam is a streamed mesh rope that may belong to the flying head rather than to her;
+ *   held at its old behaviour until it is checked against the original.
+ * - 92d79254 Jayce's back-form forge: it plays only when his cast buffs an ally, which no recording setup can stage yet;
+ *   it cannot be checked on screen, so it is not changed for now (Fable 11-13).
+ * - 4f2eb343 Mel's third cast: before and after show no difference that can be judged on screen, so it is not changed
+ *   (Fable 11-13).
+ */
+export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
+  '7029bc3c': 'streamed rope, not checked against the original',
+  '92d79254': 'cannot be recorded to check, not changed for now',
+  '4f2eb343': 'no difference that can be checked on screen, not changed',
+};
 
 /**
  * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
