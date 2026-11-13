@@ -31,6 +31,8 @@ const skills: Record<string, TimelineCue[]> = {
   // A long flourish (decorative): a living target's hit may evict it, a hit at a dead target's place may not.
   glow: [{ system: 'glow', action: 'passive', event: 'cast-start', delay: 0, duration: 5 }],
   pair: [hit('boom', 0)],
+  // One hit on every target, the rows starting together (one together group): a living and a dead target mixed.
+  duo: [hit('boom', 0, { together: 'duo' })],
 };
 const systems = ['flourish', 'boom', 'shot', 'spark', 'curse', 'glow'];
 const toSystem = (p: { x: number; y: number; z: number }) => [p.x * AXIS_SIGN[0] / FX_SCALE, p.y / FX_SCALE, p.z / FX_SCALE];
@@ -195,6 +197,45 @@ describe('vfx-ltk casts at dead targets', () => {
       expect(spare.fx.object.parent).toBeNull();
       expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 1);
       expect(of(newcomer === 'swing' ? 'spark' : 'boom').filter(entry => entry.fx.object.parent === scene && entry !== spare)).toHaveLength(1);
+      runtime.dispose();
+    }
+  });
+
+  // Review 11-13: a together group with a living and a dead target is an ordinary group, whichever target comes first.
+  it('a together group mixing a living and a dead target is an ordinary group: a newcomer never takes its living row', async () => {
+    for (const order of [['a', 'b'], ['b', 'a']]) {
+      const { runtime, scene, units, step, of } = await setup();
+      units.get('b')!.alive = false;
+      expect(runtime.play('duo', 'caster', order)).toBe(true);
+      step(1 / 60);
+      const group = of('boom').filter(entry => entry.fx.object.parent === scene);
+      expect(group).toHaveLength(2);
+      for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+      step(3 / 60);
+      // A plain attack on the full board: nothing is spare, so it is dropped and the group stays whole.
+      expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      step(1 / 60);
+      for (const entry of group) expect(entry.fx.object.parent).toBe(scene);
+      expect(of('spark')).toHaveLength(0);
+      runtime.dispose();
+    }
+  });
+
+  it('on a full board a mixed together group waits or evicts as an ordinary group; its living row is not dropped with the dead one', async () => {
+    for (const order of [['a', 'b'], ['b', 'a']]) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+      step(3 / 60);
+      units.get('b')!.alive = false;
+      const placeDropped = LTK_RUN_STATS.placeDropped.boom ?? 0;
+      expect(runtime.play('duo', 'caster', order)).toBe(true);
+      step(1 / 60);
+      // The group took a flourish's slot (a group is one slot) and both its rows run, the living one on its unit.
+      const booms = of('boom').filter(entry => entry.fx.object.parent === scene);
+      expect(booms).toHaveLength(2);
+      expect(booms.some(entry => entry.options.attachment === units.get('a'))).toBe(true);
+      expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 1);
+      expect(LTK_RUN_STATS.placeDropped.boom ?? 0).toBe(placeDropped);
       runtime.dispose();
     }
   });

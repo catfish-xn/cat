@@ -4,6 +4,8 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
+import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
@@ -134,6 +136,8 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   atPlace?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
   together?: string;
+  /** One side of a projectile split by beamSplit: its flight, or its beams pinned between caster and target. */
+  part?: 'flight' | 'beam';
   /** The clock of the first frame it was put back to wait for room. */
   waitingSince?: number }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
@@ -147,10 +151,13 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   ending?: boolean;
   /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
   heldAtEnd?: number;
-  /** A cast's projectile at a living target: if that target dies it flies on to the last place it saw it, and lands there. */
-  lands?: boolean;
   /** It plays at a dead target's place (Waiting.atPlace): it gives way to any row that lacks room, before anything else. */
   atPlace?: boolean;
+  /**
+   * Its target died, so its far end stays where the target last stood: a pinned beam run (Waiting.part 'beam'), or a cast's
+   * projectile at a living target that then flies on to that place and lands there (Waiting.place).
+   */
+  holdTarget?: () => void;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
   together?: string }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
@@ -221,6 +228,55 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
   }
   return view;
 }
+/**
+ * A projectile system's beams apart from its flight: `beam` keeps only the top-level beam emitters (VfxPrimitiveBeam,
+ * its mesh and camera-segment kinds) and everything under them, `flight` keeps the rest (null when nothing else draws).
+ * Each view disables the other side's emitters outright, so they neither emit nor draw. Null for a system with no beam.
+ *
+ * A beam reaches from the system to its target. Flown as one missile, the system's end of every beam rode the missile
+ * head, so the beam shrank to nothing over the flight, and the run was removed whole on landing while the beam
+ * particles' own lives ran past it (Viktor's basic-attack laser; Fable 11-13). The beams
+ * play as a run of their own instead: pinned to the caster's bone, reaching for the target unit where it stands, for
+ * as long as the asset gives them (beamSeconds). Only the drawing changes; the cue's timing does not.
+ */
+export interface BeamSplit { readonly beam: PreparedVfx; readonly flight: PreparedVfx | null }
+const BEAM_SPLITS = new WeakMap<PreparedVfx, BeamSplit | null>();
+export function beamSplit(prepared: PreparedVfx): BeamSplit | null {
+  if (BEAM_SPLITS.has(prepared)) return BEAM_SPLITS.get(prepared)!;
+  const beams = new Set(prepared.model.emitters.filter(e => e.beam !== null && !e.disabled).map(e => e.index));
+  const drawsBeam = prepared.drawn.some(d => beams.has(d.root) && !d.emitter.disabled);
+  const view = (keep: (index: number) => boolean): PreparedVfx => ({ ...prepared,
+    model: { ...prepared.model, emitters: prepared.model.emitters.map(e => keep(e.index) || e.disabled ? e : { ...e, disabled: true }) },
+    drawn: prepared.drawn.filter(d => keep(d.root)) });
+  const flight = view(index => !beams.has(index));
+  const split = drawsBeam ? { beam: view(index => beams.has(index)), flight: flight.drawn.some(d => !d.emitter.disabled) ? flight : null } : null;
+  BEAM_SPLITS.set(prepared, split);
+  return split;
+}
+/**
+ * How long a projectile's beams play, read from the asset: the latest any beam emitter's last particle dies. A single
+ * particle is born at the emitter's start; a stream emits over its emitter's lifetime (the flight where it has none).
+ * At most PLAY_OUT_CAP.
+ */
+export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
+  let end = 0;
+  for (const e of beam.model.emitters) if (e.beam !== null && !e.disabled) {
+    end = Math.max(end, e.timeBeforeFirstEmission + (e.singleParticle ? 0 : Math.min(e.lifetime ?? flightSeconds, PLAY_OUT_CAP)) + peak(e.particleLifetime));
+  }
+  return Math.min(PLAY_OUT_CAP, end);
+}
+/** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from the run counter's. */
+export function beamSeed(flight: number): number {
+  return (Math.imul(flight, 0x9e3779b1) ^ 0x5bd1e995) >>> 0 || 1;
+}
+/** An anchor that follows `live` until `hold` freezes it where it stands then. */
+function holdable(live: Anchor): { anchor: Anchor; hold: () => void } {
+  let at: ReturnType<Anchor['originAt']> | null = null, basis: Float32Array | null = null;
+  return {
+    anchor: { originAt: time => at ?? live.originAt(time), basisInto: (time, out) => { if (basis) { out.set(basis); return out; } return live.basisInto(time, out); } },
+    hold: () => { if (at) return; at = live.originAt(0); basis = live.basisInto(0, new Float32Array(9)); },
+  };
+}
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
   board?: () => RowBoard | null;
@@ -231,6 +287,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
   layerCap?: number } = {}) {
   let clock = 0, closed = false, seed = 1, plays = 0;
+  /**
+   * The seed each started flight row (Waiting.part 'flight') took, by its together key, for its beam row to derive its
+   * own from. The split must not take a seed of its own: every later run's seed would move one on, and with it the
+   * random shape of whatever plays next (Fable 11-13 keyframes: Viktor's storm cast after a split attack came out with
+   * a different pattern).
+   */
+  const flightSeeds = new Map<string, number>();
   const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
@@ -276,6 +339,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const slotsNow = () => { let n = 0; const groups = new Set<string>();
     for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
+  // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
+  const spareSlots = () => { let n = 0; const groups = new Set<string>();
+    for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -297,8 +363,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     spareFx.push(run.fx);
   };
   const drainSpare = () => { for (const fx of spareFx) fx.dispose(); spareFx.length = 0; };
+  /** Seeds kept for a beam row that no longer waits (dropped with its target, or cleared) are let go. */
+  const pruneFlightSeeds = () => { for (const key of flightSeeds.keys()) if (!waiting.some(row => row.together === key)) flightSeeds.delete(key); };
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
+    pruneFlightSeeds();
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
@@ -357,11 +426,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     }
     return aimed && !usable ? null : placed;
   };
-  // A living target's anchor that keeps the last place it saw once that unit is dead or gone (Running.lands).
-  const heldAnchor = (id: string, live: Anchor): Anchor => {
-    let last: ReturnType<Anchor['originAt']> | undefined;
-    return { originAt(time) { const unit = findUnit(id); if (!last || (unit?.alive && !unit.disposed)) last = live.originAt(time); return last; },
-      basisInto: (time, out) => live.basisInto(time, out) };
+
+  // A waiting row at a dead target's place: taken so when the cast played (Waiting.atPlace), or its target has died since.
+  const placeRow = (row: Waiting) => {
+    if (row.atPlace) return true;
+    if (!row.place || row.snapshot || !row.spawn.targetId) return false;
+    const unit = findUnit(row.spawn.targetId);
+    return !unit?.alive || !!unit.disposed;
   };
   const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
@@ -451,13 +522,28 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const spawns = placeTargets(mapped.spawns, !!context.snapshotTargets, skipped);
       if (!spawns) return refuse('no-target');
       if (!spawns.length) return refuse('nothing-left');
-      if (waiting.length + spawns.length > MAX_LTK_QUEUED) return refuse('queue-full');
       const independent = spawns.every(({ spawn: s }) => s.point && s.event !== 'projectile');
       // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.
       if (spawns.some(({ spawn }) => needsLivingSource(spawn)) && (!source?.alive || source.disposed)) return refuse('caster-dead');
+      // A flying projectile whose system draws beams plays as two rows (beamSplit): the flight as cued, the beams pinned
+      // to the caster for their own life. They start together or not at all. Both rows keep their spawn's place
+      // (placeTargets), so a dead target's flight and beam are both at its place, and both spare (Waiting.atPlace).
+      const rows: (Placed & { part?: 'flight' | 'beam'; together?: string })[] = [];
+      for (const placed of spawns) {
+        const { spawn } = placed;
+        const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove && !Object.hasOwn(UNPINNED_BEAM_SYSTEMS, spawn.system)
+          ? catalog.get(spawn.system) : undefined;
+        const split = loaded ? beamSplit(spawn.hide ? withHidden(loaded, spawn.hide) : loaded) : null;
+        if (!split) { rows.push(placed); continue; }
+        const together = spawn.together ? undefined : `beam${rows.length}`;
+        if (split.flight) rows.push({ ...placed, part: 'flight', together });
+        rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
+          part: 'beam', together: split.flight ? together : undefined });
+      }
+      if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
-      for (const { spawn, snapshot: taken, place, atPlace } of spawns) {
+      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
           // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
@@ -466,7 +552,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
-          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
+          ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
+          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       }
       return true;
     },
@@ -487,10 +574,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A row that keeps its target's place (Waiting.place) plays there.
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && !row.place && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
+      pruneFlightSeeds();
       for (const run of running) {
         const bySource = run.boundToSource && run.source === id;
-        // A cast's projectile flies on to where its target was and lands there (Running.lands).
-        if (!bySource && run.target === id && run.lands) { run.target = undefined; continue; }
+        // A pinned beam whose target died plays its own life out toward where the target fell (Fable 11-13); a cast's
+        // projectile flies on to there and lands (Running.holdTarget).
+        if (!bySource && run.target === id && run.holdTarget) { run.holdTarget(); run.target = undefined; continue; }
         if (!bySource && run.target !== id) continue;
         // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
         // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
@@ -554,16 +643,21 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         // A row at a dead target's place (placeTargets) only takes free room: it never waits in line, never makes a tail give
         // way and never evicts a run, so it can only add to what plays (Fable 11-13: it pushed living targets' hits out).
-        const atPlace = !!row.atPlace || (!!row.place && !snapshot && !!spawn.targetId && (!target?.alive || !!target.disposed));
+        // A together group is at a dead target's place only whole: one row at a living target makes all of it ordinary rows,
+        // so a spare group never takes a living row with it when it gives way or is dropped.
+        const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
+          && [...running].every(run => run.together !== row.together || run.atPlace)));
         const countMiss = atPlace ? countPlaceDrop : countDrop;
         if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
-        // A projectile at its still living target, from a row that kept its place: it may yet fly on to that place.
-        const lands = !!row.place && !snapshot && spawn.event === 'projectile';
+        // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
+        // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
+        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
-        const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
+        const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
         if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
@@ -597,11 +691,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
         // Runs at a dead target's place are left out of the count: they only hold spare room (Running.atPlace).
-        const shared = importance === 'attack' && slotsNow() - [...running].filter(run => run.atPlace).length >= ATTACK_FREE_SLOTS;
+        const shared = importance === 'attack' && slotsNow() - spareSlots() >= ATTACK_FREE_SLOTS;
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
-        const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
+        // A beam run (Waiting.part) holds its few beam particles, not its whole system's reserve.
+        const reserveOfRow = (other: Waiting) => other.part === 'beam' ? MIN_RESERVE : reserveFor(other.spawn.system);
+        const own = reserveOfRow(row), need = own + partners.reduce((sum, other) => sum + reserveOfRow(other), 0);
         // A together group takes one slot: none more once one of its rows runs. The particle budget still counts every row.
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
         const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
@@ -660,7 +756,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
-          else { countMiss(spawn.system); for (const other of partners) { (other.atPlace ? countPlaceDrop : countDrop)(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          else { countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -681,15 +777,24 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
+        // A pinned beam reaches for its living target, as does a cast's projectile that kept its target's place (lands); when the
+        // target dies its far end holds where it last stood.
+        const held = (row.part === 'beam' || lands) && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
+        // A beam row started beside its flight row takes a seed derived from the flight's; the pair spends one seed, as the
+        // unsplit projectile did. A beam row with no flight (a system of beams only) is the projectile and takes the next.
+        const flightSeed = row.part === 'beam' && row.together ? flightSeeds.get(row.together) : undefined;
+        if (flightSeed !== undefined) flightSeeds.delete(row.together!);
+        const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : seed++;
+        if (row.part === 'flight' && row.together) flightSeeds.set(row.together, runSeed);
         const nextOptions = { anchor, attachment,
-          target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? (lands ? heldAnchor(spawn.targetId!, unitAnchor(target.root, target.body, spawn.targetBone)) : unitAnchor(target.root, target.body, spawn.targetBone)) : null,
+          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
+        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -702,7 +807,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(lands ? { lands } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);

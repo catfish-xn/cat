@@ -1,0 +1,5 @@
+# For the user: Viktor 2★ real combat after the beam fix (PR #642), against one 3★ Twitch set 4 hexes out. Twitch is ranged
+# and holds his ground (4 hexes the whole fight), so the beam keeps its length. Viktor's 7th attack (4200 ms into the
+# window) fires the beam at about 4740 ms; frames every 33 ms from 4240 to 5440 ms (beam 0.5 s in, as in the original
+# clip). The window stops at 5450 ms, before Twitch's cast at 5500 ms.
+v-capture.cjs viktor vkbeam-user-viktor-after --real 1 --star 2 --dist 4 --nfoes 1 --foestar 3 --target twitch --ms 5450 --times 4240,4273,4306,4339,4372,4405,4438,4471,4504,4537,4570,4603,4636,4669,4702,4735,4768,4801,4834,4867,4900,4933,4966,4999,5032,5065,5098,5131,5164,5197,5230,5263,5296,5329,5362,5395,5428 --systems 87913524 --layers none --from 4700 --to 5440 --probe emitters --column after --snapshot c1333710ad8e
