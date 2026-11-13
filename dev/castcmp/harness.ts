@@ -1,13 +1,18 @@
 // Dev-only cast capture harness (dev/castcmp): a fake board feed, a virtual clock, one cast event.
 const params = new URLSearchParams(location.search);
+function params0() { return params; }
 let clock = 0;
 let seq = 100;
 const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
+// Rec branch: the real clock for frame-time.cjs, and the cap/budget overrides read before the renderer mounts.
+(window as any).__realNow = performance.now.bind(performance);
+if (params0().get('ltkcap')) (globalThis as any).__LTK_CAP = Number(params0().get('ltkcap'));
+if (params0().get('fxbudget')) (globalThis as any).__FX_BUDGET = Number(params0().get('fxbudget'));
 performance.now = () => clock;
 window.requestAnimationFrame = cb => { rafs.set(++rafId, cb); return rafId; };
 window.cancelAnimationFrame = id => { rafs.delete(id); };
 function step(ms: number) {
-  while (ms > 0) { const d = Math.min(ms, 16); clock += d; ms -= d; const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
+  while (ms > 0) { const d = Math.min(ms, 1000 / 60); clock += d; ms -= d; const p = [...rafs.values()]; rafs.clear(); for (const cb of p) cb(clock); }
 }
 import { installProbes } from './probes';
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
@@ -35,7 +40,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     let at = 0, carry = 0;
     const boardStep = (ms: number) => {
       while (ms > 0) {
-        const d = Math.min(ms, 16); carry += d;
+        const d = Math.min(ms, 1000 / 60); carry += d;
         while (carry >= 50 && at < replay.frames.length - 1) { carry -= 50; at++; listener.frame(frameOf(at)); if (replay.events[at]!.length) listener.events(replay.events[at]); }
         step(d); ms -= d;
       }
@@ -76,7 +81,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
         if (events.length) { listener.events(events); numbers?.add(events); }
       }
     };
-    const realStep = (ms: number) => { while (ms > 0) { const d = Math.min(ms, 16); advance(d); step(d); numbers?.update(d); ms -= d; } };
+    const realStep = (ms: number) => { while (ms > 0) { const d = Math.min(ms, 1000 / 60); advance(d); step(d); numbers?.update(d); ms -= d; } };
     playFrom(0);
     (window as any).__h = {
       step: realStep, frame: () => show(at), reset: () => playFrom(0),
@@ -170,9 +175,9 @@ async function createBoardReplay(mine: string[], theirs: string[], star: number)
   const [{ stepCombat }, { startRealCombat }, display, control] = await Promise.all([
     import('../../src/simulation/combat'), import('./real-combat'), import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
   const COLS = [1, 3, 5, 2, 4, 0, 6];
-  const place = (ids: string[], team: string, rows: [number, number]) => ids.slice(0, 8).map((definitionId, i) =>
+  const place = (ids: string[], team: string, rows: [number, number]) => ids.slice(0, 10).map((definitionId, i) =>
     ({ id: `${team === 'player' ? 'p' : 'e'}${i}-${definitionId}`, definitionId, team, starLevel: star,
-      location: { kind: 'board', cell: { col: COLS[i % 4]!, row: rows[i < 4 ? 0 : 1] } } }));
+      location: { kind: 'board', cell: { col: i < 8 ? COLS[i % 4]! : COLS[5 + (i - 8)]!, row: rows[i < 4 ? 0 : 1] } } }));
   const started = startRealCombat([...place(mine, 'player', [4, 6]), ...place(theirs, 'enemy', [3, 1])]);
   let state: any = started.state;
   const snapshot = () => display.toCombatViewState(state).units.map((u: any) => ({

@@ -460,7 +460,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
         const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
-        const crowded = () => running.size + partners.length >= MAX_LTK_SYSTEMS || !!(options.budget
+        // REC BRANCH ONLY (never merge): dev/castcmp/frame-time.cjs sets the cap per run (?ltkcap=).
+        const crowded = () => running.size + partners.length >= ((globalThis as any).__LTK_CAP ?? MAX_LTK_SYSTEMS) || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
