@@ -24,7 +24,7 @@ describe('Mordekaiser post-cast attack playback', () => {
     expect(ticks.flatMap(frame => frame.events).filter(e => e.type === 'cast' && e.sourceId === 'a')).toHaveLength(1);
     const interval = (attacks[1].tick - attacks[0].tick) * 0.05;
     const f = fixture(), state = new UnitActionState('a', {
-      resolvePlayback: (action, index) => f.mixer.resolvePlayback(action, index, { attackIntervalSeconds: interval }),
+      resolvePlayback: action => f.mixer.resolvePlayback(action, 0, { attackIntervalSeconds: interval }),
     });
     f.mixer.apply(state.output);
     let completed = 0;
@@ -98,7 +98,7 @@ describe('other multi-stage cast endings', () => {
       new AnimationClip(name, name === 'entry' || name === 'exit' ? 9 : 1,
         [new NumberKeyframeTrack('.position[x]', [0, 1], [i, i + 1])]));
     const mixer = new UnitAnimationMixer(new Group(), clips, { idle: 'idle', attack: 'attack', cast: 'main' }, metadata);
-    const state = new UnitActionState('hero', { resolvePlayback: (action, index) => mixer.resolvePlayback(action, index, context) });
+    const state = new UnitActionState('hero', { resolvePlayback: action => mixer.resolvePlayback(action, 0, context) });
     try {
       const cast = state.consume({ type: 'cast', sourceId: 'hero' });
       expect(cast.playback?.clips).toEqual(expected); expect(cast.loop).toBe(false);

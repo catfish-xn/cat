@@ -185,9 +185,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
     { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 0 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 1 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', phase: 2, targetLimit: 3 },
+    // Branch from the rule's cast event (combat-g2-3.ts): `single` hits the primary target, `splash` every third cast.
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, branch: 'single' },
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', branch: 'splash', targetLimit: 3 },
   ],
   // E: run/dash dust on self, fast shuriken, gold hit ~0.3s, mark on primary, blue dash hit ~1.1s (no back-dash motion in harness).
   akali: [
@@ -348,6 +348,11 @@ export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, strin
   // Ambessa: odd casts chain (Q: the chain swipe and its hit), even casts fist (R: dash, ground, weapon and slam hit).
   // Rule side: combat-g2-2.ts writes the branch (PR #623); the 11-11 live index played all six on every cast.
   ambessa: { '3b4c15e0': 'chain', '8a64f4dd': 'chain', '754b6c78': 'fist', 'a429a900': 'fist', '6390530e': 'fist', 'cba05b6e': 'fist' },
+  // Jinx W/E/R (combat writes zap/chompers/rocket). The live batch-2 index was staged from the old jinx.ts and still tags
+  // these cues with the dropped `phase` 0/1/2 instead of a branch, so without these tags every cast played all three
+  // (11-12 #629 Windows run). Same systems as champions/jinx.ts.
+  jinx: { a6a2b1cc: 'zap', '3496e112': 'zap', '10fede7e': 'zap', '40140250': 'zap', '9bd80364': 'chompers', cd05488e: 'chompers',
+    '7e6f06b5': 'rocket', '449d6617': 'rocket', '8b59c09d': 'rocket', '809da1b1': 'rocket' },
 };
 /** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
 export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {

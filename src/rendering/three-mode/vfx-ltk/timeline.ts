@@ -15,8 +15,6 @@ export interface TimelineCue {
   readonly targetBone?: string;
   /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
   readonly branch?: string;
-  /** Zero-based cast rotation, selected from observed cast events, including catch-up events. */
-  readonly phase?: 0 | 1 | 2;
   readonly primary?: boolean;
   readonly travelSeconds?: number;
   /** Soft stop emission and let existing particles linger until duration. */
@@ -105,11 +103,10 @@ export interface TimelineMapping {
 }
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
-export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0, board?: WorldPoint): TimelineMapping {
+export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], board?: WorldPoint): TimelineMapping {
   const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
   const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[] = [];
   for (const cue of cues) {
-    if (cue.phase !== undefined && cue.phase !== castIndex % 3) continue;
     if (cue.location === 'board') {
       if (!board || board.some(n => !Number.isFinite(n))) unsupported.push({ cue, reason: 'missing-point' });
       else spawns.push({ ...cue, sourceId, point: board });

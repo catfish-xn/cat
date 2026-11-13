@@ -16,7 +16,7 @@ function fixture() {
   const names = { idle: 'rest', cast: 'strike', attack: 'strike', death: 'fall' };
   const metadata = { castSequence: { in: 'entry', hold: 'wait', main: 'strike', out: 'exit' } };
   const mixer = new UnitAnimationMixer(root, clips, names, metadata);
-  const state = new UnitActionState('alpha', { blendSeconds: 0, resolvePlayback: (a, i) => mixer.resolvePlayback(a, i) });
+  const state = new UnitActionState('alpha', { blendSeconds: 0, resolvePlayback: a => mixer.resolvePlayback(a, 0) });
   mixer.apply(state.output);
   return { root, bone, clips, names, metadata, mixer, state };
 }
@@ -56,20 +56,23 @@ describe('staged casts with generated skeleton curves', () => {
       branch: { beta: { main: 'wait' } },
     } };
     const saved = structuredClone(metadata), mixer = new UnitAnimationMixer(f.root, f.clips, f.names, metadata);
-    const state = new UnitActionState('alpha', { resolvePlayback: (a, i) => mixer.resolvePlayback(a, i) });
-    expect(state.consume(cast).playback?.clips).toEqual(['entry', 'strike']);
-    expect(state.consume(cast).playback?.clips).toEqual(['entry', 'alternate']);
-    expect(state.consume(cast).playback?.clips).toEqual(['entry', 'strike']);
+    let castIndex = 0;
+    const state = new UnitActionState('alpha', { resolvePlayback: a => mixer.resolvePlayback(a, castIndex) });
+    // A main list rotates by the cast event's castIndex (1 = first cast); unreported (0) plays the first clip.
+    castIndex = 1; expect(state.consume(cast).playback?.clips).toEqual(['entry', 'strike']);
+    castIndex = 2; expect(state.consume(cast).playback?.clips).toEqual(['entry', 'alternate']);
+    castIndex = 3; expect(state.consume(cast).playback?.clips).toEqual(['entry', 'strike']);
+    castIndex = 0; expect(state.consume(cast).playback?.clips).toEqual(['entry', 'strike']);
     for (const [context, name] of [[{ starLevel: 3 }, 'alternate'], [{ hero: true }, 'wait'], [{ form: 'front' }, 'entry'], [{ form: 'back' }, 'exit'], [{ branch: 'beta' }, 'wait']] as const) {
       expect(mixer.resolvePlayback('cast', 0, context)?.clips).toEqual([name]);
     }
-    expect(selectCastSequence({ castVariants: { rotate: ['entry', 'exit'] } }, 3)).toEqual({ main: 'exit' });
+    expect(selectCastSequence({ castVariants: { rotate: ['entry', 'exit'] } }, 4)).toEqual({ main: 'exit' });
     expect(metadata).toEqual(saved); mixer.dispose(); f.mixer.dispose();
   });
   it('keeps the active idle time and revision for null, missing, and incomplete cast plans', () => {
     for (const metadata of [{}, { castSequence: { in: 'absent', main: 'strike' } }]) for (const name of [null, 'missing']) {
       const f = fixture(), mixer = new UnitAnimationMixer(f.root, f.clips, { idle: 'rest', cast: name }, metadata);
-      const state = new UnitActionState('alpha', { resolvePlayback: (a, i) => mixer.resolvePlayback(a, i) });
+      const state = new UnitActionState('alpha', { resolvePlayback: a => mixer.resolvePlayback(a, 0) });
       mixer.apply(state.output); mixer.update(0.25);
       expect(state.consume(cast).revision).toBe(0); mixer.apply(state.output);
       expect(mixer.mixer.clipAction(f.clips[0]).time).toBeCloseTo(0.25);
