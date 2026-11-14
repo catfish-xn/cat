@@ -92,6 +92,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
+        // Steb: every heal he sends draws from his heal events, not from his cast's target (an enemy). A heal on someone else
+        // (his passive share) flies his heal missile to that ally and lands its heal ring there; his own heal rings on him.
+        if (event.type === 'heal' && event.actual > 0) {
+          const steb = event.shares.find(share => share.sourceId !== undefined && definition(share.sourceId) === 'steb')?.sourceId;
+          if (steb !== undefined) plan.extra.push({ champion: 'steb', sourceId: steb, targets: [event.targetId], action: 'passive',
+            skill: event.targetId === steb ? 'steb-heal' : 'steb-share' });
+        }
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);

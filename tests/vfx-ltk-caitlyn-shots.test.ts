@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { caitlynShotCentre, createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CAITLYN_COMET, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CAITLYN_COMET, CUE_EXTRA_SKILLS as ALL_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+
+// Caitlyn's shot branches only (the table also holds other champions' display branches).
+const CUE_EXTRA_SKILLS = Object.fromEntries(Object.entries(ALL_EXTRA_SKILLS).filter(([key]) => key.startsWith('caitlyn-')));
 import { parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { createCombatReplayRecorder } from '../src/simulation/combat-replay-view';
