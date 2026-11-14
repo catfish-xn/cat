@@ -40,6 +40,11 @@ export interface TimelineCue {
    */
   readonly arc?: { readonly gravity: number; readonly targetOffset: number };
   /**
+   * A projectile whose caster is its own target still flies (from its bone to its own targetBone), instead of being left
+   * out with its landing hits moved to its release (the default for a self-projectile). Off unless set per cue.
+   */
+  readonly selfFlight?: boolean;
+  /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
    * Multiplies the system's own offsets, particle size and velocity. It does not move the
@@ -132,7 +137,7 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     }
     if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId, ...(unique[0] !== undefined && unique[0] !== sourceId ? { aimId: unique[0] } : {}) }); continue; }
     if (!unique.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-    if (cue.event === 'projectile' && unique[0] === sourceId) {
+    if (cue.event === 'projectile' && unique[0] === sourceId && !cue.selfFlight) {
       if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
