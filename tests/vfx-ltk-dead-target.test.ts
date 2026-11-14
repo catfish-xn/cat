@@ -33,6 +33,8 @@ const skills: Record<string, TimelineCue[]> = {
   // A long flourish (decorative): a living target's hit may evict it, a hit at a dead target's place may not.
   glow: [{ system: 'glow', action: 'passive', event: 'cast-start', delay: 0, duration: 5 }],
   pair: [hit('boom', 0)],
+  // A passive with a start on the caster and a hit on its target.
+  aura: [{ system: 'flourish', action: 'passive', event: 'cast-start', delay: 0, duration: 0.6 }, { ...hit('boom', 0), action: 'passive' }],
   // One hit on every target, the rows starting together (one together group): a living and a dead target mixed.
   duo: [hit('boom', 0, { together: 'duo' })],
 };
@@ -71,7 +73,8 @@ describe('vfx-ltk casts at dead targets', () => {
     runtime.dispose();
   });
 
-  it('a target whose unit is gone loses only its own rows; with no usable target left the cast is refused', async () => {
+  // Fable 11-14 (reversing #655): with every target gone the caster's rows still play; before, the cast was refused.
+  it('a target whose unit is gone loses only its own rows; with every target gone the caster\'s rows still play', async () => {
     let { runtime, units, step, of } = await setup();
     units.get('b')!.disposed = true;
     expect(runtime.play('blast', 'caster', ['a', 'b'])).toBe(true);
@@ -82,7 +85,13 @@ describe('vfx-ltk casts at dead targets', () => {
     runtime.dispose();
     ({ runtime, units } = await setup());
     units.delete('a'); units.get('b')!.disposed = true;
-    expect(runtime.play('blast', 'caster', ['a', 'b'])).toBe(false);
+    expect(runtime.play('blast', 'caster', ['a', 'b'])).toBe(true);
+    expect(runtime.queued).toBe(1);
+    runtime.dispose();
+    // Nothing left of it once its targets' rows are gone: refused whole.
+    ({ runtime, units } = await setup());
+    units.get('a')!.disposed = true;
+    expect(runtime.play('later', 'caster', ['a'])).toBe(false);
     runtime.dispose();
   });
 
@@ -122,12 +131,17 @@ describe('vfx-ltk casts at dead targets', () => {
     runtime.dispose();
   });
 
-  it('a plain attack at a dead target is not replayed at its place: it falls back as before', async () => {
-    const { runtime, units } = await setup();
+  // Fable 11-14: a plain attack keeps a dead target's place too (before, it was refused and fell back to the old effect).
+  it('a plain attack at a dead target plays at its place, as a cast does', async () => {
+    const { runtime, units, step, of } = await setup();
     units.get('a')!.alive = false;
-    const before = LTK_RUN_STATS.refused['no-target'] ?? 0;
-    expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(false);
-    expect(LTK_RUN_STATS.refused['no-target']).toBe(before + 1);
+    const spare = LTK_RUN_STATS.placeStarted.spark ?? 0;
+    expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+    step(1 / 60);
+    expect(of('spark')).toHaveLength(1);
+    expect(of('spark')[0].options.attachment).toBeUndefined();
+    expect(of('spark')[0].options.anchor.originAt(0)).toEqual(toSystem(units.get('a')!.root.position));
+    expect(LTK_RUN_STATS.placeStarted.spark).toBe(spare + 1);
     runtime.dispose();
   });
 
@@ -299,23 +313,60 @@ describe('vfx-ltk casts at dead targets', () => {
     }
   });
 
-  it('a plain attack is unchanged: refused at a dead target, not drawn when its target dies before it lands, on its unit when alive', async () => {
+  // Fable 11-14: a plain attack now keeps its target's place like an empowered one (before: refused at a dead target, and
+  // not drawn when its target died before it landed).
+  it('a plain attack that kills its target draws at its place, now or by the time it lands; on its unit when alive', async () => {
     let { runtime, units, step, of } = await setup();
+    const at = units.get('a')!.root.position.clone();
     units.get('a')!.alive = false;
-    expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(false);
+    expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(true);
+    step(0.4);
+    expect(of('spark')).toHaveLength(1);
+    expect(of('spark')[0].options.anchor.originAt(0)).toEqual(toSystem(at));
     runtime.dispose();
     ({ runtime, units, step, of } = await setup());
     expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(true);
     step(0.1);
     units.get('a')!.alive = false; runtime.stopUnit('a');
+    units.get('a')!.root.position.x += 40; units.get('a')!.root.updateMatrixWorld();
     step(0.3);
-    expect(of('spark')).toHaveLength(0);
+    expect(of('spark')).toHaveLength(1);
+    expect(of('spark')[0].options.attachment).toBeUndefined();
+    expect(of('spark')[0].options.anchor.originAt(0)).toEqual(toSystem(at));
     runtime.dispose();
     ({ runtime, units, step, of } = await setup());
     expect(runtime.play('bolt', 'caster', ['a'], 'attack')).toBe(true);
     step(0.4);
     expect(of('spark')).toHaveLength(1);
     expect(of('spark')[0].options.attachment).toBe(units.get('a'));
+    runtime.dispose();
+  });
+
+  // Fable 11-14: a target whose unit is gone by the time its row starts still gets the row at the place it was noted at.
+  it('a row that noted its target\'s place plays there even once that unit is gone (disposed)', async () => {
+    const { runtime, units, step, of } = await setup();
+    const at = units.get('a')!.root.position.clone();
+    expect(runtime.play('later', 'caster', ['a'])).toBe(true);
+    step(0.1);
+    units.get('a')!.alive = false; units.get('a')!.disposed = true; runtime.stopUnit('a');
+    step(0.3);
+    expect(of('boom')).toHaveLength(1);
+    expect(of('boom')[0].options.anchor.originAt(0)).toEqual(toSystem(at));
+    runtime.dispose();
+  });
+
+  // #622 (not merged) had the opposite test, "a passive keeps its whole-action fallback for a dead target": a passive was
+  // then refused whole so the host drew its old effect. Since #655 a passive's hit plays at the dead target's place, as a
+  // cast's does; this locks that behaviour (Fable 11-14: keep it).
+  it('a passive whose target is dead plays its hit at that target\'s place, with its own start', async () => {
+    const { runtime, units, step, of } = await setup();
+    units.get('a')!.alive = false;
+    expect(runtime.play('aura', 'caster', ['a'], 'passive')).toBe(true);
+    step(1 / 60);
+    expect(of('flourish')).toHaveLength(1);
+    expect(of('boom')).toHaveLength(1);
+    expect(of('boom')[0].options.attachment).toBeUndefined();
+    expect(of('boom')[0].options.anchor.originAt(0)).toEqual(toSystem(units.get('a')!.root.position));
     runtime.dispose();
   });
 });
