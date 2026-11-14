@@ -3,8 +3,8 @@
  * With the asset root's official per-unit scale (`models[id].unitScale`, from the 14.24 skin data), a model keeps its
  * own League size: drawn at sourceScale × unitScale, so a short champion (Amumu, Ziggs) stays short and a big one
  * (Mordekaiser, Warwick) stays big. No height or footprint cap and no per-champion override: 2026-11-03 1080p video
- * review (castcmp-1103) found the capped champions 20–40% smaller than the original game while the uncapped ones
- * matched it (median original/ours ≈ 0.97 across 22 measured champions). Without a unitScale (older asset roots)
+ * review (castcmp-1103) found the capped champions clearly smaller than the original game while the uncapped ones
+ * matched it. Without a unitScale (older asset roots)
  * every model is fitted to `height` and its x/z box to `width` exactly as before.
  */
 import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
@@ -12,7 +12,7 @@ import { createSupportSampler, registerModelGrounding, supportRotation, supportV
 
 /**
  * A champion's drawn size by star level, over its one-star official scale (2026-11-03: same unit before and after a
- * merge in 1080p ranked footage, castcmp-1103/star-scale.json: 2★ 1.15–1.22, 3★ 1.29–1.38). A promoted 4 draws as 3.
+ * merge in 1080p ranked footage, castcmp-1103; the measured spans stay with that review, not here). A promoted 4 draws as 3.
  */
 export const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
 export const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
@@ -173,7 +173,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
             if (stands) support.vertex(index, v, point);
             if (v % ENVELOPE_STRIDE === 0) radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
             // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
-            // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
+            // what is left is how far the skinned body sits from its bind pose (Darius sits well above it).
             const foot = point.y - rootAt.y;
             if (standing && foot >= groundLimit && foot < ground) ground = foot;
             if (stands && point.y >= groundLimit && point.y < feet) feet = point.y;

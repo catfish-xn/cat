@@ -88,7 +88,7 @@ const INDEX_TIMEOUT_MS = 20000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
- * League models are scaled to their full bbox height (D7 build-report: jinx 234, vi 213 source units), so every
+ * League models are scaled to their full bbox height (D7 build-report), so every
  * champion stands this tall. Width is capped at 110 (just under a hex, √3 × 68 ≈ 118, and fits a bench slot), so
  * short wide models (Urgot, Corki) stay in their own cell; tested locally on the 60 real models, slim ones (Jinx, Vi)
  * are unchanged by the cap.
@@ -911,7 +911,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (monster && unitScale) {
         // A monster at its official scale, with no footprint cap (tails/wings span cells); its bar follows its body.
         const before = Math.abs(lease.scene.scale.x) || 1;
-        // No height cap either: the official scale is the monster's size (the dragon is 0.44 × 1.75).
+        // No height cap either: the official scale is the monster's size (the dragon's official scale is well over a champion's).
         const envelope = HOVERING_MODELS.has(definitionId) ? undefined : envelopeOf(definitionId, lease);
         const support = standingSupport(definitionId, envelope);
         const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale,

@@ -208,7 +208,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
     expect(ARENA_UNIT_SCALE).toBeCloseTo(0.3306 * pick!.alignmentScale!, 12);
     expect(SKILL_FX_SIZE).toBeCloseTo(0.638, 3);
-    // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (original footage ≈ 4.5).
+    // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (close to the original footage).
     expect(2 * 485 * FX_SCALE * SKILL_FX_SIZE / (Math.sqrt(3) * 34)).toBeCloseTo(4.6, 1);
     expect(measuredAtFxScale(0.45) * SKILL_FX_SIZE).toBeCloseTo(0.45, 12);
   });
@@ -226,7 +226,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
-    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe about 3 cells
+    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
     for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).

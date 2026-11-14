@@ -25,10 +25,10 @@ export class VfxLoadError extends Error {
  * An attached-mesh emitter that names a static mesh (`mSimpleMeshName`, a `.scb`) rather than its host's own skin.
  *
  * The attached kind draws the host's skinned body at the particle's scale, and such an emitter carries the scale meant for
- * its own small mesh: Sevika's punch hit BUBBLE_START1 (the bubble, 12×) drew a 4–12× purple copy of the struck unit
+ * its own small mesh: Sevika's punch hit BUBBLE_START1 (the bubble, scaled well up) drew a 4–12× purple copy of the struck unit
  * (#588, 11-10 a96aac47 recording), and Renata's empowered attack missile (d7729373 Alpha_Bullet/Add_Bullet, her
- * canister at 1.2 × 1.2 × 2.3) would stretch her body the same way. These three are the only such emitters in Set 13;
- * every other attached-mesh emitter names no mesh or the host's own `.skn` and stays at most 1.1× (11-10 audit).
+ * canister, scaled up too) would stretch her body the same way. These three are the only such emitters in Set 13;
+ * every other attached-mesh emitter names no mesh or the host's own `.skn` and stays about its host's size (11-10 audit).
  * They are left undrawn like a muted emitter.
  */
 export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }): boolean {

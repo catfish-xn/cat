@@ -4,9 +4,9 @@
  * Particles share the world with the arena, not with the champion bodies: a body is drawn at FX_SCALE × its official
  * skinScale, but a particle has no skinScale, and the default arena maps one League unit to √3·34/178 × 7.2/8.48
  * ≈ 0.281 board units (boards-plan alignmentScale, #526), not FX_SCALE's 0.44. At 0.44 every system drew about 1.57×
- * its original size against the grid: Darius's Q ring (half-extent 485) 7.2 cells across against about 4.5 in the
- * original footage, and Viktor's board-wide R spilling over the bench. The earlier per-cue shrinks (Garen 2.2×,
- * Vex 1.43×, Nunu 1.9×, measured 11-03 and 11-06) were the same mismatch.
+ * its original size against the grid: Darius's Q ring 7.2 cells across, well wider than in the original footage, and
+ * Viktor's board-wide R spilling over the bench. The earlier per-cue shrinks (Garen, Vex and Nunu, 11-03 and 11-06) were
+ * the same mismatch.
  *
  * Kept free of the particle bundle so cue tables can import it.
  */

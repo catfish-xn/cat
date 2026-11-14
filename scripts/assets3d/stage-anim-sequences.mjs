@@ -24,13 +24,13 @@ export const DEFAULT_EXCLUDES = new Set([
 /**
  * Casts whose SpellObject has an empty mAnimationName (the original spell script picks the clips).
  * The graph keys below were checked against gameplay video and the clips' own events:
- * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (cyB8sPEcP6M 189-190.9s); that is
+ * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (gameplay footage); that is
  *   Spell3_In (carries the cast particle) + Spell3_Out (graph end frame 12). Spell2_* is the E blink
  *   with forward root motion, which made the model jump forward and snap back.
- * - warwick: TFT13_WarwickSpell is Blood Frenzy: he rears up in place and then claws (TYNlhRomM1w 109.2-110s,
- *   no displacement). The graph key of howl.anm cracks to BloodFrenzy_Activate, the cast's own name. The clip
+ * - warwick: TFT13_WarwickSpell is Blood Frenzy: he rears up in place and then claws (gameplay
+ *   footage, no displacement). The graph key of howl.anm cracks to BloodFrenzy_Activate, the cast's own name. The clip
  *   we played, TFT13_Warwick_Spell_Dash, sits under the graph key Devour_Dash: the execute leap, not the cast.
- * - mel: TFT13_MissMageSpell dashes, then fires bolts (TYNlhRomM1w ~160-164s, the dash trail precedes the
+ * - mel: TFT13_MissMageSpell dashes, then fires bolts (gameplay footage: the dash trail precedes the
  *   bolts). Spell1_Blast starts from the exact pose Spell_Dash holds, so the two chain as Spell_Dash then
  *   Spell1_Blast. (Spell2 is not used here: it carries a separate warning sound and is left out.)
  * Each list is played as a Sequencer, so the graph's own frame ranges still apply.
@@ -43,8 +43,8 @@ export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
 
 /**
  * Casts whose spell names a graph key that is not what the original plays. Darius: TFT13_DariusSpell names `Spell`
- * (Atomic Spell1, 0.53 s), but the original Q_Ring emitters wait 0.75 s and the 11-08 footage audit shows the blade
- * ring at 0.70 s, the swing of the Sequencer 0x5463dad9 (Spell1_IN 0.77 s → Spell1) next to it in the same graph.
+ * (Atomic Spell1, a short clip), but the original Q_Ring emitters wait longer than that and the 11-08 footage audit shows
+ * the blade ring with the swing of the Sequencer 0x5463dad9 (Spell1_IN → Spell1) next to it in the same graph.
  * Values are graph keys (names or 0x hashes).
  */
 export const CAST_GRAPH_KEY_OVERRIDES = Object.freeze({

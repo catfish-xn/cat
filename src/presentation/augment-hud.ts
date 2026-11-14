@@ -2,13 +2,13 @@ import './augment-hud.css';
 
 /**
  * Owned augments on the board's upper-left corner, as in the S13 client (docs/V26_AUGMENT_ICONS_LAYOUT.md:
- * a small horizontal row above the player's own hextech device, about 27% across and 24% down the screen,
+ * a small horizontal row above the player's own hextech device, near the upper-left of the screen,
  * separate from the item and trait columns). Hit targets stay 44px; only the artwork inside is smaller.
  */
 export const AUGMENT_CHIP_SIZE = 44;
 export const AUGMENT_CHIP_GAP = 4;
 const EDGE = 6;
-/** S13 screenshots: the row's centre sits at about (26.7vw, 23.8vh) in 3D. */
+/** S13 screenshots: the row's centre anchor in 3D, as a share of the viewport. */
 const ANCHOR_3D = { x: 0.267, y: 0.238 };
 /** 2D: the row's centre sits a fifth of the way down the board, like the S13 row against its board. */
 const ANCHOR_2D_Y = 0.2;

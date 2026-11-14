@@ -11,7 +11,7 @@ export function unitModelId(definitionId: string, anvil: boolean): string | null
 /**
  * Display ratio relative to the owner's fitted body, after official unitScale and size caps (see placeholder-renderer).
  * 待核，来源未知: 14.24b map22 TFT13_GoopBuff_DeftHands ({3ef46724}) has PercentAD/MiniCount/ArmorReduction/AttackCadence
- * only — no size field (contrast Giant-Sized {88bfedc3}≈1.8). MiniMees missile mTravelTime 0.5s is not model scale.
+ * only — no size field (contrast Giant-Sized {88bfedc3}, which has one). MiniMees missile mTravelTime is not model scale.
  * Evidence log: docs/CURSOR_mini-scale.md
  */
 export const MINI_MODEL_SCALE = 0.5;
