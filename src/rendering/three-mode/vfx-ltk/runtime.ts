@@ -36,7 +36,10 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
-/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
+/**
+ * At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. Hold tails
+ * and long runs in the background share one cap besides (LONG_BACKGROUND_MAX, Fable 11-14).
+ */
 export const HOLD_FREE_TAILS = 4;
 /**
  * A long run (LONG_RUN_SECONDS or more) gives up its system slot once it has played LONG_RUN_OPEN seconds, and keeps playing
@@ -370,17 +373,25 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const freeTails = () => {
     let free: Running[] | undefined;
     for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
-    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+    return free ? free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS) : null;
   };
-  // Long runs past their opening that take no system slot (LONG_RUN_SECONDS), the earliest LONG_BACKGROUND_MAX of them.
+  // Long runs past their opening that take no system slot (LONG_RUN_SECONDS).
   const backgroundRuns = () => {
     let long: Running[] | undefined;
     for (const run of running) if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (long ??= []).push(run);
-    return long ? new Set(long.sort((a, b) => a.started - b.started).slice(0, LONG_BACKGROUND_MAX)) : null;
+    return long;
+  };
+  // Free hold tails and long runs in the background together: the earliest LONG_BACKGROUND_MAX of them take no slot
+  // (Fable 11-14: one cap for both, now that short skill tails play out too). `passes`: only the tails leave the count for
+  // LTK_PASS_DEGRADE_AT, which still includes the long runs in the background.
+  const slotFree = (passes: boolean) => {
+    const tails = freeTails(), long = passes ? undefined : backgroundRuns();
+    if (!tails && !long) return null;
+    return new Set([...(tails ?? []), ...(long ?? [])].sort((a, b) => a.started - b.started).slice(0, LONG_BACKGROUND_MAX));
   };
   /** `passes`: the count for LTK_PASS_DEGRADE_AT, which still includes the long runs in the background. */
-  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), free = freeTails(), back = passes ? null : backgroundRuns();
-    for (const run of running) { if (free?.has(run) || back?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), free = slotFree(passes);
+    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
@@ -859,8 +870,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || !!loaded.playOut || undefined,
+            playOutEnd: !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);

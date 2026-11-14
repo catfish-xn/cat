@@ -3847,9 +3847,9 @@
     "tests/vfx-ltk-projectile-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10576,
+      "currentBytes": 11407,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ca386aebae078be261e6a2e7ce2c33396c96a15a1fcbb504942448e239fb8057",
+      "currentSha256": "3bcef257a616ffe772b011ed7b9bdcb0d70dd896862331b4b45b54a32e120672",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
@@ -3888,6 +3888,14 @@
       "currentBytes": 4551,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "aaf9cfc62b220b4e9938a6ffd1f4c61ae72cb65fa4f7468fb814f09b84d4b766",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-skill-play-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5416,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b20fb01fe10af099d4ce74942b1adb203cd0545973474eb35449855d12b9ed26",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {

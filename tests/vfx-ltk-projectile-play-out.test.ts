@@ -11,7 +11,9 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { LONG_RUN_SECONDS, createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
-import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // A listed system (PLAY_OUT_SYSTEMS) and an unlisted one, both plain caster-to-target projectiles, and a long cast cue.
@@ -48,11 +50,17 @@ async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAI
 }
 
 describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)', () => {
-  it('lists only systems the live lists fire as projectiles, each ending within its own seconds', () => {
+  it('lists only systems the live lists fire, each ending within its own seconds', () => {
     expect(Object.keys(PLAY_OUT_SYSTEMS).length).toBeGreaterThan(0);
+    // Gangplank's ground-fire line is the projectile that plays out once landed.
     const projectiles = new Set(Object.values(CUE_OVERRIDES).flat().filter(cue => cue.event === 'projectile').map(cue => cue.system));
+    expect(projectiles.has('20cd67dc')).toBe(true);
+    // Since 11-14 skill layers cut at their cue's end play out too, whatever their event: each is fired by the code's cue
+    // tables (Sevika's punch slam by her own table), or (Camille W heal, Rumble R cast) by the asset index's own skill lists.
+    const cued = new Set([...Object.values(CUE_OVERRIDES), ...Object.values(CUE_EXTRA_SKILLS), ...Object.values(BATCH1_TIMELINES), ...Object.values(sevikaSkills)].flat().map(cue => cue.system));
+    const fromIndex = new Set(['174f1125', '59e2ab23']);
     for (const [system, end] of Object.entries(PLAY_OUT_SYSTEMS)) {
-      expect(projectiles.has(system), system).toBe(true);
+      expect(cued.has(system) || fromIndex.has(system), system).toBe(true);
       expect(end.seconds).toBeGreaterThan(0);
       expect(end.fade).toBeGreaterThan(0);
       expect(end.fade).toBeLessThanOrEqual(end.seconds);
