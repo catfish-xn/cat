@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { admitEffect } from '../src/rendering/three-mode/effect-budget';
 import { createRenataMissile } from '../src/rendering/three-mode/renata-missile';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, LONG_RUN_SECONDS, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+// Bodies and hits that must keep their slots stay just under LONG_RUN_SECONDS: a run that long or longer leaves the slot
+// count after LONG_RUN_OPEN (vfx-ltk-long-background.test.ts).
+const UNDER_LONG = LONG_RUN_SECONDS - 0.1;
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 describe('late-game effect budget', () => {
@@ -153,7 +156,7 @@ describe('late-game effect budget', () => {
   });
 
   it('keeps a sustained cast-start body on the caster at the cap instead of evicting it for a hit', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
     fill(runtime, camera, 0.01);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
@@ -165,7 +168,7 @@ describe('late-game effect budget', () => {
   });
 
   it('queues a hit behind a full board (MAX_LTK_SYSTEMS) of fresh bodies and drops the hit after 0.3 s while all bodies stay', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
     fill(runtime, camera, 0.01);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
@@ -182,8 +185,8 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('keeps 3 s bodies that have played 1.5 s (under 70% of their span) when a hit arrives (Nunu cloud, 9d7cd268 brawl)', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+  it('keeps 2.9 s bodies that have played 1.5 s (under 70% of their span) when a hit arrives (Nunu cloud, 9d7cd268 brawl)', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
     runtime.update(0.1, camera);
     for (let i = 1; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
@@ -197,8 +200,8 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('evicts the oldest body for a hit once a full board (MAX_LTK_SYSTEMS) of three-second bodies have played 70% of their span', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+  it('evicts the oldest body for a hit once a full board (MAX_LTK_SYSTEMS) of 2.9 s bodies have played 70% of their span', async () => {
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     expect(runtime.play('nunu', 'nunu-oldest', [])).toBe(true);
     runtime.update(0.1, camera);
     for (let i = 1; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
@@ -242,7 +245,7 @@ describe('late-game effect budget', () => {
   });
 
   it('keeps yielding skill bodies when the hit that would evict them is already past its window', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'deco', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('nunu', `nunu-${i}`, [])).toBe(true);
     fill(runtime, camera, 0.005);
     runtime.update(2.3, camera);
@@ -284,7 +287,7 @@ describe('late-game effect budget', () => {
   });
 
   it('admits a body on a board full of decorative flourishes by evicting one', async () => {
-    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: 3 }] });
+    const { runtime, scene, camera } = await setup({ nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: UNDER_LONG }] });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('jinx', `caster-${i}`, [])).toBe(true);
     fill(runtime, camera, 0.01);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
@@ -300,7 +303,7 @@ describe('late-game effect budget', () => {
     const { runtime, scene, camera } = await setup({
       nunu: [{ system: 'save', event: 'cast-start' as const, delay: 0, duration: 2 }],
       ezreal: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 0.8 }],
-      vi: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: 3 }],
+      vi: [{ system: 'blow', event: 'hit' as const, delay: 0, duration: UNDER_LONG }],
     });
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('ezreal', `c-${i}`, ['victim'])).toBe(true);
     fill(runtime, camera, 0.01);
