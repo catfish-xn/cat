@@ -1385,9 +1385,9 @@
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23184,
+      "currentBytes": 23489,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6f4d210a309cdc043f4c401c17907954d4cbe1de1f3f5d0eb539e6250e40e99d",
+      "currentSha256": "9358c7ce595380c5d10804387a2f83f978edd3bb1d2c2d0fbce10fd1258569c4",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
@@ -3821,6 +3821,14 @@
       "currentSha256": "317e4d987eafd3a09666b7b30f55873822a457ee1fd450303e8a3308472bd432",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-long-background.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5506,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "324563b043256f9fab49e629bf9b9e758fd953772e126ed2255b7d15d34a7e35",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-particles.test.ts": {
       "previousBytes": 5436,
       "currentBytes": 11697,
@@ -3839,9 +3847,9 @@
     "tests/vfx-ltk-projectile-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10449,
+      "currentBytes": 10576,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7bfab7a288e078caae8bb770633a7ada19715c96874b17acd262bf782a0cbbf6",
+      "currentSha256": "ca386aebae078be261e6a2e7ce2c33396c96a15a1fcbb504942448e239fb8057",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
