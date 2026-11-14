@@ -946,6 +946,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
       }
       { const g = globalThis as any; g.__LTK_UPD_MS = (g.__LTK_UPD_MS ?? 0) + ((g.__realNow ?? (() => performance.now()))() - __t0); g.__LTK_ACTIVE = Math.max(g.__LTK_ACTIVE ?? 0, running.size);
+        g.__LTK_EFFECTIVE = { cap: __cap(), budget: options.budget?.max ?? null, offslot: __offSlot() };
         if (options.budget) g.__FX_LIVE = Math.max(g.__FX_LIVE ?? 0, options.budget.live); if (g.__LTK_SYSTEMS_NOW) for (const run of running) g.__LTK_SYSTEMS_NOW.push({ system: run.system, source: run.source, target: run.target }); }
     },
     clear,

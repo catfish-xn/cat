@@ -82,7 +82,7 @@ const countDraws = () => {
         const t0 = window.__realNow(); window.__h.step(1000 / 60); sync(); ms.push(window.__realNow() - t0);
         ltk.push(globalThis.__LTK_UPD_MS ?? 0); draws.push(window.__draws); live.push(globalThis.__LTK_ACTIVE ?? 0); particles.push(globalThis.__FX_LIVE ?? 0); for (const k of ['soft', 'early', 'late']) { pass[k].push(globalThis.__PASS_MS[k]); need[k].push(globalThis.__LTK_PASS_NEED?.[k] ?? 0); }
       }
-      return { ms, ltk, draws, live, particles, pass, need, passFrames: globalThis.__LTK_PASSES_ON, budgetRefusedRowFrames: globalThis.__LTK_BUDGET_REFUSED ?? 0, budgetRefusedRows: globalThis.__LTK_BUDGET_ROWS ?? 0 };
+      return { effective: globalThis.__LTK_EFFECTIVE ?? null, ms, ltk, draws, live, particles, pass, need, passFrames: globalThis.__LTK_PASSES_ON, budgetRefusedRowFrames: globalThis.__LTK_BUDGET_REFUSED ?? 0, budgetRefusedRows: globalThis.__LTK_BUDGET_ROWS ?? 0 };
     }, seconds);
     const admit = await page.evaluate(() => globalThis.__LTK_STATS ?? {});
     const F = ['asked', 'started', 'dropped', 'gaveWay', 'evicted'];
@@ -91,7 +91,7 @@ const countDraws = () => {
     const admission = { all: sum(() => true), tracked: Object.fromEntries(track.map(([c, a]) => { const pick = of(c, a);
       return [`${c}:${a}`, { total: sum(pick), bySystem: Object.fromEntries([...new Set(Object.keys(admit).filter(pick).map(k => k.split('|')[2]))].map(sys => [sys, sum(k => pick(k) && k.split('|')[2] === sys)])) }]; })) };
     admission.viktorAttack = admission.tracked['viktor:attack']?.total ?? null;
-    const row = { ...cell, combat: info, ...frameStats(per.ms, per.ltk, per.draws), livePeak: Math.max(...per.live), liveMean: r2(per.live.reduce((a, b) => a + b, 0) / per.live.length),
+    const row = { ...cell, effective: per.effective, combat: info, ...frameStats(per.ms, per.ltk, per.draws), livePeak: Math.max(...per.live), liveMean: r2(per.live.reduce((a, b) => a + b, 0) / per.live.length),
       passFrames: per.passFrames, passMs: Object.fromEntries(['soft', 'early', 'late'].map(k => { const on = per.pass[k].filter(x => x > 0).sort((a, b) => a - b);
         return [k, { framesOn: on.length, meanWhenOn: on.length ? r2(on.reduce((a, b) => a + b, 0) / on.length) : 0, p95WhenOn: on.length ? r2(on[Math.floor(on.length * 0.95)]) : 0, meanPerFrame: r2(per.pass[k].reduce((a, b) => a + b, 0) / per.pass[k].length) }]; })),
       passByNeed: Object.fromEntries(['soft', 'early', 'late'].map(k => [k, Object.fromEntries(['1', '2', '3', '4+'].map(b => {
@@ -107,7 +107,7 @@ const countDraws = () => {
   const passKeys = ['soft', 'early', 'late'];
   const keys = ['mean', 'p95', 'p99', 'over33_3', 'over16_7', 'ltkMean', 'ltkP95', 'drawsMean', 'drawsMax', 'livePeak', 'liveMean', 'particlePeak', 'particleP95', 'budgetRefusedRows', 'budgetRefusedRowFrames'];
   const summary = cells.map(c => { const rs = results.filter(r => r.variant === c.variant && r.cap === c.cap && r.budget === c.budget && r.degrade === c.degrade);
-    return { ...c, rounds: rs.length, ...Object.fromEntries(keys.map(k => [k, median(rs.map(r => r[k]))])),
+    return { ...c, effective: rs[0]?.effective ?? null, rounds: rs.length, ...Object.fromEntries(keys.map(k => [k, median(rs.map(r => r[k]))])),
       range: Object.fromEntries(['mean', 'p95', 'over33_3', 'ltkMean', 'drawsMean'].map(k => [k, [Math.min(...rs.map(r => r[k])), Math.max(...rs.map(r => r[k]))]])),
       passFramesOn: Object.fromEntries(passKeys.map(k => [k, median(rs.map(r => r.passFrames?.[k] ?? 0))])),
       passByNeed: passSync ? Object.fromEntries(['soft', 'early', 'late'].map(k => [k, Object.fromEntries(['1', '2', '3', '4+'].map(b => {
@@ -117,7 +117,7 @@ const countDraws = () => {
       viktorAttack: rs.map(r => r.admission.viktorAttack), tracked: Object.fromEntries(track.map(([c, a]) => [`${c}:${a}`, rs.map(r => r.admission.tracked[`${c}:${a}`].total)])) }; });
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, variants, variantOffslots, passSync, order: order.map(o => `${o.variant}/${o.cap}/${o.budget}/d${o.degrade}#${o.round}`), summary, results }, null, 1));
-  console.table(summary.map(s => ({ variant: s.variant, cap: s.cap, budget: s.budget, degrade: s.degrade, passOn: passKeys.map(k => s.passFramesOn[k]).join('/'), ...(s.passMs ? { passMs: passKeys.map(k => s.passMs[k].meanWhenOn).join('/') } : {}), mean: s.mean, meanRange: s.range.mean.join('–'), p95: s.p95, p95Range: s.range.p95.join('–'),
+  console.table(summary.map(s => ({ variant: s.variant, effective: s.effective ? `c${s.effective.cap}b${s.effective.budget}${s.effective.offslot != null ? 'e' + s.effective.offslot : ''}` : '?', cap: s.cap, budget: s.budget, degrade: s.degrade, passOn: passKeys.map(k => s.passFramesOn[k]).join('/'), ...(s.passMs ? { passMs: passKeys.map(k => s.passMs[k].meanWhenOn).join('/') } : {}), mean: s.mean, meanRange: s.range.mean.join('–'), p95: s.p95, p95Range: s.range.p95.join('–'),
     over33: s.over33_3, over33Range: s.range.over33_3.join('–'), ltkMs: s.ltkMean, draws: s.drawsMean, livePeak: s.livePeak, particlePeak: s.particlePeak, budgetRefused: s.budgetRefusedRows, vkDropped: s.viktorAttack.map(v => v?.dropped).join('/'), viStarted: (s.tracked['vi:cast'] ?? []).map(v => v.started).join('/'), viCut: (s.tracked['vi:cast'] ?? []).map(v => v.gaveWay + v.evicted).join('/') })));
   await browser.close(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
