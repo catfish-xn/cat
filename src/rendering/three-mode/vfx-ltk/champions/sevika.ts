@@ -48,17 +48,17 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
     { system: '4e1283b2', event: 'hit', primary: true, delay: .3, duration: .6 },
   ],
-  // The original bubble stays up for the whole shield (11-08 gRcKEl213wk) and only the shared tail fade ends it.
+  // The original bubble stays up for the whole shield (11-08 footage) and only the shared tail fade ends it.
   'sevika-shield': [{ system: '518dee63', event: 'cast-start', delay: 0, duration: SHIELD_SECONDS }],
   'sevika-coin': [{ system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 }],
   // High Roller slot machine (14.24 map22.bin Maps/Shipping/Map22/Particles/set13/TFT13_Lieutenant_Base_Slots*_Mirrored): the
-  // frame 169 units over her (its transform), reels locking at 0.4/0.7/1.1 s and the result flash at ~1.2 s, all gone by
-  // 2.3 s. The result layers place their own emitters 167 units up (EmitterPosition), so they play on her as they are.
+  // frame high over her (its transform), the reels locking one after another and the result flash last, all gone soon
+  // after. The result layers place their own emitters as high up (EmitterPosition), so they play on her as they are.
   'sevika-slots': [{ system: SLOTS, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }],
   ...Object.fromEntries(Object.entries(SLOT_LAYERS).map(([result, system]) =>
     [`sevika-slots-${result}`, [{ system, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }] as const])),
   // A plain roll's spell on the left and middle reels only: the mod's layer draws the right reel (its own back, icon and
-  // flash), and the spell's right icon (50 × 55) showed round the mod's smaller back (45 × 52.5) (11-09 e85a856a recording).
+  // flash), and the spell's larger right icon showed round the mod's smaller back (11-09 e85a856a recording).
   ...Object.fromEntries((['flamethrower', 'punch', 'thrash'] as const).map(spell =>
     [`sevika-slots-${spell}-pair`, [{ system: SLOT_LAYERS[spell], event: 'cast-start', delay: 0, duration: SLOT_SECONDS, hide: SPELL_RIGHT_REEL }] as const])),
 };

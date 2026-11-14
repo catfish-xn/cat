@@ -88,7 +88,7 @@ const INDEX_TIMEOUT_MS = 20000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
- * League models are scaled to their full bbox height (D7 build-report: jinx 234, vi 213 source units), so every
+ * League models are scaled to their full bbox height (D7 build-report), so every
  * champion stands this tall. Width is capped at 110 (just under a hex, √3 × 68 ≈ 118, and fits a bench slot), so
  * short wide models (Urgot, Corki) stay in their own cell; tested locally on the 60 real models, slim ones (Jinx, Vi)
  * are unchanged by the cap.
@@ -119,14 +119,15 @@ const EFFECT_TICKS = 2;
 /** A combat step lands every MOVE_INTERVAL_TICKS (250 ms): a run must outlast it, or the piece drops to idle between cells. */
 const ACTION_CONFIG = { durations: { move: 0.3 } };
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
- * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
+ * authored size. The median of the drawn height over the models' own heights, taken from the assets as they are, not
+ * hand-tuned (2026-10-20).
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 // FX_SCALE is shared with the ported engine (vfx-ltk/particles.ts).
 /**
  * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
  * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
- * minions are set lower than the doc's 0.57 because their bind pose is low (idle ≈ 0.77): 0.43 stands about as tall
- * as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
+ * minions are set lower than the doc's value because their bind pose is low against their idle: 0.43 stands about as
+ * tall as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
  */
 const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly lift: number }>> = {
   'pve-minion-melee': { height: 0.57, lift: -0.03 }, 'pve-minion-ranged': { height: 0.43, lift: 0.02 },
@@ -911,7 +912,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (monster && unitScale) {
         // A monster at its official scale, with no footprint cap (tails/wings span cells); its bar follows its body.
         const before = Math.abs(lease.scene.scale.x) || 1;
-        // No height cap either: the official scale is the monster's size (the dragon is 0.44 × 1.75).
+        // No height cap either: the official scale is the monster's size (the dragon's official scale is well over a champion's).
         const envelope = HOVERING_MODELS.has(definitionId) ? undefined : envelopeOf(definitionId, lease);
         const support = standingSupport(definitionId, envelope);
         const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale,

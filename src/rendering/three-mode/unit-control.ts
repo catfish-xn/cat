@@ -4,7 +4,7 @@
  * its clip runs slow; two stars with short trails circle its head, with sparkles, a fading ring and an opening flash;
  * a knock-up throws the drawn body (and its bars) up on one arc that lands as a 0.5 s knock-up ends. Kept apart from
  * the renderer so the curve is testable on numbers.
- * Shapes follow the client's stun (two stars 180° apart at about half a turn per second around the head, sparkles, a
+ * Shapes follow the client's stun (two stars on opposite sides circling the head, sparkles, a
  * dissolving ring, a flash) and its knock-up (an arc that lands when the control ends), drawn with our own textures
  * and sizes (11-10 side-by-side, ccvs-*). Nothing here reads original assets.
  */
@@ -36,9 +36,9 @@ export const CONTROL_3D = {
    * Stars around the head: count, ring radius and star sprite size (board units; the star itself fills about a third
    * of the sprite, the rest is its glow, like the client's star texture), turns per second, the ring centre's height
    * as a share of the drawn body height (head level), and the dark glow behind them. Calibrated on the 11-10 three-row
-   * recordings (ccvs-after, -after2): the first cut drew stars ~3× and the ring ~1.7× the client's, a third of a body
-   * too high; at 0.85 the ring still sat 0.18 of a body over the client's (the drawn height includes helmets and hair),
-   * at 0.67 still 0.08 over (after3).
+   * recordings (ccvs-after, -after2): the first cut drew stars and ring well over the client's and too
+   * high; at 0.85 the ring still sat clearly over the client's (the drawn height includes helmets and hair), at 0.67
+   * only slightly over (after3).
    */
   stars: 2, ringRadius: 11, starSize: 26, turnsPerSecond: 0.48, headShare: 0.6, glowSize: 32,
   /** Ghosts trailing each star: how many, the angle (radians) between them, and the first ghost's opacity. */

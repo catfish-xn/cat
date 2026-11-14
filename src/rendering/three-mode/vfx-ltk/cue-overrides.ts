@@ -83,7 +83,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
-  // The shadow zone and its edge are authored about 1.46× the reference diameter (2.46 and 2.9 cells); 0.68 brings them back.
+  // The shadow zone and its edge are authored well over the original's drawn size; 0.68 brings them back.
   vex: [
     { system: '85788d2c', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5666666666666667, duration: 1.5 },
@@ -94,14 +94,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '37f7cb35', action: 'cast', event: 'hit', delay: 1.2, duration: 1, bone: ground, primary: true },
   ],
   // R: shield on Garen, then one sky beam and one impact on his own ground. Not one copy per target.
-  // The landing burst is authored about 2.2× the reference diameter (castcmp-1103); 0.45 keeps it on his feet.
+  // The landing burst is authored far wider than the original's drawn burst (castcmp-1103); 0.45 keeps it on his feet.
   garen: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
     { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: kept(0.45) },
   ],
-  // E (14.24 field: cast 13.9 s, main root 14.4 s, second roots 14.9 s): E_Sequence_Impact is the index's own ground
+  // E (14.24 field: the main root lands a beat after the cast, the second roots a beat later): E_Sequence_Impact is the index's own ground
   // missile (travel 0.3): one crawls to the primary target, then short ones reach up to two others. The brown branching
   // vines (E_Outer) sprout around each rooted target, not at Zyra's feet (ca23e060: they spread from her toward empty
   // ground). E_Sequence_Root binds the primary target; the plant flash marks every one. No E_Mis or E_Mis_Child exists.
@@ -110,8 +110,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
     // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
     // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
-    // Sizes from the cdacbcc9 isolated renders against the 14.24 footage (main wrap about 2.2 cells): E_Outer drew
-    // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
+    // Sizes from the cdacbcc9 isolated renders against the 14.24 footage: E_Outer drew
+    // far too wide and was cut off at its end; the root cluster drew too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
     // particles never reach their own authored fade inside the cue, so from the stop the cue eases them out itself.
     { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
@@ -165,7 +165,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '04ae533c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
     { system: '5449dd85', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Mace_Loc' },
     { system: '0a5d1c08', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
-    // Walls and the pit are born at 0.18s inside this system. Stop before that and keep the opening slash.
+    // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
@@ -203,7 +203,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   nocturne: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.3, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over about 0.5 s
+    // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over a short fade
     // (11-08 blind recheck of the empowered swing). Both cues of the system fade from their stop.
     { action: 'cast', system: '3e224f4a', event: 'cast-start', delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
@@ -250,15 +250,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
-  // R: 14.24 is a 3 s gas cloud that then detonates (11-06 field review: ours burst at 1.2 s, white and about 3.8 cells).
-  // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.
+  // R: in 14.24 the gas cloud lasts its whole damage window, then detonates (11-06 field review: ours burst early, white and
+  // too wide). The burst and each target's splash wait for the cloud's end; the burst's scale is our fit, not original data.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
     // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
     // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The blast spans the 2-hex cloud, about 5 cells across: at 0.5 it measured 5.8 cells at 3.4 s (cdacbcc9), 16% wide.
+    // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: kept(0.7), optional: true },
@@ -281,8 +281,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   darius: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.36666666666666664, duration: 1.5 },
     { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
-    // Its five emitters already wait 0.75 s before their first particle; a 0.6 s cue delay on top pushed the blade ring to
-    // 1.35 s of a cue ending at 1.40 s (11-08 audit). The original shows it at 0.70 s, fading 0.93–1.13 s.
+    // Its five emitters already wait most of a second before their first particle; a 0.6 s cue delay on top pushed the blade
+    // ring to the very end of the cue (11-08 audit). The original shows it with the swing and fades it soon after.
     { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
@@ -291,13 +291,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
   lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
-  // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
+  // W: the guard holds until the shield runs out, and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
-    // The original stance holds to about 1.6 s and goes almost at once (11-08 blind recheck, ±2 frames): no early stop at
+    // The original stance holds to the cue's end and goes almost at once (11-08 blind recheck): no early stop at
     // 1.4 s, which cleared it in one frame; the tail fade covers its last 0.25 s.
     { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, bone: 'C_Buffbone_Glb_Center_Loc' },
-    // The swipe reaches the front row, about 3 cells in the original; at the 0.44 base it drew 2.9 and at the arena scale
+    // The swipe reaches the front row, as in the original; at the 0.44 base it drew 2.9 cells and at the arena scale
     // 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
     { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc', scale: kept(1) },
   ],
@@ -472,12 +472,12 @@ export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
  * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
-  // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
+  // Nunu R_Cas runs for the 3 s channel (authored far shorter). Its two white ground flashes kept a radial glare in the middle
   // of the pool the whole time; in 14.24 the channel is a dim green mist and only the blast (R_full_explo) flares
   // (11-07 field batches f544/c4a).
   '78d04f27': ['Explosion_Flash_ground', 'Explosion_Flash_ground1'],
   // Sevika punch hit: BUBBLE_START1 is an attached-mesh emitter (draws the host's own skinned mesh) yet carries the
-  // bubble mesh's 12× birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a scale past 1.35. On
+  // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
 };

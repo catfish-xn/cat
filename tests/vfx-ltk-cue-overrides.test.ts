@@ -68,8 +68,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
-    // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
-    // Measured 5.8 cells at 0.5 against the cloud's 5 (cdacbcc9): 0.43 lands on it.
+    // 11-06 field review: the cloud holds its damage window, then the burst and each target's splash.
+    // At 0.5 the burst measured a little wider than the cloud (cdacbcc9): 0.43, our fit, lands on it.
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(measuredAtFxScale(0.43));
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
@@ -208,7 +208,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
     expect(ARENA_UNIT_SCALE).toBeCloseTo(0.3306 * pick!.alignmentScale!, 12);
     expect(SKILL_FX_SIZE).toBeCloseTo(0.638, 3);
-    // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (original footage ≈ 4.5).
+    // Darius's Q ring: quad half-extent 485 → about 4.6 cells across a 58.9-unit hex step (close to the original footage).
     expect(2 * 485 * FX_SCALE * SKILL_FX_SIZE / (Math.sqrt(3) * 34)).toBeCloseTo(4.6, 1);
     expect(measuredAtFxScale(0.45) * SKILL_FX_SIZE).toBeCloseTo(0.45, 12);
   });
@@ -226,7 +226,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
-    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe about 3 cells
+    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
     for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).

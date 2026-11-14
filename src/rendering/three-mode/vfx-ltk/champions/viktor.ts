@@ -11,7 +11,7 @@ export const viktorSkills: Record<string, readonly TimelineCue[]> = {
     { system: '26c2f2d9', event: 'hit', delay: 0, duration: 1.5, stopAfter: 1 },
   ],
   'viktor-slam': [
-    // The original board darkening holds about 2.1 s, then cuts within 1–2 frames (11-08 frame strip): stop there, no fade.
+    // The original board darkening holds about as long as this cue, then cuts at once (11-08 frame strip): stop there, no fade.
     { system: 'c4ef93f3', event: 'cast-start', location: 'board', delay: 0, duration: 2.2, stopAfter: 2.1 },
     { system: '607d7b6b', event: 'hit', delay: 0, duration: 1, stopAfter: .3 },
   ],

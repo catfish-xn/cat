@@ -18,7 +18,7 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 export const GLOBAL_KEYS = ['TFT_Global_BA_Hit', 'TFT_Global_BA_Crit'];
 const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
 
-// Map22 contains map placements plus 1,724 VFX systems in one 26.6 MB PROP.
+// Map22 contains map placements plus all its VFX systems in one large PROP.
 // Its value count and aggregate strings exceed the character-BIN defaults.
 // Only this offline entry point opts in; byte/depth/count caps stay unchanged.
 export const GLOBAL_VFX_BIN_LIMITS = Object.freeze({ ...BIN_LIMITS,

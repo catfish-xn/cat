@@ -27,7 +27,7 @@ export interface LegendWalk {
 export const LEGEND_CELLS_PER_SECOND = 2.5;
 /**
  * Carousel layout in cells: legends on cradles around the ring, units on a ring inside the glass turning once per ORBIT_MS.
- * The cradles sit 6.7 cells out, where the 14.24 S13 carousel map puts their centers (2026-11-03 user-approved).
+ * The cradles sit where the 14.24 S13 carousel map puts their centers (2026-11-03 user-approved).
  */
 export const CAROUSEL_LEGEND_RADIUS = 6.7, CAROUSEL_UNIT_RADIUS = 2.5, CAROUSEL_ORBIT_MS = 48_000, CAROUSEL_SEATS = 8;
 /** A board walk stays within this many cells of the board origin (the room's sanity bound; the layer keeps it nearer). */

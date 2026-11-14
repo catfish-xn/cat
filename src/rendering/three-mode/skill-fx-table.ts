@@ -203,10 +203,10 @@ export const SKILL_FX_TABLE: Readonly<Record<string, SkillFxRow>> = {
   // 辛吉德
   singed: { color: 0x64d864, effects: {
     // W_Ally_Activate (2639dd7d) is authored about the ally's feet: its ground-layer splashes and
-    // ground beam carry no height and its flashes and Alpha_Beam sit 120 up, so the whole effect stands on the floor.
+    // ground beam carry no height and its flashes and Alpha_Beam sit a little above it, so the whole effect stands on the floor.
     singed_tft13_singed_base_w_ally_activate: { scale: 1, particles: 120, feet: true },
     // W_Ally_Buf (6e34a4e1): the ally's purple ground ring and smoke, on the same footing as the burst. Its four flat
-    // ground rays (Alpha_GreenRay, Add_Ray, Alpha_DarkRay, Alpha_Ray: up to 580 long) follow the ally's facing in the
+    // ground rays (Alpha_GreenRay, Add_Ray, Alpha_DarkRay, Alpha_Ray: long ones) follow the ally's facing in the
     // original; the export fixed them along one axis, so standing still they drew a long strip toward the camera
     // (10-25 playtest). Those rays are left out; the ring (Alpha_GroundGlow1), smoke, splats and glow stay.
     singed_tft13_singed_base_w_ally_buf: { scale: 1, particles: 120, feet: true, omitKinds: ['ray'] },

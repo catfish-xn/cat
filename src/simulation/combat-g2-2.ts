@@ -13,8 +13,8 @@ import { lineContains, lineDirections } from './combat-skill-lines';
 /** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
 export const VI_ROW_KNOCKUP_TICKS = 10;
 /**
- * User-approved 2026-11-11 (original footage FB7YoqakYqE, three 3-star casts: damage 0.61-0.67 s after the shield):
- * Vi grabs her target and slams 12 ticks (0.6 s) after the cast. The target is held (a knock-up) until the slam; damage,
+ * User-approved 2026-11-11 (original 3-star footage: the damage lands shortly after the shield):
+ * Vi grabs her target and slams 12 ticks (0.6 s, our fitted value, not original data) after the cast. The target is held (a knock-up) until the slam; damage,
  * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚).
  */
 export const VI_SLAM_TICKS = 12;
