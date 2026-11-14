@@ -81,7 +81,9 @@ describe('stops found by the whole-roster audit fade instead of clearing (11-08)
       expect(entry.fadeOut, system).toBe(true);
     }
     const twitchHits = CUE_OVERRIDES.twitch?.filter(entry => entry.system === '4e7cc3b1') ?? [];
-    expect(twitchHits).toHaveLength(2);
+    // 11-13 (Fable): the cast-time bolt and its hit are gone; the empowered attack's hit is the only 4e7cc3b1 left.
+    expect(twitchHits).toHaveLength(1);
+    expect(twitchHits[0]).toMatchObject({ action: 'attack', variant: 'empowered' });
     for (const hit of twitchHits) expect(hit).toMatchObject({ event: 'hit', fadeOut: true });
   });
 });

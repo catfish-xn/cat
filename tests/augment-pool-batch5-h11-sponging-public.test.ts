@@ -10,7 +10,9 @@ import { requireAugmentFacts } from '../src/simulation/augment-history';
 // five components and item-5/item-6 no longer combine (v25 made archangel/shojin/sunfire-cape). Re-searched seeds 0..79 on
 // the same route: seed 29 is the first whose item-1..6 form three completed items; their definitions are read from the
 // combines and asserted exactly below.
-let route = createMatch(29), acquired: MatchState, opening: MatchState, permanent: MatchState['items'], completed: string[];
+// 14.24b unit values (b-patch-overrides.json): seed 29's 3-2 combine is now refused (invalid-recipe). Re-searched from seed 1
+// on the same route: seed 60 is the first that passes this file unchanged.
+let route = createMatch(60), acquired: MatchState, opening: MatchState, permanent: MatchState['items'], completed: string[];
 let restoreSpongingOffers: () => void;
 const priorities = ['item-grab-bag-i','big-grab-bag','heroic-grab-bag','iron-assets'];
 beforeAll(() => {

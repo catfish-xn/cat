@@ -19,7 +19,7 @@ import { encodePng } from '../scripts/assets3d/texture.mjs';
 import { readGlb } from '../scripts/assets3d/glb.mjs';
 import { createHash } from 'node:crypto';
 
-function syntheticGeometry(version: number) {
+function syntheticGeometry(version: number, lightmap = false) {
   const parts: Buffer[] = [];
   const u = (v: number) => { const b = Buffer.alloc(4); b.writeUInt32LE(v); parts.push(b); };
   const f = (v: number) => { const b = Buffer.alloc(4); b.writeFloatLE(v); parts.push(b); };
@@ -27,14 +27,18 @@ function syntheticGeometry(version: number) {
   parts.push(Buffer.from('OEGM')); u(version);
   if (version === 17) u(0); else { text(''); text(''); }
   u(2);
-  for (const [usage, format] of [[0, 2], [7, 7]]) {
-    u(0); u(1);
-    for (let i = 0; i < 15; i++) { u(i ? 0 : usage); u(i ? 3 : format); }
+  for (const elements of [[[0, 2]], lightmap ? [[7, 7], [14, 7]] : [[7, 7]]]) {
+    u(0); u(elements.length);
+    for (let i = 0; i < 15; i++) { u(elements[i]?.[0] ?? 0); u(elements[i]?.[1] ?? 3); }
   }
   u(2);
   parts.push(Buffer.from([255])); u(36);
   for (const v of [0, 0, 0, 1, 0, 0, 0, 0, 1]) f(v);
-  parts.push(Buffer.from([255])); u(12); parts.push(Buffer.alloc(12));
+  // Half floats: uv (0,0) for every vertex; lightmap uv (0,0), (1,0), (0,1).
+  const half = [0, 0, 0x3c00, 0, 0, 0x3c00];
+  parts.push(Buffer.from([255])); u(lightmap ? 24 : 12);
+  if (lightmap) { const b = Buffer.alloc(24); for (let i = 0; i < 3; i++) { b.writeUInt16LE(half[i * 2], i * 8 + 4); b.writeUInt16LE(half[i * 2 + 1], i * 8 + 6); } parts.push(b); }
+  else parts.push(Buffer.alloc(12));
   u(1); parts.push(Buffer.from([255])); u(6); parts.push(Buffer.from([0, 0, 1, 0, 2, 0]));
   u(1); u(3); u(2); u(0); u(0); u(1); u(3); u(0);
   parts.push(Buffer.from([255])); if (version === 17) u(0);
@@ -67,6 +71,25 @@ describe('offline board planning with synthetic inputs', () => {
     expect(glb.images).toHaveLength(1);
     expect(glb.nodes.map((n: {name: string}) => n.name)).toEqual(['paper', 'pond']);
     expect(glb.meshes.every((m: {primitives: {attributes: Record<string, number>}[]}) => '_SOURCE_COLOR' in m.primitives[0].attributes)).toBe(true);
+  });
+  it('reads the lightmap UV set and places lit meshes on the shared atlas as TEXCOORD_1', () => {
+    const mesh = readBoardGeometry(syntheticGeometry(13, true)).meshes[0];
+    expect(mesh.vertices.map((v: {lightmapUv: number[]}) => v.lightmapUv)).toEqual([[0, 0], [1, 0], [0, 1]]);
+    const png = encodePng({width: 1, height: 1, rgba: Buffer.from([255, 0, 0, 255])});
+    const uv1 = (placement: number[] | null, options: Record<string, unknown> = {lightmap: true}) => {
+      mesh.baked = [{path: placement ? 'ASSETS/Maps/Lightmaps/0.tex' : '', scaleBias: placement ?? [0, 0, 0, 0]}];
+      const out = boardRangeGlb(mesh, mesh.ranges[0], png, {origin: [0, 0, 0], ...options});
+      const {document: d, binary: b} = readGlb(out.glb), index = d.meshes[0].primitives[0].attributes.TEXCOORD_1;
+      if (index === undefined) return null;
+      const a = d.accessors[index], view = d.bufferViews[a.bufferView];
+      return Array.from({length: a.count}, (_, i) => [0, 1].map(k => b.readFloatLE((view.byteOffset ?? 0) + i * 8 + k * 4)));
+    };
+    // Vertex order follows the converter's winding swap (0, 2, 1); then uv × scale + bias.
+    expect(uv1([0.5, 0.25, 0.25, 0.5])).toEqual([[0.25, 0.5], [0.25, 0.75], [0.75, 0.5]]);
+    expect(uv1([1, 1, 0, 0])).toBeNull(); // left at the whole atlas: unlit in the original data
+    expect(uv1(null)).toBeNull();
+    expect(uv1([0.5, 0.25, 0.25, 0.5], {})).toBeNull(); // only on request
+    expect(() => uv1([0, 0.5, 0.5, 0])).toThrow('mapgeo-lightmap-placement');
   });
   it('aligns all cells of an authored odd-row grid to the runtime grid', () => {
     const a = boardAlignment([0, 0, 0], [13, 0, 14], {radius: 2, origin: {x: 10, y: 20}});

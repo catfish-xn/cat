@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_WHOLE_BODY, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -82,6 +82,10 @@ export interface PreparedVfx {
    * its reflection) and `attached-deferred:<emitter>` (see attachedMeshDeferred, drawn as before). Logged once per system when loaded.
    */
   notes?: readonly string[];
+  /** Trail emitters, by name, whose head fades out once the strand stops growing (cue-overrides.ts TRAIL_END_FADE, a fit). */
+  endFade?: ReadonlySet<string>;
+  /** A projectile that plays out when it lands instead of being removed at its cue's end, and how it ends (cue-overrides.ts PLAY_OUT_SYSTEMS). */
+  playOut?: PlayOut;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -153,17 +157,31 @@ export function parseIndex(raw: unknown): VfxIndex {
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
-        || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
         || (cue.location !== undefined && cue.location !== 'board')
         || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))
         || (cue.optional !== undefined && (typeof cue.optional !== 'boolean' || cue.event === 'cast-start'))
+        || (cue.livingTarget !== undefined && (typeof cue.livingTarget !== 'boolean' || (cue.event !== 'hit' && cue.event !== 'projectile')))
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
+        || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
+        || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
+        || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
+          || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
+          || (cue.rowSpeed !== undefined && !(finite(cue.rowSpeed) && Number(cue.rowSpeed) >= 1 && Number(cue.rowSpeed) <= 40))))
+        || ((cue.rowSide !== undefined || cue.rowCells !== undefined) && (cue.event !== 'projectile' || (cue.rowSide !== -1 && cue.rowSide !== 1)
+          || !finite(cue.rowCells) || Number(cue.rowCells) < 0.5 || Number(cue.rowCells) > 8))
+        || (cue.fromAbove !== undefined && (cue.event !== 'projectile' || cue.rowSide !== undefined || !Array.isArray(cue.fromAbove) || cue.fromAbove.length !== 3
+          || !cue.fromAbove.every(finite) || Number(cue.fromAbove[1]) < 1 || Number(cue.fromAbove[1]) > 10
+          || Math.abs(Number(cue.fromAbove[0])) > 4 || Math.abs(Number(cue.fromAbove[2])) > 4))
+        || (cue.lineCells !== undefined && (cue.event !== 'projectile' || cue.rowSide !== undefined || cue.fromAbove !== undefined
+          || !finite(cue.lineCells) || Number(cue.lineCells) < 0.5 || Number(cue.lineCells) > 8))
+        || (cue.lineBack !== undefined && (cue.lineCells === undefined || !finite(cue.lineBack) || Number(cue.lineBack) < 0 || Number(cue.lineBack) > 2))
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
@@ -188,12 +206,23 @@ export function parseIndex(raw: unknown): VfxIndex {
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
-/** The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines. */
+/**
+ * The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines, and
+ * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands, and display branches the export never had
+ * (CUE_EXTRA_SKILLS) are added beside their champion's list.
+ */
 export function withCueOverrides(index: VfxIndex): VfxIndex {
   let skills: VfxIndex['skills'] | null = null;
   for (const champion of Object.keys(index.skills)) {
-    const override = cueOverride(champion, index.systems);
-    if (override) (skills ??= { ...index.skills })[champion] = override;
+    const override = cueOverride(champion, index.systems), added = cueAdditions(champion, index.systems);
+    if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
+    const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
+    if (branched) (skills ??= { ...index.skills })[champion] = branched;
+  }
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
+    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
   }
   return skills ? { ...index, skills } : index;
 }
@@ -242,7 +271,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
       // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
       // static mesh of its own (attachedMeshOfItsOwn).
-      const muted = MUTED_EMITTERS[id] ?? [];
+      // Held-back attached overlays (cue-overrides.ts ATTACHED_HELD_BACK) are left undrawn the same way.
+      const muted = [...(MUTED_EMITTERS[id] ?? []), ...(ATTACHED_HELD_BACK[id] ?? [])];
       const notes: string[] = [];
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
@@ -335,7 +365,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
       }
       if (notes.length) console.warn(`vfx-ltk:${id}:${notes.join(',')}`);
-      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}) }; prepared.set(id, result); return result;
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}) }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));

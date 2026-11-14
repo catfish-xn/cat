@@ -623,7 +623,7 @@ describe('M7/S7 combat equipment command replay', () => {
         if (event.type !== 'packetDamage') throw new Error('Expected exact damage event');
         expect(event.outcome).toMatchObject({raw:49,mitigated:44,hpDamage:44,overkill:0,killingPacket:false});
       }
-      expect(createHash('sha256').update(JSON.stringify(events)).digest('hex')).toBe('8943b83ffed95e67fa1522109ca27b1bcf576ed9c7768ccd929fdd87f7645f39');
+      expect(createHash('sha256').update(JSON.stringify(events)).digest('hex')).toBe('6301da1f5cb21ac6a9edd016b70a98feae1b587e3910375e7c42e7c887eb9028');
     } else {
       const expectedEvents = structuredClone(battles[0].events);
       const damageChanges = tick === 0

@@ -5,6 +5,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { resolveAbility } from '../src/simulation/combat-abilities';
+import { VI_SLAM_TICKS } from '../src/simulation/combat-g2-2';
 import type { S13Unit } from '../src/simulation/combat-s13-state';
 import { effectiveStatuses } from '../src/simulation/m8/status';
 import { battle, freeze, unit } from './combat-helpers';
@@ -249,12 +250,14 @@ describe('v23 independent approved Sion and crowd-control rules', () => {
         runtime: { ...base.runtime, castCount: casts }, mechanics: [], sources: [] };
       c = battle([caster, dummy('enemy', 3, 3), dummy('row', 5, 3), dummy('off', 5, 1)],
         { strategy: { traits: [], units: [] }, combatId: 'independent-cc', rngState: 42 });
-      const r = stepCombat(c), cc = controls(r.state, id === 'vi' ? 'row' : 'enemy');
+      const r = stepCombat(c);
       expect(r.events.some(e => e.type === 'cast' && 'receipt' in e && e.receipt.source.ownerId === 'caster')).toBe(true);
+      // Vi's same-row knock-up lands with her slam, VI_SLAM_TICKS after the cast.
+      const after = id === 'vi' ? advance(r.state, VI_SLAM_TICKS) : r.state, cc = controls(after, id === 'vi' ? 'row' : 'enemy');
       expect(cc).toHaveLength(1);
       expect(cc[0].expiresAtTick! - cc[0].appliedAtTick).toBe(ticks);
       expect(cc[0].application.knockup === true).toBe(knockup);
-      expect(controls(r.state, 'off')).toHaveLength(0);
+      expect(controls(after, 'off')).toHaveLength(0);
     });
 
   it('Vander casts and completes his channel without applying any taunt or forced retarget', () => {

@@ -49,7 +49,7 @@ describe('save format 9 compact export routing', () => {
   it('63372316 version gate rejects new v9 exports as unsupported-version, not invalid-data', async () => {
     const parsed = await compactSaveEnvelope();
     expect(parsed.saveFormatVersion).toBe(9);
-    expect(parsed.replayFormatVersion).toBe(8);
+    expect(parsed.replayFormatVersion).toBe(9);
     expect(v26EarlyRouteReason(parsed)).toBe('unsupported-version');
     expect(routeSaveFile(parsed).view).toBeNull();
   });

@@ -1,0 +1,6 @@
+# For the user: Viktor 2★ real combat after the beam fix (PR #642), against one 3★ Twitch 4 hexes out (ranged, holds his
+# ground). Recorded from combat start (--from-start 1, dev/castcmp from 94c2182f): his 2nd basic attack (tick 38, 1900 ms)
+# fires the beam about 2440 ms, before anyone casts (Twitch's first cast is at 4150 ms, Viktor's at 7500 ms). Frames at
+# 30 fps from 0 to 3400 ms. jobs-check PASS (Linux, 94c2182f); its WARN that Viktor's first cast falls after the window
+# is expected: the window is the attacks before it.
+v-capture.cjs viktor vkbeam-user2-viktor-after --real 1 --from-start 1 --star 2 --dist 4 --nfoes 1 --foestar 3 --target twitch --times 0,33,67,100,133,167,200,233,267,300,333,367,400,433,467,500,533,567,600,633,667,700,733,767,800,833,867,900,933,967,1000,1033,1067,1100,1133,1167,1200,1233,1267,1300,1333,1367,1400,1433,1467,1500,1533,1567,1600,1633,1667,1700,1733,1767,1800,1833,1867,1900,1933,1967,2000,2033,2067,2100,2133,2167,2200,2233,2267,2300,2333,2367,2400,2433,2467,2500,2533,2567,2600,2633,2667,2700,2733,2767,2800,2833,2867,2900,2933,2967,3000,3033,3067,3100,3133,3167,3200,3233,3267,3300,3333,3367,3400 --systems 87913524 --layers none --from 2400 --to 3400 --probe emitters --column after --snapshot c1333710ad8e

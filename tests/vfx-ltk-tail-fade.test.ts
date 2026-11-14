@@ -38,7 +38,7 @@ async function runCue(
   units.get('target')!.root.updateMatrixWorld(true);
   const scene = new Scene(), camera = new Camera();
   const runtime = createLtkRuntime(library, scene, id => units.get(id));
-  expect(runtime.play('jinx', 'caster', ['target'], 0, action, options)).toBe(true);
+  expect(runtime.play('jinx', 'caster', ['target'], action, options)).toBe(true);
   const alpha: number[] = [];
   for (let step = 0; step < steps; step++) {
     runtime.update(0.01, camera);
@@ -171,11 +171,11 @@ describe('universal tail fallback fade-out for LTK cues', () => {
     const scene = new Scene(), camera = new Camera();
     const runtime = createLtkRuntime(library, scene, () => unit);
     // First play: plain attack (fadeFrom = undefined), runs to completion and parks in spareFx.
-    expect(runtime.play('jinx', 'caster', ['caster'], 0, 'attack')).toBe(true);
+    expect(runtime.play('jinx', 'caster', ['caster'], 'attack')).toBe(true);
     for (let step = 0; step < 40; step++) runtime.update(0.01, camera);
     expect(runtime.active).toBe(0);
     // Second play: cast (fadeFrom = 0.3), reuses the parked fx from spareFx.
-    expect(runtime.play('jinx', 'caster', ['caster'], 0, 'cast')).toBe(true);
+    expect(runtime.play('jinx', 'caster', ['caster'], 'cast')).toBe(true);
     const reusedAlpha: number[] = [];
     for (let step = 0; step < 39; step++) {
       runtime.update(0.01, camera);

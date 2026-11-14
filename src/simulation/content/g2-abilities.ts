@@ -87,8 +87,8 @@ export const G2_ABILITY_DATA: Readonly<Record<string, Omit<S13AbilityData, 'name
         4.0
       ],
       "SecondaryDamage": [
-        145.0,
-        215.0,
+        150.0,
+        225.0,
         450.0
       ],
       "ShredAmount": [
@@ -102,8 +102,8 @@ export const G2_ABILITY_DATA: Readonly<Record<string, Omit<S13AbilityData, 'name
         1.5
       ],
       "TargetDamage": [
-        290.0,
-        435.0,
+        300.0,
+        450.0,
         1200.0
       ]
     }
@@ -203,8 +203,8 @@ export const G2_ABILITY_DATA: Readonly<Record<string, Omit<S13AbilityData, 'name
         0.75
       ],
       "InfectionDamage": [
-        14.0,
-        21.0,
+        15.0,
+        22.0,
         400.0
       ],
       "ShredDuration": [
@@ -438,7 +438,7 @@ export const G2_ABILITY_DATA: Readonly<Record<string, Omit<S13AbilityData, 'name
       "DR": [
         0.5,
         0.5,
-        0.6
+        0.55
       ],
       "Duration": [
         4.0,

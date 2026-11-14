@@ -1,4 +1,6 @@
 import type { TimelineCue } from '../timeline';
+import { CHEST } from '../timeline';
+// Attack: no 14.24 Sevika record on hand; the chest, as every S13 basic attack we have data for (inferred).
 /** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
 const SHIELD_SECONDS = 4;
 /**
@@ -14,7 +16,7 @@ const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3
 /** Each spell layer's right-reel emitters (Flamethrower: Alpha_Right_Slot, Punch: _Slot2, Thrash: _Slot3; all: Add_Right_Slot). */
 const SPELL_RIGHT_REEL = ['Alpha_Right_Slot', 'Alpha_Right_Slot2', 'Alpha_Right_Slot3', 'Add_Right_Slot'];
 export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
-  sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', delay: .3, duration: .5 }],
+  sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', bone: CHEST, delay: .3, duration: .5 }],
   'sevika-flamethrower': [
     { system: '2ef508db', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: .4 },
     // The flame cone reaches across the board at the arena size; held on the claw, it takes the body's, which is the same (fx-size.ts).

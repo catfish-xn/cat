@@ -106,9 +106,11 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       strike(t,mag('TargetDamage'));
       for(const x of foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1))strike(x,mag('ExplosionDamage'),'magic',true);break;
     }
-    case 'cassiopeia':
+    case 'cassiopeia': {
+      // One read decides the splash and the branch reported (display output only).
+      const splash=u.runtime.castCount%v('NumCasts')===0;ctx.castBranch=splash?'splash':'single';
       strike(t,mag('Damage'));
-      if(u.runtime.castCount%v('NumCasts')===0)for(const x of byDistance(t,foes()).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=v('HexRadius')).slice(0,v('BonusNumEnemies')))strike(x,mag('MiasmaDamage'),'magic',true);break;
+      if(splash)for(const x of byDistance(t,foes()).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=v('HexRadius')).slice(0,v('BonusNumEnemies')))strike(x,mag('MiasmaDamage'),'magic',true);break;}
     case 'nunu':{
       const ticks=Math.round(v('DamageDuration')*v('DamageTicksPerSecond'));
       applyStatus(u,origin(u),'damageReduction',Math.round(v('Durability')*10000),Math.round(v('DamageDuration')*20),ctx.tick,ctx.events,true);

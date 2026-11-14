@@ -1,0 +1,18 @@
+{
+  "name": "plan-619redo",
+  "note": "#619 re-record of five heroes (Jinx 10fede7e, Silco c7bb8557, Leona 8d9a4ccc, Kog'Maw 9f805f6e, Nocturne 97366927) in three columns: before (5c346c72), after and off (78b6adfc, the #619 after build). Tools: a commit at or after 0cd44bf0 (fresh combat before the recorded cast).",
+  "batches": [
+    {
+      "name": "619redo",
+      "before": { "src": "5c346c72", "jobs": "dev/castcmp/jobs/619redo-before.txt" },
+      "after": { "src": "78b6adfc", "jobs": "dev/castcmp/jobs/619redo-after.txt" },
+      "keyframes": [
+        "--hero jinx --system 10fede7e --before w-jinx-before --after w-jinx-after --off w-jinx-off --crop me,foe",
+        "--hero silco --system c7bb8557 --before w-silco-before --after w-silco-after --off w-silco-off",
+        "--hero leona --system 8d9a4ccc --before w-leona-before --after w-leona-after --off w-leona-off",
+        "--hero kogmaw --system 9f805f6e --before w-kogmaw-before --after w-kogmaw-after --off w-kogmaw-off",
+        "--hero nocturne --system 97366927 --before w-nocturne-before --after w-nocturne-after --off w-nocturne-off"
+      ]
+    }
+  ]
+}

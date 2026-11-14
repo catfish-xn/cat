@@ -93,7 +93,7 @@ it('the full first-battle terminal save and ledger recover the independent basel
   // Was 0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324 (events) and
   // 99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431 (save).
   expect(state.combat!.tick).toBe(274); expect(events).toHaveLength(153);
-  expect(sha(canonicalContent(events))).toBe('536cc14b0a3d4245d616eef7a92bb33769fca3e5ea2228c56bdb17cb508ddb83');
+  expect(sha(canonicalContent(events))).toBe('f7e27bc0bb88aa0289c0268bee4aa19e3d7d19a904b90f738a527380ec0b7a8e');
   expect(sha(priorBytes(serializeMatch(state),'v24'))).toBe('fc3de4605395549c665e4cbbb9a2f50fee4d9bd97806f8f6320bbe2c87ac6c8f');
 });
 

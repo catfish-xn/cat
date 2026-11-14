@@ -266,6 +266,11 @@ export interface Driver extends Source {
   sources(path: string): readonly Source[];
   /** How many child systems are live, at every depth of the lineage. */
   liveChildren(): number;
+  /**
+   * Port: what the live children take now: the room their pools hold (against the run's child budget) and the
+   * particles they have live. A run's child room is sized from these (particles.ts measureChildren).
+   */
+  childRoom(): { held: number; particles: number };
   /** Every child this pass has spawned, in the order they were spawned. */
   births(): readonly ChildBirth[];
 }
@@ -678,6 +683,12 @@ export function createDriver(
 
     liveChildren() {
       return lineage.live;
+    },
+
+    childRoom() {
+      let particles = 0;
+      for (const feed of lineage.feeds.values()) for (const source of feed) particles += source.pool.count;
+      return { held: lineage.held, particles };
     },
 
     births() {
