@@ -24,11 +24,11 @@ export interface ArenaLightmap {
 const patchable = (material: Material | Material[]): material is MeshBasicMaterial =>
   !Array.isArray(material) && material instanceof MeshBasicMaterial && material.map !== null;
 
-/** Patches every unlit, textured mesh of `scene` that carries `uv1`. Returns null when none does (no lightmap data). */
 /** The skybox (Skybox_A/B materials) keeps its own colours under the tint. */
 const SKYBOX = /skybox/i;
 const vec3 = (v: number | readonly [number, number, number]) => typeof v === 'number' ? new Vector3(v, v, v) : new Vector3(...v);
 
+/** Patches every unlit, textured mesh of `scene` that carries `uv1`. Returns null when none does (no lightmap data). */
 export function applyArenaLightmap(scene: Object3D, texture: Texture, decode: Pick<BoardLightmap, 'gamma' | 'scale' | 'tint'>): ArenaLightmap | null {
   const lit: Mesh[] = [], tinted: Mesh[] = [], unlit = new Set<Material>();
   scene.traverse(node => {
