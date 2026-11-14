@@ -138,6 +138,7 @@ export class ModelCache {
       formAnimations: this.manifest.models[id]?.formAnimations,
       attackSequence: this.manifest.models[id]?.attackSequence,
       attackRelease: this.manifest.models[id]?.attackRelease,
+      statusPose: this.manifest.models[id]?.statusPose,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

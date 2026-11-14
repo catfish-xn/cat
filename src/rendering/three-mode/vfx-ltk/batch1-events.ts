@@ -1,8 +1,20 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { TimelineAction, TimelineVariant } from './timeline';
 
+/** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
+export const SOFT_STOP_SECONDS = 0.6;
+
+/** Play one extra visual; a `once` visual is skipped while its source already runs that action at full strength. */
+export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
+  if (fx.once && ltk.playing(fx.sourceId, fx.action)) return false;
+  return ltk.play(fx.champion, fx.sourceId, fx.targets, fx.action,
+    fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
+}
+
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
+  /** Skip it while the source already runs this action at full strength (one that is fading out does not count). */
+  once?: boolean;
   /** A display branch of the champion's catalogue (LtkPlayOptions.skill) instead of its own list. */
   skill?: string;
   /** Its targets' places are taken when it plays, alive or not (LtkPlayOptions.snapshotTargets): a hit that may have killed them. */
@@ -11,7 +23,9 @@ export interface Batch1Visual {
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
   event: DisplayCombatEvent; fresh: boolean; variant?: TimelineVariant; targets?: readonly string[];
-  skipCast?: boolean; stopCast?: string; extra: Batch1Visual[];
+  skipCast?: boolean; stopCast?: string;
+  /** Fade this unit's cast cues out over SOFT_STOP_SECONDS (Singed's W when his damage reduction ends, or before his next cast). */
+  fadeCast?: string; extra: Batch1Visual[];
 }
 interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
@@ -78,6 +92,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if ('eventSeq' in event) {
           if (event.eventSeq <= lastSeq) { plan.fresh = !tracked; return plan; }
           lastSeq = event.eventSeq;
+        }
+        // Singed's cast visuals (cue-overrides.ts) last while his damage reduction does: they fade when it ends for any
+        // reason or he dies, and a new cast fades the last one's before its own start. An interrupted cast plays nothing.
+        if (owner !== undefined && definition(owner) === 'singed') {
+          if (event.type === 'cast') { if (event.completed === false) plan.skipCast = true; else plan.fadeCast = event.sourceId; }
+          else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason !== 'applied' && event.reason !== 'refreshed') plan.fadeCast = event.targetId;
+          else if (event.type === 'death') plan.fadeCast = event.unitId;
         }
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'caitlyn') shots.set(event.sourceId, { count: 0, tick: -1 });
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'caitlyn') {

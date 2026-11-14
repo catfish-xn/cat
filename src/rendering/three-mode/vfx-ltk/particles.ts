@@ -142,14 +142,21 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
     return held;
   };
 }
-/** A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. */
-export function projectileFlight(seconds: number): MissileFlight {
-  return { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
+/**
+ * A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. With `arc` it flies
+ * the gravity arc its missile data gives (TimelineCue.arc), still landing after `seconds`.
+ */
+export function projectileFlight(seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }): MissileFlight {
+  return arc
+    ? { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds }, height: { kind: 'gravity', gravity: arc.gravity }, targetOffset: arc.targetOffset }
+    : { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   /** The projectile lands exactly `projectileSeconds` after launch (projectileFlight), however steep its path. */
   fixedTime?: boolean;
+  /** An arcing projectile's gravity height solver and aimed-point lift (TimelineCue.arc); it implies fixedTime. */
+  arc?: { readonly gravity: number; readonly targetOffset: number };
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
@@ -174,7 +181,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       // Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds). A falling projectile (fixedTime) flies a
       // fixed time instead; every other cue projectile keeps its speed until that change is reviewed on its own.
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: spec.fixedTime ? projectileFlight(spec.projectileSeconds) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.fixedTime || spec.arc ? projectileFlight(spec.projectileSeconds, spec.arc) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
@@ -254,7 +261,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -262,6 +269,12 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
     get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
+    /** Ease every particle's alpha to nothing over `seconds` from now and finish then; emitters keep running meanwhile. */
+    fade(seconds: number) {
+      if (closed || !(seconds > 0)) return;
+      if (spec.fadeFrom !== undefined && spec.fadeFrom <= elapsed && spec.duration <= elapsed + seconds) return;
+      spec.fadeFrom = elapsed; spec.duration = Math.min(spec.duration, elapsed + seconds);
+    },
     /** Fade every draw to nothing over the last `over` of the next `seconds` (a play-out that must end by then). */
     endWithin(seconds: number, over: number) { ending = { from: elapsed + Math.max(0, seconds - over), to: elapsed + seconds }; },
     update(seconds: number, camera: Camera) {

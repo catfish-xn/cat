@@ -1,7 +1,7 @@
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
-import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
+import { createBatch1VfxEvents, playBatch1Visual } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
 import { BATCH1_DIRECTORIES, BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
@@ -27,6 +27,24 @@ describe('batch 1 observed forms and passive/end triggers', () => {
       const plan = events.batch([{ ...cast(champion, 1), completed: false } as DisplayCombatEvent])[0];
       expect(plan.skipCast).toBeUndefined(); expect(plan.fresh).toBe(true);
     }
+  });
+  it('fades Singed\'s cast visuals when his damage reduction ends for any reason, he dies or he casts again; skips an interrupted cast', () => {
+    const events = createBatch1VfxEvents(id => id);
+    const [plan] = events.batch([cast('singed', 1)]);
+    expect(plan.fadeCast).toBe('singed'); expect(plan.extra).toEqual([]);
+    expect(plan.skipCast).toBeUndefined(); expect(plan.stopCast).toBeUndefined();
+    const interrupted = events.batch([{ ...cast('singed', 2), completed: false } as DisplayCombatEvent])[0];
+    expect(interrupted.skipCast).toBe(true); expect(interrupted.fadeCast).toBeUndefined();
+    const end = { type: 'statusChanged', eventSeq: 3, tick: 80, targetId: 'singed', kind: 'damage-reduction', reason: 'expired', effectiveMagnitudeBps: 0 } as DisplayCombatEvent;
+    expect(events.batch([end])[0].fadeCast).toBe('singed');
+    expect(events.batch([{ type: 'death', eventSeq: 4, tick: 81, unitId: 'singed' } as DisplayCombatEvent])[0].fadeCast).toBe('singed');
+    let seq = 10;
+    for (const reason of ['cleansed', 'source-lost', 'death-cleanup', 'replaced', 'combat-end'])
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].fadeCast).toBe('singed');
+    for (const reason of ['applied', 'refreshed'])
+      expect(events.batch([{ ...end, eventSeq: seq++, reason } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
+    expect(events.batch([{ ...end, eventSeq: seq++, kind: 'stun' } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
+    expect(events.batch([{ ...end, eventSeq: seq++, targetId: 'leona' } as DisplayCombatEvent])[0].fadeCast).toBeUndefined();
   });
   it('suppresses only VFX selection on sequence rollback and leaves event facts intact', () => {
     const events = createBatch1VfxEvents(id => id);
@@ -132,6 +150,37 @@ describe('batch 1 catalogue and runtime forms', () => {
     expect(runtime.play('zeri', 'source', ['enemy'], 'attack')).toBe(true); runtime.stopUnit('source');
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(0);
     runtime.dispose(); expect(scene.children).toEqual([]); expect(budget.live).toBe(0);
+  });
+  it('fades a passive cue out over the given time instead of clearing it in one frame', async () => {
+    const cues = [{ system: 'buff', action: 'passive', event: 'cast-start', delay: 0, duration: 10 }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? {
+      version: 1, systems: { buff: 'buff.json' }, assets: { 'synthetic.tex': 'same.png' }, skills: { buffed: cues },
+    } : syntheticSystem(), readTexture: async () => new Texture() });
+    const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), budget = { live: 0, max: 1500 };
+    const runtime = createLtkRuntime(library, scene, () => source, { budget }); await runtime.warm('buffed');
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true);
+    runtime.update(.1, new Camera()); runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
+    // Two casts in a row keep one buff: a `once` visual is skipped while the first runs at full strength.
+    const again = { champion: 'buffed', sourceId: 'source', targets: [], action: 'passive' as const, once: true };
+    expect(playBatch1Visual(runtime, again)).toBe(false); runtime.update(.05, new Camera()); expect(runtime.active).toBe(1);
+    // A fading one no longer counts, so a cast during the fade starts a fresh buff (checked after it below).
+    runtime.fadeAction('source', 'passive', .6); expect(runtime.playing('source', 'passive')).toBe(false);
+    runtime.update(.3, new Camera()); expect(runtime.active).toBe(1);
+    runtime.update(.4, new Camera()); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // Reduced motion never starts the buff; a fade with nothing running is a no-op and leaves nothing behind.
+    runtime.fadeAction('source', 'passive', .6); runtime.fadeAction('nobody', 'passive', .6); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(0);
+    // A parked system replays at full strength for its whole duration, not as the tail of the earlier fade.
+    expect(playBatch1Visual(runtime, again)).toBe(true);
+    runtime.update(.05, new Camera()); runtime.update(2, new Camera()); expect(runtime.active).toBe(1);
+    // A round change mid-fade clears it at once.
+    runtime.fadeAction('source', 'passive', .6); runtime.update(.1, new Camera()); runtime.clear();
+    expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    // A removed caster's buff goes with him even while fading; a queued one is dropped by the fade.
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true); runtime.update(.05, new Camera());
+    runtime.fadeAction('source', 'passive', .6); runtime.stopUnit('source'); runtime.update(.7, new Camera());
+    expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true); runtime.fadeAction('source', 'passive', .6); expect(runtime.queued).toBe(0);
+    runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toEqual([]);
   });
   it('does not pull empowered or self cues into an options-object play of the default form', async () => {
     const cues = BATCH1_TIMELINES.zeri;

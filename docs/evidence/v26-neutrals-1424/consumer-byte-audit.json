@@ -2534,6 +2534,14 @@
       "currentSha256": "deebcfa79bdbfc5baded0f5f358e8ceae6018ed9b86fb454f03594e4cc2042af",
       "firstDifferentByte": 0
     },
+    "tests/rendering3d-status-pose.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5326,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e11c1249dd6cc50d948b09b7c0b4ee581934f96b7a4e6b50a6bc6b876495f6ef",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-tabletop.test.ts": {
       "previousBytes": 22852,
       "currentBytes": 27439,
@@ -3651,9 +3659,9 @@
     "tests/vfx-ltk-batch1.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12050,
+      "currentBytes": 16718,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "22ddb4fa67fedbc7a1b2489c53a85c3edc491610eedb75a7f625f8818e377c80",
+      "currentSha256": "8606f34dd985730cfd44593f1d0da638602c9ac9c843414f650e11173828a1d3",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch2-release.test.ts": {
@@ -3828,6 +3836,14 @@
       "currentSha256": "20ff90086467c20c67a21b6d6bedb4ffc111b99104d4df6ca3fb259a07480406",
       "firstDifferentByte": 37
     },
+    "tests/vfx-ltk-projectile-arc.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1923,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "eb42d1d2a98960e7427880eb2f65cfeaebaa3b4306b4727378b5fce4e87cc6e8",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-projectile-beam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3853,9 +3869,9 @@
     },
     "tests/vfx-ltk-review-r.test.ts": {
       "previousBytes": 8912,
-      "currentBytes": 10317,
+      "currentBytes": 11105,
       "previousSha256": "bd0f9d638180651c7cd84cbf8835d2d42f3b5a83bf4465fe5a32dced859fb019",
-      "currentSha256": "c3855b21cc6cb6dba5d32bf26524f4667e9ba82784b7e354f9c9e466e2f893dd",
+      "currentSha256": "26a8a003d39732fe1619aad009dad08ceb29ed844411992a98679e8921993b2f",
       "firstDifferentByte": 322
     },
     "tests/vfx-ltk-root-pool.test.ts": {

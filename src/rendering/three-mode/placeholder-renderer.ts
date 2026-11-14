@@ -34,7 +34,8 @@ import {
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
-import { createBatch1VfxEvents } from './vfx-ltk/batch1-events';
+import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
+import { createStatusPoseEvents } from './status-pose-events';
 import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
@@ -693,6 +694,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   const pieces = new Map<string, PieceView>();
   const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.starLevel);
+  const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -1123,7 +1125,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1442,8 +1444,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
-      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) ltk?.play(fx.champion, fx.sourceId, fx.targets, fx.action,
-        fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
+      if (planned.fadeCast) ltk?.fadeAction(planned.fadeCast, 'cast', SOFT_STOP_SECONDS);
+      // A held status pose (Singed's shield while his damage reduction lasts) follows the same cast and status events.
+      const pose = statusPoses.next(event);
+      if (pose) pieces.get(pose.id)?.mixer?.setStatusPose(pose.on);
+      if (currentEffect && !reducedMotion()) for (const fx of planned.extra) if (ltk) playBatch1Visual(ltk, fx);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);

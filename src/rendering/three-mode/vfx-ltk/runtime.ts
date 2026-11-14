@@ -155,7 +155,9 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   part?: 'flight' | 'beam';
   /** The clock of the first frame it was put back to wait for room. */
   waitingSince?: number }
-interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
+interface Running { reserved: number; system: string; stopped?: boolean;
+  /** fadeAction is easing it out: it no longer counts as playing. */
+  fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
   bodyGone?: boolean;
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
@@ -596,10 +598,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && run.action === action) { release(run, true); running.delete(run); }
     },
-    /** True while a cue of this action from the source is queued or running. */
+    /** Like stopAction, but a running system fades out over `seconds` instead of vanishing in one frame. */
+    fadeAction(sourceId: string, action: TimelineAction, seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped) { run.fx.fade(seconds); run.fading = true; run.until = Math.min(run.until, clock + seconds); }
+    },
+    /** True while a cue of this action from the source is queued or running; a stopped or fading run does not count. */
     playing(sourceId: string, action: TimelineAction = 'cast'): boolean {
       for (const row of waiting) if (row.spawn.sourceId === sourceId && (row.spawn.action ?? 'cast') === action) return true;
-      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.ending) return true;
+      for (const run of running) if (run.source === sourceId && run.action === action && !run.stopped && !run.fading && !run.ending) return true;
       return false;
     },
     stopUnit(id: string) {
@@ -825,6 +832,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
+          arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
