@@ -3893,9 +3893,9 @@
     "tests/vfx-ltk-skill-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5416,
+      "currentBytes": 5573,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b20fb01fe10af099d4ce74942b1adb203cd0545973474eb35449855d12b9ed26",
+      "currentSha256": "0f74d88d0240dd63b1260164913ac1e9a1f7efc7eaa7493edca56882da99d949",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {

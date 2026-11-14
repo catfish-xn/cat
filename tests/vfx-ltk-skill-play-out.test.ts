@@ -44,8 +44,9 @@ const fill = (runtime: Awaited<ReturnType<typeof setup>>['runtime'], skill: stri
 };
 
 describe('vfx-ltk skill layers that play out at their cue end (PLAY_OUT_SYSTEMS)', () => {
-  it('lists the layer as a hold tail of at most 1 s', () => {
+  it('lists the layer as a hold tail of at most 1 s; Viktor\'s attack plays out its flight half only', () => {
     expect(END).toEqual({ seconds: 1, fade: 0.25, hold: true });
+    expect(PLAY_OUT_SYSTEMS['87913524']).toEqual({ seconds: 1, fade: 0.25, hold: true, flightOnly: true });
   });
 
   it('a listed hit layer stops at its cue end and stays at most its own seconds; an unlisted one ends whole', async () => {

@@ -511,6 +511,8 @@ export interface PlayOut {
    * eviction at its own importance instead, and its reserve still follows what it has live.
    */
   readonly hold?: boolean;
+  /** A projectile split into a beam and a flight (runtime.ts beamSplit): only the flight plays out; the beam keeps its own end. */
+  readonly flightOnly?: boolean;
 }
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
@@ -532,6 +534,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
     // projectiles cut at the hit or with their trail still out: Kog'Maw attack, Jayce crystal, Jinx rocket, Zyra E impact.
     'f16dfc56', 'ee2e840c', '8b59c09d', '857fe049',
   ].map(id => [id, { seconds: 1, fade: 0.25, hold: true }] as const)),
+  // Viktor's attack: the flight half (its trench, rays and trails) was deleted the frame it landed (duration = travel);
+  // it plays out like the layers above. The beam half keeps its own asset life (Fable 11-14; replaces the 11-12 removal).
+  '87913524': { seconds: 1, fade: 0.25, hold: true, flightOnly: true },
 };
 
 /**
