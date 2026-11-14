@@ -3,6 +3,8 @@
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)
 //   [--kill foe,foe2 --killlead MS]: dummies only; these drop dead (still drawn) MS before the recorded action
+//   [--gone foe,foe2 --gonelead MS]: dummies only; these leave the board (their units removed) MS before the recorded action
+//   [--foe-offset K] on dummies: the dummies K columns to the side (the target ahead and to the side; --nfoes 1 past ±1)
 //   [--hide-units 1]: unit models are not drawn (bars, stars, shadows and effects are); every frame and the keyframes caption say so
 //   [--pin-foe N]: dummies only; one dummy N hexes straight ahead of the caster (overrides --dist/--nfoes; casts target it), labelled 'pinned dummy'
 //   [--cast-index N] [--from-start 1 | --lead-ms MS]: --real only; one window choice (real-combat.ts leadTicksFor): the anchor
@@ -104,6 +106,8 @@ async function unbind(page, tick, rebind) {
   await g.pre();
   // --kill: these dummies drop dead (alive false, still drawn) --killlead ms before the cast.
   if (opt('kill')) { await page.evaluate(ids => window.__h.kill(ids), opt('kill').split(',')); await page.evaluate(ms => window.__h.step(ms), Number(opt('killlead') ?? 500)); }
+  // --gone: these dummies leave the board (their units removed) --gonelead ms before the action.
+  if (opt('gone')) { if (opt('real')) throw new Error('--gone is for dummies only'); await page.evaluate(ids => window.__h.gone(ids), opt('gone').split(',')); await page.evaluate(ms => window.__h.step(ms), Number(opt('gonelead') ?? 500)); }
   await (opt('unbind') ? unbind(page, 900000, false) : page.evaluate(() => window.__h.cast()));
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
@@ -125,7 +129,7 @@ async function unbind(page, tick, rebind) {
     return runtime?.ATTACHED_LAYER_STATS ? { ...JSON.parse(JSON.stringify(runtime.ATTACHED_LAYER_STATS)), cap: runtime.ATTACHED_LAYER_CAP, ...attached?.ATTACHED_STATS } : null;
   }), null, 2));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: opt('pin-foe') ? (opt('pin-foe2') ? 2 : 1) : Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor cast` } } : {}), args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('gone') ? { gone: opt('gone') } : {}), ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor cast` } } : {}), args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);

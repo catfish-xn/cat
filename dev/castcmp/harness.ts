@@ -67,6 +67,10 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   const foe = (id: string, row: number, col: number) => ({ id, definitionId: targetModel, team: 'enemy', starLevel: Number(params.get('foestar') ?? 1), ...hex(row, col), alive: true, visible: true,
     meters: { hp: 800, maxHp: 800, mana: 0, maxMana: 60, shield: 0 } });
   const tRow = Math.max(0, 5 - dist);
+  // ?foeoffset=K on dummies (v-capture --foe-offset K): the dummies K columns to the side, so the target stands ahead and to
+  // the side of the caster, not straight behind it on screen. Every dummy must stay on columns 0-6.
+  const dummyOffset = params.get('real') ? 0 : Number(params.get('foeoffset') ?? 0);
+  if (dummyOffset && [2, 3, 4].some(c => c + dummyOffset < 0 || c + dummyOffset > 6) && Number(params.get('nfoes') ?? 4) > 1) throw new Error(`--foe-offset ${dummyOffset} puts a dummy off the board: use --nfoes 1`);
   // ?nfoes=N (1-4): how many dummies stand in front of the caster.
   // ?pinfoe=N (v-capture --pin-foe N): one dummy only, N hexes straight ahead of the caster (row 5 - N, column 3; on this
   // board's offset rows that is hex distance N). Dummy mode: no rules run, so it never moves or hits back and the caster
@@ -85,7 +89,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     return best;
   })();
   const pieces = pin !== null ? [me, foe('foe', 5 - pin, 3), ...(along ? [foe('foe2', along.row, along.col)] : [])]
-    : [me, ...[foe('foe', tRow, 3), foe('foe2', tRow, 2), foe('foe3', tRow, 4), foe('foe4', Math.max(0, tRow - 1), 3)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
+    : [me, ...[foe('foe', tRow, 3 + dummyOffset), foe('foe2', tRow, 2 + dummyOffset), foe('foe3', tRow, 4 + dummyOffset), foe('foe4', Math.max(0, tRow - 1), 3 + dummyOffset)].slice(0, Math.max(1, Math.min(4, Number(params.get('nfoes') ?? 4))))];
   // The labels these modes put on every frame (and keyframes.cjs repeats them in its caption).
   const tags = [...(pin !== null ? [`pinned dummy ${pin} hex${pin2 !== null ? ` + ${pin2} hex in line` : ''} (假人)`] : []), ...(hideUnits ? ['units hidden (单位已隐藏)'] : [])];
   if (tags.length) { const tag = document.createElement('div'); tag.id = 'castcmp-tag'; tag.textContent = tags.join('  |  ');
@@ -175,6 +179,12 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     // ?kill: these dummies drop dead (alive false, still drawn: the death plays and the body stays) before the action.
     kill(ids: string[]) {
       for (const id of ids) { const p: any = pieces.find(x => x.id === id); if (p) { p.alive = false; p.visible = true; p.meters = { ...p.meters, hp: 0 }; } }
+      listener.frame(frame(true));
+    },
+    // ?gone: these dummies leave the board before the action (dropped from the frame: the renderer removes their units, so
+    // a cast finds no unit for them, as when a dead unit is already gone).
+    gone(ids: string[]) {
+      for (const id of ids) { const at = pieces.findIndex(x => x.id === id); if (at >= 0) pieces.splice(at, 1); }
       listener.frame(frame(true));
     },
     systems: probes.systems, resetStarts: probes.resetStarts, attached: probes.attached, emitters: probes.emitters,

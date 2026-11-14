@@ -1,5 +1,6 @@
 // node dev/castcmp/v-capture-attack.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 1500 | --times 0,33,...] [--gl gpu|swift]
-//   [--systems/--absent/--layers/--from/--to/--column/--snapshot, --probe overhead, --kill/--killlead, --hide-units, --pin-foe N]: as v-capture.cjs
+//   [--systems/--absent/--layers/--from/--to/--column/--snapshot, --probe overhead, --kill/--killlead, --gone/--gonelead, --hide-units, --pin-foe N,
+//    --foe-offset K]: as v-capture.cjs
 // Records one attack as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
 const { launchOptions, timeline, timer, formProblem } = require('./common.cjs');
@@ -18,7 +19,7 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   mark('harness ready');
@@ -46,6 +47,8 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   // What runs just before the recorded attack: anything already there is left over from the warm pass.
   await g.pre();
   if (opt('kill')) { await page.evaluate(ids => window.__h.kill(ids), opt('kill').split(',')); await page.evaluate(ms => window.__h.step(ms), Number(opt('killlead') ?? 500)); }
+  // --gone: these dummies leave the board (their units removed) --gonelead ms before the action.
+  if (opt('gone')) { if (opt('real')) throw new Error('--gone is for dummies only'); await page.evaluate(ids => window.__h.gone(ids), opt('gone').split(',')); await page.evaluate(ms => window.__h.step(ms), Number(opt('gonelead') ?? 500)); }
   await triggerAction();
   let at = 0;
   for (let idx = 0; idx < times.length; idx++) {
@@ -60,7 +63,7 @@ const times = opt('times') ? opt('times').split(',').map(Number) : timeline(Numb
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: opt('pin-foe') ? (opt('pin-foe2') ? 2 : 1) : Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: false, kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), action: opt('cast') ? 'cast' : 'attack', args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: false, kill: opt('kill') ?? null, ...(opt('gone') ? { gone: opt('gone') } : {}), ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), action: opt('cast') ? 'cast' : 'attack', args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);

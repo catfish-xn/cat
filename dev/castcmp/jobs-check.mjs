@@ -40,6 +40,7 @@ for (const line of lines) {
   // --form melee | ranged only (common.cjs formProblem): any other value records the ranged form. Dummy and real lines alike.
   { const why = formProblem(o('form')); if (why) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [why] }); continue; } }
   if (o('kill') && o('real')) { results.push({ name, unit, mode: 'real', ok: false, why: ['--kill is for dummies only'] }); continue; }
+  if (o('gone') && o('real')) { results.push({ name, unit, mode: 'real', ok: false, why: ['--gone is for dummies only'] }); continue; }
   // --pin-foe N: dummies only, exactly one dummy N hexes ahead (1-5); --hide-units 1: unit models not drawn (labelled).
   const pinWhy = o('pin-foe') === undefined ? [] : [
     ...(o('real') ? ['--pin-foe is for dummies only (a real combat moves the foes and they hit back)'] : []),
@@ -52,7 +53,7 @@ for (const line of lines) {
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
   const realOnly = ['from-start', 'lead-ms', 'cast-index', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
-  if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
+  if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...(o('gone') ? { gone: o('gone') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
   const ms = o('times') !== undefined ? Number(o('times').split(',').at(-1)) : Number(o('ms') ?? 3000);
   // --cast-index N / --from-start 1 / --lead-ms MS: the window choice (real-combat.ts leadTicksFor); default 500 ms before the first cast.
