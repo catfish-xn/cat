@@ -1,0 +1,34 @@
+{
+  "name": "plan-floordiff",
+  "note": "REC ONLY. Floor-depth PR (claude/floor-no-depth) regression scan: before = integration 44abbd7f, after = the PR head; one cast and one attack per champion on dummies. Then: node dev/castcmp/floordiff-table.cjs <out>/floordiff/before <out>/floordiff/after <out>/floordiff-table",
+  "batches": [
+    {
+      "name": "floordiff",
+      "before": {
+        "src": "44abbd7f",
+        "jobs": "dev/castcmp/jobs/floordiff.txt"
+      },
+      "after": {
+        "src": "ebf69700",
+        "jobs": "dev/castcmp/jobs/floordiff.txt"
+      },
+      "keyframes": []
+    },
+    {
+      "name": "floordiff-edges",
+      "before": {
+        "src": "44abbd7f",
+        "jobs": "dev/castcmp/jobs/floordiff-edges.txt"
+      },
+      "after": {
+        "src": "ebf69700",
+        "jobs": "dev/castcmp/jobs/floordiff-edges.txt"
+      },
+      "keyframes": [
+        "--hero gangplank --system grid-and-decal --before fnd-edge-gangplank-grid --after fnd-edge-gangplank-grid --from 500 --to 3500 --crop me,foe --pick-diff",
+        "--hero caitlyn --system board-corner --before fnd-edge-caitlyn-corner --after fnd-edge-caitlyn-corner --from 500 --to 3000 --crop foe --pick-diff",
+        "--hero ziggs --system board-corner --before fnd-edge-ziggs-corner --after fnd-edge-ziggs-corner --from 500 --to 3000 --crop foe --pick-diff"
+      ]
+    }
+  ]
+}

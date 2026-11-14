@@ -1,0 +1,5 @@
+# REC ONLY. Floor-depth PR boundaries (11-14): ground decal and grid order (Gangplank's scorch over the hexes), a target
+# on the board's far corner next to the stands (Caitlyn's comet, Ziggs' bombs), and contact shadows (every frame).
+v-capture.cjs gangplank fnd-edge-gangplank-grid --star 3 --pin-foe 2 --ms 3500 --systems 20cd67dc --layers none --snapshot d3ffe5808978
+v-capture.cjs caitlyn fnd-edge-caitlyn-corner --real 1 --star 2 --target leona --foestar 2 --nfoes 1 --foe-cell 0,6 --ms 3000 --systems none --layers none --snapshot d3ffe5808978
+v-capture.cjs ziggs fnd-edge-ziggs-corner --real 1 --star 2 --target amumu --foestar 2 --nfoes 1 --foe-cell 0,0 --ms 3000 --systems none --layers none --snapshot d3ffe5808978
