@@ -55,7 +55,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
@@ -69,7 +69,7 @@ import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
-import { ARENA_UNIT_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
+import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
 /** The original spans a quad over twice its scale0 (a half-extent; vfx-ltk materials.ts REACH). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
@@ -139,8 +139,8 @@ const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly l
 const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTER_FIT[definitionId.replace(/-[a-c]$/, '')];
 /** Overhead star row: each star this many board units wide, its center this far above the body's top. */
 const STAR_SIZE = 12, STAR_GAP = 12;
-/** Target-anchored effects sit this high on the target (board units), roughly its chest. */
-const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
+/** Target-anchored effects sit this share of the target's drawn height up, roughly its chest (was 0.45 × MODEL_HEIGHT for every body). */
+const IMPACT_SHARE = 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
 const PICK_RADIUS = 0.8;
 /** Board units the camera fit adds beyond the near (bench) edge, including the drop marker's outer radius (33). */
@@ -496,7 +496,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
     return effects.load(id, maxDuration, maxParticles);
   } : null;
-  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: defaultLegendId(),
+  const stage = createCarouselStage({ championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, championWidth: MODEL_WIDTH * STAGE_BODY_FACTOR, sourceScale: STAGE_SOURCE_SCALE, legendModel: defaultLegendId(),
     font: canvasFont, ui: originalUi,
     loadModel: loadLit, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
@@ -516,7 +516,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : defaultLegendId();
     return hasLegendModel(id) ? id : defaultLegendId();
   };
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, effectScale: FX_SCALE, own, legendModel,
     loadModel: legendModelsAvailable() ? loadModel : null,
     loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
   // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
@@ -754,8 +754,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
   // surroundings and effects are hidden meanwhile and the board takes no input.
-  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
-    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
+  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT * STAGE_BODY_FACTOR, championWidth: MODEL_WIDTH * STAGE_BODY_FACTOR, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: STAGE_SOURCE_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
     loadModel: loadLit, legendModel: legend => {
       if (!legendModelsAvailable()) return null;
       const id = legend ? `little-legend-${legend}` : defaultLegendId();
@@ -911,10 +911,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (monster && unitScale) {
         // A monster at its official scale, with no footprint cap (tails/wings span cells); its bar follows its body.
         const before = Math.abs(lease.scene.scale.x) || 1;
-        // No height cap either: the official scale is the monster's size (the dragon is 0.44 × 1.75).
+        // No height cap either: the official scale is the monster's size (the dragon is CHAMPION_SOURCE_SCALE × 1.75).
         const envelope = HOVERING_MODELS.has(definitionId) ? undefined : envelopeOf(definitionId, lease);
         const support = standingSupport(definitionId, envelope);
-        const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale,
+        const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: CHAMPION_SOURCE_SCALE, unitScale,
           feet: support ? envelope?.feet : undefined, support });
         view.body = lease.scene;
         // Flying dragon retains its authored flight. Grounded monsters use their animated feet instead of bind-box lifts.
@@ -931,7 +931,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // With an official scale the width cap covers everything the clips reach (measured once per model).
         // ... and its feet on the idle's lowest point (a bind pose can stand far below it: Darius, Nami floated).
         const envelope = unitScale ? envelopeOf(definitionId, lease) : undefined;
-        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale,
+        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: CHAMPION_SOURCE_SCALE, unitScale,
           envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(definitionId, envelope), support: standingSupport(definitionId, envelope) });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
@@ -1129,11 +1129,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const item of referenceEffects) item.fx.dispose();
     referenceEffects.clear(); drainReferenceSpare(); drainHaloSpare();
   };
+  /** A piece's chest height: IMPACT_SHARE of its drawn body (stars and bars excluded). */
+  const impactHeight = (view: PieceView): number => (view.starHeight - STAR_GAP) * IMPACT_SHARE;
   const worldPoint = (view: PieceView, bone: string | undefined, out: Vector3): boolean => {
     const node = bone ? view.body?.getObjectByName(bone) : undefined;
     if (node) { node.getWorldPosition(out); return true; }
     if (bone) return false;
-    view.root.getWorldPosition(out).setY(IMPACT_HEIGHT);
+    view.root.getWorldPosition(out).setY(impactHeight(view));
     return true;
   };
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
@@ -1164,14 +1166,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const from = new Vector3();
         if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
         else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
-        // An effect authored about the target's feet (skill-fx-table `feet`) stands on its floor, not at IMPACT_HEIGHT.
+        // An effect authored about the target's feet (skill-fx-table `feet`) stands on its floor, not at its chest (impactHeight).
         else if (spec.anchor === 'target' && tuning?.feet) from.y = target!.root.position.y;
         if (!makeRoom(importance)) { fx.dispose(); return; }
         fx.object.scale.setScalar(world * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
-          effect.from = from; effect.to = target!.root.position.clone().setY(IMPACT_HEIGHT); effect.travel = spec.maxDuration;
+          effect.from = from; effect.to = target!.root.position.clone().setY(impactHeight(target!)); effect.travel = spec.maxDuration;
           fx.object.lookAt(effect.to);
         }
       }
@@ -1208,7 +1210,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
       if (!target?.alive) return;
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
-      attackFrom.copy(source.root.position).setY(IMPACT_HEIGHT * 1.1); attackTo.copy(target.root.position).setY(IMPACT_HEIGHT);
+      attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
       feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
       return;
@@ -1238,13 +1240,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (action === 'cast' && source.definitionId === 'renata') {
       if (!targetId || !pieces.has(targetId) || queued.length > MAX_QUEUED - 2) return;
       // One endpoint for both missile and impact, even if the target moves during the visual flight.
-      const point = pieces.get(targetId)!.root.position.clone();
+      const point = pieces.get(targetId)!.root.position.clone(), chest = impactHeight(pieces.get(targetId)!);
       targetPoint = point;
       if (!reducedMotion()) queued.push({ at: clock + RENATA_LAUNCH_DELAY, generation: owner, run: () => {
         if (source.disposed || !source.alive || reducedMotion()) return;
         const from = new Vector3();
         if (!worldPoint(source, 'C_Canister', from)) worldPoint(source, undefined, from);
-        const fx = takeMissile(from, point.clone().setY(IMPACT_HEIGHT), grid?.radius ?? 34);
+        const fx = takeMissile(from, point.clone().setY(chest), grid?.radius ?? 34);
         scene.add(fx.object); addReference(fx, 'critical');
       } });
       queued.push({ at: clock + RENATA_IMPACT_DELAY, generation: owner, run: () => {
@@ -1916,7 +1918,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
       portal.apply(id);
-      lighting.update(view);
+      lighting.update(view, view.starHeight - STAR_GAP); // the contact shadow follows the drawn body
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;

@@ -7,10 +7,11 @@
  * `projectile` flies caster → target over `travelSeconds`. `scale` (default 1) shrinks that one
  * system about its anchor and does not move the anchor or the flight; it multiplies the cue's size factor
  * (fx-size.ts cueSize: the body scale on a weapon or hand bone, the arena scale elsewhere). `kept(x)` is a size
- * measured against footage at the older 0.44 base, drawn as it was.
+ * measured against footage at the older 0.44 base, drawn as it was: a range in cells (ground rings, blasts, swipes).
+ * `hugged(x)` is such a size that wraps or hugs a body (shields, binds, per-target splashes): it shrinks with the body.
  */
 import type { TimelineCue } from './timeline';
-import { measuredAtFxScale as kept } from './fx-size';
+import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { jinxSkills } from './champions/jinx';
 import { jayceSkills } from './champions/jayce';
@@ -110,6 +111,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
     // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
     // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
+    // The ground cues are ranges and keep it; the chest hit on each rooted target hugs that body and shrinks with it.
     // Sizes from the cdacbcc9 isolated renders against the 14.24 footage (main wrap about 2.2 cells): E_Outer drew
     // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
@@ -119,8 +121,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
     { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: kept(1) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: kept(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: hugged(1) },
   ],
   // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
@@ -261,7 +263,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The blast spans the 2-hex cloud, about 5 cells across: at 0.5 it measured 5.8 cells at 3.4 s (cdacbcc9), 16% wide.
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: kept(0.7), optional: true },
+    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: hugged(0.7), optional: true },
   ],
   // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
   // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).
@@ -289,8 +291,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
+  // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },

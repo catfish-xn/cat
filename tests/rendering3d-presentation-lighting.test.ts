@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Bone, Box3, BoxGeometry, DoubleSide, Group, InstancedMesh, Mesh, MeshStandardMaterial, Scene, Skeleton, SkinnedMesh, Sphere, Vector3 } from 'three';
-import { createPresentationLighting, readQuality3d } from '../src/rendering/three-mode/presentation-lighting';
+import { CONTACT_SHARE, createPresentationLighting, readQuality3d } from '../src/rendering/three-mode/presentation-lighting';
 
 const piece = (team: 'player' | 'enemy' = 'player') => {
   const root = new Group(), body = new Group(), mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
@@ -39,6 +39,15 @@ describe('3D presentation lighting', () => {
     const disposeGeometry = vi.spyOn(first!.geometry, 'dispose'), disposeTexture = vi.spyOn(material.map!, 'dispose');
     lighting.dispose(); lighting.dispose();
     expect(scene.children).toHaveLength(0); expect(disposeGeometry).toHaveBeenCalledTimes(1); expect(disposeTexture).toHaveBeenCalledTimes(1);
+  });
+
+  it('scales the contact shadow with the drawn body height', () => {
+    const lighting = createPresentationLighting(new Scene(), 'balanced'), a = piece(), b = piece(), c = piece();
+    lighting.update(a); lighting.update(b, 46); lighting.update(c, 92 * 1.33);
+    const [first, second, third] = lighting.group.children as Mesh[];
+    expect(first!.scale.x).toBeCloseTo(64); expect(second!.scale.x).toBeCloseTo(32); expect(third!.scale.x).toBeCloseTo(64 * 1.33);
+    expect(CONTACT_SHARE * 92).toBeCloseTo(64);
+    lighting.dispose();
   });
 
   it('outlines only the hovered body in its team color and replaces a late-arriving model without touching owned materials', () => {

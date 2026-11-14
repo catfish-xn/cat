@@ -2286,6 +2286,14 @@
       "currentSha256": "853f5c8113ae1b6be5cd9062104beb2700e2838d700a3b02c9d68277a5cc1f58",
       "firstDifferentByte": 1280
     },
+    "tests/rendering3d-champion-arena-scale.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3541,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "54a755de00653c83facef62b9423ecbd98f3861b21814b6c5c5a0e76fccae603",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-champion-lighting.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2440,9 +2448,9 @@
     "tests/rendering3d-presentation-lighting.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10408,
+      "currentBytes": 10965,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0514166e5b762def1ef0e4087189269b55c2dfefc5ea0136291086f95abe002e",
+      "currentSha256": "245bc3855cb2cfb551893ea42ee665deb5f4d51618159fc7bef8ca4a8380877d",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-pvp-portal.test.ts": {
@@ -3738,9 +3746,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 20900,
+      "currentBytes": 21305,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "08673b2dc93bc7b4b19bb71bc46122f7dfd1dd5bd9789fa52db7cb184146ee55",
+      "currentSha256": "59c851aeb73a60f6b062e7314975cce55017f16af6c7ad1454290cd4f7ae82a8",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
