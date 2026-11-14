@@ -36,19 +36,25 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
-/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
-export const HOLD_FREE_TAILS = 4;
 /**
- * A long run (LONG_RUN_SECONDS or more) gives up its system slot once it has played LONG_RUN_OPEN seconds, and keeps playing
- * to its end: a skill body or a long area would otherwise hold a slot for its whole 3–10 s while hits that come after it
- * wait out their window and are dropped (11-14 audit: LeBlanc's 5 s marks, Mordekaiser's 10 s body and Kog'Maw's 3 s
- * bodies held the slots at most of the remaining critical drops after the cap went to 20). LONG_RUN_OPEN is the 1 s a skill
- * body also plays before a hit may evict it (effect-budget.ts BODY_YIELD_SECONDS). At most LONG_BACKGROUND_MAX of them, the
- * earliest started, are out of the count at once; any more hold a slot as before. They still hold their particles in the
- * budget and still count toward LTK_PASS_DEGRADE_AT. Node audit (real combats through the batch2 bridge, cap 20, budget
- * 2250, seeds 42/7/101): critical drops 11 → 5 in an 8 v 8 and 34 → 11 in a late-game 9 v 9, with no long run lost.
+ * Runs that keep drawing without taking a system slot, at most OFF_SLOT_MAX of them at once (the earliest started); any
+ * more hold a slot as before. All of them still hold their particles in the budget. Three kinds share this one room:
+ * - a hold tail playing out (cue-overrides.ts PlayOut.hold; Fable 11-13: Gangplank's scorch held a slot through its 2.3 s
+ *   end and kept others' hits out at cap 20);
+ * - a long run (LONG_RUN_SECONDS or more) once it has played LONG_RUN_OPEN seconds: it keeps playing to its end, where it
+ *   would otherwise hold a slot for its whole 3–10 s (11-14 audit: LeBlanc's 5 s marks, Mordekaiser's 10 s body, Kog'Maw's
+ *   3 s bodies). LONG_RUN_OPEN is the 1 s a skill body also plays before a hit may evict it (BODY_YIELD_SECONDS);
+ * - every row but the first of a fan-out (Running.fan: one cast's cue on several targets, a row each), so one cast's hits
+ *   take one slot (11-14 audit: every critical drop left in a 3-star Caitlyn fight was Nami's second hit on each target,
+ *   behind Ekko's and Heimerdinger's hits on five targets each).
+ * One shared room so the runs drawn at once stay bounded: MAX_LTK_SYSTEMS + OFF_SLOT_MAX, plus the second runs of together
+ * groups. Long runs and fan-out rows still count toward LTK_PASS_DEGRADE_AT; hold tails do not, as before. Node audit
+ * (real combats through the batch2 bridge, cap 20, budget 2250, seeds 42/7/101; long runs out with 8, fan-out savings
+ * with 8): critical starts 98.2 → 100% in an 8 v 8, 96.3 → 99.7% in a late-game 9 v 9 and 87.3 → 100% with three
+ * 3-star Caitlyns. 12 until frame time on a GPU says otherwise.
  */
-export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1, LONG_BACKGROUND_MAX = 8;
+export const OFF_SLOT_MAX = 12;
+export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -165,7 +171,9 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** One side of a projectile split by beamSplit: its flight, or its beams pinned between caster and target. */
   part?: 'flight' | 'beam';
   /** The clock of the first frame it was put back to wait for room. */
-  waitingSince?: number }
+  waitingSince?: number;
+  /** One play() call's cue on several targets, a row each (`${play}:${system}`): its rows after the first take no slot (OFF_SLOT_MAX). */
+  fan?: string }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
   bodyGone?: boolean;
@@ -185,7 +193,9 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
    */
   holdTarget?: () => void;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
-  together?: string }
+  together?: string;
+  /** Its row's Waiting.fan. */
+  fan?: string }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
 const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /**
@@ -364,23 +374,23 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
    * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
    */
-  // Hold tails (cue-overrides.ts PlayOut.hold) playing out take no system slot, the earliest HOLD_FREE_TAILS of them; their
-  // particles still count against the budget (Fable 11-13: Gangplank's scorch held a slot through its 2.3 s end and kept
-  // others' hits out at cap 20).
-  const freeTails = () => {
-    let free: Running[] | undefined;
-    for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
-    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+  // The runs that take no system slot (OFF_SLOT_MAX), each with its kind: hold tails, long runs past their opening, and the
+  // rows of a fan-out after its first.
+  const offSlot = () => {
+    let first: Map<string, Running> | undefined;
+    for (const run of running) if (run.fan) { const at = (first ??= new Map()).get(run.fan); if (!at || run.started < at.started) first.set(run.fan, run); }
+    let off: { run: Running; kind: 'tail' | 'long' | 'fan' }[] | undefined;
+    for (const run of running) {
+      if (run.ending && run.playOutEnd?.hold) (off ??= []).push({ run, kind: 'tail' });
+      else if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (off ??= []).push({ run, kind: 'long' });
+      else if (run.fan && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
+    }
+    return off ? new Map(off.sort((a, b) => a.run.started - b.run.started).slice(0, OFF_SLOT_MAX).map(({ run, kind }) => [run, kind])) : null;
   };
-  // Long runs past their opening that take no system slot (LONG_RUN_SECONDS), the earliest LONG_BACKGROUND_MAX of them.
-  const backgroundRuns = () => {
-    let long: Running[] | undefined;
-    for (const run of running) if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (long ??= []).push(run);
-    return long ? new Set(long.sort((a, b) => a.started - b.started).slice(0, LONG_BACKGROUND_MAX)) : null;
-  };
-  /** `passes`: the count for LTK_PASS_DEGRADE_AT, which still includes the long runs in the background. */
-  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), free = freeTails(), back = passes ? null : backgroundRuns();
-    for (const run of running) { if (free?.has(run) || back?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /** `passes`: the count for LTK_PASS_DEGRADE_AT, where only hold tails stay out (long runs and fan-out rows count). */
+  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), off = offSlot();
+    for (const run of running) { const kind = off?.get(run); if (kind && (!passes || kind === 'tail')) continue;
+      if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
@@ -595,7 +605,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
+      // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
+      // (OFF_SLOT_MAX).
+      const fanned = new Map<string, Set<string>>();
+      for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
       for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+        const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
           // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
@@ -605,7 +621,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
-          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
+          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
       return true;
     },
@@ -752,7 +768,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const own = reserveOfRow(row), need = own + partners.reduce((sum, other) => sum + reserveOfRow(other), 0);
         // A together group takes one slot: none more once one of its rows runs. The particle budget still counts every row.
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
-        const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
+        // A row of a fan-out whose cast already runs takes no slot of its own while the off-slot room has space (OFF_SLOT_MAX).
+        const slot = (row.together && [...running].some(run => run.together === row.together))
+          || (row.fan && [...running].some(run => run.fan === row.fan) && (offSlot()?.size ?? 0) < OFF_SLOT_MAX) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
         const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
@@ -860,7 +878,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);

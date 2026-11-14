@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { LONG_RUN_SECONDS, createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { LONG_RUN_SECONDS, createLtkRuntime, OFF_SLOT_MAX, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -128,18 +128,21 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     runtime.dispose();
   });
 
-  it('only HOLD_FREE_TAILS hold tails at once take no slot: one more holds a slot as before', async () => {
-    // HOLD_FREE_TAILS + 1 listed flights beside long runs fill every slot; once they all play out, HOLD_FREE_TAILS of them
-    // free their slots and the last keeps its own, so exactly HOLD_FREE_TAILS flourishes due then get in, not one more.
-    const tails = HOLD_FREE_TAILS + 1, flourish = { system: LATE, event: 'cast-start' as const, delay: 1, duration: 0.5, bone: 'ground' };
-    // Fillers stay under LONG_RUN_SECONDS so they keep their slots past LONG_RUN_OPEN.
-    const filler = Array.from({ length: MAX_LTK_SYSTEMS - tails }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: LONG_RUN_SECONDS - 0.5, bone: 'ground' }));
-    const { runtime, scene, advance } = await setup([...Array.from({ length: tails }, () => flight(LISTED)), ...Array.from({ length: tails }, () => flourish)], filler);
+  it('hold tails share the OFF_SLOT_MAX room with long runs: the latest one past it holds a slot as before', async () => {
+    // OFF_SLOT_MAX − 1 long runs (started first) and two listed flights beside short runs fill every slot. Once the long runs
+    // are past their opening and both flights play out, OFF_SLOT_MAX of them leave the count: the long runs and the first
+    // tail. The second tail keeps its slot.
+    const tails = 2, long = OFF_SLOT_MAX - 1;
+    const filler = [...Array.from({ length: long }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: LONG_RUN_SECONDS + 0.5, bone: 'ground' })),
+      ...Array.from({ length: MAX_LTK_SYSTEMS - tails - long }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: LONG_RUN_SECONDS - 0.5, bone: 'ground' }))];
+    const { runtime, scene, advance } = await setup(Array.from({ length: tails }, () => flight(LISTED)), filler);
     // None plays out on its own here, so each stays through its end.
     for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
     advance(1.1);
     expect(built.filter(fx => fx.object.userData.ltkSystem === LISTED && fx.object.parent === scene)).toHaveLength(tails);
-    expect(built.filter(fx => fx.object.userData.ltkSystem === LATE && fx.object.parent === scene)).toHaveLength(HOLD_FREE_TAILS);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.slots).toBe(MAX_LTK_SYSTEMS - OFF_SLOT_MAX);
     runtime.dispose();
   });
 
