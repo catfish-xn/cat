@@ -79,6 +79,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
       travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
     { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
   ],
+  // Vladimir (batch1-events.ts heal plans): his heal ring (Q_heal_tar) plays on him when his ability heals him, never on
+  // his cast's enemies. His heal missile (Q_heal_mis) is left out until the original's direction is confirmed.
+  'vladimir-heal': [
+    { system: '28c6427d', action: 'passive', event: 'hit', delay: 1, duration: 1.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
@@ -192,12 +197,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '5938e29d', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Blood strands aim at each enemy; the red burst is on them, not on Vladimir's hand.
+  // Attacks as exported. His cast keeps only its on-target hit; his heal ring plays from his heal events ('vladimir-heal').
+  // An empty cast list would not do: the cast would fall back to the host's old effects (manifest actionEffects), which
+  // are this same heal missile and heal ring.
   vladimir: [
     { system: 'ffa688fa', action: 'attack', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 0.3, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
-    { system: '45b69079', action: 'cast', event: 'projectile', delay: 0.45, duration: 0.95, travelSeconds: 0.35, bone: 'R_Buffbone_Glb_Hand_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', targetLimit: 3 },
-    { system: '28c6427d', action: 'cast', event: 'hit', delay: 0.95, duration: 0.9, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // His cast's on-target hit: the blood spikes his Q strikes enemies with (TFT13_Vladimir_Base_Q_tar), at the cast's damage
+    // (same tick: no delay). The export never cued it; its duration is a fit.
+    { system: 'ad4b639e', action: 'cast', event: 'hit', delay: 0, duration: 0.9, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // The purple disc plays once on the cast as well as on each empowered swing.
   nocturne: [
