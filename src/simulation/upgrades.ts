@@ -1,3 +1,4 @@
+import { usableBenchSlots } from './bench-capacity';
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { isBatch3Dummy } from './content/batch3-summons';
 import { isAnvil } from './content/anvils';
@@ -38,13 +39,13 @@ function validateRoster(preparation: GameState): void {
 }
 
 /** The same retention and recursive triples for purchases and post-combat merges. */
-function mergeTriples(input: Candidate[], definitionId: string, benchOnly = false): { units: Candidate[]; events: UnitUpgradedEvent[] } {
+function mergeTriples(input: Candidate[], definitionId: string, benchOnly = false, excluded: readonly string[] = []): { units: Candidate[]; events: UnitUpgradedEvent[] } {
   if(isAnvil(definitionId)||isBatch3Dummy(definitionId))return {units:input,events:[]};
   let units = input;
   const events: UnitUpgradedEvent[] = [];
   for (const fromStar of [1, 2] as const) {
     while (true) {
-      const group = units.filter(unit => unit.team === 'player' && unit.definitionId === definitionId && unit.starLevel === fromStar && (!benchOnly || unit.location?.kind !== 'board')).sort(compareRetention);
+      const group = units.filter(unit => unit.team === 'player' && !excluded.includes(unit.id) && unit.definitionId === definitionId && unit.starLevel === fromStar && (!benchOnly || unit.location?.kind !== 'board')).sort(compareRetention);
       if (group.length < 3) break;
       const [survivor, ...consumed] = group.slice(0, 3);
       // At most one unplaced candidate exists, so every triple has a placed survivor.
@@ -66,6 +67,7 @@ export function planPurchase(preparation: GameState, definitionId: string, candi
   if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId) || UNIT_DEFINITIONS[definitionId].unitKind === 'neutral') throw new RangeError(`Unknown unit definition: ${definitionId}`);
   validateRoster(preparation);
   if (preparation.units.some(unit => unit.id === candidateId)) throw new Error(`Duplicate unit ID: ${candidateId}`);
+  if (preparation.overflowUnitIds?.length) return {ok:false,reason:'bench-full'};
   let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel, location: null }];
   let events: UnitUpgradedEvent[] = [];
   ({ units, events } = mergeTriples(units, definitionId, benchOnly));
@@ -73,8 +75,8 @@ export function planPurchase(preparation: GameState, definitionId: string, candi
   if (pending) {
     const occupied = new Set(units.flatMap(unit => unit.location?.kind === 'bench' ? [unit.location.slot] : []));
     let slot = 0;
-    while (slot < preparation.benchSize && occupied.has(slot)) slot++;
-    if (slot === preparation.benchSize) return { ok: false, reason: 'bench-full' };
+    while (slot < usableBenchSlots(preparation) && occupied.has(slot)) slot++;
+    if (slot === usableBenchSlots(preparation)) return { ok: false, reason: 'bench-full' };
     units = units.map(unit => unit.id === pending.id ? { ...unit, location: { kind: 'bench', slot } } : unit);
   }
   const next: GameState = { ...preparation, units: units.map(unit => {
@@ -92,7 +94,7 @@ export function planDeferredUpgrades(preparation: GameState): { preparation: Gam
   const events: UnitUpgradedEvent[] = [];
   const definitions = [...new Set(units.filter(unit => unit.team === 'player').map(unit => unit.definitionId))].sort();
   for (const definitionId of definitions) {
-    const merged = mergeTriples(units, definitionId);
+    const merged = mergeTriples(units, definitionId, false, preparation.overflowUnitIds);
     units = merged.units; events.push(...merged.events);
   }
   if (!events.length) return { preparation, events };

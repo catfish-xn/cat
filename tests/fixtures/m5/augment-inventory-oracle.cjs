@@ -8,6 +8,10 @@ exports.pandoraPick = function(seed, seat, choice, round, item, sortedPool) {
 };
 
 const pools=require('../../augment-reward-pools-oracle-data.cjs').pools;
+/** Independent Pandora class pools (user approved 2026-11-02): same-class reroll; Tactician, Radiant and set items stay. */
+exports.pandoraPool=function(definitionId){
+ return [pools.component,['frying-pan','spatula'],pools.completed,pools.emblem,pools.artifact,pools.support].find(pool=>pool.includes(definitionId))??null;
+};
 /** Independent B5-13 obligations from original acquisition receipts, never from an anvil receipt. */
 exports.buffetPlan=function(s){
  const owner=s.augments.find(a=>a.definitionId==='component-buffet'),consumed=new Set(),gifts=new Map();
@@ -35,7 +39,7 @@ exports.validatePandoraEntry=function(before,after,assert){
  const owner=before.augments.find(a=>a.definitionId==='pandoras-items');if(!owner||after.round===before.round)return;
  for(const item of before.items){
   if(item.location.kind!=='inventory')continue;
-  const pool=pools.component.includes(item.definitionId)?pools.component:pools.completed.includes(item.definitionId)?pools.completed:null;
+  const pool=exports.pandoraPool(item.definitionId);
   const expected=pool?exports.pandoraPick(before.seed,before.multiplayer?.seatId??'solo',owner.choiceId,after.round,item.id,pool):item.definitionId;
   assert.equal(after.items.find(i=>i.id===item.id)?.definitionId,expected,'independent Pandora round entry');
  }

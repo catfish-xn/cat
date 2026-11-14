@@ -7,8 +7,9 @@ import { createRequire } from 'node:module';
 import { safeInputPath, safeOutputPath, writeOutputFile, withinRoot } from './safe-path.mjs';
 import { contracts, unitDefinitions } from './runtime.mjs';
 import { parseBin } from './bin.mjs';
-import { skinBindings, animationClips, selectAnimations, canonicalAsset } from './bin-bindings.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset, sourceName, clipRangeFor } from './bin-bindings.mjs';
 import { inspectSkn } from './inspect-source.mjs';
+import { decodeAnm } from './animation.mjs';
 import { makeModel, validateModel } from './model.mjs';
 import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
@@ -36,6 +37,106 @@ export function makeManifest(models, effects, validate, actionEffects) {
     const manifest = { schemaVersion: 1, models, effects, ...(actionEffects === undefined ? {} : { actionEffects }) };
     validate(manifest);
     return manifest;
+}
+export function castReferencedClips(cast, castSequence, castVariants) {
+    const names = new Set();
+    const add = v => {
+        if (typeof v === 'string' && v) names.add(sourceName(v));
+        else if (Array.isArray(v)) for (const item of v) if (typeof item === 'string' && item) names.add(sourceName(item));
+    };
+    const addSequence = seq => {
+        if (!seq || typeof seq !== 'object') return;
+        for (const stage of ['in', 'hold', 'main', 'out']) add(seq[stage]);
+    };
+    add(cast);
+    addSequence(castSequence);
+    if (castVariants && typeof castVariants === 'object') {
+        for (const key of ['star3', 'hero', 'front', 'back']) addSequence(castVariants[key]);
+        for (const entry of Array.isArray(castVariants.rotate) ? castVariants.rotate : []) {
+            if (typeof entry === 'string') add(entry);
+            else addSequence(entry);
+        }
+        if (castVariants.branch && typeof castVariants.branch === 'object')
+            for (const seq of Object.values(castVariants.branch)) addSequence(seq);
+    }
+    return names;
+}
+export function resolveUnitFormAnimations(animation, clips, config = {}, hasSource = () => true) {
+    const formAnimations = {}, formAnimationSkips = [];
+    if (!config?.formAnimations || typeof config.formAnimations !== 'object') {
+        return { formAnimations, formAnimationSkips };
+    }
+    const atomic = clips.filter(c => c.atomic && c.path);
+    for (const form of ['front', 'back']) {
+        const group = config.formAnimations[form];
+        if (!group || typeof group !== 'object') continue;
+        for (const action of ['idle', 'move', 'attack']) {
+            const target = group[action];
+            if (typeof target !== 'string' || !target.trim()) continue;
+            const wanted = sourceName(target);
+            const candidates = atomic.filter(c => sourceName(c.path) === wanted);
+            const paths = [...new Map(candidates.map(c => [canonicalAsset(c.path), c.path])).values()];
+            if (paths.length !== 1) {
+                formAnimationSkips.push({
+                    form,
+                    action,
+                    requested: target,
+                    reason: paths.length ? 'ambiguous-form-animation' : 'missing-form-animation',
+                });
+                continue;
+            }
+            const path = paths[0], name = sourceName(path);
+            if (!hasSource(path)) {
+                formAnimationSkips.push({
+                    form,
+                    action,
+                    requested: target,
+                    reason: 'missing-form-animation-source',
+                });
+                continue;
+            }
+            if (animation.files[name] && canonicalAsset(animation.files[name]) !== canonicalAsset(path)) {
+                throw new Error('animation-name-collision');
+            }
+            animation.files[name] = path;
+            (formAnimations[form] ??= {})[action] = name;
+        }
+    }
+    return { formAnimations, formAnimationSkips };
+}
+export function resolveUnitClipRanges(animation, clips, animationSources = [], config = {}) {
+    const clipRanges = {}, clipRangeSkips = [];
+    const castClips = castReferencedClips(animation.mapped?.cast, config.castSequence, config.castVariants);
+    for (const [name] of Object.entries(animation.files)) {
+        const graphHashes = Object.values(animation.decisions ?? {})
+            .filter(d => d.path && sourceName(d.path) === name)
+            .flatMap(d => d.graphHashes ?? []);
+        const range = clipRangeFor(clips, name, graphHashes.length ? graphHashes : undefined);
+        if (!range) continue;
+        if (!castClips.has(sourceName(name))) {
+            clipRangeSkips.push({
+                name,
+                reason: 'non-cast-action',
+                ...(range.candidates ? { candidates: range.candidates } : { startFrame: range.startFrame, endFrame: range.endFrame }),
+            });
+            continue;
+        }
+        if (range.skip) {
+            clipRangeSkips.push({ name, reason: range.skip, candidates: range.candidates });
+            continue;
+        }
+        let decoded = null;
+        try { decoded = decodeAnm(animationSources.find(s => s.name === name)?.bytes); } catch {}
+        const fps = decoded?.fps > 0 ? decoded.fps : 30;
+        if (range.endFrame === null && !(decoded?.duration > 0)) {
+            clipRangeSkips.push({ name, reason: 'missing-anm-duration', startFrame: range.startFrame, endFrame: range.endFrame });
+            continue;
+        }
+        const start = Math.max(0, (range.startFrame ?? 0) / fps);
+        const end = range.endFrame !== null ? range.endFrame / fps : decoded.duration;
+        if (start < end) clipRanges[name] = [start, end];
+    }
+    return { clipRanges, clipRangeSkips };
 }
 export async function writeParticleEffects(id, converted, patterns, { write, remove }, effectIds = new Set()) {
     const effects = {}, systems = [], actionEffects = Object.fromEntries(Object.keys(patterns).map(action => [action, []]));
@@ -157,7 +258,8 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const graphEntries = graphDocs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
         if (graphEntries.length !== 1) throw new Error('missing-or-ambiguous-animation-graph');
         const clips = animationClips([{ entries: graphEntries, patches: [] }]), animation = selectAnimations(clips, map.$animationRules, config.animations);
-        resolvedUnits[id] = { binding, animation, clips, meshBytes };
+        const { formAnimations, formAnimationSkips } = resolveUnitFormAnimations(animation, clips, config, path => Boolean(sourcePath(path)));
+        resolvedUnits[id] = { binding, animation, clips, meshBytes, formAnimations, formAnimationSkips };
         const input = await loadParticleBins([`data/characters/${config.sourceName}/skins/skin0.bin`,
             ...[`data/characters/${config.sourceName}/skins/root.bin`, `characters/${config.sourceName}`].filter(p => recordMap.has(p))], sourcePath, readRaw);
         particleInputs[id] = { paths: input.paths, unresolved: input.unresolved, bytes: input.bytes };
@@ -216,7 +318,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     }
     const models = {}, effects = {}, unitReports = {}, actionEffects = {}, effectIds = new Set();
     for (const id of selected) {
-        const config = map[id], { binding, animation, clips, meshBytes } = resolvedUnits[id], animationSources = [];
+        const config = map[id], { binding, animation, clips, meshBytes, formAnimations, formAnimationSkips } = resolvedUnits[id], animationSources = [];
         for (const [name, path] of Object.entries(animation.files)) {
             const raw = sourcePath(path);
             if (!raw) throw new Error(`missing-animation-source:${path}`);
@@ -234,7 +336,13 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        models[id] = { path, animations: animation.mapped };
+        const { clipRanges, clipRangeSkips } = resolveUnitClipRanges(animation, clips, animationSources, config);
+        models[id] = {
+            path,
+            animations: animation.mapped,
+            ...(Object.keys(formAnimations).length ? { formAnimations } : {}),
+            ...(Object.keys(clipRanges).length ? { clipRanges } : {}),
+        };
         const meshPaths = new Map(), meshReasons = new Map(), meshBuffers = new Map(), meshReports = [];
         const stack = [particleSources[id]], meshRefs = new Set();
         while (stack.length) {
@@ -267,6 +375,9 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             systemCount: converted.systems.length, emitters: converted.emitters, systems, meshes: meshReports }, textures: textureReports.filter(t => t.status === 'converted').length,
             materialTextureMappings: Object.keys(binding.textures).length,
             bindings: binding, actionMapping: animation.mapped, actionDecisions: animation.decisions,
+            ...(Object.keys(formAnimations).length ? { formAnimations } : {}),
+            ...(formAnimationSkips.length ? { formAnimationSkips } : {}),
+            clipRangeSkips,
             graphClips: clips.map(c => ({ ...c, hash: c.hash.toString(16) })),
             step2Mapping: Object.keys(config.textures).length ? Object.fromEntries(Object.entries(config.textures).map(([name, path]) => [name, {
                 expected: `${config.base}/${path}`, actual: binding.textures[name] ?? null,

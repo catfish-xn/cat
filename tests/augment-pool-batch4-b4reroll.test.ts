@@ -79,7 +79,11 @@ for(const [id,node] of targets){
  describe(id,()=>{
   let paid:MatchState,text:string;
   it('initializes its public stage route',()=>{
-   const seed=id==='invested-plus'?16:29; // Actual public offers, with no earlier history owner and enough HP.
+   // v26 (D5 3ce71065, PvE loot carryover c684c3ec, 14.24 neutrals): seed 16 no longer offers Invested+ at 3-2 and
+   // seed 29 no longer offers Invested++ at 4-2 within three rerolls; re-searched from 1 with the same fielded route,
+   // gift, credit and restore checks (v25: 16/29).
+   // Nunu's 3 s cast lock (11-11): seed 12 no longer offers Invested++ at 4-2; re-searched from 1 → 90 (89 and 90 pass here; 90 is the first seed that also passes v23-tamper-batch4).
+   const seed=id==='invested-plus'?29:90; // Actual public offers, with no earlier history owner and enough HP.
    routes.set(id,createMatch(seed));
   });
   for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2',...(node==='4-2'?['3-3','3-4','3-5','3-6','3-7','4-1','4-2']:[])])it(`public route ${stop}`,()=>{

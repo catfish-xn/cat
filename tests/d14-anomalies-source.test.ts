@@ -8,7 +8,7 @@ import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import currentBaseline from './v25-online-rules-content-baseline.json';
+import currentBaseline from './v26-neutrals-1424-content-baseline.json';
 import { M8_VERSION } from '../src/simulation/m8/version';
 
 const root='src/simulation/content/source/s13-14.24b/raw/';
@@ -57,5 +57,6 @@ it('retains the two D14 anomalies in the current epoch without overwriting sourc
   expect(ANOMALY_DEFINITIONS['ultimate-hero'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);expect(ANOMALY_DEFINITIONS['into-the-unknown'].effects).toEqual([{kind:'mechanic',mechanic:'d14Anomaly',values:{enabled:1}}]);
   expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);expect(CONTENT_DIGEST).toBe(currentBaseline.contentDigest);expect(M8_VERSION.rulesVersion).toBe(currentBaseline.rulesVersion);
   // Protect existing live source values; this pack never replaces lower-star tables.
-  expect(S13_ABILITY_DATA['singed-ability'].variables.DR).toEqual([0.5,0.5,0.6]);
+  // The D14 pack leaves it alone; the 14.24b notes (b-patch-overrides.json) set Singed's DR to 50/50/55%.
+  expect(S13_ABILITY_DATA['singed-ability'].variables.DR).toEqual([0.5,0.5,0.55]);
 });

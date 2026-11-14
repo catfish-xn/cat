@@ -14,8 +14,9 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, standingFeet, type Envelope } from './model-fit';
-import { legendSpot } from './tabletop';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { updateModelGrounding } from './model-grounding';
+import { farLegendSpot, legendOrbSlots, legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
 type OrbTier = 'gray' | 'blue' | 'gold' | 'prismatic';
@@ -26,6 +27,7 @@ const STAR_SIZE = 12, STAR_GAP = 12;
 
 /** One unit as scouting may show it. */
 export interface ScoutUnit {
+  readonly nonCombat?: true;
   readonly definitionId: string; readonly starLevel: number; readonly effectiveStarLevel?: 4;
   readonly items: readonly string[]; readonly anomaly?: string; readonly summon?: true;
 }
@@ -49,6 +51,7 @@ function unitOf(raw: unknown): ScoutUnit | null {
   const source = raw as Record<string, unknown>, starLevel = int(source.starLevel);
   if (typeof source.definitionId !== 'string' || starLevel === null) return null;
   return { definitionId: source.definitionId, starLevel, items: strings(source.items),
+    ...(source.nonCombat === true ? {nonCombat:true as const}:{}),
     ...(source.effectiveStarLevel === 4 ? { effectiveStarLevel: 4 as const } : {}),
     ...(typeof source.anomaly === 'string' ? { anomaly: source.anomaly } : {}), ...(source.summon === true ? { summon: true as const } : {}) };
 }
@@ -97,6 +100,8 @@ export interface ScoutStageContext {
   readonly overhead: OverheadContext;
   /** Item icon URL (the 2D bundle's) for an item definition id; null when there is none. */
   readonly itemIcon: (id: string) => string | null;
+  /** 2D presentation adapter recognizes both native and equipment-copy effects from public identities. */
+  readonly hasAnomaly?: (native: string | undefined, items: readonly string[]) => boolean;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
 }
 export interface ScoutStage {
@@ -105,6 +110,7 @@ export interface ScoutStage {
   /** The seat to draw on this board layout, or null to stop (everything is released). */
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
   /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
+  away(on: boolean): void;
   walkVisitor(point: { x: number; y: number }): boolean;
   inspectRoot(id: string): Group | undefined;
   descriptionAt(client: { x: number; y: number }, camera: Camera, area: ScreenArea): { target: BoardDescription; box: BoardScreenBox } | undefined;
@@ -141,10 +147,11 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let current: ScoutView | null = null, layoutKey = '';
   const pieces: Piece[] = [], orbs: Mesh[] = [];
   let legend: Piece | null = null, visitor: Piece | null = null;
+  let away = false;
   let roam: { minX: number; maxX: number; minZ: number; maxZ: number; speed: number } | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
-    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel, drawn?: (height: number) => void): Piece => {
+    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel, drawn?: (height: number) => void, starLevel = 1): Piece => {
     const root = new Group(); root.name = 'render3d-scout-piece';
     const body = stand(); root.add(body);
     const piece: Piece = { root, lease: null, mixer: null, state: new UnitActionState(`scout:${key}`), stars: null,
@@ -156,7 +163,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
-        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope) });
+        // A 2- or 3-star unit is drawn larger, as on the board (STAR_BODY_SCALE); its stars and items follow the height.
+        piece.height = fitModel(lease.scene, { height, width, unitScale: unitScale * starBodyScale(starLevel), sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));
@@ -179,7 +187,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.root.getObjectByName('render3d-scout-anomaly')?.position.setY(height + STAR_GAP);
       piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     };
-    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height));
+    const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height),
+      unit.summon ? 1 : unit.effectiveStarLevel ?? unit.starLevel);
     piece.root.userData.inspectId = `scout:${current!.seatId}:${key.startsWith('bench:') ? `bench-${key.slice(6)}` : key.slice(6)}:${unit.definitionId}:${unit.effectiveStarLevel ?? unit.starLevel}`;
     piece.root.position.copy(at); piece.root.rotation.y = Math.PI; // models face +z; the owner's side looks up the board
     if (!unit.summon) {
@@ -187,11 +196,14 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.stars.object.scale.setScalar(STAR_SIZE); piece.stars.object.position.copy(at).setY(ctx.championHeight + STAR_GAP);
       group.add(piece.stars.object);
     }
-    if (unit.anomaly) {
+    if (ctx.hasAnomaly ? ctx.hasAnomaly(unit.anomaly, unit.items) : unit.anomaly) {
       const gem = new Mesh(anomalyGeometry, anomalyMaterial); gem.name = 'render3d-scout-anomaly';
       gem.position.set(STAR_SIZE * 2.2, ctx.championHeight + STAR_GAP, 0); piece.root.add(gem);
     }
-    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined);
+    piece.overhead.set('player', undefined, unit.items.length ? unit.items.map(id => ({ id, icon: ctx.itemIcon(id) })) : undefined, false, false, undefined, unit.nonCombat);
+    // The original star emblem on the bar end replaces the star row when the client atlas has it.
+    if (!unit.summon) piece.overhead.setTier(unit.effectiveStarLevel ?? unit.starLevel);
+    if (piece.stars) piece.stars.object.visible = !piece.overhead.tiered;
     piece.overhead.object.position.copy(at).setY(ctx.championHeight + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     piece.overhead.object.visible = piece.overhead.drawn;
     return piece;
@@ -221,7 +233,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (spot) pieces.push(unitPiece(unit, `bench:${unit.slot}`, new Vector3(spot.x, 0, spot.y)));
     }
     // The owner's 河灵 where mine stands, facing the board; its orbs in two columns beside it, by tier only.
-    const spot = legendSpot(frame), legendHeight = ctx.championHeight * 0.5;
+    const spot = legendSpot(frame), legendHeight = ctx.championHeight * LEGEND_HEIGHT_RATIO;
     const loadModel = ctx.loadModel;
     const legendPiece = (role: 'legend' | 'visitor', code: string | null, at: Vector3) => {
       const model = ctx.legendModel(code);
@@ -230,6 +242,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
         return fit(stand, legendHeight);
       }, loadModel ? id => loadLegendLease(loadModel, id) : null);
+      piece.root.visible = !away;
       piece.root.position.copy(at);
       piece.root.rotation.y = Math.atan2(center.x - at.x, center.z - at.z);
       return piece;
@@ -238,12 +251,13 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     const center = new Vector3(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, frame.origin.y + step * (frame.rows - 1) / 2);
     legend = legendPiece('legend', view.legend, spot);
     // Mine came along: the visitor's corner, across the board from the owner's (where a PvP opponent's legend stands).
-    visitor = legendPiece('visitor', ctx.myLegend(), new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y));
+    visitor = legendPiece('visitor', ctx.myLegend(), farLegendSpot(frame));
     // Where it may walk: the board and its rim out to both legends' corners (as on my own board).
-    roam = { minX: frame.origin.x - width * 2, maxX: spot.x + width * 0.5, minZ: frame.origin.y - width, maxZ: spot.z + width, speed: VISITOR_WIDTHS * width };
+    roam = { minX: spot.x - width * 1.5, maxX: frame.origin.x + width * (frame.columns - 0.5) + width * 2, minZ: frame.origin.y - width, maxZ: spot.z + width, speed: VISITOR_WIDTHS * width };
+    const slots = legendOrbSlots(frame, MAX_ORBS);
     view.orbs.tiers.slice(0, MAX_ORBS).forEach((tier, index) => {
       const orb = new Mesh(orbGeometry, orbMaterial[tier]); orb.name = `render3d-scout-orb-${tier}`;
-      orb.position.set(spot.x + (index % 2 ? 0.42 : -0.42) * width, ORB_FLOAT, spot.z - (1 + Math.floor(index / 2)) * step * 0.9);
+      orb.position.copy(slots[index]!).setY(ORB_FLOAT);
       group.add(orb); orbs.push(orb);
     });
   };
@@ -253,6 +267,10 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   return {
     group,
     get active() { return current !== null; },
+    away(on) {
+      away = on;
+      for (const piece of [legend, visitor]) if (piece) { piece.root.visible = !on; if (on) piece.path = null; }
+    },
     show(scout, frame) {
       if (!scout || !frame) { if (current) { clear(); current = null; layoutKey = ''; group.visible = false; } return; }
       const view = readScout(scout);
@@ -298,11 +316,12 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
         const base = piece.state.update(seconds), walking = !!piece.path && (base.state === 'idle' || base.state === 'move');
         const output = walking || piece === visitor ? { ...base, ...(walking ? { state: 'move' as const, loop: true } : {}), revision: base.revision * 2 + (walking ? 1 : 0) } : base;
         if (piece.mixer) { piece.mixer.apply(output); piece.mixer.update(seconds); }
+        if (piece.lease) updateModelGrounding(piece.lease.scene, output.state === 'idle', seconds);
       }
       orbs.forEach((orb, index) => { orb.position.y = ORB_FLOAT + Math.sin(clock * 2 + index) * 2; });
     },
     walkVisitor(point) {
-      if (!current || !visitor || !roam) return false;
+      if (away || !current || !visitor || !roam) return false;
       const to = new Vector3(Math.min(roam.maxX, Math.max(roam.minX, point.x)), 0, Math.min(roam.maxZ, Math.max(roam.minZ, point.y)));
       const from = visitor.root.position.clone().setY(0);
       if (from.distanceToSquared(to) > 1) visitor.root.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);

@@ -251,7 +251,13 @@ function rewardPlan(s,env){
   }
  }
  const explosion=lootExplosionPlan(s);
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
+ const oeGifts=[];
+ for(const a of s.augments.filter(x=>x.definitionId==='over-encumbered')){
+  const stage=env.ROUNDS[a.acquiredRound-1].stage+1;
+  const due=s.roundResults.find(r=>{const row=env.ROUNDS[r.round-1];return row.stage===stage&&row.sub===7;});
+  if(due&&due.hpAfter>0)oeGifts.push(...expand(s,{...a,acquiredRound:due.round,choiceId:JSON.stringify([a.choiceId,'over-encumbered-stage',stage])},[Q('component',3)],env));
+ }
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...oeGifts,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
 }
 // P-B5-69 (2026-10-27): independent integer weights and reward mapping, not production receipts.
 function lootExplosionPlan(s) {
@@ -428,7 +434,8 @@ function validateRewardsCore(before,after,command,events,base){
  if(entry)xpGain=base.entryXp(before);
  if(select){xpGain=({'silver-spoon':10,epoch:6,'epoch-plus':8,'level-up':12,'slammin-plus':10})[command.definitionId]??0;
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
- const progression=base.xp(before.level,before.xp,xpGain);
+ const xpCap=s=>s.augments.some(a=>a.definitionId==='max-cap')?7:10;
+ const progression=base.xp(before.level,before.xp,xpGain,xpCap(select?{...before,augments}:before));
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
  if(pvpSettlement){
   const r=after.roundResults.at(-1);

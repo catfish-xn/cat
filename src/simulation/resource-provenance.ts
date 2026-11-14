@@ -32,12 +32,14 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | { readonly kind: 'restart-mission-completed'; readonly choiceId: string }
   | import('./augment-history-types').AugmentItemTransform
   | { readonly kind: 'unit-transformed'; readonly choiceId: string; readonly unitId: string; readonly from: string; readonly to: string; readonly starLevel: StarLevel }
   | { readonly kind: 'augment-transform-completed'; readonly choiceId: string }
   | {readonly kind:'dual-purpose-selected';readonly choiceId:string;readonly level:number;readonly xp:number}
   | {readonly kind:'dual-purpose-xp-purchased';readonly levelBefore:number;readonly xpBefore:number;readonly generation:number;readonly settled:boolean}
   | {readonly kind:'form-swapper-selected';readonly choiceId:string}
+  | {readonly kind:'anomaly-selected';readonly choiceId:string;readonly unitId:string}
   | {readonly kind:'d14-selected';readonly choiceId:string;readonly unitId:string;readonly heldItems:readonly import('./strategy-types').ItemInstance[]}
   | {readonly kind:'d14-returned';readonly choiceId:string;readonly unitId:string;readonly settledOrdinal:number}
   | {readonly kind:'anger-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
@@ -50,7 +52,7 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
   /** Batch 3: a training dummy retired by its augment (Support Mining); the grant ledger authenticates receiptId. */
-  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:1|2|3 }
+  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:StarLevel }
   /** Batch 3: one free shop reroll spent at this shop generation; the free-reroll ledger must count exactly these. */
   | { readonly kind: 'free-reroll'; readonly generation:number }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
@@ -69,6 +71,9 @@ export interface ResourceProvenance {
 export interface ProvenanceUnit { readonly id: string; readonly definitionId: string; readonly starLevel: StarLevel }
 export interface ProvenanceItem { readonly id: string; readonly definitionId: string }
 export interface FoldedResourceProvenance {
+  readonly lastAnomalyBinding: import('./strategy-types').AnomalyBinding | null;
+  readonly anomalySelection: import('./strategy-types').AnomalySelection | null;
+  readonly anomalyBinding: import('./strategy-types').AnomalyBinding | null;
   readonly units: readonly ProvenanceUnit[];
   readonly items: readonly ProvenanceItem[];
   readonly persistentGrowth: readonly PersistentGrowth[];
@@ -81,6 +86,8 @@ export interface ProvenanceCombatSettlement {
 export interface ResourceProvenanceContext {
   /** P-B5-59: authenticated Pilfer copies arrive at the next natural round, including supply. */
   readonly pilferRewards?: readonly import('./augment-gift-plan').AugmentGift[];
+  /** D2: authenticated BRB completed-item anvils may mature on a supply entry. */
+  readonly brbRewards?: readonly import('./augment-gift-plan').AugmentGift[];
   readonly batch5Inventory?:InventoryPlan;
   readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
   readonly augmentHistory?: import('./augment-history-types').AugmentHistory;

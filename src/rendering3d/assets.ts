@@ -2,6 +2,8 @@ import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata } from './contracts';
+import { holdRootInPlace, trimClip } from './clip-range';
+import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
 export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
 export interface ModelLease extends ModelTemplate, CastMetadata {
@@ -81,12 +83,48 @@ export class ModelCache {
     if (this.closed) throw new Error('model-cache-disposed');
     let entry = this.entries.get(id);
     if (!entry) {
+      const definition = Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id] : undefined;
       const created: Entry = { refs: 0, retired: false, placeholder: false, promise: Promise.resolve(undefined as never) };
       created.promise = Promise.resolve().then(() => {
-        const definition = Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id] : undefined;
         if (!definition) throw new Error('unknown-model');
         return this.read(assetUrl(this.root, definition.path));
-      }).catch(() => { created.placeholder = true; return placeholder(); }).then(model => { created.model = model; return model; });
+      }).catch(() => { created.placeholder = true; return placeholder(); }).then(model => {
+        const ranges = definition?.clipRanges;
+        if (ranges && model.animations.length) {
+          model = {
+            ...model,
+            animations: model.animations.map(clip => {
+              const range = Object.hasOwn(ranges, clip.name) ? ranges[clip.name] : undefined;
+              return range ? trimClip(clip, range[0], range[1]) : clip;
+            }),
+          };
+        }
+        const inPlace = Object.hasOwn(IN_PLACE_CLIPS, id) ? IN_PLACE_CLIPS[id] : undefined;
+        const root = inPlace && model.animations.length ? model.scene.getObjectByName(ROOT_BONE) : undefined;
+        if (inPlace && root) {
+          // Held where the unit stands: the idle clip's first root key (the blend in and out then has no step), else the bind pose.
+          const idle = model.animations.find(clip => clip.name === definition?.animations?.idle)?.tracks.find(track => track.name === `${ROOT_BONE}.position`);
+          const rest = idle && idle.values.length >= 3 ? [idle.values[0], idle.values[1], idle.values[2]] as const : [root.position.x, root.position.y, root.position.z] as const;
+          model = { ...model, animations: model.animations.map(clip => inPlace.includes(clip.name) ? holdRootInPlace(clip, ROOT_BONE, rest) : clip) };
+        }
+        const segments = definition?.clipSegments;
+        if (segments && model.animations.length) {
+          const animations = [...model.animations];
+          const names = new Set(animations.map(clip => clip.name));
+          for (const [alias, [sourceName, start, end]] of Object.entries(segments)) {
+            if (names.has(alias)) continue;
+            const source = model.animations.find(clip => clip.name === sourceName);
+            if (!source) continue;
+            const trimmed = trimClip(source, start, end);
+            trimmed.name = alias;
+            animations.push(trimmed);
+            names.add(alias);
+          }
+          model = { ...model, animations };
+        }
+        created.model = model;
+        return model;
+      });
       entry = created;
       this.entries.set(id, entry);
     }
@@ -97,6 +135,9 @@ export class ModelCache {
     let released = false;
     return { scene, animations: model.animations, placeholder: current.placeholder,
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
+      formAnimations: this.manifest.models[id]?.formAnimations,
+      attackSequence: this.manifest.models[id]?.attackSequence,
+      attackRelease: this.manifest.models[id]?.attackRelease,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

@@ -1,0 +1,17 @@
+# #619 re-record (11-12): Leona, Kog'Maw, Nocturne (batch1 casts dropped as replayed events), Jinx (phase 1 cues), Silco (warm residue).
+# Needs tools at or after 0cd44bf0: the recorded cast starts a fresh combat (real always; Silco on dummies with --fresh 1).
+v-capture.cjs jinx w-jinx-after --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 10fede7e --column after --snapshot c1333710ad8e
+v-capture.cjs jinx w-jinx-off --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 10fede7e --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs kogmaw w-kogmaw-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9f805f6e --column after --snapshot c1333710ad8e
+v-capture.cjs kogmaw w-kogmaw-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9f805f6e --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs leona w-leona-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 8d9a4ccc --column after --snapshot c1333710ad8e
+v-capture.cjs leona w-leona-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 8d9a4ccc --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs nocturne w-nocturne-after --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 97366927 --column after --snapshot c1333710ad8e
+v-capture.cjs nocturne w-nocturne-off --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 97366927 --column off --snapshot c1333710ad8e --attached off
+v-capture.cjs silco w-silco-after --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column after --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-off --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column off --snapshot c1333710ad8e --attached off
+# Probe lines (11-12 Fable's three questions: Jayce dark shell, Smeech magenta first frame, Ambessa after ~ off): same jobs
+# with --probe attached; attached.json holds every overlay drawn per frame (tint, blend, textures loaded). No sheets.
+v-capture.cjs ambessa w-ambessa-probe --real 1 --star 3 --target garen --nfoes 1 --foestar 2 --dist 3 --settle 3000 --systems c07aa972 --column after --snapshot c1333710ad8e --probe attached
+v-capture.cjs smeech w-smeech-probe --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 5cde9f59,17b8eb5c --column after --snapshot c1333710ad8e --probe attached
+v-capture.cjs jayce w-jayce-probe --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b --column after --snapshot c1333710ad8e --probe attached

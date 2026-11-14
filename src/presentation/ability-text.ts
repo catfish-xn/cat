@@ -5,7 +5,7 @@
  * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note. The player sees the
  * 14.24 zh_cn client name and tooltip (`ABILITY_ZH`, same tokens as the English content text) where the client has one.
  */
-import { abilityDisplayName, abilityDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
+import { abilityDisplayName, abilityDisplayValues, glovesOffDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { readTooltipText, tooltipTextPlaceholder } from './tooltip-text-loader';
@@ -59,7 +59,7 @@ export function fillAbilityTemplate(description: string, values: Readonly<Record
  * The ability of hero `definitionId` at `starLevel` (default base AD and 100 AP unless `stats` is given), or null when the
  * rules have no display source for it (neutrals, legacy units).
  */
-export function abilityText(definitionId: string, starLevel: number, stats?: AbilityDisplayStats): AbilityText | null {
+export function abilityText(definitionId: string, starLevel: number, stats?: AbilityDisplayStats, heroAbility = false): AbilityText | null {
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   const data = definition && Object.hasOwn(S13_ABILITY_DATA, definition.abilityId) ? S13_ABILITY_DATA[definition.abilityId] : undefined;
   if (!data) return null;
@@ -67,6 +67,9 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
   const texts = readTooltipText();
   if (!texts) return { name: abilityDisplayName(definitionId), text: tooltipTextPlaceholder().replace('强化', '技能'), unknown: [] };
   const zh = Object.hasOwn(texts.ABILITY_ZH, data.id) ? texts.ABILITY_ZH[data.id] : undefined;
+  // 卯足全力: the strongest Vander shows the hero spell that replaces his ability (rules: content/gloves-off.ts).
+  const hero = heroAbility && starLevel !== 4 && definitionId === 'vander' && Object.hasOwn(texts.HERO_ABILITY_ZH, data.id) ? texts.HERO_ABILITY_ZH[data.id] : undefined;
+  if (hero) return { name: hero.name, ...fillAbilityTemplate(hero.text, glovesOffDisplayValues(star, stats)) };
   try {
     const values = starLevel === 4 ? ultimateHeroAbilityDisplayValues(definitionId, stats)
       : abilityDisplayValues(definitionId, star, stats);

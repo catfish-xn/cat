@@ -96,7 +96,11 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     // shield rules alone (second R2 case) accept pending and consumed zero layers;
     // stepping the raw states keeps their end-task behaviour pinned.
     expect(() => restoreMatch(pending)).toThrow(/shield binding facts/);
-    expect(packets(stepMatch(pending).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
+    // v26 combat drift (targeting P0/P1 28fd974a/8106acee, melee pathing) leaves two 1-2 minions inside Irelia's end-task area at
+    // tick 105, so her one pending end task now lands one packet on each (was a single packet on one minion).
+    const endTask = [['["pve","1-2","minions-a-v1","m01"]','irelia-ability',1],['["pve","1-2","minions-a-v1","m02"]','irelia-ability',1]];
+    expect(packets(stepMatch(pending).events).filter(e => e.source.ownerId === holder.id)
+      .map(e => [e.unitId, e.source.definitionId, e.source.effectIndex])).toEqual(endTask);
     const consumed = structuredClone(pending), consumedHolder = consumed.combat.units.find((u: any) => u.id === holder.id);
     consumedHolder.shieldLayers.find((l: any) => l.key === layer.key).m8State.endRewardConsumed = true;
     consumedHolder.tasks = consumedHolder.tasks.filter((t: any) => t.shieldEndKey !== layer.key);
@@ -114,7 +118,8 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     zeroLayer.granted = zeroLayer.absorbed = zeroLayer.m8State.granted = zeroLayer.m8State.absorbed = zeroLayer.m8Grant.amount.flat = 0;
     zeroLayer.m8State.decay.basisGranted = 0;
     expect(() => restoreMatch(zeroGrant)).toThrow(/shield binding facts/);
-    expect(packets(stepMatch(zeroGrant).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
+    expect(packets(stepMatch(zeroGrant).events).filter(e => e.source.ownerId === holder.id)
+      .map(e => [e.unitId, e.source.definitionId, e.source.effectIndex])).toEqual(endTask);
   });
   it('R2 shield conservation allows active, zero pending and consumed zero but rejects consumed positive', () => {
     const grant: Extract<Effect, { kind: 'grant-shield' }> = { kind: 'grant-shield', amount: amount(400), durationTicks: 60, decay: { kind: 'none' }, onEnd: [], endTiming: 'post-damage', endTargeting: { kind: 'fixed', targetIds: ['u1'], ifMissing: 'skip' }, endEffects: [] };

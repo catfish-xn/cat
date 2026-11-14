@@ -58,7 +58,7 @@ finalize 按 id 精确核对实际 `source` 及声明的 `requestedSource`；其
   图标源映射已按本地 14.24 英文归档核对，包括梅尔的真实 API 名 `TFT13_MissMageTrait`。
   四份图像载荷均未在本地提取收据中找到；UI/Global 的 WAD 头块也不在现有 chunk 缓存，
   因而全部列入 `ui-assets.json.unavailable`，不使用其他羁绊或强化符文图标替代。
-- `board/`：仅提取 `row-align/asset-root-v2/` 的默认棋盘模型、效果及 alignment/grid。
+- `board/`：仅提取 `board-locator/asset-root/` 的默认棋盘模型、效果及 alignment/grid。
   不把该根中较旧的英雄和特效覆盖到最新测试服底包。
 
 增量目录约 23.51 MiB，**不是已发布的新完整素材根**。

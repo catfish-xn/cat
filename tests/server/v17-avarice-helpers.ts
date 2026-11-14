@@ -61,7 +61,7 @@ export function levelForBench(room: Room, seatId: string, reserve = 50, maxLevel
 export function runToAnomalyWindow(room: Room, clock: ManualClock): void {
   for (let fired = 0; fired < 5_000; fired++) {
     claimAllOrbs(room);
-    if (room.state.phase === 'choice' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) return;
+    if (room.state.phase === 'preparation' && room.state.seats.some(seat => seat.match.pendingChoice?.kind === 'anomaly')) return;
     if (room.state.phase === 'ended' || !clock.runNext()) break;
   }
   throw new Error(`no anomaly window (round ${room.state.roundName}, phase ${room.state.phase}, fault ${JSON.stringify(room.state.fault)})`);

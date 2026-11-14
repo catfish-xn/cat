@@ -9,12 +9,46 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
-import { RENDER_PHASE } from './engine/model/enums';
+import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
+import { readEmissionMesh } from './assets/emissionMesh';
+import { readMeshBuffer } from './assets/meshBuffer';
+import { meshEmission } from './assets/emission';
+import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
 
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
   constructor(readonly reason: LoadFailure, detail: string) { super(`vfx-ltk:${reason}:${detail}`); }
+}
+/**
+ * An attached-mesh emitter that names a static mesh (`mSimpleMeshName`, a `.scb`) rather than its host's own skin.
+ *
+ * The attached kind draws the host's skinned body at the particle's scale, and such an emitter carries the scale meant for
+ * its own small mesh: Sevika's punch hit BUBBLE_START1 (the bubble, scaled well up) drew a 4–12× purple copy of the struck unit
+ * (#588, 11-10 a96aac47 recording), and Renata's empowered attack missile (d7729373 Alpha_Bullet/Add_Bullet, her
+ * canister, scaled up too) would stretch her body the same way. These three are the only such emitters in Set 13;
+ * every other attached-mesh emitter names no mesh or the host's own `.skn` and stays about its host's size (11-10 audit).
+ * They are left undrawn like a muted emitter.
+ */
+export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh && emitter.mesh !== null && !emitter.mesh.skinned;
+}
+/**
+ * An attached-mesh emitter whose look needs a frozen pose (afterimages: GhostImages, AvatarDash) or a dissolve, which
+ * the live-pose overlay cannot show. Phase two of the attached-mesh work (11-11, Fable). Until then it still draws as a
+ * body that follows its host, as it did before (the 11-11 audit: skipping it emptied Illaoi's cued eefae499), and is
+ * listed in the system's notes.
+ */
+export function attachedMeshDeferred(emitter: { readonly quadType: number | null; readonly name: string | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh && /ghostimage|avatardash|dissolve/i.test(emitter.name ?? '');
+}
+/**
+ * An attached-mesh emitter that draws its host's own skin. The geometry it names, if any, is the host's `.skn`, which the
+ * overlay borrows from the live model; the vfx export does not carry it, so it is never loaded as a mesh of its own.
+ */
+export function attachedToHost(emitter: { readonly quadType: number | null }): boolean {
+  return emitter.quadType === QUAD_TYPE.attachedMesh;
 }
 export interface VfxIndex {
   version: 1;
@@ -40,8 +74,18 @@ export interface PreparedVfx {
   samplers: ReadonlyMap<string, EmitterSamplers>;
   meshes: ReadonlyMap<string, BufferGeometry>;
   poses?: ReadonlyMap<string, Pose>;
+  surfaces?: EmissionSurfaces;
   /** An original empty definition is an intentional no-op, never a failed replacement. */
   empty?: boolean;
+  /**
+   * What this system loads without: `reflection-cube:<emitter>` (a reflection map that is no cube strip, drawn without
+   * its reflection) and `attached-deferred:<emitter>` (see attachedMeshDeferred, drawn as before). Logged once per system when loaded.
+   */
+  notes?: readonly string[];
+  /** Trail emitters, by name, whose head fades out once the strand stops growing (cue-overrides.ts TRAIL_END_FADE, a fit). */
+  endFade?: ReadonlySet<string>;
+  /** A projectile that plays out when it lands instead of being removed at its cue's end, and how it ends (cue-overrides.ts PLAY_OUT_SYSTEMS). */
+  playOut?: PlayOut;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -109,14 +153,37 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(champion) || !Array.isArray(cues) || cues.length === 0 || cues.length > 12) throw new VfxLoadError('invalid', 'skill');
     for (const cue of cues) {
       if (!record(cue) || typeof cue.system !== 'string' || !Object.hasOwn(raw.systems, cue.system)
-        || !['cast-start', 'hit', 'projectile'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
+        || !['cast-start', 'hit', 'projectile', 'link'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
-        || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
-        || (cue.action !== undefined && cue.action !== 'attack' && cue.action !== 'cast')
+        || (cue.location !== undefined && cue.location !== 'board')
+        || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))
+        || (cue.optional !== undefined && (typeof cue.optional !== 'boolean' || cue.event === 'cast-start'))
+        || (cue.livingTarget !== undefined && (typeof cue.livingTarget !== 'boolean' || (cue.event !== 'hit' && cue.event !== 'projectile')))
+        || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
+        || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
+        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self'].includes(cue.variant)))
+        || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
+        || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
+        || (cue.main !== undefined && typeof cue.main !== 'boolean')
+        || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
+        || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
+          || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
+          || (cue.rowSpeed !== undefined && !(finite(cue.rowSpeed) && Number(cue.rowSpeed) >= 1 && Number(cue.rowSpeed) <= 40))))
+        || ((cue.rowSide !== undefined || cue.rowCells !== undefined) && (cue.event !== 'projectile' || (cue.rowSide !== -1 && cue.rowSide !== 1)
+          || !finite(cue.rowCells) || Number(cue.rowCells) < 0.5 || Number(cue.rowCells) > 8))
+        || (cue.fromAbove !== undefined && (cue.event !== 'projectile' || cue.rowSide !== undefined || !Array.isArray(cue.fromAbove) || cue.fromAbove.length !== 3
+          || !cue.fromAbove.every(finite) || Number(cue.fromAbove[1]) < 1 || Number(cue.fromAbove[1]) > 10
+          || Math.abs(Number(cue.fromAbove[0])) > 4 || Math.abs(Number(cue.fromAbove[2])) > 4))
+        || (cue.lineCells !== undefined && (cue.event !== 'projectile' || cue.rowSide !== undefined || cue.fromAbove !== undefined
+          || !finite(cue.lineCells) || Number(cue.lineCells) < 0.5 || Number(cue.lineCells) > 8))
+        || (cue.lineBack !== undefined && (cue.lineCells === undefined || !finite(cue.lineBack) || Number(cue.lineBack) < 0 || Number(cue.lineBack) > 2))
+        || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
+        || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
@@ -139,6 +206,27 @@ export function parseIndex(raw: unknown): VfxIndex {
     ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
+/**
+ * The index a library plays: reviewed in-repo replacements (cue-overrides.ts) win over the exported timelines, and
+ * reviewed additions (CUE_ADDITIONS) are appended to whichever list stands, and display branches the export never had
+ * (CUE_EXTRA_SKILLS) are added beside their champion's list.
+ */
+export function withCueOverrides(index: VfxIndex): VfxIndex {
+  let skills: VfxIndex['skills'] | null = null;
+  for (const champion of Object.keys(index.skills)) {
+    const override = cueOverride(champion, index.systems), added = cueAdditions(champion, index.systems);
+    if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
+    const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
+    if (branched) (skills ??= { ...index.skills })[champion] = branched;
+  }
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
+    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
+  }
+  return skills ? { ...index, skills } : index;
+}
+
 export interface VfxLibraryOptions { groundPass?: boolean; directory?: string }
 export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLibraryOptions = {}): VfxLibrary {
   let closed = false, current: VfxIndex | null = null;
@@ -147,7 +235,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   const ownedTextures = new Set<Texture>(), ownedGeometry = new Set<BufferGeometry>();
   const children = new Map<string, VfxLibrary>();
   const urlOf = (path: string) => vfxUrl(root, (options.directory ?? '') + path);
-  const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture>>();
+  const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture | null>>();
+  const birthMeshes = new Map<string, Promise<EmissionSampler>>();
   const black = new DataTexture(new Uint8Array(4), 1, 1); black.needsUpdate = true;
   const ensureOpen = () => { if (closed) throw new VfxLoadError('closed', 'library'); };
   const texture = (url: string) => {
@@ -157,7 +246,10 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
   };
   const cube = (url: string) => {
     let held = cubes.get(url);
-    if (!held) { held = texture(url).then(reflectionCube).then(t => { if (closed) { t.dispose(); ensureOpen(); } ownedTextures.add(t); return t; }); cubes.set(url, held); }
+    // A map that loads but cannot be cut into faces (no 1:6 strip, or an image with no drawable source) answers
+    // null: the emitter then draws without its reflection. A map that fails to load still fails the system.
+    if (!held) { held = texture(url).then(source => { try { return reflectionCube(source); } catch { return null; } })
+      .then(t => { if (t && closed) { t.dispose(); ensureOpen(); } if (t) ownedTextures.add(t); return t; }); cubes.set(url, held); }
     return held;
   };
   const assetPath = (named: NamedAsset) => {
@@ -171,36 +263,77 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const model = readVfxSystem(raw), drawn = drawnEmitters(model, true);
-      if (drawn.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
+      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id];
+      const model = disabled || whole ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+        : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null } : e) } : parsed;
+      const listed = drawnEmitters(model, true);
+      // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
+      // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
+      // A muted emitter (cue-overrides.ts) is left undrawn the same way, and so is an attached-mesh emitter that names a
+      // static mesh of its own (attachedMeshOfItsOwn).
+      // Held-back attached overlays (cue-overrides.ts ATTACHED_HELD_BACK) are left undrawn the same way.
+      const muted = [...(MUTED_EMITTERS[id] ?? []), ...(ATTACHED_HELD_BACK[id] ?? [])];
+      const notes: string[] = [];
+      for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
+      const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
+        && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
+      if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes
       // and a transparent arena grid. Only a host providing the separate floor,
       // ground and character passes opts in; other consumers keep legacy intact.
       // The host has no particle shadow-map pass either; a shadow-only system must
       // not become a successful but invisible replacement (or leak into colour).
-      for (const { emitter: e } of drawn) {
+      for (const { emitter: e } of listed) {
         if (e.disabled) continue;
         if (!options.groundPass && (e.groundLayer || e.renderPhaseOverride === RENDER_PHASE.groundLayer)) throw new VfxLoadError('unsupported', 'ground-layer');
         if (e.renderPhaseOverride === RENDER_PHASE.shadow) throw new VfxLoadError('unsupported', 'shadow-only');
       }
       const empty = !drawn.some(d => !d.emitter.disabled);
       const samplers = new Map<string, EmitterSamplers>(), geometry = new Map<string, BufferGeometry>(), poses = new Map<string, Pose>();
-      for (const { key, emitter: e } of drawn) {
+      const surfaces = new Map<string, Map<number, EmitterSurfaces>>();
+      const emission = async (named: NamedAsset, submeshes: readonly string[] = []) => {
+        if (!reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
+        const mesh = readMeshBuffer(await reader.readBinary(assetPath(named))); ensureOpen();
+        if (mesh.skinIndices) throw new VfxLoadError('unsupported', 'surface-skin-pose');
+        return meshEmission(mesh, submeshes);
+      };
+      for (const { key, path, emitter: e } of drawn) {
         if (e.disabled) continue;
-        if (e.childSet?.children.some(child => child === null) || e.emissionMesh || e.emissionSurface || e.hudLayer
+        if (e.childSet?.children.some(child => child === null) || e.hudLayer
           || !(drawsAsQuad(e) || drawsAsProjection(e) || drawsAsTrail(e) || drawsAsBeam(e) || drawsAsMesh(e) || drawsTheAttachment(e)) && !e.childSet) {
           throw new VfxLoadError('unsupported', `emitter:${e.name}`);
+        }
+        if (e.emissionMesh || e.emissionSurface) {
+          const surface = e.emissionSurface;
+          if (e.emissionMesh && !reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
+          if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
+          if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
+            throw new VfxLoadError('unsupported', 'surface-host-pose');
+          // Mesh bytes stay on the birth-mesh loop below. This pass only installs the surface so that loop can keep it.
+          if (surface) {
+            const sampled = await emission(surface.mesh!, surface.submeshes);
+            let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
+            held.set(e.index, { mesh: held.get(e.index)?.mesh ?? null, surface: sampled });
+          }
         }
         const slots = { base: e.texture, mult: e.multTexture, color: e.colorTexture, palette: e.palette?.texture ?? null, erosion: e.erosion?.map ?? null,
           normal: e.distortion?.map ?? null, reflection: e.reflection?.map ?? null };
         const bundle: EmitterSamplers = { base: black, mult: null, color: null, palette: null, erosion: null, normal: null, reflection: null };
         for (const [slot, named] of Object.entries(slots)) if (named) {
           const url = assetPath(named);
-          (bundle as unknown as Record<string, Texture | null>)[slot] = slot === 'reflection' ? await cube(url) : await texture(url); ensureOpen();
+          let loaded: Texture | null;
+          if (slot !== 'reflection') loaded = await texture(url);
+          else {
+            // A reflection map the converter did not write as a cube strip drops only the reflection; the fill and rim still
+            // draw. Defensive: the deployed PNG strips (all 1:6) cut fine (11-11 audit on live assets). Listed in notes.
+            loaded = await cube(url);
+            if (!loaded) notes.push(`reflection-cube:${e.name}`);
+          }
+          ensureOpen(); (bundle as unknown as Record<string, Texture | null>)[slot] = loaded;
         }
         samplers.set(key, bundle);
-        if (e.mesh) {
+        if (e.mesh && !attachedToHost(e)) {
           if (reader.readBinary) {
             const signature = JSON.stringify(e.mesh) + (e.mesh.animationVariants.length ? key : '');
             let held = converted.get(signature);
@@ -221,14 +354,25 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           geometry.set(key, await mesh); ensureOpen();
         }
       }
-      const result = { model, drawn, samplers, meshes: geometry, poses, empty }; prepared.set(id, result); return result;
+      for (const { emitter: e, path } of drawn) {
+        if (e.disabled || !e.emissionMesh) continue;
+        if (!reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
+        const url = assetPath(e.emissionMesh.mesh);
+        let pending = birthMeshes.get(url);
+        if (!pending) { pending = reader.readBinary(url).then(readEmissionMesh); birthMeshes.set(url, pending); }
+        const sampler = await pending; ensureOpen();
+        let system = surfaces.get(path); if (!system) { system = new Map(); surfaces.set(path, system); }
+        system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
+      }
+      if (notes.length) console.warn(`vfx-ltk:${id}:${notes.join(',')}`);
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}) }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));
     });
     documents.set(id, held); return held;
   }
-  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
+  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(withCueOverrides).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
   return {
     ready, load, get: (id: string) => prepared.get(id), get index() { return current; },
     async champion(id: string): Promise<VfxLibrary | null> {
@@ -250,7 +394,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       for (const t of ownedTextures) t.dispose();
       for (const g of ownedGeometry) g.dispose();
       ownedTextures.clear(); ownedGeometry.clear();
-      converted.clear(); cubes.clear();
+      converted.clear(); cubes.clear(); birthMeshes.clear();
       textures.clear(); meshes.clear(); documents.clear(); prepared.clear(); current = null;
     },
   };

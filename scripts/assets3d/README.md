@@ -369,6 +369,13 @@ initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构
 unit-map.local.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
 
 批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用现有转换实现，本轮不改粒子语义。
+`animationClips` 同时读取 `AtomicClipData` 的 `StartFrame` / `EndFrame`，`build.mjs` 按对应 ANM 的 `fps`（缺省 30）换算成秒区间写入 `models[id].clipRanges`，运行时由 `ModelCache` 调用 `trimClip` 在模型加载后裁切片段。
+已部署的资产根可用 `node scripts/assets3d/stage-clip-ranges.mjs --assets <已部署 assets3d 根> --extracted <解包根> --out <新 manifest 路径>` 直接从解包动画图与 ANM 计算并补齐 `clipRanges`（不重建 GLB、不改动原 manifest），同时向标准输出打印裁切区间报告。
+unit map 条目可配置 `formAnimations`（`front` / `back` 下按 `idle` / `move` / `attack` 指定片段名），`build.mjs` 会将对应原子片段一并导出至 GLB 并写入 `models[id].formAnimations`，运行时 `UnitAnimationMixer` 按形态切换动作片段且缺片段时退回默认 `animations`。
+已部署的资产根可用 `node scripts/assets3d/stage-form-animations.mjs --assets <已部署根> --model <id> --donor <未压缩 glb> --form-animations '<json>' --out-dir <目录>` 补齐缺失的形态动作片段并重新压缩输出 `<out-dir>/models/<id>/model.glb` 与 `<out-dir>/manifest.json`（不写回原目录）。
+已部署的资产根还可用 `node scripts/assets3d/stage-anim-sequences.mjs --assets <已部署根> --extracted <解包根> --metadata-root <元数据根> --out-dir <目录>` 按原版动画图（`Atomic` / `Sequencer` / `Parallel`）自动生成 `castSequence`、多段普攻 `attackSequence`、并行层 `layers` 与同源多段裁切别名 `clipSegments`，并将缺失的 `.anm` 动作片段转换追加至 `<out-dir>/models/<id>/model.glb`。已有 `castVariants.hero` 的英雄按原版 `<施法>Hero` 技能的 `mAnimationName` 重解析（与默认施法相同则删去 hero 变体；原版为空、带帧区间或与 `clipRanges` 冲突则保留现状，可用 `--exclude <id>:hero` 跳过）。
+
+原版技能 `mAnimationName` 为空（由技能脚本选片段）的施法，动画图里看不出顺序；核对过视频的英雄写在脚本的 `SCRIPT_CAST_GRAPH_KEYS`（按图键列出，按 Sequencer 播，图里的帧区间照常生效）。目前只有伊泽瑞尔：`Spell3_In` → `Spell3_Out`（原地抬手发射；`Spell2_*` 是 E 闪现，带前冲根位移）。
 
 真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。
 

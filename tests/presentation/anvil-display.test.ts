@@ -27,6 +27,7 @@ vi.mock('phaser', () => ({ default: { Math: { Vector2: class { constructor(reado
 import { armorySecondsLeft, forgetServerNow, isAnvilArmory, noteServerNow } from '../../src/presentation/anvil-display';
 import { isShopChoice } from '../../src/presentation/choice-fallback';
 import { UnitView } from '../../src/presentation/unit-view';
+import { unitAnomalies } from '../../src/presentation/anomaly-display';
 
 afterEach(() => { forgetServerNow(); vi.restoreAllMocks(); });
 
@@ -65,6 +66,20 @@ describe('a sold anvil opens its armory in the shop row', () => {
 describe('bench piece', () => {
   const unit = (definitionId: string): Unit => ({ id: 'unit-9', definitionId, team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } } as unknown as Unit);
   const shown = (view: UnitView) => view as unknown as { star: { text: string; visible: boolean }; costBadge: { visible: boolean }; costText: { visible: boolean } };
+  it.each(['board', 'bench'] as const)('keeps an obtained anomaly mark on a %s piece through identity refresh and clears it on removal', place => {
+    const hero = { ...unit('vex'), location: place === 'bench' ? { kind: 'bench', slot: 0 } : { kind: 'board', cell: { row: 4, col: 0 } } } as Unit;
+    const view = new UnitView(fake.scene() as never, hero, 0, 0);
+    const mark = (view as unknown as { anomalyMark: { text: string; visible: boolean } }).anomalyMark;
+    expect(mark.visible).toBe(false);
+    view.setAnomalies(unitAnomalies('the-finisher', []));
+    expect(mark.visible).toBe(true); expect(mark.text).toBe('异');
+    view.update({ ...hero, starLevel: 2 }, []);
+    expect(mark.visible).toBe(true); expect(view.anomalies).toEqual([{ id: 'the-finisher', source: 'native' }]);
+    view.setAnomalies(unitAnomalies(undefined, ['TFT13_AnotherAnomaly_Item:the-finisher']));
+    expect(mark.visible).toBe(true); expect(mark.text).toBe('异·复');
+    view.setAnomalies([]);
+    expect(mark.visible).toBe(false); expect(view.anomalies).toEqual([]);
+  });
   it('an anvil shows neither stars nor a cost; a hero keeps both', () => {
     const scene = fake.scene() as never;
     const anvil = shown(new UnitView(scene, unit('TFT_ArmoryKeyCompleted'), 0, 0));

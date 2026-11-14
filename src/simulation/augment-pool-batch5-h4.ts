@@ -15,7 +15,9 @@ export function portfolioRoundGold(state: MatchState, owner: MatchState['augment
   const facts = requireAugmentFacts(state, 'round-entry', round);
   if (facts.length !== 1) throw new RangeError('Invalid portfolio round entry');
   const roster = facts[0].roster;
-  const frozen = {...state, round, preparation:{...state.preparation, units:roster.units}, items:roster.items, augments:state.augments.filter(a => a.acquiredRound < round)};
+  // History rosters already contain the combat bench projection, without its live capacity overlay.
+  const { usableBenchSlots, overflowUnitIds, ...base } = state.preparation;
+  const frozen = {...state, round, preparation:{...base, units:roster.units}, items:roster.items, augments:state.augments.filter(a => a.acquiredRound < round)};
   const sources: TraitProjectionSource[] = v20MembershipSources(frozen, bindV20Teamups(frozen));
   const sisters = frozen.augments.find(a => a.definitionId === 'sisters');
   const partners = roster.units.filter(u => u.team === 'player' && u.location.kind === 'board' && ['jinx','vi'].includes(u.definitionId));

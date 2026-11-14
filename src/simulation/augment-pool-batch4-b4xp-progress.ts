@@ -1,3 +1,4 @@
+import { usableBenchSlots } from './bench-capacity';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { AUGMENT_BATCH4_B4XP } from './content/augment-pool-batch4-b4xp';
 import type { MatchState, RoundResult } from './match-types';
@@ -12,7 +13,7 @@ export function batch4B4xpSettlementXp(state:MatchState):number {
  const champions=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&!UNIT_DEFINITIONS[u.definitionId]?.summon).length;
  return state.augments.reduce((sum,a)=>{
   const row=AUGMENT_BATCH4_B4XP[a.definitionId];if(!row||a.acquiredRound>state.round)return sum;
-  const eligible=row.condition==='empty-champion-bench'?champions===0:row.condition==='full-champion-bench'?champions===state.preparation.benchSize:
+  const eligible=row.condition==='empty-champion-bench'?champions===0:row.condition==='full-champion-bench'?champions===usableBenchSlots(state.preparation):
    !state.items.some(i=>i.location.kind==='inventory');
   return sum+(eligible?row.source.values.XP!:0);
  },0);

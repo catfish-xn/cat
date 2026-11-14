@@ -12,9 +12,10 @@ import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { accepted, resolveM5Choices, finish, reachRound } from './match-helpers';
 import type { HistoryRoster } from '../src/simulation/augment-history-types';
 
-/** v25 batch-5 pool drift: seed 73 at 3-2 (re-searched 0..100). */
+/** D5 310-card pool: seed 73's 3-2 offer no longer contains trait-tracker.
+ * 4 is the first seed in 0..250 whose initial reachRound('3-2', false) offer does. */
 function offerTraitTracker(): MatchState {
- let state=reachRound('3-2',false,73);
+ let state=reachRound('3-2',false,4);
  expect(state.pendingChoice!.offers).toContain('trait-tracker');
  return state;
 }

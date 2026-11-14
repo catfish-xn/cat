@@ -53,3 +53,32 @@ the retained v25 bytes before updating this fixture. Only `contentDigest`,
 identity substitutions restores the old file byte for byte. No gameplay data was
 regenerated; v23/v24 files remain unchanged. Full hashes and the corresponding
 Swarm/B9 proofs are recorded in [V25_STARRY_PINS.md](../../../docs/V25_STARRY_PINS.md).
+
+## v26 neutrals-1424 identity
+
+`pre-spoils-v26-seed42.json` repeats the same isolated pre-Spoils settlement export (module from `808d16ae`) on
+the v26 integration head `707eed25` (`s13-g2-3-v26-neutrals-1424`). `scripts/export-pre-spoils-compat.cjs` was run
+unchanged except that its v24 gameplay-equality check was skipped, because v26 intentionally changes the 1-2 fight.
+Against `pre-spoils-v25-seed42.json` the only differences are: the identity fields (`rulesVersion`, `contentVersion`,
+`contentDigest`, `combatInputBasis.contentDigest`, `m8.loot.frozen.replayDigest` `36ebfac2` → `a56b2c4a`), the new
+null `anomalySelection`, and the 1-2 minion combat outcome (14.24 neutral stats from `568eeea4`, targeting/melee pathing
+from `8106acee`/`34cfbfbb`: deaths at ticks 155/274 instead of 69/164, `combatTicks` 274, `baseDamage` 0). These match
+`tests/v26-anomaly-identity-audit.test.ts`. The v23/v24/v25 files are unchanged. SHA-256:
+`3e1ca4c8ad23abe7044c1be70fb9e86ce38d93bd87ec91b4d5ef5aa626f05bd7`.
+
+2026-11-09 塞维卡三连/头奖: `pre-spoils-v26-seed42.json` identity-only refresh, `contentDigest` (×2) `150d825d` → `c7f0a2f3`
+and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte changed. SHA-256:
+`8b14766028027050af86186218f274b254a4b258d813a8cc5e136ff646e57167`.
+
+2026-11-09 塞维卡老虎机转完再出手: identity-only refresh again, `contentDigest` (×2) `c7f0a2f3` → `f37c6970` and
+`m8.loot.frozen.replayDigest` `b53841c0` → `9c98c8ef`; no other byte changed. SHA-256:
+`8648179a96e0091283e61cf1e2f1fc8cf13d665df42dc1805f0e54b00d0cbaf8`.
+
+2026-11-12 14.24b 七项英雄数值 (b-patch-overrides.json): identity-only refresh, `contentDigest` (×2) `f37c6970` → `db6dc9b6`;
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. SHA-256:
+`a895917a2707e529fe319fd3d2c4dbc0c7667f877092313d0f9bb8eca3dfc6fe`.
+
+2026-11-12 施法事件带 castIndex、回放格式 8→9 (#628): identity-only refresh, `contentDigest` (×2) `db6dc9b6` → `d94c78f1`
+(content-digest.ts covers `replayFormatVersion`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed.
+Exported with `git show 808d16ae:src/simulation/g2-3-settlement.ts | node scripts/export-pre-spoils-compat.cjs <out>`, v24 gameplay
+check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce479df19d96456580682`.

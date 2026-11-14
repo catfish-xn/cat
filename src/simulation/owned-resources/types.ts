@@ -1,7 +1,7 @@
 import type { GameState } from '../game';
 import type { MatchState } from '../match-types';
 import type { SharedPoolState } from '../shared-pool-types';
-import type { AnomalyBinding, ItemInstance } from '../strategy-types';
+import type { AnomalyBinding, AnomalySelection, ItemInstance } from '../strategy-types';
 import type { PersistentGrowth } from '../match-types';
 import type { CostTier, Unit, UnitLocation } from '../unit-types';
 
@@ -33,6 +33,7 @@ export interface OwnershipSeat {
   readonly nextDuplicatorSerial: number;
   readonly deploymentCap: number;
   readonly gold: number;
+  readonly anomalySelection?: AnomalySelection | null;
   readonly anomalyBinding: AnomalyBinding | null;
   readonly persistentGrowth: readonly PersistentGrowth[];
 }

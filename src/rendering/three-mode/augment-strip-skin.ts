@@ -71,7 +71,7 @@ export function startAugmentStripSkin(root: string | null): AugmentSkin {
       if (closed) return;
       url = URL.createObjectURL(cropped);
       style = document.createElement('style'); style.dataset.owner = 'render3d-augment-strip';
-      const chip = 'body[data-online]:has(> .render3d-layer) .augment-strip > [data-augment]';
+      const chip = 'body[data-online]:has(> .render3d-layer) :is(.augment-strip, .opponent-augment-strip) > [data-augment]';
       style.textContent = `${chip}{background:#0b151fb3;box-shadow:none;border-radius:0}
 ${chip}::before{content:"";position:absolute;inset:0;background:url(${JSON.stringify(url)}) center/100% 100% no-repeat;pointer-events:none}
 ${chip} .augment-icon{border-radius:0;box-shadow:none}`;

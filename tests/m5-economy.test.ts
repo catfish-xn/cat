@@ -58,10 +58,10 @@ describe('M5 independent economic answers', () => {
       expect([plan.baseDamage, plan.playerDamage, plan.hpLost, plan.hpAfter]).toEqual([base, base + 4, base + 4, 96 - base]);
     });
 
-  it('PvE loss and draw deal exactly three regardless of survivors; fatal HP is clamped', () => {
+  it('PvE loss and draw add stage base to survivors; fatal HP is clamped', () => {
     for (const result of ['enemyWin', 'draw'] as const) {
       const plan = planRoundEconomy(input({ roundKind: 'pve', result, hp: 2, enemySurvivors: 8 }));
-      expect([plan.baseDamage, plan.playerDamage, plan.hpLost, plan.hpAfter]).toEqual([3, 3, 2, 0]);
+      expect([plan.baseDamage, plan.playerDamage, plan.hpLost, plan.hpAfter]).toEqual([2, 10, 2, 0]);
       expect(plan.streakAfter).toEqual({ kind: 'loss', count: 1 });
     }
   });

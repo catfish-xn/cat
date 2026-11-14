@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Group, Vector3 } from 'three';
-import { arenaTransform, createBoardArena } from '../src/rendering/three-mode/board-arena';
+import { BufferAttribute, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Texture, Vector3 } from 'three';
+import { arenaDrawTransform, arenaTransform, createBoardArena } from '../src/rendering/three-mode/board-arena';
 import { assertManifest, hexCenter, type BoardAlignment, type ModelLease } from '../src/rendering3d';
 
 /** Synthetic alignment only: a source grid with 10-unit steps mapped onto a reference hex grid of radius 34. */
@@ -33,9 +33,42 @@ describe('3D board arena', () => {
     expect(root.children).toContain(scene);
     arena.place({ rows: 6, columns: 9, hexRadius: 68, origin: { x: 35, y: 50 } });
     expect(arena.ready).toBe(true); // No declared grid: dimensions retain the existing behavior.
-    expect(root.scale.toArray()).toEqual([1, 1, -1]);
+    // Drawn mirrored about the grid's centre line (arenaDrawTransform): x scale negated, x position reflected.
+    expect(root.scale.toArray()).toEqual([-1, 1, -1]);
+    const drawn = arenaDrawTransform(alignment, { hexRadius: 68, origin: { x: 35, y: 50 } }), plain = arenaTransform(alignment, { hexRadius: 68, origin: { x: 35, y: 50 } });
+    expect(root.position.x).toBeCloseTo(drawn.position.x);
+    expect(drawn.position.x + plain.position.x).toBeCloseTo(2 * (35 + Math.sqrt(3) * 68 * 3.25));
+    expect(drawn.position.z).toBe(plain.position.z); expect(drawn.scale.z).toBe(plain.scale.z);
     arena.dispose();
     expect(released).toBe(1); expect(parent.children).toHaveLength(0);
+  });
+
+  it('draws the baked lightmap once both are in, and frees it on dispose; a failed lightmap leaves the arena as is', async () => {
+    const tick = () => new Promise(done => setTimeout(done, 0));
+    const arenaScene = () => {
+      const scene = new Group(), geometry = new PlaneGeometry();
+      geometry.setAttribute('uv1', new BufferAttribute(new Float32Array(geometry.attributes.uv.count * 2), 2));
+      const material = new MeshBasicMaterial({ map: new Texture() });
+      scene.add(new Mesh(geometry, material));
+      return { scene, material };
+    };
+    const lease = (scene: Group) => ({ scene, placeholder: false, release() {} } as unknown as ModelLease);
+    const lit = arenaScene(), texture = new Texture(); let disposedTextures = 0;
+    texture.addEventListener('dispose', () => { disposedTextures++; });
+    const arena = createBoardArena(new Group(), alignment, async () => lease(lit.scene), () => {}, undefined,
+      { gamma: 0.5, scale: 2.3, load: async () => texture });
+    arena.place({ hexRadius: 34, origin: { x: 35, y: 50 }, columns: 7, rows: 8 });
+    await tick(); await tick();
+    expect(lit.material.customProgramCacheKey()).toBe('arena-lightmap');
+    arena.dispose();
+    expect(Object.hasOwn(lit.material, 'onBeforeCompile')).toBe(false); expect(disposedTextures).toBe(1);
+    const failed = arenaScene();
+    const plain = createBoardArena(new Group(), alignment, async () => lease(failed.scene), () => {}, undefined,
+      { gamma: 0.5, scale: 2.3, load: async () => { throw new Error('synthetic-missing'); } });
+    plain.place({ hexRadius: 34, origin: { x: 35, y: 50 }, columns: 7, rows: 8 });
+    await tick(); await tick();
+    expect(plain.ready).toBe(true); expect(Object.hasOwn(failed.material, 'onBeforeCompile')).toBe(false);
+    plain.dispose();
   });
 
   it('leaves no arena for a placeholder model or a failed load', async () => {

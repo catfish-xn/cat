@@ -24,6 +24,14 @@ export interface ParticleOptions {
   materials?: ParticleMaterialPool;
   /** Shared live-particle cap across effects; particles past it are not born. */
   budget?: ParticleBudget;
+  /**
+   * v2 only: how many times size0 a quad or arbitrary quad spans (default 1). The original treats scale0 as a
+   * half-extent (vfx-ltk materials.ts REACH = 2); hosts that size effects the original's way pass 2. Rays are not
+   * affected: the original draws a ray scale0.x across and scale0.y along (vfx-ltk shaders/quad.ts RAY reads the
+   * corner, not the reach), as v2 already does. Camera unit quads (REACH 1) never reach v2: the exporter rejects
+   * that primitive (scripts/assets3d/particles.mjs), and no Set 13 system uses one.
+   */
+  quadReach?: number;
 }
 export interface ParticleSkip { emitterIndex: number; kind: string; reason: string }
 /** Short, stable code for a failed mesh read: HTTP status, the adapter's own code, or `read-failed`. */
@@ -43,6 +51,8 @@ class ParticleEffectV1 {
   private particles: Particle[] = [];
   private elapsed = 0;
   private geometry: PlaneGeometry;
+  private readonly worldQuat = new Quaternion();
+  private readonly cameraQuat = new Quaternion();
   private closed = false;
   private materials?: ParticleMaterialPool;
   private budget?: ParticleBudget;
@@ -94,7 +104,7 @@ class ParticleEffectV1 {
     if (!finite(seconds) || seconds < 0) throw new Error('invalid-delta');
     this.elapsed += seconds;
     // Camera-facing in the effect parent's space, the same for every particle this frame.
-    const facing = camera ? this.object.getWorldQuaternion(new Quaternion()).invert().multiply(camera.getWorldQuaternion(new Quaternion())) : null;
+    const facing = camera ? this.object.getWorldQuaternion(this.worldQuat).invert().multiply(camera.getWorldQuaternion(this.cameraQuat)) : null;
     for (const { emitter: e, mesh, origin } of this.particles) {
       const age = this.elapsed - (e.delay ?? 0);
       mesh.visible = age >= 0 && age < e.lifetime;
@@ -141,6 +151,8 @@ export class ParticleEffect {
   get object(): Group { return this.runtime.object; }
   get skipped(): Record<'mesh' | 'trail' | 'screenDistortion', number> { return this.runtime.skipped; }
   get droppedParticles(): number { return this.runtime instanceof ParticleEffectV2 ? this.runtime.droppedParticles : 0; }
+  /** Meshes constructed by a v2 effect. Quad and ray slots are reused after the first wave. */
+  get builtMeshes(): number { return this.runtime instanceof ParticleEffectV2 ? this.runtime.builtMeshes : 0; }
   /** v1 keeps its allocated burst children; v2 removes expired particles. */
   get particleCount(): number { return this.object.children.length; }
   get finished(): boolean { return this.runtime.finished; }
@@ -155,7 +167,9 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     /** Adapter supplies geometry from one static mesh (or rejects); unavailable emitters are skipped. */
     readMesh?: (url: string) => Promise<BufferGeometry>;
     /** The readers' textures and geometry stay theirs (a caching reader): the effect never disposes them. */
-    borrowed?: boolean } = {}): Promise<ParticleEffect> {
+    borrowed?: boolean;
+    /** v2 only: emitters of these kinds are left out (a copy of the document; the reader's value is not changed). */
+    omitKinds?: readonly string[] } = {}): Promise<ParticleEffect> {
   const entry = Object.hasOwn(manifest.effects ?? {}, id) ? manifest.effects![id] : undefined;
   if (manifest.schemaVersion !== 1 || !entry) throw new Error('unknown-effect');
   const root = options.root ?? DEFAULT_ASSET_ROOT;
@@ -164,7 +178,10 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     if (!response.ok) throw new Error(`particle-http-${response.status}`);
     return response.json();
   });
-  const doc = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
+  const parsed = parseParticleDocument(await readJson(assetUrl(root, entry.path)));
+  const omit = options.omitKinds;
+  const doc: typeof parsed = omit?.length && parsed.schemaVersion === 2
+    ? { ...parsed, emitters: parsed.emitters.filter(e => !omit.includes(e.kind)) } : parsed;
   const textures = new Map<string, Texture>();
   const meshes = new Map<string, BufferGeometry>();
   const loadedGeometry = new Set<BufferGeometry>();

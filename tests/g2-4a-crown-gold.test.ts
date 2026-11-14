@@ -20,7 +20,7 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-const facts=(round:number):G23BattleFacts=>({battleId:'crown-battle-'+round,round,roundKind:'pve',result:'win',conquerorTier:9,
+const facts=(round:number):G23BattleFacts=>({battleId:'crown-battle-'+round,round,roundKind:'pvp',result:'win',conquerorTier:9,
  conquestTakedowns:Array.from({length:30},(_,i)=>'enemy-'+i),chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0});
 function crowned(battles:number,seed=42):MatchState{
  let state:MatchState={...catalogPreparation('2-1',seed),level:3,gold:100};

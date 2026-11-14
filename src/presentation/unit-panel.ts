@@ -2,19 +2,19 @@ import { unitHoverCard } from './hover-card';
 import { ORB_TIER_TEXT } from './orb-loot';
 import { orbCardBody } from '../rendering/online/orb-dock';
 /** Lazy inspect UI. All numbers are content/display projections; no planning bonus rules live here. */
-import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
-import { getUnitStats } from '../simulation/unit-stats';
-import { abilityDisplayValues } from '../simulation/ability-display';
+import { UNIT_DEFINITIONS } from '../simulation/units';
+import { abilityDisplayValues, glovesOffDisplayValues } from '../simulation/ability-display';
+import { planningBase, planningMeters } from './planning-meters';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import type { CombatViewUnit } from './combat-display';
 import type { UnitBattleStats } from './battle-ranking';
 import { abilityText, fillAbilityTemplate } from './ability-text';
-import { fourStarBaseStats } from './d14-display';
 import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
 import { catalogEntry, itemCardBody, itemMarkHtml } from './item-codex';
 import { itemDisplayName } from './g23-display';
 import { unitCardBody, roleSection, battleLine, itemStackLine, abilityLabel } from './unit-card';
+import { applyUnitPanelSkin, loadUnitPanelSkin, type UnitPanelSkin } from './unit-panel-skin';
 import { loadTooltipText, readTooltipText } from './tooltip-text-loader';
 import { PANEL_STYLE } from './unit-panel-style';
 
@@ -22,6 +22,8 @@ export interface UnitPanelData {
   id: string; definitionId: string; starLevel: number; team: 'player' | 'enemy';
   items?: readonly string[]; notes?: readonly string[]; battle?: UnitBattleStats | null;
   combat?: CombatViewUnit | null;
+  /** 卯足全力: this is the strongest Vander, whose ability the rules replace with the hero spell. */
+  heroAbility?: boolean;
 }
 /** Future rules-side planning projection. Never reconstruct item/trait bonuses in the UI. */
 export function planningBonusProjection(_unit: UnitPanelData): null { return null; }
@@ -30,13 +32,14 @@ const node = (tag: string, text = '', className = '') => {
 };
 
 /** Token substitution first, then the existing plain-text sanitizer. Markers preserve safe emphasis without HTML input. */
-export function abilityRanks(definitionId: string, star: number): HTMLElement {
+export function abilityRanks(definitionId: string, star: number, heroAbility = false): HTMLElement {
   const out = node('p', '', 'unit-card-text');
   if (star === 4) { out.textContent = abilityText(definitionId, 4)?.text ?? '无主动技能说明'; return out; }
   const def = UNIT_DEFINITIONS[definitionId], data = S13_ABILITY_DATA[def.abilityId];
   if (!data) { out.textContent = '无主动技能说明'; return out; }
-  const values = ([1, 2, 3] as const).map(rank => abilityDisplayValues(definitionId, rank));
-  const template = readTooltipText()?.ABILITY_ZH[data.id]?.text ?? '';
+  const hero = heroAbility && definitionId === 'vander' ? readTooltipText()?.HERO_ABILITY_ZH[data.id] : undefined;
+  const values = ([1, 2, 3] as const).map(rank => hero ? glovesOffDisplayValues(rank) : abilityDisplayValues(definitionId, rank));
+  const template = hero?.text ?? readTooltipText()?.ABILITY_ZH[data.id]?.text ?? '';
   const marked = template.replace(/@([^@<>\s]+)@/g, (token, key: string) => {
     const ranks = values.map(row => row[key]);
     if (ranks.some(value => value === undefined)) return token;
@@ -51,55 +54,83 @@ export function abilityRanks(definitionId: string, star: number): HTMLElement {
   return out;
 }
 
+const STAT_LABELS = { attack: '攻击力', ap: '法术强度', armor: '护甲', mr: '魔抗', speed: '攻击速度', crit: '暴击几率', critDamage: '暴击伤害', range: '射程' };
+/** Original-style layout: splash banner (cost strip, stars, traits), bars, ability + items, a 4×2 stat grid. The ability text,
+ * role and recommended items sit in a card that opens from the ability icon; battle totals stay as one line at the bottom. */
 export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
-  const body = unitCardBody(data.definitionId, data.starLevel);
-  if (!body || body.classList.contains('unit-card-anvil')) return body;
-  const def = UNIT_DEFINITIONS[data.definitionId];
-  body.querySelector('.unit-card-portrait')?.classList.toggle('neutral', def.unitKind === 'neutral');
-  const header = body.querySelector('.unit-card-head')!;
-  const traits = node('div', '', 'unit-card-traits');
-  for (const tag of heroTraitTagsWithIds(data.definitionId)) {
-    const chip = node('span', '', tag.open ? 'trait-open' : 'trait-closed');
+  const card = unitCardBody(data.definitionId, data.starLevel);
+  if (!card || card.classList.contains('unit-card-anvil')) return card;
+  const def = UNIT_DEFINITIONS[data.definitionId], neutral = def.unitKind === 'neutral';
+  const star = Number(card.dataset.star);
+  const body = node('div', '', 'unit-card unit-inspect-body'); body.dataset.unitDef = data.definitionId; body.dataset.star = String(star);
+  const hero = node('div', '', 'inspect-hero'); hero.dataset.cost = neutral ? '1' : String(Math.min(6, Math.max(1, def.cost)));
+  const portrait = card.querySelector('.unit-card-portrait')!; portrait.classList.toggle('neutral', neutral);
+  const stars = node('span', '★'.repeat(star), 'inspect-stars'); stars.dataset.star = String(star); stars.setAttribute('aria-label', `${star} 星`);
+  const traits = node('div', '', 'inspect-traits');
+  if (!neutral) for (const tag of heroTraitTagsWithIds(data.definitionId)) {
+    const chip = node('span', '', `inspect-trait ${tag.open ? 'trait-open' : 'trait-closed'}`);
     if (!tag.open) chip.title = '本版本未开放';
-    if (tag.id) chip.innerHTML = s13IconHtml('trait', tag.id, 18, 'trait-icon');
-    chip.append(document.createTextNode(tag.name)); traits.append(chip);
+    const icon = node('i'); if (tag.id) icon.innerHTML = s13IconHtml('trait', tag.id, 18, 'trait-icon');
+    chip.append(icon, document.createTextNode(tag.name)); traits.append(chip);
   }
-  body.replaceChildren(header, traits);
+  const name = node('div', '', 'inspect-name');
+  name.append(node('strong', card.querySelector('.unit-card-name')!.textContent!, 'unit-card-name'), node('span', neutral ? '野怪' : String(def.cost), 'inspect-cost'));
+  hero.append(portrait, stars, traits, name);
+  body.append(hero, node('div', '', 'inspect-notes'));
+  const bars = node('div', '', 'inspect-bars');
   for (const kind of ['hp', 'mana']) {
     const bar = node('div', '', `inspect-bar inspect-${kind}`); bar.dataset.bar = kind;
     const fill = node('span', '', 'inspect-fill'); fill.dataset.fill = kind; bar.append(fill);
     if (kind === 'hp') { const shield = node('span', '', 'inspect-shield'); shield.dataset.fill = 'shield'; bar.append(shield); }
-    const label = node('span', '', 'inspect-bar-text'); label.dataset.value = kind; bar.append(label); body.append(bar);
+    const label = node('span', '', 'inspect-bar-text'); label.dataset.value = kind; bar.append(label); bars.append(bar);
   }
+  const base = planningBase(data.definitionId, star);
+  const heroAbility = Boolean(data.heroAbility) && star !== 4;
+  const abilityName = abilityText(data.definitionId, star, undefined, heroAbility)?.name ?? '无主动技能';
+  const row = node('div', '', 'inspect-row');
+  const button = node('button', '', 'inspect-ability') as HTMLButtonElement; button.type = 'button';
+  button.setAttribute('aria-label', `技能：${abilityName}`); button.setAttribute('aria-expanded', 'false');
+  const art = abilityLabel(data.definitionId, '').querySelector('img');
+  if (art) { art.removeAttribute('style'); art.width = art.height = 40; button.append(art); }
   const items = node('div', '', 'inspect-items');
   for (let slot = 0; slot < 3; slot++) {
     const cell = node('span', '', 'inspect-item'); cell.tabIndex = 0; cell.dataset.slot = String(slot); items.append(cell);
   }
-  body.append(items, itemStackLine(data.combat?.itemStacks), node('div', '', 'inspect-stats-label'));
-  const grid = node('dl', '', 'unit-card-stats');
-  for (const [key, label] of Object.entries({ attack: '攻击力', ap: '法术强度', armor: '护甲', mr: '魔抗', speed: '攻击速度', crit: '暴击几率', critDamage: '暴击伤害', range: '射程' })) {
-    const value = node('dd'); value.dataset.value = key; grid.append(node('dt', label), value);
-  }
-  body.append(grid);
-  const stats = data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null;
-  const base = stats ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
+  row.append(button, items);
+  const tip = node('div', '', 'inspect-ability-card'); tip.setAttribute('role', 'tooltip');
   const ability = node('div', '', 'unit-card-ability');
-  ability.append(abilityLabel(data.definitionId, `技能 · ${abilityText(data.definitionId, data.starLevel)?.name ?? '无主动技能'} · 法力 ${base.initialMana}/${base.maxMana}`), abilityRanks(data.definitionId, data.starLevel));
-  body.append(ability);
-  const role = roleSection(data.definitionId); if (role) body.append(role);
-  body.append(node('div', '', 'inspect-notes'), battleLine(data.battle ?? { battle: null, match: null }));
+  const maxMana = planningMeters(data.definitionId, star, data.heroAbility).maxMana;
+  ability.append(abilityLabel(data.definitionId, `${abilityName} · 法力 ${base.initialMana}/${maxMana}`), abilityRanks(data.definitionId, data.starLevel, heroAbility));
+  tip.append(ability);
+  const role = roleSection(data.definitionId); if (role) tip.append(role);
+  const toggle = (open: boolean) => { tip.classList.toggle('open', open); button.setAttribute('aria-expanded', String(open)); };
+  button.addEventListener('pointerenter', () => toggle(true)); button.addEventListener('pointerleave', () => toggle(false));
+  button.addEventListener('focus', () => toggle(true)); button.addEventListener('blur', () => toggle(false));
+  button.addEventListener('click', () => toggle(!tip.classList.contains('open')));
+  const grid = node('dl', '', 'unit-card-stats');
+  for (const [key, label] of Object.entries(STAT_LABELS)) {
+    const cell = node('div', '', 'inspect-stat'), value = node('dd'); value.dataset.value = key; cell.append(node('dt', label), value); grid.append(cell);
+  }
+  body.append(bars, row, tip, node('div', '', 'inspect-stats-label'), grid, itemStackLine(data.combat?.itemStacks), battleLine(data.battle ?? { battle: null, match: null }));
   updateUnitPanel(body, data);
   return body;
+}
+
+/** Splash banner from the optional original art (heroes only; others keep the portrait). */
+export function applyUnitSplash(body: HTMLElement, skin: UnitPanelSkin | null): void {
+  const hero = body.querySelector<HTMLElement>('.inspect-hero'), id = body.dataset.unitDef?.replace(/-ranged$/, '') ?? '';
+  const url = skin?.splash.get(id);
+  if (!hero || !url) return;
+  hero.style.setProperty('--splash', `url(${JSON.stringify(url)})`); hero.classList.add('has-splash');
 }
 
 /** Text and widths only: combat refresh never replaces the header, slots, bars or stat nodes. */
 export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   if (body.classList.contains('unit-card-anvil')) return;
-  const def = UNIT_DEFINITIONS[data.definitionId];
-  const base = (data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null) ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
+  const base = planningBase(data.definitionId, data.starLevel);
   const live = data.combat ?? planningBonusProjection(data);
   const hp = live?.hp ?? base.health, maxHp = live?.maxHp ?? base.health, shield = live?.shield ?? 0;
-  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? base.maxMana;
+  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? planningMeters(data.definitionId, data.starLevel, data.heroAbility).maxMana;
   // The replay's interval is already the rules' current speed projection (including temporary effects).
   const speed = live ? 20 / live.attackIntervalTicks : base.baseAttackSpeedBps !== undefined ? base.baseAttackSpeedBps / 10000 : 20 / base.attackIntervalTicks;
   const crit = live as (CombatViewUnit & { baseCritChanceBps?: number; baseCritMultiplierBps?: number }) | null;
@@ -140,12 +171,17 @@ export class UnitPanel {
   private key = '';
   private stamp = -Infinity;
   private read: (() => UnitPanelData | null) | null = null;
+  private skin: UnitPanelSkin | null = null;
   private readonly escape = (event: KeyboardEvent) => { if (event.key === 'Escape') this.close(); };
   constructor() {
     if (!document.querySelector('style[data-unit-inspect]')) { const style = document.createElement('style'); style.dataset.unitInspect = ''; style.textContent = PANEL_STYLE; document.head.append(style); }
     this.root.hidden = true; this.root.setAttribute('aria-label', '棋子信息'); this.root.setAttribute('role', 'region');
     const close = node('button', '×', 'inspect-close'); close.title = '关闭'; close.setAttribute('aria-label', '关闭棋子信息'); close.addEventListener('click', () => this.close());
     this.root.append(close); document.body.append(this.root); document.addEventListener('keydown', this.escape);
+    void loadUnitPanelSkin().then(skin => {
+      if (!skin || !this.root.isConnected) return;
+      this.skin = skin; applyUnitPanelSkin(this.root, skin); if (this.body) applyUnitSplash(this.body, skin);
+    });
   }
   pin(read: () => UnitPanelData | null): void { this.read = read; this.key = ''; this.stamp = -Infinity; this.refresh(performance.now()); }
   refresh(now: number): void {
@@ -154,7 +190,7 @@ export class UnitPanel {
     const key = JSON.stringify([data.id, data.definitionId, data.starLevel]);
     if (key !== this.key) {
       this.body?.remove(); this.body = buildUnitPanel(data); if (!this.body) { this.close(); return; }
-      this.root.append(this.body); this.key = key;
+      applyUnitSplash(this.body, this.skin); this.root.append(this.body); this.key = key;
     } else if (this.body) updateUnitPanel(this.body, data);
     this.root.hidden = false; this.place();
   }
@@ -181,7 +217,7 @@ export function showSceneDescription(target: import('../rendering/board-feed').B
   if (target.kind === 'unit' || target.kind === 'carousel') {
     const data = target.kind === 'carousel' ? target.unit : unit;
     if (data) body = unitCardBody(data.definitionId, data.starLevel, null,
-      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'));
+      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'), 'notes' in data ? data.notes : []);
   } else if (target.kind === 'item') {
     const entry = catalogEntry(target.id); if (entry) body = itemCardBody(entry);
   } else if (target.kind === 'orb') {

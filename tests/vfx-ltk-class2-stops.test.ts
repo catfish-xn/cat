@@ -1,0 +1,89 @@
+import { describe, expect, it } from 'vitest';
+import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
+import { swain } from '../src/rendering/three-mode/vfx-ltk/batch3/swain';
+import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
+import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+
+const cue = (list: readonly TimelineCue[] | undefined, system: string) => {
+  const found = list?.filter(entry => entry.system === system) ?? [];
+  expect(found).toHaveLength(1);
+  return found[0]!;
+};
+
+// 11-08 class-2 pass: emitters without linger were cleared in one frame at a hand-set stopAfter.
+describe('class-2 stop timings checked against the original (3b-1)', () => {
+  it("holds Viktor's board darkening 2.1 s and cuts it there, at one and three stars", () => {
+    for (const [skill, system] of [['viktor-slam', 'c4ef93f3'], ['viktor-slam-3star', 'efdd9461']] as const) {
+      const board = cue(viktorSkills[skill], system);
+      expect(board).toMatchObject({ location: 'board', delay: 0, duration: 2.2, stopAfter: 2.1 });
+      expect(board.fadeOut).toBeUndefined();
+    }
+  });
+
+  it("starts Darius's blade ring with the cast, since its emitters carry their own 0.75 s lead", () => {
+    expect(cue(CUE_OVERRIDES.darius, '97f3e391')).toMatchObject({ action: 'cast', event: 'cast-start', delay: 0, duration: 1.2 });
+    expect(cue(CUE_OVERRIDES.darius, '97f3e391').stopAfter).toBeUndefined();
+  });
+
+  it('fades the soft-stopped casts instead of clearing them at stopAfter', () => {
+    expect(cue(jayceSkills['jayce-back'], '508e8c05')).toMatchObject({ duration: .6, stopAfter: .3, fadeOut: true });
+    expect(cue(sevikaSkills['sevika-punch'], '0badab98')).toMatchObject({ duration: .6, stopAfter: .5, fadeOut: true });
+    expect(cue(viktorSkills.viktor, '37d3ac23')).toMatchObject({ duration: 1.5, stopAfter: 1, fadeOut: true });
+  });
+
+  it('lets the Elise and Swain back-form casts run to their natural end instead of cutting them while rising', () => {
+    expect(cue(elise['elise-back'], '9e530234')).toMatchObject({ delay: 0, duration: 1.8 });
+    expect(cue(swain['swain-back'], '2a51ddb9')).toMatchObject({ delay: 0, duration: 1.8 });
+  });
+
+  it('fades Nocturne\'s shadow disc from its stop and keeps Irelia\'s stance to its end (3b-2)', () => {
+    const nocturne = CUE_OVERRIDES.nocturne?.filter(entry => entry.system === '3e224f4a') ?? [];
+    expect(nocturne).toHaveLength(2);
+    expect(nocturne.find(entry => entry.action === 'cast')).toMatchObject({ delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true });
+    expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', duration: 0.5, stopAfter: 0.1, fadeOut: true });
+    const stance = cue(CUE_OVERRIDES.irelia, '67665513');
+    expect(stance).toMatchObject({ delay: 0, duration: 1.6 });
+    expect(stance.stopAfter).toBeUndefined();
+  });
+
+  it("keeps Sevika's shield bubble up for the whole 4 s shield roll, and Jackpot (coins, no shield) has none", () => {
+    const bubble = cue(sevikaSkills['sevika-shield'], '518dee63');
+    expect(bubble).toMatchObject({ event: 'cast-start', delay: 0, duration: 4 });
+    expect(bubble.stopAfter).toBeUndefined();
+    expect(bubble.fadeOut).toBeUndefined();
+    expect(sevikaSkills['sevika-jackpot'].some(c => c.system === '518dee63')).toBe(false);
+  });
+});
+
+// 11-08 whole-roster audit at 6224095b: these stops still cleared no-linger particles in one frame.
+describe('stops found by the whole-roster audit fade instead of clearing (11-08)', () => {
+  it('fades every remaining one-frame stop from its stopAfter', () => {
+    const found: [readonly TimelineCue[] | undefined, string, string?][] = [
+      [CUE_OVERRIDES.twitch, '900dd2d2'],
+      [CUE_OVERRIDES.renata, 'fdf79734'],
+      [jayceSkills['jayce-front'], 'f7fa1af5'],
+      [jayceSkills['jayce-front'], 'a404455c'],
+      [sevikaSkills['sevika-flamethrower'], '5d6a1033'],
+      [S13_TIMELINES.vi, 'c11e6814'],
+      [S13_TIMELINES.vi, '9614ffb4'],
+      [BATCH1_TIMELINES.lux, '33f42cc3'],
+      [BATCH1_TIMELINES.zeri, 'c4b3f285'],
+      [BATCH1_TIMELINES.kogmaw, '9765f3d3'],
+    ];
+    for (const [list, system] of found) {
+      const entry = cue(list, system);
+      expect(entry.stopAfter, system).toBeGreaterThan(0);
+      expect(entry.fadeOut, system).toBe(true);
+    }
+    const twitchHits = CUE_OVERRIDES.twitch?.filter(entry => entry.system === '4e7cc3b1') ?? [];
+    // 11-13 (Fable): the cast-time bolt and its hit are gone; the empowered attack's hit is the only 4e7cc3b1 left.
+    expect(twitchHits).toHaveLength(1);
+    expect(twitchHits[0]).toMatchObject({ action: 'attack', variant: 'empowered' });
+    for (const hit of twitchHits) expect(hit).toMatchObject({ event: 'hit', fadeOut: true });
+  });
+});

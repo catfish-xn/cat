@@ -3,6 +3,8 @@ import { anvilChoiceId, specification } from '../anvils';
 import { isAnvil } from '../content/anvils';
 import { canonicalContent } from '../content/index';
 import type { MatchState } from '../match-types';
+import { isOverflowUnit } from '../bench-capacity';
+import { overEncumberedActive } from '../over-encumbered';
 
 /** Choice receipts and live units must reconcile with one authenticated birth and one consumption. */
 export function validateAnvils(state:MatchState):void {
@@ -17,7 +19,7 @@ export function validateAnvils(state:MatchState):void {
     check(state.resourceProvenance.entries.some(e=>e.kind==='unit-acquired'&&e.unitId===id));
   }
   for(const u of state.preparation.units)if(isAnvil(u.definitionId)){
-    check(u.team==='player'&&u.location.kind==='bench'&&u.starLevel===1&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id));
+    check(u.team==='player'&&(u.location.kind==='bench'||u.location.kind==='board'&&overEncumberedActive(state)&&isOverflowUnit(state.preparation,u.id))&&u.starLevel===1&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id));
     check(specification(state,u.id).definitionId===u.definitionId&&!opened.some(e=>e.unitId===u.id));
   }
   for(const e of opened){

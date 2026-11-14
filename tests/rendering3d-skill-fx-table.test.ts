@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SKILL_FX_TABLE } from '../src/rendering/three-mode/skill-fx-table';
+import { ARENA_UNIT_SCALE, FX_SOURCE_SCALE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { CAST_PARTICLE_CAP, HITSTOP_SECONDS, SKILL_FEEL_SAMPLE, WINDUP_SECONDS, castEffectTuning, impactFeel, skillColor } from '../src/rendering/three-mode/skill-feel';
 
 describe('skill feel table', () => {
@@ -35,9 +36,18 @@ describe('skill feel table', () => {
     }
   });
 
+  it('stands Singed\'s W ally burst on the ally\'s feet, with no size compensation now the old path sizes the original\'s way (B)', () => {
+    const tuning = castEffectTuning('singed_tft13_singed_base_w_ally_activate');
+    expect(tuning.scale).toBe(1);
+    expect(tuning.feet).toBe(true);
+    // Jinx's 10-24 shrink keeps its drawn quad size: 0.6 at the old base (scale0 wide at FX_SOURCE_SCALE).
+    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar').scale * 2 * ARENA_UNIT_SCALE).toBeCloseTo(0.6 * FX_SOURCE_SCALE, 12);
+    expect(castEffectTuning('singed_tft13_singed_base_w_mis')).toEqual({ scale: 1, particles: 120 });
+  });
+
   it('hands out copies, so a caller cannot change the table', () => {
     const tuning = castEffectTuning('jinx_tft13_jinx_base_r_tar'); tuning.scale = 9;
-    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar').scale).toBe(0.6);
+    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar').scale).toBeCloseTo(0.47, 2);
     const hit = impactFeel('vi'); hit.hold = 9;
     expect(impactFeel('vi').hold).toBe(0.1);
   });

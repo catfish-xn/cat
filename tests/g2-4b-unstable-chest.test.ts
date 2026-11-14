@@ -293,7 +293,10 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
   });
 
   it('M2: Lux dies after casting at two granted Archangel pulses; 972 magic restores and continues identically', () => {
-    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 64 });
+    // With the Irelia ally, targeting P1 (8106acee, merged c64a756a) draws combat RNG for equal-distance ties, so
+    // rngState 64 now grants Redemption (v25: 64 granted Archangel). 106 is the first state from 1 granting Archangel
+    // for which both M2 cases hold.
+    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 106 });
     expect(unitOf(after, 'caster').combatItemGrants!.map(g => g.definitionId)).toEqual(['archangel']);
     const cast = castNow(waitForPulses(after, 200));
     expect(unitOf(cast, 'caster').mechanismState!.periodicTasks.map(t => t.pulseOrdinal)).toEqual([2]);
@@ -303,7 +306,10 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
   });
 
   it('M2: Lux shields Irelia after two granted Archangel pulses, then dies; the ally shield restores and continues identically', () => {
-    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 64 });
+    // With the Irelia ally, targeting P1 (8106acee, merged c64a756a) draws combat RNG for equal-distance ties, so
+    // rngState 64 now grants Redemption (v25: 64 granted Archangel). 106 is the first state from 1 granting Archangel
+    // for which both M2 cases hold.
+    const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 106 });
     const ready = waitForPulses(after, 200);
     const cast = castNow({ ...ready, units: ready.units.map(u => u.id === 'z-ally' ? { ...u, hp: 300 } : u) });
     const shield = unitOf(cast, 'z-ally').shieldLayers!.find(s => s.source.ownerId === 'caster')!;

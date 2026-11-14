@@ -5,7 +5,8 @@ import { conserved } from '../tp-helpers';
 import { makeRoom, runUntil } from './helpers';
 
 // No socket or wall clock: exercise the same bounded timer driver as the whole-match routes.
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 26, preparationMs: 31_000 });
+// v26 D5 pool (7953c99a): real 2-1 draw with Shop Glitch for s1 is now seed 42 (was 26).
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 42, preparationMs: 31_000 });
 const owner = () => room.state.seats.find(s => s.seatId === 's1')!;
 afterAll(() => room.dispose());
 

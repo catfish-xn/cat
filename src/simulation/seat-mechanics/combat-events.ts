@@ -3,7 +3,7 @@ import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
 export interface SevikaCastVariant {
   readonly actionSeq:number;
-  readonly move:'flamethrower'|'punch'|'chomp';
+  readonly move:'flamethrower'|'punch'|'chomp'|'jackpot';
   readonly channelTicks:number;
   /** High Roller's empowered roll, independent of augment ownership. */
   readonly enhanced:boolean;
@@ -45,7 +45,10 @@ export function spawnCombatUnit(state: CombatState, unit: CombatUnit, source: Co
 /** Removes a unit from state.units and clears other units' targetId pointing at it. */
 export function removeCombatUnit(state: CombatState, unitId: string, reason: string, tick: number): CombatMembershipChange {
   if (!state.units.some(unit => unit.id === unitId)) throw new RangeError(`Unknown combat unit ${unitId}`);
-  const units = state.units.filter(unit => unit.id !== unitId).map(unit => unit.targetId === unitId ? { ...unit, targetId: null } : unit);
+  const units = state.units.filter(unit => unit.id !== unitId).map(unit => {
+    if (unit.targetId !== unitId) return unit;
+    const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
+  });
   return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
 }
 

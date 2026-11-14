@@ -36,6 +36,9 @@ for (const source of [args.source, args['six-cost']]) {
   }
 }
 const overlayPaths = new Set((await files(overlay)).map(p => p.toLowerCase()));
+// map22.bin systems a champion's script spawns. Sevika's High Roller slot machine, its lock-in flash and its result layers.
+// Sevika's High Roller slot machine, the _Mirrored twins (see champions/sevika.ts), and the lock-in child the frame spawns.
+const EXTRA_SYSTEMS = { tft13_lieutenant: ['5ee3f587', '8108acc8', '75cc1285', '5875fa39', '85a3c691', '5dbfcb42', 'e9258aa9', 'ba45e98d', '066fd22b'] };
 const results = [];
 for (const champion of input) {
   const folder = join(out, champion.source); await mkdir(folder, { recursive: true });
@@ -47,7 +50,7 @@ for (const champion of input) {
     }
   }
   const argv = ['--bin', champion.bin, '--assets', join(args.source, 'extracted'), '--hashes', join(args.source, 'hashes'), '--overlay', overlay,
-    '--extra-bin', join(overlay, 'data/maps/shipping/map22/map22.bin'), '--extra-systems', '0f2af66b,2436e086', '--out', folder];
+    '--extra-bin', join(overlay, 'data/maps/shipping/map22/map22.bin'), '--extra-systems', ['0f2af66b', '2436e086', ...(EXTRA_SYSTEMS[champion.source] ?? [])].join(','), '--out', folder];
   const result = await new Promise((accept, reject) => {
     const child = spawn(resolve(args.cli), argv, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = ''; child.stdout.on('data', b => stdout += b); child.stderr.on('data', b => stderr += b);

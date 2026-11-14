@@ -4,6 +4,7 @@ import { nameHash } from './binHash';
 import type { TimelineCue } from './timeline';
 import { S13_TIMELINES } from './s13-timelines';
 import { planActionEffects, type EffectPlayback } from '../action-effect-plan';
+import { SKILL_FX_TABLE } from '../skill-fx-table';
 export interface ConvertedMetadata { class: string | null; name?: string | null; root: VfxValue }
 export interface ConvertedEvent {
   source: 'spell' | 'animation'; label: string; action?: 'cast' | 'attack'; event: TimelineCue['event'];
@@ -128,7 +129,10 @@ export function mapLegacyTimeline(champion: string, inventory: readonly { id: st
     const original = ids.map(id => ({ id, playback: playback[id] }));
     // Existing renderer overrides can depend on procedural missiles/areas or omit
     // known fixed-direction layers. A data-only replacement must not bypass them.
-    if (Object.keys(playback).length === ids.length && JSON.stringify(planActionEffects(champion, action, ids.map(id => ({ id })), playback)) !== JSON.stringify(original)) {
+    // An effect the skill feel table stages itself (feet, omitted kinds: Singed's ally buff without its fixed-axis rays)
+    // counts as such an override too.
+    const staged = ids.some(id => { const tuning = SKILL_FX_TABLE[champion]?.effects?.[id]; return !!(tuning?.feet || tuning?.omitKinds?.length); });
+    if (staged || (Object.keys(playback).length === ids.length && JSON.stringify(planActionEffects(champion, action, ids.map(id => ({ id })), playback)) !== JSON.stringify(original))) {
       diagnostics.push(`${action}:requires-host-staging`); continue;
     }
     const pending: TimelineCue[] = []; let complete = true;

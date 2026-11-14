@@ -62,7 +62,9 @@ it.skipIf(!existsSync(RESEARCH_FILE))('registers the 14.24 source and both allow
 let route: MatchState;
 it('selects Shop Glitch through the real choice command', () => {
   // v25 batch-5 pool drift: seed 21 (also 42/51) naturally offers shop-glitch at 2-1 with up to three slot rerolls.
-  const seed = 21;
+  // v26 D5 (7953c99a) added four cards to the pool and moved the 2-1 draws; seed 21 no longer reaches shop-glitch within
+  // those rerolls. Re-searched 0..299 with the same procedure: seed 5 is the first (after rerolling slot 0).
+  const seed = 5;
   let s = reachRound('2-1', false, seed);
   for (let i = 0; i < 3 && !s.pendingChoice!.offers.includes('shop-glitch'); i++) {
     const c = s.pendingChoice!; s = accepted(rerollAugment(s, c.choiceId, c.generation, i));

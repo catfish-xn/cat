@@ -3,8 +3,10 @@ import { heroEmblemSvg } from '../../presentation/hero-identity';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { avatarUnit } from './opponent-board';
 import type { PlayerView, SeatPublic } from './protocol';
-import { StageTrack } from './stage-track';
+import { StageTrack, type StageHistory } from './stage-track';
 import { overtimeIndicator } from '../../presentation/overtime-display';
+import { SidebarRanking } from '../../presentation/sidebar-ranking';
+import { sidebarWinStreak, type SidebarStreak } from '../../presentation/sidebar-streak';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -14,6 +16,12 @@ type Pairing = 'opponent' | 'candidate' | null;
 /** How long a seat's HP drop stays marked (lost segment and -N chip). */
 const HIT_MS = 2600;
 const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', carousel: '选秀', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
+/** 14.24 tftstage right block: one small phase icon before the timer (planning clock, combat swords, draft, overtime). */
+const PHASE_ICON: Record<keyof typeof PHASE_TEXT, string> = {
+  lobby: 'M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11zM8 5v3.2l2.2 1.4', preparation: 'M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11zM8 5v3.2l2.2 1.4',
+  choice: 'M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z', carousel: 'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
+  combat: 'M3 3l7 7M3 3h3M3 3v3M13 3l-7 7M13 3h-3M13 3v3M5 11l-2 2M11 11l2 2', settlement: 'M3 8.5l3 3 7-7', ended: 'M3 8.5l3 3 7-7',
+};
 /** TFT-style right column: phase badge on top, eight seats ordered by HP below. The big countdown sits above the
  *  board when a countdown host is given (TFT top centre); without one it stays in the sidebar's top bar.
  *  Each seat shows an avatar (its most expensive deployed unit) and opens that seat's public board when clicked. */
@@ -27,6 +35,11 @@ export class PlayersSidebar {
   private countdownRound: HTMLElement | null = null;
   /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
   private stageTrack: StageTrack | null = null;
+  /** 14.24 tftstage left block's square slot, left of the stage number: the opening encounter's entry (OpeningEncounterHud mounts its chip here). */
+  readonly encounterSlot: HTMLElement | null = null;
+  private phaseIcon: HTMLElement | null = null;
+  /** My results by round ordinal, from my private seat view (set separately: the view does not carry them). */
+  private roundResults: NonNullable<StageHistory['results']> = new Map();
   private list: HTMLElement;
   private tabs!: HTMLElement;
   private view: PlayerView | null = null;
@@ -34,6 +47,8 @@ export class PlayersSidebar {
   private spectateBanner: HTMLElement;
   /** Last HP shown per seat: a drop leaves a fading "lost" segment and a -N chip on the bar (presentation only). */
   private shownHp = new Map<string, { hp: number; from: number; at: number }>();
+  private readonly ranking = new SidebarRanking();
+  private readonly rows = new Map<string, HTMLElement>();
   /** performance.now() minus the server clock, so the countdown follows the server. */
   private clockOffset = 0;
   /** Length of the current countdown (first sight of its deadline) and the deadline it belongs to, for the TFT progress line. */
@@ -48,7 +63,10 @@ export class PlayersSidebar {
     if (countdownHost) {
       countdownHost.classList.add('online-countdown'); this.countdownRound = element('span', '', 'countdown-round');
       this.stageTrack = new StageTrack();
-      countdownHost.replaceChildren(this.countdownRound, this.stageTrack.root, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
+      // 14.24 tftstage: left block (encounter slot + stage number) | the stage's rounds | right block (phase icon + timer).
+      this.encounterSlot = element('span', '', 'countdown-encounter'); this.encounterSlot.dataset.debug = 'online:stage-encounter';
+      this.phaseIcon = element('span', '', 'countdown-phase'); this.phaseIcon.dataset.debug = 'online:stage-phase';
+      countdownHost.replaceChildren(this.encounterSlot, this.countdownRound, this.stageTrack.root, this.phaseIcon, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
     } else top.append(this.phaseBadge, this.roundLabel, this.timerLabel);
     this.connectionBadge = element('span', '', 'online-connection'); this.connectionBadge.dataset.debug = 'online:connection'; this.connectionBadge.hidden = true;
     this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
@@ -76,34 +94,70 @@ export class PlayersSidebar {
     const spectateText = spectating ? `已淘汰 · 第 ${me!.rank ?? '?'} 名 · 观战中` : '';
     this.spectateBanner.textContent = spectateText; this.spectateBanner.hidden = !spectating;
     if (this.countdownRound) {
-      this.countdownRound.textContent = spectating ? `${spectateText} · ${view.phase.roundName}` : `${view.phase.roundName} · ${PHASE_TEXT[view.phase.kind]}`;
-      this.stageTrack!.render(view.phase.kind === 'lobby' || view.phase.kind === 'ended' ? 0 : view.phase.round);
+      // 14.24 shows the stage number alone; the phase is the small icon next to the timer.
+      this.countdownRound.textContent = spectating ? `${spectateText} · ${view.phase.roundName}` : view.phase.roundName;
+      const phase = this.phaseIcon!;
+      if (phase.dataset.phase !== view.phase.kind) {
+        phase.dataset.phase = view.phase.kind; textCard(phase, PHASE_TEXT[view.phase.kind]);
+        phase.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${PHASE_ICON[view.phase.kind]}"/></svg>`;
+      }
+      this.renderStage();
       this.countdownHost!.dataset.phase = view.phase.kind; this.countdownHost!.toggleAttribute('data-spectating', spectating);
     }
-    const ordered = [...view.seats].sort(compareSeats);
     // G1-P6: before the freeze only candidates are known (weak mark); the drawn opponent, or a single candidate, is certain (strong mark).
     const candidates = view.opponentCandidates ?? [];
     const opponent = view.opponentSeatId ?? (candidates.length === 1 ? candidates[0]! : null);
     const pairing = (seatId: string): Pairing => seatId === opponent ? 'opponent' : candidates.includes(seatId) ? 'candidate' : null;
-    this.list.replaceChildren(...ordered.map(seat => this.seatRow(seat, seat.seatId === view.mySeatId, pairing(seat.seatId))));
+    this.ranking.render(this.list, view.seats, seat => this.seatRow(seat, seat.seatId === view.mySeatId, pairing(seat.seatId)));
+    for (const id of this.rows.keys()) if (!view.seats.some(seat => seat.seatId === id)) { this.rows.delete(id); this.shownHp.delete(id); }
     this.tick();
   }
-  private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
+  /** My round results from my private seat view; redraws the stage tracker when a result arrives after the view. */
+  setRoundResults(results: readonly { readonly round: number; readonly result: 'playerWin' | 'enemyWin' | 'draw' | 'supply' }[]): void {
+    this.roundResults = new Map(results.map(entry => [entry.round, entry.result]));
+    this.renderStage();
+  }
+  private renderStage(): void {
+    const view = this.view; if (!view || !this.stageTrack) return;
+    const nameOf = (seatId: string) => view.seats.find(seat => seat.seatId === seatId)?.name ?? seatId;
+    const opponents = new Map((view.opponentHistory ?? []).map(entry => [entry.round, nameOf(entry.seatId)] as const));
+    if (view.opponentSeatId && !opponents.has(view.phase.round)) opponents.set(view.phase.round, nameOf(view.opponentSeatId));
+    this.stageTrack.render(view.phase.kind === 'lobby' || view.phase.kind === 'ended' ? 0 : view.phase.round, { results: this.roundResults, opponents });
+  }
+  private seatRow(seat: SeatPublic & { readonly streak?: SidebarStreak }, me: boolean, pairing: Pairing) {
     // A human whose connection dropped (server `connected`, kept fresh by the #229 heartbeat) is greyed out like TFT's reconnecting player, also while a bot covers it.
     const offline = seat.kind === 'human' && !seat.connected;
-    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`);
+    const existing = this.rows.get(seat.seatId), row = existing ?? element('li');
+    row.className = `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${offline && seat.alive ? ' offline' : ''}${seat.seatId === this.viewing ? ' viewing' : ''}`;
+    this.rows.set(seat.seatId, row);
+    row.style.animationDelay = '';
     row.dataset.debug = `online:seat:${seat.seatId}`;
-    if (pairing) row.dataset.pairing = pairing;
+    if (pairing) row.dataset.pairing = pairing; else delete row.dataset.pairing;
     if (this.onSelect) {
       row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', `查看 ${seat.name} 的阵容`);
       row.setAttribute('aria-pressed', String(seat.seatId === this.viewing));
-      row.addEventListener('click', () => this.onSelect!(seat.seatId));
-      row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.onSelect!(seat.seatId); } });
+      if (!existing) {
+        row.addEventListener('click', () => this.onSelect!(seat.seatId));
+        row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.onSelect!(seat.seatId); } });
+      }
     }
-    const avatar = element('span', '', 'seat-avatar'); avatar.dataset.debug = `online:avatar:${seat.seatId}`;
+    const portrait = existing?.children[0] as HTMLElement | undefined ?? element('span', '', 'seat-portrait');
+    const avatar = portrait.children[0] as HTMLElement | undefined ?? element('span', '', 'seat-avatar'); avatar.dataset.debug = `online:avatar:${seat.seatId}`;
     const unit = avatarUnit(seat.publicBoard);
     if (unit) { avatar.dataset.definition = unit.definitionId; avatar.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40)); }
-    else avatar.append(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder'));
+    else { delete avatar.dataset.definition; avatar.replaceChildren(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder')); }
+    const winFire = sidebarWinStreak(seat);
+    // Local ui/manifest.json lists tft_winstreak_atlas as unavailable. Code-drawn flame
+    // stays outside the clipped portrait and works in both render modes, without an asset request.
+    if (!portrait.children.length) portrait.append(avatar);
+    const streakNode = portrait.children[1] as HTMLElement | undefined;
+    if (winFire !== null) {
+      const fire = streakNode ?? element('span', '', 'seat-streak-fire');
+      fire.setAttribute('aria-hidden', 'true');
+      fire.dataset.debug = `online:streak:${seat.seatId}`;
+      fire.classList.toggle('level-2', winFire.level === 2);
+      if (!streakNode) portrait.append(fire);
+    } else streakNode?.remove();
     const head = element('div', '', 'seat-head');
     // 机: a fill-in bot for the whole match; a human seat a bot is playing while its player is away shows 机 in the
     // takeover style plus 接管中 (B6). Only one of them controls a seat at a time.
@@ -132,12 +186,12 @@ export class PlayersSidebar {
       const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
       chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
     }
-    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
+    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, winFire === null ? '' : `${winFire.count} 连胜`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
     for (const node of Array.from(head.querySelectorAll<HTMLElement>('[title]'))) { node.setAttribute('aria-label', node.title); node.removeAttribute('title'); }
     bar.append(fill);
     // TFT player list: round portrait on the left, name and bar in the middle, HP and level on the right.
     const main = element('div', '', 'seat-main'); main.append(head, bar);
-    row.append(avatar, main, foot); return row;
+    row.replaceChildren(portrait, main, foot); return row;
   }
   /** Shows the player list or the battle stats in the column (3D; 2D keeps both). */
   setTab(key: 'players' | 'stats'): void {
@@ -180,10 +234,5 @@ export class PlayersSidebar {
     this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; this.connectionBadge.dataset.tone = tone;
   }
   show(visible: boolean) { this.root.hidden = !visible; }
-  dispose() { this.detach(); this.stageTrack?.dispose(); this.root.remove(); this.countdownHost?.replaceChildren(); }
-}
-function compareSeats(a: SeatPublic, b: SeatPublic): number {
-  if (a.alive !== b.alive) return a.alive ? -1 : 1;
-  if (a.alive) return b.hp - a.hp || a.name.localeCompare(b.name, 'zh');
-  return (a.rank ?? 99) - (b.rank ?? 99);
+  dispose() { this.ranking.dispose(); this.rows.clear(); this.shownHp.clear(); this.detach(); this.stageTrack?.dispose(); this.root.remove(); this.countdownHost?.replaceChildren(); }
 }

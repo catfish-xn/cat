@@ -12,6 +12,7 @@ import { flickerInto, integratedInto, sampleCurveInto } from "../utils/sampleCur
 import { instanceScaleOf } from "./flex";
 import type { EmitterState, World } from "./integrate";
 import { FRAME_SLOTS, NOT_LINGERING, type Pool } from "./pool";
+import { cueScale } from "./systemScale";
 
 export { emitterPhase };
 
@@ -50,6 +51,8 @@ export interface DrawFrame {
   readonly orientation: Float32Array;
   /** The definition's own `transform`, the last factor of a particle's own matrix. */
   readonly world: World;
+  /** Cue scale about the anchor. 1 keeps an authored world-acceleration offset. */
+  readonly scale: number;
 }
 
 /**
@@ -71,18 +74,38 @@ export interface Source {
   readonly orientation: Float32Array;
   /** The definition's own `transform`. */
   readonly world: World;
+  /**
+   * Cue scale about the anchor. Omitted means 1. Particle positions are already stored
+   * scaled; this reaches draws that add a further world-space offset, and beam ends.
+   */
+  readonly scale?: number;
 }
 
-/** What `source` stands at this moment, for a draw of `emitter`. */
+/** A DrawFrame whose fields a hot path overwrites instead of allocating. */
+export interface FrameSlot {
+  emitter: EmitterModel;
+  now: number;
+  phase: number;
+  origin: Point;
+  orientation: Float32Array;
+  world: World;
+  scale: number;
+}
+export function frameInto(source: Source, emitter: EmitterModel, out: FrameSlot): DrawFrame {
+  out.emitter = emitter;
+  out.now = source.time;
+  out.phase = emitterPhase(emitter, source.elapsed);
+  out.origin = source.origin;
+  out.orientation = source.orientation;
+  out.world = source.world;
+  out.scale = cueScale(source.scale);
+  return out;
+}
 export function frameOf(source: Source, emitter: EmitterModel): DrawFrame {
-  return {
-    emitter,
-    now: source.time,
-    phase: emitterPhase(emitter, source.elapsed),
-    origin: source.origin,
-    orientation: source.orientation,
-    world: source.world,
-  };
+  return frameInto(source, emitter, {
+    emitter, now: 0, phase: 0, origin: source.origin, orientation: source.orientation, world: source.world,
+    scale: cueScale(source.scale),
+  });
 }
 
 /** Where one particle draws, of which a draw path keeps one. */
@@ -114,6 +137,16 @@ const UNIFORMLY_SCALED: ReadonlySet<number | null> = new Set([
  * progress instead, where its emitter switches them in. A table on either curve is read at
  * a fresh draw each step, so it flickers.
  */
+let drawFade = 1;
+/**
+ * Run `draw` with every particle it reads drawn at `fade` of its alpha (1 outside). A host-side fade for a cue whose
+ * particles outlive it: an additive emitter premultiplies alpha into its colour, so this fades every blend mode.
+ */
+export function withDrawFade(fade: number, draw: () => void): void {
+  drawFade = fade;
+  try { draw(); } finally { drawFade = 1; }
+}
+
 export function appearance(
   pool: Pool,
   index: number,
@@ -155,6 +188,7 @@ export function appearance(
   for (let channel = 0; channel < 4; channel += 1) {
     out.color[channel] *= pool.birthColor[index * 4 + channel] * emitter.modulation[channel];
   }
+  out.color[3] *= drawFade;
 }
 
 /**
@@ -199,7 +233,11 @@ export function drawnPlaceInto(pool: Pool, index: number, frame: DrawFrame, out:
 
   PUSHED.fill(0);
   integratedInto(emitter.worldAcceleration, age01(pool, index, frame.now), 2, PUSHED, 0);
-  for (let axis = 0; axis < 3; axis += 1) out.place[axis] += PUSHED[axis] * lifetime * lifetime;
+  const cue = cueScale(frame.scale);
+  for (let axis = 0; axis < 3; axis += 1) {
+    const gained = PUSHED[axis] * lifetime * lifetime;
+    out.place[axis] += cue === 1 ? gained : gained * cue;
+  }
 }
 
 /**

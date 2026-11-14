@@ -2,7 +2,7 @@ import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { readAugmentIncome } from './augment-income';
 import type { OwnedAugment } from './strategy-types';
-import { ECONOMY_RULES, MATCH_RULES, STAGE_PLAYER_DAMAGE, selectPlayerBaseDamage } from './match-rules';
+import { ECONOMY_RULES, MATCH_RULES, PLAYER_DAMAGE_RULES, selectPlayerBaseDamage } from './match-rules';
 import { grantXp } from './progression';
 
 export interface EconomyStreak { readonly kind: 'win' | 'loss' | null; readonly count: number }
@@ -37,6 +37,18 @@ function nonnegativeInteger(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`Invalid ${label}`);
 }
 
+/** 2026-10-29 approved PvE rule. Survivors use countsG23SurvivorDamage, independent of stars. */
+export function planPlayerDamage(input: Pick<RoundEconomyInput, 'stage' | 'roundKind' | 'roundId' | 'result' | 'enemySurvivors'>): { readonly baseDamage: number; readonly playerDamage: number } {
+  nonnegativeInteger(input.enemySurvivors, 'enemy survivor count');
+  const baseDamage = selectPlayerBaseDamage(input.stage, input.roundKind, input.roundId);
+  const damage = input.roundKind === 'supply' || input.result === 'playerWin' ? 0
+    : baseDamage + input.enemySurvivors * PLAYER_DAMAGE_RULES.survivingEnemyDamage;
+  const playerDamage = input.roundKind === 'pve' && input.result !== 'playerWin'
+    ? Math.max(PLAYER_DAMAGE_RULES.pveMinimumDamage, damage) : damage;
+  nonnegativeInteger(playerDamage, 'player damage');
+  return { baseDamage, playerDamage };
+}
+
 /** PvP and PvE share streaks; a draw counts as a loss. Supply preserves but does not pay the streak. */
 export function planCombatStreak(streak: EconomyStreak, result: RoundEconomyInput['result']): { streakAfter: EconomyStreak; streakGold: number } {
   if (result === null) return { streakAfter: { ...streak }, streakGold: 0 };
@@ -51,7 +63,8 @@ export function planCombatStreak(streak: EconomyStreak, result: RoundEconomyInpu
 /** Pure calculation only. Match freezes this plan with its unique settlement receipt; base/interest/streak pay at next entry. */
 export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const { stage, roundKind, result, gold, streak, level, xp, hp, enemySurvivors } = input;
-  if (!Number.isInteger(stage) || STAGE_PLAYER_DAMAGE[stage] === undefined) throw new RangeError('Invalid stage');
+  // Ordinary economy covers stages 2–6; opening and overtime damage have their own contexts.
+  if (!Number.isInteger(stage) || stage < 2 || stage > 6) throw new RangeError('Invalid stage');
   if (!['pvp', 'pve', 'supply'].includes(roundKind)) throw new RangeError('Invalid round kind');
   if (roundKind === 'supply' ? result !== null : !['playerWin', 'enemyWin', 'draw'].includes(result ?? '')) {
     throw new RangeError('Result does not match round kind');
@@ -79,9 +92,7 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const income = incomeBreakdown.base + win + interest + streakGold;
   const goldAfter = gold + income;
   nonnegativeInteger(goldAfter, 'settled gold');
-  const baseDamage = selectPlayerBaseDamage(stage, roundKind, input.roundId);
-  const playerDamage = roundKind === 'supply' || won ? 0 : baseDamage + (isPvp ? enemySurvivors : 0);
-  nonnegativeInteger(playerDamage, 'player damage');
+  const { baseDamage, playerDamage } = planPlayerDamage(input);
   const hpAfter = Math.max(0, hp - playerDamage);
   return { goldAfter, hpAfter, income, incomeBreakdown, interestBasis, streakAfter, baseDamage, playerDamage,
     hpLost: hp - hpAfter, progression: grantXp(level, xp, MATCH_RULES.roundXp,augmentLevelCap(input.augments??[])) };

@@ -43,7 +43,7 @@ export const ROUND_CATALOG: readonly RoundDefinition[] = freezeContent<RoundDefi
   {roundId:'6-4',ordinal:35,stage:6,subround:4,kind:'supply',isFinal:false,encounterId:null,displayName:'6-4'},
   {roundId:'6-5',ordinal:36,stage:6,subround:5,kind:'pvp',isFinal:false,encounterId:null,displayName:'6-5'},
   {roundId:'6-6',ordinal:37,stage:6,subround:6,kind:'pvp',isFinal:false,encounterId:null,displayName:'6-6'},
-  {roundId:'6-7',ordinal:38,stage:6,subround:7,kind:'pve',isFinal:true,encounterId:'rift-herald-v1',displayName:'6-7'},
+  {roundId:'6-7',ordinal:38,stage:6,subround:7,kind:'pve',isFinal:true,encounterId:'elder-dragon-v1',displayName:'6-7'},
 ]);
 
 export type RoundSemanticNode = 'augment' | 'anomaly' | 'supply';

@@ -18,6 +18,8 @@ const load = (file: string) => JSON.parse(readFileSync(new URL(sourceRoot + file
 const inventory = load('normalized/g2-1-champions.json');
 const traits = load('normalized/g2-1-traits.json');
 const items = load('normalized/g2-1-items.json');
+// Official 14.24b values replace these archived fields; tests/s13-14-24b-overrides.test.ts locks the exact list.
+const bPatch = load('b-patch-overrides.json');
 const expected = { amumu: 1, powder: 1, singed: 1, violet: 1, nocturne: 2, vladimir: 2, zeri: 2,
   blitzcrank: 3, ekko: 4, illaoi: 4, twitch: 4, leblanc: 5, malzahar: 5, rumble: 5 } as const;
 
@@ -38,14 +40,14 @@ it('maps all admitted new heroes to independent source attributes, costs and abi
   for (const [id, cost] of Object.entries(expected)) {
     const c = inventory.champions.find((r: any) => r.id === id), d = M5_UNIT_DEFINITIONS[id];
     expect(d.cost).toBe(cost); expect(d.name).toBe(c.record.name);
-    expect(d.baseStats).toEqual({ health: c.record.stats.hp, attack: c.record.stats.damage, armor: c.record.stats.armor, magicResist: c.record.stats.magicResist });
+    expect(d.baseStats).toEqual({ health: c.record.stats.hp, attack: bPatch.units[id]?.attack ?? c.record.stats.damage, armor: c.record.stats.armor, magicResist: c.record.stats.magicResist });
     expect(d.baseAttackSpeedBps).toBe(Math.round(c.record.stats.attackSpeed * 10000));
     expect(d.abilityId).toBe(`${id}-ability`);
     for (const star of [1, 2, 3] as const) {
       const ability = resolveAbility(d.abilityId, star);
       expect(ability.kind).toBe('s13');
       if (ability.kind === 's13') for (const v of c.record.ability.variables.filter((v: any) => v.value !== null))
-        expect(ability.variables[v.name]).toBe(Math.round(Math.round(v.value[star] * 10000) / 10000 * 10000));
+        expect(ability.variables[v.name]).toBe(Math.round(Math.round((bPatch.abilities[id]?.[v.name]?.[star - 1] ?? v.value[star]) * 10000) / 10000 * 10000));
     }
   }
 });

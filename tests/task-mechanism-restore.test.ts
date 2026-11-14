@@ -24,8 +24,9 @@ for (const options of [
 beforeAll(() => { acquireEquipment(['rod']); });
 
 const accepted = (r: MatchCommandResult): MatchState => { if (!r.ok) throw new Error(r.reason); return r.state; };
-// v16 public position vectors: real Sion attack kills at244/355, zero personal
-// kill reward and exactly0/15 assist stats; no battle facts or stats are patched.
+// v26 public position vectors: real Sion attack kills, zero personal kill
+// reward and exactly 0/15 assist stats; no battle facts or stats are patched.
+// v26 melee pathing moves the contribution case to tick 410 (enemy-r4-2).
 function bracerCounts(state: MatchState, ownerId: string) {
   const owner = state.combat!.units.find(u => u.id === ownerId)!;
   return Object.fromEntries(['kill', 'assist'].map(id => {
@@ -70,9 +71,10 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 
 it.each([
   // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
-  // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
-  { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
+  // P0 retention moved the old kills at 255/225. v26 melee pathing moves the
+  // contribution case to tick 410; public position vectors retain curse and +0/+15 checks.
+  { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.
@@ -177,13 +179,13 @@ function expectRejectedAtAllEntrances(bad: MatchState, reason: string) {
 
 it('rejects altered or invented target reave facts beside the legal seed 3151248 curse', () => {
   const state = morganaCurseSave();
-  // v22 mana rules (damage-taken mana, overflow) bring Morgana's first curse forward from tick 89 to 70.
-  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(70);
+  // v22 mana rules bring Morgana's first curse forward from 89 to 70; v26 melee pathing to 60.
+  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(60);
   const target = state.combat!.units.find(u => u.id === 'enemy-r4-1')!;
-  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 270 });
+  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 260 });
   const owner = state.combat!.units.find(u => u.definitionId === 'morgana')!;
   expect(owner.tasks).toHaveLength(10);
-  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 70 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
+  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 60 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
     const bad = structuredClone(state);
     Object.assign(bad.combat!.units.find(u => u.id === target.id)!.g22!, patch);
     expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
@@ -191,7 +193,7 @@ it('rejects altered or invented target reave facts beside the legal seed 3151248
   const bad = structuredClone(state), untouched = bad.combat!.units.find(u => u.team === target.team && u.id !== target.id)!;
   expect(untouched.g22?.reaveBps ?? 0).toBe(0);
   Object.assign(untouched, { g22: { initialized: false, wanted: [], wantedDeaths: 0, mordeUntilTick: 0,
-    reaveBps: 5000, reaveUntilTick: 270, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
+    reaveBps: 5000, reaveUntilTick: 260, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
   expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
 });
 
@@ -205,8 +207,10 @@ it('restores the legal target reave and retains Irelia shielding at tick 104', (
 
 async function blackRoseSave(): Promise<MatchState> {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  // v23 batch 3: an economy augment now completes the rod sooner; keep the fixture at its original round 8.
-  let state = prepare(['rod'], { seed: 42, earliestRound: 8 });
+  // D5 registration (3ce71065) makes seed 42 select Sniper's Nest, whose solo
+  // proof cannot replay these test-only grants. Seed 43 reaches the same round
+  // without a history-owned augment; keep the real cast/Sion ticks unchanged.
+  let state = prepare(['rod'], { seed: 43, earliestRound: 8 });
   expect(state.round).toBe(8);
   for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,u.id));
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {

@@ -5,7 +5,9 @@ import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { validateContent } from '../src/simulation/validate-content';
 /** v25 pool: first public 3-2 seed in 0..100 after rerolls 0/1/2; draw scripted when the pinned slot still drifts. */
-const H11_SPONGING = { seed: 7, rerolls: [0, 1, 2] as const };
+// v26 D5 (7953c99a) pool: seed 7 (old value) ends with upward-mobility; 66 is the first seed from 0 still offering
+// Sponging after the same three slot rerolls (it appears at reroll 1 and survives rerolls 2/3).
+const H11_SPONGING = { seed: 66, rerolls: [0, 1, 2] as const };
 function spongingOffer() {
   let state = reachRound('3-2', false, H11_SPONGING.seed);
   for (const slot of H11_SPONGING.rerolls) {

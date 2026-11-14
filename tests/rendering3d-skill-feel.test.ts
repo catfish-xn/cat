@@ -65,7 +65,7 @@ describe('skill feel sample', () => {
     expect(impactFeel('renata')).toEqual({ hold: 0.1, kick: 1.5, ring: true });
     expect(impactFeel('vi')).toEqual({ hold: 0.1, kick: 1.5, ring: true, ringDelay: 0.15 });
     for (const id of ['jinx', 'jayce']) expect(impactFeel(id)).toEqual({ hold: HITSTOP_SECONDS, kick: 1, ring: false });
-    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar')).toEqual({ scale: 0.6, particles: 50 });
+    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar')).toEqual({ scale: expect.closeTo(0.4703, 4), particles: 50 });
     expect(castEffectTuning('jinx_tft13_jinx_base_r_muzzleflash')).toEqual({ scale: 1, particles: CAST_PARTICLE_CAP });
   });
 

@@ -2,6 +2,11 @@
 
 本项目由两个 AI agent 协作。先确认你是哪一个，只按自己的角色行事。
 
+**2026-11-12 用户更新：Codex 不再参与**
+- 用户原话："自己安排做,没有codex的参与了"。此后由 Claude 承担下文原属 Codex 的目录（`src/simulation/`、`tests/`、`scripts/`、`docs/` 等；`.github/workflows` 约定不变），`docs/UI_REQUESTS.md` 不再需要转交 Codex。
+- 放开的只是"谁来改"，不放宽改什么：改游戏规则或数值仍须用户先批准；只加输出的规则层改动也要证明结算零漂移（相关回放／种子测试通过，不改断言凑绿），事件结构变化按批重录纪元并同步 consumer-byte-audit。
+- 下文按两方写的分工保留作历史和目录说明，与本条冲突处以本条为准。
+
 **Codex（GPT）：规则、后端、测试、文档、审计、部署**
 - 可修改：`src/simulation/`（含 `content/`）、`tests/`、`scripts/`、`docs/`、各阶段计划文件、`.github/`。
 - M8 D6-A 已由用户确认：负责 `src/m6/` 的非视觉应用集成，以及 `src/persistence/`、`src/replay/`、`src/stats/` 中的非界面模块；下列四个界面文件归 Claude，不扩大为 Codex 的界面修改权限。

@@ -13,12 +13,70 @@ import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-pat
 // Names are editorial picks, not a measured popularity ranking. Availability is
 // established by the pinned client's WAD index, never the newer hash dictionary.
 export const BOARD_PICKS = [
-  { key: 'board-default', name: '通用默认棋盘', stems: ['base'], selection: 'pinned-client-base-arena' },
-  { key: 'board-dragon-bathhouse', name: '神龙温泉', stems: ['dragonbathhouse'] },
-  { key: 'board-club-two', name: '二号俱乐部', stems: ['lunarrevel_club2'] },
-  { key: 'board-kda', name: 'K/DA 演出舞台', stems: ['set10_kda'] },
-  { key: 'board-spirit-blossom', name: '灵魂莲华·神明', stems: ['spiritblossom_kami'] },
+  { key: 'board-default', name: '通用默认棋盘', stems: ['base'], selection: 'pinned-client-base-arena',
+    alignmentTargetWalkableCells: 7.2,
+    alignmentScale: 7.2 / 8.48,
+    // RegExp fields are overwritten by mergeBoardPick; JSON plan snapshots show {} unless re-serialized from code.
+    walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
+      ground: /\/BattleField_A_MAT$/i, wall: /\/Bench_A_MAT$/i },
+    alignmentEvidence: {
+      kind: 'screenshot',
+      method: 'screenshot-stone-railing-inner-edge',
+      materials: 'report.md 前排石栏可视内沿 ÷ 脚本 hex 格尺（locator 基准 f=1 时 implied 8.48 格）',
+      runtimeFrontRow: 3,
+      impliedWalkableCellsAtLocatorScale: 8.48,
+      targetWalkableCells: 7.2,
+      rayInnerWallCells: 9.069752108851418,
+      rayReference: 'BattleField_A_MAT + Bench_A_MAT inner-walls at locator scale; reference only, not used in f',
+      originalReference: '7.17 格（report.md 原版录像帧）',
+      formula: 'targetWalkableCells / impliedWalkableCellsAtLocatorScale',
+    } },
+  { key: 'board-dragon-bathhouse', name: '神龙温泉', stems: ['dragonbathhouse'],
+    walkableMeasure: { measureMode: 'inner-walls', runtimeFrontRow: 3,
+      ground: /DragonBathHouse_Board_MAT$/i, wall: /DragonBathHouse_Bench_MAT$/i },
+    alignmentEvidence: {
+      method: 'inner-walls',
+      materials: 'DragonBathHouse_Board_MAT + DragonBathHouse_Bench_MAT',
+      impliedWalkableCellsAtLocatorScale: 9.185,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-club-two', name: '二号俱乐部', stems: ['lunarrevel_club2'],
+    walkableMeasure: { measureMode: 'ground-floor-slice', runtimeFrontRow: 3,
+      ground: /Board_Club2_A_MAT$/i },
+    alignmentEvidence: {
+      method: 'ground-floor-slice',
+      materials: 'Board_Club2_A_MAT front-row floor slice (no bench wall MAT)',
+      impliedWalkableCellsAtLocatorScale: 9.73,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-kda', name: 'K/DA 演出舞台', stems: ['set10_kda'],
+    walkableMeasure: { measureMode: 'ground-floor-slice', runtimeFrontRow: 3,
+      ground: /Board_KDA_A_MAT$/i },
+    alignmentEvidence: {
+      method: 'ground-floor-slice',
+      materials: 'Board_KDA_A_MAT front-row floor slice (no bench wall MAT)',
+      impliedWalkableCellsAtLocatorScale: 9.411,
+      originalReference: '无原版对照',
+    } },
+  { key: 'board-spirit-blossom', name: '灵魂莲华·神明', stems: ['spiritblossom_kami'],
+    alignmentTargetWalkableCells: 8.8,
+    alignmentScale: 0.9462365591397849,
+    alignmentEvidence: {
+      kind: 'estimate',
+      method: 'screenshot-walkable-at-locator-scale',
+      reason: 'mapgeo 无前排连续 Board_Kami 地面切片或石栏 MAT（Board_Kami_MAT 仅包络顶点），无法用 inner-walls / floor-slice 射线',
+      impliedWalkableCellsAtLocatorScale: 9.3,
+      targetWalkableCells: 8.8,
+      originalReference: '8.8 格（step1 原版对照）',
+      screenshotReference: 'board-spirit-blossom-step1.png 可走区宽 ÷ 脚本 hex 格尺',
+      formula: 'targetWalkableCells / impliedWalkableCellsAtLocatorScale',
+    } },
 ];
+export function mergeBoardPick(pick) {
+  const meta = BOARD_PICKS.find(p => p.key === pick.key);
+  // walkableMeasure.ground/wall are RegExp in code; JSON.stringify(plan) turns them into {} until mergeBoardPick runs.
+  return meta ? { ...pick, ...meta } : pick;
+}
 export function boardRoot(key) {
   if (!/^board-[a-z]+(?:-[a-z]+)*$/.test(key)) throw new Error('invalid-board-key');
   return key === 'board-default' ? 'default' : `extra/${key}`;

@@ -14,7 +14,7 @@ import { battle, unit, freeze } from './combat-helpers';
 import { source } from './fixtures/m8-contract-cases';
 import { packets } from './helpers/replay2-views';
 
-const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/v25-online-rules-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
+const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/v26-neutrals-1424-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
 const id = (seat: string, unitId: string) => JSON.stringify(['t2', seat, 'unit', unitId]);
 function advance(state: CombatState, through: number) {
   const events: CombatEvent[] = [];
@@ -53,11 +53,12 @@ function isolated(holderId: string, mode: 'new-group' | 'new-source' | 'refresh'
 describe('SR-C19-01 same-tick burn attachment', () => {
   it('reduced seed-9 compiled input finishes with one pulse per live 20-tick interval', () => {
     const input = freeze(fixture()), result = resolveTwoSidedBattle(input, 5000);
-    expect(result.terminal).toMatchObject({ status: 'finished', tick: 346, result: 'enemyWin' });
+    expect(result.terminal).toMatchObject({ status: 'finished', tick: 344, result: 'enemyWin' });
     const pulses = burnPackets(result.events);
-    // Both first applications are at 40. v22 (AD star factor, mana): Ezreal dies at 164: 60..160 = 6.
-    // Garen dies at 346: 60..340 = 15, despite a new source joining at 200.
-    for (const [unitId, deathTick, count] of [['unit-42', 164, 6], ['unit-48', 346, 15]] as const) {
+    // Both first applications are at 40. v26 (targeting-p1): the recorder re-picks Ezreal's cell (4,7)->(4,5)
+    // to keep that obligation (docs/evidence/v26-neutrals-1424/input-fixture-audit.json c19.placementSearch).
+    // Ezreal dies at 160: 60..160 = 6. Garen dies at 344: 60..340 = 15, despite a new source joining at 200.
+    for (const [unitId, deathTick, count] of [['unit-42', 160, 6], ['unit-48', 344, 15]] as const) {
       const target = id('s3', unitId);
       expect(result.events.find(e => e.type === 'death' && e.unitId === target)?.tick).toBe(deathTick);
       const paid = pulses.filter(e => e.unitId === target);

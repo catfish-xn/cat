@@ -4,7 +4,9 @@
  *
  * A piece that moves looks where it goes; standing in combat it looks at the unit it last attacked or cast on while
  * that unit is alive and drawn; with no such target (or dead itself) it keeps the way it already looks. Outside combat it
- * rests looking across the board at the other side. Every change is a TURN_SECONDS turn the short way round, never a jump.
+ * rests facing the camera, as the client shows pieces in planning (both sides: the far side's rest heading is toward us
+ * too). A piece on the bench (or gliding into a bench cell after a drop or a swap) always rests that way: it never turns
+ * to where it slides. Every change is a TURN_SECONDS turn the short way round, never a jump.
  */
 
 /** Board units a piece must still have to go this frame to count as moving (the renderer's glide step). */
@@ -16,8 +18,8 @@ const RETARGET = 0.05;
 
 export interface PlanarPoint { readonly x: number; readonly z: number }
 
-/** Rest heading: the player's side looks up the board (-z), the enemy's down it (+z). */
-export const restHeading = (team: 'player' | 'enemy'): number => team === 'player' ? Math.PI : 0;
+/** Rest heading: every piece faces the camera (+z) outside combat, whichever side it stands on. */
+export const restHeading = (_team: 'player' | 'enemy'): number => 0;
 
 /** The heading that looks from `from` to `to`, or null when the two points are (nearly) the same. */
 export function headingToward(from: PlanarPoint, to: PlanarPoint): number | null {
@@ -58,6 +60,8 @@ export interface FacingInput {
   readonly alive: boolean;
   /** The combat being shown (BoardFrame.fighting). */
   readonly fighting: boolean;
+  /** It stands in, or glides to, a bench cell: it keeps the rest heading and never looks where it slides. */
+  readonly onBench?: boolean;
   /** Where the piece stands now and where it is gliding to. */
   readonly position: PlanarPoint;
   readonly destination: PlanarPoint;
@@ -68,6 +72,7 @@ export interface FacingInput {
 /** The heading a piece should turn toward this frame; null keeps the one it has (or is already turning to). */
 export function desiredHeading(input: FacingInput): number | null {
   if (!input.alive) return null;
+  if (input.onBench) return restHeading(input.team);
   const moving = headingToward(input.position, input.destination);
   if (moving !== null) return moving;
   if (!input.fighting) return restHeading(input.team);

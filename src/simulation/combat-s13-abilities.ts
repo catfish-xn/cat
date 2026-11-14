@@ -9,6 +9,8 @@ import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
+import { knockAway } from './combat-displacement';
+import { GLOVES_OFF } from './content/gloves-off';
 import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
@@ -29,6 +31,8 @@ export interface AbilityContext {
   nextTriggerEventSeq?: number;
   virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
+  /** Set by an ability's own branch choice while its cast resolves; copied onto that cast's receipt as output only. */
+  castBranch?: string;
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
@@ -129,9 +133,10 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       replaceEndTask(unit, 'leonaEnd', tick + ticks, mag('Damage'), seq); break;
     }
     case 'vander': {
-      const ticks = duration('TauntDuration', 2.5), hero = heroLive(unit);
+      const hero = heroLive(unit), ticks = hero ? GLOVES_OFF.castTicks : duration('TauntDuration', 2.5);
       applyStatus(unit, source, 'channel', 0, ticks, tick, events, true, '', seq);
-      // All Out (P): no resists; DamageBps × PercentAttackDamage, and the empowered attack splashes SplashBps to adjacent enemies.
+      // 卯足全力 (content/gloves-off.ts): a 0.5 s cast with no resists instead of the 2.5 s brace; DamageBps × PercentAttackDamage,
+      // and the empowered attack knocks the target back and splashes SplashBps to every enemy it hits.
       if (!hero) applyStatus(unit, source, 'resistanceFlat', mag('Resists'), ticks, tick, events, true);
       unit.runtime.nextAttackPhysical = amount(unit, tick, { ad: v('PercentAttackDamage') * (hero?.damageBps ?? 10000) / 10000 + v('BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count') });
       if (hero) unit.batch2 = { ...unit.batch2, primeSplash: true };
@@ -263,7 +268,10 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   }
   const prime = heroLive(unit);
   if (prime?.splashBps && unit.batch2?.primeSplash && unit.runtime.nextAttackPhysical > 0) {
-    for (const [index, enemy] of enemies(unit, ctx.units).filter(x => x.id !== target.id && hexDistance(x.cell, target.cell) <= 1).sort((a, b) => a.id < b.id ? -1 : 1).entries())
+    // The punch sends the target flying (stunned for the flight) and it hits every other enemy next to a cell it passes.
+    const passed = knockAway(ctx, unit, target, GLOVES_OFF.knockbackHexes, 'vander-knockback');
+    applyStatus(target, origin(unit), 'stun', 0, GLOVES_OFF.stunTicks, ctx.tick, ctx.events);
+    for (const [index, enemy] of enemies(unit, ctx.units).filter(x => x.id !== target.id && passed.some(cell => hexDistance(x.cell, cell) <= 1)).sort((a, b) => a.id < b.id ? -1 : 1).entries())
       ctx.packets.push({ source: origin(unit), targetId: enemy.id, raw: Math.floor(base * prime.splashBps / 10000), damageType: 'physical', actionSeq: seq, ordinal: 300 + index, delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
     unit.batch2 = { ...unit.batch2, primeSplash: false };
   }

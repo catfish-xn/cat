@@ -1,0 +1,12 @@
+# Projectile beams pinned (PR #642), re-record with one still dummy, before column. Same machine, same asset snapshot;
+# only --column and output names differ. dev/castcmp from d00ea8a8 (PR #643) in both columns.
+# Viktor 2★ basic attack at one pinned Garen 4 hexes straight ahead: beam 87913524 from about 567 ms.
+v-capture-attack.cjs viktor vkbeam3-viktor-before --star 2 --pin-foe 4 --times 600,667,733,800,900,1000,1100,1200,1300 --systems 87913524 --layers none --from 600 --to 1300 --probe emitters --column before --snapshot c1333710ad8e
+# Viktor 2★ real combat, the earlier line unchanged: his storm cast (about 3567/3667 ms) must now match between columns (seed fix).
+v-capture.cjs viktor vkbeam3-viktor-real-before --real 1 --star 2 --dist 3 --nfoes 1 --foestar 2 --ms 4000 --systems 87913524 --layers none --from 2800 --to 3900 --probe emitters --column before --snapshot c1333710ad8e
+# Zeri 2★ at one pinned Garen 4 hexes ahead: two warm attacks, so the recorded one is her third, the empowered shot d160dfa9 (about 267 ms on).
+v-capture-attack.cjs zeri vkbeam3-zeri-before --star 2 --pin-foe 4 --warm 2 --times 300,367,433,500,600,700,800,900 --systems d160dfa9 --layers none --from 300 --to 900 --probe emitters --column before --snapshot c1333710ad8e
+# Mel 2★: 4f2eb343 plays only on her third cast (branch third), which only a real combat reaches (dummy casts carry no
+# branch), and --pin-foe cannot go with --real. Real combat as before: third cast 7750 ms into the window, 4f2eb343 from
+# about 8150 ms; both Garens cast about 3900 ms (jobs-check FAILs this line for that; the judged 8050–8950 ms is clear).
+v-capture.cjs mel vkbeam3-mel-real-before --real 1 --star 2 --dist 3 --nfoes 2 --foestar 3 --ms 9050 --systems 4f2eb343 --layers none --from 8050 --to 8950 --probe emitters --column before --snapshot c1333710ad8e

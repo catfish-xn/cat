@@ -6,8 +6,9 @@ import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 
-// First integrated-pool seed offering the card to s2 within two rerolls (seed 32, one reroll).
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:32});
+// First integrated-pool seed offering the card to s2 within two rerolls (seed 3, one reroll).
+// v26 D5 (7953c99a) drifted the draws; old value seed 32 (one reroll) no longer reaches Cooking Pot within two rerolls.
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:3});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s2')!.match;
 let target:string;
 beforeAll(()=>room.start());

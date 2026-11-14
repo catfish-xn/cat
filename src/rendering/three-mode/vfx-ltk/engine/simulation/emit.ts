@@ -12,6 +12,7 @@ import type { Rng } from "../utils/Rng";
 import { drawChannelsInto, drawCurve, sampleCurve, tableValue } from "../utils/sampleCurve";
 import { addFlexInto, channelOf, flexScaleOf, flexTerm } from "./flex";
 import type { EmitterState, SystemStep } from "./integrate";
+import { cueScale, scaleAxes } from "./systemScale";
 import { scalar } from "./particleRead";
 import { FRAME_SLOTS, type Pool, spawn, UV, UV_LAYERS, uvAt } from "./pool";
 import { birth, sampleShape } from "./spawnShape";
@@ -68,7 +69,9 @@ export function emit(
   step: SystemStep,
   rng: Rng,
   dragMotion: DragMotion,
+  siblings?: { readonly emitters: readonly EmitterModel[]; readonly states: readonly EmitterState[] },
 ): void {
+  const cue = cueScale(step.scale);
   if (emitter.disabled || state.absent) return;
   if (emitter.singleParticle && state.emitted) return;
 
@@ -79,7 +82,15 @@ export function emit(
 
   const phase = emitterPhase(emitter, now);
   const pinned = step.pinned ?? null;
-  const count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  let count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  /* Ours: a burst that would fill the pool leaves one place for each one-shot emitter of the system still to spawn, and a
+     one-shot keeps at least its own (11-13: Caitlyn's burst filled its 150 places with debris on its first frame, and the
+     seventeen emitters after it, the flash and the smoke among them, never spawned). Only a step that would fill the
+     pool is touched. */
+  if (count > 0 && siblings && pool.count + count >= pool.capacity) {
+    const held = oneShotsPending(siblings.emitters, siblings.states, index);
+    if (held > 0) count = Math.max(Math.min(count, pool.capacity - pool.count - held), emitter.singleParticle ? 1 : 0);
+  }
   if (count <= 0) return;
 
   travel(state, step);
@@ -192,14 +203,15 @@ export function emit(
       const channel = channelOf(pool.flex, translation);
       if (translation !== null && channel !== 0) {
         const moved = sampleCurve(translation.value, phase);
-        for (let axis = 0; axis < 3; axis += 1) BASE[axis] += (moved[axis] ?? 0) * channel;
+        const gain = cue === 1 ? channel : channel * cue;
+        for (let axis = 0; axis < 3; axis += 1) BASE[axis] += (moved[axis] ?? 0) * gain;
       }
     }
     lifetime = offsetLifetime(emitter, lifetime, BORN.raw);
     pool.lifetime[at] = lifetime;
 
     if (surfaces?.mesh?.sample(now, rng, SURFACE_BIRTH)) {
-      const scale = emitter.emissionMesh?.scale ?? 1;
+      const scale = (emitter.emissionMesh?.scale ?? 1) * (cue === 1 ? 1 : cue);
       for (let axis = 0; axis < 3; axis += 1) BASE[axis] += SURFACE_BIRTH.position[axis] * scale;
       if (emitter.emissionMesh?.useNormal) {
         alongNormal(pool.velocity, slot);
@@ -207,7 +219,7 @@ export function emit(
       }
     }
     if (surfaces?.surface?.sample(now, rng, SURFACE_BIRTH)) {
-      const scale = emitter.emissionSurface?.scale ?? 1;
+      const scale = (emitter.emissionSurface?.scale ?? 1) * (cue === 1 ? 1 : cue);
       for (let axis = 0; axis < 3; axis += 1) BASE[axis] += SURFACE_BIRTH.position[axis] * scale;
       if (emitter.emissionSurface?.useNormal) {
         alongNormal(pool.velocity, slot);
@@ -220,6 +232,19 @@ export function emit(
     if (BORN.turned) {
       turnInto(BORN.turn, pool.velocity, slot);
       turnInto(BORN.turn, pool.birthAcceleration, slot);
+    }
+    /* Shape offset, birth velocity, acceleration and size, after the shape's own turn. */
+    if (cue !== 1) {
+      scaleAxes(pool.velocity, slot, cue);
+      scaleAxes(pool.birthAcceleration, slot, cue);
+      // An attached mesh is the host's own mesh: it draws at the host's size whatever the cue's (a chest cue's
+      // SKILL_FX_SIZE 0.64 shrank Mordekaiser's aura toward his feet and left a slab on his arm and mace).
+      // A ribbon beam's scale0 y and z are the shares of its length kept from each end (ribbon.ts writeBeam), not lengths:
+      // only its width takes the cue's size. Scaled, both ends drew in toward the middle (Viktor's basic-attack laser
+      // at SKILL_FX_SIZE was a short bar touching neither unit, Fable 11-13).
+      if (emitter.beam !== null && emitter.mesh === null) pool.birthScale[slot] *= cue;
+      else if (emitter.quadType !== QUAD_TYPE.attachedMesh) scaleAxes(pool.birthScale, slot, cue);
+      scaleAxes(BORN.offset, 0, cue);
     }
     for (let axis = 0; axis < 3; axis += 1) {
       pool.position[slot + axis] = BASE[axis] + BORN.offset[axis];
@@ -238,6 +263,18 @@ export function emit(
 
   state.emitted = true;
   state.lastSpawn = now;
+}
+
+/** One-shot (`isSingleParticle`) emitters of the system other than `except` that are still to spawn. */
+function oneShotsPending(emitters: readonly EmitterModel[], states: readonly EmitterState[], except: number): number {
+  let pending = 0;
+  for (let at = 0; at < emitters.length; at += 1) {
+    const other = emitters[at], own = states[at];
+    if (at === except || !other.singleParticle || own.emitted || own.absent || other.disabled) continue;
+    if (emissionEnded(other, own.age)) continue;
+    pending += 1;
+  }
+  return pending;
 }
 
 /**

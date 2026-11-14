@@ -27,6 +27,7 @@ import { validateSettlementGold } from './settlement-gold-check';
 import { validateShopAugments } from './shop-augments-check';
 import { validateSurvivorGold } from './survivor-gold-check';
 import { validateTombRaider } from './tomb-raider-check';
+import { validateRestartMission } from './restart-mission-check';
 
 export function validateBatch1Gifts(state:MatchState):void {
  validateTombRaider(state);
@@ -57,6 +58,7 @@ export function validateBatch1Gifts(state:MatchState):void {
  * before normal preparation/economy restoration can run. Inspect receipts even
  * without an owner so deleting the augment cannot bypass this admission. */
 export function validateBatch1GiftReceipts(state:MatchState):void {
+ validateRestartMission(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

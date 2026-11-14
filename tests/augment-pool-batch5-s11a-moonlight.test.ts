@@ -8,7 +8,7 @@ import { selectChoice, startMatchCombat, stepMatch, type MatchState } from '../s
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { familyCombatBase } from '../src/simulation/family-reunion';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { fieldedLegCases, fieldedRoute, offerFor } from './augment-stage-helpers';
+import { FIELDED_LEGS, fieldedRoute } from './augment-stage-helpers';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
 it.skipIf(!existsSync(RESEARCH_FILE))('Moonlight preserves the 14.24 archive numbers',()=>{
@@ -29,10 +29,17 @@ it('Moonlight samples only fielded eligible one-cost champions, without promotin
  expect(moonlightSelection(units.slice(1),a,1,42,new Map()).size).toBe(0);
 });
 let combat:MatchState, promotedId:string;
+// v26 re-pin (D5 pool +4 cards 7953c99a, 14.24 neutrals 568eeea4): the shared STAGE_SEEDS route
+// (fielded seed 63, slot-0 reroll) now offers cloning-facility,... at 4-2 without Moonlight. Local override so the
+// shared helper table stays untouched: fielded seed 3 is the first seed from 0 whose public 4-2 offer holds
+// Moonlight with no reroll, and its earlier picks (sorcerer-crest, rebel-crest) own no augment history.
+const MOONLIGHT_FIELDED_SEED=3;
 // Reuse the same public route in bounded legs; keep the existing hook timeout unchanged.
-for(const [seed,leg] of fieldedLegCases('moonlight'))beforeAll(()=>{fieldedRoute(seed,leg);});
+for(const leg of FIELDED_LEGS.slice(0,FIELDED_LEGS.indexOf('4-2')+1))beforeAll(()=>{fieldedRoute(MOONLIGHT_FIELDED_SEED,leg);});
 beforeAll(()=>{
- let s=offerFor('moonlight'), c=s.pendingChoice!;expect(c.offers).toContain('moonlight');
+ let s=fieldedRoute(MOONLIGHT_FIELDED_SEED,'4-2');
+ expect(s.roundDefinitionId).toBe('4-2');expect(s.pendingChoice?.kind).toBe('augment');
+ let c=s.pendingChoice!;expect(c.offers).toContain('moonlight');
  s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'moonlight')));s=fieldBench(s);
  const originals=s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.starLevel<3);
  expect(originals.length).toBeGreaterThan(0);

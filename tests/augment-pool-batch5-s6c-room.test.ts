@@ -4,7 +4,10 @@ import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { makeRoom, runUntil } from './server/helpers';
 
 // Fixed public 2-1 offer for seat s2 (room seed 6; v25 batch-5 pool re-search in 0..100).
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:6});
+// v26 D5 (7953c99a) added four cards to the 2-1 pool: room seed 6's s2 now needs rerolls. Re-searched room seeds 0..39 for an
+// unrerolled human-seat offer: seed 7, seat s1, is the first.
+const SEAT='s1';
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:7});
 afterAll(()=>room.dispose());
 // Keep every real PvE leg, bounded by its own default-timeout hook. Only frozen
 // fault observations are cached; augment selection still runs in its case.
@@ -22,13 +25,13 @@ it('B5-48 room advances the second PvE round',()=>{
 });
 it('B5-48 room opens the public 2-1 augment',()=>{
  expect(entries.get('2-1')?.fault).toBeNull();
- const seat=room.state.seats.find(s=>s.seatId==='s2')!,choice=seat.match.pendingChoice!;
+ const seat=room.state.seats.find(s=>s.seatId===SEAT)!,choice=seat.match.pendingChoice!;
  expect(choice.offers).toContain('tiniest-titan');
  expect(room.handle(seat.seatId,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'tiniest-titan'})).toMatchObject({ok:true});
 });
 it('B5-48 room settles PvP; shared snapshots reject forged health and receipts',()=>{
  runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='settlement');
- const match=room.state.seats.find(s=>s.seatId==='s2')!.match;
+ const match=room.state.seats.find(s=>s.seatId===SEAT)!.match;
  expect(room.state.fault).toBeNull();expect(match.roundResults.at(-1)!.roundKind).toBe('pvp');
  expect(match.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-s6c')).toHaveLength(1);
  for(const input of [match,structuredClone(match),JSON.stringify(match)])expect(restoreSharedOrbSnapshot(room.state.pool,input)).toEqual(match);

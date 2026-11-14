@@ -6,14 +6,60 @@
  */
 const assert = require('node:assert/strict');
 const {isDeepStrictEqual} = require('node:util');
-const {observedEqual,observedArray,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
+const {pandoraChanges} = require('./augment-batch5-s3b-oracle.cjs');
+const {observedEqual,observedArray,extendObservedArray,identicalPrefix,reuseGrowthFacts,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
 const IDS = ['no-scout-no-pivot', 'cooking-pot'];
 const owners = s => s.augments.filter(a => IDS.includes(a.definitionId));
 const roster = s => ({units:s.preparation.units.filter(u=>u.team==='player'),items:s.items});
+function entryItemsAfterPandora(before, afterRound) {
+  const entryState = {...before, round: afterRound};
+  let items = copy(before.items);
+  for (const change of pandoraChanges(entryState, afterRound)) {
+    items = items.map(i => i.id === change.itemId ? {...i, definitionId: change.to} : i);
+  }
+  return items;
+}
+/** Independent history roster audit (P-B5-S3B Pandora + 运力不足 history projection).
+ * Does not replay production reconcile or bench projection; checks lineage and allowed moves only. */
+function validateProjectedPlayerRoster(before, entry, expectedItems, label, itemsMessage) {
+  assert.deepEqual(entry.items, expectedItems, itemsMessage ?? `H3 independent ${label} items`);
+  const prep = before.preparation, overflow = new Set(prep.overflowUnitIds ?? []);
+  const beforePlayer = prep.units.filter(u => u.team === 'player');
+  assert.equal(entry.units.length, beforePlayer.length, `H3 ${label} roster unit count`);
+  assert.deepEqual([...entry.units.map(u => u.id)].sort(), beforePlayer.map(u => u.id).sort(), `H3 ${label} roster unit ids`);
+  const benchSlots = [];
+  for (const entryUnit of entry.units) {
+    const prev = beforePlayer.find(u => u.id === entryUnit.id);
+    assert.equal(entryUnit.definitionId, prev.definitionId, `H3 ${label} unit definition`);
+    assert.equal(entryUnit.starLevel, prev.starLevel, `H3 ${label} unit star`);
+    assert.deepEqual(unitEquip(entry.items, entryUnit.id), unitEquip(expectedItems, entryUnit.id), `H3 ${label} unit equipment`);
+    const prevLoc = prev.location, entryLoc = entryUnit.location;
+    if (prevLoc.kind === 'board' && overflow.has(entryUnit.id)) {
+      // 运力不足 card text: extras stay on the board in play; history lists them as bench reserves.
+      assert.equal(entryLoc.kind, 'bench', `H3 ${label} overflow reserve projection`);
+      benchSlots.push(entryLoc.slot);
+    } else if (prevLoc.kind === 'board') {
+      assert.deepEqual(entryLoc, prevLoc, `H3 ${label} board placement`);
+    } else if (prevLoc.kind === 'bench') {
+      assert.equal(entryLoc.kind, 'bench', `H3 ${label} bench slot change only`);
+      benchSlots.push(entryLoc.slot);
+    } else assert.fail(`H3 ${label} unexpected before location`);
+  }
+  assert.equal(new Set(benchSlots).size, benchSlots.length, `H3 ${label} projected bench slots distinct`);
+  for (const slot of benchSlots) assert(slot >= 0 && slot < prep.benchSize, `H3 ${label} bench slot bounds`);
+}
+function validateRoundEntryRoster(before, afterRound, entry) {
+  validateProjectedPlayerRoster(before, entry, entryItemsAfterPandora(before, afterRound), 'entry', 'H3 independent entry items');
+}
+function validateFrozenRoster(before, frozen) {
+  validateProjectedPlayerRoster(before, frozen, before.items, 'independent frozen roster', 'H3 independent frozen roster');
+}
 const facts = s => s.augmentHistory?.facts ?? [];
 const resources = s => s.resourceProvenance.entries;
 const copy = structuredClone;
 const order = (a,b) => a<b?-1:a>b?1:0;
+const unitEquip = (items, unitId) => items.filter(i => i.location.kind === 'unit' && i.location.unitId === unitId)
+  .map(i => i.definitionId).sort((a, b) => order(a, b));
 const growthFields = ['healthFlat','healthBps','attackDamageBps','abilityPowerCenti'];
 const zero = unitId => ({unitId,healthFlat:0,healthBps:0,attackDamageBps:0,abilityPowerCenti:0});
 const receipt = f => ({kind:f.kind,seatId:f.seatId,round:f.round,roundId:f.roundId,choiceId:f.choiceId,receiptId:f.receiptId,deltas:f.deltas});
@@ -28,14 +74,30 @@ const histories = {facts:'facts',resources:'merge facts',results:'settlements',r
 const references = c => Object.fromEntries(Object.keys(histories).map(k=>[k,c[k].slice()]));
 const current = c => Object.fromEntries(Object.entries(c).filter(([k])=>!(k in histories)));
 function retained(old,refs,next,full,message,exact=false) {
+  // sameRefs is only a construction hint for the detached snapshot. A shortened
+  // or boundary journal still deep-equals here, and a replaced row that is not
+  // identical still fails with the original whole-prefix diagnostic.
+  let sameRefs=!full&&(exact?next.length===old.length:next.length>=old.length);
   if(full||(exact?next.length!==old.length:next.length<old.length))
     assert.deepEqual(exact?next:next.slice(0,old.length),old,message);
-  else for(let i=0;i<old.length;i++)if(next[i]!==refs?.[i]&&!isDeepStrictEqual(next[i],old[i]))
-    assert.deepEqual(next.slice(0,old.length),old,message);
-  return next.slice(old.length);
+  else if(!(refs&&refs.length===old.length&&identicalPrefix(next,refs))){
+    sameRefs=false;
+    for(let i=0;i<old.length;i++)if(next[i]!==refs?.[i]&&!isDeepStrictEqual(next[i],old[i]))
+      assert.deepEqual(next.slice(0,old.length),old,message);
+  }
+  return {rows:next.slice(old.length),sameRefs};
 }
+// Not part of the ledger value compared with the v25 baseline.
+const journalStable=new WeakMap();
+// Growth receipts are sparse. reuseGrowthFacts keeps a private prefix and still
+// compares every cached slot; receipt() reads the live objects, so an in-place
+// delta edit fails the same assertion. The cache is not the caller's array.
+const growthFactsCache=new WeakMap();
 function prefix(memory,c,key,full) {
-  return retained(memory.observed[key],memory.references?.[key],c[key],full,`H3 retained ${histories[key]}`);
+  const kept=retained(memory.observed[key],memory.references?.[key],c[key],full,`H3 retained ${histories[key]}`);
+  let flags=journalStable.get(memory);if(!flags)journalStable.set(memory,flags={});
+  flags[key]=kept.sameRefs;
+  return kept.rows;
 }
 function observe(memory,c,full) {
   if(full) { assert.deepEqual(c,memory.observed,'H3 independent observed checkpoint');return; }
@@ -72,15 +134,29 @@ function saveObserved(memory,before,c) {
   // Changed current branches use F5's detached observation reuse. Journal rows
   // retain their detached values even if a live reference was edited in place;
   // only the new suffix is cloned. A boundary or audit still compares all rows.
+  // v26 records a deaths fact on every combat tick once history exists (a
+  // history-owner augment, or a prismatic 4-2 offer). Rebuilding that whole
+  // detached array each tick was quadratic. prefix() already proved a
+  // reference-stable prefix, so those rows are reused and only the suffix is cloned.
   const observed=copyChanged(current(before),current(c),current(memory.observed),memory.freezeInputs);
+  const stable=journalStable.get(memory);
   return freezeObservedNode({...observed,...Object.fromEntries(Object.keys(histories).map(k=>{
-    const old=memory.observed[k];
-    const snapshot=c[k]===before[k]&&c[k].length===old.length?old:observedArray(c[k],(value,i)=>{
+    const old=memory.observed[k],live=c[k],prev=before[k];
+    let snapshot;
+    if(live===prev&&live.length===old.length)snapshot=old;
+    else if(stable?.[k]===true&&live.length>=old.length){
+      if(live.length===old.length)snapshot=old;
+      else{
+        const suffix=[];
+        for(let i=old.length;i<live.length;i++)suffix.push(copyChanged(undefined,live[i],undefined,memory.freezeInputs));
+        snapshot=extendObservedArray(old,suffix);
+      }
+    }else snapshot=observedArray(live,(value,i)=>{
       if(i>=old.length)return copyChanged(undefined,value,undefined,memory.freezeInputs);
-      if(memory.freezeInputs&&value!==before[k]?.[i])freezeObservation(value);
+      if(memory.freezeInputs&&value!==prev?.[i])freezeObservation(value);
       return old[i];
     },old);
-    if(memory.freezeInputs&&c[k]!==before[k]&&c[k].length<=64)freezeObservedNode(c[k]);
+    if(memory.freezeInputs&&live!==prev&&live.length<=64)freezeObservedNode(live);
     return [k,snapshot];
   }))});
 }
@@ -199,13 +275,14 @@ function checkH3Growth(memory,before,after,command) {
     assert.equal(after.m8.round.kind,'pvp','H3 PvP boundary');
     assert(!next.battles.some(b=>b.battleId===f.battleId||b.round===f.round),'H3 duplicate PvP freeze');
     const own=f.seats.filter(s=>s.seatId===memory.seatId);assert.equal(own.length,1,'H3 frozen seat');
-    assert.deepEqual({units:own[0].units,items:own[0].items},roster(before),'H3 independent frozen roster');
-    next.battles.push({battleId:f.battleId,round:before.round,roster:copy(roster(before))});
+    const frozen={units:own[0].units,items:own[0].items};
+    validateFrozenRoster(before,frozen);
+    next.battles.push({battleId:f.battleId,round:before.round,roster:copy(frozen)});
   }
   const entries=added.filter(f=>f.kind==='round-entry');
   if(after.round!==before.round&&before.augmentHistory) {
     assert.equal(after.round,before.round+1,'H3 natural entry');assert.equal(before.phase,'settlement','H3 entry after settlement');
-    assert.equal(entries.length,1,'H3 required entry');assert.deepEqual(entries[0].roster,roster(before),'H3 independent entry equipment/roster');
+    assert.equal(entries.length,1,'H3 required entry');validateRoundEntryRoster(before,after.round,entries[0].roster);
   } else assert.equal(entries.length,0,'H3 unexpected entry');
   const add=(owner,key,deltas)=>next.expected.push({kind:'growth',seatId:memory.seatId,round:after.round,roundId:after.roundDefinitionId,choiceId:owner.choiceId,receiptId:JSON.stringify(key),deltas});
   const pot=owners(before).find(a=>a.definitionId==='cooking-pot');
@@ -221,7 +298,9 @@ function checkH3Growth(memory,before,after,command) {
     }
     add(scout,['no-scout-no-pivot',scout.choiceId,b.battleId],[...counts].sort(([a],[b])=>order(a,b)).map(([id,n])=>({...zero(id),healthFlat:20*n,attackDamageBps:150*n,abilityPowerCenti:150*n})));
   }
-  assert.deepEqual(facts(after).filter(f=>f.kind==='growth').map(receipt),next.expected,'H3 independent complete growth receipts');
+  const found=reuseGrowthFacts(facts(after),growthFactsCache.get(memory));
+  assert.deepEqual(found.rows.map(receipt),next.expected,'H3 independent complete growth receipts');
+  growthFactsCache.set(next,found.cache);
   next.merges.push(...merges.map(m=>m.event));next.observed=saveObserved(memory,beforeCheckpoint,afterCheckpoint);
   next.references=references(afterCheckpoint);return next;
 }

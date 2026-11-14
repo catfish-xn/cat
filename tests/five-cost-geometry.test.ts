@@ -77,7 +77,7 @@ it.each([1,2,3,4,5])('Malzahar divides exactly five stacks across %s hits in hit
   expect(p.tasks).toHaveLength(5);
   const vectors=[[5],[3,2],[2,2,1],[2,1,1,1],[1,1,1,1,1]];
   expect(targets.map(t=>p.tasks.filter(task=>task.targetId===t.id).length)).toEqual(vectors[count-1]);
-  expect(p.tasks.map(t=>t.amount)).toEqual([14,14,14,14,14]);
+  expect(p.tasks.map(t=>t.amount)).toEqual([15,15,15,15,15]); // 14.24b InfectionDamage 15 (b-patch-overrides.json)
   expect(p.tasks.map(t=>t.ordinal)).toEqual([0,1,2,3,4]);
   expect(p.tasks.every(t=>t.executeAtTick===21)).toBe(true);
 });

@@ -49,7 +49,8 @@ it('chooses B5-53, combines its two gloves and equips the parent through Room.ha
   const equip=room.handle(seatId,command);expect(equip).toMatchObject({ok:true});
   if(!equip.ok)throw Error(equip.reason);
   const state=current(),roll=state.equipmentState.rolls.at(-1)!;
-  expect(found).toEqual({seed:10,seatId:'s3'});
+  // v26 D5 (7953c99a) added four cards to the 2-1 pool; the same bounded first-offer search now stops at room seed 6, s3 (v25: 10, s3).
+  expect(found).toEqual({seed:6,seatId:'s3'});
   expect(beforeEquip.equipmentState.rolls).toHaveLength(0);
   expect(roll.rngDrawStart).toBe(0);
   const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};

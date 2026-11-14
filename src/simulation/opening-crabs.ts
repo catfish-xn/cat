@@ -13,7 +13,8 @@ export function enterOpeningCrabs(state:MatchState):MatchState {
  return {...state,m8:claimGeneratedJson({...state.m8,preparation:{...state.m8.preparation,enemies:encounter.deployment}}),preparation:{...state.preparation,units:[...state.preparation.units.filter(u=>u.team==='player'),...encounter.deployment]}};
 }
 /** Preserve original base loot and its RNG; original slot order maps to crab order.
- * The sixth 4-7 carrier shares the fifth crab's death. No drop is lost or doubled.
+ * Since 2026-10-29, 4-7 has five original carriers for five crabs.
+ * The existing clamp remains for other authored groups; no drop is lost or doubled.
  * The mapping reads only content tables, so it is remembered per (encounter, round, source): loot reads it every tick. */
 const carriers=new Map<string,string>();
 export function openingCrabCarrier(state:Pick<MatchState,'openingEncounter'>,roundId:string,sourceId:string):string {

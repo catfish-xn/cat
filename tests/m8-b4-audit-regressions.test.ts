@@ -1,4 +1,5 @@
 // v19: ordinary catalogue + 2 crafting inputs + 22 approved custom emblems.
+import { historyFreeAugments } from './fixtures/history-free-augments';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { describe, expect, it } from 'vitest';
 import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
@@ -69,12 +70,16 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   it('5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage', async () => {
     // Random belt/vest + 2-4 belt make Warmog; 3-4 bow makes Titan;
     // the actual 2-7 rod and 3-7 sword make Gunblade. No obsolete 4-7 choice.
-    let s = await configuredPrefix('5-1', {seed:42,build:'sniper',equipItems:false,
+    // v26 D5 registration (7953c99a, merged 3ce71065) makes seed 42's sniper route take Sniper's Nest at 2-1, a history
+    // owner whose full replay rejects the forged save first ("replayed facts/state mismatch"). Public history-free
+    // rerolls at 2-1 only (v25: none) keep the route free of augmentHistory so the ownership validator under test answers.
+    let s = await configuredPrefix('5-1', {seed:42,build:'sniper',equipItems:false,augmentRerollPriorities:{'2-1':historyFreeAugments},
       supplyChoices:['belt','bow','rod'],reservedComponents:['belt','bow','vest','sword','rod'],
       fieldCopies:['irelia'],equipmentTargets:{
         'titans-resolve':{definitionId:'irelia'},warmog:{definitionId:'irelia'},gunblade:{definitionId:'irelia'},
       }});
     expect(restoreMatch(serializeMatch(s))).toEqual(s);
+    expect(s.augmentHistory).toBeUndefined();
     expect(s.roundDefinitionId).toBe('5-1');
     for(const [slot,id] of ['titans-resolve','warmog','gunblade'].entries())s=accepted((await import('../src/simulation/match')).equipItem(s,s.items.find(i=>i.definitionId===id)!.id,'unit-1',slot));
     for (const definitionId of ['titans-resolve','warmog','gunblade']) {

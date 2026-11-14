@@ -43,7 +43,7 @@ it.each(['jinx','mordekaiser','malzahar'])('%s geometry restores from authentica
   }
   expect(cast).toBe(true);
 });
-it.each([['sevika',1,'g23Flame'],['sevika',3,'g23Chomp'],['malzahar',3,'g2Infection']] as const)('%s star %s restores %s from authenticated inputs and rejects forged tasks',(name,star,expectedKind)=>{
+it.each([['sevika',1,'g23Roll'],['sevika',1,'g23Flame'],['sevika',3,'g23Chomp'],['malzahar',3,'g2Infection']] as const)('%s star %s restores %s from authenticated inputs and rejects forged tasks',(name,star,expectedKind)=>{
   const player=army(name,star),opponent=army('garen');
   const s:MatchState={...player,items:(['blue-buff','tear','tear'] as const).map((definitionId,slot)=>({id:`mana-${slot}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot:slot as 0|1|2}})),preparation:{...player.preparation,units:[...player.preparation.units,
     ...opponent.preparation.units.map(u=>({...u,id:'enemy-'+u.id,team:'enemy' as const,
@@ -54,7 +54,7 @@ it.each([['sevika',1,'g23Flame'],['sevika',3,'g23Chomp'],['malzahar',3,'g2Infect
   let state=createCombatWithEvents(s.preparation,strategy,basis.combatId,battleSeed).state;
   while(state.status==='running'){
     state=stepCombat(state).state;
-    const pending=state.units.flatMap(u=>(u.tasks??[]).filter(t=>['g23Flame','g23Chomp','g2Infection'].includes(t.kind)));
+    const pending=state.units.flatMap(u=>(u.tasks??[]).filter(t=>['g23Roll','g23Flame','g23Chomp','g2Infection'].includes(t.kind)));
     const kind=pending.find(t=>t.kind===expectedKind&&!checked.has(t.kind))?.kind;
     if(!kind)continue;
     const rebuilt=createRestoreCombatReplay(JSON.parse(JSON.stringify(basis)),strategy,state.tick).stateAtSaveTick();

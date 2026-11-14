@@ -16,7 +16,9 @@ vi.setConfig({ testTimeout: 20_000 });
 
 // Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
 // Its public control uses level 5, which has the identical <=6 equipment pool.
-const levelRounds: Readonly<Record<number, string>> = { 3: '3-5', 6: '3-5', 7: '3-5', 9: '4-2' };
+// v26 PvE loss damage (merged 54557be5) eliminates the conceding level-9 control at 4-1, so its paid-XP control
+// now buys level 9 at 4-1 preparation (v25: 4-2); the level-9 pool vector itself is unchanged.
+const levelRounds: Readonly<Record<number, string>> = { 3: '3-5', 6: '3-5', 7: '3-5', 9: '4-1' };
 const inventoryAtRound = publicGlovesInventory;
 function inventory(level = 3, seed = 42): MatchState {
   let state = inventoryAtRound(levelRounds[level], seed);
@@ -39,7 +41,10 @@ const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definiti
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
 // Seed 42 keeps Sorcerer Crest (one unequipped emblem); its exact public choices are checked by the fixture.
 // The two scheduled gloves are item-2/item-3, so their parent is item-4; HP/armor and roll vectors are unchanged.
-const TG = 'item-4';
+// v26: PvE loot carryover (8f794062, merged c684c3ec) keeps the 1-3/1-4 loot orbs this conceding route used to
+// forfeit (item-1 belt, item-2), and the emblem is item-3, so the 2-4/3-4 gloves are item-4/item-5 and their
+// parent is item-6 (v25: item-4). The roll vectors are seed-only and unchanged.
+const TG = 'item-6';
 
 describe('B5 Match TG-01 lifecycle and save validation', () => {
   it.each([3, 6, 7, 9])('level %s preserves the 2-1 pool mechanism and its legal paid-XP restore control', level => {
@@ -200,7 +205,9 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   const TG_ROUND_GROUPS = 5;
   // v22 enables the Trainer Golem opening, whose golem must stay on the board; seeds 9605 and
   // 2563011894 draw it, so they are replaced by the first non-golem seeds rolling the identical pair.
-  const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9533],
+  // v26: D5 (7953c99a) changes 1274836067's offers so its 3-2 choice has only gift/history cards left after rerolls
+  // (category-five,pilfer,golemify); 2083 is the first unplanned seed rolling the same Sunfire/Bow pair.
+  const TG_SEED_SUBSTITUTES = new Map([[1274836067, 2083], [1401181143, 47], [2654435761, 4113], [147926525, 9533],
     [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9574], [4168622220, 9340], [2563011894, 2062],
     // v23 fmix32 openings put an unbenchable opening structure on 387276917's board; 9341 rolls the same Sterak's/Tear pair.
     [387276917, 9341],

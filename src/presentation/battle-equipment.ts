@@ -34,6 +34,8 @@ export function combatItemStackBadges(ids: readonly string[], stacks: CombatView
     return { stacks: row.stacks, maxStacks: row.maxStacks };
   });
 }
-export function itemStackBadgeText(row: { readonly stacks: number; readonly maxStacks: number }): string {
-  return `${row.stacks}${row.stacks >= row.maxStacks ? '满' : ''}`;
+/** Capped counters reach 满; uncapped ones (maxStacks null) only count. */
+export const itemStackFull = (row: { readonly stacks: number; readonly maxStacks: number | null }): boolean => row.maxStacks !== null && row.stacks >= row.maxStacks;
+export function itemStackBadgeText(row: { readonly stacks: number; readonly maxStacks: number | null }): string {
+  return `${row.stacks}${itemStackFull(row) ? '满' : ''}`;
 }

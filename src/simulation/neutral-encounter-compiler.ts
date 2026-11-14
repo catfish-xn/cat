@@ -3,7 +3,7 @@ import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
 import type { Unit, ResolvedUnitStats } from './unit-types';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
-import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
+import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION, type NeutralEncounterDefinition } from './content/neutral-encounters';
 import { freezeContent } from './content/freeze';
 import type { Source } from './m8/contracts';
 import type { OpeningDefinition } from './m8/opening';
@@ -29,6 +29,15 @@ export interface CompiledNeutralEncounter {
 export function compileNeutralEncounter(roundId: string, encounterId?:string): CompiledNeutralEncounter {
   const encounter = (encounterId ? CRAB_ENCOUNTERS : NEUTRAL_ENCOUNTERS).find(entry => entry.roundId === roundId && (!encounterId||entry.encounterId===encounterId));
   if (!encounter) throw new RangeError(`Unknown neutral round: ${roundId}`);
+  return compileNeutralEncounterDefinition(encounter);
+}
+
+/** Compile trusted authored content without installing it in the live schedule.
+ * Also preserves compiler coverage for legacy mechanisms absent from S13 rounds.
+ * The same deployment/stat validation applies as for scheduled encounters.
+ */
+export function compileNeutralEncounterDefinition(encounter: NeutralEncounterDefinition): CompiledNeutralEncounter {
+  const { roundId } = encounter;
   const deployment: Unit[] = [], units: CombatUnit[] = [], openingDefinitions: OpeningDefinition[] = [];
   const seenSlots = new Set<string>(), seenCells = new Set<string>();
   for (const slot of encounter.slots) {

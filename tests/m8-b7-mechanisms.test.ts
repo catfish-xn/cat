@@ -11,6 +11,7 @@ import { applyStatusContribution } from '../src/simulation/m8/status';
 import { effectIdentity } from '../src/simulation/m8/identity';
 import type { Source, StatusKind } from '../src/simulation/m8/contracts';
 import { battle, unit } from './combat-helpers';
+import { legacyHeraldVector } from './neutral-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -21,7 +22,7 @@ const target = (id: string, col: number, row: number, hp = 500): CombatUnit => i
   ability: { id: 'boundary-dummy', amount: 0, kind: 's13', championId: 'neutral', variables: {} },
 }));
 const start = (round: string, players: readonly CombatUnit[], patch: Partial<CombatState> = {}): CombatState => {
-  const compiled = compileNeutralEncounter(round);
+  const compiled = round === 'legacy-herald' ? legacyHeraldVector() : compileNeutralEncounter(round);
   return battle([...compiled.units, ...players], { combatId: 'b7-vector', rngState: 634785765, rngDraws: 0,
     openingDefinitions: compiled.openingDefinitions, ...patch });
 };
@@ -36,7 +37,7 @@ function withStatus(u: CombatUnit, kind: StatusKind, magnitudeBps = 10000): Comb
 }
 const get = (state: CombatState, id: string) => state.units.find(u => u.id === id)!;
 
-// Combat subjects always originate in compileNeutralEncounter. Altered HP/cooldowns or
+// Active subjects originate in compileNeutralEncounter; legacy Herald is an explicit synthetic vector. Altered HP/cooldowns or
 // synthetic opponents isolate a mechanism; none of these vectors enable a Match round.
 describe('B7 compiled neutral programs through the existing B3 executor', () => {
   it.each(NEUTRAL_ENCOUNTERS.map(e => e.roundId))('%s executes real authored units without mana/cast or input mutation', round => {
@@ -53,19 +54,19 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
 
   it.each([0, 3300])('krugs: actual two deaths, then separately sampled missing HP heals under wound=%i', wound => {
     const compiled = compileNeutralEncounter('2-7'), survivor = compiled.units[0];
-    const krugs = compiled.units.map((u, i) => idle({ ...u, hp: i === 0 ? 200 : 1 }));
+    const krugs = compiled.units.map((u, i) => idle({ ...u, hp: i === 0 ? 1000 : 1 }));
     if (wound) krugs[0] = withStatus(krugs[0], 'wound', wound);
     const killers = [target('killer2', 3, 4), target('killer3', 5, 4)].map(u => ({ ...u, cooldownTicks: 0 }));
     const initial = start('2-7', [], { units: [...krugs, ...killers] });
     const deathTick = stepCombat(initial);
     expect(deathTick.events.filter(e => e.type === 'death').map(e => e.unitId)).toEqual(compiled.units.slice(1).map(u => u.id));
     expect(deathTick.events.filter(e => e.type === 'heal')).toEqual([]);
-    expect(get(deathTick.state, survivor.id).hp).toBe(200);
+    expect(get(deathTick.state, survivor.id).hp).toBe(1000);
     expect(deathTick.state.companionState?.reactions.map(r => [r.executeAtTick, r.status])).toEqual([[2, 'pending'], [2, 'pending']]);
     const healed = stepCombat(deathTick.state);
     // floor(200*.67)=134, then floor(66*.67)=44. No early aggregation.
     expect(healed.events.flatMap(e => e.type === 'heal' ? [[e.outcome.requested, e.outcome.actual]] : [])).toEqual(wound ? [[200, 134], [66, 44]] : [[200, 200], [0, 0]]);
-    expect(get(healed.state, survivor.id).hp).toBe(wound ? 378 : 400);
+    expect(get(healed.state, survivor.id).hp).toBe(wound ? 1178 : 1200);
     expect(stepCombat(JSON.parse(JSON.stringify(deathTick.state)))).toEqual(healed);
     expect(stepCombat(healed.state).events.filter(e => e.type === 'heal')).toEqual([]);
     expect(healed.state.rngDraws).toBe(deathTick.state.rngDraws);
@@ -92,7 +93,10 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(planOpening('b7-vector', DEFAULT_BOARD, [...units].reverse(), [...compiled.openingDefinitions].reverse())).toEqual(planned);
     const first = stepCombat(start('3-7', [], { units }));
     expect(first.events.filter(e => e.type === 'movement')).toHaveLength(4);
-    expect(first.events.filter(e => e.type === 'packetDamage')).toEqual([]); expect(first.state.rngDraws).toBe(0);
+    // targeting-p1 (8106acee): p's opening target is an equal-distance tie among the wolves and now draws one combat word;
+    // the opening plans still consume none (v25: rngDraws 0, when ties took the first candidate without a draw).
+    expect(first.events.filter(e => e.type === 'packetDamage')).toEqual([]); expect(first.state.rngDraws).toBe(1);
+    expect(first.state.units.find(u => u.id === 'p')!.targetId).toBeTruthy();
     expect(first.state.openingState?.plans.every(p => p.consumed)).toBe(true);
     validateOpeningState(first.state.openingState!, 'b7-vector', DEFAULT_BOARD, compiled.openingDefinitions);
     const restored = stepCombat(JSON.parse(JSON.stringify(first.state)));
@@ -100,8 +104,11 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(commitOpening(first.state.openingState!, first.state.units).movements).toEqual([]);
   });
 
-  it.each([0, 1, 2, 5])('bird compiled post-death boundary: %i dead companions gives correct next-tick interval without resetting cooldown', count => {
-    const compiled = compileNeutralEncounter('4-7'), holder = compiled.units[0], dead = compiled.units.slice(1, count + 1);
+  it.each([0, 1, 2, 4, 5])('bird compiled post-death boundary: %i dead companions gives correct next-tick interval without resetting cooldown', count => {
+    const active = compileNeutralEncounter('4-7');
+    // Five-stack legacy boundary is synthetic; active birds have only four companions.
+    const compiled = count === 5 ? { ...active, units: [...active.units, { ...active.units[4], id: 'synthetic-fifth-companion', companionDefinitions: undefined, cell: { col: 5, row: 3 } }] } : active;
+    const holder = compiled.units[0], dead = compiled.units.slice(1, count + 1);
     // Explicit post-cleanup boundary (not a claim that these deaths were simulated).
     const definitions = compiled.units.flatMap(u => u.companionDefinitions ?? []);
     const live = compiled.units.filter(u => !dead.includes(u)).map(u => u.id);
@@ -112,8 +119,8 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     const initial = start('4-7', [], { tick: 1, companionState: ledger, units: [...units, target('p', 6, 7)] });
     expect(readCombatStats(get(initial, holder.id), initial).attackIntervalTicks).toBe(25);
     const next = stepCombat(initial);
-    // ceil(20 / (0.8*(1+0.15*n))) = 25,22,20,15 ticks for n=0,1,2,5.
-    expect(readCombatStats(get(next.state, holder.id), next.state).attackIntervalTicks).toBe(({ 0: 25, 1: 22, 2: 20, 5: 15 } as Record<number, number>)[count]);
+    // ceil(20 / (0.8*(1+0.15*n))) = 25,22,20,16,15 ticks for n=0,1,2,4,5.
+    expect(readCombatStats(get(next.state, holder.id), next.state).attackIntervalTicks).toBe(({ 0: 25, 1: 22, 2: 20, 4: 16, 5: 15 } as Record<number, number>)[count]);
     expect(get(next.state, holder.id).cooldownTicks).toBe(6);
     expect(next.state.companionState?.reactions.filter(r => r.targetId === holder.id)).toHaveLength(count);
     expect(next.state.rngDraws).toBe(0);
@@ -124,9 +131,9 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
   });
 
   it('bird actual small-bird death grants its large companion one 1500Bps contribution at t+1', () => {
-    const compiled = compileNeutralEncounter('4-7'), holder = compiled.units[0], victim = compiled.units[5];
+    const compiled = compileNeutralEncounter('4-7'), holder = compiled.units[0], victim = compiled.units[4];
     const units = compiled.units.map(u => idle({ ...u, hp: u.id === victim.id ? 1 : u.hp }));
-    const first = stepCombat(start('4-7', [], { units: [...units, { ...target('p', 6, 4), cooldownTicks: 0 }] }));
+    const first = stepCombat(start('4-7', [], { units: [...units, { ...target('p', 4, 4), cooldownTicks: 0 }] }));
     expect(first.events.filter(e => e.type === 'death').map(e => e.unitId)).toEqual([victim.id]);
     expect(readCombatStats(get(first.state, holder.id), first.state).attackIntervalTicks).toBe(25);
     const second = stepCombat(first.state);
@@ -137,15 +144,16 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(second.events.some(e => e.type === 'heal' || e.type === 'attack')).toBe(false);
   });
 
-  it('dragon word0 gives 119 main damage and at most two 29 never-critical children, consuming exactly one combat word', () => {
-    const players = [target('primary', 4, 2), target('a', 5, 2), target('b', 5, 1), target('c', 5, 3), target('d', 6, 2)];
-    const initial = start('5-7', players), first = stepCombat(initial);
-    // 0*10000 < 2500*2^32; floor(85*1.4)=119, floor(85*.35)=29.
-    // B9 replay2: a critical packet's raw is the frozen pre-crit DamageOutcome.raw (85); its post-crit 119 remains in hpDamage.
+  it.each(['5-7', '6-7'])('%s dragon word0 gives 1260 main damage and at most two 315 never-critical children, consuming exactly one combat word', round => {
+    const players = [target('primary', 4, 2, 2000), target('a', 5, 2, 2000), target('b', 5, 1, 2000), target('c', 5, 3, 2000), target('d', 6, 2, 2000)];
+    const compiled = compileNeutralEncounter(round);
+    const initial = start(round, players, { units: [{ ...compiled.units[0], cell: { col: 3, row: 2 } }, ...players] }), first = stepCombat(initial);
+    // 0*10000 < 2500*2^32; floor(900*1.4)=1260, floor(900*.35)=315.
+    // B9 replay2: a critical packet's raw is the frozen pre-crit DamageOutcome.raw (900); its post-crit 1260 remains in hpDamage.
     expect(first.events.flatMap(e => e.type === 'packetDamage' ? [[e.outcome.context.targetId, e.outcome.raw, e.outcome.hpDamage, e.outcome.critical, e.outcome.context.source.sourceKind]] : [])).toEqual([
-      ['a', 29, 29, false, 'ability'], ['b', 29, 29, false, 'ability'], ['primary', 85, 119, true, 'attack'],
+      ['a', 315, 315, false, 'ability'], ['b', 315, 315, false, 'ability'], ['primary', 900, 1260, true, 'attack'],
     ]);
-    expect(players.map(u => [u.id, get(first.state, u.id).hp])).toEqual([['primary', 381], ['a', 471], ['b', 471], ['c', 500], ['d', 500]]);
+    expect(players.map(u => [u.id, get(first.state, u.id).hp])).toEqual([['primary', 740], ['a', 1685], ['b', 1685], ['c', 2000], ['d', 2000]]);
     expect(first.events.filter(e => e.type === 'attack')).toHaveLength(1);
     expect(first.state.rngState).toBe(0); expect(first.state.rngDraws).toBe(1);
     expect(stepCombat(JSON.parse(JSON.stringify(initial)))).toEqual(first);
@@ -156,8 +164,8 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
   });
 
   it.each([1000, 4000])('herald charge samples target maxHP=%i, caps at300 and stuns next tick for10 ticks', hp => {
-    const compiled = compileNeutralEncounter('6-7');
-    const initial = start('6-7', [], { units: [...compiled.units.map(idle), target('p', 3, 4, hp)] });
+    const compiled = legacyHeraldVector();
+    const initial = start('legacy-herald', [], { units: [...compiled.units.map(idle), target('p', 3, 4, hp)] });
     const first = stepCombat(initial);
     expect(first.state.openingState?.plans[0]).toMatchObject({ path: [{ col: 4, row: 2 }, { col: 3, row: 3 }, { col: 3, row: 4 }, { col: 2, row: 5 }],
       targetIds: ['p'], to: { col: 2, row: 5 }, task: { executeAtTick: 1, status: 'executed' } });
@@ -168,10 +176,29 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(second.events.filter(e => e.type === 'packetDamage' || e.type === 'movement')).toEqual([]);
   });
 
+  it('legacy charge resumes every stun tick, expires exactly at tick 12, and never replays damage or control', () => {
+    const compiled=legacyHeraldVector();
+    let continuous=start('legacy-herald',[],{units:[...compiled.units.map(idle),target('p',3,4,1000)],
+      neutralReceipts:{deaths:[],controls:[]},nextEventSeq:0,nextActionSeq:0});
+    let resumed=JSON.parse(JSON.stringify(continuous));
+    const events=[];
+    for(let tick=1;tick<=13;tick++){
+      const a=stepCombat(continuous),b=stepCombat(resumed);
+      expect(b).toEqual(a);continuous=a.state;resumed=JSON.parse(JSON.stringify(b.state));events.push(...a.events);
+      expect(continuous.neutralReceipts!.controls).toHaveLength(1);
+      if(tick<12)expect(continuous.neutralReceipts!.controls[0].removedAtTick).toBeNull();
+      else expect(continuous.neutralReceipts!.controls[0]).toMatchObject({removedAtTick:12,removedReason:'expired'});
+    }
+    expect(events.filter(e=>e.type==='packetDamage')).toHaveLength(1);
+    expect(events.filter(e=>e.type==='movement')).toHaveLength(1);
+    expect(events.flatMap(e=>e.type==='statusChanged'&&e.group.kind==='stun'?[[e.tick,e.reason]]:[])).toEqual([[1,'applied'],[12,'expired']]);
+    expect(continuous.rngDraws).toBe(0);
+  });
+
   it('herald immunity blocks stun; prevention blocks damage but not the scheduled control', () => {
     for (const kind of ['control-immunity', 'damage-prevention'] as const) {
-      const compiled = compileNeutralEncounter('6-7');
-      const first = stepCombat(start('6-7', [], { units: [...compiled.units.map(idle), withStatus(target('p', 3, 4, 1000), kind)] }));
+      const compiled = legacyHeraldVector();
+      const first = stepCombat(start('legacy-herald', [], { units: [...compiled.units.map(idle), withStatus(target('p', 3, 4, 1000), kind)] }));
       expect(get(first.state, 'p').hp).toBe(kind === 'damage-prevention' ? 1000 : 850);
       expect(get(first.state, 'p').mechanismState?.statuses.some(g => g.kind === 'stun')).toBe(kind !== 'control-immunity');
     }

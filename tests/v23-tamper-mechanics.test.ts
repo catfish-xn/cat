@@ -17,8 +17,14 @@ import { createMatch } from '../src/simulation/match';
 import { openingEncounterId } from '../src/simulation/opening-encounter';
 import { BattleHistory } from '../src/replay/history';
 import type { BattleRecord } from '../src/m6/contracts';
-import { reachRound, resolveM5Choices } from './match-helpers';
+import { emptyBoard, reachRound as reachPublicRound, resolveM5Choices } from './match-helpers';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 
+// v26 D5 (7953c99a) changed seed 42's public 2-1 offer so the first card is snipers-nest, a history owner. Its solo proof
+// replays only public commands, so the receipted test grants below made restore fail ("replay command buyXp/equipItem/
+// useConsumable"). The v25 routes picked no history owner; keep that by skipping owner cards (as experiment-emblem-clone does).
+const reachRound = (roundId: string, resolveChoices = true, seed = 42) =>
+  reachPublicRound(roundId, resolveChoices, seed, [], Object.keys(AUGMENT_HISTORY_OWNERS));
 function accepted<T extends { ok: boolean; state: MatchState; reason?: string }>(r: T): MatchState {
   expect(r.ok, r.reason).toBe(true); return r.state;
 }
@@ -242,21 +248,48 @@ matrix('Experiment genuine split', experiment, [
   ['clone HP', s => { copy(s).hp++; }],
 ]);
 
-// Seed 35 naturally offers Blood Brothers at 2-1 on the current pool.
-function acquire(id: string): MatchState {
-  const seed = 35, root = createMatch(seed);
+// v25: seed 35 naturally offered Blood Brothers at 2-1 on an empty recorded route.
+// v26 D5 stage bans (7953c99a, docs/D5_REGISTERED_AUGMENTS.md) restrict TFT13_TeamupAugment_BloodBrothers to 3-2, a
+// trait-tailored node: it is drawn only with a fielded dominator/family/watcher unit. The route therefore keeps the
+// recorded empty-board battles through 3-1 (taking the first public 2-1 card that owns no history; over-encumbered
+// would park the bench), fields Vander and Silco with receipted grants for one recorded 3-1 battle, and enters 3-2.
+// Seed 44 is the first seed (re-searched from 0) whose unrerolled 3-2 draw on this route contains Blood Brothers;
+// no scripted offers are used.
+const BLOOD_ROUTE_EXCLUDED = [...Object.keys(AUGMENT_HISTORY_OWNERS), 'over-encumbered'];
+function* acquire(id: string): Generator<void, MatchState> {
+  const seed = 44, root = createMatch(seed);
   expect(openingEncounterId(root)).not.toBe('trainer-golems');
-  // Real seed and real 2-1 draw (no scripted offers here): predicts the offer from the real candidate pool.
-  expect(generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], openingEncounterId(root),
-    { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers).toContain(id);
-  const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
+  let s = reachBloodRound(seed);
+  while (s.roundDefinitionId !== '3-1') {
+    s = resolveM5Choices(s, [], BLOOD_ROUTE_EXCLUDED);
+    if (s.phase === 'preparation') {
+      s = emptyBoard(s); s = accepted(recorded(s, startMatchCombat(s))); expect(s.phase).not.toBe('combat');
+    }
+    s = resolveM5Choices(s, [], BLOOD_ROUTE_EXCLUDED); s = accepted(nextRound(s, s.round));
+  }
+  s = clear(resolveM5Choices(s, [], BLOOD_ROUTE_EXCLUDED));
+  s = add(s, 'vander', 0, 4); s = add(s, 'silco', 3, 7);
+  s = accepted(recorded(s, startMatchCombat(s)));
+  for (let tick = 0; s.phase === 'combat' && tick < 1201; tick++) {
+    s = recorded(s, stepMatch(s)).state; if (tick % 50 === 0) yield;
+  }
+  s = resolveM5Choices(s, [], BLOOD_ROUTE_EXCLUDED);
+  const before = s; s = accepted(nextRound(s, s.round));
+  expect(s.roundDefinitionId).toBe('3-2');
+  expect(s.augmentHistory).toBeUndefined();
+  // Real seed and real 3-2 draw (no scripted offers here): predicts the whole offer from the real candidate pool,
+  // the fielded-trait snapshot and the choice RNG immediately before the node opened.
+  const offer = s.augmentOffers.at(-1)!;
+  expect(offer.fieldedTraits).toEqual(expect.arrayContaining(['dominator', 'family', 'watcher']));
+  expect(generateChoices(augmentCandidates(resolveAugmentTier(s, 'round:3-2:augment'), s.augments, before.removedAugmentIds, openingEncounterId(s),
+    { node: '3-2', level: s.level, fieldedTraits: offer.fieldedTraits, blocked: [] }), before.choiceRngState).offers).toEqual(s.pendingChoice!.offers);
   const c = s.pendingChoice!;
   expect(c.offers).toContain(id);
   return resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
 }
 function* acquireBetrayal(): Generator<void, MatchState> {
   // Betrayal is 3-2-only and trait-tailored; field both partners before the scripted draw.
-  let s = clear(reachRound('2-1', true, 10));
+  let s = clear(reachPublicRound('2-1', true, 10));
   s = add(s, 'maddie', 0, 4); s = add(s, 'ambessa', 3, 7);
   while (s.roundDefinitionId !== '3-2') {
     s = resolveM5Choices(s);
@@ -277,7 +310,7 @@ function* acquireBetrayal(): Generator<void, MatchState> {
 const partnerSaves = new Map<string, MatchState>();
 function* partners(id: string): Generator<void, MatchState> {
   const cached = partnerSaves.get(id); if (cached) return cached;
-  let s = clear(id === 'betrayal' ? yield* acquireBetrayal() : acquire(id));
+  let s = clear(id === 'betrayal' ? yield* acquireBetrayal() : yield* acquire(id));
   for (const [i, hero] of (id === 'blood-brothers' ? ['vander', 'silco'] : ['maddie', 'ambessa']).entries())
     s = add(s, hero, i * 3, i ? 7 : 4, id === 'betrayal' ? 3 : 1);
   s = accepted(id === 'blood-brothers' ? recorded(s, startMatchCombat(s)) : startMatchCombat(s));

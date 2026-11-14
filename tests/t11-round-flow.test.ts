@@ -19,7 +19,9 @@ import { ManualClock } from '../src/server/room/clock';
 it('T11 eight-seat whole game automatically continues x-3 → x-4 supply → x-5 and x-7 → next x-1 without extra battles', () => {
   const clock=new ManualClock();
   // Real seed 0 with eight active bots reaches overtime-2 under randomized loot.
-  const room=new Room(SEATS.map(s=>({...s,kind:'bot'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'t11-flow',seed:0,clock,resolver:new TwoSidedBattleResolver()});
+  // v26 rule changes (14.24 neutrals 568eeea4, PvE loss damage ef0490c4, targeting P0/P1, D5 offers) end seed 0 at 6-6;
+  // seed 20 is the first seed from 1 whose eight-bot game reaches overtime (overtime-3), so every x-7 → next transition is exercised.
+  const room=new Room(SEATS.map(s=>({...s,kind:'bot'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'t11-flow',seed:20,clock,resolver:new TwoSidedBattleResolver()});
   const rounds: string[] = [];
   const phases = new Map<string, Set<string>>();
   const battleEntries = new Map<string, number>();

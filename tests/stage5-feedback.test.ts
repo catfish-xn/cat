@@ -96,6 +96,8 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(operations.filter(op => op === 'read:height')).toHaveLength(1);
       operations = []; renderer.render(round * 1000, anchors);
       expect(operations.filter(op => op === 'text' || op.startsWith('style:'))).toEqual([]);
+      // The text did not change, so the steady frame must not measure labels again.
+      expect(operations.filter(op => op === 'read:label')).toEqual([]);
       renderer.reset(); expect(snapshot(h)[0].children).toHaveLength(0);
     }
     expect(created).toBe(24);

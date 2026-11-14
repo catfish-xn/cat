@@ -109,7 +109,10 @@ it('Climb: expired membership restores native numerical eligibility',()=>{
 it('Climb: the actual lethal combat tick uses frozen instance membership and JSON continuation stays exact',()=>{
   const context=ctx([{...lifetime,sourceId:'lux-emblem',kind:'emblem',unitId:'p1',traitId:'conqueror',itemInstanceId:'emblem'}]);
   const started=battle(['darius','lux','lux'],context);
-  const before={...started,units:started.units.map(u=>u.id==='enemy'?{...u,cell:{col:0,row:3},attackDamage:10000,attackDamageBase:10000,attackDamagePercentBps:0,attackRange:20,baseCritChanceBps:0,cooldownTicks:0}
+  // targeting-p0 (28fd974a, docs/CURSOR_targeting-p1.md): an in-range current target is retained, so the enemy would keep
+  // the unit it picked from (3,0) in battle(). Clear that opening pick so the moved enemy selects its nearest unit (p0) again,
+  // as the old per-tick nearest scan did; the lethal tick, growth and JSON continuation assertions are unchanged.
+  const before={...started,units:started.units.map(u=>u.id==='enemy'?{...u,targetId:null,targetEngaged:undefined,cell:{col:0,row:3},attackDamage:10000,attackDamageBase:10000,attackDamagePercentBps:0,attackRange:20,baseCritChanceBps:0,cooldownTicks:0}
     :{...u,hp:u.id==='p0'?1:u.hp,cooldownTicks:2000,moveCooldownTicks:2000})};
   const next=stepCombat(before);
   expect(recipient(next.state,'p0').alive).toBe(false);

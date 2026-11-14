@@ -9,7 +9,9 @@ import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 
 const require = createRequire(import.meta.url), oracle = require('../fixtures/m5/augment-batch5-g5-oracle.cjs');
 // First prismatic-party candidate in the bounded 0..100 probe: s0's unrerolled 3-2 offer is Pipeline.
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 28 });
+// v26 D5 (7953c99a) and the 14.24 neutrals moved the room draws (old seed 28). Re-probed room seeds 0..60 on the same
+// runUntil route: seed 54 is the first whose s0 (human) is offered Pipeline at 3-2 without rerolling.
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 54 });
 afterAll(() => room.dispose());
 const mine = () => room.state.seats.find(s => s.seatId === 's0')!.match;
 it('starts the room', () => { room.start(); });
@@ -36,6 +38,15 @@ it('opens the independently sampled late PvE orb and grants exactly its weighted
   const extra = pipelineExtraOrbs(mine()); expect(extra).toHaveLength(1); expect(extra[0].roundId).toBe('3-7');
   expect(extra).toEqual(oracle.pipelineOrbs(mine())); const orbId = extra[0].orbId;
   runUntil(room, clock, s => s.roundId === '3-7' && s.phase === 'settlement');
+  // v26 PvE loot carryover (8f794062, docs/CURSOR_pve-loot-carryover.md): s0's bought army now loses the 14.24 wolves
+  // (568eeea4), so every unkilled 3-7 drop, including Pipeline's extra orb, is carried to the next PvE, 4-7, where the
+  // orb becomes claimable from the start of preparation. (v25: s0 won 3-7 and claimed it in 3-7 settlement.)
+  expect(mine().roundResults.at(-1)).toMatchObject({ roundId: '3-7', result: 'enemyWin' });
+  expect(readLootView(mine()).unclaimedOrbs?.some(o => o.orbId === orbId)).toBe(false);
+  const carried = (mine().m8.loot.carry ?? []).filter(row => extra[0].entries.some(entry => entry.dropId === row.dropId));
+  expect(carried.map(row => row.deliverRoundId)).toEqual(extra[0].entries.map(() => '4-7'));
+  runUntil(room, clock, s => s.roundId === '4-7' && s.phase === 'preparation');
+  expect(mine().roundDefinitionId).toBe('4-7');
   expect(readLootView(mine()).unclaimedOrbs?.some(o => o.orbId === orbId)).toBe(true);
   const result = room.handle('s0', { type: 'claimOrb', round: mine().round, orbId }); expect(result).toMatchObject({ ok: true });
   const s = mine(), p = pipelineBonusPlan(s), independent = oracle.pipelineBonuses(s);

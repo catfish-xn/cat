@@ -22,8 +22,10 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 
 function publicVoidSwarm() {
-  // Real first-node draw in the authorized 0..100 range; no scripted offers.
-  const open=reachRound('2-1',false,53);
+  // Real first-node draw; no scripted offers. D5 310-card pool: seed 53 offers wandering-trainer-ii,
+  // dual-purpose, sorcerer-crown. First non-Trainer-Golem seed in 0..300 whose reachRound('2-1') offer
+  // contains void-swarm is 57 (also inside the previous 0..100 bound).
+  const open=reachRound('2-1',false,57);
   expect(open.pendingChoice!.offers).toContain('void-swarm');
   return resolveM5Choices(open,['void-swarm']);
 }
@@ -39,12 +41,28 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
     .map(f=>({kind:f.kind,sequence:f.sequence}))).toEqual([
       {kind:'combat-roster',sequence:3},{kind:'pvp-roster',sequence:4},{kind:'deaths',sequence:5},
     ]);
-  // Independently exported with 97068956's unmodified match.ts and these same
-  // public commands. Hash the entire serialization, including history sequences.
+  // Hash of this same public command sequence after the D5 re-pin (seed 57). Computed from
+  // serializeMatch of that route; not a content-identity or ur-i3 re-record.
   // v25 identity-only refresh and reverse-substitution proof: docs/V25_STARRY_PINS.md.
+  // v26 identity-only refresh (ec1ce026, v26-neutrals-1424 epoch): the save bytes differ from the D5 pin
+  // 14cc123e20bea6891bfefb28e78d78c8fbae55b9d2328d391acb837964cc00dc only in contentDigest
+  // bbfbe0dd->9dc693dd and the frozen loot replayDigest 10ece6a9->a56b2c4a; history order and all other bytes unchanged.
+  // v26 卯足全力内容变化 (2026-11-02): contentDigest 9dc693dd->ed366cad only; substituting it back gives the previous pin
+  // a639ba227e42d92b3a4619f9f46e724af278f586426ef67971f128d26974f55a.
+  // v26 选秀 8 件散件必出 (2026-11-02): contentDigest ed366cad->150d825d only (was 35a972ba…).
+  // 塞维卡三连/头奖 (2026-11-09): contentDigest 150d825d->c7f0a2f3, loot replayDigest a56b2c4a->b53841c0 only;
+  // substituting both back gives the previous pin 338bebf5….
   const save=serializeMatch(started);
+  // 塞维卡老虎机转完再出手 (2026-11-09): contentDigest c7f0a2f3->f37c6970, loot b53841c0->9c98c8ef only (was a7947f17…).
+  // 14.24b 七项英雄数值 (2026-11-12, b-patch-overrides.json): contentDigest f37c6970->db6dc9b6 only; loot replay unchanged
+  // (was 6c5f207e…).
+  // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
+  const back=save.split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
+  expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
+    .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('8dedd86620e10240b954970b1f2c544e9dc8275ab65c5c5a2bb59c889bd8178d');
+    .toBe('91a0760ce161675721ba5e9e3dd1ce74db40e9ada9a2231a89958b1a03e97f60');
   expect(restoreMatch(save)).toEqual(started);
 });
 

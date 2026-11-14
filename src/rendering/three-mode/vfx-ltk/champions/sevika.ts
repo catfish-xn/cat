@@ -1,0 +1,80 @@
+import type { TimelineCue } from '../timeline';
+import { SKILL_FX_SIZE } from '../fx-size';
+import { CHEST } from '../timeline';
+// Attack: no 14.24 Sevika record on hand; the chest, as every S13 basic attack we have data for (inferred).
+/** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
+const SHIELD_SECONDS = 4;
+/**
+ * The `_Mirrored` slot machine and result layers. The game ships both twins, which differ only in the sign of every x
+ * offset; this board shows a +x offset on the screen's left (11-09 recording: the mod over the left reel, the reels
+ * stopping right to left), so the twin that keeps the right reel on the right is the mirrored one.
+ */
+const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
+/** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
+export const SEVIKA_SLOT_SECONDS = 1.25;
+const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3c691',
+  rocket: '5dbfcb42', shield: 'e9258aa9', coin: 'ba45e98d', jackpot: '066fd22b' } as const;
+/** Each spell layer's right-reel emitters (Flamethrower: Alpha_Right_Slot, Punch: _Slot2, Thrash: _Slot3; all: Add_Right_Slot). */
+const SPELL_RIGHT_REEL = ['Alpha_Right_Slot', 'Alpha_Right_Slot2', 'Alpha_Right_Slot3', 'Add_Right_Slot'];
+export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
+  sevika: [{ system: '0f2af66b', action: 'attack', event: 'hit', bone: CHEST, delay: .3, duration: .5 }],
+  'sevika-flamethrower': [
+    { system: '2ef508db', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: .4 },
+    // The flame cone reaches across the board, so it takes the arena size though it is held on the claw (fx-size.ts).
+    { system: '5d6a1033', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, fadeOut: true, scale: SKILL_FX_SIZE },
+    { system: 'e4e1dab4', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
+  ],
+  'sevika-blue-flamethrower': [
+    { system: '83de8443', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2, scale: SKILL_FX_SIZE },
+    { system: '892df721', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
+  ],
+  'sevika-punch': [
+    { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 20 / 30, duration: .7, stopAfter: 20 / 30 },
+    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30, duration: .6, stopAfter: .5, fadeOut: true },
+    { system: '8ccb497d', event: 'hit', primary: true, delay: .8, duration: .8 },
+    { system: '95fb90ce', event: 'hit', primary: true, delay: .8, duration: .8 },
+  ],
+  'sevika-chomp': [
+    { system: '7029bc3c', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 11 / 30, duration: .3, travelSeconds: .3 },
+    { system: '0fbf9f17', event: 'hit', primary: true, delay: 11 / 30 + .3, duration: .8 },
+    { system: '38d5b37a', event: 'hit', primary: true, delay: 11 / 30 + .3, duration: .8 },
+  ],
+  'sevika-jackpot': [
+    { system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 },
+    { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: .1, duration: .3, travelSeconds: .3 },
+    { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
+  ],
+  'sevika-rocket': [
+    { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
+    { system: '4e1283b2', event: 'hit', primary: true, delay: .3, duration: .6 },
+  ],
+  // The original bubble stays up for the whole shield (11-08 footage) and only the shared tail fade ends it.
+  'sevika-shield': [{ system: '518dee63', event: 'cast-start', delay: 0, duration: SHIELD_SECONDS }],
+  'sevika-coin': [{ system: '91985f5e', event: 'cast-start', delay: 0, duration: .8, stopAfter: .3 }],
+  // High Roller slot machine (14.24 map22.bin Maps/Shipping/Map22/Particles/set13/TFT13_Lieutenant_Base_Slots*_Mirrored): the
+  // frame high over her (its transform), the reels locking one after another and the result flash last, all gone soon
+  // after. The result layers place their own emitters as high up (EmitterPosition), so they play on her as they are.
+  'sevika-slots': [{ system: SLOTS, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }],
+  ...Object.fromEntries(Object.entries(SLOT_LAYERS).map(([result, system]) =>
+    [`sevika-slots-${result}`, [{ system, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }] as const])),
+  // A plain roll's spell on the left and middle reels only: the mod's layer draws the right reel (its own back, icon and
+  // flash), and the spell's larger right icon showed round the mod's smaller back (11-09 e85a856a recording).
+  ...Object.fromEntries((['flamethrower', 'punch', 'thrash'] as const).map(spell =>
+    [`sevika-slots-${spell}-pair`, [{ system: SLOT_LAYERS[spell], event: 'cast-start', delay: 0, duration: SLOT_SECONDS, hide: SPELL_RIGHT_REEL }] as const])),
+};
+/**
+ * The slot layers one cast shows: the rolled spell on the reels; a plain roll's mod replaces the right reel, a Triple is
+ * three of the spell, and Jackpot is its own reel set.
+ */
+export function sevikaSlotSkills(move: string, outcome: string): string[] {
+  if (outcome === 'jackpot' || move === 'jackpot') return ['sevika-slots', 'sevika-slots-jackpot'];
+  const spell = ({ flamethrower: 'flamethrower', punch: 'punch', chomp: 'thrash' } as Record<string, string>)[move];
+  if (!spell) return [];
+  return ['rocket', 'shield', 'coin'].includes(outcome) ? ['sevika-slots', `sevika-slots-${spell}-pair`, `sevika-slots-${outcome}`] : ['sevika-slots', `sevika-slots-${spell}`];
+}
+export function sevikaSkill(move: string, outcome: string): string | undefined {
+  // 14.24b Jackpot is its own spell (coins), not one of the three moves plus a bonus.
+  if (move === 'jackpot') return 'sevika-jackpot';
+  if (!['flamethrower', 'punch', 'chomp'].includes(move)) return;
+  return outcome === 'blue-flamethrower' && move === 'flamethrower' ? 'sevika-blue-flamethrower' : `sevika-${move}`;
+}

@@ -6,7 +6,7 @@ import {join,resolve,dirname,isAbsolute} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {build} from 'esbuild';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {createMatch,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
+import {createMatch,rerollAugment,buyXp,deployMatchUnit,equipItem,useConsumable,selectChoice,nextRound,startMatchCombat,stepMatch,sellUnit,type MatchState} from '../src/simulation/match';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {advanceG23Economy} from '../src/simulation/g2-3-economy';
@@ -36,8 +36,13 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;
-   // The current pool offers Pumping Up III without reserve-filling unit gifts.
-   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'pumping-up-iii':c.offers[0];
+   // A card without reserve-filling unit gifts or history-evidence needs.
+   // v26 D5 pool (7953c99a): seed 27566's 2-1 offers no Pumping Up III, even after all three rerolls
+   // (spoils-of-war-iii / family-crown / ghost-of-friends-past all need battle-history evidence for restore).
+   // Rerolling slots 0 and 1 reaches Dual Purpose (was pumping-up-iii): XP-purchase gold, no units, no history.
+   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'dual-purpose':c.offers[0];
+   const slot=c.kind==='augment'?(c.rerolledSlots??[]).findIndex(used=>!used):-1;
+   if(pick==='dual-purpose'&&!c.offers.includes(pick)&&slot>=0){state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));continue;}
    expect(c.offers).toContain(pick);state=accepted(selectChoice(state,c.choiceId,c.generation,pick));
   }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
@@ -144,10 +149,10 @@ it('restores the copied hero across battles and an equip/remove cycle with full 
 },20_000);
 
 let tier14:MatchState|undefined;
-/** Historical receipt vector reaches 1188; the tier14 award itself comes from a real solo battle (5-5).
- * v22: batch-B crabs (scuttle-puddle) field five 4-7 crabs, so seed 24 opens tier 10 one round later (5-3, see below);
- * the vector now rewrites the 5-3 receipt on top of 648 stacks, and 27 tier-9 takedowns (20 stacks each) keep it
- * below the tier-14 threshold (1200) so the next real battle (+42) still earns tier 14. */
+/** Historical receipt vector reaches 1182; the tier14 award itself comes from a real solo battle (6-2).
+ * P-CONQ-PVE-01 (2026-11-03): PvE takedowns grant no Conquest, so seed 24 opens tier 10 at 6-1 (see below);
+ * the vector rewrites the 6-1 receipt on top of 642 stacks, and 27 tier-9 takedowns (20 stacks each) keep it
+ * below the tier-14 threshold (1200) so the next real battle (+48) still earns tier 14. */
 function tier14Battle():MatchState{
  if(tier14)return tier14;
  const pending=naturalForgeStates().get(10)!,choice=pending.pendingChoice!;
@@ -163,13 +168,11 @@ function tier14Battle():MatchState{
  if(last.kind!=='battle')throw Error('Expected final battle');
  for(const payout of g23BattlePayouts(last.facts,replay.conquest.chestsOpened,original.conquest.chestsOpened))state=accepted(grantMechanicGold(state,payout));
  state=accepted(nextRound(state,state.round));
- expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-4',1188,13]);
- // 5-4 is a supply round (its pick settles it; no mechanic choices/anvil openings); the next battle is 5-5.
- expect(state.pendingChoice?.payload).toBeUndefined();
- while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
- expect(state.phase).toBe('settlement');
- state=accepted(nextRound(state,state.round));
- expect([state.roundDefinitionId,state.phase]).toEqual(['5-5','preparation']);
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['6-2',1182,13]);
+ // P-CONQ-PVE-01: without PvE Conquest the vector sits on 6-1, so the next battle is the ordinary PvP round 6-2
+ // (no supply pick in between; no mechanic choices/anvil openings pending).
+ expect(state.pendingChoice).toBeNull();
+ expect([state.roundDefinitionId,state.phase]).toEqual(['6-2','preparation']);
  // v22 anvil units: the tier-11 support anvil waits in an orb; claim it, open it by selling and take the first offer
  // exactly as the old popup was resolved here.
  for(;;){
@@ -179,7 +182,7 @@ function tier14Battle():MatchState{
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  state=accepted(startMatchCombat(state));
  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
- expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-5',1230,14]);
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['6-2',1230,14]);
  // v22 anvil units: the tier-14 artifact forge is claimed as an anvil unit and opened by selling it (no popup).
  expect(state.pendingChoice).toBeNull();
  const opened=openConquerorAnvil(state)!;
@@ -266,13 +269,15 @@ it('restores the award-round duplicator in escrow when no eligible hero is owned
 
 it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pending and selected, on the award round',()=>{
  const states=settlementCases(),four=states[0];
- expect([four.round,four.roundDefinitionId,readG23Progress(four)!.conquest.stacks]).toEqual([6,'2-3',108]);
+ expect([four.round,four.roundDefinitionId,readG23Progress(four)!.conquest.stacks]).toEqual([9,'2-6',102]);
  expect(four.combat?.status).toBe('finished');
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
- // The seed 24 route births the crown as item-26.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-26',definitionId:'TFT_Item_ForceOfNature'});
+ // The seed 24 route births the crown as item-25.
+ // v26 D5 pool (7953c99a): seed 24's 3-2 card is now mentorship-i instead of item-grab-bag-i, so the route
+ // mints one item fewer before 5-5 (was item-26).
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-25',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   // Seed 24's tier-14 radiant roll is Hand of Justice.
@@ -290,7 +295,7 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
 it('rejects a duplicator receipt and matching hero forged to an unowned option at tier4',()=>{
  const state=naturalForgeStates().get(4)!;
  // Seed 24 keeps the scuttle-puddle opening without the unrelated prismatic offer-history replay.
- expect([state.seed,state.round,state.roundDefinitionId]).toEqual([NATURAL_FORGE_SEED,6,'2-3']);
+ expect([state.seed,state.round,state.roundDefinitionId]).toEqual([NATURAL_FORGE_SEED,9,'2-6']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
  // Seed 24's genuine duplicator roll copies Scar into unit-64.
@@ -363,11 +368,11 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
 },60000);
 
 // Seed 24 retains the scuttle-puddle trajectory.
-it('the scuttle-puddle seed naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
+it('the scuttle-puddle seed naturally opens tier10 at 6-1/690 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
- // v22 batch-B crabs: seed 24 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
- // fifth crab's death), so 4-7 yields one fewer takedown and the 650-stack tier 10 is crossed at 5-3 (648+42).
- expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([27,'5-3',690]);
+ // P-CONQ-PVE-01: PvE rounds (1-2..1-4, 2-7, 3-7, 4-7, 5-7) grant no Conquest, so only PvP takedowns count and
+ // the 650-stack tier 10 is crossed at 6-1 (642+48).
+ expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([32,'6-1',690]);
  // v22 anvil units: the fixture claimed the tier-10 anvil unit from its orb and opened it by selling it.
  expect(choice).toMatchObject({kind:'forge',payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:choice.offers[0]}});
  // Pick a non-timeout offer from the natural artifact pool.

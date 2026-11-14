@@ -84,5 +84,7 @@ it('randomizes real attacks across multiple enemies without depending on array o
   }
   expect(new Set(selected).size).toBeGreaterThan(1);
   expect(state.itemRandomStreams!.fishbones.draws).toBe(selected.length);
-  expect(state.rngDraws).toBe(selected.length);
+  // targeting-p1 (8106acee): the holder's opening target is an equal-distance tie among the adjacent dummies, which now
+  // draws the combat lcg32 stream exactly once; the target is then held. v25 expected rngDraws === selected.length.
+  expect(state.rngDraws).toBe(selected.length + 1);
 });

@@ -39,7 +39,8 @@ function checkedMesh(entry) {
   return mesh;
 }
 
-export function extractUnitScale(documents, { skinEntryHash, meshPath, multipliers = [] } = {}) {
+/** The one selected skin's checked skinMeshProperties (also read by champion-lighting.mjs). */
+export function selectSkinMesh(documents, { skinEntryHash, meshPath } = {}) {
   if (!Array.isArray(documents) || !documents.length) throw new Error('missing-scale-source');
   if (documents.some(d => !d || !Array.isArray(d.entries))) throw new Error('invalid-scale-source');
   if (documents.some(d => d.patches?.length)) throw new Error('unsupported-scale-bin-patches');
@@ -49,7 +50,10 @@ export function extractUnitScale(documents, { skinEntryHash, meshPath, multiplie
     .map(checkedMesh)
     .filter(mesh => meshPath === undefined || canonicalAsset(binField(mesh, 'simpleSkin') ?? '') === canonicalAsset(meshPath));
   if (candidates.length !== 1) throw new Error(candidates.length ? 'ambiguous-scale-skin' : 'missing-scale-skin');
-  const value = binField(candidates[0], 'skinScale');
+  return candidates[0];
+}
+export function extractUnitScale(documents, { skinEntryHash, meshPath, multipliers = [] } = {}) {
+  const value = binField(selectSkinMesh(documents, { skinEntryHash, meshPath }), 'skinScale');
   const skinScale = value === undefined ? 1 : value;
   const valid = n => typeof n === 'number' && Number.isFinite(n) && n > 0;
   if (!valid(skinScale)) throw new Error('invalid-skin-scale');

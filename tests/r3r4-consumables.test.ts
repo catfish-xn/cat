@@ -6,9 +6,11 @@ import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import type {MatchState} from '../src/simulation/match-types';
 import type {ConsumableDefinitionId,ConsumableTarget} from '../src/simulation/consumable-types';
 import {publicConsumables,accepted,finish} from './fixtures/r3r4-public';
+// v26 D5 (7953c99a): the default route's first 2-1 card is now Spoils of War III, whose saves need replayed battle history;
+// take the route's first quiet card instead (r3r4-public quietAugment) so every save below stays a plain B8 restore.
 const tools:{id:ConsumableDefinitionId;kind:'component'|'completed'}[]=[{id:'magnetic-remover',kind:'component'},{id:'reforger',kind:'component'},{id:'reforger',kind:'completed'}];
 function prepared(phase:MatchState['phase']){
- let state=publicConsumables();
+ let state=publicConsumables(27566,true);
  if(phase!=='settlement')state=accepted(nextRound(state,state.round));
  if(phase==='choice')state=accepted(nextRound(finish(state),state.round));
  if(phase==='combat')state=accepted(startMatchCombat(state));
@@ -59,7 +61,7 @@ describe('R4 public tools, four phases and restored source history',()=>{
   },30000);
  }
  it('rejects all tool target/phase failures without IDs, RNG, receipts, resources or events',()=>{
-  const state=publicConsumables(),remover=state.consumables.find(c=>c.definitionId==='magnetic-remover')!,component=state.consumables.find(c=>c.definitionId==='reforger')!;
+  const state=publicConsumables(27566,true),remover=state.consumables.find(c=>c.definitionId==='magnetic-remover')!,component=state.consumables.find(c=>c.definitionId==='reforger')!;
   const empty=state.preparation.units.find(u=>u.team==='player')!;
   const cases:[MatchState,string,ConsumableTarget,string][]=[
    [state,'missing',{kind:'unit',unitId:empty.id},'unknown-consumable'],
@@ -73,7 +75,7 @@ describe('R4 public tools, four phases and restored source history',()=>{
   for(const [s,id,t,reason] of cases){const bytes=JSON.stringify(s),r=useConsumable(s,id,t);expect(r).toEqual({ok:false,state:s,reason});expect(r.state).toBe(s);expect(JSON.stringify(s)).toBe(bytes);}
  });
  it('rejects altered consumption RNG, output, double consumption and consumption before grant',()=>{
-  let state=publicConsumables();const tool=state.consumables.find(c=>c.definitionId==='reforger')!;
+  let state=publicConsumables(27566,true);const tool=state.consumables.find(c=>c.definitionId==='reforger')!;
   const item=state.items.find(i=>ITEM_DEFINITIONS[i.definitionId].kind==='component')!;
   state=accepted(equipItem(state,item.id,state.preparation.units.find(u=>u.team==='player')!.id,0));
   const used=accepted(useConsumable(state,tool.consumableId,{kind:'unit',unitId:state.preparation.units.find(u=>u.team==='player')!.id}));
@@ -88,7 +90,7 @@ describe('R4 public tools, four phases and restored source history',()=>{
 
 it('a real dropped Thief parent retains its roll after removal/re-equip; reforging removes live children while frozen combat restores',()=>{
  // Restore the v15 public recipe seed; scheme A leaves its original drops unchanged.
- let state=publicConsumables(162);
+ let state=publicConsumables(162,true);
  const parent=state.items.find(i=>i.definitionId==='thiefs-gloves')!,holder=state.preparation.units.find(u=>u.team==='player')!;
  expect(parent).toBeDefined();state=accepted(equipItem(state,parent.id,holder.id,2));
  const roll=state.equipmentState.rolls,draws=state.equipmentState.equipment;

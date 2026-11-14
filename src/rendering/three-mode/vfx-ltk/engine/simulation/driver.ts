@@ -253,6 +253,12 @@ export interface Driver extends Source {
   /** Carry the system on `next`, restarting the run where the motion itself changed. */
   steer(next: RigModel): void;
   /**
+   * Cue scale about the anchor for every later birth of this run, children included.
+   * 1 keeps authored lengths. Call it before the run steps; a parked system is not reused
+   * across two scales.
+   */
+  setScale(scale: number): void;
+  /**
    * The live children of the child definition at `path`.
    *
    * The driver keeps the list current in place, so a draw holds it and reads it every frame.
@@ -260,6 +266,11 @@ export interface Driver extends Source {
   sources(path: string): readonly Source[];
   /** How many child systems are live, at every depth of the lineage. */
   liveChildren(): number;
+  /**
+   * Port: what the live children take now: the room their pools hold (against the run's child budget) and the
+   * particles they have live. A run's child room is sized from these (particles.ts measureChildren).
+   */
+  childRoom(): { held: number; particles: number };
   /** Every child this pass has spawned, in the order they were spawned. */
   births(): readonly ChildBirth[];
 }
@@ -345,6 +356,7 @@ export function createDriver(
           (rig.stopAt != null && reached >= rig.stopAt) || landed(rig.motion, reached, rig.height),
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
+        scale: lineage.scale,
       };
 
       stepEmitters(pool, system, placed, rng, states);
@@ -458,6 +470,7 @@ export function createDriver(
         stopped: false,
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
+        scale: lineage.scale,
       };
       stepEmitters(pool, system, placed, rng, states);
       children.step(driver, system, SEEK_STEP, now);
@@ -516,6 +529,12 @@ export function createDriver(
     },
     get world() {
       return world;
+    },
+    get scale() {
+      return lineage.scale;
+    },
+    setScale(next) {
+      lineage.scale = next;
     },
     histogram: lanes,
     advance: run,
@@ -664,6 +683,12 @@ export function createDriver(
 
     liveChildren() {
       return lineage.live;
+    },
+
+    childRoom() {
+      let particles = 0;
+      for (const feed of lineage.feeds.values()) for (const source of feed) particles += source.pool.count;
+      return { held: lineage.held, particles };
     },
 
     births() {

@@ -13,6 +13,8 @@ import { EMPTY_TRIGGER_LEDGER } from '../../src/simulation/m8/triggers';
 import { accepted, battle, emptyBoard, reachRound } from '../match-helpers';
 import { itemMatch } from '../fixtures/m8-b4-match';
 import { configuredPrefix } from '../fixtures/t13-loot-public';
+import { historyFreeAugments, historyFreeRerollPriorities } from '../fixtures/history-free-augments';
+import { AUGMENT_HISTORY_OWNERS } from '../../src/simulation/augment-history-owners';
 
 for (const id of ['bloodthirster', 'sunfire-cape']) {
   beforeAll(() => { itemMatch(id); });
@@ -100,7 +102,11 @@ it('G-C06 binds the real absorption value even when its status is forged coheren
   // v25 seed 66 is Prismatic Party: its replay/item-transform route no longer
   // isolates the ordinary G23 guard. Seed 1 has a gold 4-2 node and ordinary 4-7
   // neutrals; reserve public earnings to buy the requested anomaly without fallback.
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 1, goldReserveByRound: { '4-5': 80 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia' });
+  // v26 D5 registration (7953c99a, merged 3ce71065): seed 1's default route now takes Two Much Value (a history
+  // owner), so every restore replays the whole game and the case exceeds its budget. Public history-free rerolls
+  // (v25: no rerolls) keep the same seed, anomaly and target; the route ends with no augmentHistory.
+  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 1, goldReserveByRound: { '4-5': 80 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia', augmentRerollPriorities: historyFreeRerollPriorities });
+  expect(prep.augmentHistory).toBeUndefined();
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
   // Public bench sales leave room to move the seeded roster off the board.
@@ -144,8 +150,9 @@ it('G-C07 authenticates burn phase even when the group and task agree', () => {
 
 it('G-C08 rejects invented Experiment takedowns plus matching maximum health', () => {
   // Seed 1: after the augment pool grew, seed 5's route holds a sampled shield whose check fires before the G23 facts.
-  // Route seed 2 (was 1) after the global 14.24 stage bans; 12 after the v23 integration merge (seed 2 opens with Trainer Golems).
-  const routeSeed = 12, seed = readG23Progress(reachRound('2-1', true, routeSeed))!.seed;
+  // Route seed 2 (was 1) after the global 14.24 stage bans; 12 after the v23 integration merge (seed 2 opens with Trainer Golems);
+  // 3 after Nunu's 3 s cast lock (seed 12's route now holds a sampled shield whose check fires first; first passing seed from 1).
+  const routeSeed = 3, seed = readG23Progress(reachRound('2-1', true, routeSeed))!.seed;
   const labs = g23Laboratories(seed, 'player', 3);
   const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], routeSeed);
   const eligible = (s: MatchState) => s.combat!.units.find(u => u.team === 'player' && u.mechanics?.some(m => m.mechanic === 'g23Experiment' && m.values.mundo > 0)
@@ -232,10 +239,19 @@ it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async
   // v25: seed 3 no longer owns Wealthy Rehab II. Seed 49 naturally offers it at
   // 3-2; the driver selects that real card (no scripted offers).
   // Keep the original Mirror-labelled dynamic replay path and reserve for paid anomaly rerolls.
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 49, anomalyDefinitionId,
-    augmentPriorities:['wealthy-rehab-ii'],goldReserveByRound:{'4-5':150} });
+  // v26: D5 registration (7953c99a, merged 3ce71065) removes Wealthy Rehab II from seed 49's natural route even with
+  // public 3-2 rerolls. With public rerolls (Wealthy Rehab II first, otherwise history-free cards at 2-1/4-2) seed 97
+  // (v25: 49) naturally acquires it and binds both anomalies with no augmentHistory (checked below).
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 97, anomalyDefinitionId,
+    augmentPriorities:['wealthy-rehab-ii'],
+    augmentRerollPriorities:{'2-1':['wealthy-rehab-ii',...historyFreeAugments],'3-2':['wealthy-rehab-ii'],'4-2':['wealthy-rehab-ii',...historyFreeAugments]},
+    // R4a reaches eagle-eye at paid refresh 151; save real income before the late XP/shop push.
+    goldReserveByRound: anomalyDefinitionId === 'eagle-eye'
+      ? Object.fromEntries(['3-5','3-6','3-7','4-1','4-2','4-3','4-4','4-5'].map(round=>[round,180]))
+      : {'4-5':150} });
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   expect(prep.augments.map(a => a.definitionId)).toContain('wealthy-rehab-ii');
+  expect(prep.augmentHistory).toBeUndefined();
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;
@@ -258,7 +274,10 @@ it('G-C08 binds Conqueror receipts after an actual takedown', () => {
   reject(legal, s => { s.combat!.units.find(u => u.g23?.conquestTakedowns.length)!.g23!.conquestTakedowns.pop(); }, 'G23 state/maximum health binding facts');
 });
 it('resists shields, sampled holders and ordinary facts share the same cached trajectory', () => {
-  let prep = reachRound('2-1', true, 5);
+  // v26 D5 registration (7953c99a, merged 3ce71065) lets seed 5's default 2-1 pick land on a history-owner card, whose
+  // full-game replay rejects the later public equipItem; exclude history owners (v25: default pick) so the cached
+  // trajectory under test is the only replay.
+  let prep = reachRound('2-1', true, 5, [], Object.keys(AUGMENT_HISTORY_OWNERS));
   prep = accepted(grantMechanicItem(prep, { receiptId: 'cd-shared-resists', source: 'test', definitionId: 'TFT_Item_Artifact_LightshieldCrest' }));
   prep = accepted(equipItem(prep, prep.items.at(-1)!.id, 'unit-1', 0));
   prep = accepted(deployMatchUnit(prep, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));

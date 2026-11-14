@@ -1,6 +1,8 @@
 /** Reserved integration IDs only. This registry does NOT enable offers or implement effects.
  * Future jobs must use these IDs (or update this registry in the same change). */
 export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>> = {
+  // what-you-really-are (True Colors) needs no owner here: progress and rewards read
+  // authenticated D0 roundResults/receipts, not incoming player-damage history.
   'trait-tracker': ['trait-activation'],
   'snipers-nest': ['positions', 'combat-roster', 'pvp-roster'],
   'sponging': ['combat-roster', 'pvp-roster'],
@@ -30,7 +32,7 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],
-  'restart-mission': ['carousel', 'positions'],
+  'restart-mission': ['acquire', 'carousel', 'positions'],
   'brb': ['carousel', 'positions'],
   'diversified-portfolio': ['round-entry'], 'diversified-portfolio-plus': ['round-entry'],
   'survivor': ['table'], 'table-scraps': ['carousel'], 'young-and-wild-and-free': ['carousel'],

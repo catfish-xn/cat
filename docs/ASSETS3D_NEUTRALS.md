@@ -28,7 +28,7 @@ node scripts/assets3d/neutral-browser-review.mjs
 
 ## 回合、ID 与动作
 
-以 `src/simulation/content/neutrals.ts`、`neutral-encounters.ts` 为项目 ID/回合依据。A/B/C 数值档位只用外观别名，不改领域规则。
+以 `src/simulation/content/neutrals.ts`、`neutral-encounters.ts` 为项目 ID/回合依据。A/B/C 保留为外观／部署别名；2026-10-29 用户批准三轮小兵统一数值，见 [恢复记录](NEUTRALS_14_24_RESTORATION.md)。
 
 | 回合 | manifest key | 角色 | GLB 字节 | clip 数 |
 | --- | --- | --- | ---: | ---: |
@@ -39,8 +39,8 @@ node scripts/assets3d/neutral-browser-review.mjs
 | 3-7 | pve-wolf-small | tft_murkwolfmini | 1,542,280 | 7 |
 | 4-7 | pve-razorbeak-large | tft_razorbeak | 1,195,472 | 6 |
 | 4-7 | pve-razorbeak-small | tft_razorbeakmini | 946,528 | 6 |
-| 5-7 | pve-elder-dragon | tft_elderdragon | 3,511,836 | 5 |
-| 6-7 | pve-rift-herald | tft_riftherald | 3,866,496 | 9 |
+| 5-7、6-7 | pve-elder-dragon | tft_elderdragon | 3,511,836 | 5 |
+| 旧6-7（2026-10-29已取代，现不部署） | pve-rift-herald | tft_riftherald | 3,866,496 | 9 |
 
 共 55 段模型内 clip（共享动作在各自 GLB 内保留），9/9 外观均覆盖 idle/move/attack/cast/death。
 
@@ -95,3 +95,7 @@ node node_modules/vitest/vitest.mjs run --configLoader runner --project fast ass
 
    merge 读取英雄根 manifest 和野怪 build/units 中的分批 manifest，复制到新根并生成统一 manifest/precache；key 冲突、不同内容覆盖、缺依赖都会失败。这里使用 build 作为输入以保证与输出目录相互隔离；不可把 neutrals 根作为输入再输出到它的子目录。若采用已压缩英雄包，将第一个 `--from` 换为其实际根；保留既有 meshopt/KTX2 读取能力。将 3D 可配置素材根指向该新根，根 manifest 同时包含英雄和 12 个野怪 ID。预缓存按该根 precache 清单处理，不扫描 build/runtime/extracted/review。
 5. 界面验收条件：八个 PvE 回合均按 definitionId 显示正确外观；大小狼/鸟比例可区分，小兵 A/B/C 外观一致；多只模型动作独立；失败有占位回退；2D 模式和规则无改动。本次未修改界面文件，接线尚待 Claude 实现。
+
+## 2026-10-29 6-7 模型复核
+
+用户决定以远古龙替换6-7先锋，直接复用5-7的 `pve-elder-dragon`，不新增模型或回合特判。`neutral-config.mjs` 已绑定 `tft_elderdragon`，2D头像、3D模型缓存及高度表已有该ID。当前工作树无 `assets3d-local/`；在本机 `cat-v23-anvil-assets/assets3d-local/anvil-delta/root-H1IaDF/roots/0/roots/4/roots/8/models/pve-elder-dragon/model.glb` 只读复核到882804字节的GLB v2，头部长度一致，包含上表五段龙动作。此为已有处理包，大小不同于2026-10-21未压缩源输出。素材未复制或提交；运行3D仍须将可配置素材根指向含该key的已有完整包。本轮未做浏览器视觉验收。

@@ -38,18 +38,20 @@ export interface FrozenLootLedger {
 /** Runtime status and resolution belong to the independent ledger introduced in checkpoint②.
  * Component identity is read from receipt.payload, never duplicated here.
  */
-export interface LootChoiceEligibility { readonly dropId:string; readonly status:'planned'|'revealed'|'forfeited' }
+export interface LootChoiceEligibility { readonly dropId:string; readonly status:'planned'|'revealed'|'forfeited'|'carried' }
 export interface LootChoiceResolution { readonly dropId:string; readonly receiptId:string; readonly method:'player-choice'|'terminal-fallback' }
 
 /** Runtime progress references the sole immutable plan; payloads are never copied here. */
 export type DirectLootProgress = { readonly dropId: string } & (
-  | { readonly status: 'planned' | 'revealed' | 'pending-capacity' | 'retained-terminal' | 'forfeited'; readonly receiptId: null }
+  | { readonly status: 'planned' | 'revealed' | 'pending-capacity' | 'retained-terminal' | 'forfeited' | 'carried'; readonly receiptId: null }
   | { readonly status: 'granted'; readonly receiptId: string }
 );
 export interface LootEarnedEvidence {
   readonly dropId: string;
   readonly death: { readonly combatId: string; readonly tick: number; readonly eventSeq: number };
 }
+/** Loot a lost PvE round did not pay, delivered on the next PvE round. Absent when nothing is waiting or already explained by a receipt. */
+export interface LootCarry { readonly dropId: string; readonly deliverRoundId: string }
 export interface MatchLootState {
   /** Multiplayer seat-private FIFO; revealed entries stay unallocated until settlement. */
   readonly queuedOrbClaims?: readonly string[];
@@ -63,6 +65,7 @@ export interface MatchLootState {
   readonly earnedEvidence: readonly LootEarnedEvidence[];
   readonly receipts: readonly import('./m8/contracts').LootReceipt[];
   readonly guaranteeCounters: Readonly<Record<string, number>>;
+  readonly carry?: readonly LootCarry[];
 }
 export interface RewardOrb {
   readonly orbId: string;
@@ -74,5 +77,6 @@ export interface RewardOrb {
 export type LootMatchEvent =
   | { readonly type: 'lootRevealed'; readonly dropId: string; readonly death: LootEarnedEvidence['death'] }
   | { readonly type: 'lootForfeited'; readonly dropId: string }
+  | { readonly type: 'lootCarried'; readonly dropId: string; readonly deliverRoundId: string }
   | { readonly type: 'lootGranted'; readonly receipt: import('./m8/contracts').LootReceipt }
   | { readonly type: 'lootChoiceResolved'; readonly dropId: string; readonly receiptId: string; readonly method: LootChoiceResolution['method'] };

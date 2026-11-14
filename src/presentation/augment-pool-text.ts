@@ -1,5 +1,9 @@
 /** Player-only 14.24 names/descriptions. Loaded on demand; never imported by the domain or server. */
 export const AUGMENT_POOL_TEXT: Readonly<Record<string, { readonly name: string; readonly description: string }>> = {
+  'what-you-really-are': { name: '真心本色', description: '获得一个【饮血剑】。从取得当轮起，对其他玩家累计造成35点实际生命伤害后，获得一个【沃里克】和一个【斯特拉克的挑战护手】。\n当前：〔对局动态值〕/35。单人及缺少实扣血数据的占位结算不累计。' },
+  brb: { name: '假装摸鱼', description: '从取得当轮起的3个回合内，商店不可用、不能出售弈子，已锁定的商店自动解锁。仍可调整站位和移动选秀，系统自动布阵；随后获得2个【成装锻造器】。' },
+  'over-encumbered': { name: '运力不足', description: '下一整个阶段仅有1个可用备战席栏位，期间不能购买弈子，刷新、买经验和锁店照常。多余弈子暂留场上不参战，出售空出栏位后依次返回；阶段结束获得3件随机基础装备。' },
+  'restart-mission': { name: '重启任务', description: '移除场上和备战席上的全部弈子，不获得出售金币，装备回库存；锻造器和选秀暂存保留。获得6个二星弈子的奖励法球：1个一费、3个二费、2个三费，领取时合星；缺池按费用折金。' },
   "coronation": {
     "description": "获得1个【金铲铲冠冕】。【金铲铲冠冕】、【金锅锅冠冕】和【金锅铲冠冕】将为携带者提供额外的30%攻击速度、30%攻击力和40法术强度。",
     "name": "加冕礼"

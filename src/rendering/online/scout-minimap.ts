@@ -11,12 +11,20 @@ const FIRST_ROW = 4, ROWS = 4, COLUMNS = 7;
  */
 export class ScoutMinimap {
   readonly root = document.createElement('nav');
+  private rendered = '';
   constructor(host: HTMLElement, private readonly onSelect: (seatId: string) => void) {
     this.root.className = 'scout-minimap'; this.root.dataset.debug = 'online:minimap'; this.root.setAttribute('aria-label', '对手棋盘');
     host.append(this.root);
   }
   render(view: PlayerView | null, viewing: string | null): void {
     const shown = viewing ?? view?.mySeatId;
+    // A room publication often changes only a shop, timer or combat stream.
+    // Compare the values this map draws, including after a wire JSON clone.
+    const key = JSON.stringify([shown, view?.mySeatId, view?.opponentSeatId, (view?.seats ?? []).map(seat => [
+      seat.seatId, seat.name, seat.hp, seat.alive, (seat.publicBoard?.units ?? []).map(unit => [unit.definitionId, unit.cell.row, unit.cell.col, unit.summon]),
+    ])]);
+    if (key === this.rendered) return;
+    this.rendered = key;
     this.root.replaceChildren(...(view?.seats ?? []).map(seat => this.tile(seat, seat.seatId === view!.mySeatId, seat.seatId === shown, seat.seatId === view!.opponentSeatId)));
   }
   dispose(): void { this.root.remove(); }

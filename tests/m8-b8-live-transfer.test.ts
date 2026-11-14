@@ -11,7 +11,7 @@ import { accepted, battle, configuredPrefix, transferPreparation, players, plan 
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-import anchor from './fixtures/v25-online-rules-transfer-route.json';
+import anchor from './fixtures/v26-neutrals-1424-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
 let prepared: MatchState;
 let replayCache: ReturnType<typeof installAugmentReplayCommandCache>;
@@ -153,9 +153,16 @@ type MutableMatch = Mutable<MatchState>;
 // This separate public route preserves the transfer but avoids history-dependent
 // augments. Some tampered states otherwise fail solo replay before the specific
 // B8/resource checks below are reached.
+// v26 re-pin: seed 25 now leaves 2 fewer gold at the 4-6 anomaly (augment pool/economy drift: its route
+// takes all-out/lineup/sentinel-crest instead of all-out/teaming-up-i/manaflow-ii), so the paid reroll
+// chain stops one draw short and must take TFT13_GoopBuff_HungerForPower (v25 reached slime-time on
+// reroll 32 with 1 gold left). Of the seeds whose independent 4-7 loot plan grants a Tristana (4, 25, 42,
+// 43, ...), 4 is the history-owning main route and 42 binds arcana-overwhelming; 43 is the first whose same
+// public options bind slime-time to one of two one-star Tristanas with Thief's Gloves and no
+// history-dependent augment (bruiser-crest/rocket-collection-plus/reinfourcement).
 async function corruptionPreparation(onProgress:(state:MatchState)=>Promise<void>) {
   const state=await configuredPrefix('4-7',{
-    seed:25,build:'cannon',onRound:onProgress,onBattleProgress:onProgress,augmentRerollPriorities:{
+    seed:43,build:'cannon',onRound:onProgress,onBattleProgress:onProgress,augmentRerollPriorities:{
       '2-1':['pumping-up-i','manaflow-i','backup','bronze-for-life-i','bulky-buddies-i','placebo','lineup','little-buddies','bulky-buddies-ii','blistering-strikes'],
       '4-2':['pumping-up-ii','blistering-strikes','bronze-for-life-ii','item-collector-ii','mentorship-ii','little-buddies','bulky-buddies-ii','lineup','backup','manaflow-ii','glass-cannon-ii'],
     },equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
@@ -176,12 +183,12 @@ function corruptionRoute(initial:MatchState) {
   state=accepted(api.equipItem(state,tg,donor,0));
   const live=make(state);
   const upgrade=live.events.find(e=>e.type==='unitUpgraded'&&e.survivorId===survivor);
-  expect(upgrade).toMatchObject({survivorId:survivor,consumedIds:[donor,'unit-38'].sort(),fromStar:1,toStar:2});
+  expect(upgrade).toMatchObject({survivorId:survivor,consumedIds:[donor,'unit-37'].sort(),fromStar:1,toStar:2});
   expect(live.selected.anomalyBinding).toMatchObject({definitionId:'slime-time',unitId:survivor});
   expect(live.selected.items.find(item=>item.id===tg)!.location).toEqual({kind:'unit',unitId:survivor,slot:0});
   expect(live.selected.temporaryEquipment).toHaveLength(2);
   expect(restoreMatch(serializeMatch(live.selected))).toEqual(live.selected);
-  return {live,donor,survivor,tg,reward:'unit-38'};
+  return {live,donor,survivor,tg,reward:'unit-37'}; // seed 43's 4-7 loot Tristana birth (seed 25: unit-38)
 }
 let alternate:ReturnType<typeof corruptionRoute>;
 let CORRUPT_DONOR:string, CORRUPT_SURVIVOR:string, CORRUPT_TG:string, CORRUPT_REWARD:string;
@@ -235,11 +242,11 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
     state.combatInputBasis!.inputs.preparation.units.find(unit => unit.id === CORRUPT_DONOR)!.starLevel = 2;
   }, 'Invalid combat input basis'],
   ['basis anomaly target rewritten after upgrade', state => { state.combatInputBasis!.inputs.anomalyBinding!.unitId = CORRUPT_SURVIVOR; },
-    'Invalid Match save: resolved strategy'],
+    'Invalid combat input basis'],
   ['current TG parent falsely returned with matching empty children', state => {
     state.items.find(item => item.id === CORRUPT_TG)!.location = { kind: 'inventory' }; state.temporaryEquipment = [];
   }, 'Invalid B8 Match: finished resource projection'],
-  ['current anomaly silently removed', state => { state.anomalyBinding = null; }, 'Invalid B8 Match: finished resource projection'],
+  ['current anomaly silently removed', state => { state.anomalyBinding = null; }, 'Invalid B8 Match: current resource fold'],
   ['current child moved back to consumed donor', state => { state.temporaryEquipment.forEach(child => { child.holderId = DONOR; }); },
     'Invalid current temporary equipment projection'],
   ['original finished Combat star rewritten', state => { state.combat!.units.find(unit => unit.id === mirror.donor)!.starLevel = 2; },
