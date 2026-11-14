@@ -495,7 +495,7 @@ export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
- * Systems that play out at their end (a projectile when it lands, any other at its cue's end): emission stops and the run stays until its particles have
+ * Projectile systems that play out when they land: emission stops at arrival and the run stays until its particles have
  * finished their own curves (runtime PLAY_OUT_CAP at most), instead of being removed whole at the cue's end. Particles of
  * emitters without particleLinger still go at the stop, as the engine does for any stopped system, so a beam or missile
  * head still ends on the hit. Decided system by system against original footage (Fable 11-12): on some projectiles the
@@ -520,20 +520,11 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // that time changes with the star level is not checked yet.
   // hold: it lasts as the original's does (11-13 Node 8 v 8: without it, it gave way the frame it began to play out).
   '20cd67dc': { seconds: 2.3, fade: 0.5, hold: true },
-  // Skill layers that still showed much of themselves when their cue ended and were cut whole (11-14 visibility audit of
-  // the cues cut while alive: a large share of their peak left at the cut, and their own curves end within about a second
-  // more). At the cue's end they stop emitting and play out for at most 1 s, fading over the last quarter second; as hold
-  // tails they take no system slot (sharing LONG_BACKGROUND_MAX with the long runs) and keep their particles in the
-  // budget. Our setting, not original data (Fable 11-14).
-  ...Object.fromEntries([
-    // critical: Tristana R dust, Vladimir Q heal, Caitlyn R target, Gangplank R bomb, Nami W buff, Darius Q hit,
-    // Zyra E plant, Vex Q explosion, Sevika's extendo punch slam.
-    'fb4ea008', '28c6427d', 'a1ab2507', '2a495226', '03b4d6ac', 'a5373796', '9d413df0', 'c4da788c', '8ccb497d',
-    // body: Scar Q regen, Darius Q heal, Camille W heal, Jinx R mouth flash, Rumble R cast.
-    'f4a6240a', 'd2b2862d', '174f1125', '7e6f06b5', '59e2ab23',
-    // projectiles cut at the hit or with their trail still out: Kog'Maw attack, Jayce crystal, Jinx rocket, Zyra E impact.
-    'f16dfc56', 'ee2e840c', '8b59c09d', '857fe049',
-  ].map(id => [id, { seconds: 1, fade: 0.25, hold: true }] as const)),
+  // Projectiles cut whole the frame they land (cue duration = flight) or with their trail still out, which still show much
+  // of themselves then (11-14 visibility audit): Jayce's crystal, Jinx's rocket, Zyra's E impact. They
+  // play out for at most 1 s after landing, fading over the last quarter second, as hold tails (no system slot, sharing
+  // LONG_BACKGROUND_MAX with the long runs; particles still in the budget). Our setting, not original data (Fable 11-14).
+  ...Object.fromEntries(['ee2e840c', '8b59c09d', '857fe049'].map(id => [id, { seconds: 1, fade: 0.25, hold: true }] as const)),
   // Viktor's attack: the flight half (its trench, rays and trails) was deleted the frame it landed (duration = travel);
   // it plays out like the layers above. The beam half keeps its own asset life (Fable 11-14; replaces the 11-12 removal).
   '87913524': { seconds: 1, fade: 0.25, hold: true, flightOnly: true },
