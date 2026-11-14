@@ -79,9 +79,27 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
       travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
     { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
   ],
+  // Steb (batch1-events.ts heal plans). His heal missile belongs to his heal share, not to his cast: it flies to the ally
+  // his share heals and the heal ring shows there once it arrives (its travel time is a display value). His own heal
+  // rings on him. Neither plays on an enemy.
+  // Body rank, not critical (Fable 11-14 display priority, not original data): with vamp on him a share follows nearly
+  // every attack, and it must not crowd skill impacts out. His own heal ring stays critical.
+  'steb-share': [
+    { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
+    { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
+  ],
+  'steb-heal': [
+    { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },
+  ],
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
+  // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
+  steb: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
+    { system: '8b302521', action: 'cast', event: 'hit', delay: 0.6, duration: 0.8 },
+  ],
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored well over the original's drawn size; 0.68 brings them back.
   vex: [
