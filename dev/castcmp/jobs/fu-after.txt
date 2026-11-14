@@ -1,4 +1,4 @@
-v-capture-attack.cjs ezreal fu-ezreal-attack-after --star 2 --dist 4 --nfoes 1 --foe-offset 2 --target garen --kill foe --killlead 100 --ms 1500 --column after --snapshot c1333710ad8e --layers none --systems none
-v-capture-attack.cjs sett fu-sett-attack-after --star 2 --dist 1 --nfoes 1 --foe-offset 1 --target garen --kill foe --killlead 100 --ms 1500 --column after --snapshot c1333710ad8e --layers none --systems none
-v-capture.cjs caitlyn fu-caitlyn-gone-after --star 2 --dist 4 --nfoes 1 --foe-offset 2 --target garen --gone foe --gonelead 100 --ms 3000 --column after --snapshot c1333710ad8e --layers none --systems none
-v-capture.cjs vi fu-vi-gone-after --star 2 --dist 2 --nfoes 1 --foe-offset 1 --target garen --gone foe --gonelead 100 --ms 3000 --column after --snapshot c1333710ad8e --layers none --systems none
+v-capture-attack.cjs ezreal fu-ezreal-attack-after --star 2 --dist 4 --nfoes 1 --foe-offset 2 --target garen --kill foe --killlead 100 --ms 1500 --column after --snapshot d3ffe5808978 --layers none --systems none
+v-capture-attack.cjs sett fu-sett-attack-after --star 2 --dist 1 --nfoes 1 --foe-offset 1 --target garen --kill foe --killlead 100 --ms 1500 --column after --snapshot d3ffe5808978 --layers none --systems none
+v-capture.cjs caitlyn fu-caitlyn-gone-after --star 2 --dist 4 --nfoes 1 --foe-offset 2 --target garen --gone foe --gonelead 100 --ms 3000 --column after --snapshot d3ffe5808978 --layers none --systems none
+v-capture.cjs vi fu-vi-gone-after --star 2 --dist 2 --nfoes 1 --foe-offset 1 --target garen --gone foe --gonelead 100 --ms 3000 --column after --snapshot d3ffe5808978 --layers none --systems none
