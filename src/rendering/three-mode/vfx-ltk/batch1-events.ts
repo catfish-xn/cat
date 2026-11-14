@@ -45,6 +45,9 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
+/** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
+const STEB_ABILITY = 'steb-ability';
+
 export function createBatch1VfxEvents(definition: (id: string) => string | undefined, star: (id: string) => number | undefined = () => undefined) {
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
@@ -91,6 +94,16 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             }
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
+        }
+        // Steb: his heal visuals come from his own heal events, not from his cast's target (an enemy). Only a share his ability
+        // sends counts (sourceKind ability, definitionId steb-ability, actual > 0): one to someone else is his passive share
+        // and flies his heal missile to that ally, one to himself is his ability's heal and rings on him. Item or vamp heals
+        // (sourceKind item) and every other unit's heals draw nothing here.
+        if (event.type === 'heal') {
+          const share = event.shares.find(s => s.sourceId !== undefined && s.sourceKind === 'ability' && s.definitionId === STEB_ABILITY
+            && definition(s.sourceId) === 'steb' && s.actual > 0);
+          if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
+            skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {

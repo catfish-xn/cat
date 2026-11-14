@@ -3699,9 +3699,9 @@
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9347,
+      "currentBytes": 9582,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "427c494441f9292e93c8d4102ad73d965719dff30a3aab7133351581ddeb45b5",
+      "currentSha256": "16782e9c998f0b0a30fc1c669efc169041f878657396485132b4010aebd56d18",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cast-branch.test.ts": {
@@ -3896,6 +3896,14 @@
       "currentBytes": 4539,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "b2547ed5f7d8fc8202b7afc8ab1b12484cfd23c87a6ea5fc560c3c735e0f64f1",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-steb-heal.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5839,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ecb6b38d2235fb5516e936d011525705b879fa7d51eaa0bd104a076859eda924",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
