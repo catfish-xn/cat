@@ -64,7 +64,7 @@ describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
     runtime.dispose();
   });
 
-  it('a dead target: from above its snapshot point when the cast keeps it, else not at all', async () => {
+  it('a dead target: from above its snapshot point, or above where it stood when the cast played', async () => {
     let { runtime, units } = await setup([drop]);
     units.get('target')!.alive = false;
     expect(runtime.play('caitlyn', 'caster', ['target'], 'cast', { snapshotTargets: true })).toBe(true);
@@ -74,9 +74,12 @@ describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
     runtime.dispose();
     ({ runtime, units } = await setup([{ ...drop, delay: 0.1 }]));
     expect(runtime.play('caitlyn', 'caster', ['target'])).toBe(true);
-    units.get('target')!.alive = false;
+    // Dead before it starts, its body moved after the cast: it falls where the target stood when the cast played (Fable
+    // 11-13; before, it did not play).
+    units.get('target')!.alive = false; units.get('target')!.root.position.set(300, 0, 90);
     for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
-    expect(built).toHaveLength(0);
+    expect(built).toHaveLength(1);
+    expect(built[0].options.anchor.originAt(0)).toEqual(toSystem(205 - cell, 5 * cell, 90 - 1.5 * cell));
     runtime.dispose();
   });
 

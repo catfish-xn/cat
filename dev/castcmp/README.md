@@ -25,7 +25,7 @@ jobs 文件每行格式是 `<脚本> <英雄> <输出名> [参数…]`，`#` 开
 ```
 v-capture.cjs camille cast-camille --dist 1 --star 3
 v-capture.cjs viktor cast-viktor --dist 3 --star 3 --slam 1 --ms 4000
-v-capture-attack.cjs gangplank atk-gangplank-back --dist 3 --star 3 --form back
+v-capture-attack.cjs jayce atk-jayce-ranged --dist 3 --star 3 --form ranged
 ```
 
 ```bash

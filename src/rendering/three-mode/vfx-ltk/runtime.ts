@@ -1,8 +1,11 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
+import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
+import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
@@ -18,13 +21,25 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 }
 
 /**
- * At most 12 systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what it was
- * seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The shared
- * budget (1500 live particles) is unchanged, so this lets more small systems play, never more particles (11-07 brawl:
- * every critical drop was on six full 250-slot reservations while most of those systems drew a few dozen particles).
+ * At most MAX_LTK_SYSTEMS systems at once. Each reserves 150 root + 100 child particle slots on its first play, then what
+ * it was seen to need (its peak root count with a quarter of headroom, plus the child room when it has children). The
+ * shared budget (effect-library.ts MAX_LIVE_PARTICLES) is apart from the cap, so a cap lets more small systems play, never
+ * more particles (11-07 brawl: every critical drop was on six full 250-slot reservations while most of those systems drew
+ * a few dozen particles).
+ *
+ * 20, not 12 (11-13 admission audit: Linux, 1/60 frames, real combats replayed on the 3D renderer with the shared budget,
+ * claude/ltk-child-room 3ac39eb1). At 12 every refused cue was refused on the system count, never on the budget or the
+ * six starts per frame, and skill hits and projectiles that started (targets that died first left out) were 68% in an
+ * 8 v 8 and 60% in a late-game 9 v 9; at 20 they were 91% and 90%, and finished basic-attack visuals went from 36 to 82
+ * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
+ * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
+ * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
-export const MAX_LTK_SYSTEMS = 12, MAX_LTK_QUEUED = 64;
-/** LTK systems a plain attack may take without shared fallback room (half of MAX_LTK_SYSTEMS). */
+export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
+export const HOLD_FREE_TAILS = 4;
+/** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
+ * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
 /**
  * Host-body overlay layers on screen at once, across systems: a fuse against runaway stacking, never meant to trip in
@@ -47,24 +62,47 @@ export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLay
  * its warm pass: the most systems running at once, and starts and drops by system. A drop is a cue that missed its
  * moment (overdue) or found no room and could not wait. Counting only; nothing reads them to decide.
  */
-export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, number>, dropped: {} as Record<string, number> };
+export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, number>, dropped: {} as Record<string, number>,
+  /** Cues a cast played without, by `${system} ${reason}` (LtkSkipReason): the rest of that cast still played. */
+  skipped: {} as Record<string, number>,
+  /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
+  refused: {} as Record<string, number>,
+  /**
+   * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
+   * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
+   */
+  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number> };
+/**
+ * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
+ * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
+ * target's unit was gone.
+ */
+export type LtkSkipReason = 'missing-target' | 'self-projectile' | 'missing-point' | 'target-dead' | 'target-gone';
+const countSkips = (skipped: readonly { system: string; reason: LtkSkipReason }[]) => {
+  for (const { system, reason } of skipped) LTK_RUN_STATS.skipped[`${system} ${reason}`] = (LTK_RUN_STATS.skipped[`${system} ${reason}`] ?? 0) + 1;
+};
+const refuse = (why: 'not-ready' | 'no-target' | 'nothing-left' | 'queue-full' | 'caster-dead') => { LTK_RUN_STATS.refused[why] = (LTK_RUN_STATS.refused[why] ?? 0) + 1; return false; };
 const countDrop = (system: string) => { LTK_RUN_STATS.dropped[system] = (LTK_RUN_STATS.dropped[system] ?? 0) + 1; };
+const countPlaceDrop = (system: string) => { LTK_RUN_STATS.placeDropped[system] = (LTK_RUN_STATS.placeDropped[system] ?? 0) + 1; };
 /** Which overlays the screen cap keeps first. */
 const LAYER_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /** The fewest slots a system reserves, whatever its measured peak. */
 export const MIN_RESERVE = 24;
 /**
- * At this many live systems the extra depth and distortion passes are skipped (a together group counts as one: slots).
- * Colour particles still draw in the single board pass.
+ * At this many live systems the late distortion and soft (depth) passes are skipped (a together group counts as one:
+ * slots). Colour particles still draw in the single board pass. The early distortion pass is never skipped: it costs about
+ * 1 ms where it runs (frame-time.cjs v2 passSync, one GTX 1080), and a real 8 v 8 has four or more live systems on 87–91% of
+ * its frames (11-13 audit), so its systems were drawn wrong almost every time they played in a fight (Viktor's storm
+ * c4ef93f3 as a blue-white band with a round hole; Fable 11-13).
  */
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: false, late: false, soft: false };
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
+  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
@@ -74,7 +112,10 @@ export interface LtkPlayOptions {
   board?: WorldPoint;
   /** Explicit board stage only, e.g. a confirmed storm after all recipients died. */
   boardOnly?: boolean;
-  /** Only a confirmed post-death effect (devoured) may capture a dead victim's position. */
+  /**
+   * Every target's place is taken when it plays, a living target's too: a confirmed post-death effect (devoured). Without
+   * it a living target is followed and a dead one gets the cast's hits and projectiles at its place (placeTargets).
+   */
   snapshotTargets?: boolean;
   /** Observed channel duration; soft-stopped emitters end at this offset from cast. */
   channelSeconds?: number;
@@ -104,8 +145,14 @@ export interface LtkPlayOptions {
   cancelWithSource?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
+  /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
+  place?: WorldPoint;
+  /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
+  atPlace?: boolean;
   /** TimelineCue.together, made unique to one play() call: the rows that start together or not at all. */
   together?: string;
+  /** One side of a projectile split by beamSplit: its flight, or its beams pinned between caster and target. */
+  part?: 'flight' | 'beam';
   /** The clock of the first frame it was put back to wait for room. */
   waitingSince?: number }
 interface Running { reserved: number; system: string; stopped?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
@@ -113,10 +160,19 @@ interface Running { reserved: number; system: string; stopped?: boolean; source:
   bodyGone?: boolean;
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
   playOut?: boolean;
+  /** How a listed projectile's play-out ends (cue-overrides.ts PLAY_OUT_SYSTEMS); PLAY_OUT_CAP with none. */
+  playOutEnd?: PreparedVfx['playOut'];
   /** Its end came and it is playing out. */
   ending?: boolean;
   /** What it held when its end came: playing out, its reserve follows what it has live, never above this. */
   heldAtEnd?: number;
+  /** It plays at a dead target's place (Waiting.atPlace): it gives way to any row that lacks room, before anything else. */
+  atPlace?: boolean;
+  /**
+   * Its target died, so its far end stays where the target last stood: a pinned beam run (Waiting.part 'beam'), or a cast's
+   * projectile at a living target that then flies on to that place and lands there (Waiting.place).
+   */
+  holdTarget?: () => void;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
   together?: string }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
@@ -150,6 +206,17 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
+/**
+ * A ground line's two ends (TimelineCue.lineCells): on the floor along the way from `from` toward `toward`, starting
+ * `back` cells behind `from` (TimelineCue.lineBack) and running `cells` cells in all, at `from`'s height. Null when the two
+ * stand on one spot, which gives it no direction.
+ */
+export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, back = 0, cell = BOARD_CELL): [WorldPoint, WorldPoint] | null {
+  const dx = toward[0] - from[0], dz = toward[2] - from[2], length = Math.hypot(dx, dz);
+  if (!(length > 1e-3)) return null;
+  const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
+  return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
+}
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
@@ -176,6 +243,55 @@ function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVf
   }
   return view;
 }
+/**
+ * A projectile system's beams apart from its flight: `beam` keeps only the top-level beam emitters (VfxPrimitiveBeam,
+ * its mesh and camera-segment kinds) and everything under them, `flight` keeps the rest (null when nothing else draws).
+ * Each view disables the other side's emitters outright, so they neither emit nor draw. Null for a system with no beam.
+ *
+ * A beam reaches from the system to its target. Flown as one missile, the system's end of every beam rode the missile
+ * head, so the beam shrank to nothing over the flight, and the run was removed whole on landing while the beam
+ * particles' own lives ran past it (Viktor's basic-attack laser; Fable 11-13). The beams
+ * play as a run of their own instead: pinned to the caster's bone, reaching for the target unit where it stands, for
+ * as long as the asset gives them (beamSeconds). Only the drawing changes; the cue's timing does not.
+ */
+export interface BeamSplit { readonly beam: PreparedVfx; readonly flight: PreparedVfx | null }
+const BEAM_SPLITS = new WeakMap<PreparedVfx, BeamSplit | null>();
+export function beamSplit(prepared: PreparedVfx): BeamSplit | null {
+  if (BEAM_SPLITS.has(prepared)) return BEAM_SPLITS.get(prepared)!;
+  const beams = new Set(prepared.model.emitters.filter(e => e.beam !== null && !e.disabled).map(e => e.index));
+  const drawsBeam = prepared.drawn.some(d => beams.has(d.root) && !d.emitter.disabled);
+  const view = (keep: (index: number) => boolean): PreparedVfx => ({ ...prepared,
+    model: { ...prepared.model, emitters: prepared.model.emitters.map(e => keep(e.index) || e.disabled ? e : { ...e, disabled: true }) },
+    drawn: prepared.drawn.filter(d => keep(d.root)) });
+  const flight = view(index => !beams.has(index));
+  const split = drawsBeam ? { beam: view(index => beams.has(index)), flight: flight.drawn.some(d => !d.emitter.disabled) ? flight : null } : null;
+  BEAM_SPLITS.set(prepared, split);
+  return split;
+}
+/**
+ * How long a projectile's beams play, read from the asset: the latest any beam emitter's last particle dies. A single
+ * particle is born at the emitter's start; a stream emits over its emitter's lifetime (the flight where it has none).
+ * At most PLAY_OUT_CAP.
+ */
+export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
+  let end = 0;
+  for (const e of beam.model.emitters) if (e.beam !== null && !e.disabled) {
+    end = Math.max(end, e.timeBeforeFirstEmission + (e.singleParticle ? 0 : Math.min(e.lifetime ?? flightSeconds, PLAY_OUT_CAP)) + peak(e.particleLifetime));
+  }
+  return Math.min(PLAY_OUT_CAP, end);
+}
+/** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from the run counter's. */
+export function beamSeed(flight: number): number {
+  return (Math.imul(flight, 0x9e3779b1) ^ 0x5bd1e995) >>> 0 || 1;
+}
+/** An anchor that follows `live` until `hold` freezes it where it stands then. */
+function holdable(live: Anchor): { anchor: Anchor; hold: () => void } {
+  let at: ReturnType<Anchor['originAt']> | null = null, basis: Float32Array | null = null;
+  return {
+    anchor: { originAt: time => at ?? live.originAt(time), basisInto: (time, out) => { if (basis) { out.set(basis); return out; } return live.basisInto(time, out); } },
+    hold: () => { if (at) return; at = live.originAt(0); basis = live.basisInto(0, new Float32Array(9)); },
+  };
+}
 export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer; floors?: () => readonly Object3D[];
   /** The board's cell geometry, for a row projectile that runs to the end of its row (TimelineCue.rowToEnd). */
   board?: () => RowBoard | null;
@@ -186,6 +302,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
   layerCap?: number } = {}) {
   let clock = 0, closed = false, seed = 1, plays = 0;
+  /**
+   * The seed each started flight row (Waiting.part 'flight') took, by its together key, for its beam row to derive its
+   * own from. The split must not take a seed of its own: every later run's seed would move one on, and with it the
+   * random shape of whatever plays next (Fable 11-13 keyframes: Viktor's storm cast after a split attack came out with
+   * a different pattern).
+   */
+  const flightSeeds = new Map<string, number>();
   const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Map<string, Promise<void>>(), catalogs = new Map<string, VfxLibrary>();
   const claimBuf: (StencilClaim & { material: Material })[] = [];
@@ -206,19 +329,44 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
    */
   const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
+  /** Root places of each skill system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
+  const roots = new Map<string, number>();
   /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
   const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
     + (children === true ? CHILD_PARTICLES : children === false ? 0 : Math.ceil(children * 1.25))));
   const reserveFor = (system: string) => needs.get(system) ?? slots;
   const reservedNow = () => { let sum = 0; for (const run of running) sum += run.reserved; return sum; };
   /**
+   * A run playing out that gives way to a newcomer lacking room. A listed projectile marked `hold` (cue-overrides.ts
+   * PLAY_OUT_SYSTEMS) does not: playing out it is weighed only by the usual eviction, at its own importance.
+   */
+  const yields = (run: Running) => !!run.ending && !run.playOutEnd?.hold;
+  /** A run that plays out reaches its end: it stops emitting and stays until played out, by its own end or PLAY_OUT_CAP. */
+  const beginEnding = (run: Running) => {
+    run.fx.stop(); run.ending = true; run.heldAtEnd = run.reserved;
+    const own = run.playOutEnd;
+    run.until = clock + (own?.seconds ?? PLAY_OUT_CAP);
+    if (own) run.fx.endWithin(own.seconds, own.fade);
+  };
+  /**
    * The system slots in use, as MAX_LTK_SYSTEMS and LTK_PASS_DEGRADE_AT count them: the runs of one together group
    * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
    * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
    */
-  const slotsNow = () => { let n = 0; const groups = new Set<string>();
-    for (const run of running) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  // Hold tails (cue-overrides.ts PlayOut.hold) playing out take no system slot, the earliest HOLD_FREE_TAILS of them; their
+  // particles still count against the budget (Fable 11-13: Gangplank's scorch held a slot through its 2.3 s end and kept
+  // others' hits out at cap 20).
+  const freeTails = () => {
+    let free: Running[] | undefined;
+    for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
+    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+  };
+  const slotsNow = () => { let n = 0; const groups = new Set<string>(), free = freeTails();
+    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
+  // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
+  const spareSlots = () => { let n = 0; const groups = new Set<string>();
+    for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -240,8 +388,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     spareFx.push(run.fx);
   };
   const drainSpare = () => { for (const fx of spareFx) fx.dispose(); spareFx.length = 0; };
+  /** Seeds kept for a beam row that no longer waits (dropped with its target, or cleared) are let go. */
+  const pruneFlightSeeds = () => { for (const key of flightSeeds.keys()) if (!waiting.some(row => row.together === key)) flightSeeds.delete(key); };
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
+    pruneFlightSeeds();
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
@@ -264,10 +415,58 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A missile stops emitting where it lands, so its children are measured stopped at its flight.
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
-        needs.set(id, reserveOf(measurePeak(prepared, Math.min(longest.duration, 10), stopAt), kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
+        // A skill system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and
+        // reserves what it holds there; a plain attack's system keeps ROOT_PARTICLES (its spawns never take the room).
+        const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
+        const seconds = Math.min(longest.duration, 10);
+        const unlimited = skill ? measurePeak(prepared, seconds, stopAt, ROOT_PARTICLES_MOST) : 0, wide = skill ? rootRoomOf(unlimited) : ROOT_PARTICLES;
+        if (wide > ROOT_PARTICLES) roots.set(id, wide);
+        // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
+        const peak = skill && wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide);
+        needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
     warming.set(champion, pending); return pending;
+  };
+  // Where a cue meets its target, as a world point: the way LtkPlayOptions.snapshotTargets takes it.
+  const placeOf = (unit: VfxUnit, spawn: TimelineSpawn): WorldPoint => {
+    const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone).originAt(0);
+    return [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
+  };
+  // A cast's hit or projectile still plays where a dead target stood, and so does an empowered attack's (a variant: Twitch's
+  // bolts after his cast, Zeri's third shot; Fable 11-13, a killing bolt drew nothing). A plain attack, a link, a state its
+  // target carries (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
+  const keepsPlace = (spawn: TimelineSpawn) => ((spawn.action ?? 'cast') !== 'attack' || !!spawn.variant) && (spawn.event === 'hit' || spawn.event === 'projectile')
+    && !spawn.livingTarget && spawn.targetId !== spawn.sourceId;
+  type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean };
+  /**
+   * Which of a cast's spawns play, and at what. A living target is followed as before, with its place noted for a cast cue;
+   * a dead target whose unit is still there gets each cast cue at its place now; a target whose unit is gone loses its rows.
+   * `snapshotAll` (LtkPlayOptions.snapshotTargets) takes every target's place now, alive or not. Null: the cast has
+   * targets and none of them is usable.
+   */
+  const placeTargets = (spawns: readonly TimelineSpawn[], snapshotAll: boolean, skipped: { system: string; reason: LtkSkipReason }[]): Placed[] | null => {
+    const placed: Placed[] = []; let aimed = false, usable = false;
+    for (const spawn of spawns) {
+      if (spawn.targetId === undefined) { placed.push({ spawn }); continue; }
+      aimed = true;
+      const target = findUnit(spawn.targetId);
+      if (!target || target.disposed) { skipped.push({ system: spawn.system, reason: 'target-gone' }); continue; }
+      if (snapshotAll) placed.push({ spawn, snapshot: placeOf(target, spawn) });
+      else if (target.alive) placed.push(keepsPlace(spawn) ? { spawn, place: placeOf(target, spawn) } : { spawn });
+      else if (keepsPlace(spawn)) placed.push({ spawn, snapshot: placeOf(target, spawn), atPlace: true });
+      else { skipped.push({ system: spawn.system, reason: 'target-dead' }); continue; }
+      usable = true;
+    }
+    return aimed && !usable ? null : placed;
+  };
+
+  // A waiting row at a dead target's place: taken so when the cast played (Waiting.atPlace), or its target has died since.
+  const placeRow = (row: Waiting) => {
+    if (row.atPlace) return true;
+    if (!row.place || row.snapshot || !row.spawn.targetId) return false;
+    const unit = findUnit(row.spawn.targetId);
+    return !unit?.alive || !!unit.disposed;
   };
   const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
@@ -276,20 +475,26 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const available = catalog.index?.skills[variant];
       const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
-      if (!cues || !source?.alive || source.disposed) return false;
+      if (!cues) return refuse('not-ready');
+      if (!source?.alive || source.disposed) return refuse('caster-dead');
       const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds);
-      if (unsupported.length || !spawns.length) return false;
+      // A cue the timeline cannot map is played without, never the whole cast (Fable 11-13).
+      const skipped = unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
+      if (!spawns.length) return refuse('nothing-left');
       const living = (spawn: TimelineSpawn) => {
         if (spawn.targetId === undefined) return true;
         const target = findUnit(spawn.targetId);
         return !!target?.alive && !target.disposed;
       };
       // The legacy action stays atomic: one dead target keeps the handwritten fallback.
-      // A variant takeover drops only that target and keeps the caster's windup plus living targets.
-      if (!partialTargets && spawns.some(spawn => !living(spawn))) return false;
-      const chosen = partialTargets ? spawns.filter(living) : spawns;
-      if (!chosen.length || waiting.length + chosen.length > MAX_LTK_QUEUED) return false;
-      for (const spawn of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group });
+      // A variant takeover plays as play() does: a dead target's cast cues at its place, a gone target's rows dropped.
+      if (!partialTargets && spawns.some(spawn => !living(spawn))) return refuse('no-target');
+      const chosen = partialTargets ? placeTargets(spawns, false, skipped) : spawns.map(spawn => ({ spawn }) as Placed);
+      if (!chosen) return refuse('no-target');
+      if (!chosen.length) return refuse('nothing-left');
+      if (waiting.length + chosen.length > MAX_LTK_QUEUED) return refuse('queue-full');
+      countSkips(skipped);
+      for (const { spawn, snapshot, place, atPlace } of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group, ...(snapshot ? { snapshot } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       return true;
   };
   return {
@@ -340,35 +545,49 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
-      if (!cues) return false;
-      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board), { unsupported } = mapped;
-      // An optional target cue whose recipient is already gone (often killed by this very cast) is dropped, not fatal.
-      const spawns = mapped.spawns.filter(spawn => {
-        if (!spawn.optional || spawn.targetId === undefined || context.snapshotTargets) return true;
-        const target = findUnit(spawn.targetId);
-        return !!target && !target.disposed && target.alive;
-      });
-      if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
-      const independent = spawns.every(s => s.point && s.event !== 'projectile');
+      if (!cues) return refuse('not-ready');
+      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
+      // A cue the timeline cannot map (timeline.ts unsupported) is played without; the rest of the cast plays (Fable 11-13:
+      // one such cue sent the whole cast back to the host's own effect).
+      const skipped = mapped.unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
+      // Targets: a living one is followed, a dead one whose unit is still there gets the cast's hits and projectiles at its
+      // place, a gone one loses its rows (placeTargets). The cast is refused only when none of its targets is usable, or
+      // nothing is left of it, or its caster is dead and it rides on the caster.
+      const spawns = placeTargets(mapped.spawns, !!context.snapshotTargets, skipped);
+      if (!spawns) return refuse('no-target');
+      if (!spawns.length) return refuse('nothing-left');
+      const independent = spawns.every(({ spawn: s }) => s.point && s.event !== 'projectile');
       // A dead caster drops only cues anchored on that caster. Target hits and board points still enqueue.
-      if (spawns.some(needsLivingSource) && (!source?.alive || source.disposed)) return false;
-      // All targets are required before suppressing the old cast; later disappearance cancels its visual.
-      if (spawns.some(spawn => {
-        if (spawn.targetId === undefined) return false;
-        const target = findUnit(spawn.targetId);
-        return !target || target.disposed || (!target.alive && !context.snapshotTargets);
-      })) return false;
+      if (spawns.some(({ spawn }) => needsLivingSource(spawn)) && (!source?.alive || source.disposed)) return refuse('caster-dead');
+      // A flying projectile whose system draws beams plays as two rows (beamSplit): the flight as cued, the beams pinned
+      // to the caster for their own life. They start together or not at all. Both rows keep their spawn's place
+      // (placeTargets), so a dead target's flight and beam are both at its place, and both spare (Waiting.atPlace).
+      const rows: (Placed & { part?: 'flight' | 'beam'; together?: string })[] = [];
+      for (const placed of spawns) {
+        const { spawn } = placed;
+        const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove && !Object.hasOwn(UNPINNED_BEAM_SYSTEMS, spawn.system)
+          ? catalog.get(spawn.system) : undefined;
+        const split = loaded ? beamSplit(spawn.hide ? withHidden(loaded, spawn.hide) : loaded) : null;
+        if (!split) { rows.push(placed); continue; }
+        const together = spawn.together ? undefined : `beam${rows.length}`;
+        if (split.flight) rows.push({ ...placed, part: 'flight', together });
+        rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
+          part: 'beam', together: split.flight ? together : undefined });
+      }
+      if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
+      countSkips(skipped);
       const play = ++plays;
-      for (const spawn of spawns) {
-        let snapshot: WorldPoint | undefined;
-        if (context.snapshotTargets && spawn.targetId) {
-          const p = unitAnchor(findUnit(spawn.targetId)!.root, findUnit(spawn.targetId)!.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone);
-          // Snapshot as a world point, rather than retaining the dead object's bones.
-          const engine = p.originAt(0);
-          snapshot = [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
+      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+        let snapshot = taken;
+        if (!snapshot && spawn.lineCells && spawn.targetId) {
+          // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
+          // so a cast that kills its target still draws its line (11-13, Gangplank's killing slash drew nothing).
+          const unit = findUnit(spawn.targetId);
+          if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
-          ...(spawn.together ? { together: `${play}:${spawn.together}` } : {}) });
+          ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
+          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       }
       return true;
     },
@@ -386,14 +605,25 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     stopUnit(id: string) {
       for (let at = waiting.length - 1; at >= 0; at--) {
         const row = waiting[at];
-        if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && row.spawn.targetId === id)) waiting.splice(at, 1);
+        // A row that keeps its target's place (Waiting.place) plays there.
+        if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && !row.place && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
-      for (const run of running) if ((run.boundToSource && run.source === id) || run.target === id) {
+      pruneFlightSeeds();
+      for (const run of running) {
+        const bySource = run.boundToSource && run.source === id;
+        // A pinned beam whose target died plays its own life out toward where the target fell (Fable 11-13); a cast's
+        // projectile flies on to there and lands (Running.holdTarget).
+        if (!bySource && run.target === id && run.holdTarget) { run.holdTarget(); run.target = undefined; continue; }
+        if (!bySource && run.target !== id) continue;
         // Its tail still plays, but the finished system belongs to a gone unit: retire, never park. An overlay drawn on
         // that unit's body is not a tail: it goes now (Fable 11-11, Mordekaiser's aura on death).
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
+        // A listed projectile (cue-overrides.ts PLAY_OUT_SYSTEMS) plays out from here too: a killing hit lands as its unit
+        // dies, and the landed projectile's tail must not go whole with it. Only those: Vi's row shockwave, accepted as it
+        // is (Fable 11-13), keeps its planned end with emission stopped when its caster or target goes.
+        if (run.playOutEnd && !run.ending) beginEnding(run);
       }
       // By unit id, not a lookup: the host may already have dropped the unit from its map.
       for (let index = spareFx.length - 1; index >= 0; index--) {
@@ -409,7 +639,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
         // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
-          run.fx.stop(); run.ending = true; run.until = clock + PLAY_OUT_CAP; run.heldAtEnd = run.reserved;
+          beginEnding(run);
         }
         // Playing out, it holds only what it still has live: its reserve follows its live particles down, and back up
         // (a child may still emit through its own short life after the stop), never above what it held at its end.
@@ -426,7 +656,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // single rows due a few frames later took every slot that freed).
       const heldRoom: { rank: number; key: unknown; need: number }[] = [];
       for (let at = 0; at < waiting.length;) {
-        const row = waiting[at], { at: when, spawn, library: catalog, snapshot, persistent, group } = row;
+        const row = waiting[at], { at: when, spawn, library: catalog, persistent, group } = row;
+        let { snapshot } = row;
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
@@ -443,11 +674,24 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // attack runs were live at critical drops). A late attack or flourish is simply dropped: replayed late, a hit spark
         // reads as lag (eab51a1e: 0f2af66b replayed 9 times).
         const overdue = clock - when > (importance === 'body' ? spawn.duration / 2 : 0.3) && !(group && clock < when + spawn.duration);
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countDrop(spawn.system); continue; }
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
-        if ((needsLivingSource(spawn) && (!source?.alive || source.disposed)) || (spawn.targetId && !snapshot && (!target?.alive || target.disposed))) continue;
+        // A row at a dead target's place (placeTargets) only takes free room: it never waits in line, never makes a tail give
+        // way and never evicts a run, so it can only add to what plays (Fable 11-13: it pushed living targets' hits out).
+        // A together group is at a dead target's place only whole: one row at a living target makes all of it ordinary rows,
+        // so a spare group never takes a living row with it when it gives way or is dropped.
+        const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
+          && [...running].every(run => run.together !== row.together || run.atPlace)));
+        const countMiss = atPlace ? countPlaceDrop : countDrop;
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
+        if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
+        // A target dead by now: a row that kept its place plays there, any other is dropped.
+        if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
+        // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
+        // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
+        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
-        const prepared = spawn.hide ? withHidden(loaded, spawn.hide) : loaded;
+        const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
+        const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
         if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
@@ -465,6 +709,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
         const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
+        // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
+        // on one spot, it does not play: it never falls back to a flight from the caster's bone.
+        const lineEnds = spawn.event === 'projectile' && spawn.lineCells && source && !source.disposed
+          ? (() => { const toward = snapshot ?? (target ? standingPoint(target.root) : undefined);
+            return toward ? groundLine(standingPoint(source.root), toward, spawn.lineCells!, spawn.lineBack ?? 0) : null; })() : null;
+        if (spawn.event === 'projectile' && spawn.lineCells && !lineEnds) continue;
         const flight = rowStart && spawn.rowSpeed ? rowCells / spawn.rowSpeed : spawn.travelSeconds;
         const runFor = rowStart && spawn.rowSpeed ? flight! + spawn.duration - (spawn.travelSeconds ?? 0) : spawn.duration;
         // Fallback particles spawn one at a time up to the shared cap, so they fill whatever is free and a whole system
@@ -473,11 +724,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // other LTK reservations; fallback then stops spawning until it drains. A plain attack still waits for shared room.
         // A plain attack may also take a free LTK slot while at most half of them are live, so a calm board still shows hits
         // (11-07 brawl: attack drops 413 -> 919 once it always waited for shared room); a skill evicts it as before.
-        const shared = importance === 'attack' && slotsNow() >= ATTACK_FREE_SLOTS;
+        // Runs at a dead target's place are left out of the count: they only hold spare room (Running.atPlace).
+        const shared = importance === 'attack' && slotsNow() - spareSlots() >= ATTACK_FREE_SLOTS;
         // Rows that start together (TimelineCue.together) wait for room for all of them and start in one frame, or are
         // all dropped once overdue: one side of a pair never plays without the other.
         const partners = row.together ? waiting.filter(other => other.together === row.together) : [];
-        const own = reserveFor(spawn.system), need = own + partners.reduce((sum, other) => sum + reserveFor(other.spawn.system), 0);
+        // A beam run (Waiting.part) holds its few beam particles, not its whole system's reserve.
+        const reserveOfRow = (other: Waiting) => other.part === 'beam' ? MIN_RESERVE : reserveFor(other.spawn.system);
+        const own = reserveOfRow(row), need = own + partners.reduce((sum, other) => sum + reserveOfRow(other), 0);
         // A together group takes one slot: none more once one of its rows runs. The particle budget still counts every row.
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
         const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
@@ -487,15 +741,38 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
-        // first, before anything still in its own time is weighed for eviction. Giving way removes the whole tail at once,
-        // its rock children and smoke included: what was left of it disappears in that frame.
-        while (crowded()) {
+        // first, before anything still in its own time is weighed for eviction. Only when giving up every tail would let the
+        // new run in: one that stays out anyway is weighed below as before, and no tail is cut for it (Fable 11-12, a
+        // Gangplank cast's own hits filled every system slot and took its landed ground-fire line for nothing). Giving way
+        // removes the whole tail at once, its rock children and smoke included: what was left of it disappears in that frame.
+        // Counted the way crowded() counts: a tail's together group is one slot and leaves whole (leave()), so the slots
+        // freed are the groups with a tail in them and the room freed is every run of those groups, tail or not.
+        const tailsAdmit = () => {
+          const gone = new Set<Running>(); let groups = 0;
+          for (const run of running) if (yields(run) && !gone.has(run)) {
+            groups++;
+            for (const other of running) if (other === run || (run.together && other.together === run.together)) gone.add(other);
+          }
+          let room = 0; for (const run of gone) room += run.reserved;
+          // This row's own group no longer holds a slot once the tails took all of its running rows with them.
+          const slotAfter = row.together && [...running].some(run => run.together === row.together && !gone.has(run)) ? 0 : 1;
+          return groups > 0 && slotsNow() - groups + slotAfter + heldSlots <= MAX_LTK_SYSTEMS
+            && !(options.budget && (shared ? options.budget.live : reservedNow()) - room + need + heldNeed > options.budget.max);
+        };
+        // Only a critical or body newcomer takes a tail's place: a plain attack or a flourish never ends one early (Fable 11-13:
+        // Gangplank's scorch gave way the frame it began to play out, both times, in an 8 v 8).
+        const takesTails = !atPlace && (importance === 'critical' || importance === 'body');
+        while (takesTails && crowded() && tailsAdmit()) {
           let tail: Running | undefined;
-          for (const run of running) if (run.ending && (!tail || run.started < tail.started)) tail = run;
+          for (const run of running) if (yields(run) && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
           leave(tail);
         }
-        while (blocked()) {
+        while (!atPlace && blocked()) {
+          // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
+          let spare: Running | undefined;
+          for (const run of running) if (run.atPlace && (!spare || run.started < spare.started)) spare = run;
+          if (spare && crowded()) { leave(spare); continue; }
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
@@ -508,12 +785,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
-          if (!overdue && (importance === 'critical' || importance === 'body')) {
+          if (!atPlace && !overdue && (importance === 'critical' || importance === 'body')) {
             row.waitingSince ??= clock;
             if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
-          else { countDrop(spawn.system); for (const other of partners) { countDrop(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          else { countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -522,7 +799,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
         const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
-        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : null;
+        // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
+        const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
         const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
@@ -533,15 +811,25 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
+        const rootRoom = (spawn.action ?? 'cast') === 'attack' && !spawn.variant ? undefined : roots.get(spawn.system);
+        // A pinned beam reaches for its living target, as does a cast's projectile that kept its target's place (lands); when the
+        // target dies its far end holds where it last stood.
+        const held = (row.part === 'beam' || lands) && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
+        // A beam row started beside its flight row takes a seed derived from the flight's; the pair spends one seed, as the
+        // unsplit projectile did. A beam row with no flight (a system of beams only) is the projectile and takes the next.
+        const flightSeed = row.part === 'beam' && row.together ? flightSeeds.get(row.together) : undefined;
+        if (flightSeed !== undefined) flightSeeds.delete(row.together!);
+        const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : seed++;
+        if (row.part === 'flight' && row.together) flightSeeds.set(row.together, runSeed);
         const nextOptions = { anchor, attachment,
-          target: rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary ? flight : undefined, fixedTime: !!dropFrom,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: seed++, scale, childRoom: room };
+          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
-        const poolKey = `${spawn.system}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}`;
+        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}${rootRoom ? `\nroot ${rootRoom}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -553,8 +841,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || undefined, together: row.together }); starts++;
-          LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+          if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
+          else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
         } catch { fx?.dispose(); /* Prepared definitions were checked; context loss/resource failure drops only this visual. */ }
       }

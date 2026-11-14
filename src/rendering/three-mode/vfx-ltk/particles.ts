@@ -26,6 +26,16 @@ import { withDrawFade } from './engine/simulation/particleRead';
 export const FX_SCALE = 0.44;
 export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
 /**
+ * The most root places one run of a skill system may take, however much it measures (rootRoomOf). A system measured at
+ * most ROOT_PARTICLES, and every plain attack's system, keeps ROOT_PARTICLES (11-13: the 150 every system took starved
+ * thirteen systems' later emitters, Caitlyn's burst of seventeen, Garen's R landing of eight).
+ */
+export const ROOT_PARTICLES_MOST = 400;
+/** A skill system's root places for what it measured without a limit: ROOT_PARTICLES up to that, then a quarter more, at most ROOT_PARTICLES_MOST. */
+export function rootRoomOf(need: number): number {
+  return need > ROOT_PARTICLES ? Math.min(ROOT_PARTICLES_MOST, Math.ceil(need * 1.25)) : ROOT_PARTICLES;
+}
+/**
  * The most child room (pool slots, as the engine's child budget counts them) and live child systems one run may take,
  * however much its system measures (measureChildren). A run whose system was never measured keeps CHILD_PARTICLES and 8.
  * One flat 100 refused the second and third of the rock children every FillMouth particle of Vi's row shockwave
@@ -148,6 +158,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   scale?: number;
   /** The run's child room (measureChildren); DEFAULT_CHILD_ROOM when omitted. Fixed for the life of the driver. */
   childRoom?: ChildRoom;
+  /** Root places for this run (rootRoomOf); omitted means ROOT_PARTICLES. */
+  rootRoom?: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
   const resolveFadeFrom = (next: typeof options) => 'fadeFrom' in next ? next.fadeFrom : next.fadeOut ? next.stopAfter : undefined;
@@ -168,7 +180,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
   const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
   const room = options.childRoom ?? DEFAULT_CHILD_ROOM;
-  const driver = createDriver(spec.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: room.budget, maxChildren: room.most });
+  const driver = createDriver(spec.seed, { capacity: options.rootRoom ?? ROOT_PARTICLES, seekable: false, childBudget: room.budget, maxChildren: room.most });
   driver.setScale(spec.scale);
   let rig = rigFor();
   driver.swap(prepared.model);
@@ -222,6 +234,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
   let elapsed = 0, closed = false, peak = 0, childPeak = 0;
+  /** endWithin: from when, and by when, every draw has faded to nothing. */
+  let ending: { from: number; to: number } | null = null;
   const hasChildren = prepared.drawn.some(definition => !!definition.path);
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
@@ -242,12 +256,14 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
       spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
-      elapsed = 0; peak = 0; childPeak = 0; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
+      elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
     get finished() { return closed || elapsed >= spec.duration; },
     /** Nothing left to draw: no root particle and no live child. A stopped run plays out to this. */
     get playedOut() { return closed || (driver.pool.count === 0 && driver.liveChildren() === 0); },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
+    /** Fade every draw to nothing over the last `over` of the next `seconds` (a play-out that must end by then). */
+    endWithin(seconds: number, over: number) { ending = { from: elapsed + Math.max(0, seconds - over), to: elapsed + seconds }; },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
       elapsed += seconds;
@@ -258,7 +274,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       camera.getWorldPosition(eye.position).divideScalar(FX_SCALE); camera.getWorldQuaternion(eye.quaternion); eye.up.copy(camera.up); eye.updateMatrixWorld();
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
-      const fade = spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1;
+      const fade = (spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1) * (ending ? fadeAt(elapsed, ending.to, ending.from) : 1);
       withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
@@ -300,9 +316,9 @@ export function childRoomOf(measured: { room: number; live: number } | null): Ch
  * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
  * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
  */
-export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number): number {
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES): number {
   const anchor = pointAnchor([0, 0, 0]);
-  const driver = createDriver(1, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  const driver = createDriver(1, { capacity, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: { kind: 'bone', anchor, target: null } });

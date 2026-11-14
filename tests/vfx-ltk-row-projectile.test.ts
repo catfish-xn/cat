@@ -171,7 +171,34 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     runtime.dispose();
   });
 
-  it('a dead target: from its snapshot point when the cast keeps it, else not at all, never from the caster', async () => {
+  it('a row run whose caster dies stops emitting and keeps its planned end: it does not play out past it', async () => {
+    built.length = 0;
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index([row(-1)]) : syntheticSystem(), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => {
+      const root = new Group(); root.position.set(i * 20 + 5, 0, i * 30); scene.add(root); root.updateMatrixWorld();
+      return [id, { root, body: null, alive: true }];
+    }));
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(1);
+    const fx = built[0]!.fx;
+    // Its particles never play out on their own here: only its planned end can remove it.
+    Object.defineProperty(fx, 'playedOut', { get: () => false });
+    const stop = vi.spyOn(fx, 'stop');
+    for (let t = 0; t < 0.1; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    units.get('caster')!.alive = false; runtime.stopUnit('caster');
+    expect(stop).toHaveBeenCalledTimes(1);
+    for (let t = 0.1; t < 0.5; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    expect(fx.object.parent).toBe(scene);
+    for (let t = 0.5; t < 0.7; t += 1 / 30) runtime.update(1 / 30, new Camera());
+    expect(fx.object.parent).toBeNull();
+    expect(stop).toHaveBeenCalledTimes(1);
+    runtime.dispose();
+  });
+
+  it('a dead target: from its snapshot point, or from where it stood when the cast played; never from the caster', async () => {
     const setup = async (delay: number) => {
       built.length = 0;
       const cues = [row(-1), row(1)].map(cue => ({ ...cue, delay }));
@@ -190,12 +217,14 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(built).toHaveLength(2);
     for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
     runtime.dispose();
-    // Dead before it starts, no place kept: neither run plays.
+    // Dead before it starts (its body moved after the cast): both runs start where it stood when the cast played (Fable 11-13;
+    // before, neither played).
     ({ runtime, units } = await setup(0.1));
     expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
-    units.get('target')!.alive = false;
+    units.get('target')!.alive = false; units.get('target')!.root.position.set(80, 0, 10);
     for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
-    expect(built).toHaveLength(0);
+    expect(built).toHaveLength(2);
+    for (const entry of built) expect(entry.options.anchor.originAt(0)).toEqual(toSystem(40, 0, 10));
     runtime.dispose();
   });
 

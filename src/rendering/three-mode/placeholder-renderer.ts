@@ -57,7 +57,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
-import { OverheadFollow, overheadHeights } from './overhead-follow';
+import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
@@ -346,6 +346,8 @@ interface PieceView {
   lungeWorld: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
   follow: OverheadFollow;
+  /** The loaded model's manifest id: picks its cast clips that move the bars (overhead-follow.ts CAST_TRAVEL_CLIPS). */
+  bodyModelId: string | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -579,8 +581,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   scene.add(arenaGroup);
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
+  // The arena's baked lightmap, read through the same local store as the models (arena-lightmap.ts).
+  const lightmapEntry = boardEntry?.lightmap, lightmapReader = models.reader, assetRoot = options.assetBase;
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
+    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid,
+    lightmapEntry && lightmapReader && assetRoot
+      ? { gamma: lightmapEntry.gamma, scale: lightmapEntry.scale, tint: lightmapEntry.tint, load: () => lightmapReader.readTexture(assetUrl(assetRoot, lightmapEntry.path)) }
+      : undefined) : null;
   const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
   let boardKey = '', showingOwnBoard = true;
   /**
@@ -945,6 +952,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.mixer.setForm(view.form);
       view.follow = OverheadFollow.of(lease.scene, lease.animations, lease.animationNames.idle);
+      view.bodyModelId = definitionId;
+      if (import.meta.env?.DEV) { const missing = missingCastTravelClips(definitionId, lease.animations); if (missing.length) console.warn(`[overhead] ${definitionId}: listed cast travel clips not in the model: ${missing.join(', ')}`); }
       view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
@@ -984,7 +993,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow() };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1936,10 +1945,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
-      // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
-      // (a jump, a dash) and its body bone past that (overhead-follow.ts) on top of its spot, during a cast only (an attack's
-      // sway leaves the bars put, as in the original); the knock-up lift is already in `lift`.
-      const travel = view.body ? view.follow.update(seconds, view.lungeWorld, height, output.state === 'cast') : null;
+      // The bars, star row and stun ring stand over the piece's spot (its root, which slides to a new cell when the rules
+      // move it: a step, a leap, a dash) plus the knock-up lift in `lift`. Only a listed cast clip (one whose body leaves
+      // its cell whole: overhead-follow.ts CAST_TRAVEL_CLIPS) also moves them with the body's clip travel and lunge; any other
+      // cast leaves them put, as the original's in-place casts do. The list is per clip, so a walk during or just before
+      // a cast changes nothing.
+      const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);
+      const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
       const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
       const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
         headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
