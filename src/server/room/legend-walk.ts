@@ -7,7 +7,7 @@
 import type { Clock, ClockHandle } from './clock';
 import { walkPoint, type CellPoint, type LegendScene, type LegendWalk } from '../legend-motion';
 
-/** A seat's walks closer together than this are dropped (a held button or a script; TFT itself repeats at about 10/s). */
+/** A seat's walks closer together than this are dropped (a held button or a script; our bound, fitted, not original data). */
 export const LEGEND_WALK_MIN_GAP_MS = 80;
 
 export class LegendWalkBook {
