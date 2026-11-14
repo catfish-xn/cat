@@ -35,6 +35,12 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
+// REC BRANCH ONLY (never merge): per-row admission counts for dev/castcmp/frame-time.cjs, keyed unit|action|system[:part].
+const __recKey = (row: { spawn: TimelineSpawn; part?: string }) => `${row.spawn.sourceId}|${row.spawn.action ?? 'cast'}|${row.spawn.system}${row.part ? ':' + row.part : ''}`;
+const __recNew = () => ({ asked: 0, started: 0, dropped: 0, gaveWay: 0, evicted: 0 });
+const __rec = (row: any, field: 'asked' | 'started' | 'dropped') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = __recKey(row); (all[k] ??= __recNew())[field]++; };
+const __recRun = (run: { source: string; action: string; system: string }, field: 'gaveWay' | 'evicted') => { const all = ((globalThis as any).__LTK_STATS ??= {}); const k = `${run.source}|${run.action}|${run.system}`; (all[k] ??= __recNew())[field]++; };
+const __cap = () => (globalThis as any).__LTK_CAP ?? MAX_LTK_SYSTEMS;
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
 /** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
 export const HOLD_FREE_TAILS = 4;
@@ -102,7 +108,9 @@ export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
+  // REC BRANCH ONLY: per-frame count of live systems needing each pass (__LTK_PASS_NEED), and ?degrade=4|8|off.
+  { const g = globalThis as any; const need = { early: 0, late: 0, soft: 0 }; for (const fx of systems) { need.early += Number(fx.passes.early); need.late += Number(fx.passes.late); need.soft += Number(fx.passes.soft); } g.__LTK_PASS_NEED = need; }
+  if (slots >= ((globalThis as any).__LTK_DEGRADE ?? LTK_PASS_DEGRADE_AT)) return { early: needs.early, late: false, soft: false };
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
@@ -632,6 +640,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     },
     update(seconds: number, camera: Camera) {
       if (closed || !Number.isFinite(seconds) || seconds < 0) return;
+      // REC BRANCH ONLY: real-clock update time, live systems, shared budget peak and running systems for the dev tools.
+      const __t0 = ((globalThis as any).__realNow ?? (() => performance.now()))();
       clock += seconds;
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
@@ -661,6 +671,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
+        if (!(row as any).__asked) { (row as any).__asked = true; __rec(row, 'asked'); }
         // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
         // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
         const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
@@ -682,7 +693,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
           && [...running].every(run => run.together !== row.together || run.atPlace)));
         const countMiss = atPlace ? countPlaceDrop : countDrop;
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); __rec(row, 'dropped'); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
@@ -737,7 +748,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
-        const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
+        // REC BRANCH ONLY: dev/castcmp/frame-time.cjs sets the cap per run (?ltkcap=).
+        const crowded = () => slotsNow() + slot + heldSlots > __cap() || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
@@ -766,6 +778,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           let tail: Running | undefined;
           for (const run of running) if (yields(run) && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
+          __recRun(tail, 'gaveWay');
           leave(tail);
         }
         while (!atPlace && blocked()) {
@@ -779,9 +792,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!decision.admit) break;
           const victim = [...running][decision.evict];
           if (!victim) break;
+          __recRun(victim, 'evicted');
           leave(victim);
         }
         if (blocked()) {
+          // REC BRANCH ONLY: a row refused while the shared budget (not only the count) has no room for it.
+          if (options.budget && (shared ? options.budget.live : reservedNow()) + need > options.budget.max) { const g = globalThis as any; g.__LTK_BUDGET_REFUSED = (g.__LTK_BUDGET_REFUSED ?? 0) + 1; if (!(row as any).__budgetRefused) { (row as any).__budgetRefused = true; g.__LTK_BUDGET_ROWS = (g.__LTK_BUDGET_ROWS ?? 0) + 1; } }
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
@@ -790,7 +806,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
-          else { countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          else { countMiss(spawn.system); __rec(row, 'dropped'); for (const other of partners) { countMiss(other.spawn.system); if (!(other as any).__asked) { (other as any).__asked = true; __rec(other, 'asked'); } __rec(other, 'dropped'); waiting.splice(waiting.indexOf(other), 1); } }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
@@ -891,6 +907,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const states = stencilStates(claimBuf);
         for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
       }
+      { const g = globalThis as any; g.__LTK_UPD_MS = (g.__LTK_UPD_MS ?? 0) + ((g.__realNow ?? (() => performance.now()))() - __t0); g.__LTK_ACTIVE = Math.max(g.__LTK_ACTIVE ?? 0, running.size);
+        if (options.budget) g.__FX_LIVE = Math.max(g.__FX_LIVE ?? 0, options.budget.live); if (g.__LTK_SYSTEMS_NOW) for (const run of running) g.__LTK_SYSTEMS_NOW.push({ system: run.system, source: run.source, target: run.target }); }
     },
     clear,
     render(camera: Camera) {
@@ -900,7 +918,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
       liveFx.length = 0;
       for (const { fx } of running) liveFx.push(fx);
-      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow()));
+      { const needs = ltkRenderNeeds(liveFx, slotsNow()), g = globalThis as any; g.__LTK_PASSES_ON = { early: (g.__LTK_PASSES_ON?.early ?? 0) + Number(needs.early), late: (g.__LTK_PASSES_ON?.late ?? 0) + Number(needs.late), soft: (g.__LTK_PASSES_ON?.soft ?? 0) + Number(needs.soft) };
+        passes.render(scene as Scene, camera, needs); }
     },
     get active() { return running.size; },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
