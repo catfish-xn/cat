@@ -85,10 +85,6 @@ export interface BoardAlignment {
   bench?: readonly Vec3[];
 }
 /**
- * `lighting` (optional): a ChampionLighting JSON beside the manifest. Champions with `selfIllumination` are then lit by
- * it instead of the scene lights; without it (or on older roots) every model keeps the generic lit material.
- */
-/**
  * The arena's baked lightmap (Map22 `BakedLight`): an RGB(A) atlas sampled with the arena meshes' TEXCOORD_1, which the
  * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space, scale
  * one number or one per R/G/B channel; gamma and scale are fitted against original footage by the converter (not values
@@ -96,6 +92,10 @@ export interface BoardAlignment {
  * meshes except the skybox, so trees and outer rocks match the lit ground: our own colour choice, not game data.
  */
 export interface BoardLightmap { path: string; gamma: number; scale: number | readonly [number, number, number]; tint?: readonly [number, number, number] }
+/**
+ * `lighting` (optional): a ChampionLighting JSON beside the manifest. Champions with `selfIllumination` are then lit by
+ * it instead of the scene lights; without it (or on older roots) every model keeps the generic lit material.
+ */
 export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string }; lightmap?: BoardLightmap }
 /**
  * Champion light for one board, built offline from the board's light data: six colours along the world axes

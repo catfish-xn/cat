@@ -205,7 +205,6 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   const first = board.origin.x + cell * (((row % 2) + 2) % 2) / 2, last = first + cell * (board.columns - 1);
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
-/** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 /**
  * A ground line's two ends (TimelineCue.lineCells): on the floor along the way from `from` toward `toward`, starting
  * `back` cells behind `from` (TimelineCue.lineBack) and running `cells` cells in all, at `from`'s height. Null when the two
@@ -217,6 +216,7 @@ export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, 
   const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
   return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
 }
+/** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
