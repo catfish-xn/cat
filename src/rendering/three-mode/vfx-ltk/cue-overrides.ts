@@ -82,9 +82,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // Steb (batch1-events.ts heal plans). His heal missile belongs to his heal share, not to his cast: it flies to the ally
   // his share heals and the heal ring shows there once it arrives (its travel time is a display value). His own heal
   // rings on him. Neither plays on an enemy.
+  // Body rank, not critical (Fable 11-14 display priority, not original data): with vamp on him a share follows nearly
+  // every attack, and it must not crowd skill impacts out. His own heal ring stays critical.
   'steb-share': [
-    { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6 },
-    { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2 },
+    { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
+    { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
   ],
   'steb-heal': [
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },

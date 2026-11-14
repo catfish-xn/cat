@@ -98,7 +98,9 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Steb: his heal visuals come from his own heal events, not from his cast's target (an enemy). Only a share his ability
         // sends counts (sourceKind ability, definitionId steb-ability, actual > 0): one to someone else is his passive share
         // and flies his heal missile to that ally, one to himself is his ability's heal and rings on him. Item or vamp heals
-        // (sourceKind item) and every other unit's heals draw nothing here.
+        // (sourceKind item) and every other unit's heals draw nothing here. Telling his share from his own heal by whether
+        // the target is himself is all today's heal events allow: both carry the same share fields (tests/vfx-ltk-steb-heal.test.ts
+        // asserts them). Should the rules give the share its own definitionId, change this and that test with it.
         if (event.type === 'heal') {
           const share = event.shares.find(s => s.sourceId !== undefined && s.sourceKind === 'ability' && s.definitionId === STEB_ABILITY
             && definition(s.sourceId) === 'steb' && s.actual > 0);

@@ -4,6 +4,11 @@ import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides, type VfxIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
+import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
+import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { DEFAULT_BOARD } from '../src/simulation/board';
+import { toDisplayEvents } from '../src/presentation/combat-display';
+import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 
 // Heal events as the combat view sends them (combat-replay-view.ts 'heal': targetId, actual, shares with their source). Shapes
 // measured in real combats (11-14): Steb's own ability heal and his passive share both carry sourceKind 'ability',
@@ -37,7 +42,6 @@ describe('Steb heal visuals follow his heal events, never his cast\'s enemy', ()
   it('an item or vamp heal from Steb draws nothing; only his ability\'s share counts', () => {
     const extras = createBatch1VfxEvents(id => definitions[id]).batch([
       healOf('steb', 2, [share('steb', 'bloodthirster', 40, 'item', 'equipment-proc')]),
-      healOf('ally', 3, [share('steb', 'bloodthirster', 40, 'item', 'equipment-proc')]),
     ]).flatMap(plan => plan.extra);
     expect(extras).toEqual([]);
   });
@@ -72,5 +76,41 @@ describe('Steb heal visuals follow his heal events, never his cast\'s enemy', ()
     expect(extras.some(fx => fx.skill === 'steb-share' && fx.targets[0] === 'ally')).toBe(true);
     expect(extras.some(fx => fx.skill === 'steb-heal' && fx.targets[0] === 'me')).toBe(true);
     expect(extras.every(fx => !fx.targets.some(id => id.startsWith('foe')))).toBe(true);
+    // The two heal shapes the planner tells apart by target alone (batch1-events.ts): his ability's heal on himself and his
+    // passive share on an ally carry the same share fields today. If the rules give the share its own definitionId, this
+    // turns red: update the planner with it.
+    const shape = (target: (id: string) => boolean) => [...new Set(events.filter(e => e.type === 'heal' && target(e.targetId))
+      .flatMap(e => (e as Extract<DisplayCombatEvent, { type: 'heal' }>).shares.filter(sh => sh.sourceId === 'me')
+        .map(sh => JSON.stringify([sh.sourceKind, sh.definitionId, sh.delivery]))))];
+    expect(shape(id => id === 'me')).toEqual([JSON.stringify(['ability', 'steb-ability', 'ability-direct'])]);
+    expect(shape(id => id !== 'me')).toEqual([JSON.stringify(['ability', 'steb-ability', 'ability-direct'])]);
+  });
+
+  it('with a Bloodthirster on Steb: his vamp heal draws nothing, the share it sets off flies to his allies', () => {
+    // A real combat started as dev/castcmp/real-combat.ts starts one, with the item on Steb (me).
+    const units = realUnits({ unit: 'steb', star: 2, form: null, foe: 'darius', dist: 2, nfoes: 3, foestar: 2, ally: 'amumu', allystar: 1, allyCell: { row: 4, col: 2 } });
+    const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+    let { state, events: first } = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation,
+      items: [{ id: 'item-bt', definitionId: 'bloodthirster', location: { kind: 'unit', unitId: 'me' } }], temporaryEquipment: [],
+      augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'steb-bt', 42) as { state: any; events: any[] };
+    const events = [...toDisplayEvents(first as any)] as DisplayCombatEvent[];
+    for (let i = 0; i < 400 && state.status !== 'finished'; i++) { const step = stepCombat(state); state = step.state; events.push(...toDisplayEvents(step.events as any) as DisplayCombatEvent[]); }
+    const heals = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'heal' }> => e.type === 'heal');
+    const fields = (target: (id: string) => boolean) => [...new Set(heals.filter(e => target(e.targetId)).flatMap(e => e.shares.filter(sh => sh.sourceId === 'me')
+      .map(sh => JSON.stringify([sh.sourceKind, sh.definitionId]))))].sort();
+    // Measured shapes: on Steb, his vamp (item/bloodthirster) and his ability's heal; on the ally, only his share.
+    expect(fields(id => id === 'me')).toEqual([JSON.stringify(['ability', 'steb-ability']), JSON.stringify(['item', 'bloodthirster'])]);
+    expect(fields(id => id !== 'me')).toEqual([JSON.stringify(['ability', 'steb-ability'])]);
+    const extras = createBatch1VfxEvents(id => units.find(u => u.id === id)?.definitionId).batch(events).flatMap(plan => plan.extra);
+    const vamps = heals.filter(e => e.targetId === 'me' && e.shares.some(sh => sh.definitionId === 'bloodthirster')).length;
+    const rings = extras.filter(fx => fx.skill === 'steb-heal').length, missiles = extras.filter(fx => fx.skill === 'steb-share').length;
+    expect(vamps).toBeGreaterThan(rings); // the vamp heals ring nothing
+    expect(missiles).toBeGreaterThan(rings); // the shares they set off still fly
+    expect(extras.every(fx => fx.skill !== 'steb-share' || fx.targets[0] !== 'me')).toBe(true);
+  });
+
+  it('display priority (Fable 11-14, not original data): the share missile and its ring are body, his own heal ring critical', () => {
+    for (const cue of CUE_EXTRA_SKILLS['steb-share']!) expect(effectImportance(cue), cue.system).toBe('body');
+    for (const cue of CUE_EXTRA_SKILLS['steb-heal']!) expect(effectImportance(cue), cue.system).toBe('critical');
   });
 });
