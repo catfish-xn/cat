@@ -51,7 +51,8 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  const realOnly = ['from-start', 'lead-ms', 'cast-index', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
+  // --foe-offset also takes dummies (v-capture.cjs and v-capture-attack.cjs): the dummies K columns to the side.
+  const realOnly = ['from-start', 'lead-ms', 'cast-index', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...(o('gone') ? { gone: o('gone') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).

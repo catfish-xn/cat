@@ -64,7 +64,6 @@ async function unbind(page, tick, rebind) {
   const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined;
   if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index are for --real only: a dummy cast has no combat before it');
   if (['ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally / --ally-cell / --foe-cell / --foe2 / --foe2star / --foe2-cell are for --real only');
-  if (opt('foe-offset') !== undefined && !opt('real')) throw new Error('--foe-offset is for --real only (dummies: use --pin-foe / --dist)');
   if (opt('foe-offset') !== undefined && !/^-?[0-9]+$/.test(opt('foe-offset'))) throw new Error(`--foe-offset must be a whole number of columns, got ${opt('foe-offset')}`);
   if (opt('cast-index') !== undefined && !/^[1-9][0-9]*$/.test(opt('cast-index'))) throw new Error(`--cast-index must be 1, 2, ..., got ${opt('cast-index')}`);
   if (opt('from-start') === '1' && opt('lead-ms') !== undefined) throw new Error('--from-start and --lead-ms: give one');

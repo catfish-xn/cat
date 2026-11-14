@@ -1,0 +1,23 @@
+{
+  "name": "plan-fu-dead",
+  "note": "Dead-target follow-ups (11-14): a plain attack that kills its target (ranged Ezreal, melee Sett) and a cast whose target's unit is gone (Caitlyn, Vi). Dummies with --foe-offset, so each target stands ahead and to the side of the caster.",
+  "batches": [
+    {
+      "name": "fu",
+      "before": {
+        "src": "57f7c298",
+        "jobs": "dev/castcmp/jobs/fu-before.txt"
+      },
+      "after": {
+        "src": "e95092da",
+        "jobs": "dev/castcmp/jobs/fu-after.txt"
+      },
+      "keyframes": [
+        "--hero ezreal --system plain-attack-kill --before fu-ezreal-attack-before --after fu-ezreal-attack-after --from 0 --to 1500 --crop me,foe",
+        "--hero sett --system plain-attack-kill --before fu-sett-attack-before --after fu-sett-attack-after --from 0 --to 1500 --crop me,foe",
+        "--hero caitlyn --system cast-target-gone --before fu-caitlyn-gone-before --after fu-caitlyn-gone-after --from 0 --to 3000 --crop me",
+        "--hero vi --system cast-target-gone --before fu-vi-gone-before --after fu-vi-gone-after --from 0 --to 3000 --crop me"
+      ]
+    }
+  ]
+}
