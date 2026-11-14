@@ -586,7 +586,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
     () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid,
     lightmapEntry && lightmapReader && assetRoot
-      ? { gamma: lightmapEntry.gamma, scale: lightmapEntry.scale, load: () => lightmapReader.readTexture(assetUrl(assetRoot, lightmapEntry.path)) }
+      ? { gamma: lightmapEntry.gamma, scale: lightmapEntry.scale, tint: lightmapEntry.tint, load: () => lightmapReader.readTexture(assetUrl(assetRoot, lightmapEntry.path)) }
       : undefined) : null;
   const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
   let boardKey = '', showingOwnBoard = true;

@@ -22,10 +22,12 @@ import { contracts } from './runtime.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
-/** Baked lightmap decode (render: diffuse × pow(lightmap.rgb, gamma) × scale, in sRGB space). Our own fitted values,
- * not original game data: chosen against TFT footage of the default arena (8 regions, same camera, each within ±9%).
+/** Baked lightmap decode (render: diffuse × pow(lightmap.rgb, gamma) × scale, in sRGB space) and the tint of the arena's
+ * other meshes (trees, outer rocks, props; not the skybox). Our own values, not original game data: the per-channel fit
+ * to TFT footage of the default arena (2.52/2.32/2.20 over 16 regions of two videos) pushed warmer and brighter on the
+ * user's call (2026-11-14); the tint takes the blue-green cast off the meshes that have no lightmap.
  * See BoardLightmap in src/rendering3d/contracts.ts. */
-export const BOARD_LIGHTMAP_DECODE = Object.freeze({ gamma: 0.5, scale: 2.3 });
+export const BOARD_LIGHTMAP_DECODE = Object.freeze({ gamma: 0.5, scale: Object.freeze([2.9, 2.6, 2.15]), tint: Object.freeze([1.14, 1.03, 0.82]) });
 const json = boardPlanJson;
 /** Place every board, including board-default, from BoardLocator (first cell) and
  * BoardCenterLocator (mean of the 56 cells: 3.25 columns and 3.5 rows from the first).
