@@ -20,8 +20,8 @@ const ITEM_SIZE = 13, ITEM_GAP = 2;
 /** An item icon's share of its slot; the rest is its dark frame. */
 const ITEM_ICON = 0.86;
 /**
- * The client's whole unit bars (tfthealthbaratlas regions `health.tier-1..4`, emblem + track): each track is 13 pixels
- * tall; `top` is its first row and `fill` the first column right of the emblem, in the region's pixels. Narrower
+ * The client's whole unit bars (tfthealthbaratlas regions `health.tier-1..4`, emblem + track): every track has one
+ * height, taken from the atlas as it is; `top` is its first row and `fill` the first column right of the emblem, in the region's pixels. Narrower
  * regions (an older sidecar that cut only the emblem) are not used.
  */
 const TIER_TRACK = 13, TIER_PIXEL = 4, TIER_MIN_WIDTH = 60, TIER_FLATTEN = 0.8, TIER_LIFT = 14;
@@ -174,8 +174,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     const c = ctx.colors(), m = shown?.meters, team = shown?.team ?? 'player';
     g.clearRect(0, 0, tierCanvas.width, tierCanvas.height);
     if (typeof g.drawImage === 'function') g.drawImage(sprite.source, 0, 0, tierCanvas.width, tierCanvas.height);
-    // Inside the track's 1-pixel border (11 rows): HP blocks (6 rows), a dark row, then a 4-row mana strip, in the atlas's
-    // own fills. The atlas splits the track 8 + 1 + 2; at board scale its 2-row mana read as no mana at all (playtest 11-09).
+    // Inside the track's border: HP blocks, a dark row, then a mana strip, in the atlas's own fills. The atlas gives mana
+    // only a thin strip; at board scale it read as no mana at all (playtest 11-09), so ours is thicker.
     const x0 = (layout.fill + 1) * k, x1 = (sprite.width - 1) * k, y0 = (layout.top + 1) * k, inner = x1 - x0;
     const hpHeight = 6 * k, manaY = y0 + 7 * k, manaHeight = 4 * k;
     const fill = (id: string, color: string, x: number, y: number, width: number, height: number) => {

@@ -119,14 +119,15 @@ const EFFECT_TICKS = 2;
 /** A combat step lands every MOVE_INTERVAL_TICKS (250 ms): a run must outlast it, or the piece drops to idle between cells. */
 const ACTION_CONFIG = { durations: { move: 0.3 } };
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
- * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
+ * authored size. The median of the drawn height over the models' own heights, taken from the assets as they are, not
+ * hand-tuned (2026-10-20).
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
 // FX_SCALE is shared with the ported engine (vfx-ltk/particles.ts).
 /**
  * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
  * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
- * minions are set lower than the doc's 0.57 because their bind pose is low (idle ≈ 0.77): 0.43 stands about as tall
- * as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
+ * minions are set lower than the doc's value because their bind pose is low against their idle: 0.43 stands about as
+ * tall as a melee minion. The dragon keeps its idle flight height (no offset). A monster missing here is fitted as a champion.
  */
 const MONSTER_FIT: Readonly<Record<string, { readonly height: number; readonly lift: number }>> = {
   'pve-minion-melee': { height: 0.57, lift: -0.03 }, 'pve-minion-ranged': { height: 0.43, lift: 0.02 },

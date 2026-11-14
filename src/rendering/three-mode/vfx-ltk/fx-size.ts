@@ -2,9 +2,9 @@
  * Drawn size of skill particles relative to their authored size (2026-11-09).
  *
  * Particles share the world with the arena, not with the champion bodies: a body is drawn at FX_SCALE × its official
- * skinScale, but a particle has no skinScale, and the default arena maps one League unit to √3·34/178 × 7.2/8.48
- * ≈ 0.281 board units (boards-plan alignmentScale, #526), not FX_SCALE's 0.44. At 0.44 every system drew about 1.57×
- * its original size against the grid: Darius's Q ring 7.2 cells across, well wider than in the original footage, and
+ * skinScale, but a particle has no skinScale, and the default arena maps one League unit to √3·34 / (one cell in the asset's
+ * own units) × 7.2 / (the board's width in cells at its locator's scale) board units (boards-plan alignmentScale, #526),
+ * well under FX_SCALE's 0.44. At 0.44 every system drew clearly larger than its original size against the grid: Darius's Q ring 7.2 cells across, well wider than in the original footage, and
  * Viktor's board-wide R spilling over the bench. The earlier per-cue shrinks (Garen, Vex and Nunu, 11-03 and 11-06) were
  * the same mismatch.
  *
@@ -16,7 +16,7 @@ export const FX_SOURCE_SCALE = 0.44; // Must equal particles.ts FX_SCALE.
  * 34), in which pieces stand. Kept here because a 3D module does not import that 2D module; a test keeps the two equal.
  */
 export const BOARD_CELL = Math.sqrt(3) * 34;
-/** League units → board units for the default arena model (boardAlignment 0.3306 × alignmentScale 7.2 / 8.48). */
+/** League units → board units for the default arena model (boardAlignment × alignmentScale, from the asset root's board data). */
 export const ARENA_UNIT_SCALE = 0.3306 * (7.2 / 8.48);
 /** Multiplies a cue's scale (see cueSize for the weapon-bone exception). */
 export const SKILL_FX_SIZE = ARENA_UNIT_SCALE / FX_SOURCE_SCALE;

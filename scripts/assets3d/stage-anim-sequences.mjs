@@ -25,7 +25,7 @@ export const DEFAULT_EXCLUDES = new Set([
  * Casts whose SpellObject has an empty mAnimationName (the original spell script picks the clips).
  * The graph keys below were checked against gameplay video and the clips' own events:
  * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (gameplay footage); that is
- *   Spell3_In (carries the cast particle) + Spell3_Out (graph end frame 12). Spell2_* is the E blink
+ *   Spell3_In (carries the cast particle) + Spell3_Out (to the graph's own end frame). Spell2_* is the E blink
  *   with forward root motion, which made the model jump forward and snap back.
  * - warwick: TFT13_WarwickSpell is Blood Frenzy: he rears up in place and then claws (gameplay
  *   footage, no displacement). The graph key of howl.anm cracks to BloodFrenzy_Activate, the cast's own name. The clip

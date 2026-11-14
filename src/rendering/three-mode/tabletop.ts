@@ -70,7 +70,7 @@ const ORB_VARIANT_COLOR: Record<NonNullable<BoardOrb['variant']>, string> = { wa
 const orbTint = (tier: BoardOrb['tier'], variant?: BoardOrb['variant']) => variant ? ORB_VARIANT_COLOR[variant] : ORB_COLOR[tier];
 /**
  * Loot orb particles are not scaled like skill VFX. tft-extras review at FX_SCALE=0.44 (docs/ASSETS3D_TFT_EXTRAS.md):
- * gray idle ≈0.37 cell; blue/gold/prismatic ≈0.5 cell; warband/crime cores ≈0.92 / ≈0.97 cell (special-orbs review).
+ * each tier's and variant's idle core is taken from the assets' own drawn size, not hand-tuned (special-orbs review).
  * Target visible core ≈0.5 cell for every variant.
  */
 const ORB_GRAY_IDLE_CELLS_AT_FX = 0.37;

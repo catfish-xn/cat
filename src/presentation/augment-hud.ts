@@ -10,7 +10,7 @@ export const AUGMENT_CHIP_GAP = 4;
 const EDGE = 6;
 /** S13 screenshots: the row's centre anchor in 3D, as a share of the viewport. */
 const ANCHOR_3D = { x: 0.267, y: 0.238 };
-/** 2D: the row's centre sits a fifth of the way down the board, like the S13 row against its board. */
+/** 2D: the row's centre sits near the top of the board, like the S13 row against its board (our fit). */
 const ANCHOR_2D_Y = 0.2;
 
 export interface AugmentStripRect {

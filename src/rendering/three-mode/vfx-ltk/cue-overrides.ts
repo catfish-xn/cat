@@ -111,7 +111,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
     // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
     // Sizes from the cdacbcc9 isolated renders against the 14.24 footage: E_Outer drew
-    // 4.5 cells wide and was cut off at its end; the root cluster drew 1.1 cells, too thin to read as the vine mass.
+    // far too wide and was cut off at its end; the root cluster drew too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
     // particles never reach their own authored fade inside the cue, so from the stop the cue eases them out itself.
     { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
@@ -165,7 +165,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '04ae533c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
     { system: '5449dd85', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Mace_Loc' },
     { system: '0a5d1c08', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
-    // Walls and the pit are born at 0.18s inside this system. Stop before that and keep the opening slash.
+    // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
@@ -251,15 +251,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
-  // R: 14.24 is a 3 s gas cloud that then detonates (11-06 field review: ours burst at 1.2 s, white and about 3.8 cells).
-  // The cloud stays for the whole damage window; the burst and each target's splash wait for its end. Burst 0.5 is about 2.9 cells.
+  // R: in 14.24 the gas cloud lasts its whole damage window, then detonates (11-06 field review: ours burst early, white and
+  // too wide). The burst and each target's splash wait for the cloud's end; the burst's scale is our fit, not original data.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
     // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
     // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
     // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The blast spans the 2-hex cloud, about 5 cells across: at 0.5 it measured 5.8 cells at 3.4 s (cdacbcc9), 16% wide.
+    // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
     { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: kept(0.7), optional: true },

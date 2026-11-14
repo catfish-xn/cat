@@ -68,8 +68,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === '8682c9ee')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
-    // 11-06 field review: the cloud holds 3 s, then the burst (0.5, about 2.9 cells) and each target's splash.
-    // Measured 5.8 cells at 0.5 against the cloud's 5 (cdacbcc9): 0.43 lands on it.
+    // 11-06 field review: the cloud holds its damage window, then the burst and each target's splash.
+    // At 0.5 the burst measured a little wider than the cloud (cdacbcc9): 0.43, our fit, lands on it.
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(measuredAtFxScale(0.43));
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
