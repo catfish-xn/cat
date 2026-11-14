@@ -1,0 +1,5 @@
+v-capture.cjs gangplank gp-tri-all --pin-foe 3 --times 0,900,933,967,1000,1033,1067,1100 --layers none --column after --snapshot c1333710ad8e --systems none --probe emitters
+v-capture.cjs gangplank gp-tri-8da84aa4 --pin-foe 3 --times 0,900,933,967,1000,1033,1067,1100 --layers none --column after --snapshot c1333710ad8e --systems 8da84aa4 --only 8da84aa4
+v-capture.cjs gangplank gp-tri-2a495226 --pin-foe 3 --times 0,900,933,967,1000,1033,1067,1100 --layers none --column after --snapshot c1333710ad8e --systems 2a495226 --only 2a495226
+v-capture.cjs gangplank gp-tri-cf147eda --pin-foe 3 --times 0,900,933,967,1000,1033,1067,1100 --layers none --column after --snapshot c1333710ad8e --systems cf147eda --only cf147eda
+v-capture.cjs gangplank gp-tri-5d21d7bb --pin-foe 3 --times 0,900,933,967,1000,1033,1067,1100 --layers none --column after --snapshot c1333710ad8e --systems 5d21d7bb --only 5d21d7bb
