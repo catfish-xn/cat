@@ -140,8 +140,25 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
     advance(1.1);
+    expect(long + tails).toBe(OFF_SLOT_MAX + 1);
     expect(built.filter(fx => fx.object.userData.ltkSystem === LISTED && fx.object.parent === scene)).toHaveLength(tails);
     expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.slots).toBe(MAX_LTK_SYSTEMS - OFF_SLOT_MAX);
+    runtime.dispose();
+  });
+
+  it('hold tails alone fill the OFF_SLOT_MAX room: the next one past it holds a slot as before', async () => {
+    // Two casts of seven listed flights (fourteen, more than OFF_SLOT_MAX) beside short runs fill every slot. Once all of
+    // them play out, the earliest OFF_SLOT_MAX tails leave the count and the rest keep their slots.
+    const flights = 7, filler = Array.from({ length: MAX_LTK_SYSTEMS - 2 * flights }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: LONG_RUN_SECONDS - 0.5, bone: 'ground' }));
+    const { runtime, scene, advance } = await setup(Array.from({ length: flights }, () => flight(LISTED)), filler);
+    expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
+    advance(2 / 30);
+    for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS); expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
+    advance(1.1);
+    expect(2 * flights).toBeGreaterThan(OFF_SLOT_MAX);
+    expect(built.filter(fx => fx.object.userData.ltkSystem === LISTED && fx.object.parent === scene)).toHaveLength(2 * flights);
     expect(runtime.slots).toBe(MAX_LTK_SYSTEMS - OFF_SLOT_MAX);
     runtime.dispose();
   });
