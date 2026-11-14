@@ -22,6 +22,12 @@ import { contracts } from './runtime.mjs';
 import { createPrecache } from './merge-manifests.mjs';
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
+/** Baked lightmap decode (render: diffuse × pow(lightmap.rgb, gamma) × scale, in sRGB space) and the tint of the arena's
+ * other meshes (trees, outer rocks, props; not the skybox). Our own values, not original game data: the per-channel fit
+ * to TFT footage of the default arena (2.52/2.32/2.20 over 16 regions of two videos) pushed warmer and brighter on the
+ * user's call (2026-11-14); the tint takes the blue-green cast off the meshes that have no lightmap.
+ * See BoardLightmap in src/rendering3d/contracts.ts. */
+export const BOARD_LIGHTMAP_DECODE = Object.freeze({ gamma: 0.5, scale: Object.freeze([2.9, 2.6, 2.15]), tint: Object.freeze([1.14, 1.03, 0.82]) });
 const json = boardPlanJson;
 /** Place every board, including board-default, from BoardLocator (first cell) and
  * BoardCenterLocator (mean of the 56 cells: 3.25 columns and 3.5 rows from the first).
@@ -53,7 +59,7 @@ export function nestedBoardObjects(entries, type) {
   return result;
 }
 export function boardReferences(manifest, effects = {}) {
-  const refs = new Set([manifest.boards?.[manifest.boardKey]?.path, ...Object.values(manifest.models).map(v => v.path),
+  const refs = new Set([manifest.boards?.[manifest.boardKey]?.path, manifest.boards?.[manifest.boardKey]?.lightmap?.path, ...Object.values(manifest.models).map(v => v.path),
     ...Object.values(manifest.effects).map(v => v.path)].filter(Boolean));
   for (const d of Object.values(effects)) for (const e of d.emitters ?? [])
     for (const p of [e.texture, e.mesh, e.distortion?.normalMap].filter(Boolean)) refs.add(p);
@@ -132,13 +138,15 @@ export async function buildBoards({keys}={}) {
     // Arena map coordinates use a local board frame. Preserve them here;
     // manifest alignment is derived below from the shipped board locator.
     const origin = [0, 0, 0];
+    const lightmapped = new Set();
     for (const mesh of geometry.meshes) for (const range of mesh.ranges) {
       const id = `${pick.key}-static-${mesh.id}-${mesh.ranges.indexOf(range)}`;
       try {
         const mat = entries.find(e => binIs(e, 'StaticMaterialDef') && binField(e, 'name')?.toLowerCase() === range.material.toLowerCase());
         if (!mat) throw new Error('missing-board-material');
         const diffuse = boardDiffuse(mat), png = encodePng(decodeTexture(await load(diffuse.path)));
-        const converted = boardRangeGlb(mesh, range, png, { origin });
+        const converted = boardRangeGlb(mesh, range, png, { origin, lightmap: true });
+        if (converted.lightmap) lightmapped.add(converted.lightmap.path);
         const path = `models/${id}.glb`; await write(path, converted.glb); manifest.models[id] = { path };
         scene.models.push({ id, visibility: mesh.visibility, renderFlags: mesh.renderFlags, bounds: converted.bounds, baked: mesh.baked }); report.staticModels++;
       } catch (e) { report.limitations.push({ stage: 'static-material', id, material: range.material, reason: e.message }); }
@@ -219,7 +227,11 @@ export async function buildBoards({keys}={}) {
       catch(e){report.limitations.push({stage:'baked-lightmap',source:p,reason:e.message});}
     }
     scene.shaderPolicy='Diffuse preview only; original material records, source shader paths and behavior cues retained in local source archive.';
-    manifest.boards[pick.key]={path:'scene.json',grid:scene.grid,alignment:scene.alignment};
+    // One shared atlas: the arena's TEXCOORD_1 (boardRangeGlb) samples it. Decoding fitted against original footage.
+    const atlas=lightmapped.size===1?scene.lighting.baked.find(b=>canonicalAsset(b.source)===canonicalAsset([...lightmapped][0])):null;
+    if(lightmapped.size>1)report.limitations.push({stage:'baked-lightmap',reason:'several-lightmap-atlases'});
+    manifest.boards[pick.key]={path:'scene.json',grid:scene.grid,alignment:scene.alignment,
+      ...(atlas?{lightmap:{path:atlas.path,...BOARD_LIGHTMAP_DECODE}}:{})};
     await write('scene.json',json(scene));
     const effects=Object.fromEntries(report.systems.filter(s=>s.document).map(s=>[s.id,s.document]));
     const refs=[...new Set([...boardReferences(manifest,effects),...payloads.keys()])];

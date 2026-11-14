@@ -92,10 +92,18 @@ export interface BoardAlignment {
   bench?: readonly Vec3[];
 }
 /**
+ * The arena's baked lightmap (Map22 `BakedLight`): an RGB(A) atlas sampled with the arena meshes' TEXCOORD_1, which the
+ * converter has already placed on the atlas. Drawn as diffuse × pow(lightmap.rgb, gamma) × scale in sRGB space, scale
+ * one number or one per R/G/B channel; gamma and scale are fitted against original footage by the converter (not values
+ * from the game data). `tint` (optional, one factor per R/G/B in the same space) grades the arena's other textured
+ * meshes except the skybox, so trees and outer rocks match the lit ground: our own colour choice, not game data.
+ */
+export interface BoardLightmap { path: string; gamma: number; scale: number | readonly [number, number, number]; tint?: readonly [number, number, number] }
+/**
  * `lighting` (optional): a ChampionLighting JSON beside the manifest. Champions with `selfIllumination` are then lit by
  * it instead of the scene lights; without it (or on older roots) every model keeps the generic lit material.
  */
-export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string } }
+export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number }; lighting?: { path: string }; lightmap?: BoardLightmap }
 /**
  * Champion light for one board, built offline from the board's light data: six colours along the world axes
  * (+X, −X, +Y, −Y, +Z, −Z; display-encoded 0..1), blended by the squared world normal, scaled by `ambientScale`, plus the
@@ -316,6 +324,7 @@ function assertAttackSequence(value: unknown): void {
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const scaleOk = (v: unknown): boolean => finite(v) && v > 0 && v <= 16;
 const vec3 = (v: unknown): boolean => Array.isArray(v) && v.length === 3 && v.every(finite);
 /** Each board names a model of this manifest (same key) and how its source coordinates land on the hex grid. */
 function assertBoards(value: unknown, manifest: AssetManifest): void {
@@ -328,6 +337,13 @@ function assertBoards(value: unknown, manifest: AssetManifest): void {
     if (entry.lighting !== undefined) {
       if (!entry.lighting || typeof entry.lighting.path !== 'string' || !/\.json$/i.test(entry.lighting.path)) throw new Error('invalid-board-lighting');
       assetUrl('', entry.lighting.path);
+    }
+    if (entry.lightmap !== undefined) {
+      const l = entry.lightmap;
+      if (!l || typeof l.path !== 'string' || !/\.(png|ktx2)$/i.test(l.path) || !finite(l.gamma) || l.gamma <= 0 || l.gamma > 4
+        || !(Array.isArray(l.scale) ? l.scale.length === 3 && l.scale.every(scaleOk) : scaleOk(l.scale))
+        || (l.tint !== undefined && !(Array.isArray(l.tint) && l.tint.length === 3 && l.tint.every(scaleOk)))) throw new Error('invalid-board-lightmap');
+      assetUrl('', l.path);
     }
   }
 }

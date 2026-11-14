@@ -69,6 +69,7 @@ export function emit(
   step: SystemStep,
   rng: Rng,
   dragMotion: DragMotion,
+  siblings?: { readonly emitters: readonly EmitterModel[]; readonly states: readonly EmitterState[] },
 ): void {
   const cue = cueScale(step.scale);
   if (emitter.disabled || state.absent) return;
@@ -81,7 +82,15 @@ export function emit(
 
   const phase = emitterPhase(emitter, now);
   const pinned = step.pinned ?? null;
-  const count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  let count = spawnCount(emitter, state, step, phase, rng, pool.flex);
+  /* Ours: a burst that would fill the pool leaves one place for each one-shot emitter of the system still to spawn, and a
+     one-shot keeps at least its own (11-13: Caitlyn's burst filled its 150 places with debris on its first frame, and the
+     seventeen emitters after it, the flash and the smoke among them, never spawned). Only a step that would fill the
+     pool is touched. */
+  if (count > 0 && siblings && pool.count + count >= pool.capacity) {
+    const held = oneShotsPending(siblings.emitters, siblings.states, index);
+    if (held > 0) count = Math.max(Math.min(count, pool.capacity - pool.count - held), emitter.singleParticle ? 1 : 0);
+  }
   if (count <= 0) return;
 
   travel(state, step);
@@ -228,7 +237,13 @@ export function emit(
     if (cue !== 1) {
       scaleAxes(pool.velocity, slot, cue);
       scaleAxes(pool.birthAcceleration, slot, cue);
-      scaleAxes(pool.birthScale, slot, cue);
+      // An attached mesh is the host's own mesh: it draws at the host's size whatever the cue's (a chest cue's
+      // SKILL_FX_SIZE 0.64 shrank Mordekaiser's aura toward his feet and left a slab on his arm and mace).
+      // A ribbon beam's scale0 y and z are the shares of its length kept from each end (ribbon.ts writeBeam), not lengths:
+      // only its width takes the cue's size. Scaled, both ends drew in toward the middle (Viktor's basic-attack laser
+      // at SKILL_FX_SIZE was a short bar touching neither unit, Fable 11-13).
+      if (emitter.beam !== null && emitter.mesh === null) pool.birthScale[slot] *= cue;
+      else if (emitter.quadType !== QUAD_TYPE.attachedMesh) scaleAxes(pool.birthScale, slot, cue);
       scaleAxes(BORN.offset, 0, cue);
     }
     for (let axis = 0; axis < 3; axis += 1) {
@@ -248,6 +263,18 @@ export function emit(
 
   state.emitted = true;
   state.lastSpawn = now;
+}
+
+/** One-shot (`isSingleParticle`) emitters of the system other than `except` that are still to spawn. */
+function oneShotsPending(emitters: readonly EmitterModel[], states: readonly EmitterState[], except: number): number {
+  let pending = 0;
+  for (let at = 0; at < emitters.length; at += 1) {
+    const other = emitters[at], own = states[at];
+    if (at === except || !other.singleParticle || own.emitted || own.absent || other.disabled) continue;
+    if (emissionEnded(other, own.age)) continue;
+    pending += 1;
+  }
+  return pending;
 }
 
 /**

@@ -1,0 +1,14 @@
+{
+  "name": "plan-619jayce",
+  "note": "Jayce black shell (#619, 11-12): before 5c346c72; after/off at 4a8eaf8930f2e30057cba4af9d7d738a48bd1b39 (8d9d784b and e07c8088 attached overlays held back). Key frames at the probe's Avatar_Dark span (333-833 ms).",
+  "batches": [
+    {
+      "name": "619jayce",
+      "before": { "src": "5c346c72", "jobs": "dev/castcmp/jobs/619jayce-before.txt" },
+      "after": { "src": "4a8eaf8930f2e30057cba4af9d7d738a48bd1b39", "jobs": "dev/castcmp/jobs/619jayce-after.txt" },
+      "keyframes": [
+        "--hero jayce --system 8d9d784b --before w-jayce-before --after w-jayce-after --off w-jayce-off --times 400,600,800 --note Avatar_Dark_span_333-833ms_(11-12_Windows_probe)"
+      ]
+    }
+  ]
+}

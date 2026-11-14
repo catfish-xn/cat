@@ -4,15 +4,15 @@ import { flightTrack, trackPositionAt } from '../src/rendering/three-mode/vfx-lt
 import { FIRST_FLIGHT } from '../src/rendering/three-mode/vfx-ltk/engine/model/rig';
 
 describe('cue projectile flight', () => {
-  it('without an arc is the straight flight it always was', () => {
-    expect(projectileFlight(300, 0.3)).toEqual({ ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: 1000 } });
-    const track = flightTrack({ flight: projectileFlight(300, 0.3), from: [0, 50, 0], to: [300, 50, 0], launchHeight: 0 });
+  it('without an arc is the fixed-time flight it was before the arc field', () => {
+    expect(projectileFlight(0.3)).toEqual({ ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: 0.3 } });
+    const track = flightTrack({ flight: projectileFlight(0.3), from: [0, 50, 0], to: [300, 50, 0], launchHeight: 0 });
     expect(track.arrival).toBeCloseTo(0.3, 2);
     for (const t of [0, 0.1, 0.2, 0.3]) expect(trackPositionAt(track, t)[1]).toBeCloseTo(50, 3); // no height change
   });
   it('with an arc starts at the launch point, lands on the lifted target after the travel time, and peaks between', () => {
     // Synthetic numbers: gravity 5000 units/s², target lifted 100, 0.4 s, hand at 60 high to a point 120 high, 200 away.
-    const flight = projectileFlight(200, 0.4, { gravity: 5000, targetOffset: 100 });
+    const flight = projectileFlight(0.4, { gravity: 5000, targetOffset: 100 });
     const track = flightTrack({ flight, from: [0, 60, 0], to: [200, 120, 0], launchHeight: 0 });
     expect(track.arrival).toBeCloseTo(0.4, 2);
     const start = trackPositionAt(track, 0), end = trackPositionAt(track, 0.4);

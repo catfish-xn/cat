@@ -12,10 +12,74 @@
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
+import { jinxSkills } from './champions/jinx';
+import { jayceSkills } from './champions/jayce';
+import { melSkills } from './champions/mel';
+import { sevikaSkills } from './champions/sevika';
+import { viktorSkills } from './champions/viktor';
+import { warwickSkills } from './champions/warwick';
+import { S13_TIMELINES } from './s13-timelines';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
+
+/**
+ * Caitlyn's Air Raid comet, one per shot, falling onto that shot's damage centre (TimelineCue.fromAbove). Every value is a
+ * fitted value, not original data: the blimp that drops it is off screen in 14.24 and the export carries no path for it.
+ */
+export const CAITLYN_COMET = {
+  /**
+   * Cells from where the target stands: left on screen, up, and toward the top of the screen. Fitted, not original data:
+   * far enough and slanted enough that the comet comes in from the upper left at about the angle the 14.24 footage shows,
+   * with the long streak it leaves there (the board camera looks down along -Z, so screen left is -X and screen up is
+   * mostly +Y and -Z). It still falls in CAITLYN_COMET.fall, so it lands when it did; it reads faster than the footage's,
+   * whose shot the renderer cannot see coming (a shot's centre is drawn by the rule when the shot executes).
+   */
+  from: [-4, 6, -2.5] as const,
+  /**
+   * Seconds it falls. Fitted: a shot's damage is already settled when its event arrives, so the comet starts then and
+   * lands this much later, short enough to read as the cause of that hit.
+   */
+  fall: 0.15,
+  /** Seconds its trail fades out over once it lands (fitted: in the footage the column is gone soon after the burst). */
+  linger: 0.15,
+  /** Seconds a 3-star shot's burst (R_Bombardment_Impact) plays, eased out from its middle: twenty shots in five seconds. */
+  burst3: 0.6,
+} as const;
+
+/**
+ * Cells Gangplank's ground-fire line runs from his feet through the target. A FIT, not the original's value: its scorch
+ * strand emits for only part of the flight, so the line runs this far for the scorch it leaves to reach about as far past
+ * the target as it does in footage (11-13).
+ */
+export const GP_GROUND_LINE_CELLS = 2.7;
+/**
+ * Cells behind Gangplank (away from the target) his ground-fire line starts. A FIT, not the original's value: in the
+ * 3-star full-board footage the scorch starts on his far side and runs through the target (11-13).
+ */
+export const GP_GROUND_LINE_BACK = 0.5;
+/**
+ * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
+ * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
+ */
+export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
+  'caitlyn-shot': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: 1.5 },
+  ],
+  // 3 stars (twenty shots): every shot bursts, shorter; every other shot also shows its comet.
+  'caitlyn-shot-3': [
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+  'caitlyn-shot-3-comet': [
+    { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
+      travelSeconds: CAITLYN_COMET.fall, stopAfter: CAITLYN_COMET.fall, fadeOut: true, fromAbove: CAITLYN_COMET.from },
+    { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
+  ],
+};
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
@@ -75,6 +139,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: 0.5, duration: 0.8, primary: true },
     { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: 0.5, duration: 0.7, primary: true },
   ],
+  // R (Air Raid): the exported list without the comet (R_Bombardment_Mis) and its burst (R_Bombardment_Impact). The export
+  // kept the comet as a cast-start with no bone, so it stood on Caitlyn's feet (11-03 castcmp review; #622 keyframes), and
+  // it played one comet and one burst on the cast target at 1 s, while the rule drops TotalShots shots over RaidDuration,
+  // each on a random enemy centre. Each shot now plays its own comet and burst where its damage lands (CUE_EXTRA_SKILLS
+  // caitlyn-shot, driven by the shot's packetDamage events in batch1-events.ts).
+  caitlyn: [
+    { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
+    { system: '3a811b77', action: 'attack', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0.3333333333333333, duration: 1.5 },
+    { system: 'ce2a567b', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0, duration: 0.4 },
+    { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
+    { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
+  ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.2990000089009603, duration: 1.5 },
@@ -104,15 +181,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
     { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.2 },
   ],
-  // Cast keeps the green aura and fires one bolt. Later bolts stay on the empowered attacks.
+  // Cast keeps the green aura; every bolt is an empowered attack (batch1-events aims it at the enemies it pierced).
+  // The cast event targets Twitch himself, so a cast-time bolt had nowhere to fly and failed the whole cast (11-13).
   twitch: [
     { action: 'attack', system: 'ba5fe1c0', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
     { action: 'cast', system: '54af463f', event: 'cast-start', delay: 0, duration: 0.5, stopAfter: 0.2, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'cast', system: '2beb0657', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
-    { action: 'cast', system: '5938e29d', event: 'projectile', delay: 0.15, duration: 0.8, travelSeconds: 0.55, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '4e7cc3b1', event: 'hit', delay: 0.7, duration: 0.55, stopAfter: 0.15, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '5938e29d', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
@@ -146,9 +222,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
     { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 0 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, phase: 1 },
-    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', phase: 2, targetLimit: 3 },
+    // Branch from the rule's cast event (combat-g2-3.ts): `single` hits the primary target, `splash` every third cast.
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true, branch: 'single' },
+    { system: 'b124a9c5', action: 'cast', event: 'hit', delay: 0.6, duration: 1.2, bone: 'BUFFBONE_GLB_GROUND_LOC', branch: 'splash', targetLimit: 3 },
   ],
   // E: run/dash dust on self, fast shuriken, gold hit ~0.3s, mark on primary, blue dash hit ~1.1s (no back-dash motion in harness).
   akali: [
@@ -229,7 +305,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1) } : cue),
+  // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out (about 1.5 s in 14.24), and the swipe lands then, not 0.6 s in (11-06 field).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
@@ -246,7 +323,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5333333333333333, duration: 1.5 },
     { system: '809dc7ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'Buffbone_Glb_Weapon_1', targetBone: chest },
     { system: '9d79232b', action: 'cast', event: 'hit', delay: 0.6, duration: 1.5, primary: true },
-    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true },
+    // The curse rides its target: it is not drawn where a dead target stood (livingTarget).
+    { system: '7fb1a74c', action: 'cast', event: 'hit', delay: 0.6, duration: 8.4, stopAfter: 7.4, primary: true, livingTarget: true },
   ],
   // The export carries Renata's attack only, so every cast fell back to the procedural shot (11-06 field: 4/4 no-cues).
   // Order and timing follow the system names and the handwritten shot: canisters fire, the missile flies 0.3–0.9 s,
@@ -281,7 +359,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
     { system: '80ab2d1b', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'r_hand', travelSeconds: 0.7 },
-    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'Buffbone_Glb_Weapon_2', travelSeconds: 0.7 },
+    // Ground-fire line: in the original a line missile cast at a location, with no start bone and not following its target
+    // (14.24 spell data), whose scorch lies flat on the ground through the target. Played on the floor along the way from
+    // Gangplank to the target, starting a little behind him (TimelineCue.lineCells, lineBack); it flew from his weapon bone
+    // to the target's feet before and its scorch hid under both bodies (11-13 A/B/C keyframes). GP_GROUND_LINE_CELLS and
+    // GP_GROUND_LINE_BACK are FITS, not the original's values.
+    { system: '20cd67dc', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.7, lineCells: GP_GROUND_LINE_CELLS, lineBack: GP_GROUND_LINE_BACK },
     { system: 'cf147eda', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
     { system: '2a495226', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
     { system: '8da84aa4', action: 'cast', event: 'hit', delay: 0.9, duration: 1.5 },
@@ -297,17 +380,112 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '95bbab3d', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
     { system: '03b4d6ac', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
   ],
+  // The asset root's exported list is S13_TIMELINES.vi as of 10-27 plus its attack hit (copied unchanged from the
+  // export); this replaces it so the landing play-out (s13-timelines.ts) reaches the live board without an asset rebuild.
+  vi: [
+    ...S13_TIMELINES.vi,
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
+  ],
+  // #627 (11-12): these batch-2 lists are the repository tables themselves, so a cue edit (here: basic-attack hits and
+  // missiles on the target's chest, 14.24 BasicAttack mHitBoneName) plays from code without rebuilding the asset index.
+  // The asset root's vfx-ltk/batch2/tft13_*/index.json keeps the older copy; it is not hand-edited.
+  jinx: jinxSkills.jinx,
+  'jayce-front': jayceSkills['jayce-front'],
+  'jayce-back': jayceSkills['jayce-back'],
+  mel: melSkills.mel,
+  'mel-third': melSkills['mel-third'],
+  sevika: sevikaSkills.sevika,
+  viktor: viktorSkills.viktor,
+  warwick: warwickSkills.warwick,
 };
+
+/**
+ * Which rule branch each cast system belongs to, by champion and system. Tags only: the exported timing stays as it is.
+ * A tagged cue plays only when the cast event names its branch (TimelineCue.branch), so one cast no longer plays every
+ * branch's effects at once. Untagged cues play on every cast. Applied only when every tagged system is in the list.
+ */
+export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  // Ambessa: odd casts chain (Q: the chain swipe and its hit), even casts fist (R: dash, ground, weapon and slam hit).
+  // Rule side: combat-g2-2.ts writes the branch (PR #623); the 11-11 live index played all six on every cast.
+  ambessa: { '3b4c15e0': 'chain', '8a64f4dd': 'chain', '754b6c78': 'fist', 'a429a900': 'fist', '6390530e': 'fist', 'cba05b6e': 'fist' },
+  // Jinx W/E/R (combat writes zap/chompers/rocket). The live batch-2 index was staged from the old jinx.ts and still tags
+  // these cues with the dropped `phase` 0/1/2 instead of a branch, so without these tags every cast played all three
+  // (11-12 #629 Windows run). Same systems as champions/jinx.ts.
+  jinx: { a6a2b1cc: 'zap', '3496e112': 'zap', '10fede7e': 'zap', '40140250': 'zap', '9bd80364': 'chompers', cd05488e: 'chompers',
+    '7e6f06b5': 'rocket', '449d6617': 'rocket', '8b59c09d': 'rocket', '809da1b1': 'rocket' },
+};
+/** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
+export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {
+  const tags = Object.hasOwn(CUE_BRANCHES, champion) ? CUE_BRANCHES[champion] : undefined;
+  if (!tags || !cues) return undefined;
+  const cast = new Set(cues.filter(cue => (cue.action ?? 'cast') === 'cast').map(cue => cue.system));
+  if (!Object.keys(tags).every(system => cast.has(system))) return undefined;
+  return cues.map(cue => (cue.action ?? 'cast') === 'cast' && Object.hasOwn(tags, cue.system) ? { ...cue, branch: tags[cue.system] } : cue);
+}
 
 /** The override for `champion` when every system it names is present in `systems`. */
 export function cueOverride(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] | undefined {
   const cues = Object.hasOwn(CUE_OVERRIDES, champion) ? CUE_OVERRIDES[champion] : undefined;
-  return cues?.length && cues.every(cue => Object.hasOwn(systems, cue.system)) ? cues : undefined;
+  if (!cues?.length) return undefined;
+  const missing = cues.filter(cue => !Object.hasOwn(systems, cue.system)).map(cue => cue.system);
+  noteOverride(champion, missing);
+  return missing.length ? undefined : cues;
+}
+/**
+ * Dev builds only: which overrides applied and which were skipped for a missing system (warned once per key), kept on
+ * `globalThis.__vfxCueOverrides` so a capture can prove an override reached the page (#627). Production does nothing.
+ */
+function noteOverride(key: string, missing: readonly string[]): void {
+  if (!import.meta.env?.DEV) return;
+  const log = ((globalThis as { __vfxCueOverrides?: { applied: string[]; skipped: Record<string, string[]> } }).__vfxCueOverrides ??= { applied: [], skipped: {} });
+  if (!missing.length) { if (!log.applied.includes(key)) log.applied.push(key); return; }
+  if (log.skipped[key]) return;
+  log.skipped[key] = [...missing];
+  console.warn(`[vfx-ltk] cue override '${key}' skipped: system(s) ${missing.join(', ')} not in the loaded index`);
 }
 
 /**
- * Emitters of a system left undrawn, by emitter name. Only for a system whose cue now runs far past its authored
- * length: an emitter meant to flash once at the cast then glares for the whole stretched cue.
+ * Cues added to a champion's list (exported or replaced above), each only when its system is in the loaded index.
+ * For a layer the export never cued, where copying the champion's whole list into CUE_OVERRIDES would freeze the rest.
+ * Times are measured on the original, with 0 at the mana bar emptying.
+ */
+export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
+  // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
+  ambessa: [
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+  ],
+  // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
+  // The original keeps it for about as long as the empower lasts (sweep thread side by side, 11-11). Our rule holds the
+  // empower for EmpowerDuration, so the layer runs that long and fades over its last half second (our fit). A recast refreshes the
+  // empower, so it refreshes the layer rather than stacking a second (refresh).
+  mordekaiser: [
+    { system: '3292fe09', action: 'cast', event: 'cast-start', delay: 0, duration: 10, stopAfter: 9.5, fadeOut: true, bone: chest, refresh: true },
+  ],
+};
+export function cueAdditions(champion: string, systems: Readonly<Record<string, string>>): readonly TimelineCue[] {
+  return (Object.hasOwn(CUE_ADDITIONS, champion) ? CUE_ADDITIONS[champion] : []).filter(cue => Object.hasOwn(systems, cue.system));
+}
+
+/**
+ * Projectile systems whose beams keep flying with the system instead of being pinned between caster and target
+ * (runtime beamSplit), each with why. The pin is the default for every projectile beam (Fable 11-13).
+ * - 7029bc3c Sevika's chomp: its beam is a streamed mesh rope that may belong to the flying head rather than to her;
+ *   held at its old behaviour until it is checked against the original.
+ * - 92d79254 Jayce's back-form forge: it plays only when his cast buffs an ally, which no recording setup can stage yet;
+ *   it cannot be checked on screen, so it is not changed for now (Fable 11-13).
+ * - 4f2eb343 Mel's third cast: before and after show no difference that can be judged on screen, so it is not changed
+ *   (Fable 11-13).
+ */
+export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
+  '7029bc3c': 'streamed rope, not checked against the original',
+  '92d79254': 'cannot be recorded to check, not changed for now',
+  '4f2eb343': 'no difference that can be checked on screen, not changed',
+};
+
+/**
+ * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
+ * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Nunu R_Cas runs for the 3 s channel (authored 0.8 s). Its two white ground flashes kept a radial glare in the middle
@@ -325,6 +503,43 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Trail emitters, by system and emitter name, whose head fades out over twice its own drawn half-width once the strand
+ * stops growing, instead of ending on a flat cut across the trail (Trails.ts). A fit, not the original's behaviour: how
+ * the original ends a trail whose emitter stopped is not known.
+ * Vi's row shockwave Trench: its head kept widening after the run landed and drew a straight vertical edge at the row end
+ * (11-12 isolate recordings; back on screen once the run's rock children and play-out were in, Fable 11-12).
+ */
+export const TRAIL_END_FADE: Readonly<Record<string, readonly string[]>> = {
+  '84b969e0': ['Trench'],
+};
+
+/**
+ * Projectile systems that play out when they land: emission stops at arrival and the run stays until its particles have
+ * finished their own curves (runtime PLAY_OUT_CAP at most), instead of being removed whole at the cue's end. Particles of
+ * emitters without particleLinger still go at the stop, as the engine does for any stopped system, so a beam or missile
+ * head still ends on the hit. Decided system by system against original footage (Fable 11-12): on some projectiles the
+ * hit effect taking over at once is the original's own design, so this is no default.
+ * - 20cd67dc Gangplank's ground-fire line: its ground strand carries a long particleLinger; in the original the burning
+ *   line stays on the ground well after it is drawn, then chars and fades (11-12 footage).
+ * Each entry ends its play-out on its own clock: gone `seconds` after landing, every draw fading out over the last `fade`.
+ */
+export interface PlayOut {
+  readonly seconds: number; readonly fade: number;
+  /**
+   * Playing out, it does not give way to a newcomer that lacks room, as other tails do; it is weighed by the usual
+   * eviction at its own importance instead, and its reserve still follows what it has live.
+   */
+  readonly hold?: boolean;
+}
+export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
+  // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
+  // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
+  // that time changes with the star level is not checked yet.
+  // hold: it lasts as the original's does (11-13 Node 8 v 8: without it, it gave way the frame it began to play out).
+  '20cd67dc': { seconds: 2.3, fade: 0.5, hold: true },
+};
+
+/**
  * Emitters of a system that never emit here, by emitter name: their particles and every child they would spawn are gone.
  * Each Sevika slot result layer (14.24 map22.bin TFT13_Lieutenant_Base_Slots_*_Child_Mirrored) opens with an
  * `Alpha_Boarder` whose child is the whole slot machine again; the board already plays that machine as its own cue, so
@@ -333,4 +548,38 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+};
+
+/**
+ * Attached-mesh emitters held off screen, by system and emitter name, until their look is checked against the original.
+ * The rest of each system draws as before. Only for an overlay measured to draw wrong on the board.
+ */
+export const ATTACHED_HELD_BACK: Readonly<Record<string, readonly string[]>> = {
+  // Jayce R_Melee_LightningCall: Avatar_Fresnel is a black-based layer lit only by its rim, and our rim leaves it unlit, so
+  // the layer adds nothing (#619 Windows probe, 11-12). Held with Avatar_Hammer until the rim is checked against an
+  // original of the same star.
+  '8d9d784b': ['Avatar_Hammer', 'Avatar_Fresnel'],
+  // Jayce E_Knockback_Wave, which plays with it: Avatar_Dark is a near-black copy of the body, meant to sit under
+  // Avatar_Orange and Avatar_Yellow, black-based layers lit only by their rims; with those unlit, the dark copy alone drew
+  // a black shell over Jayce (#619 Windows probe, 11-12).
+  'e07c8088': ['Avatar_Dark', 'Avatar_Orange', 'Avatar_Yellow'],
+};
+
+/**
+ * Attached-mesh emitters that keep covering the whole host although they name parts, by system and emitter name.
+ * Only for a cued emitter that drew before the part filter (11-11) and whose parts our host model does not hold, so the
+ * filter would take away something the board shows today. Each stays until its host model is split into those parts.
+ */
+export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = {
+  // Jinx R_Cast_Mouth: Avatar_BodyLight names Weapon (her launcher); our Jinx model is one Body part (11-11 parts audit).
+  // Remove when the Jinx model holds the launcher as its own Weapon part (or phase two filters it by bone weights).
+  '7e6f06b5': ['Avatar_BodyLight'],
+  // Leona W_buf: Avatar3 names a part hashed 0xddb924a1 that is none of her model's Body, Sword, Equipment (11-11).
+  // Remove when the Leona model holds the part 0xddb924a1 names. Both stay provisional: if the side-by-side with the
+  // original shows the whole-body layer clearly overdone, the entry goes and the filter leaves it undrawn (Fable, 11-11).
+  '8d9a4ccc': ['Avatar3'],
+  // Sion Unleash_Cas and its Cabal copy: Avatar_Fresnel names Head, Body and Weapon, which is near enough his whole body;
+  // our Sion model is one merged part (Sion_Base_MD_lambert2SG1, 11-11 live parts audit). Remove when the model is split.
+  '9118f221': ['Avatar_Fresnel'],
+  '5afb9708': ['Avatar_Fresnel'],
 };

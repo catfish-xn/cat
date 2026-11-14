@@ -142,12 +142,12 @@ describe('batch 1 catalogue and runtime forms', () => {
     } : syntheticSystem(), readTexture: async () => new Texture() });
     const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), budget = { live: 0, max: 1500 };
     const runtime = createLtkRuntime(library, scene, () => source, { budget }); await runtime.warm('zeri');
-    expect(runtime.play('zeri', 'source', [], 0, 'attack', 'empowered')).toBe(false); expect(runtime.queued).toBe(0);
-    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack', 'empowered')).toBe(true); expect(runtime.queued).toBe(2);
+    expect(runtime.play('zeri', 'source', [], 'attack', 'empowered')).toBe(false); expect(runtime.queued).toBe(0);
+    expect(runtime.play('zeri', 'source', ['enemy'], 'attack', 'empowered')).toBe(true); expect(runtime.queued).toBe(2);
     runtime.update(8 / 30, new Camera()); expect(scene.children.map(o => o.userData.ltkSystem)).toEqual(['d160dfa9']);
     runtime.stopAction('source', 'attack'); expect(runtime.queued).toBe(0); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
     runtime.update(1, new Camera()); expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
-    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack')).toBe(true); runtime.stopUnit('source');
+    expect(runtime.play('zeri', 'source', ['enemy'], 'attack')).toBe(true); runtime.stopUnit('source');
     runtime.update(.3, new Camera()); expect(runtime.active).toBe(0);
     runtime.dispose(); expect(scene.children).toEqual([]); expect(budget.live).toBe(0);
   });
@@ -158,7 +158,7 @@ describe('batch 1 catalogue and runtime forms', () => {
     } : syntheticSystem(), readTexture: async () => new Texture() });
     const source = { root: new Group(), body: null, alive: true }, scene = new Scene(), budget = { live: 0, max: 1500 };
     const runtime = createLtkRuntime(library, scene, () => source, { budget }); await runtime.warm('buffed');
-    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true);
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true);
     runtime.update(.1, new Camera()); runtime.update(1, new Camera()); expect(runtime.active).toBe(1);
     // Two casts in a row keep one buff: a `once` visual is skipped while the first runs at full strength.
     const again = { champion: 'buffed', sourceId: 'source', targets: [], action: 'passive' as const, once: true };
@@ -176,10 +176,10 @@ describe('batch 1 catalogue and runtime forms', () => {
     runtime.fadeAction('source', 'passive', .6); runtime.update(.1, new Camera()); runtime.clear();
     expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
     // A removed caster's buff goes with him even while fading; a queued one is dropped by the fade.
-    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true); runtime.update(.05, new Camera());
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true); runtime.update(.05, new Camera());
     runtime.fadeAction('source', 'passive', .6); runtime.stopUnit('source'); runtime.update(.7, new Camera());
     expect(runtime.active).toBe(0); expect(budget.live).toBe(0);
-    expect(runtime.play('buffed', 'source', [], 0, 'passive')).toBe(true); runtime.fadeAction('source', 'passive', .6); expect(runtime.queued).toBe(0);
+    expect(runtime.play('buffed', 'source', [], 'passive')).toBe(true); runtime.fadeAction('source', 'passive', .6); expect(runtime.queued).toBe(0);
     runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toEqual([]);
   });
   it('does not pull empowered or self cues into an options-object play of the default form', async () => {
@@ -189,11 +189,11 @@ describe('batch 1 catalogue and runtime forms', () => {
     } : syntheticSystem(), readTexture: async () => new Texture() });
     const source = { root: new Group(), body: null, alive: true }, scene = new Scene();
     const runtime = createLtkRuntime(library, scene, () => source); await runtime.warm('zeri');
-    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack', { skill: 'zeri' })).toBe(true);
+    expect(runtime.play('zeri', 'source', ['enemy'], 'attack', { skill: 'zeri' })).toBe(true);
     runtime.update(8 / 30, new Camera());
     expect(scene.children.map(object => object.userData.ltkSystem)).toEqual(['215abe6e']);
     runtime.clear();
-    expect(runtime.play('zeri', 'source', ['enemy'], 0, 'attack', 'empowered')).toBe(true);
+    expect(runtime.play('zeri', 'source', ['enemy'], 'attack', 'empowered')).toBe(true);
     runtime.update(8 / 30, new Camera());
     expect(scene.children.map(object => object.userData.ltkSystem)).toEqual(['d160dfa9']);
     runtime.dispose();

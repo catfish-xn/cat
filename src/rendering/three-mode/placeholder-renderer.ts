@@ -46,6 +46,7 @@ import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL, minesFrameFor } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
+import { DEFAULT_FAR, farToCover } from './camera-far';
 import { loadChampionLighting } from './champion-lighting';
 import { createScoutStage } from './scout-stage';
 // Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
@@ -57,11 +58,11 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
-import { OverheadFollow } from './overhead-follow';
+import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
@@ -307,6 +308,8 @@ interface PieceView {
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
   castBranch?: string;
+  /** The rule's cast number for this unit's last cast (cast event `castIndex`, 1 on its first cast); 0 = not reported. */
+  castIndex: number;
   readonly attackCadence: AttackCadence;
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
@@ -344,6 +347,8 @@ interface PieceView {
   lungeWorld: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
   follow: OverheadFollow;
+  /** The loaded model's manifest id: picks its cast clips that move the bars (overhead-follow.ts CAST_TRAVEL_CLIPS). */
+  bodyModelId: string | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -397,7 +402,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const sun = new DirectionalLight(0xffffff, 1.5);
   sun.position.set(-200, 600, 300);
   scene.add(sun);
-  const camera = new PerspectiveCamera(36, 1, 1, 5000);
+  const camera = new PerspectiveCamera(36, 1, 1, DEFAULT_FAR);
   const quality = readQuality3d(typeof location === 'undefined' ? '' : location.search);
   const lighting = createPresentationLighting(scene, quality), portal = createPvpPortal(scene);
   const arrivalsEnabled = () => quality !== 'off' && !reducedMotion() && !visiting() && !stage.active;
@@ -521,7 +526,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
     font: canvasFont, ui: originalUi,
     loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
-  const boardGroup = new Group(), boardBox = new Box3();
+  const boardGroup = new Group(), boardBox = new Box3(), arenaBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
   // Fills the board box (#board-root): the board, bench and table props, the near edge padded for the drop marker by the
@@ -567,6 +572,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // The last shift moved the extents: back off just enough that they still fit.
     for (let i = 0; i < 16 && !fits(distance); i++) distance *= 1.02;
     place(distance);
+    // Reach the arena's skybox from wherever the framing put the camera (camera-far.ts).
+    const far = farToCover(camera.position, arena?.ready ? arenaBox.setFromObject(arenaGroup) : arenaBox.makeEmpty());
+    if (far !== camera.far) { camera.far = far; camera.updateProjectionMatrix(); }
   };
   scene.add(boardGroup);
   // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
@@ -574,8 +582,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   scene.add(arenaGroup);
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
+  // The arena's baked lightmap, read through the same local store as the models (arena-lightmap.ts).
+  const lightmapEntry = boardEntry?.lightmap, lightmapReader = models.reader, assetRoot = options.assetBase;
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
+    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid,
+    lightmapEntry && lightmapReader && assetRoot
+      ? { gamma: lightmapEntry.gamma, scale: lightmapEntry.scale, tint: lightmapEntry.tint, load: () => lightmapReader.readTexture(assetUrl(assetRoot, lightmapEntry.path)) }
+      : undefined) : null;
   const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
   let boardKey = '', showingOwnBoard = true;
   /**
@@ -680,8 +693,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
-  const ltkCastCounts = new Map<string, number>();
-  const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId);
+  const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.starLevel);
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
@@ -703,13 +715,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
-    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe }) : null;
+    floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
+    board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
   const anvilIdle = ltk ? createAnvilIdleLoop({
-    play: (key, id) => ltk.play(key, id, [], 0, 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
+    play: (key, id) => ltk.play(key, id, [], 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
   }) : null;
   const anvilPieces = function* () { for (const [id, view] of pieces) if (isAnvilPiece(view.definitionId)) yield { id, definitionId: view.definitionId, alive: view.alive && !view.disposed }; };
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
@@ -940,7 +954,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.mixer.setForm(view.form);
       view.follow = OverheadFollow.of(lease.scene, lease.animations, lease.animationNames.idle);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+      view.bodyModelId = definitionId;
+      if (import.meta.env?.DEV) { const missing = missingCastTravelClips(definitionId, lease.animations); if (missing.length) console.warn(`[overhead] ${definitionId}: listed cast travel clips not in the model: ${missing.join(', ')}`); }
+      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
       flushRise(view);
@@ -975,11 +991,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = new Group();
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
-    const view: PieceView = { root, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, stars: null, castIndex: 0, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow() };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -997,7 +1013,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
       view.mixer.setForm(view.form);
-      view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index,
+      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
         { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
       view.mixer.apply(view.state.output);
     }
@@ -1109,7 +1125,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkCastCounts.clear(); ltkEvents.clear(); statusPoses.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1175,7 +1191,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const release = releaseOf(source);
     return release ? { variant, release } : variant;
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0,
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
@@ -1184,8 +1200,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, castIndex, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, castIndex, action, action === 'attack' ? attackTiming(source, variant) : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1439,7 +1455,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
-      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 0, 'passive', { delay: renataShieldDelay(event, events, recipient) }))) {
+      if (recipient?.alive && recipient.root.visible && !(!reducedMotion() && ltk?.play('renata', shieldTarget!, [shieldTarget!], 'passive', { delay: renataShieldDelay(event, events, recipient) }))) {
         const fx = takeShield(grid?.radius ?? 34, reducedMotion());
         recipient.root.add(fx.object); addReference(fx, 'critical');
       }
@@ -1466,21 +1482,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       if (event.type === 'cast') {
-        const source = pieces.get(event.sourceId); if (source) source.castBranch = batch2Vfx.branch(event);
+        const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, 0, planned.variant);
+        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
-        const castIndex = ltkCastCounts.get(event.sourceId) ?? 0;
-        ltkCastCounts.set(event.sourceId, castIndex + 1);
         face(event.sourceId, event.targetIds[0]);
-        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { if (planned.fresh) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.
+        if (current && pieces.get(event.sourceId)?.definitionId === 'vi') { const held = pieces.get(event.targetIds[0]); if (held?.alive) held.control.grab(GRAB_3D.viSlamTicks / 20); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
@@ -1934,28 +1950,33 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
-      // The bars, star row and stun ring stand over the model where it is now: its lunge and the clip's own root travel
-      // (a jump, a dash) on top of its spot; the knock-up lift is already in `lift`.
-      const travel = view.body ? view.follow.update(seconds, view.lungeWorld) : null;
+      // The bars, star row and stun ring stand over the piece's spot (its root, which slides to a new cell when the rules
+      // move it: a step, a leap, a dash) plus the knock-up lift in `lift`. Only a listed cast clip (one whose body leaves
+      // its cell whole: overhead-follow.ts CAST_TRAVEL_CLIPS) also moves them with the body's clip travel and lunge; any other
+      // cast leaves them put, as the original's in-place casts do. The list is per clip, so a walk during or just before
+      // a cast changes nothing.
+      const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);
+      const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
       const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
-      const overY = view.root.position.y + (travel?.y ?? 0);
+      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
+        headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
       const benchedInCombat = !!fighting && view.onBench;
       view.overhead.setBarsHidden(benchedInCombat);
       if (view.stars) {
         view.stars.setLevel(starUps.level(id, view.starLevel));
         view.stars.object.scale.setScalar(STAR_SIZE * starUps.scale(id));
-        view.stars.object.position.set(overX, overY + view.starHeight + lift, overZ);
+        view.stars.object.position.set(overX, over.stars, overZ);
         // The original star emblem on the bar replaces the star row (as in the client); the row stays as a fallback.
         view.stars.object.visible = view.root.visible && !view.overhead.tiered && !benchedInCombat && view.alive;
       }
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
-      view.overhead.object.position.set(overX, overY + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2), overZ);
+      view.overhead.object.position.set(overX, over.bar, overZ);
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);
-        view.halo.object.position.set(overX, overY + height * CONTROL_3D.headShare + lift, overZ);
+        view.halo.object.position.set(overX, over.halo, overZ);
         view.halo.object.visible = view.root.visible;
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).

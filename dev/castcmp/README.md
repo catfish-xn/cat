@@ -25,7 +25,7 @@ jobs 文件每行格式是 `<脚本> <英雄> <输出名> [参数…]`，`#` 开
 ```
 v-capture.cjs camille cast-camille --dist 1 --star 3
 v-capture.cjs viktor cast-viktor --dist 3 --star 3 --slam 1 --ms 4000
-v-capture-attack.cjs gangplank atk-gangplank-back --dist 3 --star 3 --form back
+v-capture-attack.cjs jayce atk-jayce-ranged --dist 3 --star 3 --form ranged
 ```
 
 ```bash
@@ -43,5 +43,13 @@ node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 ```
 
 常用参数：`--dist` 是目标距离（格），`--star` 是星级（默认 3）；`--ms` 是时长，或用 `--times` 直接给时间点；`--warm N` 表示正式录之前先放 N 次技能，用于多段技能选段；`--form`、`--move`、`--outcome` 用来指定形态和施法分支；`--slam 1` 是维克托的砸地。
+
+`--hide-units 1`：不画单位模型（血条、星级、影子和特效照画），每帧左上角和 keyframes 图头都标“单位已隐藏”。`--pin-foe N`（只用于假人，N 为 1–5）：只放一个假人，在施法者正前方同一列 N 格处，不走动、不还手，施法者也不动，技能只打它；每帧和图头标“假人”，gate.json 记 `pinFoe`、`hideUnits`，`dist` 记为 N。不带这两个参数时行为不变。
+
+关于 `--dist`：假人模式下，目标确实放在施法者前方 `dist` 排（默认 4 个假人：三个并排、一个在后）；画面上看着贴脸，是因为假人数量多、施法者模型高（如 2★ 维克托）。`--real 1` 时双方按真实规则走位，近战目标会自己走到施法者身边，`--dist` 只决定开局站位。要固定距离、单个目标，用 `--pin-foe N`。
+
+实战（`--real 1`）的录制窗口用同一套参数选：`--cast-index N` 以本单位第 N 次施法为锚点（默认第 1 次）；`--from-start 1` 从开战（第 0 tick）开始录，锚点之前的普攻和施法都在窗口里；`--lead-ms MS` 从锚点前 MS 毫秒开始（不早于开战）；都不带时和以前一样，从锚点前 0.5 秒开始。`--from-start` 和 `--lead-ms` 只能选一个。实战录制的 `--times` 必须从 0 开始（jobs-check 不符合判 FAIL）。gate.json 记 `window`（锚点和起点），`actionAtMs` 是锚点施法在录制时钟上的位置。
+
+`--foe-offset K`（只用于 `--real 1`）：所有目标整体横移 K 列（正数往右），让目标站在施法者侧前方，比如光束横着出现在画面里，而不是正对镜头被透视压短。平移后每个目标都要在第 0–6 列（`--nfoes 1` 时最好用）；不带时站位不变。
 
 录的是当前检出的代码。如果要录测试服上的版本，先检出测试服的 SHA 再录。

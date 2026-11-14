@@ -29,4 +29,13 @@ function timer() {
   return name => console.log('T', name, ((Date.now() - t0) / 1000).toFixed(1) + 's');
 }
 
-module.exports = { launchOptions, timeline, timer };
+// --form: the renderer (placeholder-renderer.ts) draws the front form for 'melee' only and the back form for anything else,
+// so a value outside the rules' UnitForm ('melee' | 'ranged', seat-mechanics/types.ts) silently recorded the back form
+// (11-13: --form front on Elise and Jayce played their ranged systems).
+const FORMS = ['melee', 'ranged'];
+/** Why a --form value cannot be used, or null (undefined: no --form given). */
+function formProblem(form) {
+  return form === undefined || FORMS.includes(form) ? null : `--form must be ${FORMS.join(' or ')} (the renderer draws anything but melee as the ranged form), got ${form}`;
+}
+
+module.exports = { launchOptions, timeline, timer, FORMS, formProblem };

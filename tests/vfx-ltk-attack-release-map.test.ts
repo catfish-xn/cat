@@ -51,7 +51,7 @@ describe('attack cue segment mapping (LtkPlayOptions.release)', () => {
       const units = new Map<string, VfxUnit>([['caster', { root: new Group(), body: new Group(), alive: true }], ['target', { root: new Group(), body: new Group(), alive: true }]]);
       for (const unit of units.values()) unit.root.add(unit.body!);
       const scene = new Scene(), camera = new Camera(), runtime = createLtkRuntime(library, scene, id => units.get(id));
-      expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', options)).toBe(true);
+      expect(runtime.play('jinx', 'caster', ['target'], 'attack', options)).toBe(true);
       let first = -1;
       for (let step = 0; step < 100 && first < 0; step++) {
         runtime.update(0.01, camera);
@@ -91,7 +91,7 @@ describe('attack cue segment mapping (LtkPlayOptions.release)', () => {
       const library = createVfxLibrary('/root/', { readJson: async () => ({ version: 1, systems: {}, assets: {}, skills: { jinx: [hit(0.5)] } }), readTexture: async () => new Texture() });
       const runtime = createLtkRuntime(library, new Scene(), () => undefined);
       for (const release of [{ atSeconds: Number.NaN, clipSeconds: 0.8, tailSpeed: 1 }, { atSeconds: 0.2, clipSeconds: 0, tailSpeed: 1 }, { atSeconds: 0.2, clipSeconds: 0.8, tailSpeed: 0 }, { atSeconds: -1, clipSeconds: 0.8, tailSpeed: 1 }])
-        expect(runtime.play('jinx', 'caster', ['target'], 0, 'attack', { release })).toBe(false);
+        expect(runtime.play('jinx', 'caster', ['target'], 'attack', { release })).toBe(false);
       runtime.dispose(); library.dispose();
     });
   });

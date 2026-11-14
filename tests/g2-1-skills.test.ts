@@ -39,9 +39,9 @@ describe('G2-1 independent fixed-seed skill oracles (seed 42)', () => {
     expect(raw(r.events)).toEqual([350, 245]);
     expect(r.state.units.find(u => u.id === 'e')!.mechanismState!.statuses.map(s => s.kind)).toContain('burn');
   });
-  it('Ekko: primary 290, secondary 145, flat MR reduction 5', () => {
+  it('Ekko: primary 300, secondary 150 (14.24b), flat MR reduction 5', () => {
     const r = stepCombat(battle([hero('ekko'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }));
-    expect(raw(r.events)).toEqual([290, 145]);
+    expect(raw(r.events)).toEqual([300, 150]);
     expect(r.state.units.find(u => u.id === 'e')!.mechanismState!.statuses).toHaveLength(1);
   });
   it('Blitzcrank: 470 shield and 40 magic damage plus an outgoing damage debuff', () => {
@@ -76,9 +76,9 @@ describe('G2-1 independent fixed-seed skill oracles (seed 42)', () => {
     expect(r.state.units.find(u => u.id === 'p')!.expansion!.attacksRemaining).toBeLessThan(8);
     expect(advance(initial, 25)).toEqual(r);
   });
-  it('Malzahar: 80 on cast, five 14-damage infections first pulse at tick21', () => {
+  it('Malzahar: 80 on cast, five 15-damage (14.24b) infections first pulse at tick21', () => {
     const r = advance(battle([hero('malzahar'), dummy()], { rngState: 42 }), 21);
-    expect(raw(r.events).filter(n => n === 14)).toHaveLength(5); expect(raw(r.events)[0]).toBe(80);
+    expect(raw(r.events).filter(n => n === 15)).toHaveLength(5); expect(raw(r.events)[0]).toBe(80);
   });
   it('Amumu: passive 10 magic damage each second; no cast or mana expenditure', () => {
     const r = advance(battle([hero('amumu', { maxMana: 0, mana: 0, cooldownTicks: 1000 }), dummy()], { rngState: 42 }), 40);

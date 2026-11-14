@@ -228,6 +228,17 @@ export function readMesh(primitive: VfxValue | null): MeshModel | null {
   };
 }
 
+/**
+ * `mSubmeshesToDraw` and `mSubmeshesToDrawAlways` of an attached-mesh primitive, read whether or not it names a mesh:
+ * the attached kind draws its host's skin, and these narrow it to parts (a weapon, a dress). Null when neither is written.
+ */
+export function readAttachedSubmeshes(primitive: VfxValue | null): { readonly draw: readonly string[]; readonly always: readonly string[] } | null {
+  const held = field(primitive, PRIMITIVE_FIELD.mesh);
+  if (held?.type !== "struct") return null;
+  const draw = hashes(field(held, MESH.submeshes)), always = hashes(field(held, MESH.submeshesAlways));
+  return draw.length || always.length ? { draw, always } : null;
+}
+
 function animationVariants(node: VfxValue | null): NamedAsset[] {
   if (node?.type !== "container") return [];
   return node.items.map(namedAsset).filter((asset): asset is NamedAsset => asset !== null);

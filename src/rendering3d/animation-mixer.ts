@@ -3,15 +3,19 @@ import type { ActionOutput, ActionPlayback } from './animation-state';
 import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations } from './contracts';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
-/** Select only supplied display context; never infer a random ability or hero augment. */
+/**
+ * Select only supplied display context; never infer a random ability or hero augment. `castIndex` is the rule's cast
+ * number from the cast event (1 on the unit's first cast); 0 means the event did not report it (an older replay), and a
+ * rotation then plays its default sequence instead of guessing.
+ */
 export function selectCastSequence(metadata: CastMetadata, castIndex: number, context: CastSelection = {}): CastSequence | undefined {
   const v = metadata.castVariants;
   if (context.hero && v?.hero) return v.hero;
   if ((context.starLevel ?? 0) >= 3 && v?.star3) return v.star3;
   if (context.branch && v?.branch && Object.hasOwn(v.branch, context.branch)) return v.branch[context.branch];
   if (context.form && v?.[context.form]) return v[context.form];
-  if (v?.rotate) {
-    const entry = v.rotate[castIndex % v.rotate.length];
+  if (v?.rotate && castIndex > 0) {
+    const entry = v.rotate[(castIndex - 1) % v.rotate.length];
     return typeof entry === 'string' ? { main: entry } : entry;
   }
   return metadata.castSequence;
@@ -202,7 +206,8 @@ export class UnitAnimationMixer {
       : state === 'attack' && !(formAttack && this.clips.has(formAttack))
         ? this.metadata.attackSequence
         : undefined;
-    const main = sequence && (Array.isArray(sequence.main) ? sequence.main[castIndex % sequence.main.length] : sequence.main as string);
+    // A clip list rotates by the rule's cast number (Ekko's three spell clips); unreported (0) plays the first.
+    const main = sequence && (Array.isArray(sequence.main) ? sequence.main[Math.max(0, castIndex - 1) % sequence.main.length] : sequence.main as string);
     const names = sequence ? [sequence.in, sequence.hold, main, sequence.out].filter((v): v is string => !!v)
       : [this.nameFor(state, context.form)];
     const clips = names.map(name => this.clips.get(name));
