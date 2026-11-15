@@ -62,7 +62,7 @@ export interface StencilState {
   readonly stencilZPass: StencilOp;
   /**
    * False for a writing mode: an emitter that writes the stencil mask draws into the mask only, never its colour (11-15,
-   * engine-wide rule chosen from Viktor's storm against the original; no asset field says so: inference).
+   * engine-wide). Basis: on-screen comparison with the original (Viktor's storm); no asset field says so (inference).
    */
   readonly colorWrite: boolean;
 }
