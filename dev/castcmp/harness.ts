@@ -111,6 +111,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     // cast of `me` and the recorded cast is the renderer's first: its effect files are fetched cold. Any playFrom() lifts it.
     let limit = real.frames.length - 1;
     const playFrom = (i: number) => { at = i; carry = 0; limit = real.frames.length - 1; show(i); };
+    // A window that opens mid-combat first hands the renderer every earlier event, effects off (real-combat.ts catchUpBatch).
+    const playWindow = (i: number) => { playFrom(i); const batch = real.catchUp(i); if (batch.length) listener.events(batch as any); };
     const advance = (ms: number) => {
       carry += ms;
       while (carry >= 50 && at < limit) {
@@ -125,14 +127,14 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       step: realStep, frame: () => show(at), reset: () => playFrom(0),
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
-      cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - real.lead)); },
+      cast() { numbers?.clear(); playWindow(Math.max(0, real.castIndex - real.lead)); },
       hold() { limit = Math.min(limit, Math.max(0, real.castIndex - real.lead - 1)); return { at, limit }; },
       // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
       // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
       // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
       // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
       // settle(): the models stand on their start cells, turned as there, at t=0 (no glide back from the warm pass's end).
-      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); settle(); },
+      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playWindow(from); settle(); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, startTick: Math.max(0, real.castIndex - real.lead), ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
@@ -223,7 +225,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   }, start.castNumber ?? 1, anchor);
   if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
   const lead = rc.leadTicksFor(run.castIndex, window);
-  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {
