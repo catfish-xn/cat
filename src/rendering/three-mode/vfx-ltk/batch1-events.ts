@@ -47,6 +47,14 @@ const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamag
 
 /** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
 const STEB_ABILITY = 'steb-ability';
+/**
+ * Whether a shield layer key (combat-replay-view.ts 'shieldLayerChanged': the layer's source key, a JSON array
+ * [combat, owner, kind, definition, ...]) is Irelia's own ability shield on `holder`.
+ */
+export function isIreliaShield(key: unknown, holder: string): boolean {
+  if (typeof key !== 'string') return false;
+  try { const k = JSON.parse(key); return Array.isArray(k) && k[1] === holder && k[2] === 'ability' && k[3] === 'irelia-ability'; } catch { return false; }
+}
 
 export function createBatch1VfxEvents(definition: (id: string) => string | undefined, star: (id: string) => number | undefined = () => undefined) {
   const units = new Map<string, SeenUnit>();
@@ -107,6 +115,18 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Irelia: her stance and her swipe follow her shield, not fixed times. Her cast plays the stance; when the rules end
+        // her ability shield (shieldLayerChanged depleted, emptied early, or expired, at the end of its time) the stance stops
+        // and the swipe plays there, as her strike lands (its damage packet follows within a tick). A cast that grants her
+        // no shield (Blade Dance) draws no stance at all.
+        if (event.type === 'shieldLayerChanged' && (event.reason === 'depleted' || event.reason === 'expired')
+          && definition(event.targetId) === 'irelia' && isIreliaShield(event.key, event.targetId)) {
+          plan.stopCast = event.targetId;
+          plan.extra.push({ champion: 'irelia', sourceId: event.targetId, targets: [], action: 'passive', skill: 'irelia-swipe' });
+        }
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
+          && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
+          plan.skipCast = true;
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);

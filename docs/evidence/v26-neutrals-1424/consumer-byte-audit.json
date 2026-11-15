@@ -3730,9 +3730,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5241,
+      "currentBytes": 5353,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ecb28763da1164ed3e82ec279f848bffd3629f1ade2258aefe46cf5f8aab110d",
+      "currentSha256": "8033793a266e10ff045da2909618310241c268f8a8d9db23a0220b3de501da54",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
@@ -3746,9 +3746,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 20922,
+      "currentBytes": 21097,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "052021ca79c8c14281e333725a21c027a6cca6ac9fa43350ff642132f408aa7b",
+      "currentSha256": "20e1c72be39c08afc86d223f95d0ae32e38847730bf7399cf8f74a481f99d2f2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
@@ -3827,6 +3827,14 @@
       "currentBytes": 2183,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "317e4d987eafd3a09666b7b30f55873822a457ee1fd450303e8a3308472bd432",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-irelia-shield-end.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4498,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4e4ea2888683099a2e623dd1b97ab2f870d13997e7c344fe3074bb47904cafbc",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-long-background.test.ts": {

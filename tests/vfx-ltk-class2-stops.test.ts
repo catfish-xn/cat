@@ -47,7 +47,8 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
     expect(nocturne.find(entry => entry.action === 'cast')).toMatchObject({ delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true });
     expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', duration: 0.5, stopAfter: 0.1, fadeOut: true });
     const stance = cue(CUE_OVERRIDES.irelia, '67665513');
-    expect(stance).toMatchObject({ delay: 0, duration: 1.6 });
+    // Was duration 1.6 (fixed); now the rules' ShieldDuration, stopped where the shield ends (batch1-events.ts).
+    expect(stance).toMatchObject({ delay: 0, duration: 3 });
     expect(stance.stopAfter).toBeUndefined();
   });
 
