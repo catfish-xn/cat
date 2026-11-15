@@ -24,6 +24,16 @@ function step(ms: number) {
 const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
+import { AnimationMixer } from 'three';
+// Animation clocks (Fable 11-15): a unit that idles from its model's load (a dummy, a little legend, never recast) carried
+// a phase set by which loading step its model finished on, so separate recordings of one build drew those units in one of
+// two poses (GPU batches 11-15: max diff 96 on the units, 0 on the board). Every three.js mixer that updates is kept here;
+// v-capture calls __resetClocks() after the warm pass and the fresh combat, before the reference frame, so every unit
+// starts the recorded window from clip time 0 whatever the load timing was.
+const mixers = new Set<AnimationMixer>();
+const mixerUpdate = AnimationMixer.prototype.update;
+AnimationMixer.prototype.update = function (this: AnimationMixer, delta: number) { mixers.add(this); return mixerUpdate.call(this, delta); };
+(window as any).__resetClocks = () => { for (const m of mixers) m.setTime(0); frameAfter(0); return mixers.size; };
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
 const probes = installProbes(() => clock);
 const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });

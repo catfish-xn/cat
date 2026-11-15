@@ -10,6 +10,8 @@
 - `assets.cjs`：素材服务，带 CORS。传 `--upstream <assets3d 地址>`（或设环境变量 `CASTCMP_ASSET_UPSTREAM`）时，缺的文件会从那个地址拉下来缓存到 `--root`；不传时只用 `--root` 里已有的文件。
 - `batch.cjs`：批量跑 jobs 文件，可以续跑。Windows 和 Linux 都能用，替代原来的 `run.sh` / `lane.sh`。
 - `common.cjs`：按系统决定浏览器启动参数，并生成 30fps 时间点。
+- `render-meta.json` / `ref-units.png`（v-capture 每次都写）：录制前的渲染状态。内容包括 WebGL renderer/vendor 字符串、上下文属性、MSAA 采样数、画布和绘图缓冲尺寸、devicePixelRatio，以及素材服务文件加载完成的先后次序（作为贴图上传次序的近似）。另外存一张参考帧，是单位站好、录制的施法还没发出时，单位区域的 PNG，并记下它的 sha256 指纹。gate.json 的 meta.render 里有摘要。
+- `ref-pair.cjs <录制A> <录制B>`：判断两段录制能不能逐像素对比（Fable 11-15 的同状态配对口径）。比较两段的参考帧，单位区域最大差 ≤ 8 才算配对，同时列出 render-meta 中不同的字段。退出码：0 表示配对，1 表示状态不同，2 表示缺 meta。
 
 ## 浏览器
 

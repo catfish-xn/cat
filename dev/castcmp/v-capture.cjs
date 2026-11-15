@@ -3,6 +3,7 @@
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)
 //   [--kill foe,foe2 --killlead MS]: dummies only; these drop dead (still drawn) MS before the recorded action
+//   [--render-probe 1]: also expose the renderer's debug hook (?debug3d) so render-meta.json lists each unit's animation clock
 //   [--hide-units 1]: unit models are not drawn (bars, stars, shadows and effects are); every frame and the keyframes caption say so
 //   [--pin-foe N]: dummies only; one dummy N hexes straight ahead of the caster (overrides --dist/--nfoes; casts target it), labelled 'pinned dummy'
 //   [--anchor attack-hit | event:<type>]: --real only; the window is about me's N-th basic attack that hits, or N-th display event
@@ -25,7 +26,7 @@
 //   [--pin-foe2 M]: with --pin-foe N (M > N, at most 5): a second still dummy on the line from the caster through the first, about M hexes out
 // Records one cast as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
-const { launchOptions, timeline, timer, formProblem } = require('./common.cjs');
+const { launchOptions, timeline, timer, formProblem, renderMeta } = require('./common.cjs');
 const gate = require('./gate.cjs');
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2); const unit = args[0], out = path.resolve(args[1]);
@@ -49,7 +50,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') || opt('render-probe') === '1' ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -105,11 +106,15 @@ async function unbind(page, tick, rebind) {
     mark('warm measured ' + waited);
   }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
+  // Every unit's animation clock to 0 (harness.ts __resetClocks): an idle dummy's pose no longer depends on its load timing.
+  const clocks = await page.evaluate(() => window.__resetClocks?.() ?? null); mark(`clocks reset (${clocks} mixers)`);
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
   const clip = { x: Math.max(0, cx - half), y: Math.max(0, cy - half * 3 / 4), width: Math.min(960, half * 2), height: Math.min(720, half * 1.5) };
   const fullClip = { x: 0, y: 0, width: 1920, height: 1080 }; fs.writeFileSync(path.join(out, 'boxes.json'), JSON.stringify({ boxes, ids: ['me', 'foe', 'foe2', 'foe3', 'foe4'] }));
+  // Render state and reference frame (units standing, before the recorded cast): render-meta.json, ref-units.png.
+  const render = await renderMeta(page, out, boxes); mark(`render ${render.renderer} samples ${render.samples} dpr ${render.dpr} ref ${render.refSha}`);
   // The overlay counts below cover the recorded window only: peaks and counters the warm pass left are cleared here.
   await page.evaluate(async () => {
     const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
@@ -143,7 +148,7 @@ async function unbind(page, tick, rebind) {
     return runtime?.ATTACHED_LAYER_STATS ? { ...JSON.parse(JSON.stringify(runtime.ATTACHED_LAYER_STATS)), cap: runtime.ATTACHED_LAYER_CAP, ...attached?.ATTACHED_STATS } : null;
   }), null, 2));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: opt('pin-foe') ? (opt('pin-foe2') ? 2 : 1) : Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), anchor: opt('anchor') ?? 'cast', start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor` } } : {}), args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), anchor: opt('anchor') ?? 'cast', start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor` } } : {}), render, args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);
