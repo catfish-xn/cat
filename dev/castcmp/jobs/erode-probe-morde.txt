@@ -1,0 +1,10 @@
+# REC ONLY (11-15): Mordekaiser E a7c49a29 stencil / erosion probe on the natural-end branch (705a2156): the cue plays to the system's own end.
+v-capture.cjs mordekaiser er-morde-full --star 2 --ms 3000 --only a7c49a29 --probe emitters --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-walls --star 2 --ms 3000 --only a7c49a29 --solo Mesh_Walls_Red --probe emitters --emitters Mesh_Walls_Red --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-walls-dbg --star 2 --ms 3000 --only a7c49a29 --solo Mesh_Walls_Red --erodedebug Mesh_Walls_Red --probe emitters --emitters Mesh_Walls_Red --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-cap --star 2 --ms 3000 --only a7c49a29 --solo Stencil_Cap --probe emitters --emitters Stencil_Cap --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-hand --star 2 --ms 3000 --only a7c49a29 --solo Stencil_Cap,Mesh_Hand --probe emitters --emitters Stencil_Cap,Mesh_Hand --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-edge --star 2 --ms 3000 --only a7c49a29 --solo Stencil_Cap,Mesh_Edge --probe emitters --emitters Stencil_Cap,Mesh_Edge --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-gradient --star 2 --ms 3000 --only a7c49a29 --solo Stencil_Cap,Stencil_Gradient --probe emitters --emitters Stencil_Cap,Stencil_Gradient --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-inner --star 2 --ms 3000 --only a7c49a29 --solo Stencil_Cap,Stencil_InnerDarkness --probe emitters --emitters Stencil_Cap,Stencil_InnerDarkness --systems a7c49a29 --layers none --snapshot d3ffe5808978
+v-capture.cjs mordekaiser er-morde-testers-nocap --star 2 --ms 3000 --only a7c49a29 --solo Mesh_Hand,Mesh_Edge,Stencil_Gradient,Stencil_InnerDarkness --probe emitters --emitters Mesh_Hand,Mesh_Edge,Stencil_Gradient,Stencil_InnerDarkness --systems a7c49a29 --layers none --snapshot d3ffe5808978
