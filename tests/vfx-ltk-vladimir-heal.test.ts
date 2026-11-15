@@ -34,6 +34,9 @@ describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies'
   it('a normal cast (one enemy) and a Blood Pact cast (two enemies, no heal) put neither the heal missile nor the heal ring on an enemy', () => {
     const castCues = CUE_OVERRIDES.vladimir!.filter(cue => (cue.action ?? 'cast') === 'cast');
     expect(castCues.map(cue => [cue.system, cue.event])).toEqual([[SPIKES, 'hit']]);
+    // Only the three spikes draw: the blood splatter, drops and strands are hidden (the original's cast shows none).
+    expect(castCues[0]!.hide).toEqual(['Splatter', 'bloodslash', 'bloodstrands']);
+    expect(castCues[0]!.hide!.some(name => name.startsWith('spike'))).toBe(false);
     for (const targets of [['foe'], ['foe', 'foe2']]) {
       const mapped = mapSkillTimeline(castCues, 'vlad', targets);
       expect(mapped.unsupported).toEqual([]);

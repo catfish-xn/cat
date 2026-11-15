@@ -203,9 +203,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   vladimir: [
     { system: 'ffa688fa', action: 'attack', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 0.3, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
-    // His cast's on-target hit: the blood spikes his Q strikes enemies with (TFT13_Vladimir_Base_Q_tar), at the cast's damage
-    // (same tick: no delay). The export never cued it; its duration is a fit.
-    { system: 'ad4b639e', action: 'cast', event: 'hit', delay: 0, duration: 0.9, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // His cast's on-target hit: only the three red spikes of his Q_tar (TFT13_Vladimir_Base_Q_tar) on each enemy. Its blood
+    // splatter, drops and strands are in the asset but the original's cast shows none of them, so they are left out by the
+    // original's footage. The cast's damage lands on the cast tick and the original's spikes show from about half a second
+    // after it (the cast animation's fixed lead): the delay and the duration are fitted. The export never cued this system.
+    { system: 'ad4b639e', action: 'cast', event: 'hit', delay: 0.5, duration: 0.35, bone: 'C_BUFFBONE_GLB_CHEST_LOC', hide: ['Splatter', 'bloodslash', 'bloodstrands'] },
   ],
   // The purple disc plays once on the cast as well as on each empowered swing.
   nocturne: [

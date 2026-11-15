@@ -3948,9 +3948,9 @@
     "tests/vfx-ltk-vladimir-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7335,
+      "currentBytes": 7619,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "eeec6b825464f8fc0b793543a3c56d14d76deff1151aced35956ff11433b2165",
+      "currentSha256": "f08f99f5e5c2c8561c08f51bb6379d33e7db396ea7eed694e42dcb066c955e7c",
       "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {
