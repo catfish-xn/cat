@@ -100,6 +100,16 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Twisted Fate's index list plus W_BlueCard 8cec23d9 on him at his cast (its Light_Projected
+  // emitter carries the blue card's hit colour; candidate for the original's blue ring at his feet).
+  twistedfate: [
+    { system: '1e05be94', action: 'attack', event: 'projectile', bone: 'L_hand', delay: 0.2600000063578288, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5600000063578288, duration: 1.5 },
+    { system: '8740c168', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'R_Hand' },
+    { system: '5c6b6f6a', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.4, bone: 'R_Hand', travelSeconds: 0.4 },
+    { system: 'e6795c96', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: '8cec23d9', action: 'cast', event: 'cast-start', delay: 0, duration: 2 },
+  ],
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
