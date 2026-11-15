@@ -186,27 +186,29 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
-  // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
+  // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out. The chain, the mark and the
+  // empowered glow play their own life and end when the rule's chain does (CUE_END_STOPS 'leblanc-chain').
   leblanc: [
     { system: '9ad0dd7c', action: 'attack', event: 'projectile', bone: 'weapon_b', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5666666666666667, duration: 1.5 },
     { system: '93fe62de', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.45, travelSeconds: 0.18, bone: 'BUFFBONE_CSTM_WEAPON_2', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'c54516b3', action: 'cast', event: 'hit', delay: 0.32, duration: 0.45, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
-    { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
-    { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
-    { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 3.5, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
+    { system: 'c54516b3', action: 'cast', event: 'hit', delay: 0.32, duration: 1, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
+    { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 7.55, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 7.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
     { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
-    { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.2 },
+    { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Cast keeps the green aura; every bolt is an empowered attack (batch1-events aims it at the enemies it pierced).
   // The cast event targets Twitch himself, so a cast-time bolt had nowhere to fly and failed the whole cast (11-13).
+  // The weapon glow plays its own life and ends when the empowered bolts are spent (CUE_END_STOPS 'twitch-volley').
   twitch: [
     { action: 'attack', system: 'ba5fe1c0', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
     { action: 'cast', system: '54af463f', event: 'cast-start', delay: 0, duration: 0.5, stopAfter: 0.2, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'cast', system: '2beb0657', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
+    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 8, stopAfter: 7.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'attack', variant: 'empowered', system: '5938e29d', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
@@ -593,4 +595,15 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   // our Sion model is one merged part (Sion_Base_MD_lambert2SG1, 11-11 live parts audit). Remove when the model is split.
   '9118f221': ['Avatar_Fresnel'],
   '5afb9708': ['Avatar_Fresnel'],
+};
+
+/**
+ * Systems a rule's display-only "effect ended" event (abilityEffectEnded) ends early: the caster's runs of these systems
+ * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
+ * it plays out; with it, it ends when the rule's effect does.
+ */
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley', readonly string[]>> = {
+  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
+  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
+  'twitch-volley': ['900dd2d2'],
 };

@@ -65,6 +65,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
+import { CUE_END_STOPS } from './vfx-ltk/cue-overrides';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
@@ -1469,6 +1470,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
+      // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
+      if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
       // attacker's effect; a periodic tick does not either, or a damage-over-time zone would strobe its victims).
       if (event.type === 'packetDamage' && currentEffect && event.hit && event.hpDamage + event.absorbed > 0 && !reducedMotion()

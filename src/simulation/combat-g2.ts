@@ -144,7 +144,10 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
     pierced.forEach((t, n) => {
       const raw = Number(BigInt(amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') })) * BigInt(10000 - Math.round(v('DamageReduction') * 10000)) ** BigInt(n) / 10000n ** BigInt(n));
       ctx.packets.push({ source: { ...origin(unit), sourceKind: 'attack' }, targetId: t.id, raw, damageType: 'physical', actionSeq: seq, ordinal: n, delivery: 'basic-attack', critEligibility: 'basic', area: true, triggeringCastActionSeq: null });
-    }); state.attacksRemaining--; return true;
+    }); state.attacksRemaining--;
+    // Display only: the last empowered attack is spent.
+    if (state.attacksRemaining === 0) ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'twitch-volley', targetIds: [] });
+    return true;
   }
   if (name === 'zeri' && unit.runtime.attackCount % v('NumOfAttacks') === 0) {
     const raw = amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') });
@@ -188,6 +191,9 @@ export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): v
   // Snapshot damage totals only when a skill/trait consumes them.
   if (ctx.units.some(u => ['singed', 'blitzcrank', 'leblanc'].includes(champion(u)) || mechanic(u, 'automata', 'crystals') || mechanic(u, 'firelight', 'periodTicks')))
     for (const unit of ctx.units) expansion(unit);
+  // Display only: a LeBlanc chain runs out this tick (the redirect reads chainUntilTick > tick, so it is already over).
+  for (const unit of ctx.units) if (champion(unit) === 'leblanc' && unit.expansion && unit.expansion.chainUntilTick === ctx.tick)
+    ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'leblanc-chain', targetIds: [...unit.expansion.chainTargets] });
   for (const unit of ctx.units.filter(u => u.alive && u.hp > 0)) {
     if (champion(unit) === 'amumu' && ctx.tick % 20 === 0)
       for (const target of areaEnemies(unit, ctx.units).filter(u => hexDistance(unit.cell, u.cell) <= 1)) hit(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'Damage') }), nextSeq(), 0, 'magic', true, origin(unit), true);
