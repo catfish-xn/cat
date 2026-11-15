@@ -1,8 +1,9 @@
-import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
+import { AmbientLight, Bone, BoxGeometry, Camera, EqualStencilFunc, KeepStencilOp, ShaderMaterial, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
 import { clipUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { BOARD_REFERENCES, BOARD_STENCIL_REFERENCE, stencilStates } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/stencil';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
 import { struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -113,7 +114,7 @@ describe('opt-in board ground pass', () => {
     floor.add(plane, overlay); scene.add(floor);
     const seen: { overlay: boolean; surface: number[] }[] = [];
     const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
-      if (scene.overrideMaterial) seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
+      if (scene.overrideMaterial?.name === 'vfx-floor-depth') seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
     } };
     createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
     expect(seen).toEqual([{ overlay: false, surface: [-100, 100, -50, 50] }]);
@@ -171,5 +172,39 @@ describe('particles clipped under the play surface', () => {
     expect(await materialOf({})).not.toContain('vPlayWorld');
     expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}) })).toContain('vPlayWorld');
     expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}), isGroundLayer: { type: 'bool', value: true } }, true)).not.toContain('vPlayWorld');
+  });
+});
+
+// 11-15: the board's play surface writes stencil reference 4 each frame (fitted, not the original's): Viktor's R warning
+// MAP_DISC_HIGH_WRITE, a TestEqual tester of 4 with no writer of its own, draws on the board alone instead of untested.
+describe('the board writes its stencil reference', () => {
+  it('draws the play surface alone, stencil only, after the depth-only redraw, and notes reference 4 for the frame', () => {
+    const scene = new Scene(), camera = new Camera(); camera.layers.enable(2);
+    const floor = new Group(), plane = new Mesh(new PlaneGeometry(200, 100).rotateX(-Math.PI / 2), new MeshBasicMaterial());
+    const wall = new Mesh(new BoxGeometry(200, 20, 10), new MeshBasicMaterial()); wall.position.z = 60;
+    floor.add(plane, wall); scene.add(floor);
+    const seen: { override: string | null; plane: boolean; wall: boolean }[] = [];
+    const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
+      if (camera.layers.isEnabled(FLOOR_LAYER)) seen.push({ override: scene.overrideMaterial?.name ?? null, plane: plane.visible, wall: wall.visible });
+    } };
+    createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
+    expect(seen).toEqual([{ override: null, plane: true, wall: true }, { override: 'vfx-floor-depth', plane: true, wall: true },
+      { override: 'vfx-board-stencil', plane: true, wall: false }]);
+    expect(wall.visible).toBe(true); expect(scene.overrideMaterial).toBeNull();
+    expect([...BOARD_REFERENCES]).toEqual([BOARD_STENCIL_REFERENCE]); expect(BOARD_STENCIL_REFERENCE).toBe(4);
+    // Without a play surface (the procedural board) nothing is written and the reference is gone.
+    createVfxPasses(gl as unknown as WebGLRenderer, () => [new Group()]).render(scene, camera, { early: false, late: false, soft: false });
+    expect(BOARD_REFERENCES.size).toBe(0);
+    for (const mesh of [plane, wall]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+  });
+
+  it('a TestEqual tester of the board reference with no writer is tested against it; without the board it draws untested', () => {
+    const claims = [{ use: { mode: 2 as const, ref: 4, id: null }, live: true }];
+    BOARD_REFERENCES.clear();
+    expect(stencilStates(claims)[0]!.stencilWrite).toBe(false);
+    BOARD_REFERENCES.add(BOARD_STENCIL_REFERENCE);
+    const state = stencilStates(claims)[0]!;
+    expect(state).toMatchObject({ stencilWrite: true, stencilFunc: EqualStencilFunc, stencilRef: 4, stencilZPass: KeepStencilOp });
+    BOARD_REFERENCES.clear();
   });
 });

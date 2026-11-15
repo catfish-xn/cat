@@ -3,7 +3,8 @@
  * Bare host adaptation, 2026-10-26. See NOTICE.md and LICENSE.
  */
 /** Bare host for upstream Passes.tsx phase ordering. Restores host state even when a draw fails. */
-import { DoubleSide, MeshBasicMaterial, type Camera, type Material, type Mesh, type Object3D, type Scene, type WebGLRenderer } from 'three';
+import { AlwaysStencilFunc, DoubleSide, MeshBasicMaterial, ReplaceStencilOp, type Camera, type Material, type Mesh, type Object3D, type Scene, type WebGLRenderer } from 'three';
+import { BOARD_REFERENCES, BOARD_STENCIL_REFERENCE } from './utils/stencil';
 import { createFloorSurvey, ON_OR_UNDER_PLAY, PLAY_SURFACE, setPlaySurface } from './utils/playSurface';
 import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER, sealCanvasAlpha } from './utils/frame';
 
@@ -39,6 +40,9 @@ export function floorDepthMaterial(): MeshBasicMaterial {
 }
 export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Object3D[]) {
   const floorDepth = floorDepthMaterial(), survey = createFloorSurvey();
+  const boardStencil = new MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true, side: DoubleSide, stencilWrite: true,
+    stencilRef: BOARD_STENCIL_REFERENCE, stencilFunc: AlwaysStencilFunc, stencilZPass: ReplaceStencilOp, stencilWriteMask: 0x3f, stencilFuncMask: 0x3f });
+  boardStencil.name = 'vfx-board-stencil';
   const masks = new Map<Object3D, number>(), ground = new Map<Material, Pick<Material, 'depthWrite' | 'polygonOffset' | 'polygonOffsetFactor' | 'polygonOffsetUnits'>>();
   return {
     render(scene: Scene, camera: Camera, needs: { early: boolean; late: boolean; soft: boolean }) {
@@ -60,7 +64,7 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
               polygonOffsetFactor: one.polygonOffsetFactor, polygonOffsetUnits: one.polygonOffsetUnits });
         });
         const floorRoots = floors?.() ?? [];
-        setPlaySurface(null);
+        setPlaySurface(null); BOARD_REFERENCES.clear();
         if (floorRoots.length) {
           // The floor draws first, on its own. Separate calls avoid Three's opaque/transparent sorting putting ground
           // beneath opaque hexes or beneath the arena's transparent cell overlay.
@@ -73,11 +77,20 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           // is not cut by it, while walls, ledges and terrain write their depth again (floorDepthMaterial), and units drawn
           // after write theirs. A floor mesh that writes no depth of its own (the arena's cell overlay) is left out.
           gl.clearDepth();
-          const { play, quiet } = survey.survey(floorRoots), shown = quiet.map(mesh => mesh.visible);
+          const { play, quiet, flat, solid } = survey.survey(floorRoots), shown = quiet.map(mesh => mesh.visible);
           setPlaySurface(play);
           for (const mesh of quiet) mesh.visible = false;
           const override = scene.overrideMaterial; scene.overrideMaterial = floorDepth;
           try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; quiet.forEach((mesh, i) => { mesh.visible = shown[i]!; }); }
+          // The play surface writes BOARD_STENCIL_REFERENCE into the stencil buffer (no colour, no depth; walls in front keep
+          // it out by depth), as the map is taken to write it: fitted, not the original's (utils/stencil.ts).
+          if (flat.length) {
+            const hidden = [...quiet, ...solid], was = hidden.map(mesh => mesh.visible);
+            for (const mesh of hidden) mesh.visible = false;
+            scene.overrideMaterial = boardStencil;
+            try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; hidden.forEach((mesh, i) => { mesh.visible = was[i]!; }); }
+            BOARD_REFERENCES.add(BOARD_STENCIL_REFERENCE);
+          }
           if (needs.early) { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); }
           // Keep the authored depth test so arena walls still occlude ground. A small
           // polygon offset avoids coplanar hex/floor flicker; no ground depth can hide units.
@@ -99,6 +112,6 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
         camera.layers.mask = layers; gl.autoClear = autoClear; scene.background = background; gl.setRenderTarget(target);
       }
     },
-    dispose() { releaseFrame(gl); floorDepth.dispose(); },
+    dispose() { releaseFrame(gl); floorDepth.dispose(); boardStencil.dispose(); },
   };
 }

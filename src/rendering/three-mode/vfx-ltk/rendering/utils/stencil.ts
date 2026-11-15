@@ -147,9 +147,19 @@ function canPass(use: StencilUse, reference: number, written: ReadonlySet<number
  * against, because the engine's writer is then outside the scene. Decision 2.53 of
  * docs/plans/vfx-particle-renderer.md.
  */
+/**
+ * The stencil reference the board's play surface writes each frame (rendering/passes.ts), as the map is taken to write it
+ * (11-15). Fitted, not the original's: the spec does not say which reference a map writes. Inferred from footage, where
+ * Viktor's R warning (12ac9712) draws its MAP_DISC_HIGH_WRITE, a TestEqual tester of reference 4 with no writer of its own,
+ * on the board alone; it drew untested over the whole screen before. Only Viktor's R systems (12ac9712, c4ef93f3,
+ * efdd9461) test reference 4.
+ */
+export const BOARD_STENCIL_REFERENCE = 4;
+/** The references the board wrote in the frame drawn last; a tester of one of them can pass where no emitter writes it. */
+export const BOARD_REFERENCES = new Set<number>();
 export function stencilStates(claims: readonly StencilClaim[]): StencilState[] {
   const references = stencilReferences(claims);
-  const written = new Set<number>();
+  const written = new Set<number>(BOARD_REFERENCES);
   claims.forEach((claim, at) => {
     if (claim.live && writesStencil(claim.use)) written.add(references[at]);
   });
