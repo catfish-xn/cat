@@ -19,6 +19,7 @@ import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
+import { rell as rellBatch3 } from './batch3/rell';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -100,6 +101,12 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Rell's cast as exported plus two candidates for the original's dark ground ring around her:
+  // Q_Shield b7f04e24 (Rell_Q_Shockwaves2; its 'rell-shield' row is never triggered today) and Q_Stab_Child_Ground e494370a.
+  rell: [...rellBatch3.rell!,
+    { system: 'b7f04e24', action: 'cast', event: 'cast-start', delay: 0, duration: 4, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: 'e494370a', action: 'cast', event: 'cast-start', delay: 0.1, duration: 2 },
+  ],
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
