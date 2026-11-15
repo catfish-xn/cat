@@ -36,6 +36,26 @@ export function playSurfaceOf(roots: readonly Object3D[]): PlaySurface | null {
   return found;
 }
 
+/**
+ * The play surface and the floor meshes that write no depth of their own, worked out once per floor (11-15: a walk of every
+ * floor mesh each frame cost frame time) and again only when a floor root is added or dropped, one of its children
+ * changes, or a root moves (the arena placed on a new grid).
+ */
+export function createFloorSurvey() {
+  let key: unknown[] = [], held: { play: PlaySurface | null; quiet: Mesh[] } = { play: null, quiet: [] };
+  const keyOf = (roots: readonly Object3D[]) => roots.flatMap(root => [root, ...root.children, ...root.matrixWorld.elements]);
+  return {
+    survey(roots: readonly Object3D[]) {
+      const next = keyOf(roots);
+      if (next.length === key.length && next.every((one, i) => one === key[i])) return held;
+      key = next; const quiet: Mesh[] = [];
+      for (const root of roots) root.traverse(node => { const mesh = node as Mesh; if (mesh.isMesh && !writesDepth(mesh)) quiet.push(mesh); });
+      held = { play: playSurfaceOf(roots), quiet };
+      return held;
+    },
+  };
+}
+
 /** Sets the shared play surface (null: none, nothing is clipped or left out). */
 export function setPlaySurface(play: PlaySurface | null): void {
   PLAY_SURFACE.surface.value.set(play?.minX ?? 1, play?.maxX ?? 0, play?.minZ ?? 1, play?.maxZ ?? 0);

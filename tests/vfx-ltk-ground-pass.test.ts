@@ -2,7 +2,7 @@ import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, M
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
-import { clipUnderPlay, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { clipUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
 import { struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -121,6 +121,19 @@ describe('opt-in board ground pass', () => {
     // Without a floor the play surface is empty again: nothing is clipped.
     createVfxPasses(gl as unknown as WebGLRenderer).render(scene, camera, { early: false, late: false, soft: false });
     expect(PLAY_SURFACE.surface.value.x).toBeGreaterThan(PLAY_SURFACE.surface.value.y);
+    for (const mesh of [plane, overlay]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+  });
+
+  // 11-15: the floor is surveyed once, not walked every frame; again only when a root's children change or a root moves.
+  it('the floor survey is kept until a floor root gains or loses a child or moves', () => {
+    const floor = new Group(), plane = new Mesh(new PlaneGeometry(100, 100).rotateX(-Math.PI / 2), new MeshBasicMaterial()); floor.add(plane);
+    floor.updateMatrixWorld(true);
+    const survey = createFloorSurvey(), first = survey.survey([floor]);
+    expect(first.play).not.toBeNull(); expect(survey.survey([floor])).toBe(first);
+    const overlay = new Mesh(new PlaneGeometry(), new MeshBasicMaterial({ depthWrite: false })); floor.add(overlay);
+    const second = survey.survey([floor]); expect(second).not.toBe(first); expect(second.quiet).toEqual([overlay]);
+    floor.position.x = 10; floor.updateMatrixWorld(true);
+    const third = survey.survey([floor]); expect(third).not.toBe(second); expect(third.play!.minX).toBeCloseTo(-40);
     for (const mesh of [plane, overlay]) { mesh.geometry.dispose(); mesh.material.dispose(); }
   });
 

@@ -4,7 +4,7 @@
  */
 /** Bare host for upstream Passes.tsx phase ordering. Restores host state even when a draw fails. */
 import { DoubleSide, MeshBasicMaterial, type Camera, type Material, type Mesh, type Object3D, type Scene, type WebGLRenderer } from 'three';
-import { ON_OR_UNDER_PLAY, PLAY_SURFACE, playSurfaceOf, setPlaySurface, writesDepth } from './utils/playSurface';
+import { createFloorSurvey, ON_OR_UNDER_PLAY, PLAY_SURFACE, setPlaySurface } from './utils/playSurface';
 import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER, sealCanvasAlpha } from './utils/frame';
 
 /** Visit `node` and its descendants, skipping bone hierarchies under skinned units. */
@@ -38,7 +38,7 @@ export function floorDepthMaterial(): MeshBasicMaterial {
   return material;
 }
 export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Object3D[]) {
-  const floorDepth = floorDepthMaterial();
+  const floorDepth = floorDepthMaterial(), survey = createFloorSurvey();
   const masks = new Map<Object3D, number>(), ground = new Map<Material, Pick<Material, 'depthWrite' | 'polygonOffset' | 'polygonOffsetFactor' | 'polygonOffsetUnits'>>();
   return {
     render(scene: Scene, camera: Camera, needs: { early: boolean; late: boolean; soft: boolean }) {
@@ -73,11 +73,11 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           // is not cut by it, while walls, ledges and terrain write their depth again (floorDepthMaterial), and units drawn
           // after write theirs. A floor mesh that writes no depth of its own (the arena's cell overlay) is left out.
           gl.clearDepth();
-          const quiet: Object3D[] = [];
-          setPlaySurface(playSurfaceOf(floorRoots));
-          for (const root of floorRoots) root.traverse(node => { const mesh = node as Mesh; if (mesh.isMesh && mesh.visible && !writesDepth(mesh)) { quiet.push(mesh); mesh.visible = false; } });
+          const { play, quiet } = survey.survey(floorRoots), shown = quiet.map(mesh => mesh.visible);
+          setPlaySurface(play);
+          for (const mesh of quiet) mesh.visible = false;
           const override = scene.overrideMaterial; scene.overrideMaterial = floorDepth;
-          try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; for (const mesh of quiet) mesh.visible = true; }
+          try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; quiet.forEach((mesh, i) => { mesh.visible = shown[i]!; }); }
           if (needs.early) { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); }
           // Keep the authored depth test so arena walls still occlude ground. A small
           // polygon offset avoids coplanar hex/floor flicker; no ground depth can hide units.
