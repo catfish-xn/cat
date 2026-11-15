@@ -64,6 +64,8 @@ export const GP_GROUND_LINE_BACK = 0.5;
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Blitzcrank's Q_cas at his shock's damage (on him), once per shock.
+  'blitzcrank-shock': [{ system: 'fc6cdcf0', action: 'passive', event: 'cast-start', delay: 0, duration: 1.2 }],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -484,6 +486,8 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times are measured on the original, with 0 at the mana bar emptying.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Swain's bird missile candidate.
+  'swain-back': [{ system: '3d2697ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.8, travelSeconds: 0.5 }],
   // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
   // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
   ambessa: [
