@@ -18,6 +18,8 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: '4f2eb343', event: 'projectile', targetLimit: 5, delay: .4, duration: .4, travelSeconds: .4 },
     { system: 'a9cc7bf3', event: 'hit', targetLimit: 5, delay: .8, duration: 1 },
     { system: '3857e78b', event: 'hit', primary: true, delay: 1.2, duration: 1 },
+    // REC ONLY (do not merge): candidate for the third cast's big totem, one copy on the primary target.
+    { system: '7555d4c3', event: 'hit', primary: true, delay: .8, duration: 2 },
   ],
   'mel-energy': [{ system: '3eab3582', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2 }],
   'mel-shield': [{ system: '71e871c8', event: 'hit', delay: 0, duration: .2, stopAfter: .1 }],
