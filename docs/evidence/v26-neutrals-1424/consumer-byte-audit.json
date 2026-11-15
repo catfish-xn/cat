@@ -656,9 +656,9 @@
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4019,
+      "currentBytes": 5150,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5419ee0799f392067159821ae273fa5a8da829d4f074572705f668d4cfc55b23",
+      "currentSha256": "562fff85d23d7acfbcd92726ad40604530c98afd1d56acdec022797ec7fa1ba8",
       "firstDifferentByte": 0
     },
     "tests/castcmp-draw-filter.test.ts": {
