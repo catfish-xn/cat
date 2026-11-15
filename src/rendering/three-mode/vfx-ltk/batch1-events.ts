@@ -110,6 +110,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // REC ONLY (do not merge): Blitzcrank's shock, at his ability damage (one per tick).
+        if (event.type === 'packetDamage' && event.delivery === 'ability-direct' && definition(event.sourceId) === 'blitzcrank'
+          && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick && e.eventSeq < event.eventSeq && e.delivery === 'ability-direct'))
+          plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [], action: 'passive', skill: 'blitzcrank-shock' });
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
