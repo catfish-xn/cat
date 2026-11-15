@@ -1142,7 +1142,7 @@
       "previousBytes": 0,
       "currentBytes": 69515,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "08a9e44afadaa1c60cdc245d2c9628bb6dca177810cb666dd07b051b8e3b4d6d",
+      "currentSha256": "6e1917b6af039f4b32f0860f3c8f8e4665905d1031008d88ef15f1646b9c1ee9",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -3061,9 +3061,9 @@
     },
     "tests/server/fixtures/battle-start.json": {
       "previousBytes": 4979457,
-      "currentBytes": 4147745,
+      "currentBytes": 4147784,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "cb6cfaa1d43bf352724686d279cfda9bd661495a704e2d5ef46bde134fe36f39",
+      "currentSha256": "8247c7486a99caaa1d35371945673d23b9d6ba85956dc741890d0641a2207d00",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {
