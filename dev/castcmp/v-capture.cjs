@@ -91,6 +91,18 @@ async function unbind(page, tick, rebind) {
   if (opt('settle')) { for (let left = Number(opt('settle')); left > 0; left -= 500) { await page.evaluate(ms => window.__h.step(ms), Math.min(500, left)); await page.waitForTimeout(50); } }
   // A fresh combat before the recorded cast (harness fresh(): what the warm pass left is cleared and cast counts restart,
   // as a game combat starts): always for --real, with --fresh 1 for dummies. Loaded effect files stay loaded.
+  // The recorded cast runs with each system's measured room: wait until every champion warm (file loads and peak
+  // measures, runtime.ts LTK_WARMING) has finished. Not with --cold 1, whose point is a first, cold play.
+  if (!cold) {
+    const waited = await page.evaluate(async () => {
+      const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+      const state = runtime?.LTK_WARMING; if (!state) return 'no-probe';
+      for (let i = 0; i < 200 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
+      return state.pending > 0 ? `still ${state.pending} after 20 s` : 'ok';
+    });
+    if (waited !== 'ok') console.warn(`warm wait: ${waited}`);
+    mark('warm measured ' + waited);
+  }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
