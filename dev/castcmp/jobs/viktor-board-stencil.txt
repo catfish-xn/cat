@@ -1,0 +1,4 @@
+# REC ONLY (11-15): Viktor R warning 12ac9712 MAP_DISC_HIGH_WRITE (TestEqual ref 4) — experiment B: the board's play surface
+# writes stencil ref 4 each frame (fitted, not the original's), so the warning's dark disc draws on the board alone.
+v-capture.cjs viktor vsb-real --real 1 --star 2 --ms 3000 --systems 12ac9712 --layers none --snapshot d3ffe5808978
+v-capture.cjs viktor vsb-real-only --real 1 --star 2 --ms 3000 --only 12ac9712 --systems 12ac9712 --layers none --snapshot d3ffe5808978

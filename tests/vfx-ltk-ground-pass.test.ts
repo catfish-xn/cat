@@ -113,7 +113,7 @@ describe('opt-in board ground pass', () => {
     floor.add(plane, overlay); scene.add(floor);
     const seen: { overlay: boolean; surface: number[] }[] = [];
     const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
-      if (scene.overrideMaterial) seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
+      if (scene.overrideMaterial?.name === 'vfx-floor-depth') seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
     } };
     createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
     expect(seen).toEqual([{ overlay: false, surface: [-100, 100, -50, 50] }]);

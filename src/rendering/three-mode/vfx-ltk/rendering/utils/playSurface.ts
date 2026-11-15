@@ -42,15 +42,17 @@ export function playSurfaceOf(roots: readonly Object3D[]): PlaySurface | null {
  * changes, or a root moves (the arena placed on a new grid).
  */
 export function createFloorSurvey() {
-  let key: unknown[] = [], held: { play: PlaySurface | null; quiet: Mesh[] } = { play: null, quiet: [] };
+  let key: unknown[] = [], held: { play: PlaySurface | null; quiet: Mesh[]; flat: Mesh[] } = { play: null, quiet: [], flat: [] };
   const keyOf = (roots: readonly Object3D[]) => roots.flatMap(root => [root, ...root.children, ...root.matrixWorld.elements]);
   return {
     survey(roots: readonly Object3D[]) {
       const next = keyOf(roots);
       if (next.length === key.length && next.every((one, i) => one === key[i])) return held;
-      key = next; const quiet: Mesh[] = [];
-      for (const root of roots) root.traverse(node => { const mesh = node as Mesh; if (mesh.isMesh && !writesDepth(mesh)) quiet.push(mesh); });
-      held = { play: playSurfaceOf(roots), quiet };
+      key = next; const quiet: Mesh[] = [], flat: Mesh[] = [];
+      for (const root of roots) root.traverse(node => { const mesh = node as Mesh; if (!mesh.isMesh) return;
+        if (!writesDepth(mesh)) { quiet.push(mesh); return; }
+        BOX.setFromObject(mesh); if (!BOX.isEmpty() && BOX.max.y - BOX.min.y <= FLAT) flat.push(mesh); });
+      held = { play: playSurfaceOf(roots), quiet, flat };
       return held;
     },
   };
