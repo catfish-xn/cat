@@ -148,24 +148,28 @@ function canPass(use: StencilUse, reference: number, written: ReadonlySet<number
  * docs/plans/vfx-particle-renderer.md.
  */
 /**
- * The stencil reference the board's play surface writes each frame (rendering/passes.ts), as the map is taken to write it
- * (11-15). Fitted, not the original's: the spec does not say which reference a map writes. Inferred from footage, where
- * Viktor's R warning (12ac9712) draws its MAP_DISC_HIGH_WRITE, a TestEqual tester of reference 4 with no writer of its own,
- * on the board alone; it drew untested over the whole screen before. Only Viktor's R systems (12ac9712, c4ef93f3,
- * efdd9461) test reference 4.
+ * The stencil value the board's play surface writes each frame (rendering/passes.ts), and the one a TestEqual tester whose
+ * reference no live emitter of the scene writes is tested against in place of its own (11-15). The value no shipped emitter
+ * names (a full-asset scan, 11-15: references 0, 1, 3, 4, 6, 7, 8 and 37 are named, plus the ids counting down from 63;
+ * tests/vfx-ltk-board-stencil-assets.test.ts fails the day an asset names it), so no emitter that writes or tests its own
+ * reference sees the board. Fitted, not the original's: the spec does not say what a map writes. Inferred from footage,
+ * where Viktor's R warning (12ac9712) draws MAP_DISC_HIGH_WRITE, a TestEqual tester of reference 4 with no writer in the
+ * scene until the slam's own system starts, on the board alone; it drew untested over the whole screen before.
  */
-export const BOARD_STENCIL_REFERENCE = 4;
-/** The references the board wrote in the frame drawn last; a tester of one of them can pass where no emitter writes it. */
-export const BOARD_REFERENCES = new Set<number>();
-export function stencilStates(claims: readonly StencilClaim[]): StencilState[] {
+export const BOARD_FALLBACK_REFERENCE = 32;
+export function stencilStates(claims: readonly StencilClaim[], board?: ReadonlySet<number>): StencilState[] {
   const references = stencilReferences(claims);
-  const written = new Set<number>(BOARD_REFERENCES);
+  const written = new Set<number>();
   claims.forEach((claim, at) => {
     if (claim.live && writesStencil(claim.use)) written.add(references[at]);
   });
+  // The board's value stands in only where it is written this frame and no claim names it as its own.
+  const fallback = board?.has(BOARD_FALLBACK_REFERENCE) && !references.includes(BOARD_FALLBACK_REFERENCE);
 
   return claims.map((claim, at) => {
     const reference = references[at];
+    if (fallback && claim.live && claim.use.mode === STENCIL_MODE.testEqual && reference !== CLEARED && !written.has(reference))
+      return stencilState(claim.use, BOARD_FALLBACK_REFERENCE);
     const tested = claim.live && canPass(claim.use, reference, written);
     return tested ? stencilState(claim.use, reference) : NO_STENCIL;
   });

@@ -23,21 +23,32 @@ export function writesDepth(mesh: Mesh): boolean {
 }
 
 const BOX = new Box3();
-/** The footprint and height of the floor's flat depth-writing meshes (the arena's battlefield plane), or null for none. */
-export function playSurfaceOf(roots: readonly Object3D[]): PlaySurface | null {
-  let found: PlaySurface | null = null;
+/**
+ * The floor's play-surface meshes: visible, depth-writing and flat (no height at all; the arena's battlefield plane). The
+ * play surface's footprint (playSurfaceOf) and the board's stencil write (passes.ts) both take exactly these.
+ */
+export function playMeshesOf(roots: readonly Object3D[]): Mesh[] {
+  const found: Mesh[] = [];
   for (const root of roots) root.traverse(node => {
     const mesh = node as Mesh; if (!mesh.isMesh || !mesh.visible || !writesDepth(mesh)) return;
     BOX.setFromObject(mesh);
-    if (BOX.isEmpty() || BOX.max.y - BOX.min.y > FLAT) return;
+    if (!BOX.isEmpty() && BOX.max.y - BOX.min.y <= FLAT) found.push(mesh);
+  });
+  return found;
+}
+/** The footprint and height of the floor's play-surface meshes (playMeshesOf), or null for none. */
+export function playSurfaceOf(roots: readonly Object3D[], meshes: readonly Mesh[] = playMeshesOf(roots)): PlaySurface | null {
+  let found: PlaySurface | null = null;
+  for (const mesh of meshes) {
+    BOX.setFromObject(mesh);
     found = found ? { minX: Math.min(found.minX, BOX.min.x), maxX: Math.max(found.maxX, BOX.max.x), minZ: Math.min(found.minZ, BOX.min.z),
       maxZ: Math.max(found.maxZ, BOX.max.z), y: Math.max(found.y, BOX.max.y) } : { minX: BOX.min.x, maxX: BOX.max.x, minZ: BOX.min.z, maxZ: BOX.max.z, y: BOX.max.y };
-  });
+  }
   return found;
 }
 
 /**
- * The play surface, the floor meshes that write no depth of their own, the flat ones (the play surface's own) and the rest,
+ * The play surface, the floor meshes that write no depth of their own, the play-surface meshes (playMeshesOf) and the rest,
  * worked out once per floor (11-15: a walk of every
  * floor mesh each frame cost frame time) and again only when a floor root is added or dropped, one of its children
  * changes, or a root moves (the arena placed on a new grid).
@@ -49,11 +60,10 @@ export function createFloorSurvey() {
     survey(roots: readonly Object3D[]) {
       const next = keyOf(roots);
       if (next.length === key.length && next.every((one, i) => one === key[i])) return held;
-      key = next; const quiet: Mesh[] = [], flat: Mesh[] = [], solid: Mesh[] = [];
+      key = next; const quiet: Mesh[] = [], solid: Mesh[] = [], flat = playMeshesOf(roots);
       for (const root of roots) root.traverse(node => { const mesh = node as Mesh; if (!mesh.isMesh) return;
-        if (!writesDepth(mesh)) { quiet.push(mesh); return; }
-        BOX.setFromObject(mesh); (!BOX.isEmpty() && BOX.max.y - BOX.min.y <= FLAT ? flat : solid).push(mesh); });
-      held = { play: playSurfaceOf(roots), quiet, flat, solid };
+        if (!writesDepth(mesh)) quiet.push(mesh); else if (!flat.includes(mesh)) solid.push(mesh); });
+      held = { play: playSurfaceOf(roots, flat), quiet, flat, solid };
       return held;
     },
   };

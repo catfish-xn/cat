@@ -3720,6 +3720,14 @@
       "currentSha256": "3a872679362bdaaace0ba9296ef2848927324d76977fa4a622aeef9493a8071e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-board-stencil-assets.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2552,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0b6b33749da0cdceb172e09ef93b15a4984e54d5bd61cd6279a1b871fb20df54",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3840,9 +3848,9 @@
     },
     "tests/vfx-ltk-ground-pass.test.ts": {
       "previousBytes": 3207,
-      "currentBytes": 17557,
+      "currentBytes": 19439,
       "previousSha256": "d35f1e1ae15e073ccc9d81724229eb4f8a30d1995edbb04b8883b1a53954d051",
-      "currentSha256": "57b4db71b28dc605b76e36c059506be98802abcd8d093328914b104371d81ee8",
+      "currentSha256": "0e7ff0fee945c003f21bedff8c57d2dec944f7ee1538de5c9d0ce32c1d7ef9a7",
       "firstDifferentByte": 9
     },
     "tests/vfx-ltk-importance.test.ts": {
