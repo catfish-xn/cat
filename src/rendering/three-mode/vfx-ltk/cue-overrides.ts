@@ -64,6 +64,15 @@ export const GP_GROUND_LINE_BACK = 0.5;
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Twisted Fate's yellow card on the enemy his cast stuns, his blue card on the ally it heals.
+  'twistedfate-yellow': [
+    { system: 'c1ee471b', action: 'passive', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'R_Hand', targetBone: chest },
+    { system: '17b9181f', action: 'passive', event: 'hit', delay: 0.6, duration: 1, bone: chest },
+  ],
+  'twistedfate-blue': [
+    { system: 'e49f834b', action: 'passive', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.4, bone: 'R_Hand', targetBone: chest },
+    { system: '8134ca81', action: 'passive', event: 'hit', delay: 0.6, duration: 1, bone: chest },
+  ],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -176,6 +185,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'bef025dc', action: 'cast', event: 'projectile', delay: 0.1, duration: 0.9, travelSeconds: 0.25, bone: 'L_Hand', targetBone: chest, targetLimit: 3 },
     { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 0.55, bone: chest, targetLimit: 3 },
     { system: 'f4a6240a', action: 'cast', event: 'cast-start', delay: 1.1, duration: 1.1, bone: chest },
+    // REC ONLY (do not merge): W_tar burst ring on each struck enemy (candidate).
+    { system: '9f028364', action: 'cast', event: 'hit', delay: 0.4, duration: 1, bone: chest, targetLimit: 3 },
+  ],
+  // REC ONLY (do not merge): Rell's cast plays the parent Q_Stab (9e4b14b5, which spawns Stab_Child and Stab_Child_Ground)
+  // instead of its child alone.
+  rell: [
+    { system: '0f2af66b', event: 'hit', delay: 0.26, duration: 0.6, action: 'attack' },
+    { system: '9e4b14b5', event: 'cast-start', delay: 0.1, duration: 1 },
+    { system: 'd3831a9d', event: 'hit', delay: 0.3, duration: 0.6 },
+    { system: '5fe3dc8a', event: 'hit', delay: 0.3, duration: 0.6 },
   ],
   // Mace glow only. E_floor's pit and its claw share one system, so emission stops before the pit. Ult enter stays out.
   mordekaiser: [

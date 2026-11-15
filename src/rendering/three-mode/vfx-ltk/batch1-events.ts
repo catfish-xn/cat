@@ -110,6 +110,14 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // REC ONLY (do not merge): Twisted Fate's cards by the rules' card events of his cast's tick: the yellow card on each
+        // enemy stunned then, the blue card on each ally his ability heals then.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'twistedfate') {
+          const stunned = events.filter(e => e.type === 'statusChanged' && e.tick === event.tick && e.kind === 'stun' && e.reason === 'applied').map(e => (e as { targetId: string }).targetId);
+          const healed = events.filter(e => e.type === 'heal' && e.tick === event.tick && e.shares.some(s => s.sourceId === event.sourceId && s.sourceKind === 'ability')).map(e => (e as { targetId: string }).targetId);
+          if (stunned.length) plan.extra.push({ champion: 'twistedfate', sourceId: event.sourceId, targets: stunned, action: 'passive', skill: 'twistedfate-yellow' });
+          if (healed.length) plan.extra.push({ champion: 'twistedfate', sourceId: event.sourceId, targets: healed, action: 'passive', skill: 'twistedfate-blue' });
+        }
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
