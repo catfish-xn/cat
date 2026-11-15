@@ -189,6 +189,29 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
+  // REC ONLY (do not merge): 2-cost batch 2 candidates, recorded beside the original before any binding is chosen.
+  camille: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.3, duration: 1.5 },
+    { system: 'b0db024b', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
+    { system: '69b207a4', action: 'cast', event: 'hit', delay: 0.55, duration: 1 },
+    { system: '174f1125', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
+    { system: '58222a54', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6 },
+    { system: 'aff93381', action: 'cast', event: 'hit', delay: 0.55, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+  ],
+  zeri: [
+    { action: 'attack', system: '215abe6e', event: 'projectile', delay: 0.26666666666666666, duration: 0.3, travelSeconds: 0.3, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.5666666666666667, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
+    { action: 'attack', variant: 'empowered', system: 'd160dfa9', event: 'link', delay: 0.26666666666666666, duration: 0.6, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'attack', variant: 'empowered', system: 'c4b3f285', event: 'hit', delay: 0.5666666666666667, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', fadeOut: true },
+  ],
+  amumu: [
+    { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.36666666666666664, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'passive', system: '56e6971e', event: 'cast-start', delay: 0, duration: 0.9, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    { action: 'passive', system: 'f2b3f090', event: 'projectile', delay: 0, duration: 0.15, travelSeconds: 0.15, bone: 'C_BUFFBONE_GLB_CHEST_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { action: 'passive', system: '0b982f9a', event: 'hit', delay: 0.15, duration: 0.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
   leblanc: [
     { system: '9ad0dd7c', action: 'attack', event: 'projectile', bone: 'weapon_b', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5666666666666667, duration: 1.5 },
