@@ -46,7 +46,8 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
     { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
     viRowCue(-1), viRowCue(1),
-    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
+    // Q shield: its own life with the fade-out tail; it ends with the shield (cue-overrides.ts CUE_RULE_STOPS).
+    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 3.3, bone: chest, stopAfter: 2.9, fadeOut: true },
   ],
 };
 /** Opt in only to the complete known export. An explicit caller timeline always wins. */

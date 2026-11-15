@@ -173,10 +173,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
     { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: hugged(1) },
   ],
-  // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
+  // The shield plays its own life (up to the index cap) and ends with the rule's shield (CUE_RULE_STOPS). Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
-    { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 3, bone: center },
+    { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
     { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
   // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
@@ -321,12 +321,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
   // No q_mis; spell ring on targets then infection. Portal mesh ids are not in the asset root.
+  // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
     { system: '3c65ee71', action: 'attack', event: 'projectile', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.8666666666666667, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
-    { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 3, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Asset root only ships WeaponSmoke + BA hit; q_tar / slam systems lack JSON files.
@@ -465,6 +466,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+  // Exported to the asset index; repeated here so the R heal plays its own life (up to the index cap) and ends
+  // with the heal (CUE_END_STOPS).
+  drmundo: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3231666564941406, duration: 1.5 },
+    { system: '5443cd9f', action: 'cast', event: 'cast-start', delay: 0, duration: 9.25, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: '4caada37', action: 'cast', event: 'cast-start', delay: 0.3, duration: 10, bone: 'C_Buffbone_Glb_Center_Loc' },
+  ],
+  // Exported to the asset index; repeated here so the Q brace plays its own life and ends with the brace (CUE_END_STOPS).
+  vander: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3, duration: 1.5 },
+    { system: '68e8ca37', action: 'cast', event: 'cast-start', delay: 0, duration: 4.12, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '3ecf22e8', action: 'cast', event: 'hit', delay: 0.4, duration: 1 },
+  ],
 };
 
 /**
@@ -653,8 +667,26 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley', readonly string[]>> = {
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace', readonly string[]>> = {
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
   'twitch-volley': ['900dd2d2'],
+  'drmundo-heal': ['5443cd9f', '4caada37'],
+  'vander-brace': ['68e8ca37'],
 };
+
+/**
+ * Systems that end with a rule event the simulation already sends: each plays its own life (its cue's duration) unless the
+ * rule's effect ends first. `on` 'source' ends the caster's runs, 'target' the runs on the unit the event names.
+ */
+export const CUE_RULE_STOPS = {
+  // Warwick's blood frenzy aura goes when the frenzy does (bloodFrenzyChanged active: false).
+  frenzyEnded: { systems: ['8c054bed'], on: 'source' },
+  // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
+  // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
+  viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
+  // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
+  shredEnded: { systems: ['88a717e0'], on: 'target' },
+} as const;
