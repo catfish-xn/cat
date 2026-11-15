@@ -34,6 +34,10 @@ if (!board || (!systems.length && !frames.length)) throw Error('--board and --sy
   await page.evaluate(() => window.__h.reset());
   for (let s = 0; s < seconds * 4; s++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(60); }
   await page.evaluate(() => window.__h.reset()); await page.evaluate(() => window.__h.step(1000 / 60));
+  // The values the runtime itself used (rec probe __LTK_EFFECTIVE), stamped into every frame name and both json files.
+  const effective = await page.evaluate(() => globalThis.__LTK_EFFECTIVE ?? null);
+  const tag = effective ? `c${effective.cap}b${effective.budget}${effective.offslot != null ? 'e' + effective.offslot : ''}` : 'unknown';
+  console.log(`effective cap=${effective?.cap} budget=${effective?.budget}${effective?.offslot != null ? ' offslot=' + effective.offslot : ''}`);
   const saved = {}, log = [], live = []; for (const s of systems) { saved[s] = 0; fs.mkdirSync(path.join(out, s), { recursive: true }); }
   if (frames.length) fs.mkdirSync(path.join(out, 'frames'), { recursive: true });
   const n = Math.round(seconds * 60);
@@ -43,12 +47,12 @@ if (!board || (!systems.length && !frames.length)) throw Error('--board and --sy
       const running = globalThis.__LTK_SYSTEMS_NOW ?? [], ids = [...new Set(running.flatMap(r => [r.source, r.target]).filter(Boolean))];
       return { running, boxes: Object.fromEntries(ids.map(id => [id, window.__h.box?.(id) ?? null])), passes: { early: after.early > before.early, late: after.late > before.late, soft: after.soft > before.soft } }; });
     live.push(now.running.length);
-    if (frames.includes(f)) { const shot = await page.screenshot({ type: 'jpeg', quality: 90 }); fs.writeFileSync(path.join(out, 'frames', `f${String(f).padStart(4, '0')}.jpg`), shot);
+    if (frames.includes(f)) { const shot = await page.screenshot({ type: 'jpeg', quality: 90 }); fs.writeFileSync(path.join(out, 'frames', `f${String(f).padStart(4, '0')}_${tag}.jpg`), shot);
       log.push({ frame: f, ms: Math.round(f * 1000 / 60), systems: [], live: now.running.length, running: now.running, boxes: now.boxes, crop: {}, passes: now.passes, picked: true }); }
     const hits = systems.filter(s => now.running.some(r => r.system === s) && saved[s] < max);
     if (!hits.length || f % every) continue;
     const shot = await page.screenshot({ type: 'jpeg', quality: 90 });
-    for (const s of hits) { fs.writeFileSync(path.join(out, s, `f${String(f).padStart(4, '0')}.jpg`), shot); saved[s]++; }
+    for (const s of hits) { fs.writeFileSync(path.join(out, s, `f${String(f).padStart(4, '0')}_${tag}.jpg`), shot); saved[s]++; }
     // Per system: the screen box around its runs' casters and targets, grown by --pad and widened to 16:9 (board-sheet crops to it).
     const crop = Object.fromEntries(hits.map(s => { const bs = now.running.filter(r => r.system === s).flatMap(r => [r.source, r.target]).map(id => id && now.boxes[id]).filter(Boolean);
       if (!bs.length) return [s, null];
@@ -59,6 +63,6 @@ if (!board || (!systems.length && !frames.length)) throw Error('--board and --sy
     log.push({ frame: f, ms: Math.round(f * 1000 / 60), systems: hits, live: now.running.length, running: now.running, boxes: now.boxes, crop, passes: now.passes });
   }
   fs.writeFileSync(path.join(out, 'live.json'), JSON.stringify({ live, max: Math.max(...live), at: live.indexOf(Math.max(...live)) + 1 }));
-  fs.writeFileSync(path.join(out, 'frames.json'), JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), overrides: over, gl: launch.gl, combat: info, saved, frames: log, errors: [...new Set(errors)].slice(0, 10) }, null, 1));
+  fs.writeFileSync(path.join(out, 'frames.json'), JSON.stringify({ board: board.split(','), foes: foes.split(','), star: Number(star), overrides: over, effective, gl: launch.gl, combat: info, saved, frames: log, errors: [...new Set(errors)].slice(0, 10) }, null, 1));
   mark(`saved ${JSON.stringify(saved)}`); await browser.close(); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
