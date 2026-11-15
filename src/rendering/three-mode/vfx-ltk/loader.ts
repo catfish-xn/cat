@@ -264,7 +264,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id];
+      // REC ONLY (do not merge): Mel's R_Explosion without its 1.8 s build-up, so its decal (0.5 s at the start) is drawn.
+      const read0 = readVfxSystem(raw), parsed = id === '3857e78b' ? { ...read0, buildUpTime: 0 } : read0, disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id];
       const model = disabled || whole ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null } : e) } : parsed;
       const listed = drawnEmitters(model, true);
