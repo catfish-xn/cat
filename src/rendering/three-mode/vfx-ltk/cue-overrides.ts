@@ -490,6 +490,9 @@ export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
  * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
+  // REC ONLY (do not merge): Gold2 emits from a skinned host surface the loader cannot pose, which refused the whole system
+  // and with it the whole cast. Left out so the rest of the candidate can be recorded.
+  'e70520ea': ['Gold2'],
   // Nunu R_Cas runs for the 3 s channel (authored far shorter). Its two white ground flashes kept a radial glare in the middle
   // of the pool the whole time; in 14.24 the channel is a dim green mist and only the blast (R_full_explo) flares
   // (11-07 field batches f544/c4a).
