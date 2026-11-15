@@ -49,9 +49,9 @@ export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
  *   behind Ekko's and Heimerdinger's hits on five targets each).
  * One shared room so the runs drawn at once stay bounded: MAX_LTK_SYSTEMS + OFF_SLOT_MAX, plus the second runs of together
  * groups. Long runs and fan-out rows still count toward LTK_PASS_DEGRADE_AT; hold tails do not, as before. Node audit
- * (real combats through the batch2 bridge, cap 20, budget 2250, seeds 42/7/101; long runs out with 8, fan-out savings
- * with 8): critical starts 98.2 → 100% in an 8 v 8, 96.3 → 99.7% in a late-game 9 v 9 and 87.3 → 100% with three
- * 3-star Caitlyns. 8 is a performance trade-off fitted on GPU frame time, not a value from the original: in 11-15 Windows
+ * (real combats through the batch2 bridge, cap 20, budget 2250, seeds 42/7/101; OFF_SLOT_MAX 8 against the separate
+ * 4 hold tails and 8 long runs before it): critical starts 98.2 → 100% in an 8 v 8, 94.6 → 99.3% in a late-game 9 v 9
+ * and 87.3 → 100% with three 3-star Caitlyns. 8 is a performance trade-off fitted on GPU frame time, not a value from the original: in 11-15 Windows
  * runs (cap 20, budget 2250, 6 rounds) 8 kept the mean frame time of the code before it with no budget refusals, where 12
  * ran slower and had the budget refuse attack projectiles.
  */
