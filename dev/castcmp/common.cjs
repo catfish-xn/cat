@@ -59,7 +59,11 @@ async function renderMeta(page, out, boxes) {
     }).filter(Boolean);
     const loads = performance.getEntriesByType('resource').filter(e => /\/(assets3d|vfx-ltk|models?|textures?)\//i.test(e.name) || /\.(tex|dds|png|ktx2|glb|bin|json)(\?|$)/i.test(e.name))
       .sort((a, b) => a.responseEnd - b.responseEnd).map(e => new URL(e.name).pathname);
-    return { dpr: devicePixelRatio, canvases, loads, userAgent: navigator.userAgent };
+    // Animation clocks (only with ?debug3d, v-capture --render-probe 1): each piece's mixer time and running clips. A
+    // piece that idles from its model's load (a dummy, never recast) carries a phase set by when that load finished.
+    const r = window.__render3d, anim = r?.pieces ? [...r.pieces].map(([id, v]) => ({ id, def: v.definitionId ?? null, mixerTime: v.mixer?.time ?? null,
+      running: (v.mixer?._actions ?? []).filter(x => x.isRunning()).map(x => ({ clip: x.getClip().name, time: Math.round(x.time * 1000) / 1000 })) })) : null;
+    return { dpr: devicePixelRatio, canvases, loads, userAgent: navigator.userAgent, anim };
   });
   // Reference frame: the unit area (union of the unit boxes, padded) as PNG; its sha256 is the fingerprint.
   let ref = null;
@@ -73,7 +77,7 @@ async function renderMeta(page, out, boxes) {
   }
   const loadOrder = crypto.createHash('sha256').update(gl.loads.join('\n')).digest('hex').slice(0, 16);
   const main = gl.canvases.slice().sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? null;
-  const meta = { at: new Date().toISOString(), dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads } };
+  const meta = { at: new Date().toISOString(), dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, anim: gl.anim, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads } };
   fs.writeFileSync(path.join(out, 'render-meta.json'), JSON.stringify(meta, null, 1));
   return { renderer: main?.renderer ?? null, samples: main?.samples ?? null, antialias: main?.attributes?.antialias ?? null, dpr: gl.dpr,
     size: main ? [main.width, main.height] : null, refSha: ref?.sha256?.slice(0, 16) ?? null, loads: gl.loads.length, loadOrder };
