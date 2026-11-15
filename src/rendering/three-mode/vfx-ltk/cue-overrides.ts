@@ -93,7 +93,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
-export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+const BASE_CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -412,6 +412,20 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+};
+
+// RECORDING ONLY (claude/rec-cuestop-bahit, not for merge): the shared basic-attack hit 0f2af66b plays to its own end
+// (0.5 s, no stopAfter) for the six champions whose cue stopped it at 0.1 s.
+const hitToEnd = (list: readonly TimelineCue[]): TimelineCue[] =>
+  list.map(cue => { if (cue.system !== '0f2af66b') return cue; const { stopAfter: _drop, ...rest } = cue; return { ...rest, duration: 0.5 }; });
+export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  ...BASE_CUE_OVERRIDES,
+  draven: hitToEnd(BATCH1_TIMELINES.draven!),
+  amumu: hitToEnd(BATCH1_TIMELINES.amumu!),
+  kogmaw: hitToEnd(BATCH1_TIMELINES.kogmaw!),
+  zeri: hitToEnd(BATCH1_TIMELINES.zeri!),
+  lux: hitToEnd(BASE_CUE_OVERRIDES.lux!),
+  twitch: hitToEnd(BASE_CUE_OVERRIDES.twitch!),
 };
 
 /**
