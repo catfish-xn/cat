@@ -21,7 +21,26 @@ function textureState(t: any) {
     const faces: any[] = Array.isArray(img) ? img : [];
     return { ready: faces.length === 6 && faces.every(f => has(f?.isTexture ? f.image : f)), size: faces[0] ? `6x${(faces[0].isTexture ? faces[0].image : faces[0])?.width ?? '?'}` : null, version: t.version, cube: true };
   }
-  return { ready: has(img), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: t.version };
+  return { ready: has(img), size: img ? `${img.width ?? '?'}x${img.height ?? '?'}` : null, version: t.version, ...decodedAlpha(t) };
+}
+/** REC ONLY (erosion probe, 11-15): the texture's format flags and its image's alpha as the browser decoded it (min / max /
+ * mean over every texel, 0-255), read once through a 2D canvas; null where the image is not drawable (KTX2, data). */
+function decodedAlpha(t: any) {
+  const img = t.image;
+  const flags = { format: t.format, type: t.type, premultiplyAlpha: t.premultiplyAlpha, flipY: t.flipY, colorSpace: t.colorSpace };
+  if (t.userData?.__alpha !== undefined) return { ...flags, alpha: t.userData.__alpha };
+  let alpha: unknown = null;
+  try {
+    if (img && img.width > 0 && img.width * img.height <= 1 << 20 && typeof document !== 'undefined' && !img.data) {
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d', { willReadFrequently: true })!; g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height).data; let mn = 255, mx = 0, sum = 0, high = 0;
+      for (let i = 3; i < d.length; i += 4) { mn = Math.min(mn, d[i]!); mx = Math.max(mx, d[i]!); sum += d[i]!; if (d[i]! >= 102) high++; }
+      alpha = { min: mn, max: mx, mean: Math.round(sum / (d.length / 4) * 10) / 10, atLeast40pct: Math.round(high / (d.length / 4) * 1000) / 1000 };
+    }
+  } catch (e) { alpha = { error: String(e) }; }
+  t.userData = t.userData ?? {}; t.userData.__alpha = alpha;
+  return { ...flags, alpha };
 }
 
 /**
@@ -36,10 +55,10 @@ function textureState(t: any) {
  * nocolor/noerode change the material, so other emitters sharing it change too; and those material changes stay on a
  * pooled object when it is reused (the layer mask is set again each time a system starts).
  */
-export interface DrawFilter { only: string | null; mute: string[]; solo: string[]; nocolor: string[]; noerode: string[] }
+export interface DrawFilter { only: string | null; mute: string[]; solo: string[]; nocolor: string[]; noerode: string[]; erodedebug: string[] }
 export function drawFilterOf(search: string, only?: string | null): DrawFilter {
   const params = new URLSearchParams(search), list = (key: string) => (params.get(key) ?? '').split(',').map(x => x.trim()).filter(Boolean);
-  return { only: params.get('only') ?? only ?? null, mute: list('mute'), solo: list('solo'), nocolor: list('nocolor'), noerode: list('noerode') };
+  return { only: params.get('only') ?? only ?? null, mute: list('mute'), solo: list('solo'), nocolor: list('nocolor'), noerode: list('noerode'), erodedebug: list('erodedebug') };
 }
 /** Whether `entry` (`name` or `system:name`) names the emitter `emitter` of `system`. */
 const names = (entry: string, system: string, emitter: string) => {
@@ -62,10 +81,22 @@ export function applyDrawFilter(filter: DrawFilter, rec: { system: string; fx?: 
       if (!m) continue;
       if (filter.nocolor.some(e => names(e, rec.system, emitter)) && m.colorWrite !== false) m.colorWrite = false;
       if (filter.noerode.some(e => names(e, rec.system, emitter)) && m.defines && 'EROSION' in m.defines) { delete m.defines.EROSION; m.needsUpdate = true; }
+      // REC ONLY (erosion probe, 11-15): the emitter draws, opaque, what its erosion reads: R and G the fractional sampling
+      // coordinate, B the value the band is judged on (the texel through erosionMix), so a frame shows where and what it samples.
+      if (filter.erodedebug.some(e => names(e, rec.system, emitter)) && m.defines && 'EROSION' in m.defines && !String(m.fragmentShader).includes('erodeDbg')) {
+        const ret = 'return kept(clamp(dot(read, erosionMix), 0.0, 1.0), vErode);';
+        if (String(m.fragmentShader).includes(ret)) {
+          m.fragmentShader = String(m.fragmentShader)
+            .replace('float eroding(vec2 at) {\n  vec4 read', 'vec4 erodeDbg = vec4(0.0, 0.0, 0.0, 1.0);\nfloat eroding(vec2 at) {\n  vec4 read')
+            .replace(ret, 'erodeDbg = vec4(fract(at), clamp(dot(read, erosionMix), 0.0, 1.0), 1.0);\n  ' + ret)
+            .replace(/void\s+main\s*\(\s*\)/, 'void erodeDbgMain()') + '\nvoid main() {\n  erodeDbgMain();\n  gl_FragColor = erodeDbg;\n}\n';
+          m.blending = 0; m.transparent = false; m.needsUpdate = true; m.userData.__erodeDbg = true;
+        } else m.userData.__erodeDbg = 'shader-mismatch';
+      }
     }
   }
 }
-const filtering = (f: DrawFilter) => f.only !== null || f.mute.length + f.solo.length + f.nocolor.length + f.noerode.length > 0;
+const filtering = (f: DrawFilter) => f.only !== null || f.mute.length + f.solo.length + f.nocolor.length + f.noerode.length + f.erodedebug.length > 0;
 
 export function installProbes(clock: () => number) {
   const live = new Set<Rec>(), started: { t: number; system: string; source?: string; action?: string }[] = [];
