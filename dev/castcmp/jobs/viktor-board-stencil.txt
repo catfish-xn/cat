@@ -2,3 +2,5 @@
 # writes stencil ref 4 each frame (fitted, not the original's), so the warning's dark disc draws on the board alone.
 v-capture.cjs viktor vsb-real --real 1 --star 2 --ms 3000 --systems 12ac9712 --layers none --snapshot d3ffe5808978
 v-capture.cjs viktor vsb-real-only --real 1 --star 2 --ms 3000 --only 12ac9712 --systems 12ac9712 --layers none --snapshot d3ffe5808978
+# Row 3 (4.2 s) reaches the slam: in this real combat the slam damage lands 3.0 s after the cast (tick 210), past the 3 s windows above. jobs-check FAILs it only on "target dead by window end" (foe2), which is fine for a look at c4ef93f3.
+v-capture.cjs viktor vsb-real-slam --real 1 --star 2 --ms 4200 --systems 12ac9712,c4ef93f3 --layers none --snapshot d3ffe5808978
