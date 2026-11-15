@@ -19,7 +19,7 @@ const share = (sourceId: string, definitionId: string, actual = 200, sourceKind 
 const cast = (sourceId: string, eventSeq: number, targetIds: string[]): DisplayCombatEvent => ({ type: 'cast', sourceId, eventSeq, tick: eventSeq,
   actionSeq: eventSeq, completed: true, actualManaSpent: 60, refundedMana: 0, targetIds, completionCell: { col: 0, row: 0 } });
 const definitions: Record<string, string> = { vlad: 'vladimir', ally: 'darius', foe: 'amumu', foe2: 'amumu' };
-const HEAL_MISSILE = '45b69079', HEAL_RING = '28c6427d', SPIKES = 'ad4b639e';
+const STRANDS = '45b69079', HEAL_RING = '28c6427d', SPIKES = 'ad4b639e';
 
 describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies', () => {
   it('his ability healing him rings on him; an item heal, a zero heal, another unit\'s heal or a cast alone draw nothing', () => {
@@ -31,25 +31,24 @@ describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies'
     expect(plans.map(plan => plan.extra)).toEqual([[], [{ champion: 'vladimir', sourceId: 'vlad', targets: ['vlad'], action: 'passive', skill: 'vladimir-heal' }], [], [], []]);
   });
 
-  it('a normal cast (one enemy) and a Blood Pact cast (two enemies, no heal) put neither the heal missile nor the heal ring on an enemy', () => {
+  it('a normal cast (one enemy) and a Blood Pact cast (two enemies, no heal): red strands to each enemy, never the heal ring on one', () => {
     const castCues = CUE_OVERRIDES.vladimir!.filter(cue => (cue.action ?? 'cast') === 'cast');
-    expect(castCues.map(cue => [cue.system, cue.event])).toEqual([[SPIKES, 'hit']]);
-    // Only the three spikes draw: the blood splatter, drops and strands are hidden (the original's cast shows none).
-    expect(castCues[0]!.hide).toEqual(['Splatter', 'bloodslash', 'bloodstrands']);
-    expect(castCues[0]!.hide!.some(name => name.startsWith('spike'))).toBe(false);
+    // 11-15 (Fable): his cast draws the thin red strands of Q_heal_mis to each enemy; Q_tar's spikes are gone.
+    expect(castCues.map(cue => [cue.system, cue.event])).toEqual([[STRANDS, 'projectile']]);
+    expect(castCues.some(cue => cue.system === SPIKES || cue.system === HEAL_RING)).toBe(false);
     for (const targets of [['foe'], ['foe', 'foe2']]) {
       const mapped = mapSkillTimeline(castCues, 'vlad', targets);
       expect(mapped.unsupported).toEqual([]);
-      expect(mapped.spawns.map(s => [s.system, s.targetId])).toEqual(targets.map(id => [SPIKES, id]));
+      expect(mapped.spawns.map(s => [s.system, s.targetId])).toEqual(targets.map(id => [STRANDS, id]));
     }
     // Blood Pact heals nothing: its cast plans no ring.
     expect(createBatch1VfxEvents(id => definitions[id]).batch([cast('vlad', 1, ['foe', 'foe2'])]).flatMap(plan => plan.extra)).toEqual([]);
-    expect(CUE_EXTRA_SKILLS['vladimir-heal']!.map(cue => [cue.system, cue.event])).toEqual([[HEAL_RING, 'hit']]);
-    expect(Object.values(CUE_EXTRA_SKILLS).flat().some(cue => cue.system === HEAL_MISSILE)).toBe(false);
+    // The ring plays at his heal itself: no delay after the heal event.
+    expect(CUE_EXTRA_SKILLS['vladimir-heal']!.map(cue => [cue.system, cue.event, cue.delay])).toEqual([[HEAL_RING, 'hit', 0]]);
   });
 
   it('the cast list is never empty: an empty one would fall back to the old effects, which are this heal missile and ring', () => {
-    const systems = Object.fromEntries(['ffa688fa', '0f2af66b', HEAL_MISSILE, HEAL_RING, SPIKES].map(s => [s, `${s}.json`]));
+    const systems = Object.fromEntries(['ffa688fa', '0f2af66b', STRANDS, HEAL_RING, SPIKES].map(s => [s, `${s}.json`]));
     const played = withCueOverrides({ version: 1, systems, assets: {}, skills: { vladimir: [] } } as unknown as VfxIndex).skills;
     expect(played.vladimir!.filter(cue => (cue.action ?? 'cast') === 'cast').length).toBeGreaterThan(0);
     expect(played['vladimir-heal']).toBe(CUE_EXTRA_SKILLS['vladimir-heal']);
@@ -60,10 +59,10 @@ describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies'
     const exported = [
       { system: 'ffa688fa', action: 'attack', event: 'projectile', delay: 0.3, duration: 1.5, travelSeconds: 0.3 },
       { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.6, duration: 1.5 },
-      { system: HEAL_MISSILE, action: 'cast', event: 'projectile', delay: 0.6, duration: 1, travelSeconds: 0.4 },
+      { system: STRANDS, action: 'cast', event: 'projectile', delay: 0.6, duration: 1, travelSeconds: 0.4 },
       { system: HEAL_RING, action: 'cast', event: 'cast-start', delay: 1, duration: 1.5 },
     ];
-    const ids = ['ffa688fa', '0f2af66b', HEAL_MISSILE, HEAL_RING, SPIKES];
+    const ids = ['ffa688fa', '0f2af66b', STRANDS, HEAL_RING, SPIKES];
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
       ? { version: 1, systems: Object.fromEntries(ids.map(s => [s, `systems/${s}.json`])), assets: { 'synthetic.tex': 'texture.png' }, skills: { vladimir: exported } }
       : syntheticSystem(),
@@ -89,5 +88,9 @@ describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies'
     const extras = createBatch1VfxEvents(id => defs[id]).batch(events).flatMap(plan => plan.extra).filter(fx => fx.champion === 'vladimir');
     expect(extras.length).toBeGreaterThan(0);
     expect(extras.every(fx => fx.skill === 'vladimir-heal' && fx.targets.length === 1 && fx.targets[0] === 'me')).toBe(true);
+    // Each ring is planned on the heal event itself (and its cue has no delay): it starts on the heal's tick.
+    const ringPlans = createBatch1VfxEvents(id => defs[id]).batch(events).filter(plan => plan.extra.some(fx => fx.skill === 'vladimir-heal'));
+    expect(ringPlans.length).toBeGreaterThan(0);
+    expect(ringPlans.every(plan => plan.event.type === 'heal' && plan.event.targetId === 'me')).toBe(true);
   });
 });

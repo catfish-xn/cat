@@ -80,9 +80,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '8d6e1c2e', action: 'passive', event: 'hit', delay: CAITLYN_COMET.fall, duration: CAITLYN_COMET.burst3, stopAfter: CAITLYN_COMET.burst3 / 2, fadeOut: true },
   ],
   // Vladimir (batch1-events.ts heal plans): his heal ring (Q_heal_tar) plays on him when his ability heals him, never on
-  // his cast's enemies. His heal missile (Q_heal_mis) is left out until the original's direction is confirmed.
+  // his cast's enemies.
   'vladimir-heal': [
-    { system: '28c6427d', action: 'passive', event: 'hit', delay: 1, duration: 1.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // At his heal itself (the heal event's tick), not the index's later start.
+    { system: '28c6427d', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
 };
 
@@ -203,11 +204,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   vladimir: [
     { system: 'ffa688fa', action: 'attack', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 0.3, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
-    // His cast's on-target hit: only the three red spikes of his Q_tar (TFT13_Vladimir_Base_Q_tar) on each enemy. Its blood
-    // splatter, drops and strands are in the asset but the original's cast shows none of them, so they are left out by the
-    // original's footage. The cast's damage lands on the cast tick and the original's spikes show from about half a second
-    // after it (the cast animation's fixed lead): the delay and the duration are fitted. The export never cued this system.
-    { system: 'ad4b639e', action: 'cast', event: 'hit', delay: 0.5, duration: 0.35, bone: 'C_BUFFBONE_GLB_CHEST_LOC', hide: ['Splatter', 'bloodslash', 'bloodstrands'] },
+    // His cast draws the thin red strands (Q_heal_mis 45b69079) between him and each enemy he strikes, as the original's
+    // cast shows; it is no longer a heal missile onto the enemy (the heal ring plays on him, 'vladimir-heal'). Timings are
+    // the old cue's. Which way the strands run (him to the enemy, as here, or back) is not verified against the original.
+    { system: '45b69079', action: 'cast', event: 'projectile', delay: 0.45, duration: 0.95, travelSeconds: 0.35, bone: 'R_Buffbone_Glb_Hand_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', targetLimit: 3 },
   ],
   // The purple disc plays once on the cast as well as on each empowered swing.
   nocturne: [
