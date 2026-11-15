@@ -42,6 +42,15 @@ describe('castcmp real-combat window anchors', () => {
     expect(audit.targets.length).toBe(1);
   });
 
+  it('N counts ticks, not events: a pulse striking both foes in one tick counts once', () => {
+    const units = realUnits({ unit: 'amumu', star: 1, form: null, foe: 'amumu', dist: 2, nfoes: 2, foestar: 2 });
+    const anchor = { kind: 'event', type: 'packetDamage' } as const, ticks: number[] = [];
+    const perTick: number[] = [];
+    const run = runRealCombat(units, 5, (_state, shown) => { const n = shown.filter(e => anchorMatches(anchor, e)).length; perTick.push(n); if (n) ticks.push(perTick.length - 1); }, 4, anchor);
+    expect(perTick.slice(0, run.castIndex + 1).some(n => n > 1)).toBe(true);
+    expect(run.castIndex).toBe(ticks[3]);
+  });
+
   it('an anchor that never happened is not in the window', () => {
     expect(auditWindow([[], []], [{}, {}], 1, 1000, 1, { kind: 'attack-hit' }).anchorInWindow).toBe(false);
   });

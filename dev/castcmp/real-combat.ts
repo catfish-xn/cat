@@ -127,7 +127,8 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
 }
 
 /** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
- * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). `onTick` sees every tick's state and display events (tick 0 carries the
+ * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
+ * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
 export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR) {
   const started = startRealCombat(units);

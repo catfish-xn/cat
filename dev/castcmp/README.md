@@ -48,7 +48,7 @@ node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 
 关于 `--dist`：假人模式下，目标确实放在施法者前方 `dist` 排（默认 4 个假人：三个并排、一个在后）；画面上看着贴脸，是因为假人数量多、施法者模型高（如 2★ 维克托）。`--real 1` 时双方按真实规则走位，近战目标会自己走到施法者身边，`--dist` 只决定开局站位。要固定距离、单个目标，用 `--pin-foe N`。
 
-实战窗口也可以不以施法定位：`--anchor attack-hit` 以本单位第 N 次普攻命中为锚点，`--anchor event:<类型>` 以本单位发出（或作为主体）的第 N 个该类显示事件为锚点（例如被动周期伤害用 `event:packetDamage`），N 仍由 `--cast-index` 给出。用于从不施法的单位（阿木木、泽丽）；jobs-check 会检查锚点事件确实落在窗口里。
+实战窗口也可以不以施法定位：`--anchor attack-hit` 以本单位第 N 次普攻命中为锚点，`--anchor event:<类型>` 以本单位发出（或作为主体）该类显示事件的第 N 拍为锚点（按拍计数：同一拍里有几个这样的事件只算一次，例如一次脉冲同时打到两个敌人）（例如被动周期伤害用 `event:packetDamage`），N 仍由 `--cast-index` 给出。用于从不施法的单位（阿木木、泽丽）；jobs-check 会检查锚点事件确实落在窗口里。
 
 实战（`--real 1`）的录制窗口用同一套参数选：`--cast-index N` 以本单位第 N 次施法为锚点（默认第 1 次）；`--from-start 1` 从开战（第 0 tick）开始录，锚点之前的普攻和施法都在窗口里；`--lead-ms MS` 从锚点前 MS 毫秒开始（不早于开战）；都不带时和以前一样，从锚点前 0.5 秒开始。`--from-start` 和 `--lead-ms` 只能选一个。实战录制的 `--times` 必须从 0 开始（jobs-check 不符合判 FAIL）。gate.json 记 `window`（锚点和起点），`actionAtMs` 是锚点施法在录制时钟上的位置。
 
