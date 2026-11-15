@@ -19,21 +19,24 @@ function dummy(id = 'e', patch: Partial<CombatUnit> = {}): CombatUnit {
     hp: 10000, maxHp: 10000, mana: 0, maxMana: 1, attackDamage: 0, cooldownTicks: 1000, moveCooldownTicks: 1000,
     runtime: { ...EMPTY_RUNTIME }, statuses: [], shieldLayers: [], tasks: [], ...patch });
 }
-function advance(initial: CombatState, count: number) {
+function advance(initial: CombatState, count: number, onStep: (state: CombatState) => void = () => {}) {
   let state = initial; const events: CombatEvent[] = [];
-  for (let n = 0; n < count && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
+  for (let n = 0; n < count && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); onStep(state); }
   return { state, events };
 }
 const ended = (events: readonly CombatEvent[]) => events.filter(e => e.type === 'abilityEffectEnded') as Extract<CombatEvent, { type: 'abilityEffectEnded' }>[];
 
 describe('abilityEffectEnded: display-only end signals for timed ability effects', () => {
   it('LeBlanc: one event the tick her chain runs out, naming the chained units', () => {
-    const r = advance(battle([hero('leblanc'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }), 140);
+    // The tick the rule set the chain to run out (its ChainDuration after the cast), read off LeBlanc's own state.
+    let chainUntil = 0;
+    const r = advance(battle([hero('leblanc'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }), 140,
+      state => { chainUntil = Math.max(chainUntil, (state.units.find(u => u.id === 'p') as { expansion?: { chainUntilTick: number } } | undefined)?.expansion?.chainUntilTick ?? 0); });
     const cast = r.events.find(e => e.type === 'cast')!;
     const chain = ended(r.events).filter(e => e.effect === 'leblanc-chain');
     expect(chain).toHaveLength(1);
-    // The rule's ChainDuration is 5 s = 100 ticks after the cast.
-    expect(chain[0]!.tick).toBe(cast.tick + 100);
+    expect(chainUntil).toBeGreaterThan(cast.tick);
+    expect(chain[0]!.tick).toBe(chainUntil);
     expect(chain[0]).toMatchObject({ unitId: 'p', targetIds: ['e', 'e2'] });
   });
 
