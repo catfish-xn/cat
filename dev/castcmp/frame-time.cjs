@@ -70,7 +70,7 @@ const countDraws = () => {
     const seconds = Math.ceil(info.ticks * 50 / 1000) + 2;
     await page.evaluate(() => window.__h.reset());
     for (let s = 0; s < seconds * 4; s++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(60); }
-    await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; globalThis.__LTK_BUDGET_REFUSED = 0; globalThis.__LTK_BUDGET_ROWS = 0; });
+    await page.evaluate(() => { window.__h.reset(); globalThis.__LTK_STATS = {}; globalThis.__LTK_BUDGET_REFUSED = 0; globalThis.__LTK_BUDGET_ROWS = 0; globalThis.__LTK_BUDGET_ROW_LIST = []; });
     const per = await page.evaluate(seconds => {
       const c = document.querySelector('#host canvas'); const gl = c && (c.getContext('webgl2') || c.getContext('webgl')); const px = new Uint8Array(4);
       const sync = () => { if (gl) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
@@ -82,7 +82,7 @@ const countDraws = () => {
         const t0 = window.__realNow(); window.__h.step(1000 / 60); sync(); ms.push(window.__realNow() - t0);
         ltk.push(globalThis.__LTK_UPD_MS ?? 0); draws.push(window.__draws); live.push(globalThis.__LTK_ACTIVE ?? 0); particles.push(globalThis.__FX_LIVE ?? 0); for (const k of ['soft', 'early', 'late']) { pass[k].push(globalThis.__PASS_MS[k]); need[k].push(globalThis.__LTK_PASS_NEED?.[k] ?? 0); }
       }
-      return { effective: globalThis.__LTK_EFFECTIVE ?? null, ms, ltk, draws, live, particles, pass, need, passFrames: globalThis.__LTK_PASSES_ON, budgetRefusedRowFrames: globalThis.__LTK_BUDGET_REFUSED ?? 0, budgetRefusedRows: globalThis.__LTK_BUDGET_ROWS ?? 0 };
+      return { effective: globalThis.__LTK_EFFECTIVE ?? null, ms, ltk, draws, live, particles, pass, need, passFrames: globalThis.__LTK_PASSES_ON, budgetRefusedRowFrames: globalThis.__LTK_BUDGET_REFUSED ?? 0, budgetRefusedRows: globalThis.__LTK_BUDGET_ROWS ?? 0, budgetRefusedRowList: globalThis.__LTK_BUDGET_ROW_LIST ?? [] };
     }, seconds);
     const admit = await page.evaluate(() => globalThis.__LTK_STATS ?? {});
     const F = ['asked', 'started', 'dropped', 'gaveWay', 'evicted'];
@@ -98,7 +98,7 @@ const countDraws = () => {
         const xs = per.pass[k].filter((ms, i) => ms > 0 && (b === '4+' ? per.need[k][i] >= 4 : per.need[k][i] === Number(b))).sort((a, b) => a - b);
         return [b, { frames: xs.length, mean: xs.length ? r2(xs.reduce((a, c) => a + c, 0) / xs.length) : null, p95: xs.length ? r2(xs[Math.floor(xs.length * 0.95)]) : null }]; }))])),
       needFrames: Object.fromEntries(['soft', 'early', 'late'].map(k => [k, Object.fromEntries(['0', '1', '2', '3', '4+'].map(b => [b, per.need[k].filter(x => b === '4+' ? x >= 4 : x === Number(b)).length]))])),
-      particlePeak: Math.max(...per.particles), particleP95: [...per.particles].sort((a, b) => a - b)[Math.floor(per.particles.length * 0.95)], budgetRefusedRows: per.budgetRefusedRows, budgetRefusedRowFrames: per.budgetRefusedRowFrames,
+      particlePeak: Math.max(...per.particles), particleP95: [...per.particles].sort((a, b) => a - b)[Math.floor(per.particles.length * 0.95)], budgetRefusedRows: per.budgetRefusedRows, budgetRefusedRowFrames: per.budgetRefusedRowFrames, budgetRefusedRowList: per.budgetRefusedRowList,
       admission, errors: [...new Set(errors)].slice(0, 5), ms: per.ms.map(r2), ltkMs: per.ltk.map(r2), draws: per.draws, live: per.live };
     results.push(row);
     mark(`${cell.variant} cap ${cell.cap}/${cell.budget} degrade ${cell.degrade} round ${cell.round}: passOn ${JSON.stringify(per.passFrames)}${passSync ? ' passMs ' + JSON.stringify(row.passMs) : ''} mean ${row.mean} p95 ${row.p95} >33 ${row.over33_3} ltk ${row.ltkMean} draws ${row.drawsMean} live ${row.livePeak} particles ${row.particlePeak} budgetRefused ${row.budgetRefusedRows} tracked ${JSON.stringify(Object.fromEntries(Object.entries(admission.tracked).map(([k, v]) => [k, v.total])))}`);

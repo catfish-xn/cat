@@ -835,7 +835,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         if (blocked()) {
           // REC BRANCH ONLY: a row refused while the shared budget (not only the count) has no room for it.
-          if (options.budget && (shared ? options.budget.live : reservedNow()) + need > options.budget.max) { const g = globalThis as any; g.__LTK_BUDGET_REFUSED = (g.__LTK_BUDGET_REFUSED ?? 0) + 1; if (!(row as any).__budgetRefused) { (row as any).__budgetRefused = true; g.__LTK_BUDGET_ROWS = (g.__LTK_BUDGET_ROWS ?? 0) + 1; } }
+          if (options.budget && (shared ? options.budget.live : reservedNow()) + need > options.budget.max) { const g = globalThis as any; g.__LTK_BUDGET_REFUSED = (g.__LTK_BUDGET_REFUSED ?? 0) + 1; if (!(row as any).__budgetRefused) { (row as any).__budgetRefused = true; g.__LTK_BUDGET_ROWS = (g.__LTK_BUDGET_ROWS ?? 0) + 1;
+            (g.__LTK_BUDGET_ROW_LIST ??= []).push({ system: spawn.system, source: spawn.sourceId, target: spawn.targetId ?? null, event: spawn.event, action: spawn.action ?? 'cast', need, emitters: (catalog.get(spawn.system) as any)?.model?.emitters?.map((e: any) => e.name) ?? [] }); } }
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
           // rule above still bounds the wait, and the catch-up update below keeps it on its timeline.
