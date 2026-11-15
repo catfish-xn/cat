@@ -26,6 +26,11 @@ export interface TimelineCue {
   readonly fadeOut?: boolean;
   /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
   readonly main?: boolean;
+  /**
+   * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
+   * visual that must not crowd skill impacts out (Steb's heal share). A display priority decision, not original data.
+   */
+  readonly rank?: 'body';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
