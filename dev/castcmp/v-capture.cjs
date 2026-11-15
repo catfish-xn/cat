@@ -97,10 +97,11 @@ async function unbind(page, tick, rebind) {
     const waited = await page.evaluate(async () => {
       const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
       const state = runtime?.LTK_WARMING; if (!state) return 'no-probe';
+      const first = state.pending, began = performance.now();
       for (let i = 0; i < 200 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
-      return state.pending > 0 ? `still ${state.pending} after 20 s` : 'ok';
+      return state.pending > 0 ? `still ${state.pending} after 20 s` : `ok (${first} in flight, ${Math.round(performance.now() - began)} ms)`;
     });
-    if (waited !== 'ok') console.warn(`warm wait: ${waited}`);
+    if (!waited.startsWith('ok')) console.warn(`warm wait: ${waited}`);
     mark('warm measured ' + waited);
   }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
