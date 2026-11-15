@@ -37,7 +37,30 @@ export const LEAD_TICKS = 10;
  * (half a second) unless asked: fromStart (--from-start 1, ?fromstart=1) starts at combat start (tick 0, so the attacks
  * and casts before the anchor are in the window); leadMs (--lead-ms MS, ?leadms=MS) starts MS before the anchor cast,
  * never before combat start. */
-export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number }
+export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number; anchor?: Anchor }
+/**
+ * What the window is anchored on (v-capture --anchor, ?anchor=): `me`'s N-th cast (the default), its N-th basic attack that
+ * hits (`attack-hit`: a basic-attack damage packet it lands), or the N-th display event of a type that `me` sends or is the
+ * subject of (`event:<type>`, e.g. `event:packetDamage` for a passive's periodic damage). For a unit that never casts
+ * (Amumu, Zeri) an attack or event anchor still finds a window. N is --cast-index (castNumber).
+ */
+export type Anchor = { kind: 'cast' } | { kind: 'attack-hit' } | { kind: 'event'; type: string };
+export const CAST_ANCHOR: Anchor = { kind: 'cast' };
+/** --anchor's value as an Anchor, or null when it is not one (`cast`, `attack-hit`, `event:<display event type>`). */
+export function parseAnchor(value: string | null | undefined): Anchor | null {
+  if (value == null || value === 'cast') return CAST_ANCHOR;
+  if (value === 'attack-hit') return { kind: 'attack-hit' };
+  const m = /^event:([A-Za-z][A-Za-z0-9]{0,31})$/.exec(value);
+  return m ? { kind: 'event', type: m[1]! } : null;
+}
+/** Whether one display event is an occurrence of the anchor for `me`. */
+export function anchorMatches(anchor: Anchor, e: any): boolean {
+  if (anchor.kind === 'cast') return e.type === 'cast' && e.sourceId === 'me';
+  if (anchor.kind === 'attack-hit') return e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.hit === true;
+  return e.type === anchor.type && (e.sourceId === 'me' || e.attackerId === 'me' || e.unitId === 'me');
+}
+/** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
+export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
 export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
   if (start.fromStart) return Math.max(0, castIndex);
   if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
@@ -104,16 +127,16 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
 }
 
 /** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
- * `castNumber`-th: v-capture --cast-index N). `onTick` sees every tick's state and display events (tick 0 carries the
+ * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1) {
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR) {
   const started = startRealCombat(units);
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = toDisplayEvents(stepped.events as any) as any[];
-    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me') && ++casts === castNumber) castIndex = ticks;
+    if (castIndex < 0 && shown.some(e => anchorMatches(anchor, e)) && ++casts === castNumber) castIndex = ticks;
     onTick(state, shown); ticks++;
   }
   return { castIndex, ticks, combatStart: !!state.startEffectsApplied, finished: state.status === 'finished' };
@@ -121,15 +144,18 @@ export function runRealCombat(units: any[], afterTicks: number, onTick: (state: 
 
 /** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
  * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
-export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS) {
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS, anchor: Anchor = CAST_ANCHOR) {
   const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
-  const cast = (events[castIndex] ?? []).find(e => e.type === 'cast' && e.sourceId === 'me');
-  const targets: string[] = [...(cast?.targetIds ?? [])];
+  // The anchor's own occurrence: a cast names its targets; an attack hit or another event its one target, if any.
+  const cast = (events[castIndex] ?? []).find(e => anchorMatches(anchor, e));
+  const targets: string[] = [...(cast?.targetIds ?? (cast?.targetId && cast.targetId !== 'me' ? [cast.targetId] : []))];
+  // The anchor is inside the recorded window (jobs-check: the event the window is about really happens in it).
+  const anchorInWindow = !!cast && castIndex >= from && castIndex <= to;
   const end = Math.min(to, alive.length - 1);
   const otherCasts: { id: string; tick: number }[] = [];
   for (let t = from; t <= Math.min(to, events.length - 1); t++) for (const e of events[t] ?? []) if (e.type === 'cast' && e.sourceId !== 'me') otherCasts.push({ id: e.sourceId, tick: t });
   const myCasts = events.slice(from, to + 1).flat().filter(e => e.type === 'cast' && e.sourceId === 'me').length;
-  return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets,
+  return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets, anchorInWindow,
     targetsAliveAtEnd: Object.fromEntries(targets.map(id => [id, !!alive[end]?.[id]])), otherCasts, myCasts };
 }
 

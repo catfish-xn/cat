@@ -98,8 +98,10 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   if (pin !== null && params.get('real')) throw new Error('?pinfoe is for dummies only: a real combat moves and fights back');
   // ?fromstart=1 / ?leadms=MS / ?castindex=N (v-capture --from-start 1 / --lead-ms MS / --cast-index N): the replay window
   // (real-combat.ts leadTicksFor); without them it starts LEAD_TICKS (half a second) before the first cast of `me`, as before.
+  // ?anchor=attack-hit|event:<type> (v-capture --anchor): the window is about `me`'s N-th basic attack hit or event, not its
+  // N-th cast (real-combat.ts Anchor); a unit that never casts still gets a window.
   const start = { fromStart: params.get('fromstart') === '1', leadMs: params.get('leadms') !== null ? Number(params.get('leadms')) : null,
-    castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1 };
+    castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
@@ -188,9 +190,12 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
-async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number, start: { fromStart?: boolean; leadMs?: number | null; castNumber?: number } = {}) {
+async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number, start: { fromStart?: boolean; leadMs?: number | null; castNumber?: number; anchor?: string | null } = {}) {
   const [rc, display, control] = await Promise.all([import('./real-combat'),
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
+  // A bad ?anchor throws: the recording must not fall back to the first cast.
+  const anchor = rc.parseAnchor(start.anchor);
+  if (!anchor) throw new Error(`?anchor must be cast, attack-hit or event:<type>, got ${start.anchor}`);
   const nfoes = Number(params.get('nfoes') ?? 4), foeOffset = params.get('foeoffset') !== null ? Number(params.get('foeoffset')) : 0;
   // ?foeoffset=K (v-capture --foe-offset K): the foes K columns to the side, the target ahead and to the side of the caster.
   if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }
@@ -214,10 +219,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
       ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
     })));
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
-  }, start.castNumber ?? 1);
-  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never cast${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
+  }, start.castNumber ?? 1, anchor);
+  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
   const lead = rc.leadTicksFor(run.castIndex, start);
-  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead) };
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {
