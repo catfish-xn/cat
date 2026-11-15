@@ -8,7 +8,7 @@ const rec = (system: string, ...draws: ReturnType<typeof draw>[]) => ({ system, 
 
 describe('castcmp draw filter', () => {
   it('reads its lists from the URL, --only from the URL or window.__only', () => {
-    expect(drawFilterOf('?mute=a,b&solo=sys:c&nocolor=STENCIL&noerode=x')).toEqual({ only: null, mute: ['a', 'b'], solo: ['sys:c'], nocolor: ['STENCIL'], noerode: ['x'] });
+    expect(drawFilterOf('?mute=a,b&solo=sys:c&nocolor=STENCIL&noerode=x')).toEqual({ only: null, mute: ['a', 'b'], solo: ['sys:c'], nocolor: ['STENCIL'], noerode: ['x'], erodedebug: [] });
     expect(drawFilterOf('?unit=viktor', 'abc12345').only).toBe('abc12345');
     expect(drawFilterOf('?only=def67890', 'abc12345').only).toBe('def67890');
   });
