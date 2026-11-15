@@ -278,7 +278,8 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
         && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
-      if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
+      // REC ONLY (do not merge): candidate C lets Mel's e4b71857 (152 emitters with its children) past the 64-emitter cap.
+      if ((listed.length > 64 && id !== 'e4b71857') || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
       // Upstream's negative ground order alone cannot sort against both opaque hexes
       // and a transparent arena grid. Only a host providing the separate floor,

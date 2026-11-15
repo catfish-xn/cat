@@ -32,6 +32,13 @@ describe('castcmp emitters probe', () => {
     expect(tex).toEqual({ map: true, mapErosion: false, mapReflection: true });
   });
 
+  it('says whether each draw reaches the frame: a draw the filter left out (layer mask 0) or with no colour is not drawn', () => {
+    expect(probes.emitters().draws.map((d: any) => [d.name, d.visible, d.drawn])).toEqual([['Trench#4', true, true], ['Dust#2', true, true]]);
+    other.layers.mask = 0;
+    expect(probes.emitters().draws.map((d: any) => [d.name, d.visible, d.drawn, d.layerMask])).toEqual([['Trench#4', true, true, 1], ['Dust#2', true, false, 0]]);
+    other.layers.mask = 1;
+  });
+
   it('lists every draw without a filter and drops stopped systems', () => {
     expect(probes.emitters().draws.map((d: any) => d.name)).toEqual(['Trench#4', 'Dust#2']);
     running.delete(rec);
