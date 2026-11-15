@@ -17,6 +17,12 @@ import { burn, modifier, stat, status } from './content/item-programs';
 
 export const EMPTY_EXPANSION: ExpansionState = { damageDealt: 0, damageTaken: 0, crystals: 0, crystalDamage: 0,
   attacksRemaining: 0, buffUntilTick: 0, lastRetaliationTick: 0, chainUntilTick: 0, chainTargets: [], chainCastSeq: 0, chainKills: 0 };
+/**
+ * User-approved 2026-11-15 (timing only; Fable after the original frames: the shield first, the shock a moment later):
+ * Blitzcrank's shock lands 5 ticks (0.25 s) after the cast; the shield stays on the cast. Fitted (not original data) by
+ * lining our recording up with the original frame by frame. See docs/S13_RULES_GAP.md (布里茨).
+ */
+export const BLITZ_SHOCK_TICKS = 5;
 export function expansion(unit: S13Unit): ExpansionState { return unit.expansion ??= structuredClone(EMPTY_EXPANSION); }
 function hit(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number, seq: number, ordinal: number,
   type: S13Packet['damageType'] = 'magic', area = false, source = origin(unit), derived = false): void {
@@ -86,11 +92,11 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'blitzcrank': {
+      // The shield lands now; the shock on the enemies nearest now lands BLITZ_SHOCK_TICKS later (g2BlitzShock, executeG2Task).
       grantShield(unit, origin(unit), mag('Shield'), ctx.tick + ticks('ShieldDuration'), ctx.tick, ctx.events);
-      for (const t of byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'))) {
-        strike(t, mag('BaseDamage'));
-        effect(ctx, unit, t, stat(modifier('damageAmp', -Math.round(v('DamageReduction') * 10000), 'bps'), ticks('ShieldDuration')), seq);
-      } break;
+      const targets = byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'));
+      targets.forEach((t, n) => { task(unit, 'g2BlitzShock', ctx.tick + BLITZ_SHOCK_TICKS, t.id, mag('BaseDamage'), seq, n, targets.length); ids.push(t.id); });
+      break;
     }
     case 'ekko': {
       const targets = [target, ...byDistance(target, enemies(unit, ctx.units).filter(u => u.id !== target.id)).slice(0, v('NumBonusEnemies'))];
@@ -184,6 +190,13 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     if (victim) {
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
+    }
+  } else if (t.kind === 'g2BlitzShock') {
+    // Runs only while Blitzcrank is alive; a control on him after the cast does not stop it. A target that died in the
+    // meantime takes nothing and no other target is picked; one that moved away is still hit.
+    if (target) {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      effect(ctx, unit, target, stat(modifier('damageAmp', -Math.round(variable(unit, 'DamageReduction') * 10000), 'bps'), Math.round(variable(unit, 'ShieldDuration') * 20)), t.actionSeq);
     }
   } else if (target) hit(ctx, unit, target, t.amount, t.actionSeq, 1000 + t.ordinal, champion(unit) === 'leblanc' ? 'true' : 'magic', false, t.source, true);
 }

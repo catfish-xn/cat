@@ -1745,6 +1745,25 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 实现：`src/simulation/combat-g2-2.ts` `case 'vi'` 与 `executeG22Task`；任务类型 `g22ViSlam`（combat-types、serialization-structure 任务校验）。测试 `tests/vi-grab-slam.test.ts`。
 - **已知差异，原版行为未核实**（2026-11-12，Fable 定案：本次不改规则）：蔚在砸地前阵亡时，砸地取消，但主目标的 12 tick 抓起控制不提前解除（现有机制没有"施法者死亡提前解除他人状态"的通道）。3D 画面上主目标仍被举在空中，到 0.6 秒自己落下，没有伤害数字和眩晕。原版此时是否立即放下目标没有录像核实。若要改成立即放下，需要先在规则层提前解除抓起控制，再让渲染（`ControlMotion.grab`）跟随。
 
+## 卡蜜尔：踢中目标那一拍才结算伤害（2026-11-15，用户批准）
+
+- 依据：用户批准伤害改在踢中那一拍结算。原版的具体延迟没有数据，也没有逐帧核实。
+- 之前的差异：伤害在施法当刻结算，比踢腿画面早。
+- 现在（`CAMILLE_KICK_TICKS` = 5 tick = 0.25 秒，**拟合，非原版**）：跟我们施法动画 `tft13_camille_spell1` 里起跳撩腿那一下；原版伤害字也是在撩腿那一帧出现（逐帧对图）。施法当刻只记下伤害数值；第 5 tick（新任务 `g22CamilleKick`）打出伤害并按伤害回复生命。只改结算时刻，伤害数值、回复比例、目标都不变。
+- 自适应伤害的类型（目标护甲低于魔抗时为物理，否则为魔法）在踢中那一拍按目标当时的双抗判定。
+- 中途情况（拟合，原版未核实）：卡蜜尔在踢中前阵亡——不结算；卡蜜尔施法后被控——照常结算；目标在踢中前死亡——这一下作废，不换目标；目标在这期间移动——照常命中。
+- 显示：命中特效 Q_tar 跟这次伤害事件播，按伤害类型二选一（物理 69b207a4，魔法 aff93381），不再在施法后按固定时刻播。
+- 实现：`src/simulation/combat-g2-2.ts` `case 'camille'` 与 `executeG22Task`；任务类型 `g22CamilleKick`（combat-types、serialization-structure 任务校验）。测试 `tests/camille-blitz-timing.test.ts`、`tests/vfx-ltk-camille-hit.test.ts`。
+
+## 布里茨：护盾先到，电击随后结算（2026-11-15，用户长期授权：只改伤害时刻、不改数值，Fable 看过原版逐帧）
+
+- 依据：Fable 看过原版逐帧，护盾先出现，过一会儿才放电。延迟取我们的动画帧，拟合，非原版。
+- 之前的差异：护盾、电击伤害和减伤在施法当刻同时结算。
+- 现在（`BLITZ_SHOCK_TICKS` = 5 tick = 0.25 秒，**拟合，非原版**）：按我们的录像和原版逐帧对齐后定的。护盾仍在施法当刻；施法当刻记下最近的 `NumEnemies` 个敌人和伤害数值，第 5 tick（新任务 `g2BlitzShock`，每个目标一个）对他们结算魔法伤害，并在同一拍上减伤（持续 `ShieldDuration`，从电击那一拍算起）。
+- 中途情况（拟合，原版未核实）：布里茨在电击前阵亡——不结算；施法后被控——照常结算；某个目标在电击前死亡——这一份作废，不换目标，其余目标照常；目标在这期间移动——照常命中。
+- 显示：周身电弧 9d35c42d 和目标爆点 065c16b8 改成跟电击伤害事件播（不再按施法后的固定时刻），顺序为护盾、伤害字、电弧和爆点。
+- 实现：`src/simulation/combat-g2.ts` `case 'blitzcrank'` 与 `executeG2Task`；任务类型 `g2BlitzShock`。测试 `tests/camille-blitz-timing.test.ts`。
+
 ## 伊莉丝近战形态：缺跳跃、先后顺序和蜘蛛模型（2026-11-15 登记，未改规则）
 
 - 现状：伊莉丝按站位分形态（`elise` 带 formSwap）。前排是近战形态，用 `elise-ability`，射程 1；后排是远程形态 `elise-ranged`。近战形态施法时（`src/simulation/combat-g2-3.ts` `case 'elise'`），在施法当拍按 FlatHealth 回血，同时对目标周围 HexRadius（2 格）内的敌人造成伤害并眩晕 StunDuration。她留在原地，画面上一直是人形。
