@@ -193,6 +193,8 @@ const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, dec
  * past its landing, and none of its own particles' curves run longer.
  */
 export const PLAY_OUT_CAP = 2;
+/** REC ONLY (do not merge): each system's own end in seconds, computed from its emitters (L2 11-15 list, group A). */
+const REC_NATURAL_END: Record<string, number> = { c07aa972: 1.0, '6d6525e8': 2.1, dda108d2: 2.0, '106a5167': 0.5, e2f2798d: 2.3, '3857e78b': 6.5, '71e871c8': 5.4, a111b8d1: 2.9, a7c49a29: 2.85, '2ef508db': 1.54, '4e7cc3b1': 1.2, '4c885a29': 1.2 };
 /**
  * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
@@ -541,6 +543,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         && cue.variant === form
         && (cue.branch === undefined || cue.branch === context.branch)
         && (!context.boardOnly || cue.location === 'board'));
+      // REC ONLY (do not merge): group A of the early-stop list plays each system to its own end (no stopAfter, duration =
+      // the system's own end from its emitters: start + emission + particle life). Jayce's forge row is left as it is.
+      selected = selected?.map(cue => Object.hasOwn(REC_NATURAL_END, cue.system) ? { ...cue, stopAfter: undefined, fadeOut: undefined, duration: Math.max(cue.duration, REC_NATURAL_END[cue.system]!) } : cue);
       if (context.channelSeconds !== undefined) {
         if (!Number.isFinite(context.channelSeconds) || context.channelSeconds <= 0 || context.channelSeconds > 10) return false;
         const end = context.channelSeconds;
