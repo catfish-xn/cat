@@ -227,6 +227,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
+  // Sett's slam (11-15): the cast plays his whole E_cas (f7d4d344, the exported cue's E_cas_child twice plus its ground
+  // lines and ground planes) in the child's place, from the cast itself (fitted: lines its bright light up with the
+  // original's). Two enemies keep the collision hit and dust on each; one enemy (variant 'single', batch1-events.ts) gets
+  // the one-target slam E_tar_single_front (2794d903: the same hit, dust and ground planes as one system) instead. The
+  // single slam's duration is the collision hit's; the other timings are the index's.
+  sett: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.2990000089009603, duration: 1.5 },
+    { system: 'f7d4d344', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '5c1a47f1', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   urgot: [

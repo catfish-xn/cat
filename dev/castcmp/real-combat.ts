@@ -14,6 +14,9 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
   /** v-capture --ally-cell R,C: the ally on this cell instead of one row straight ahead of `me` (row 4, col 3), e.g. ahead
    * and one column to the side, off the line from `me` to its target. */
   allyCell?: Cell;
+  /** v-capture --me-cell R,C: the caster on this cell instead of row 5, column 3 (a form swapper fights in its ranged form only
+   * from its side's back two rows, rows 6-7). The foes' default row and the ally's default cell are taken from it. */
+  meCell?: Cell;
   /** v-capture --foe-cell R,C: the target `foe` on this cell (any row, e.g. on `me`'s own row), not `dist` rows ahead. */
   foeCell?: Cell;
   /** v-capture --foe2 X / --foe2star N / --foe2-cell R,C: the second foe as another hero, of its own star, on its own cell
@@ -61,6 +64,19 @@ export function anchorMatches(anchor: Anchor, e: any): boolean {
 }
 /** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
 export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
+/**
+ * The display events before a replay window, as one catch-up batch for the renderer: every event of ticks 0 to `from` - 1,
+ * then a marker two ticks past the window's first tick. The renderer moves its counts and states on every event of a batch
+ * but starts effects only for its last EFFECT_TICKS (2) ticks (placeholder-renderer.ts onEvents), so with the marker last
+ * nothing before the window starts an effect. Without this a window that opens mid-combat starts every count at zero:
+ * Zeri's third attack, Twitch's shots after her cast and the like were drawn plain. The marker is an effectTriggered event,
+ * which no renderer consumer reads.
+ */
+export function catchUpBatch(events: readonly (readonly unknown[])[], from: number): unknown[] {
+  if (from <= 0) return [];
+  const batch = events.slice(0, from).flat();
+  return batch.length ? [...batch, { type: 'effectTriggered', tick: from + 1, eventSeq: -1, ownerId: '', sourceKind: 'item', sourceDefinitionId: '', targetId: '' }] : [];
+}
 export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
   if (start.fromStart) return Math.max(0, castIndex);
   if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
@@ -77,14 +93,14 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
  * an `ally` one row in front of `me`. --foe-cell / --foe2-cell / --ally-cell put those units on given cells instead. */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
-  const meRow = ME_CELL.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
+  const meCell = s.meCell ?? ME_CELL, meRow = meCell.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
   const asked: Record<string, Cell | undefined> = { foe: s.foeCell, foe2: s.foe2Cell };
   const units = [
-    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...ME_CELL } }, ...(s.form ? { form: s.form } : {}) },
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...meCell } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
       ({ id, definitionId: id === 'foe2' && s.foe2 ? s.foe2 : foe, team: 'enemy', starLevel: id === 'foe2' && s.foe2star !== undefined ? s.foe2star : s.foestar,
         location: { kind: 'board', cell: asked[id as string] ? { ...asked[id as string]! } : { col: (col as number) + (s.foeOffset ?? 0), row } } })),
-    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: ME_CELL.col }) } } }] : []),
+    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: meCell.col }) } } }] : []),
   ];
   const why = layoutProblem(s, units);
   if (why) throw new Error(why);
@@ -93,6 +109,12 @@ export function realUnits(s: RealSetup): any[] {
 /** Why this layout cannot be placed (a cell option without its unit, a unit off the board, two on one cell), or null. */
 export function layoutProblem(s: RealSetup, units: any[]): string | null {
   if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
+  // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
+  // never by --form, which only picks what the renderer draws: the two must agree.
+  const meRow = (s.meCell ?? ME_CELL).row;
+  if (s.form === 'ranged' && meRow < 6) return `--form ranged needs the caster in rows 6-7 (--me-cell); on row ${meRow} the rules fight it as melee`;
+  if (s.form === 'melee' && meRow >= 6) return `--form melee needs the caster in rows 4-5; on row ${meRow} the rules fight it as ranged`;
+  if (s.meCell && (s.meCell.row < 4 || s.meCell.row >= ROWS)) return `--me-cell must be on the caster's side (rows 4-${ROWS - 1}), got ${s.meCell.row},${s.meCell.col}`;
   if ((s.foe2 || s.foe2star !== undefined || s.foe2Cell) && s.nfoes < 2) return '--foe2 / --foe2star / --foe2-cell need --nfoes 2 or more';
   const seen = new Map<string, string>();
   for (const u of units) {

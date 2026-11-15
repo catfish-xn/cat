@@ -12,6 +12,8 @@
 //     cast is the N-th cast of the unit (default 1st); the recorded window starts at combat start / MS before the anchor
 //     (default: 500 ms before it). --times must start at 0 for --real (jobs-check.mjs fails it otherwise).
 //   [--ally X --allystar N]: --real only; one front-liner of the caster's team a row ahead of it (default star 2).
+//   [--me-cell R,C]: --real only; the caster on this cell instead of row 5, column 3 (rows 4-7; a form swapper's ranged form
+//     needs its back two rows, 6-7).
 //   [--ally-cell R,C] [--foe-cell R,C] [--foe2 X --foe2star N --foe2-cell R,C]: --real only; the ally / the target / the second
 //     foe on these cells (the caster stands on 5,3; rows 0-7, columns 0-6), the second foe another hero of its own star (needs
 //     --nfoes 2 or more): e.g. a tank ahead and one column aside, off the caster's line, and a melee foe far off for it to fight.
@@ -47,7 +49,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -64,7 +66,7 @@ async function unbind(page, tick, rebind) {
   if (opt('pin-foe') && opt('nfoes') && Number(opt('nfoes')) !== 1) throw new Error('--pin-foe places exactly one dummy: drop --nfoes');
   const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined || opt('anchor') !== undefined;
   if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index / --anchor are for --real only: a dummy cast has no combat before it');
-  if (['ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally / --ally-cell / --foe-cell / --foe2 / --foe2star / --foe2-cell are for --real only');
+  if (['me-cell', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally / --ally-cell / --foe-cell / --foe2 / --foe2star / --foe2-cell are for --real only');
   if (opt('foe-offset') !== undefined && !opt('real')) throw new Error('--foe-offset is for --real only (dummies: use --pin-foe / --dist)');
   if (opt('foe-offset') !== undefined && !/^-?[0-9]+$/.test(opt('foe-offset'))) throw new Error(`--foe-offset must be a whole number of columns, got ${opt('foe-offset')}`);
   if (opt('cast-index') !== undefined && !/^[1-9][0-9]*$/.test(opt('cast-index'))) throw new Error(`--cast-index must be 1, 2, ..., got ${opt('cast-index')}`);
@@ -89,6 +91,19 @@ async function unbind(page, tick, rebind) {
   if (opt('settle')) { for (let left = Number(opt('settle')); left > 0; left -= 500) { await page.evaluate(ms => window.__h.step(ms), Math.min(500, left)); await page.waitForTimeout(50); } }
   // A fresh combat before the recorded cast (harness fresh(): what the warm pass left is cleared and cast counts restart,
   // as a game combat starts): always for --real, with --fresh 1 for dummies. Loaded effect files stay loaded.
+  // The recorded cast runs with each system's measured room: wait until every champion warm (file loads and peak
+  // measures, runtime.ts LTK_WARMING) has finished. Not with --cold 1, whose point is a first, cold play.
+  if (!cold) {
+    const waited = await page.evaluate(async () => {
+      const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+      const state = runtime?.LTK_WARMING; if (!state) return 'no-probe';
+      const first = state.pending, began = performance.now();
+      for (let i = 0; i < 200 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
+      return state.pending > 0 ? `still ${state.pending} after 20 s` : `ok (${first} in flight, ${Math.round(performance.now() - began)} ms)`;
+    });
+    if (!waited.startsWith('ok')) console.warn(`warm wait: ${waited}`);
+    mark('warm measured ' + waited);
+  }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
