@@ -78,7 +78,8 @@ export const DEFAULT = {
   one2: constant([1, 1]),
   one: constant([1]),
   /** `palleteSrcMixColor`'s own default, the weights of a luma. */
-  luma: constant([0.299, 0.587, 0.114, 0]),
+  /** EXPERIMENT (fit to footage, not the original's value): an emitter that writes no palleteSrcMixColor reads column 0. */
+  luma: constant([0, 0, 0, 0]),
   /** `erosionMapChannelMixer`'s own default, which reads the alpha alone. */
   alpha: constant([0, 0, 0, 1]),
 } as const;
