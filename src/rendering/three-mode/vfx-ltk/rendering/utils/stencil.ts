@@ -60,6 +60,11 @@ export interface StencilState {
   readonly stencilFail: StencilOp;
   readonly stencilZFail: StencilOp;
   readonly stencilZPass: StencilOp;
+  /**
+   * False for a writing mode: an emitter that writes the stencil mask draws into the mask only, never its colour (11-15,
+   * engine-wide rule chosen from Viktor's storm against the original; no asset field says so: inference).
+   */
+  readonly colorWrite: boolean;
 }
 
 /** The state of a material that neither tests nor writes, which is the ThreeJS default. */
@@ -72,6 +77,7 @@ export const NO_STENCIL: StencilState = {
   stencilFail: KeepStencilOp,
   stencilZFail: KeepStencilOp,
   stencilZPass: KeepStencilOp,
+  colorWrite: true,
 };
 
 /** The compare each mode runs, per `stencilMode` on the meta wiki's `VfxEmitterDefinitionData`. */
@@ -93,6 +99,7 @@ export function stencilState(use: StencilUse, reference: number): StencilState {
     stencilFail: KeepStencilOp,
     stencilZFail: KeepStencilOp,
     stencilZPass: writesStencil(use) ? ReplaceStencilOp : KeepStencilOp,
+    colorWrite: !writesStencil(use),
   };
 }
 
