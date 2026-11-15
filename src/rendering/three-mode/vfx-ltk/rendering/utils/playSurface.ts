@@ -66,8 +66,8 @@ export function setPlaySurface(play: PlaySurface | null): void {
 }
 
 const INSIDE = 'vPlayWorld.x >= vfxPlaySurface.x && vPlayWorld.x <= vfxPlaySurface.y && vPlayWorld.z >= vfxPlaySurface.z && vPlayWorld.z <= vfxPlaySurface.w';
-/** The GLSL test a fragment at `vPlayWorld` is under the play surface by (strictly, past the tolerance). */
-export const UNDER_PLAY = `(${INSIDE} && vPlayWorld.y < vfxPlayPlane - ${FLAT.toFixed(4)})`;
+/** REC ONLY (11-15): the strict-under test with a 1.0 world-unit margin instead of FLAT, to see whether coplanar ground quads come back. */
+export const UNDER_PLAY = `(${INSIDE} && vPlayWorld.y < vfxPlayPlane - 1.0000)`;
 /** The GLSL test a fragment at `vPlayWorld` is on or under the play surface by. */
 export const ON_OR_UNDER_PLAY = `(${INSIDE} && vPlayWorld.y <= vfxPlayPlane + ${FLAT.toFixed(4)})`;
 
