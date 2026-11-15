@@ -87,7 +87,8 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; quiet.forEach((mesh, i) => { mesh.visible = shown[i]!; }); }
           // The play surface writes BOARD_FALLBACK_REFERENCE into the stencil buffer (no colour, no depth; walls in front keep
           // it out by depth), for testers with no writer in the scene: fitted, not the original's (utils/stencil.ts).
-          if (flat.length) {
+          // REC ONLY (bisect): the board's stencil pass is off.
+          if (false && flat.length) {
             const hidden = [...quiet, ...solid], was = hidden.map(mesh => mesh.visible);
             for (const mesh of hidden) mesh.visible = false;
             scene.overrideMaterial = boardStencil;
