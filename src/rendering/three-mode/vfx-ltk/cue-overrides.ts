@@ -467,6 +467,13 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times are measured on the original, with 0 at the mana bar emptying.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Renni's lift and slam candidates. Her cast event names no target (the rules pick the target), so
+  // they play on her at guessed times; the real binding follows the lift and slam damage events.
+  renni: [
+    { system: 'be12cd52', action: 'cast', event: 'cast-start', delay: 0.3, duration: 1 },
+    { system: '2f79da6f', action: 'cast', event: 'cast-start', delay: 0.8, duration: 1.2 },
+    { system: '32bd44a4', action: 'cast', event: 'cast-start', delay: 0.8, duration: 1.2 },
+  ],
   // REC ONLY (do not merge): Swain's bird missile candidate.
   'swain-back': [{ system: '3d2697ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.8, travelSeconds: 0.5 }],
   // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
