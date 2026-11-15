@@ -447,8 +447,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warming.set(champion, pending); return pending;
   };
   // Where a cue meets its target, as a world point: the way LtkPlayOptions.snapshotTargets takes it.
+  // REC ONLY (do not merge): a hit cue that names no bone goes on the original's hit bone (the spell data's mHitBoneName,
+  // C_BuffBone_Glb_Center_Loc) when the body has it, else on the unit's root as before.
+  const HIT_BONE = 'C_BuffBone_Glb_Center_Loc';
+  const hitBoneOf = (body: Object3D | null, spawn: TimelineSpawn): string | undefined => {
+    if (spawn.event !== 'hit' || spawn.bone) return spawn.bone;
+    let found = false; body?.traverse(node => { if (!found && node.name.toLowerCase() === HIT_BONE.toLowerCase()) found = true; });
+    return found ? HIT_BONE : undefined;
+  };
   const placeOf = (unit: VfxUnit, spawn: TimelineSpawn): WorldPoint => {
-    const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone).originAt(0);
+    const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? hitBoneOf(unit.body, spawn) : spawn.targetBone).originAt(0);
     return [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
   };
   // A cast's hit or projectile still plays where a dead target stood, and so does an empowered attack's (a variant: Twitch's
@@ -819,7 +827,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.event === 'hit' ? hitBoneOf(host!.body, spawn) : spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
