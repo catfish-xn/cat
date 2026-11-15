@@ -513,7 +513,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
       const available = catalog.index?.skills[variant];
-      const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
+      const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action)
+        // REC ONLY (do not merge): the same group-A natural end for variants (batch3's Elise plays through here).
+        .map(cue => Object.hasOwn(REC_NATURAL_END, cue.system) ? { ...cue, stopAfter: undefined, fadeOut: undefined, duration: Math.max(cue.duration, REC_NATURAL_END[cue.system]!) } : cue),
+        id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues) return refuse('not-ready');
       if (!source?.alive || source.disposed) return refuse('caster-dead');
