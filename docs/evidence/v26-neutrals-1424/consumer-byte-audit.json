@@ -661,6 +661,14 @@
       "currentSha256": "5419ee0799f392067159821ae273fa5a8da829d4f074572705f668d4cfc55b23",
       "firstDifferentByte": 0
     },
+    "tests/castcmp-catchup.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3817,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6e6b4dea3713a0f216628b360e6d90ff599547f47fbba17087f62f014d0f247f",
+      "firstDifferentByte": 0
+    },
     "tests/castcmp-draw-filter.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

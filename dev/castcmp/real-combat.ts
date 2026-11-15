@@ -61,6 +61,19 @@ export function anchorMatches(anchor: Anchor, e: any): boolean {
 }
 /** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
 export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
+/**
+ * The display events before a replay window, as one catch-up batch for the renderer: every event of ticks 0 to `from` - 1,
+ * then a marker two ticks past the window's first tick. The renderer moves its counts and states on every event of a batch
+ * but starts effects only for its last EFFECT_TICKS (2) ticks (placeholder-renderer.ts onEvents), so with the marker last
+ * nothing before the window starts an effect. Without this a window that opens mid-combat starts every count at zero:
+ * Zeri's third attack, Twitch's shots after her cast and the like were drawn plain. The marker is an effectTriggered event,
+ * which no renderer consumer reads.
+ */
+export function catchUpBatch(events: readonly (readonly unknown[])[], from: number): unknown[] {
+  if (from <= 0) return [];
+  const batch = events.slice(0, from).flat();
+  return batch.length ? [...batch, { type: 'effectTriggered', tick: from + 1, eventSeq: -1, ownerId: '', sourceKind: 'item', sourceDefinitionId: '', targetId: '' }] : [];
+}
 export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
   if (start.fromStart) return Math.max(0, castIndex);
   if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
