@@ -151,8 +151,8 @@ for (const [definitionId, oldSeed, reason] of [
   const currentPredecessor = () => {
     if (predecessor) return predecessor;
     const run = declarationWalk(12, definitionId);
-    // Blitzcrank's debuff comes with his shock, BLITZ_SHOCK_TICKS (7) after the cast since 2026-11-15: was [115, 104].
-    expect([run.declarationStep, run.state.combat!.tick]).toEqual(definitionId === 'blitzcrank' ? [122, 111] : [109, 98]);
+    // Blitzcrank's debuff comes with his shock, BLITZ_SHOCK_TICKS (5) after the cast since 2026-11-15: was [115, 104].
+    expect([run.declarationStep, run.state.combat!.tick]).toEqual(definitionId === 'blitzcrank' ? [120, 109] : [109, 98]);
     expect(run.probe.failures).toEqual([]);
     expect(run.probe.checkpoints).toBe(2);
     expect(run.probe.continuations).toBe(3);

@@ -20,8 +20,8 @@ export const VI_ROW_KNOCKUP_TICKS = 10;
 export const VI_SLAM_TICKS = 12;
 /**
  * User-approved 2026-11-15 (original footage: the damage number shows when the kick lands, not on the cast):
- * Camille's kick lands 5 ticks (0.25 s) after the cast. Fitted to a frame of our own cast animation
- * (tft13_camille_spell1), not original data; which kick frame to follow is still under review. The damage type is picked
+ * Camille's kick lands 5 ticks (0.25 s) after the cast. It follows the rising kick of our cast animation
+ * (tft13_camille_spell1), as the original's damage number does; fitted, not original data. The damage type is picked
  * when the kick lands. See docs/S13_RULES_GAP.md (卡蜜尔).
  */
 export const CAMILLE_KICK_TICKS = 5;
