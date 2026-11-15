@@ -107,6 +107,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // REC ONLY (do not merge): Camille's Q_tar at her damage, the variant her damage type picks (adaptive damage).
+        if (event.type === 'packetDamage' && event.delivery === 'ability-direct' && definition(event.sourceId) === 'camille'
+          && (event.damageType === 'physical' || event.damageType === 'magic'))
+          plan.extra.push({ champion: 'camille', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `camille-q-${event.damageType}` });
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
