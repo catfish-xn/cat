@@ -14,7 +14,10 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
   ],
   'mel-third': [...attack,
     { system: 'e2f2798d', event: 'cast-start', delay: 0, duration: .4, stopAfter: .3 },
-    { system: '4c885a29', event: 'cast-start', delay: 0, duration: .4, stopAfter: .3 },
+    // REC ONLY (do not merge): R_cas_Ground played whole (its emitters start up to 0.2 s in and live up to 1 s), and
+    // R_cas_enemy (unreferenced) on each beam target, to compare their rings with the original.
+    { system: '4c885a29', event: 'cast-start', delay: 0, duration: 2 },
+    { system: '9e45e7ea', event: 'hit', targetLimit: 5, delay: .4, duration: 2.5 },
     { system: '4f2eb343', event: 'projectile', targetLimit: 5, delay: .4, duration: .4, travelSeconds: .4 },
     { system: 'a9cc7bf3', event: 'hit', targetLimit: 5, delay: .8, duration: 1 },
     { system: '3857e78b', event: 'hit', primary: true, delay: 1.2, duration: 1 },
