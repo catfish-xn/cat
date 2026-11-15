@@ -1459,6 +1459,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
+      // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
+      // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
+      if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // A forced move is no run: the moved unit hops along the slide and keeps its action (its stun stops that).
       if (event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) {
@@ -1470,8 +1473,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
-      // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
-      if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
       // attacker's effect; a periodic tick does not either, or a damage-over-time zone would strobe its victims).
       if (event.type === 'packetDamage' && currentEffect && event.hit && event.hpDamage + event.absorbed > 0 && !reducedMotion()

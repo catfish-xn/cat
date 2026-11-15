@@ -4,6 +4,7 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { CUE_END_STOPS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { battle, unit } from './combat-helpers';
+import { readFileSync } from 'node:fs';
 
 // Same fixed-seed setup as tests/g2-1-skills.test.ts.
 function hero(name: string, patch: Partial<CombatUnit> = {}): CombatUnit {
@@ -55,6 +56,17 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
         // Its own life: no early stop, or only the fade-out's last moments before the system's own end.
         if (cue!.stopAfter !== undefined) expect(cue!.fadeOut && cue!.duration - cue!.stopAfter <= 0.5, `${effect} ${system}`).toBe(true);
       }
+    }
+  });
+
+  it('the renderer handles the end events before its animation-only gate (they move no unit, so the gate would drop them)', () => {
+    const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
+    const gate = source.indexOf('if (!ANIMATION_EVENTS.has(event.type)) continue;');
+    expect(gate).toBeGreaterThan(0);
+    for (const handler of ["event.type === 'abilityEffectEnded'"]) {
+      const at = source.indexOf(handler);
+      expect(at, handler).toBeGreaterThan(0);
+      expect(at, handler).toBeLessThan(gate);
     }
   });
 });
