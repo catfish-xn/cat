@@ -455,9 +455,10 @@ export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // REC ONLY (do not merge): 3-cost binding batch, candidate systems the export left out, at guessed times (attribution images only).
   renni: [
     { system: '0aaf8a76', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2 },
-    { system: 'be12cd52', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BuffBone_Glb_Center_Loc' },
-    { system: '2f79da6f', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2, primary: true },
-    { system: '32bd44a4', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2, primary: true, bone: 'C_BuffBone_Glb_Center_Loc' },
+    // Her cast event names no target (the rules pick the pounce target), so these play on her at guessed times.
+    { system: 'be12cd52', action: 'cast', event: 'cast-start', delay: 0.3, duration: 1 },
+    { system: '2f79da6f', action: 'cast', event: 'cast-start', delay: 0.8, duration: 1.2 },
+    { system: '32bd44a4', action: 'cast', event: 'cast-start', delay: 0.8, duration: 1.2 },
   ],
   scar: [
     { system: '95d62c6a', action: 'cast', event: 'projectile', targetLimit: 3, delay: 0.2, duration: 0.8, travelSeconds: 0.4 },
