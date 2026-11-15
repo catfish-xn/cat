@@ -14,6 +14,9 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
   /** v-capture --ally-cell R,C: the ally on this cell instead of one row straight ahead of `me` (row 4, col 3), e.g. ahead
    * and one column to the side, off the line from `me` to its target. */
   allyCell?: Cell;
+  /** v-capture --me-cell R,C: the caster on this cell instead of row 5, column 3 (a form swapper fights in its ranged form only
+   * from its side's back two rows, rows 6-7). The foes' default row and the ally's default cell are taken from it. */
+  meCell?: Cell;
   /** v-capture --foe-cell R,C: the target `foe` on this cell (any row, e.g. on `me`'s own row), not `dist` rows ahead. */
   foeCell?: Cell;
   /** v-capture --foe2 X / --foe2star N / --foe2-cell R,C: the second foe as another hero, of its own star, on its own cell
@@ -37,7 +40,43 @@ export const LEAD_TICKS = 10;
  * (half a second) unless asked: fromStart (--from-start 1, ?fromstart=1) starts at combat start (tick 0, so the attacks
  * and casts before the anchor are in the window); leadMs (--lead-ms MS, ?leadms=MS) starts MS before the anchor cast,
  * never before combat start. */
-export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number }
+export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number; anchor?: Anchor }
+/**
+ * What the window is anchored on (v-capture --anchor, ?anchor=): `me`'s N-th cast (the default), its N-th basic attack that
+ * hits (`attack-hit`: a basic-attack damage packet it lands), or the N-th display event of a type that `me` sends or is the
+ * subject of (`event:<type>`, e.g. `event:packetDamage` for a passive's periodic damage). For a unit that never casts
+ * (Amumu, Zeri) an attack or event anchor still finds a window. N is --cast-index (castNumber).
+ */
+export type Anchor = { kind: 'cast' } | { kind: 'attack-hit' } | { kind: 'event'; type: string };
+export const CAST_ANCHOR: Anchor = { kind: 'cast' };
+/** --anchor's value as an Anchor, or null when it is not one (`cast`, `attack-hit`, `event:<display event type>`). */
+export function parseAnchor(value: string | null | undefined): Anchor | null {
+  if (value == null || value === 'cast') return CAST_ANCHOR;
+  if (value === 'attack-hit') return { kind: 'attack-hit' };
+  const m = /^event:([A-Za-z][A-Za-z0-9]{0,31})$/.exec(value);
+  return m ? { kind: 'event', type: m[1]! } : null;
+}
+/** Whether one display event is an occurrence of the anchor for `me`. */
+export function anchorMatches(anchor: Anchor, e: any): boolean {
+  if (anchor.kind === 'cast') return e.type === 'cast' && e.sourceId === 'me';
+  if (anchor.kind === 'attack-hit') return e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.hit === true;
+  return e.type === anchor.type && (e.sourceId === 'me' || e.attackerId === 'me' || e.unitId === 'me');
+}
+/** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
+export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
+/**
+ * The display events before a replay window, as one catch-up batch for the renderer: every event of ticks 0 to `from` - 1,
+ * then a marker two ticks past the window's first tick. The renderer moves its counts and states on every event of a batch
+ * but starts effects only for its last EFFECT_TICKS (2) ticks (placeholder-renderer.ts onEvents), so with the marker last
+ * nothing before the window starts an effect. Without this a window that opens mid-combat starts every count at zero:
+ * Zeri's third attack, Twitch's shots after her cast and the like were drawn plain. The marker is an effectTriggered event,
+ * which no renderer consumer reads.
+ */
+export function catchUpBatch(events: readonly (readonly unknown[])[], from: number): unknown[] {
+  if (from <= 0) return [];
+  const batch = events.slice(0, from).flat();
+  return batch.length ? [...batch, { type: 'effectTriggered', tick: from + 1, eventSeq: -1, ownerId: '', sourceKind: 'item', sourceDefinitionId: '', targetId: '' }] : [];
+}
 export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
   if (start.fromStart) return Math.max(0, castIndex);
   if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
@@ -54,14 +93,14 @@ export function afterTicksFor(windowMs: number, start: WindowStart = {}): number
  * an `ally` one row in front of `me`. --foe-cell / --foe2-cell / --ally-cell put those units on given cells instead. */
 export function realUnits(s: RealSetup): any[] {
   const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
-  const meRow = ME_CELL.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
+  const meCell = s.meCell ?? ME_CELL, meRow = meCell.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
   const asked: Record<string, Cell | undefined> = { foe: s.foeCell, foe2: s.foe2Cell };
   const units = [
-    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...ME_CELL } }, ...(s.form ? { form: s.form } : {}) },
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...meCell } }, ...(s.form ? { form: s.form } : {}) },
     ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
       ({ id, definitionId: id === 'foe2' && s.foe2 ? s.foe2 : foe, team: 'enemy', starLevel: id === 'foe2' && s.foe2star !== undefined ? s.foe2star : s.foestar,
         location: { kind: 'board', cell: asked[id as string] ? { ...asked[id as string]! } : { col: (col as number) + (s.foeOffset ?? 0), row } } })),
-    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: ME_CELL.col }) } } }] : []),
+    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: meCell.col }) } } }] : []),
   ];
   const why = layoutProblem(s, units);
   if (why) throw new Error(why);
@@ -70,6 +109,12 @@ export function realUnits(s: RealSetup): any[] {
 /** Why this layout cannot be placed (a cell option without its unit, a unit off the board, two on one cell), or null. */
 export function layoutProblem(s: RealSetup, units: any[]): string | null {
   if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
+  // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
+  // never by --form, which only picks what the renderer draws: the two must agree.
+  const meRow = (s.meCell ?? ME_CELL).row;
+  if (s.form === 'ranged' && meRow < 6) return `--form ranged needs the caster in rows 6-7 (--me-cell); on row ${meRow} the rules fight it as melee`;
+  if (s.form === 'melee' && meRow >= 6) return `--form melee needs the caster in rows 4-5; on row ${meRow} the rules fight it as ranged`;
+  if (s.meCell && (s.meCell.row < 4 || s.meCell.row >= ROWS)) return `--me-cell must be on the caster's side (rows 4-${ROWS - 1}), got ${s.meCell.row},${s.meCell.col}`;
   if ((s.foe2 || s.foe2star !== undefined || s.foe2Cell) && s.nfoes < 2) return '--foe2 / --foe2star / --foe2-cell need --nfoes 2 or more';
   const seen = new Map<string, string>();
   for (const u of units) {
@@ -104,16 +149,17 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
 }
 
 /** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
- * `castNumber`-th: v-capture --cast-index N). `onTick` sees every tick's state and display events (tick 0 carries the
+ * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
+ * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1) {
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR) {
   const started = startRealCombat(units);
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
     const stepped = stepCombat(state); state = stepped.state;
     const shown = toDisplayEvents(stepped.events as any) as any[];
-    if (castIndex < 0 && shown.some(e => e.type === 'cast' && e.sourceId === 'me') && ++casts === castNumber) castIndex = ticks;
+    if (castIndex < 0 && shown.some(e => anchorMatches(anchor, e)) && ++casts === castNumber) castIndex = ticks;
     onTick(state, shown); ticks++;
   }
   return { castIndex, ticks, combatStart: !!state.startEffectsApplied, finished: state.status === 'finished' };
@@ -121,15 +167,18 @@ export function runRealCombat(units: any[], afterTicks: number, onTick: (state: 
 
 /** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
  * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
-export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS) {
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS, anchor: Anchor = CAST_ANCHOR) {
   const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
-  const cast = (events[castIndex] ?? []).find(e => e.type === 'cast' && e.sourceId === 'me');
-  const targets: string[] = [...(cast?.targetIds ?? [])];
+  // The anchor's own occurrence: a cast names its targets; an attack hit or another event its one target, if any.
+  const cast = (events[castIndex] ?? []).find(e => anchorMatches(anchor, e));
+  const targets: string[] = [...(cast?.targetIds ?? (cast?.targetId && cast.targetId !== 'me' ? [cast.targetId] : []))];
+  // The anchor is inside the recorded window (jobs-check: the event the window is about really happens in it).
+  const anchorInWindow = !!cast && castIndex >= from && castIndex <= to;
   const end = Math.min(to, alive.length - 1);
   const otherCasts: { id: string; tick: number }[] = [];
   for (let t = from; t <= Math.min(to, events.length - 1); t++) for (const e of events[t] ?? []) if (e.type === 'cast' && e.sourceId !== 'me') otherCasts.push({ id: e.sourceId, tick: t });
   const myCasts = events.slice(from, to + 1).flat().filter(e => e.type === 'cast' && e.sourceId === 'me').length;
-  return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets,
+  return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets, anchorInWindow,
     targetsAliveAtEnd: Object.fromEntries(targets.map(id => [id, !!alive[end]?.[id]])), otherCasts, myCasts };
 }
 

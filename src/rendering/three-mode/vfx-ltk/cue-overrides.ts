@@ -228,15 +228,37 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '45b69079', action: 'cast', event: 'projectile', delay: 0.45, duration: 0.95, travelSeconds: 0.35, bone: 'R_Buffbone_Glb_Hand_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', targetLimit: 3 },
     { system: '28c6427d', action: 'cast', event: 'hit', delay: 0.95, duration: 0.9, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // The purple disc plays once on the cast as well as on each empowered swing.
+  // The purple disc plays under each empowered swing only: the original's cast shows no disc (11-15 review). His cast keeps
+  // its buff (97366927); the cast's jump-slash light has no exported system yet.
   nocturne: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.3, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over a short fade
-    // (11-08 blind recheck of the empowered swing). Both cues of the system fade from their stop.
-    { action: 'cast', system: '3e224f4a', event: 'cast-start', delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // (11-08 blind recheck of the empowered swing).
     { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
+  // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
+  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
+  // minibombs have no exported system.
+  ziggs: [
+    { system: '7f403068', action: 'attack', event: 'projectile', bone: 'weapon', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6333333333333333, duration: 1.5 },
+    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'weapon', delay: 0.3, duration: 0.5, travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '04c3cba0', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2 },
+  ],
+  // Sett's slam (11-15): the cast plays his whole E_cas (f7d4d344, the exported cue's E_cas_child twice plus its ground
+  // lines and ground planes) in the child's place, from the cast itself (fitted: lines its bright light up with the
+  // original's). Two enemies keep the collision hit and dust on each; one enemy (variant 'single', batch1-events.ts) gets
+  // the one-target slam E_tar_single_front (2794d903: the same hit, dust and ground planes as one system) instead. The
+  // single slam's duration is the collision hit's; the other timings are the index's.
+  sett: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.2990000089009603, duration: 1.5 },
+    { system: 'f7d4d344', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '5c1a47f1', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
