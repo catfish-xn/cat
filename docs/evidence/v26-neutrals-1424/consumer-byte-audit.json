@@ -3985,6 +3985,14 @@
       "currentSha256": "34abf1fe66f51258e7762609c31d0f7a20ab43d8fa638fc527e71d2504cf844c",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-warming.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1646,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bd5b96b34acabb59d4269cbe4a83bad98ada10f5b09ce5b26de687d35e5b4710",
+      "firstDifferentByte": 0
+    },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
