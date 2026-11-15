@@ -1,0 +1,44 @@
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { BOARD_FALLBACK_REFERENCE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/stencil';
+
+// 11-15: the board's stencil value must be one no shipped emitter names, or that emitter would see the board as its own
+// mask. Scans the vfx-ltk asset root when one is on hand (VFX_LTK_ASSET_ROOT, or the Linux box's live copy); skipped elsewhere.
+const ROOT = process.env.VFX_LTK_ASSET_ROOT ?? '/data/aiapps/asset-root-live/vfx-ltk';
+type Node = { name?: string; hash?: string; value?: any; fields?: Node[]; items?: Node[] };
+/** Every emitter's stencil mode and reference in one system document. */
+function stencilsOf(doc: unknown): { emitter: string; mode: number; ref: number; id: string | null }[] {
+  const out: { emitter: string; mode: number; ref: number; id: string | null }[] = [];
+  const walk = (node: any) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    const fields: Node[] | undefined = Array.isArray(node.fields) ? node.fields : undefined;
+    const named = fields?.find(f => f?.name === 'emitterName');
+    if (fields && named) {
+      const get = (n: string) => fields.find(f => f?.name === n)?.value;
+      const mode = Number(get('stencilMode')?.value ?? 0);
+      if (mode) out.push({ emitter: String(named.value?.value), mode, ref: Number(get('stencilRef')?.value ?? 0), id: get('StencilReferenceId')?.hash ?? null });
+    }
+    Object.values(node).forEach(walk);
+  };
+  walk(doc);
+  return out;
+}
+describe.skipIf(!existsSync(ROOT))('no shipped emitter names the board stencil value', () => {
+  it(`no emitter's stencilRef is ${BOARD_FALLBACK_REFERENCE} (low six bits)`, () => {
+    const hits: string[] = []; let scanned = 0;
+    for (const group of readdirSync(ROOT)) {
+      const dir = join(ROOT, group); if (!statSync(dir).isDirectory()) continue;
+      for (const hero of readdirSync(dir)) {
+        const systems = join(dir, hero, 'systems'); if (!existsSync(systems)) continue;
+        for (const file of readdirSync(systems)) {
+          const doc = JSON.parse(readFileSync(join(systems, file), 'utf8')); scanned++;
+          for (const s of stencilsOf(doc.root ?? doc)) if (s.id === null && (s.ref & 0x3f) === BOARD_FALLBACK_REFERENCE) hits.push(`${hero}/${file}:${s.emitter}`);
+        }
+      }
+    }
+    expect(scanned).toBeGreaterThan(0);
+    expect(hits).toEqual([]);
+  });
+});

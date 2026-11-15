@@ -171,20 +171,20 @@
     "src/simulation/combat-effects.ts": "a90aa6949eb007e5f3433f980a9ed2b4266ae9764e88a15aac5f7d482996ba88",
     "src/simulation/combat-experiment-clone.ts": "56381b803d0bc57f9b58fb00b058a18f792c0a3df8fefd45e6a4ce1aead815b4",
     "src/simulation/combat-family-reunion.ts": "1e5ab0c14f86d583d9b83cfc6b6ddc9fba293710c1fefc1c29c248c9bfb1c6ae",
-    "src/simulation/combat-g2-2.ts": "5edbf943c2db7b3f2b35b8467d1483957906f5312b528dfa70c0a183989ef615",
+    "src/simulation/combat-g2-2.ts": "3ceee09385a98297e7bc8272fe919cdeaf6d78813b1768c8bd3839aec9a17010",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
     "src/simulation/combat-g2-3-summons.ts": "674da09bfb74f3cf835acf4a53837c22ca753993d840595fdaea60039d4af57d",
-    "src/simulation/combat-g2-3.ts": "2f06c081c82b6f8bc241ef082c06bac49df75912796d8a7e09f7ff78c81d089d",
+    "src/simulation/combat-g2-3.ts": "bdf16896fa49d419309ee7072c1a7719696e3b02b2fab0989eec506f7f615630",
     "src/simulation/combat-g2-4b-trench.ts": "c4957265097e620890d6c91b33f2eeb68b5c67da04d726b4839ca250912d5d8f",
     "src/simulation/combat-g2-4b.ts": "dd3028d2977f1d31ab0a4064740ffde11cf51bbbeedb33bf24a20d0b66dc32b7",
-    "src/simulation/combat-g2.ts": "f2c3259602725c15681394c3c2c783eae55697eaf20c4c065f223763e9806de1",
+    "src/simulation/combat-g2.ts": "64c92db8ee0fb39c0505be17119457394a4652cfa94153b59b2f3d21e9c97a38",
     "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
     "src/simulation/combat-input.ts": "944364963553d17f776dcd1df544fbf8da9a2b0065d04ca0713846f007d219fd",
     "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
     "src/simulation/combat-movement.ts": "65d2e21f9908422b13e59f36d1eb4560a36eeaba48fa321db85a08261b0ea2df",
     "src/simulation/combat-opening-crabs.ts": "c1d00a0a86a411c35a744f45587a89dd350dddfd5ee8d801247ab1e15c8c793f",
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
-    "src/simulation/combat-replay-view.ts": "14e182ae889ca4cf522ad228d0e6c7e38fa3e9e1bb317e7fdc63b38c4e3ef8b4",
+    "src/simulation/combat-replay-view.ts": "492bc1b765dfc34766486b530cca8d7533fd7559a848d4b6cf85312646ebc50a",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "932c956ce788c5572bb28e27900e911855dc4380b1d5bdc54b72d907393ff1c6",
     "src/simulation/combat-s13-state.ts": "79839b1df406583f40f4b3cc3db20e4a5fccbc9c3c090586bfdac1a267c71680",
@@ -196,7 +196,7 @@
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
     "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
-    "src/simulation/combat-types.ts": "6e98ac01b0d53c8c8f31417a0e338541a70efc3707515ab733f59df151151f88",
+    "src/simulation/combat-types.ts": "ab9aa1a56ffee6fcb7e7d7291fae12e2dc75aa4b826fef1e2a67749505cc5f23",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
     "src/simulation/combat-v20-traits.ts": "761944a2e973677ccca1c6cc217b9aa7b41de86ed9f596dd1e4e73a8747cc5c1",
     "src/simulation/combat.ts": "812792cf31746e20006da6c8efd1b9db814c92b2ab7e22f58dd09c12e47bd559",
@@ -473,7 +473,7 @@
     "src/simulation/m8/restore.ts": "5361b16b77f453b54ba2f2b26d513837f93cfc334614f790f2dd67410c3ed30c",
     "src/simulation/m8/runtime-types.ts": "da704a0f399e0917a1825b5e84aa0baee570cee43042dbd996b15a3fe96ceee4",
     "src/simulation/m8/s13-definitions.ts": "7de62a2946892458d9e3effeeeca0d4536c3c37bd4c1eeb7dfa2d99682ac0003",
-    "src/simulation/m8/s13-mechanisms.ts": "93837963aff1bbffa044c29a73dfea09e39f732e39634354da0eb1af89caa839",
+    "src/simulation/m8/s13-mechanisms.ts": "8b324fc8839bec70273d7b87f3b6f96b3ab0cd329dba5a47f88d631085ff0f60",
     "src/simulation/m8/s13-targeting.ts": "8e55d4341287db716034f9f6dc2f08db57a0aa8315671a7bc9d0ffa22d5888ac",
     "src/simulation/m8/s13-triggers.ts": "c3356c55ec21c706a0815945d1318b768f5ef14258695dedc58ef89c3e254adb",
     "src/simulation/m8/sampled-stat-facts.ts": "f5d1244ce39ab2ef380eec9f005abe22d9fa3558d33db03717f649c827609e3e",
@@ -583,7 +583,7 @@
     "src/simulation/s13-p3-programs.ts": "5368142348225dfe8d63b5913481192c4bf49d8fc7028b534d93e2e28c467769",
     "src/simulation/s13-rules.ts": "edb01688ecd112372bdefea78bd6c6357f2fd9c159f16601bf0ab30f31c0bc50",
     "src/simulation/seat-mechanics/choices.ts": "f68964fa36561844dc5524632ef78fb4c86cc22f305579d62fcc08c5ba7d2c60",
-    "src/simulation/seat-mechanics/combat-events.ts": "918d2300cccf671b3710b0c17672ff557eafc720980c6e5fa2c916f1ec1ecd1b",
+    "src/simulation/seat-mechanics/combat-events.ts": "197f77e665dbbb7660df169e504bac6f39152d317ea38c96c2162ba116c696d9",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
     "src/simulation/seat-mechanics/grants.ts": "bd52f4a2c36074b81ebd80b2d4006b8decae95a20a23f369ab1d0c0d1f5fc48e",
     "src/simulation/seat-mechanics/index.ts": "ef94f045bdaf1944daed9329d2297514c3bc56f005c348c8480fa3d44dfa610b",
@@ -591,7 +591,7 @@
     "src/simulation/seat-mechanics/replay-units.ts": "9e73e8cf4a7f2d21e5a10e62674a31771b0ea90e10fe9817726337109b3035fb",
     "src/simulation/seat-mechanics/state.ts": "313391d455f813f223797bccc92360a0dc4ae1be0c87ad838dbda0ed0b14427e",
     "src/simulation/seat-mechanics/types.ts": "ab5406abf6544fb533c49eb7ee30ac6a2fb17bb79819ff4ac702c8a502cd0c6f",
-    "src/simulation/serialization-structure.ts": "b351f9268af8fa452de3e6078408a199adac8aec9ee8ad195df4213eb4b1a713",
+    "src/simulation/serialization-structure.ts": "55e714ab728c379a5420750f04ad0d8a56a95f2353894429151604f7007701b0",
     "src/simulation/serialization.ts": "2a80600b71ef2d1a228c3798986f0c2d140f4899a2f8fcacde9c6d1539af316a",
     "src/simulation/setup-work.ts": "e7832d5d78d5f5b477de28ccf63ac2521870b45c1bde10a93fe012ee24e81ef9",
     "src/simulation/shared-pool-ledger.ts": "3e06e304056d7b42f3bbc6dd9445d4972014fad60d4e111185cceee99c8722df",
@@ -710,14 +710,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 904308,
-          "currentBytes": 1158989,
+          "currentBytes": 1158757,
           "previousSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1",
-          "currentSha256": "599c0f152b87cf1f8d1170adfd572bec2d775bbbceb8633e7a1c0d87ccfe1af1",
+          "currentSha256": "283a44a464f15adbce6e96e94aa91df1e227e20e5b5d884267a0a08de52ad9e7",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "599c0f152b87cf1f8d1170adfd572bec2d775bbbceb8633e7a1c0d87ccfe1af1",
-        "stateUtf8Sha256": "20a6bd56cfc01edf51f77eb5e79187edbeb9de511dcc072ef8c35ee0032dc954",
+        "gzipSha256": "283a44a464f15adbce6e96e94aa91df1e227e20e5b5d884267a0a08de52ad9e7",
+        "stateUtf8Sha256": "6e59a3bab8be859dad633f32becba77a8efcf6b23086d252ae7081079248e57a",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "176fba2ef035fe76f9780e7a05bc0cdc2387eff54d8ddcc9aa5942312f9785c1"
       },
@@ -918,7 +918,7 @@
             "roundId": "2-2",
             "result": "playerWin",
             "combatTicks": 297,
-            "combatEventCount": 385,
+            "combatEventCount": 386,
             "settlementId": "round-5-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1078,7 +1078,7 @@
             "roundId": "2-6",
             "result": "playerWin",
             "combatTicks": 245,
-            "combatEventCount": 496,
+            "combatEventCount": 497,
             "settlementId": "round-9-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1238,7 +1238,7 @@
             "roundId": "3-3",
             "result": "playerWin",
             "combatTicks": 328,
-            "combatEventCount": 808,
+            "combatEventCount": 810,
             "settlementId": "round-13-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1438,7 +1438,7 @@
             "roundId": "4-1",
             "result": "playerWin",
             "combatTicks": 382,
-            "combatEventCount": 1482,
+            "combatEventCount": 1484,
             "settlementId": "round-18-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1598,7 +1598,7 @@
             "roundId": "4-5",
             "result": "playerWin",
             "combatTicks": 334,
-            "combatEventCount": 1407,
+            "combatEventCount": 1408,
             "settlementId": "round-22-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1758,7 +1758,7 @@
             "roundId": "5-2",
             "result": "playerWin",
             "combatTicks": 269,
-            "combatEventCount": 1449,
+            "combatEventCount": 1451,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -1918,7 +1918,7 @@
             "roundId": "5-6",
             "result": "playerWin",
             "combatTicks": 265,
-            "combatEventCount": 1372,
+            "combatEventCount": 1373,
             "settlementId": "round-30-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2078,7 +2078,7 @@
             "roundId": "6-3",
             "result": "playerWin",
             "combatTicks": 295,
-            "combatEventCount": 1706,
+            "combatEventCount": 1708,
             "settlementId": "round-34-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2296,14 +2296,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 937538,
-          "currentBytes": 1216855,
+          "currentBytes": 1216666,
           "previousSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2",
-          "currentSha256": "8d2ad7dfcd759dde7903a2875949fe6487ae9074d8a5487836070a2c7e46258f",
+          "currentSha256": "ca4fe608248dc64c1a15b9e3c65a736e9a9d5f8905719bca2c05e5b0f1d62966",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "8d2ad7dfcd759dde7903a2875949fe6487ae9074d8a5487836070a2c7e46258f",
-        "stateUtf8Sha256": "1ea68f01f869d72619550781df04216b34e62f364f83914be7bfeb1512da19eb",
+        "gzipSha256": "ca4fe608248dc64c1a15b9e3c65a736e9a9d5f8905719bca2c05e5b0f1d62966",
+        "stateUtf8Sha256": "ad94a2ceb15fb62d1896662b91d4e309b1acb4a5283e240609be73d018015c42",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "f716daf22ced71f1292430f68fd1757d76fabf52fcf9f8238f73864ad31d3cc2"
       },
@@ -2464,7 +2464,7 @@
             "roundId": "2-1",
             "result": "playerWin",
             "combatTicks": 612,
-            "combatEventCount": 877,
+            "combatEventCount": 881,
             "settlementId": "round-4-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2504,7 +2504,7 @@
             "roundId": "2-2",
             "result": "enemyWin",
             "combatTicks": 721,
-            "combatEventCount": 728,
+            "combatEventCount": 735,
             "settlementId": "round-5-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2544,7 +2544,7 @@
             "roundId": "2-3",
             "result": "playerWin",
             "combatTicks": 458,
-            "combatEventCount": 711,
+            "combatEventCount": 713,
             "settlementId": "round-6-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2624,7 +2624,7 @@
             "roundId": "2-5",
             "result": "enemyWin",
             "combatTicks": 603,
-            "combatEventCount": 834,
+            "combatEventCount": 838,
             "settlementId": "round-8-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2664,7 +2664,7 @@
             "roundId": "2-6",
             "result": "playerWin",
             "combatTicks": 293,
-            "combatEventCount": 552,
+            "combatEventCount": 555,
             "settlementId": "round-9-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2704,7 +2704,7 @@
             "roundId": "2-7",
             "result": "playerWin",
             "combatTicks": 439,
-            "combatEventCount": 523,
+            "combatEventCount": 526,
             "settlementId": "round-10-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -2744,7 +2744,7 @@
             "roundId": "3-1",
             "result": "enemyWin",
             "combatTicks": 720,
-            "combatEventCount": 1535,
+            "combatEventCount": 1538,
             "settlementId": "round-11-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2784,7 +2784,7 @@
             "roundId": "3-2",
             "result": "playerWin",
             "combatTicks": 666,
-            "combatEventCount": 1431,
+            "combatEventCount": 1435,
             "settlementId": "round-12-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2824,7 +2824,7 @@
             "roundId": "3-3",
             "result": "playerWin",
             "combatTicks": 474,
-            "combatEventCount": 1180,
+            "combatEventCount": 1184,
             "settlementId": "round-13-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2904,7 +2904,7 @@
             "roundId": "3-5",
             "result": "playerWin",
             "combatTicks": 351,
-            "combatEventCount": 985,
+            "combatEventCount": 987,
             "settlementId": "round-15-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2944,7 +2944,7 @@
             "roundId": "3-6",
             "result": "playerWin",
             "combatTicks": 331,
-            "combatEventCount": 926,
+            "combatEventCount": 928,
             "settlementId": "round-16-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -2984,7 +2984,7 @@
             "roundId": "3-7",
             "result": "playerWin",
             "combatTicks": 198,
-            "combatEventCount": 363,
+            "combatEventCount": 364,
             "settlementId": "round-17-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -3024,7 +3024,7 @@
             "roundId": "4-1",
             "result": "playerWin",
             "combatTicks": 567,
-            "combatEventCount": 2071,
+            "combatEventCount": 2077,
             "settlementId": "round-18-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3064,7 +3064,7 @@
             "roundId": "4-2",
             "result": "playerWin",
             "combatTicks": 432,
-            "combatEventCount": 1577,
+            "combatEventCount": 1579,
             "settlementId": "round-19-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3104,7 +3104,7 @@
             "roundId": "4-3",
             "result": "playerWin",
             "combatTicks": 402,
-            "combatEventCount": 1504,
+            "combatEventCount": 1507,
             "settlementId": "round-20-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3184,7 +3184,7 @@
             "roundId": "4-5",
             "result": "playerWin",
             "combatTicks": 450,
-            "combatEventCount": 1697,
+            "combatEventCount": 1701,
             "settlementId": "round-22-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3224,7 +3224,7 @@
             "roundId": "4-6",
             "result": "playerWin",
             "combatTicks": 359,
-            "combatEventCount": 1324,
+            "combatEventCount": 1326,
             "settlementId": "round-23-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3264,7 +3264,7 @@
             "roundId": "4-7",
             "result": "playerWin",
             "combatTicks": 223,
-            "combatEventCount": 622,
+            "combatEventCount": 623,
             "settlementId": "round-24-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -3304,7 +3304,7 @@
             "roundId": "5-1",
             "result": "playerWin",
             "combatTicks": 455,
-            "combatEventCount": 2089,
+            "combatEventCount": 2092,
             "settlementId": "round-25-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3344,7 +3344,7 @@
             "roundId": "5-2",
             "result": "playerWin",
             "combatTicks": 495,
-            "combatEventCount": 2330,
+            "combatEventCount": 2334,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3384,7 +3384,7 @@
             "roundId": "5-3",
             "result": "playerWin",
             "combatTicks": 452,
-            "combatEventCount": 2012,
+            "combatEventCount": 2015,
             "settlementId": "round-27-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3464,7 +3464,7 @@
             "roundId": "5-5",
             "result": "playerWin",
             "combatTicks": 442,
-            "combatEventCount": 3371,
+            "combatEventCount": 3373,
             "settlementId": "round-29-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3504,7 +3504,7 @@
             "roundId": "5-6",
             "result": "playerWin",
             "combatTicks": 478,
-            "combatEventCount": 5086,
+            "combatEventCount": 5091,
             "settlementId": "round-30-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3544,7 +3544,7 @@
             "roundId": "5-7",
             "result": "playerWin",
             "combatTicks": 267,
-            "combatEventCount": 1047,
+            "combatEventCount": 1048,
             "settlementId": "round-31-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -3584,7 +3584,7 @@
             "roundId": "6-1",
             "result": "playerWin",
             "combatTicks": 602,
-            "combatEventCount": 4493,
+            "combatEventCount": 4497,
             "settlementId": "round-32-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3624,7 +3624,7 @@
             "roundId": "6-2",
             "result": "enemyWin",
             "combatTicks": 451,
-            "combatEventCount": 5778,
+            "combatEventCount": 5779,
             "settlementId": "round-33-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3664,7 +3664,7 @@
             "roundId": "6-3",
             "result": "playerWin",
             "combatTicks": 533,
-            "combatEventCount": 5718,
+            "combatEventCount": 5723,
             "settlementId": "round-34-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3744,7 +3744,7 @@
             "roundId": "6-5",
             "result": "playerWin",
             "combatTicks": 519,
-            "combatEventCount": 4688,
+            "combatEventCount": 4691,
             "settlementId": "round-36-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3784,7 +3784,7 @@
             "roundId": "6-6",
             "result": "enemyWin",
             "combatTicks": 451,
-            "combatEventCount": 3842,
+            "combatEventCount": 3844,
             "settlementId": "round-37-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -3824,7 +3824,7 @@
             "roundId": "6-7",
             "result": "playerWin",
             "combatTicks": 270,
-            "combatEventCount": 1052,
+            "combatEventCount": 1053,
             "settlementId": "round-38-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -4077,7 +4077,7 @@
             "roundId": "2-2",
             "result": "enemyWin",
             "combatTicks": 364,
-            "combatEventCount": 468,
+            "combatEventCount": 470,
             "settlementId": "round-5-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -4237,7 +4237,7 @@
             "roundId": "2-6",
             "result": "playerWin",
             "combatTicks": 434,
-            "combatEventCount": 624,
+            "combatEventCount": 627,
             "settlementId": "round-9-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -4397,7 +4397,7 @@
             "roundId": "3-3",
             "result": "playerWin",
             "combatTicks": 280,
-            "combatEventCount": 677,
+            "combatEventCount": 679,
             "settlementId": "round-13-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -4597,7 +4597,7 @@
             "roundId": "4-1",
             "result": "playerWin",
             "combatTicks": 714,
-            "combatEventCount": 5109,
+            "combatEventCount": 5112,
             "settlementId": "round-18-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -4757,7 +4757,7 @@
             "roundId": "4-5",
             "result": "playerWin",
             "combatTicks": 381,
-            "combatEventCount": 2669,
+            "combatEventCount": 2670,
             "settlementId": "round-22-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -4917,7 +4917,7 @@
             "roundId": "5-2",
             "result": "playerWin",
             "combatTicks": 553,
-            "combatEventCount": 4078,
+            "combatEventCount": 4080,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5077,7 +5077,7 @@
             "roundId": "5-6",
             "result": "playerWin",
             "combatTicks": 489,
-            "combatEventCount": 3910,
+            "combatEventCount": 3912,
             "settlementId": "round-30-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5237,7 +5237,7 @@
             "roundId": "6-3",
             "result": "playerWin",
             "combatTicks": 699,
-            "combatEventCount": 5754,
+            "combatEventCount": 5756,
             "settlementId": "round-34-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5610,7 +5610,7 @@
             "roundId": "2-1",
             "result": "playerWin",
             "combatTicks": 612,
-            "combatEventCount": 877,
+            "combatEventCount": 881,
             "settlementId": "round-4-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5650,7 +5650,7 @@
             "roundId": "2-2",
             "result": "enemyWin",
             "combatTicks": 721,
-            "combatEventCount": 728,
+            "combatEventCount": 735,
             "settlementId": "round-5-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5690,7 +5690,7 @@
             "roundId": "2-3",
             "result": "playerWin",
             "combatTicks": 458,
-            "combatEventCount": 711,
+            "combatEventCount": 713,
             "settlementId": "round-6-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5770,7 +5770,7 @@
             "roundId": "2-5",
             "result": "enemyWin",
             "combatTicks": 603,
-            "combatEventCount": 834,
+            "combatEventCount": 838,
             "settlementId": "round-8-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5810,7 +5810,7 @@
             "roundId": "2-6",
             "result": "playerWin",
             "combatTicks": 293,
-            "combatEventCount": 552,
+            "combatEventCount": 555,
             "settlementId": "round-9-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5850,7 +5850,7 @@
             "roundId": "2-7",
             "result": "playerWin",
             "combatTicks": 439,
-            "combatEventCount": 523,
+            "combatEventCount": 526,
             "settlementId": "round-10-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -5890,7 +5890,7 @@
             "roundId": "3-1",
             "result": "enemyWin",
             "combatTicks": 720,
-            "combatEventCount": 1535,
+            "combatEventCount": 1538,
             "settlementId": "round-11-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5930,7 +5930,7 @@
             "roundId": "3-2",
             "result": "playerWin",
             "combatTicks": 666,
-            "combatEventCount": 1431,
+            "combatEventCount": 1435,
             "settlementId": "round-12-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -5970,7 +5970,7 @@
             "roundId": "3-3",
             "result": "playerWin",
             "combatTicks": 474,
-            "combatEventCount": 1180,
+            "combatEventCount": 1184,
             "settlementId": "round-13-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6050,7 +6050,7 @@
             "roundId": "3-5",
             "result": "playerWin",
             "combatTicks": 351,
-            "combatEventCount": 985,
+            "combatEventCount": 987,
             "settlementId": "round-15-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6090,7 +6090,7 @@
             "roundId": "3-6",
             "result": "playerWin",
             "combatTicks": 331,
-            "combatEventCount": 926,
+            "combatEventCount": 928,
             "settlementId": "round-16-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6130,7 +6130,7 @@
             "roundId": "3-7",
             "result": "playerWin",
             "combatTicks": 198,
-            "combatEventCount": 363,
+            "combatEventCount": 364,
             "settlementId": "round-17-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -6170,7 +6170,7 @@
             "roundId": "4-1",
             "result": "playerWin",
             "combatTicks": 567,
-            "combatEventCount": 2071,
+            "combatEventCount": 2077,
             "settlementId": "round-18-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6210,7 +6210,7 @@
             "roundId": "4-2",
             "result": "playerWin",
             "combatTicks": 432,
-            "combatEventCount": 1577,
+            "combatEventCount": 1579,
             "settlementId": "round-19-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6250,7 +6250,7 @@
             "roundId": "4-3",
             "result": "playerWin",
             "combatTicks": 402,
-            "combatEventCount": 1504,
+            "combatEventCount": 1507,
             "settlementId": "round-20-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6330,7 +6330,7 @@
             "roundId": "4-5",
             "result": "playerWin",
             "combatTicks": 450,
-            "combatEventCount": 1697,
+            "combatEventCount": 1701,
             "settlementId": "round-22-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6370,7 +6370,7 @@
             "roundId": "4-6",
             "result": "playerWin",
             "combatTicks": 359,
-            "combatEventCount": 1324,
+            "combatEventCount": 1326,
             "settlementId": "round-23-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6410,7 +6410,7 @@
             "roundId": "4-7",
             "result": "playerWin",
             "combatTicks": 223,
-            "combatEventCount": 622,
+            "combatEventCount": 623,
             "settlementId": "round-24-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -6450,7 +6450,7 @@
             "roundId": "5-1",
             "result": "playerWin",
             "combatTicks": 455,
-            "combatEventCount": 2089,
+            "combatEventCount": 2092,
             "settlementId": "round-25-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6490,7 +6490,7 @@
             "roundId": "5-2",
             "result": "playerWin",
             "combatTicks": 495,
-            "combatEventCount": 2330,
+            "combatEventCount": 2334,
             "settlementId": "round-26-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6530,7 +6530,7 @@
             "roundId": "5-3",
             "result": "playerWin",
             "combatTicks": 467,
-            "combatEventCount": 2101,
+            "combatEventCount": 2105,
             "settlementId": "round-27-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6610,7 +6610,7 @@
             "roundId": "5-5",
             "result": "playerWin",
             "combatTicks": 449,
-            "combatEventCount": 3540,
+            "combatEventCount": 3542,
             "settlementId": "round-29-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6650,7 +6650,7 @@
             "roundId": "5-6",
             "result": "playerWin",
             "combatTicks": 478,
-            "combatEventCount": 5343,
+            "combatEventCount": 5348,
             "settlementId": "round-30-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6690,7 +6690,7 @@
             "roundId": "5-7",
             "result": "playerWin",
             "combatTicks": 267,
-            "combatEventCount": 1047,
+            "combatEventCount": 1048,
             "settlementId": "round-31-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -6730,7 +6730,7 @@
             "roundId": "6-1",
             "result": "playerWin",
             "combatTicks": 564,
-            "combatEventCount": 5510,
+            "combatEventCount": 5513,
             "settlementId": "round-32-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6770,7 +6770,7 @@
             "roundId": "6-2",
             "result": "enemyWin",
             "combatTicks": 436,
-            "combatEventCount": 6067,
+            "combatEventCount": 6069,
             "settlementId": "round-33-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6810,7 +6810,7 @@
             "roundId": "6-3",
             "result": "playerWin",
             "combatTicks": 497,
-            "combatEventCount": 5622,
+            "combatEventCount": 5627,
             "settlementId": "round-34-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6890,7 +6890,7 @@
             "roundId": "6-5",
             "result": "playerWin",
             "combatTicks": 507,
-            "combatEventCount": 4583,
+            "combatEventCount": 4586,
             "settlementId": "round-36-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6930,7 +6930,7 @@
             "roundId": "6-6",
             "result": "enemyWin",
             "combatTicks": 420,
-            "combatEventCount": 5630,
+            "combatEventCount": 5631,
             "settlementId": "round-37-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
@@ -6970,7 +6970,7 @@
             "roundId": "6-7",
             "result": "playerWin",
             "combatTicks": 226,
-            "combatEventCount": 890,
+            "combatEventCount": 891,
             "settlementId": "round-38-settled",
             "roundKind": "pve",
             "incomeBreakdown": {
@@ -7009,12 +7009,12 @@
       }
     }
   },
-  "candidateSha256": "cc6a5e2d340c7df3fdbafc182ffb799be6482905db4b10a1e010baac383a2005",
+  "candidateSha256": "f5b87638e17f90d7b7364612cb94a7deec745de8d5172cf0109007556b666eec",
   "goldenByteEvidence": {
     "previousBytes": 110194,
     "currentBytes": 107972,
     "previousSha256": "b6b2508ad17e621aa47b7928db591df3723815df9d183420a7bcea35786c8507",
-    "currentSha256": "cc6a5e2d340c7df3fdbafc182ffb799be6482905db4b10a1e010baac383a2005",
+    "currentSha256": "f5b87638e17f90d7b7364612cb94a7deec745de8d5172cf0109007556b666eec",
     "firstDifferentByte": 15
   }
 }

@@ -44,6 +44,7 @@ import {
 import { borrowRibbonBuffers, releaseRibbonBuffers } from "../utils/drawBufferPool";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay, clipsUnderPlay } from '../utils/playSurface';
 
 /** How many points one strand holds, which caps its share of its pool. */
 const TRAIL_POINTS = 1024;
@@ -93,14 +94,18 @@ export function createTrails({ emitter, sources, samplers, rank, hidden, endFade
   const trail = emitter.trail;
   const buffers = memo(() => borrowRibbonBuffers(TRAIL_VERTICES), []);
   const material = memo(
-    () =>
-      ribbonMaterial(
+    () => {
+      const material = ribbonMaterial(
         emitter.blendMode,
         samplers.base,
         emitter.depthBias,
         layersOf(emitter, samplers, DRAWS),
         fragmentTests(emitter),
-      ),
+      );
+      // 11-15: a ribbon is clipped below the board, as the floor's depth clipped it, unless its depth test is off
+      // (playSurface.ts).
+      return clipsUnderPlay(emitter) ? clipUnderPlay(material) : material;
+    },
     [emitter, samplers],
   );
 

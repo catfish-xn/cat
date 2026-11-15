@@ -7,10 +7,11 @@
  * `projectile` flies caster → target over `travelSeconds`. `scale` (default 1) shrinks that one
  * system about its anchor and does not move the anchor or the flight; it multiplies the cue's size factor
  * (fx-size.ts cueSize: the body scale on a weapon or hand bone, the arena scale elsewhere). `kept(x)` is a size
- * measured against footage at the older 0.44 base, drawn as it was.
+ * measured against footage at the older 0.44 base, drawn as it was: a range in cells (ground rings, blasts, swipes).
+ * `hugged(x)` is such a size that wraps or hugs a body (shields, binds, per-target splashes): it shrinks with the body.
  */
 import type { TimelineCue } from './timeline';
-import { measuredAtFxScale as kept } from './fx-size';
+import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { jinxSkills } from './champions/jinx';
 import { jayceSkills } from './champions/jayce';
@@ -19,6 +20,7 @@ import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
+import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -60,10 +62,26 @@ export const GP_GROUND_LINE_CELLS = 2.7;
  */
 export const GP_GROUND_LINE_BACK = 0.5;
 /**
+ * Fallback only, not original data: the longest Irelia's stance may play when her shield's end event never arrives. Her
+ * shield's end (shieldLayerChanged depleted or expired, batch1-events.ts) is what stops it; this is set past any shield
+ * the rules grant her so it never cuts one short.
+ */
+export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
+/**
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
+  // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
+  // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
+  // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  'blitzcrank-shock': [
+    { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
+    { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
+  ],
+  'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
+  'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -97,9 +115,17 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'steb-heal': [
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },
   ],
+  // Irelia's swipe where her shield ends (batch1-events.ts). It reaches the front row, as in the original; at the 0.44 base
+  // it drew 2.9 cells and at the arena scale 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
+  'irelia-swipe': [
+    { system: '08b7a939', action: 'passive', event: 'cast-start', delay: 0, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc', scale: kept(1) },
+  ],
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
+  // system's own end instead of the default: no rule event ends it (11-15).
+  'elise-front': eliseBatch3['elise-front']!.map(cue => cue.system === '6d6525e8' ? { ...cue, duration: 2.1 } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -134,6 +160,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6333333333333333, duration: 1.5 },
     // The whole E was sized together against the footage at the 0.44 base, so every cast cue keeps that size (pr572-report,
     // 11-09: only the two vine systems kept it and the sprouts and flash shrank to 0.29 and 0.59 cells beside them).
+    // The ground cues are ranges and keep it; the chest hit on each rooted target hugs that body and shrinks with it.
     // Sizes from the cdacbcc9 isolated renders against the 14.24 footage: E_Outer drew
     // far too wide and was cut off at its end; the root cluster drew too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
@@ -143,15 +170,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
     { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
     { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: kept(1) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: kept(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
+    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: hugged(1) },
   ],
-  // Shield stays up. Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
+  // The shield plays its own life (up to the index cap) and ends with the rule's shield (CUE_RULE_STOPS). Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
-    { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 3, bone: center },
-    { system: '9d35c42d', action: 'cast', event: 'link', delay: 0.15, duration: 0.28, bone: chest, targetBone: chest, targetLimit: 3 },
-    { system: '065c16b8', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, targetLimit: 3 },
+    { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
     { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
   // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
@@ -192,27 +217,36 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
   ],
-  // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
+  // The index list without Q_tar: her hit plays at her kick's damage event instead, by damage type (CUE_EXTRA_SKILLS camille-q-*).
+  camille: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.3, duration: 1.5 },
+    { system: 'b0db024b', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
+    { system: '174f1125', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
+  ],
+  // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out. The chain, the mark and the
+  // empowered glow play their own life and end when the rule's chain does (CUE_END_STOPS 'leblanc-chain').
   leblanc: [
     { system: '9ad0dd7c', action: 'attack', event: 'projectile', bone: 'weapon_b', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5666666666666667, duration: 1.5 },
     { system: '93fe62de', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.45, travelSeconds: 0.18, bone: 'BUFFBONE_CSTM_WEAPON_2', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'c54516b3', action: 'cast', event: 'hit', delay: 0.32, duration: 0.45, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
-    { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
-    { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
-    { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 3.5, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
+    { system: 'c54516b3', action: 'cast', event: 'hit', delay: 0.32, duration: 1, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
+    { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 7.55, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 7.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
     { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true, stopAfter: 4.5 },
-    { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.2 },
+    { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Cast keeps the green aura; every bolt is an empowered attack (batch1-events aims it at the enemies it pierced).
   // The cast event targets Twitch himself, so a cast-time bolt had nowhere to fly and failed the whole cast (11-13).
+  // The weapon glow plays its own life and ends when the empowered bolts are spent (CUE_END_STOPS 'twitch-volley').
   twitch: [
     { action: 'attack', system: 'ba5fe1c0', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.55, duration: 0.45, bone: 'C_BUFFBONE_GLB_CHEST_LOC', stopAfter: 0.1 },
     { action: 'cast', system: '54af463f', event: 'cast-start', delay: 0, duration: 0.5, stopAfter: 0.2, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'cast', system: '2beb0657', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 4, stopAfter: 3.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
+    { action: 'cast', system: '900dd2d2', event: 'cast-start', delay: 0, duration: 8, stopAfter: 7.6, fadeOut: true, bone: 'Buffbone_Glb_Weapon_1' },
     { action: 'attack', variant: 'empowered', system: '5938e29d', event: 'projectile', delay: 0.25, duration: 0.3, travelSeconds: 0.3, bone: 'Winch', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: '4e7cc3b1', event: 'hit', delay: 0.55, duration: 0.6, stopAfter: 0.1, fadeOut: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
@@ -287,12 +321,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
   // No q_mis; spell ring on targets then infection. Portal mesh ids are not in the asset root.
+  // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
     { system: '3c65ee71', action: 'attack', event: 'projectile', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.8666666666666667, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
-    { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 3, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Asset root only ships WeaponSmoke + BA hit; q_tar / slam systems lack JSON files.
@@ -311,7 +346,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
     // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: kept(0.7), optional: true },
+    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: hugged(0.7), optional: true },
   ],
   // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
   // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).
@@ -339,17 +374,17 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
+  // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
-  // W: the guard holds until the shield runs out, and the swipe lands then, not 0.6 s in (11-06 field).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
+  // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
+  // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that
+  // end. IRELIA_STANCE_FALLBACK_SECONDS only bounds a stance whose end event never comes. The original stance goes almost
+  // at once at its end (11-08 blind recheck).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
-    // The original stance holds to the cue's end and goes almost at once (11-08 blind recheck): no early stop at
-    // 1.4 s, which cleared it in one frame; the tail fade covers its last 0.25 s.
-    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 1.6, bone: 'C_Buffbone_Glb_Center_Loc' },
-    // The swipe reaches the front row, as in the original; at the 0.44 base it drew 2.9 cells and at the arena scale
-    // 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
-    { system: '08b7a939', action: 'cast', event: 'cast-start', delay: 1.5, duration: 0.8, bone: 'Buffbone_Glb_Ground_Loc', scale: kept(1) },
+    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: IRELIA_STANCE_FALLBACK_SECONDS, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
   morgana: [
@@ -431,6 +466,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+  // Exported to the asset index; repeated here so the R heal plays its own life (up to the index cap) and ends
+  // with the heal (CUE_END_STOPS).
+  drmundo: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3231666564941406, duration: 1.5 },
+    { system: '5443cd9f', action: 'cast', event: 'cast-start', delay: 0, duration: 9.25, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: '4caada37', action: 'cast', event: 'cast-start', delay: 0.3, duration: 10, bone: 'C_Buffbone_Glb_Center_Loc' },
+  ],
+  // Exported to the asset index; repeated here so the Q brace plays its own life and ends with the brace (CUE_END_STOPS).
+  vander: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3, duration: 1.5 },
+    { system: '68e8ca37', action: 'cast', event: 'cast-start', delay: 0, duration: 4.12, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '3ecf22e8', action: 'cast', event: 'hit', delay: 0.4, duration: 1 },
+  ],
 };
 
 /**
@@ -484,10 +532,10 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times are measured on the original, with 0 at the mana bar emptying.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
-  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
-  // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
+  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The delay is fitted to a
+  // 3-star original side by side (Ambessa thread, 11-11), our fit. No rule event ends it: it plays to its system's own end (11-15).
   ambessa: [
-    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1, bone: chest },
   ],
   // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
   // The original keeps it for about as long as the empower lasts (sweep thread side by side, 11-11). Our rule holds the
@@ -613,3 +661,32 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   '9118f221': ['Avatar_Fresnel'],
   '5afb9708': ['Avatar_Fresnel'],
 };
+
+/**
+ * Systems a rule's display-only "effect ended" event (abilityEffectEnded) ends early: the caster's runs of these systems
+ * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
+ * it plays out; with it, it ends when the rule's effect does.
+ */
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace', readonly string[]>> = {
+  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
+  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
+  'twitch-volley': ['900dd2d2'],
+  'drmundo-heal': ['5443cd9f', '4caada37'],
+  'vander-brace': ['68e8ca37'],
+};
+
+/**
+ * Systems that end with a rule event the simulation already sends: each plays its own life (its cue's duration) unless the
+ * rule's effect ends first. `on` 'source' ends the caster's runs, 'target' the runs on the unit the event names.
+ */
+export const CUE_RULE_STOPS = {
+  // Warwick's blood frenzy aura goes when the frenzy does (bloodFrenzyChanged active: false).
+  frenzyEnded: { systems: ['8c054bed'], on: 'source' },
+  // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
+  // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
+  viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
+  // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
+  shredEnded: { systems: ['88a717e0'], on: 'target' },
+} as const;
