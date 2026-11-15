@@ -3,7 +3,7 @@
  * Bare host adaptation, 2026-10-26. See NOTICE.md and LICENSE.
  */
 /** Bare host for upstream Passes.tsx phase ordering. Restores host state even when a draw fails. */
-import { DoubleSide, MeshBasicMaterial, type Camera, type Material, type Mesh, type Object3D, type Scene, type WebGLRenderer } from 'three';
+import { Box3, DoubleSide, MeshBasicMaterial, Vector4, type Camera, type Material, type Mesh, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { bindFrameTargets, grabDepth, grabFrame, releaseFrame, SCENE_LAYER, UNDER_LAYER, PARTICLE_LAYER, EARLY_DISTORTION_LAYER, DISTORTION_LAYER, FLOOR_LAYER, GROUND_LAYER, sealCanvasAlpha } from './utils/frame';
 
 /** Visit `node` and its descendants, skipping bone hierarchies under skinned units. */
@@ -15,28 +15,49 @@ function walkDrawable(node: Object3D, visit: (node: Object3D) => void): void {
   for (const child of node.children) walkDrawable(child, visit);
 }
 /**
- * World height (board units, the floor at 0) under which the floor writes no depth: a particle that reaches below the board
- * is drawn whole over it, as a camera-facing glow half sunk into the ground (Gangplank's ground tar, 11-14) showed a
- * straight cut. Walls, stands and terrain above it still occlude. A fitted value (11-14), not the original's: the original
- * is inferred not to cut particles at its floor from one ground glow seen whole in its footage.
+ * The play surface the floor's depth is left out on: the footprint (world x and z) and height of the floor's flat meshes,
+ * those with no height at all (the arena's battlefield plane). Null when the floor has none (the procedural board).
  */
-export const FLOOR_DEPTH_FROM = 5;
+export interface PlaySurface { minX: number; maxX: number; minZ: number; maxZ: number; y: number }
+export function playSurfaceOf(roots: readonly Object3D[]): PlaySurface | null {
+  let found: PlaySurface | null = null;
+  for (const root of roots) root.traverse(node => {
+    const mesh = node as Mesh; if (!mesh.isMesh || !mesh.visible || !writesDepth(mesh)) return;
+    BOX.setFromObject(mesh);
+    if (BOX.isEmpty() || BOX.max.y - BOX.min.y > FLAT) return;
+    found = found ? { minX: Math.min(found.minX, BOX.min.x), maxX: Math.max(found.maxX, BOX.max.x), minZ: Math.min(found.minZ, BOX.min.z),
+      maxZ: Math.max(found.maxZ, BOX.max.z), y: Math.max(found.y, BOX.max.y) } : { minX: BOX.min.x, maxX: BOX.max.x, minZ: BOX.min.z, maxZ: BOX.max.z, y: BOX.max.y };
+  });
+  return found;
+}
+const BOX = new Box3();
+/** Height (world units) under which a mesh counts as flat: float rounding only, not a look value. */
+const FLAT = 1e-3;
+function writesDepth(mesh: Mesh): boolean {
+  const material = mesh.material; return (Array.isArray(material) ? material : [material]).some(one => one?.depthWrite);
+}
 /**
- * The depth-only material the floor is drawn again with after its depth is cleared: it writes no colour and keeps only
- * the fragments at or above `from` world height (FLOOR_DEPTH_FROM).
+ * The depth-only material the floor is drawn again with after its depth is cleared (11-15): it writes no colour and leaves
+ * out every fragment on or under the play surface inside its footprint, so a particle reaching below the board is not cut
+ * by the board, while walls, ledges and terrain outside the footprint or above it occlude as before (Viktor's storm stays
+ * off the wall faces). `surface.value` is [minX, maxX, minZ, maxZ] and `plane.value` the surface's height; an empty
+ * footprint (minX > maxX) leaves nothing out.
  */
-export function floorDepthMaterial(from = FLOOR_DEPTH_FROM): MeshBasicMaterial {
-  const material = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide });
+export function floorDepthMaterial(): MeshBasicMaterial & { userData: { surface: { value: Vector4 }; plane: { value: number } } } {
+  const material = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide }) as MeshBasicMaterial & { userData: { surface: { value: Vector4 }; plane: { value: number } } };
   material.name = 'vfx-floor-depth';
+  const surface = { value: new Vector4(1, 0, 1, 0) }, plane = { value: 0 };
+  material.userData = { surface, plane };
   material.onBeforeCompile = shader => {
+    shader.uniforms.vfxPlaySurface = surface; shader.uniforms.vfxPlayPlane = plane;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vFloorY;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\n  vec4 floorWorld = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n  floorWorld = instanceMatrix * floorWorld;\n#endif\n  vFloorY = (modelMatrix * floorWorld).y;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFloorWorld;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\n  vec4 floorWorld = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n  floorWorld = instanceMatrix * floorWorld;\n#endif\n  vFloorWorld = (modelMatrix * floorWorld).xyz;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vFloorY;')
-      .replace('void main() {', `void main() {\n  if (vFloorY < ${from.toFixed(3)}) discard;`);
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFloorWorld;\nuniform vec4 vfxPlaySurface;\nuniform float vfxPlayPlane;')
+      .replace('void main() {', `void main() {\n  if (vFloorWorld.x >= vfxPlaySurface.x && vFloorWorld.x <= vfxPlaySurface.y && vFloorWorld.z >= vfxPlaySurface.z && vFloorWorld.z <= vfxPlaySurface.w && vFloorWorld.y <= vfxPlayPlane + ${FLAT.toFixed(4)}) discard;`);
   };
-  material.customProgramCacheKey = () => `vfx-floor-depth-${from}`;
+  material.customProgramCacheKey = () => 'vfx-floor-depth-surface';
   return material;
 }
 export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Object3D[]) {
@@ -70,11 +91,16 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
             if ((node as { isLight?: boolean }).isLight) { masks.set(node, node.layers.mask); node.layers.enable(FLOOR_LAYER); }
           });
           draw([FLOOR_LAYER]);
-          // The floor keeps its colour but not its depth below FLOOR_DEPTH_FROM: a particle reaching below the board is not
-          // cut by it, while walls, stands and terrain above write their depth again, and units drawn after write theirs.
+          // The floor keeps its colour but not its depth on and under the play surface: a particle reaching below the board
+          // is not cut by it, while walls, ledges and terrain write their depth again (floorDepthMaterial), and units drawn
+          // after write theirs. A floor mesh that writes no depth of its own (the arena's cell overlay) is left out.
           gl.clearDepth();
+          const play = playSurfaceOf(floorRoots), quiet: Object3D[] = [];
+          floorDepth.userData.surface.value.set(play?.minX ?? 1, play?.maxX ?? 0, play?.minZ ?? 1, play?.maxZ ?? 0);
+          floorDepth.userData.plane.value = play?.y ?? 0;
+          for (const root of floorRoots) root.traverse(node => { const mesh = node as Mesh; if (mesh.isMesh && mesh.visible && !writesDepth(mesh)) { quiet.push(mesh); mesh.visible = false; } });
           const override = scene.overrideMaterial; scene.overrideMaterial = floorDepth;
-          try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; }
+          try { draw([FLOOR_LAYER], true); } finally { scene.overrideMaterial = override; for (const mesh of quiet) mesh.visible = true; }
           if (needs.early) { grabFrame(gl); draw([EARLY_DISTORTION_LAYER], true); }
           // Keep the authored depth test so arena walls still occlude ground. A small
           // polygon offset avoids coplanar hex/floor flicker; no ground depth can hide units.
