@@ -51,9 +51,11 @@ export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
  * groups. Long runs and fan-out rows still count toward LTK_PASS_DEGRADE_AT; hold tails do not, as before. Node audit
  * (real combats through the batch2 bridge, cap 20, budget 2250, seeds 42/7/101; long runs out with 8, fan-out savings
  * with 8): critical starts 98.2 → 100% in an 8 v 8, 96.3 → 99.7% in a late-game 9 v 9 and 87.3 → 100% with three
- * 3-star Caitlyns. 12 until frame time on a GPU says otherwise.
+ * 3-star Caitlyns. 8 is a performance trade-off fitted on GPU frame time, not a value from the original: in 11-15 Windows
+ * runs (cap 20, budget 2250, 6 rounds) 8 kept the mean frame time of the code before it with no budget refusals, where 12
+ * ran slower and had the budget refuse attack projectiles.
  */
-export const OFF_SLOT_MAX = 12;
+export const OFF_SLOT_MAX = 8;
 export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
