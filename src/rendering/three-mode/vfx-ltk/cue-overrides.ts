@@ -206,6 +206,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: 'd160dfa9', event: 'link', delay: 0.26666666666666666, duration: 0.6, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'attack', variant: 'empowered', system: 'c4b3f285', event: 'hit', delay: 0.5666666666666667, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', fadeOut: true },
   ],
+  // batch3/rell.ts is never read (batch3Timelines has no importer): Rell plays the index list, so the candidate goes here.
+  rell: [
+    { system: '0f2af66b', event: 'hit', delay: 0.26, duration: 0.6, action: 'attack' },
+    { system: '6b3b977c', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'Lance' },
+    { system: 'd3831a9d', event: 'hit', delay: 0.3, duration: 0.6 },
+    { system: '5fe3dc8a', event: 'hit', delay: 0.3, duration: 0.6 },
+    { system: 'e494370a', event: 'cast-start', delay: 0.1, duration: 1, bone: 'Buffbone_Glb_Ground_Loc' },
+  ],
   amumu: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.36666666666666664, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'passive', system: '56e6971e', event: 'cast-start', delay: 0, duration: 0.9, bone: 'BUFFBONE_GLB_GROUND_LOC' },
