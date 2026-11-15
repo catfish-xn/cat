@@ -64,6 +64,10 @@ export const GP_GROUND_LINE_BACK = 0.5;
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): Mundo candidates. R_Beam from him to the enemy his once-a-second damage hits; R_Zap_AoE_Tar on
+  // each enemy his closing blast hits. The blast's own R_Zap_AoE (surface-host-pose) is not loadable yet: left out.
+  'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],
+  'drmundo-zap': [{ system: '56c38cb9', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: chest }],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
