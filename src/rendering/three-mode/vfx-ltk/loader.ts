@@ -170,6 +170,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
         || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
+        || (cue.rank !== undefined && cue.rank !== 'body')
         || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
         || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
           || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
