@@ -2,9 +2,9 @@ import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, M
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
-import { clipUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { clipUnderPlay, clipsUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
-import { struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
+import { num, struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import type { VfxValue } from '../src/rendering/three-mode/vfx-ltk/bindings';
 import type { WebGLRenderer } from 'three';
@@ -157,8 +157,9 @@ describe('opt-in board ground pass', () => {
 // arbitrary quad is (as are meshes and ribbons, through the same clipUnderPlay call in their components).
 describe('particles clipped under the play surface', () => {
   async function materialOf(fields: Record<string, VfxValue>, ground = false) {
-    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(fields),
-      readTexture: async () => new Texture() }, ground ? { groundPass: true } : {});
+    const index = syntheticIndex();
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? { ...index, assets: { ...index.assets, 'synthetic.scb': 'meshes/sample.ltkg' } } : syntheticSystem(fields),
+      readTexture: async () => new Texture(), readMesh: async () => new BoxGeometry(1, 1, 1) }, ground ? { groundPass: true } : {});
     const system = await library.load('sample');
     const root = new Group(), body = new Group(); root.add(body);
     const fx = createLtkParticles(system, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1 });
@@ -171,5 +172,22 @@ describe('particles clipped under the play surface', () => {
     expect(await materialOf({})).not.toContain('vPlayWorld');
     expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}) })).toContain('vPlayWorld');
     expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}), isGroundLayer: { type: 'bool', value: true } }, true)).not.toContain('vPlayWorld');
+  });
+  // 11-15: Garen's R impact Shockwave1 is a mesh wholly under the board with its depth test off; it drew over the floor
+  // before the floor stopped writing depth there and vanished once clipped. An emitter with the test off is never clipped.
+  const mesh = { primitive: struct('VfxPrimitiveMesh', { mMesh: struct('VfxMeshDefinitionData', { mSimpleMeshName: { type: 'asset', path: 'synthetic.scb', asset: {} } as never }) }) };
+  const depthOff = { miscRenderFlags: num(1) };
+  it('a mesh is clipped; a mesh with its depth test off (DISABLE_ZBUFFER) is not', async () => {
+    expect(await materialOf(mesh)).toContain('vPlayWorld');
+    expect(await materialOf({ ...mesh, ...depthOff })).not.toContain('vPlayWorld');
+  });
+  it('an arbitrary quad with its depth test off is not clipped either; the other render-state bits change nothing', async () => {
+    const quad = { primitive: struct('VfxPrimitiveArbitraryQuad', {}) };
+    expect(await materialOf({ ...quad, ...depthOff })).not.toContain('vPlayWorld');
+    expect(await materialOf({ ...quad, miscRenderFlags: num(6) })).toContain('vPlayWorld');
+  });
+  it('clipsUnderPlay: clipped unless a ground-layer draw or its depth test is off', () => {
+    const of = (groundLayer: boolean, miscRenderFlags: number) => clipsUnderPlay({ groundLayer, miscRenderFlags, alphaRef: 0 } as never);
+    expect([of(false, 0), of(false, 2), of(false, 4), of(false, 1), of(false, 5), of(true, 0)]).toEqual([true, true, true, false, false, false]);
   });
 });
