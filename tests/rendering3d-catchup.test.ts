@@ -57,7 +57,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     }));
     vi.doMock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
       domElement = { className: '', style: {}, addEventListener() {}, removeEventListener() {}, remove() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-      setPixelRatio() {} setSize() {} render() {} dispose() {} forceContextLoss() {} initTexture() {} async compileAsync() {}
+      setPixelRatio() {} setSize() {} render() {} clearDepth() {} dispose() {} forceContextLoss() {} initTexture() {} async compileAsync() {}
       getRenderTarget() { return null; } setRenderTarget() {}
     } }));
     three = await import('three'); core = await import('../src/rendering3d');
