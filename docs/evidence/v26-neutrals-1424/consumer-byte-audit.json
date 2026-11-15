@@ -3619,9 +3619,9 @@
     "tests/vfx-ltk-2cost-bindings.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5592,
+      "currentBytes": 5680,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "939b6ba7fd142dcc91554be08c62cfa651dcfd63a11e36b114f024483bc986ee",
+      "currentSha256": "3518e4870cc51514fbc02dacc7b14516e3696bbbd5656eeff004b40207bf388c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attached-caps.test.ts": {
