@@ -2,7 +2,7 @@
 export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
-export type TimelineVariant = 'empowered' | 'self';
+export type TimelineVariant = 'empowered' | 'self' | 'single';
 export interface TimelineCue {
   readonly system: string;
   readonly action?: TimelineAction;

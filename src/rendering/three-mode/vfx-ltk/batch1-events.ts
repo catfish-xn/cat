@@ -92,6 +92,9 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
+        // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
+          plan.variant = 'single';
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
