@@ -61,8 +61,8 @@ async function renderMeta(page, out, boxes) {
       .sort((a, b) => a.responseEnd - b.responseEnd).map(e => new URL(e.name).pathname);
     // Animation clocks (only with ?debug3d, v-capture --render-probe 1): each piece's mixer time and running clips. A
     // piece that idles from its model's load (a dummy, never recast) carries a phase set by when that load finished.
-    const r = window.__render3d, anim = r?.pieces ? [...r.pieces].map(([id, v]) => ({ id, def: v.definitionId ?? null, mixerTime: v.mixer?.time ?? null,
-      running: (v.mixer?._actions ?? []).filter(x => x.isRunning()).map(x => ({ clip: x.getClip().name, time: Math.round(x.time * 1000) / 1000 })) })) : null;
+    const r = window.__render3d, anim = r?.pieces ? [...r.pieces].map(([id, v]) => ({ id, def: v.definitionId ?? null, mixerTime: v.mixer?.mixer?.time ?? null,
+      running: (v.mixer?.mixer?._actions ?? []).filter(x => x.isRunning()).map(x => ({ clip: x.getClip().name, time: Math.round(x.time * 1000) / 1000 })) })) : null;
     return { dpr: devicePixelRatio, canvases, loads, userAgent: navigator.userAgent, anim };
   });
   // Reference frame: the unit area (union of the unit boxes, padded) as PNG; its sha256 is the fingerprint.

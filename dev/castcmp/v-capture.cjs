@@ -106,6 +106,8 @@ async function unbind(page, tick, rebind) {
     mark('warm measured ' + waited);
   }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
+  // Every unit's animation clock to 0 (harness.ts __resetClocks): an idle dummy's pose no longer depends on its load timing.
+  const clocks = await page.evaluate(() => window.__resetClocks?.() ?? null); mark(`clocks reset (${clocks} mixers)`);
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
   const L = Math.min(...boxes.map(b => b.left)), R = Math.max(...boxes.map(b => b.right)), T = Math.min(...boxes.map(b => b.top)), B = Math.max(...boxes.map(b => b.bottom));
   const cx = (L + R) / 2, cy = (T + B) / 2, half = Math.max((R - L) * 0.7, (B - T) * 0.7 * 4 / 3, 150);
