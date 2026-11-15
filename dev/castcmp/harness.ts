@@ -210,7 +210,8 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
-  const after = rc.afterTicksFor(windowMs, start);
+  const window = { ...start, anchor };
+  const after = rc.afterTicksFor(windowMs, window);
   const run = rc.runRealCombat(units, after, (state, shown) => {
     frames.push(display.toCombatViewState(state).units.map((u: any) => ({
       id: u.id, definitionId: u.definitionId, team: u.team, starLevel: u.starLevel, ...hexOf(u.cell.row, u.cell.col),
@@ -221,7 +222,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
   }, start.castNumber ?? 1, anchor);
   if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
-  const lead = rc.leadTicksFor(run.castIndex, start);
+  const lead = rc.leadTicksFor(run.castIndex, window);
   return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
