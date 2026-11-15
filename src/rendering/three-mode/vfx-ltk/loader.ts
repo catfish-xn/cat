@@ -176,6 +176,7 @@ export function parseIndex(raw: unknown): VfxIndex {
           || (cue.rowSpeed !== undefined && !(finite(cue.rowSpeed) && Number(cue.rowSpeed) >= 1 && Number(cue.rowSpeed) <= 40))))
         || ((cue.rowSide !== undefined || cue.rowCells !== undefined) && (cue.event !== 'projectile' || (cue.rowSide !== -1 && cue.rowSide !== 1)
           || !finite(cue.rowCells) || Number(cue.rowCells) < 0.5 || Number(cue.rowCells) > 8))
+        || (cue.fixedFlight !== undefined && (typeof cue.fixedFlight !== 'boolean' || cue.event !== 'projectile' || cue.stationary === true))
         || (cue.fromAbove !== undefined && (cue.event !== 'projectile' || cue.rowSide !== undefined || !Array.isArray(cue.fromAbove) || cue.fromAbove.length !== 3
           || !cue.fromAbove.every(finite) || Number(cue.fromAbove[1]) < 1 || Number(cue.fromAbove[1]) > 10
           || Math.abs(Number(cue.fromAbove[0])) > 4 || Math.abs(Number(cue.fromAbove[2])) > 4))

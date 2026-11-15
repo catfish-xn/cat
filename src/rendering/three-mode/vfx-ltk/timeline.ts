@@ -90,6 +90,12 @@ export interface TimelineCue {
    */
   readonly fromAbove?: readonly [number, number, number];
   /**
+   * A projectile that takes exactly its `travelSeconds` to arrive whatever the distance (the engine's fixed-time flight, as
+   * `fromAbove` uses), instead of a speed taken from the distance at spawn. Set per cue only where a landing must meet a
+   * timed hit (Ziggs's bomb on his explosion, 11-15); every other projectile keeps its speed.
+   */
+  readonly fixedFlight?: boolean;
+  /**
    * A projectile that starts where its caster stands and runs on the floor toward where its target stands, through it,
    * `lineCells` cells in all, instead of flying from a caster bone to the target: a line missile the original casts at a
    * location with no start bone (Gangplank's ground-fire line). Both ends are taken when it spawns; it never follows.
