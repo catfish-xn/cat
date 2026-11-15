@@ -153,6 +153,10 @@ varying vec4 vShiftMult;
 varying vec2 vLookup;
 varying float vErode;
 
+#ifdef PLAY_CLIP
+varying vec3 vPlayWorld;
+#endif
+
 void main() {
   vUv = uv;
   vColor = tint * vertexColor;
@@ -168,6 +172,9 @@ void main() {
   vec4 world = modelMatrix * instanceMatrix * vec4(posedPosition, 1.0);
   // The world matrix turns the normal as it turns the vertex, which is what mesh_vs does.
   facingTerms(world.xyz, mat3(modelMatrix) * mat3(instanceMatrix) * posedNormal);
+#ifdef PLAY_CLIP
+  vPlayWorld = world.xyz;
+#endif
   gl_Position = projectionMatrix * viewMatrix * world;
 }
 `;

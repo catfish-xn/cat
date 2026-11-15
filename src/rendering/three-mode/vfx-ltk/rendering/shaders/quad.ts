@@ -152,6 +152,9 @@ attribute vec3 lookup;
 uniform float pushPull;
 uniform float reach;
 uniform float pivot;
+#ifdef PLAY_CLIP
+varying vec3 vPlayWorld;
+#endif
 
 varying vec2 vUv;
 varying vec4 vColor;
@@ -182,7 +185,12 @@ void main() {
   vLookup = lookup.xy;
   vErode = lookup.z;
 
-  gl_Position = projectionMatrix * pushed(viewMatrix * cornerWorld());
+  vec4 world = cornerWorld(), view = viewMatrix * world, near = pushed(view);
+#ifdef PLAY_CLIP
+  // The pushed corner in world space, from the push itself (a view-space offset turned back), not from the clip position.
+  vPlayWorld = world.xyz + (near.xyz - view.xyz) * mat3(viewMatrix);
+#endif
+  gl_Position = projectionMatrix * near;
 }
 `;
 

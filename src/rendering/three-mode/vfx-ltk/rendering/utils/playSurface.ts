@@ -66,8 +66,14 @@ export function setPlaySurface(play: PlaySurface | null): void {
 }
 
 const INSIDE = 'vPlayWorld.x >= vfxPlaySurface.x && vPlayWorld.x <= vfxPlaySurface.y && vPlayWorld.z >= vfxPlaySurface.z && vPlayWorld.z <= vfxPlaySurface.w';
-/** The GLSL test a fragment at `vPlayWorld` is under the play surface by (strictly, past the tolerance). */
-export const UNDER_PLAY = `(${INSIDE} && vPlayWorld.y < vfxPlayPlane - ${FLAT.toFixed(4)})`;
+/**
+ * How far under the play surface (world units) a particle fragment must be to be clipped. Fitted, not the original's: a
+ * small margin so a particle lying on the surface (a flat quad at a unit's feet) is never clipped, well under any
+ * authored depth below the board.
+ */
+export const PLAY_MARGIN = 0.05;
+/** The GLSL test a fragment at `vPlayWorld` is under the play surface by (strictly, past PLAY_MARGIN). */
+export const UNDER_PLAY = `(${INSIDE} && vPlayWorld.y < vfxPlayPlane - ${PLAY_MARGIN.toFixed(4)})`;
 /** The GLSL test a fragment at `vPlayWorld` is on or under the play surface by. */
 export const ON_OR_UNDER_PLAY = `(${INSIDE} && vPlayWorld.y <= vfxPlayPlane + ${FLAT.toFixed(4)})`;
 
@@ -82,18 +88,15 @@ export function clipsUnderPlay(emitter: EmitterModel): boolean {
 }
 
 /**
- * Clips `material`'s fragments under the play surface: its `main` runs as before, after one that notes the vertex's world
- * position (from its clip position, so any corner placing and push-pull already applied) and discards under the surface.
+ * Clips `material`'s fragments under the play surface. Its vertex stage writes the world position itself under
+ * `PLAY_CLIP` (quad, mesh and ribbon shaders: any corner placing and push-pull applied), so no position is rebuilt from
+ * the clip position: that rebuild's float error dropped particles lying on the play surface (11-15: Mel's R hit, three
+ * flat quads at her targets' feet). The fragment's `main` runs after a test that discards under the surface.
  */
 export function clipUnderPlay<T extends ShaderMaterial>(material: T): T {
-  if (material.vertexShader.includes('vPlayWorld')) return material;
-  material.vertexShader = `varying vec3 vPlayWorld;\n${material.vertexShader.replace(/void\s+main\s*\(\s*\)/, 'void vfxPlayMain()')}
-void main() {
-  vfxPlayMain();
-  vec4 playView = inverse(projectionMatrix) * gl_Position; playView /= playView.w;
-  vPlayWorld = (inverse(viewMatrix) * playView).xyz;
-}
-`;
+  if (material.defines?.PLAY_CLIP !== undefined) return material;
+  if (!material.vertexShader.includes('PLAY_CLIP')) throw new Error('clipUnderPlay: the vertex shader writes no vPlayWorld under PLAY_CLIP');
+  material.defines = { ...material.defines, PLAY_CLIP: '' };
   material.fragmentShader = `varying vec3 vPlayWorld;\nuniform vec4 vfxPlaySurface;\nuniform float vfxPlayPlane;\n${material.fragmentShader.replace(/void\s+main\s*\(\s*\)/, 'void vfxPlayMain()')}
 void main() {
   if ${UNDER_PLAY} discard;
@@ -101,5 +104,6 @@ void main() {
 }
 `;
   material.uniforms.vfxPlaySurface = PLAY_SURFACE.surface; material.uniforms.vfxPlayPlane = PLAY_SURFACE.plane;
+  material.needsUpdate = true;
   return material;
 }

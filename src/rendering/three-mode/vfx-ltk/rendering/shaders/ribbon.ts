@@ -23,6 +23,10 @@ varying float vErode;
 varying vec2 vMultUv;
 varying vec2 vMultCell;
 
+#ifdef PLAY_CLIP
+varying vec3 vPlayWorld;
+#endif
+
 void main() {
   vUv = uv;
   vAlphaUv = alphaUv;
@@ -32,7 +36,11 @@ void main() {
   vErode = erode;
   vMultUv = multUv;
   vMultCell = multCell;
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+  vec4 world = modelMatrix * vec4(position, 1.0);
+#ifdef PLAY_CLIP
+  vPlayWorld = world.xyz;
+#endif
+  gl_Position = projectionMatrix * viewMatrix * world;
 }
 `;
 

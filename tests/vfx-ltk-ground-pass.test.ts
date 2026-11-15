@@ -2,7 +2,10 @@ import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, M
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
-import { clipUnderPlay, clipsUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { clipUnderPlay, clipsUnderPlay, createFloorSurvey, PLAY_MARGIN, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { VERTEX } from '../src/rendering/three-mode/vfx-ltk/rendering/shaders/quad';
+import { MESH_VERTEX } from '../src/rendering/three-mode/vfx-ltk/rendering/shaders/mesh';
+import { RIBBON_VERTEX } from '../src/rendering/three-mode/vfx-ltk/rendering/shaders/ribbon';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
 import { num, struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -139,16 +142,30 @@ describe('opt-in board ground pass', () => {
 
   // 11-15: a mesh, a ribbon or an arbitrary quad is clipped under the play surface (Garen's falling light column stopped at
   // the board); a camera-facing quad is not. Fitted, not the original's (playSurface.ts).
-  it('clipUnderPlay wraps a material\'s main: notes the world position and discards strictly under the play surface', () => {
-    const material = clipUnderPlay(new ShaderMaterial({ vertexShader: 'void main() {\n  gl_Position = vec4(0.0);\n}', fragmentShader: 'void main() {\n  gl_FragColor = vec4(1.0);\n}' }));
-    expect(material.vertexShader).toContain('void vfxPlayMain()');
-    expect(material.vertexShader).toContain('vPlayWorld = (inverse(viewMatrix) * playView).xyz;');
-    expect(material.fragmentShader).toContain('vPlayWorld.y < vfxPlayPlane - 0.0010) discard;');
+  it('clipUnderPlay takes the world position its vertex stage writes under PLAY_CLIP and discards strictly under the play surface', () => {
+    expect(() => clipUnderPlay(new ShaderMaterial({ vertexShader: 'void main() {\n  gl_Position = vec4(0.0);\n}', fragmentShader: 'void main() {}' }))).toThrow(/PLAY_CLIP/);
+    const vertexShader = '#ifdef PLAY_CLIP\nvarying vec3 vPlayWorld;\n#endif\nvoid main() {\n#ifdef PLAY_CLIP\n  vPlayWorld = vec3(0.0);\n#endif\n  gl_Position = vec4(0.0);\n}';
+    const material = clipUnderPlay(new ShaderMaterial({ vertexShader, fragmentShader: 'void main() {\n  gl_FragColor = vec4(1.0);\n}' }));
+    expect(material.defines.PLAY_CLIP).toBe('');
+    expect(material.vertexShader).toBe(vertexShader);
+    expect(material.fragmentShader).toContain(`vPlayWorld.y < vfxPlayPlane - ${PLAY_MARGIN.toFixed(4)}) discard;`);
     expect(material.fragmentShader.indexOf('discard')).toBeLessThan(material.fragmentShader.lastIndexOf('vfxPlayMain();'));
     expect(material.uniforms.vfxPlaySurface).toBe(PLAY_SURFACE.surface);
     // Twice is once.
-    const again = material.vertexShader; clipUnderPlay(material); expect(material.vertexShader).toBe(again);
+    const again = material.fragmentShader; clipUnderPlay(material); expect(material.fragmentShader).toBe(again);
     material.dispose();
+  });
+  // 11-15: rebuilding the world position from the clip position (inverse projection and view) lost flat quads lying on the
+  // play surface to float error (Mel's R hit); each clipped kind's vertex stage writes it from its own world position.
+  it('the quad, mesh and ribbon vertex stages write vPlayWorld themselves under PLAY_CLIP, never from an inverse matrix', () => {
+    for (const shader of [VERTEX, MESH_VERTEX, RIBBON_VERTEX]) {
+      expect(shader).toMatch(/#ifdef PLAY_CLIP\s+varying vec3 vPlayWorld;\s+#endif/);
+      expect(shader).toMatch(/#ifdef PLAY_CLIP\s+(\/\/[^\n]*\s+)?vPlayWorld = [^;]*world/);
+      expect(shader).not.toContain('inverse(');
+    }
+    expect(VERTEX).toContain('vPlayWorld = world.xyz + (near.xyz - view.xyz) * mat3(viewMatrix);');
+    expect(VERTEX).toContain('gl_Position = projectionMatrix * near;');
+    expect(PLAY_MARGIN).toBeGreaterThan(0); expect(PLAY_MARGIN).toBeLessThan(1);
   });
 
 });
@@ -164,27 +181,28 @@ describe('particles clipped under the play surface', () => {
     const root = new Group(), body = new Group(); root.add(body);
     const fx = createLtkParticles(system, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1 });
     fx.update(0.05, new Camera());
-    const shader = (fx.draws[0]!.object.material as ShaderMaterial).vertexShader;
+    // What the material is clipped by: PLAY_CLIP among its defines (clipUnderPlay).
+    const defines = Object.keys((fx.draws[0]!.object.material as ShaderMaterial).defines ?? {}).join(' ');
     fx.dispose(); library.dispose();
-    return shader;
+    return defines;
   }
   it('a camera-facing quad is not clipped; an arbitrary quad is; a ground-layer quad is not', async () => {
-    expect(await materialOf({})).not.toContain('vPlayWorld');
-    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}) })).toContain('vPlayWorld');
-    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}), isGroundLayer: { type: 'bool', value: true } }, true)).not.toContain('vPlayWorld');
+    expect(await materialOf({})).not.toContain('PLAY_CLIP');
+    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}) })).toContain('PLAY_CLIP');
+    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}), isGroundLayer: { type: 'bool', value: true } }, true)).not.toContain('PLAY_CLIP');
   });
   // 11-15: Garen's R impact Shockwave1 is a mesh wholly under the board with its depth test off; it drew over the floor
   // before the floor stopped writing depth there and vanished once clipped. An emitter with the test off is never clipped.
   const mesh = { primitive: struct('VfxPrimitiveMesh', { mMesh: struct('VfxMeshDefinitionData', { mSimpleMeshName: { type: 'asset', path: 'synthetic.scb', asset: {} } as never }) }) };
   const depthOff = { miscRenderFlags: num(1) };
   it('a mesh is clipped; a mesh with its depth test off (DISABLE_ZBUFFER) is not', async () => {
-    expect(await materialOf(mesh)).toContain('vPlayWorld');
-    expect(await materialOf({ ...mesh, ...depthOff })).not.toContain('vPlayWorld');
+    expect(await materialOf(mesh)).toContain('PLAY_CLIP');
+    expect(await materialOf({ ...mesh, ...depthOff })).not.toContain('PLAY_CLIP');
   });
   it('an arbitrary quad with its depth test off is not clipped either; the other render-state bits change nothing', async () => {
     const quad = { primitive: struct('VfxPrimitiveArbitraryQuad', {}) };
-    expect(await materialOf({ ...quad, ...depthOff })).not.toContain('vPlayWorld');
-    expect(await materialOf({ ...quad, miscRenderFlags: num(6) })).toContain('vPlayWorld');
+    expect(await materialOf({ ...quad, ...depthOff })).not.toContain('PLAY_CLIP');
+    expect(await materialOf({ ...quad, miscRenderFlags: num(6) })).toContain('PLAY_CLIP');
   });
   it('clipsUnderPlay: clipped unless a ground-layer draw or its depth test is off', () => {
     const of = (groundLayer: boolean, miscRenderFlags: number) => clipsUnderPlay({ groundLayer, miscRenderFlags, alphaRef: 0 } as never);
