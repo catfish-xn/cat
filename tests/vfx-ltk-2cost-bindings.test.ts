@@ -53,9 +53,10 @@ describe('two-cost cue bindings (11-15)', () => {
     runRealCombat(units, 120, (_state, shown) => { events.push(...shown as DisplayCombatEvent[]); });
     const defs = Object.fromEntries(units.map(u => [u.id, u.definitionId as string]));
     const plans = createBatch1VfxEvents(id => defs[id]).batch(events);
+    const tickOf = (e: DisplayCombatEvent) => (e as { tick: number }).tick;
     const firstCast = events.find(e => e.type === 'cast' && e.sourceId === 'me' && e.completed !== false)!;
     expect(firstCast).toBeDefined();
-    const swings = plans.filter(p => p.event.type === 'attack' && p.event.attackerId === 'me' && p.event.tick > firstCast.tick && p.event.tick < firstCast.tick + 120);
+    const swings = plans.filter(p => p.event.type === 'attack' && p.event.attackerId === 'me' && tickOf(p.event) > tickOf(firstCast) && tickOf(p.event) < tickOf(firstCast) + 120);
     expect(swings.length).toBeGreaterThanOrEqual(2);
     expect(swings.every(p => p.variant === 'empowered')).toBe(true);
   });
