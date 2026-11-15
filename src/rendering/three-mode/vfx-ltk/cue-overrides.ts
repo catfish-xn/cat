@@ -19,6 +19,7 @@ import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
+import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -100,6 +101,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 };
 
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
+  // own end (2.1 s from its emitters) instead of the 1 s default: no rule event ends it (11-15).
+  'elise-front': eliseBatch3['elise-front']!.map(cue => cue.system === '6d6525e8' ? { ...cue, duration: 2.1 } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -484,10 +488,10 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times are measured on the original, with 0 at the mana bar emptying.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
-  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
-  // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
+  // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The delay is fitted to a
+  // 3-star original side by side (Ambessa thread, 11-11), our fit. No rule event ends it: it plays to its own end (1.0 s, 11-15).
   ambessa: [
-    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.45, stopAfter: 0.4, fadeOut: true, bone: chest },
+    { system: 'c07aa972', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1, bone: chest },
   ],
   // R_Aura: the dark red body and red inner edge (Avatar_BodyMult, Avatar_BodyFresnel_In1) through his empowered stretch.
   // The original keeps it for about as long as the empower lasts (sweep thread side by side, 11-11). Our rule holds the
