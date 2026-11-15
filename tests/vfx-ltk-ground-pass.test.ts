@@ -1,8 +1,9 @@
-import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
+import { AmbientLight, Bone, BoxGeometry, Camera, EqualStencilFunc, KeepStencilOp, NotEqualStencilFunc, ShaderMaterial, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
 import { clipUnderPlay, clipsUnderPlay, createFloorSurvey, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
+import { BOARD_FALLBACK_REFERENCE, stencilStates } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/stencil';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
 import { num, struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -113,7 +114,7 @@ describe('opt-in board ground pass', () => {
     floor.add(plane, overlay); scene.add(floor);
     const seen: { overlay: boolean; surface: number[] }[] = [];
     const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
-      if (scene.overrideMaterial) seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
+      if (scene.overrideMaterial?.name === 'vfx-floor-depth') seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
     } };
     createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
     expect(seen).toEqual([{ overlay: false, surface: [-100, 100, -50, 50] }]);
@@ -189,5 +190,65 @@ describe('particles clipped under the play surface', () => {
   it('clipsUnderPlay: clipped unless a ground-layer draw or its depth test is off', () => {
     const of = (groundLayer: boolean, miscRenderFlags: number) => clipsUnderPlay({ groundLayer, miscRenderFlags, alphaRef: 0 } as never);
     expect([of(false, 0), of(false, 2), of(false, 4), of(false, 1), of(false, 5), of(true, 0)]).toEqual([true, true, true, false, false, false]);
+  });
+});
+
+// 11-15: the board's play surface writes a stencil value no asset names (BOARD_FALLBACK_REFERENCE), and a TestEqual
+// tester whose reference no live emitter writes is tested against it (fitted, not the original's): Viktor's R warning
+// MAP_DISC_HIGH_WRITE draws on the board alone instead of untested over the whole screen.
+describe('the board writes its stencil fallback', () => {
+  const setup = () => {
+    const scene = new Scene(), camera = new Camera(); camera.layers.enable(2);
+    const floor = new Group(), plane = new Mesh(new PlaneGeometry(200, 100).rotateX(-Math.PI / 2), new MeshBasicMaterial());
+    const wall = new Mesh(new BoxGeometry(200, 20, 10), new MeshBasicMaterial()); wall.position.z = 60;
+    floor.add(plane, wall); scene.add(floor);
+    const seen: { override: string | null; plane: boolean; wall: boolean }[] = [];
+    const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
+      if (camera.layers.isEnabled(FLOOR_LAYER)) seen.push({ override: scene.overrideMaterial?.name ?? null, plane: plane.visible, wall: wall.visible });
+    } };
+    const dispose = () => { for (const mesh of [plane, wall]) { mesh.geometry.dispose(); mesh.material.dispose(); } };
+    return { scene, camera, floor, plane, wall, seen, gl: gl as unknown as WebGLRenderer, dispose };
+  };
+  it('draws the play surface alone, stencil only, after the depth-only redraw, and keeps what it wrote on its own passes', () => {
+    const { scene, camera, floor, wall, seen, gl, dispose } = setup();
+    const passes = createVfxPasses(gl, () => [floor]), other = createVfxPasses(gl, () => [new Group()]);
+    passes.render(scene, camera, { early: false, late: false, soft: false });
+    expect(seen).toEqual([{ override: null, plane: true, wall: true }, { override: 'vfx-floor-depth', plane: true, wall: true },
+      { override: 'vfx-board-stencil', plane: true, wall: false }]);
+    expect(wall.visible).toBe(true); expect(scene.overrideMaterial).toBeNull();
+    expect([...passes.board]).toEqual([BOARD_FALLBACK_REFERENCE]);
+    // Another renderer's passes (a second canvas) keep their own set: drawing one with no play surface leaves this one's.
+    other.render(scene, camera, { early: false, late: false, soft: false });
+    expect(other.board.size).toBe(0); expect([...passes.board]).toEqual([BOARD_FALLBACK_REFERENCE]);
+    dispose();
+  });
+
+  it('the set is what the runtime reads between frames: written by a render, cleared and written again by the next', () => {
+    const { scene, camera, floor, plane, gl, dispose } = setup();
+    const passes = createVfxPasses(gl, () => [floor]);
+    expect(passes.board.size).toBe(0);
+    passes.render(scene, camera, { early: false, late: false, soft: false });
+    expect(passes.board.has(BOARD_FALLBACK_REFERENCE)).toBe(true);
+    plane.visible = false; floor.add(new Group()); // a changed floor with no play surface
+    passes.render(scene, camera, { early: false, late: false, soft: false });
+    expect(passes.board.size).toBe(0);
+    dispose();
+  });
+
+  it('only a TestEqual tester with no live writer of its reference falls back to the board value', () => {
+    const tester = (ref: number, mode: 2 | 3 = 2) => ({ use: { mode, ref, id: null }, live: true });
+    const writer = (ref: number) => ({ use: { mode: 1 as const, ref, id: null }, live: true });
+    const board = new Set([BOARD_FALLBACK_REFERENCE]);
+    // No board: untested, as before.
+    expect(stencilStates([tester(4)])[0]!.stencilWrite).toBe(false);
+    // Board written: tested against the board value.
+    expect(stencilStates([tester(4)], board)[0]).toMatchObject({ stencilWrite: true, stencilFunc: EqualStencilFunc, stencilRef: BOARD_FALLBACK_REFERENCE, stencilZPass: KeepStencilOp });
+    // A live writer of its own reference: tested against that, the board is not used.
+    expect(stencilStates([writer(4), tester(4)], board)[1]).toMatchObject({ stencilFunc: EqualStencilFunc, stencilRef: 4 });
+    // A TestNotEqual tester and a reference of 0 never take the board value.
+    expect(stencilStates([tester(4, 3)], board)[0]).toMatchObject({ stencilFunc: NotEqualStencilFunc, stencilRef: 4 });
+    expect(stencilStates([tester(0)], board)[0]).toMatchObject({ stencilFunc: EqualStencilFunc, stencilRef: 0 });
+    // A claim that names the board value itself turns the fallback off for the frame.
+    expect(stencilStates([tester(BOARD_FALLBACK_REFERENCE), tester(4)], board)[1]!.stencilWrite).toBe(false);
   });
 });
