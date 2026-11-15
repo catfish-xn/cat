@@ -3616,6 +3616,14 @@
       "currentSha256": "d30725b927fd0617764048608fd14277763b2a9e6292ccef80f37c1d30009be2",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-anchor-jump-stretch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3259,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4a053dfbe81be1c1e3afd7892c50d19f934a28146a648169593dd4ec94d66f9a",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
