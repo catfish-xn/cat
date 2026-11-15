@@ -160,7 +160,10 @@ export function installProbes(clock: () => number) {
             else if (v && typeof v === 'object' && typeof v.x === 'number') uniforms[k] = num([v.x, v.y, v.z, v.w].filter((x: unknown) => typeof x === 'number'));
           }
           let parentVisible = true; for (let p = o; p; p = p.parent) if (p.visible === false) { parentVisible = false; break; }
-          out.push({ system: rec.system, source: rec.source ?? null, name, index, visible: !!o.visible && parentVisible, kind: o.isInstancedMesh ? 'instanced' : o.isSkinnedMesh ? 'skinned' : 'mesh',
+          // visible is the object's own switch only; the draw filter (--only/--mute/--solo) leaves draws out by their layer mask
+          // and --nocolor by colourWrite, so `drawn` says whether this draw actually reaches the frame.
+          const drawn = !!o.visible && parentVisible && o.layers.mask !== 0 && m.colorWrite !== false;
+          out.push({ system: rec.system, source: rec.source ?? null, name, index, visible: !!o.visible && parentVisible, drawn, layerMask: o.layers.mask, colorWrite: m.colorWrite !== false, kind: o.isInstancedMesh ? 'instanced' : o.isSkinnedMesh ? 'skinned' : 'mesh',
             count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
             material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
             transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),
