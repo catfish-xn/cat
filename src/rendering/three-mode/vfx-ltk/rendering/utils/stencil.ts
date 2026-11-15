@@ -141,13 +141,6 @@ function canPass(use: StencilUse, reference: number, written: ReadonlySet<number
 }
 
 /**
- * The state each claim's materials draw under, in the order of `claims`.
- *
- * A claim draws untested where no live claim of the scene writes a value its test can pass
- * against, because the engine's writer is then outside the scene. Decision 2.53 of
- * docs/plans/vfx-particle-renderer.md.
- */
-/**
  * The stencil value the board's play surface writes each frame (rendering/passes.ts), and the one a TestEqual tester whose
  * reference no live emitter of the scene writes is tested against in place of its own (11-15). The value no shipped emitter
  * names (a full-asset scan, 11-15: references 0, 1, 3, 4, 6, 7, 8 and 37 are named, plus the ids counting down from 63;
@@ -157,6 +150,14 @@ function canPass(use: StencilUse, reference: number, written: ReadonlySet<number
  * scene until the slam's own system starts, on the board alone; it drew untested over the whole screen before.
  */
 export const BOARD_FALLBACK_REFERENCE = 32;
+
+/**
+ * The state each claim's materials draw under, in the order of `claims`.
+ *
+ * A claim draws untested where no live claim of the scene writes a value its test can pass
+ * against, because the engine's writer is then outside the scene. Decision 2.53 of
+ * docs/plans/vfx-particle-renderer.md.
+ */
 export function stencilStates(claims: readonly StencilClaim[], board?: ReadonlySet<number>): StencilState[] {
   const references = stencilReferences(claims);
   const written = new Set<number>();
