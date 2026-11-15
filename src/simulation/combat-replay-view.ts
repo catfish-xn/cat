@@ -151,6 +151,7 @@ function animationEvent(event: LedgerCombatEvent) {
       ...(event.castVariant?{castVariant:{...pick(event.castVariant,['actionSeq','move','channelTicks','enhanced']),heroAugmentIds:[...event.castVariant.heroAugmentIds]}}:{}) };
     case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
+    case 'abilityEffectEnded': return { ...envelope, ...pick(event, ['type', 'unitId', 'effect']), targetIds: [...event.targetIds] };
   }
 }
 type PacketOrigin = {
