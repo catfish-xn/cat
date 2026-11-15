@@ -452,6 +452,23 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times are measured on the original, with 0 at the mana bar emptying.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // REC ONLY (do not merge): 3-cost binding batch, candidate systems the export left out, at guessed times (attribution images only).
+  renni: [
+    { system: '0aaf8a76', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2 },
+    { system: 'be12cd52', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BuffBone_Glb_Center_Loc' },
+    { system: '2f79da6f', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2, primary: true },
+    { system: '32bd44a4', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2, primary: true, bone: 'C_BuffBone_Glb_Center_Loc' },
+  ],
+  scar: [
+    { system: '95d62c6a', action: 'cast', event: 'projectile', targetLimit: 3, delay: 0.2, duration: 0.8, travelSeconds: 0.4 },
+    { system: '9f028364', action: 'cast', event: 'hit', targetLimit: 3, delay: 0.6, duration: 1, bone: 'C_BuffBone_Glb_Center_Loc' },
+  ],
+  blitzcrank: [{ system: 'fc6cdcf0', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2 }],
+  twistedfate: [
+    { system: 'c1ee471b', action: 'cast', event: 'projectile', primary: true, delay: 0.2, duration: 0.6, travelSeconds: 0.4 },
+    { system: '17b9181f', action: 'cast', event: 'hit', primary: true, delay: 0.6, duration: 1, bone: 'C_BuffBone_Glb_Center_Loc' },
+  ],
+  'swain-back': [{ system: '3d2697ac', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.8, travelSeconds: 0.5 }],
   // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The timings below are
   // fitted to a 3-star original side by side (Ambessa thread, 11-11); they are our fit, not values read from the game.
   ambessa: [
