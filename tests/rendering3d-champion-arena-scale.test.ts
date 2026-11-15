@@ -37,7 +37,7 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
   });
 
   it('shrinks body-hugging hand sizes with the body and keeps range sizes in cells', async () => {
-    const { CUE_OVERRIDES } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    const { CUE_EXTRA_SKILLS, CUE_OVERRIDES } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
     const { measuredAtFxScale, measuredOnBody } = await import('../src/rendering/three-mode/vfx-ltk/fx-size');
     expect(measuredOnBody(1)).toBeCloseTo(measuredAtFxScale(1) * BODY_TO_FX);
     const scaleOf = (champion: string, system: string) => CUE_OVERRIDES[champion]!.filter(cue => cue.system === system).map(cue => cue.scale);
@@ -48,7 +48,8 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     // Ranges measured in cells: unchanged.
     expect(scaleOf('nunu', '78d04f27')).toEqual([measuredAtFxScale(0.43)]);
     expect(scaleOf('nunu', '8c256426')).toEqual([measuredAtFxScale(0.43)]);
-    expect(scaleOf('irelia', '08b7a939')).toEqual([measuredAtFxScale(1)]);
+    // Irelia's swipe plays at her shield's end (#677: CUE_EXTRA_SKILLS 'irelia-swipe'), still sized in cells.
+    expect(CUE_EXTRA_SKILLS['irelia-swipe']!.filter(cue => cue.system === '08b7a939').map(cue => cue.scale)).toEqual([measuredAtFxScale(1)]);
     expect(scaleOf('garen', '5bbccb8c')).toEqual([measuredAtFxScale(0.45)]);
   });
 });
