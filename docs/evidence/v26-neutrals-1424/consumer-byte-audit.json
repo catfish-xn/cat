@@ -656,9 +656,9 @@
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3365,
+      "currentBytes": 4019,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8eb89f1aa678eea4a12ca598fdbffd2bee54861dcee8628b78e1578a603e0bd9",
+      "currentSha256": "5419ee0799f392067159821ae273fa5a8da829d4f074572705f668d4cfc55b23",
       "firstDifferentByte": 0
     },
     "tests/castcmp-draw-filter.test.ts": {
@@ -680,9 +680,9 @@
     "tests/castcmp-probe-emitters.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2096,
+      "currentBytes": 2594,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "86260ca79af0bf1f22f2459713f318b01dda044d32b2113253937f303783cbda",
+      "currentSha256": "1840f0c8825ed1eddf7bda7f4b76822599b8f5a4d4b996b3620821dd8e20ebd8",
       "firstDifferentByte": 0
     },
     "tests/castcmp-probe-running.test.ts": {
