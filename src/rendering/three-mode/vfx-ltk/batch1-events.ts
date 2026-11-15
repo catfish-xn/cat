@@ -47,6 +47,8 @@ const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamag
 
 /** Vladimir's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
 const VLADIMIR_ABILITY = 'vladimir-ability';
+/** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
+const STEB_ABILITY = 'steb-ability';
 
 export function createBatch1VfxEvents(definition: (id: string) => string | undefined, star: (id: string) => number | undefined = () => undefined) {
   const units = new Map<string, SeenUnit>();
@@ -101,6 +103,21 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'heal' && definition(event.targetId) === 'vladimir'
           && event.shares.some(s => s.sourceId === event.targetId && s.sourceKind === 'ability' && s.definitionId === VLADIMIR_ABILITY && s.actual > 0))
           plan.extra.push({ champion: 'vladimir', sourceId: event.targetId, targets: [event.targetId], action: 'passive', skill: 'vladimir-heal' });
+        // Steb: his heal visuals come from his own heal events, not from his cast's target (an enemy). Only a share his ability
+        // sends counts (sourceKind ability, definitionId steb-ability, actual > 0): one to someone else is his passive share
+        // and flies his heal missile to that ally, one to himself is his ability's heal and rings on him. Item or vamp heals
+        // (sourceKind item) and every other unit's heals draw nothing here. Telling his share from his own heal by whether
+        // the target is himself is all today's heal events allow: both carry the same share fields (tests/vfx-ltk-steb-heal.test.ts
+        // asserts them). Should the rules give the share its own definitionId, change this and that test with it.
+        if (event.type === 'heal') {
+          const share = event.shares.find(s => s.sourceId !== undefined && s.sourceKind === 'ability' && s.definitionId === STEB_ABILITY
+            && definition(s.sourceId) === 'steb' && s.actual > 0);
+          if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
+            skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
+        }
+        // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
+          plan.variant = 'single';
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);

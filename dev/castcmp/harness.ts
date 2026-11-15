@@ -98,8 +98,10 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   if (pin !== null && params.get('real')) throw new Error('?pinfoe is for dummies only: a real combat moves and fights back');
   // ?fromstart=1 / ?leadms=MS / ?castindex=N (v-capture --from-start 1 / --lead-ms MS / --cast-index N): the replay window
   // (real-combat.ts leadTicksFor); without them it starts LEAD_TICKS (half a second) before the first cast of `me`, as before.
+  // ?anchor=attack-hit|event:<type> (v-capture --anchor): the window is about `me`'s N-th basic attack hit or event, not its
+  // N-th cast (real-combat.ts Anchor); a unit that never casts still gets a window.
   const start = { fromStart: params.get('fromstart') === '1', leadMs: params.get('leadms') !== null ? Number(params.get('leadms')) : null,
-    castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1 };
+    castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
   if (real) {
@@ -109,6 +111,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     // cast of `me` and the recorded cast is the renderer's first: its effect files are fetched cold. Any playFrom() lifts it.
     let limit = real.frames.length - 1;
     const playFrom = (i: number) => { at = i; carry = 0; limit = real.frames.length - 1; show(i); };
+    // A window that opens mid-combat first hands the renderer every earlier event, effects off (real-combat.ts catchUpBatch).
+    const playWindow = (i: number) => { playFrom(i); const batch = real.catchUp(i); if (batch.length) listener.events(batch as any); };
     const advance = (ms: number) => {
       carry += ms;
       while (carry >= 50 && at < limit) {
@@ -123,14 +127,14 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
       step: realStep, frame: () => show(at), reset: () => playFrom(0),
       box: (id: string) => listener.screenBox?.(id),
       // A cast replays from half a second before the first cast of `me` in the real combat.
-      cast() { numbers?.clear(); playFrom(Math.max(0, real.castIndex - real.lead)); },
+      cast() { numbers?.clear(); playWindow(Math.max(0, real.castIndex - real.lead)); },
       hold() { limit = Math.min(limit, Math.max(0, real.castIndex - real.lead - 1)); return { at, limit }; },
       // A fresh combat at the replay's start (v-capture calls it before the recorded cast): one frame out of combat and
       // back, so the renderer clears what the warm pass left (running effects, summons) and its per-unit cast count, as a
       // game combat starts. Without it the recorded cast was the unit's second (castIndex 1): a three-phase hero (Jinx)
       // played phase 1's cues, not the first cast's. Loaded effect files stay loaded.
       // settle(): the models stand on their start cells, turned as there, at t=0 (no glide back from the warm pass's end).
-      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playFrom(from); settle(); },
+      fresh() { const from = Math.max(0, real.castIndex - real.lead); listener.frame({ ...frame(false), pieces: real.frames[from]! }); step(50); playWindow(from); settle(); },
       events: (evts: any[]) => listener.events(evts), ctl() {}, hit() {},
       clock: () => clock, status: r.status, detail: r.detail, real: { castTick: real.castIndex, startTick: Math.max(0, real.castIndex - real.lead), ticks: real.frames.length, combatStart: real.combatStart },
       // The recorded window as the rules played it: the cast's targets alive at its end, and anyone else's casts inside it.
@@ -188,9 +192,12 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
 
 // ---- ?real=1 helpers (dev only) ----
 type Piece = Record<string, unknown>;
-async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number, start: { fromStart?: boolean; leadMs?: number | null; castNumber?: number } = {}) {
+async function createRealReplay(unit: string, star: number, form: string | null, foeModel: string, dist: number, windowMs: number, start: { fromStart?: boolean; leadMs?: number | null; castNumber?: number; anchor?: string | null } = {}) {
   const [rc, display, control] = await Promise.all([import('./real-combat'),
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
+  // A bad ?anchor throws: the recording must not fall back to the first cast.
+  const anchor = rc.parseAnchor(start.anchor);
+  if (!anchor) throw new Error(`?anchor must be cast, attack-hit or event:<type>, got ${start.anchor}`);
   const nfoes = Number(params.get('nfoes') ?? 4), foeOffset = params.get('foeoffset') !== null ? Number(params.get('foeoffset')) : 0;
   // ?foeoffset=K (v-capture --foe-offset K): the foes K columns to the side, the target ahead and to the side of the caster.
   if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }
@@ -199,13 +206,14 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   // ?allycell=R,C / ?foecell=R,C / ?foe2=X&foe2star=N&foe2cell=R,C (v-capture --ally-cell / --foe-cell / --foe2 --foe2star
   // --foe2-cell): those units on given cells, the second foe another hero (real-combat.ts realUnits; layoutProblem throws).
   const cellParam = (k: string) => { const v = params.get(k); if (v === null) return undefined; const c = rc.parseCell(v); if (!c) throw new Error(`?${k} must be R,C, got ${v}`); return c; };
-  const allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
+  const meCell = cellParam('mecell'), allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
   const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
-    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(foeCell ? { foeCell } : {}),
+    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(meCell ? { meCell } : {}), ...(foeCell ? { foeCell } : {}),
     ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
-  const after = rc.afterTicksFor(windowMs, start);
+  const window = { ...start, anchor };
+  const after = rc.afterTicksFor(windowMs, window);
   const run = rc.runRealCombat(units, after, (state, shown) => {
     frames.push(display.toCombatViewState(state).units.map((u: any) => ({
       id: u.id, definitionId: u.definitionId, team: u.team, starLevel: u.starLevel, ...hexOf(u.cell.row, u.cell.col),
@@ -214,10 +222,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
       ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
     })));
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
-  }, start.castNumber ?? 1);
-  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never cast${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
-  const lead = rc.leadTicksFor(run.castIndex, start);
-  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead) };
+  }, start.castNumber ?? 1, anchor);
+  if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
+  const lead = rc.leadTicksFor(run.castIndex, window);
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {

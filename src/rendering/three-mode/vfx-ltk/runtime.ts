@@ -69,6 +69,11 @@ export const ATTACHED_LAYER_CAP = 24;
  */
 export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
 /**
+ * Champion warms still in flight (files loading, systems being measured), over every runtime. Dev tools wait for 0 before a
+ * recorded cast, so its systems run with their measured room (castcmp v-capture), not the default one a first play takes.
+ */
+export const LTK_WARMING = { pending: 0 };
+/**
  * Admission counters across every runtime, for the dev load harness (dev/castcmp/board-load.cjs), which resets them after
  * its warm pass: the most systems running at once, and starts and drops by system. A drop is a cue that missed its
  * moment (overdue) or found no room and could not wait. Counting only; nothing reads them to decide.
@@ -444,6 +449,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
+    LTK_WARMING.pending++; void pending.finally(() => { LTK_WARMING.pending--; });
     warming.set(champion, pending); return pending;
   };
   // Where a cue meets its target, as a world point: the way LtkPlayOptions.snapshotTargets takes it.
