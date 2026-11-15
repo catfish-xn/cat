@@ -8,7 +8,7 @@ import type { ChildSetModel, EmitterModel, InheritanceModel, SystemModel } from 
 import type { Anchor, Joints, Point } from "../model/rig";
 import { addressTheSame, emissionEnded, systemSpan } from "../model/systemModel";
 import { Rng } from "../utils/Rng";
-import { drawCurve, sampleCurve } from "../utils/sampleCurve";
+import { drawCurve, sampleCurve, sampleCurveInto } from "../utils/sampleCurve";
 import {
   BEARING,
   type Bearing,
@@ -29,7 +29,7 @@ import {
   type World,
   worldOf,
 } from "./integrate";
-import { type DrawFrame, frameInto, type FrameSlot, type Source } from "./particleRead";
+import { age01, type DrawFrame, frameInto, type FrameSlot, type Source } from "./particleRead";
 import { cueScale } from "./systemScale";
 import {
   copyRows,
@@ -96,6 +96,10 @@ export interface ChildBirth {
   /** Nesting under the opened system, 1 for its own emitters' children. */
   readonly depth: number;
 }
+
+/** REC ONLY (experiment B): children take the ridden particle's scale0 curve X as a size factor. */
+const CHILD_SIZE_FROM_CURVE = true;
+const INHERIT = new Float32Array(3);
 
 /** How many births one pass logs, past which a spawn goes unnamed. */
 const MOST_BIRTHS = 4096;
@@ -218,6 +222,11 @@ export interface Child extends Source {
   readonly children: Children;
   /** Cue scale, copied from the lineage so a child's own draw and births read it. */
   scale: number;
+  /**
+   * REC ONLY (experiment B, not for merging): the size the child takes from the particle it rides, read as that
+   * particle's `scale0` curve X alone (not its birth scale). 1 for a loose child and before the first step it rides.
+   */
+  inherit: number;
 }
 
 /** One live child as a value: its pool's live rows, its own state, and its own children. */
@@ -347,6 +356,7 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
       anchor,
       children: createChildren(lineage, childPrefix(path), depth + 1),
       scale: lineage.scale,
+      inherit: 1,
     };
     standAt(child, bearing, now);
     child.from[0] = child.origin[0];
@@ -414,6 +424,11 @@ export function createChildren(lineage: Lineage, prefix: string, depth: number):
         const index = pool.emitter[at];
         bearingInto(parent, emitters[index], frameAt(index), at, child.inheritance, BEARING);
         standAt(child, BEARING, now);
+        // REC ONLY (experiment B): follow the ridden particle's scale0 curve X every step.
+        if (CHILD_SIZE_FROM_CURVE) {
+          INHERIT.fill(1); sampleCurveInto(emitters[index].scale0, age01(pool, at, now), INHERIT, 0);
+          child.inherit = Number.isFinite(INHERIT[0]) && INHERIT[0] > 0 ? INHERIT[0] : 1;
+        }
       }
 
       for (const child of mine) advance(child, dt, now, lineage);
@@ -550,6 +565,7 @@ function copyChild(child: Child): ChildCopy {
     anchor: child.anchor,
     children: child.children.snapshot(),
     scale: child.scale,
+    inherit: child.inherit,
   };
 }
 
@@ -585,6 +601,7 @@ function standChild(lineage: Lineage, copy: ChildCopy, depth: number): Child {
     anchor: copy.anchor,
     children,
     scale: lineage.scale,
+    inherit: copy.inherit,
   };
 
   feedOf(lineage, copy.path).push(child);
@@ -632,7 +649,7 @@ function boneChildCount(set: ChildSetModel): number {
 function advance(child: Child, dt: number, now: number, lineage: Lineage): void {
   child.time = now;
   child.elapsed = now - child.bornAt;
-  child.scale = lineage.scale;
+  child.scale = lineage.scale * child.inherit;
   if (child.stopAt !== null && now >= child.stopAt) child.stopped = true;
 
   const step: SystemStep = {
