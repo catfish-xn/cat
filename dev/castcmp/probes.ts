@@ -215,7 +215,12 @@ export function installProbes(clock: () => number) {
         // Keyed by the emitter's index in the system's model (readVfxSystem order: complex list, then simple).
         const per: Record<string, number> = {};
         for (let i = 0; i < pool.count; i++) { const k = String(pool.emitter[i]); per[k] = (per[k] ?? 0) + 1; }
-        runs.push({ system: rec.system, capacity: pool.capacity, live: pool.count, peak: fx.peak ?? null, perEmitter: per });
+        // Child systems this run's emitters spawned so far (driver births: emitter index → child slot), and how many are live,
+        // so a child that a parent spawns and a cue also plays on its own shows up twice.
+        const driver = fx.driver, spawned: Record<string, number> = {};
+        for (const b of driver.births?.() ?? []) { const k = `${b.path || 'root'}:${b.emitter}/${b.slot}@${b.depth}`; spawned[k] = (spawned[k] ?? 0) + 1; }
+        runs.push({ system: rec.system, capacity: pool.capacity, live: pool.count, peak: fx.peak ?? null, perEmitter: per,
+          liveChildren: driver.liveChildren?.() ?? null, spawned });
       }
       return { draws: out, units, runs };
     },
