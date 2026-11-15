@@ -53,6 +53,7 @@ import { sourcesScrollInto } from "../utils/palette";
 import { beamEndsInto, beamTint } from "../utils/ribbon";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { layerOf, uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay } from '../utils/playSurface';
 
 /** Scratch the frame reuses, so a draw allocates nothing per particle. */
 const DRAWN = { scale: new Float32Array(3), color: new Float32Array(4) };
@@ -143,6 +144,8 @@ export function createMeshes({
       fragmentTests(emitter),
       meshSide(emitter),
     );
+    // 11-15: a mesh is clipped below the board, as the floor's depth clipped it (playSurface.ts).
+    if (!emitter.groundLayer) clipUnderPlay(material);
     if (buffers.pose) {
       material.defines.PARTICLE_SKINNING = 1;
       material.uniforms.particleBones = { value: buffers.pose.texture };
