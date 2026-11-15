@@ -93,7 +93,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
-export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+const BASE_CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -412,6 +412,25 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+};
+
+// RECORDING ONLY (claude/rec-cuestop-b1, not for merge): B group batch 1 — each listed system plays to its own end
+// (duration = the system's longest emitter end, no stopAfter) instead of the hand-written early stop.
+const toEnd = (list: readonly TimelineCue[], ends: Readonly<Record<string, number>>): TimelineCue[] =>
+  list.map(cue => { if (!(cue.system in ends)) return cue; const { stopAfter: _drop, ...rest } = cue; return { ...rest, duration: ends[cue.system]! }; });
+const MUNDO_INDEX: readonly TimelineCue[] = [
+  { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3231666564941406, duration: 1.5 },
+  { system: '5443cd9f', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'C_Buffbone_Glb_Chest_Loc' },
+  { system: '4caada37', action: 'cast', event: 'cast-start', delay: 0.3, duration: 3, bone: 'C_Buffbone_Glb_Center_Loc' },
+];
+export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
+  ...BASE_CUE_OVERRIDES,
+  warwick: toEnd(warwickSkills.warwick, { '8c054bed': 10 }),
+  'warwick-permanent': toEnd(warwickSkills['warwick-permanent'], { '27416beb': 18.1 }),
+  blitzcrank: toEnd(BASE_CUE_OVERRIDES.blitzcrank!, { fc783cba: 10.6, '065c16b8': 1.35 }),
+  drmundo: toEnd(MUNDO_INDEX, { '5443cd9f': 9.25, '4caada37': 14.9 }),
+  leblanc: toEnd(BASE_CUE_OVERRIDES.leblanc!, { c54516b3: 1, ed58bcfc: 7.55, '898ab758': 7.5, '1b624dee': 6.4, '0a2eef95': 1 }),
+  draven: toEnd(BATCH1_TIMELINES.draven!, { '3381c8eb': 0.7, '5e3986cd': 1.5 }),
 };
 
 /**
