@@ -47,6 +47,8 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
+/** Vladimir's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
+const VLADIMIR_ABILITY = 'vladimir-ability';
 /** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
 const STEB_ABILITY = 'steb-ability';
 /**
@@ -105,6 +107,12 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
+        // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
+        // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
+        // vamp heals draw nothing here.
+        if (event.type === 'heal' && definition(event.targetId) === 'vladimir'
+          && event.shares.some(s => s.sourceId === event.targetId && s.sourceKind === 'ability' && s.definitionId === VLADIMIR_ABILITY && s.actual > 0))
+          plan.extra.push({ champion: 'vladimir', sourceId: event.targetId, targets: [event.targetId], action: 'passive', skill: 'vladimir-heal' });
         // Steb: his heal visuals come from his own heal events, not from his cast's target (an enemy). Only a share his ability
         // sends counts (sourceKind ability, definitionId steb-ability, actual > 0): one to someone else is his passive share
         // and flies his heal missile to that ally, one to himself is his ability's heal and rings on him. Item or vamp heals
