@@ -4,6 +4,7 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 import { packets, heals, casts } from './helpers/replay2-views';
+import { BLITZ_SHOCK_TICKS } from '../src/simulation/combat-g2';
 
 function hero(name: string, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('p', 'player', 1, 3, { definitionId: name, ability: resolveAbility(name + '-ability', 1),
@@ -45,8 +46,12 @@ describe('G2-1 independent fixed-seed skill oracles (seed 42)', () => {
     expect(r.state.units.find(u => u.id === 'e')!.mechanismState!.statuses).toHaveLength(1);
   });
   it('Blitzcrank: 470 shield and 40 magic damage plus an outgoing damage debuff', () => {
-    const r = stepCombat(battle([hero('blitzcrank'), dummy()], { rngState: 42 }));
-    expect(raw(r.events)).toEqual([40]); expect(r.state.units.find(u => u.id === 'p')!.shield).toBe(470);
+    // The shield lands on the cast; the shock BLITZ_SHOCK_TICKS later (user 2026-11-15, docs/S13_RULES_GAP.md 布里茨).
+    const cast = stepCombat(battle([hero('blitzcrank'), dummy()], { rngState: 42 }));
+    expect(raw(cast.events)).toEqual([]); expect(cast.state.units.find(u => u.id === 'p')!.shield).toBe(470);
+    expect(raw(advance(battle([hero('blitzcrank'), dummy()], { rngState: 42 }), BLITZ_SHOCK_TICKS).events)).toEqual([]);
+    const r = advance(battle([hero('blitzcrank'), dummy()], { rngState: 42 }), 1 + BLITZ_SHOCK_TICKS);
+    expect(raw(r.events)).toEqual([40]);
   });
   it('LeBlanc: split 650 exactly between two chains and 160 on next attack', () => {
     const r = advance(battle([hero('leblanc'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }), 22);

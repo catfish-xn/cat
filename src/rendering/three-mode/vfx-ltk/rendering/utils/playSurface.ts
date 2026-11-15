@@ -7,8 +7,11 @@
  * drawn whole; every other particle (a mesh, a ribbon, an arbitrary quad or a ray) is clipped below it here, as the floor's
  * depth clipped it before. Which primitives the floor leaves alone is fitted, not the original's: inferred from footage
  * (Gangplank's ground glow, a camera quad, shows whole; Garen's falling light column, a mesh, stops at the board).
+ * An emitter that turns its depth test off is never clipped (clipsUnderPlay): the floor's depth never clipped it.
  */
 import { Box3, Vector4, type Mesh, type Object3D, type ShaderMaterial } from 'three';
+import type { EmitterModel } from '../../engine/model/model';
+import { fragmentTests } from './blend';
 
 export interface PlaySurface { minX: number; maxX: number; minZ: number; maxZ: number; y: number }
 
@@ -80,6 +83,16 @@ const INSIDE = 'vPlayWorld.x >= vfxPlaySurface.x && vPlayWorld.x <= vfxPlaySurfa
 export const UNDER_PLAY = `(${INSIDE} && vPlayWorld.y < vfxPlayPlane - ${FLAT.toFixed(4)})`;
 /** The GLSL test a fragment at `vPlayWorld` is on or under the play surface by. */
 export const ON_OR_UNDER_PLAY = `(${INSIDE} && vPlayWorld.y <= vfxPlayPlane + ${FLAT.toFixed(4)})`;
+
+/**
+ * Whether `emitter`'s particles are clipped under the play surface (clipUnderPlay): not a ground-layer draw, and tested
+ * against depth. One that turns its depth test off (`DISABLE_ZBUFFER`) drew over the floor while the floor still wrote
+ * depth there, so it stays whole below the board (11-15: Garen's R impact Shockwave1, a mesh wholly under the board with
+ * the test off, vanished once it was clipped). Kinds the floor leaves alone (a camera-facing quad) are the caller's.
+ */
+export function clipsUnderPlay(emitter: EmitterModel): boolean {
+  return !emitter.groundLayer && fragmentTests(emitter).depthTest;
+}
 
 /**
  * Clips `material`'s fragments under the play surface: its `main` runs as before, after one that notes the vertex's world

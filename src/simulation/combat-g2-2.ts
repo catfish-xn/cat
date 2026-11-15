@@ -18,6 +18,13 @@ export const VI_ROW_KNOCKUP_TICKS = 10;
  * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚).
  */
 export const VI_SLAM_TICKS = 12;
+/**
+ * User-approved 2026-11-15 (original footage: the damage number shows when the kick lands, not on the cast):
+ * Camille's kick lands 5 ticks (0.25 s) after the cast. It follows the rising kick of our cast animation
+ * (tft13_camille_spell1), as the original's damage number does; fitted, not original data. The damage type is picked
+ * when the kick lands. See docs/S13_RULES_GAP.md (卡蜜尔).
+ */
+export const CAMILLE_KICK_TICKS = 5;
 /** User-approved 10-24: Ambessa's gauntlet slam stuns its target for 1 s (was 0.25 s); the slam↔gauntlet link is inferred (P). */
 export const AMBESSA_SLAM_STUN_TICKS = 20;
 import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
@@ -38,7 +45,9 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   const heal=(value:number)=>ctx.heals.push({source:origin(u),targetId:u.id,amount:value});
   const foes=()=>byDistance(u,enemies(u,ctx.units));
   switch(champion(u)) {
-    case 'camille': strike(t,ad('PercentAttackDamage','APDamage'),t.armor<t.magicResist?'physical':'magic');break;
+    case 'camille':
+      // The amount is taken now; the kick lands CAMILLE_KICK_TICKS later (g22CamilleKick, executeG22Task).
+      schedule(u,'g22CamilleKick',ctx.tick+CAMILLE_KICK_TICKS,t,ad('PercentAttackDamage','APDamage'),seq);ids.push(t.id);break;
     case 'vi':
       // The shield lands now; she holds the channel and the grabbed target until the slam (g22ViSlam, executeG22Task).
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
@@ -151,6 +160,12 @@ export function executeG22Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
       if(t){hit(ctx,u,t,task.amount,task.actionSeq,0,'physical');applyStatus(t,task.source,'stun',0,Math.round(variable(u,'StunDuration')*20),ctx.tick,ctx.events);}}
     else for(const [i,other] of byDistance(u,enemies(u,ctx.units)).filter(x=>x.id!==task.targetId&&x.cell.row===task.cell!.row).entries()) {
       hit(ctx,u,other,task.amount,task.actionSeq,1+i,'physical',true);applyStatus(other,task.source,'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);} // the row shockwave knocks up
+  }
+  else if(task.kind==='g22CamilleKick') {
+    // Runs only while Camille is alive; a control on her after the cast does not stop the kick. A target that died in the
+    // meantime takes nothing and no other target is picked; one that moved away is still hit.
+    const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);
+    if(t)hit(ctx,u,t,task.amount,task.actionSeq,0,t.armor<t.magicResist?'physical':'magic');
   }
   else {const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);if(t)hit(ctx,u,t,task.amount,task.actionSeq,100+task.ordinal);}
 }

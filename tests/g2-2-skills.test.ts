@@ -4,7 +4,7 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit, freeze } from './combat-helpers';
 import { packets, heals } from './helpers/replay2-views';
-import { VI_SLAM_TICKS } from '../src/simulation/combat-g2-2';
+import { VI_SLAM_TICKS, CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:10000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 function run(initial:CombatState,count:number){let state=initial;const events:CombatEvent[]=[];for(let n=0;n<count&&state.status==='running';n++){const r=stepCombat(state);state=r.state;events.push(...r.events);}return{state,events};}
@@ -14,11 +14,13 @@ it.each([
  ['trundle',[322]],['ziggs',[180,90,90,90]],['steb',[260]],['vex',[220]],['twistedfate',[110,230]],
  ['jinx',[265]],['ambessa',[250]],['mordekaiser',[200]],
 ] as const)('%s independently sourced first-cast raw damage', (name,values)=>{const initial=freeze(battle([hero(name),dummy()],{rngState:42}));
-  // Vi's damage lands at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11); every other skill on the cast tick.
-  expect(raw(name==='vi'?run(initial,1+VI_SLAM_TICKS).events:stepCombat(initial).events)).toEqual(values);
-  if(name==='vi')expect(raw(run(initial,VI_SLAM_TICKS).events)).toEqual([]);
+  // Vi's damage lands at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11), Camille's at her kick, CAMILLE_KICK_TICKS
+  // after the cast (user 2026-11-15); every other skill on the cast tick.
+  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS} as Record<string,number>)[name];
+  expect(raw(later?run(initial,1+later).events:stepCombat(initial).events)).toEqual(values);
+  if(later)expect(raw(run(initial,later).events)).toEqual([]);
   expect(initial.tick).toBe(0);});
-it('Camille heals actual mitigated damage, not raw damage',()=>{const r=stepCombat(battle([hero('camille'),dummy('e',{armor:100,magicResist:200})],{rngState:42}));expect(heals(r.events).find(x=>x.unitId==='p')?.actual).toBe(42);});
+it('Camille heals actual mitigated damage, not raw damage',()=>{const r=run(battle([hero('camille'),dummy('e',{armor:100,magicResist:200})],{rngState:42}),1+CAMILLE_KICK_TICKS);expect(heals(r.events).find(x=>x.unitId==='p')?.actual).toBe(42);});
 it('Vex samples a fixed zone at source delay; Morgana preserves all 525 DOT damage and shield mark',()=>{
  const vex=run(battle([hero('vex'),dummy()],{rngState:42}),17);expect(raw(vex.events).filter(x=>x===110)).toEqual([110]);
  const morgana=run(battle([hero('morgana',{baseAttackSpeedBps:1}),dummy()],{rngState:42}),201);

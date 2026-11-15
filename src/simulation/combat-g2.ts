@@ -17,6 +17,12 @@ import { burn, modifier, stat, status } from './content/item-programs';
 
 export const EMPTY_EXPANSION: ExpansionState = { damageDealt: 0, damageTaken: 0, crystals: 0, crystalDamage: 0,
   attacksRemaining: 0, buffUntilTick: 0, lastRetaliationTick: 0, chainUntilTick: 0, chainTargets: [], chainCastSeq: 0, chainKills: 0 };
+/**
+ * User-approved 2026-11-15 (timing only; Fable after the original frames: the shield first, the shock a moment later):
+ * Blitzcrank's shock lands 5 ticks (0.25 s) after the cast; the shield stays on the cast. Fitted (not original data) by
+ * lining our recording up with the original frame by frame. See docs/S13_RULES_GAP.md (布里茨).
+ */
+export const BLITZ_SHOCK_TICKS = 5;
 export function expansion(unit: S13Unit): ExpansionState { return unit.expansion ??= structuredClone(EMPTY_EXPANSION); }
 function hit(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number, seq: number, ordinal: number,
   type: S13Packet['damageType'] = 'magic', area = false, source = origin(unit), derived = false): void {
@@ -86,11 +92,11 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'blitzcrank': {
+      // The shield lands now; the shock on the enemies nearest now lands BLITZ_SHOCK_TICKS later (g2BlitzShock, executeG2Task).
       grantShield(unit, origin(unit), mag('Shield'), ctx.tick + ticks('ShieldDuration'), ctx.tick, ctx.events);
-      for (const t of byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'))) {
-        strike(t, mag('BaseDamage'));
-        effect(ctx, unit, t, stat(modifier('damageAmp', -Math.round(v('DamageReduction') * 10000), 'bps'), ticks('ShieldDuration')), seq);
-      } break;
+      const targets = byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'));
+      targets.forEach((t, n) => { task(unit, 'g2BlitzShock', ctx.tick + BLITZ_SHOCK_TICKS, t.id, mag('BaseDamage'), seq, n, targets.length); ids.push(t.id); });
+      break;
     }
     case 'ekko': {
       const targets = [target, ...byDistance(target, enemies(unit, ctx.units).filter(u => u.id !== target.id)).slice(0, v('NumBonusEnemies'))];
@@ -144,7 +150,10 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
     pierced.forEach((t, n) => {
       const raw = Number(BigInt(amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') })) * BigInt(10000 - Math.round(v('DamageReduction') * 10000)) ** BigInt(n) / 10000n ** BigInt(n));
       ctx.packets.push({ source: { ...origin(unit), sourceKind: 'attack' }, targetId: t.id, raw, damageType: 'physical', actionSeq: seq, ordinal: n, delivery: 'basic-attack', critEligibility: 'basic', area: true, triggeringCastActionSeq: null });
-    }); state.attacksRemaining--; return true;
+    }); state.attacksRemaining--;
+    // Display only: the last empowered attack is spent.
+    if (state.attacksRemaining === 0) ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'twitch-volley', targetIds: [] });
+    return true;
   }
   if (name === 'zeri' && unit.runtime.attackCount % v('NumOfAttacks') === 0) {
     const raw = amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') });
@@ -182,12 +191,22 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
     }
+  } else if (t.kind === 'g2BlitzShock') {
+    // Runs only while Blitzcrank is alive; a control on him after the cast does not stop it. A target that died in the
+    // meantime takes nothing and no other target is picked; one that moved away is still hit.
+    if (target) {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      effect(ctx, unit, target, stat(modifier('damageAmp', -Math.round(variable(unit, 'DamageReduction') * 10000), 'bps'), Math.round(variable(unit, 'ShieldDuration') * 20)), t.actionSeq);
+    }
   } else if (target) hit(ctx, unit, target, t.amount, t.actionSeq, 1000 + t.ordinal, champion(unit) === 'leblanc' ? 'true' : 'magic', false, t.source, true);
 }
 export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): void {
   // Snapshot damage totals only when a skill/trait consumes them.
   if (ctx.units.some(u => ['singed', 'blitzcrank', 'leblanc'].includes(champion(u)) || mechanic(u, 'automata', 'crystals') || mechanic(u, 'firelight', 'periodTicks')))
     for (const unit of ctx.units) expansion(unit);
+  // Display only: a LeBlanc chain runs out this tick (the redirect reads chainUntilTick > tick, so it is already over).
+  for (const unit of ctx.units) if (champion(unit) === 'leblanc' && unit.expansion && unit.expansion.chainUntilTick === ctx.tick)
+    ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'leblanc-chain', targetIds: [...unit.expansion.chainTargets] });
   for (const unit of ctx.units.filter(u => u.alive && u.hp > 0)) {
     if (champion(unit) === 'amumu' && ctx.tick % 20 === 0)
       for (const target of areaEnemies(unit, ctx.units).filter(u => hexDistance(unit.cell, u.cell) <= 1)) hit(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'Damage') }), nextSeq(), 0, 'magic', true, origin(unit), true);

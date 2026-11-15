@@ -633,6 +633,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       return true;
     },
+    /**
+     * A rule says these systems of the source's are over (an ability effect ended, CUE_END_STOPS): queued rows go, running
+     * ones stop emitting and leave within half a second, the way stopGroup ends them.
+     */
+    stopSystems(sourceId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
