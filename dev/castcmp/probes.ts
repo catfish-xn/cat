@@ -91,7 +91,7 @@ export function installProbes(clock: () => number) {
   // WebGLRenderer defines render() per instance, so the scene and camera are found another way: the scene is the parent
   // the renderer adds overheads to (Object3D.prototype.add), the camera the perspective camera with the canvas's aspect
   // whose world matrix the renderer refreshes each frame (Camera.prototype.updateMatrixWorld).
-  let scene: any = null, camera: any = null;
+  let scene: any = null, camera: any = null, T: any = null;
   const three = import('three').then(THREE => {
     const add = THREE.Object3D.prototype.add;
     THREE.Object3D.prototype.add = function (this: any, ...objects: any[]) {
@@ -104,6 +104,7 @@ export function installProbes(clock: () => number) {
       if (this.isPerspectiveCamera && c && Math.abs(this.aspect - c.clientWidth / Math.max(1, c.clientHeight)) < 0.01) camera = this;
       return update.call(this, force);
     };
+    T = THREE;
     return THREE;
   });
   return {
@@ -141,6 +142,36 @@ export function installProbes(clock: () => number) {
         if (!used) return null;
         return { min: num(lo), max: num(hi), vertices: used, firstVertex: num(first!.slice(0, 3)), lastVertex: num(last!.slice(0, 3)) };
       };
+      // A quad draw (vfx-ltk Quads: one instanced unit quad, its rows `center` and `size`) has no positions to bound, so each
+      // live quad is measured off its rows the way the quad vertex shader places it: half an extent is 0.5 * reach * size,
+      // times the draw's world scale (the length of its world matrix's first column), centred on the row's centre. Reported
+      // in world (board) units, in cells of BOARD_CELL (sqrt(3) * 34), and in canvas CSS px along the eye's right through the
+      // centre, beside the px one cell spans there, so a draw's size can be followed from the rows to the screen.
+      const CELL = Math.sqrt(3) * 34;
+      const quadsOf = (o: any, m: any) => {
+        const g = o.geometry, center = g?.attributes?.center, size = g?.attributes?.size; if (!center || !size) return null;
+        const n = Math.min(g.instanceCount ?? 0, center.count); if (!n) return { live: 0 };
+        o.updateWorldMatrix(true, false); const e = o.matrixWorld.elements;
+        const scale = Math.hypot(e[0], e[1], e[2]), reach = m.uniforms?.reach?.value ?? 2;
+        const canvas = typeof document === 'undefined' ? null : document.querySelector('#host canvas') as HTMLCanvasElement | null;
+        const rect = canvas?.getBoundingClientRect();
+        let right: number[] | null = null;
+        if (camera && T) { camera.updateMatrixWorld(); const c = camera.matrixWorld.elements; right = [c[0], c[1], c[2]]; const l = Math.hypot(...right); right = right.map(v => v / l); }
+        const px = (w: number[]) => { if (!camera || !T || !rect) return null; const v = new T.Vector3(w[0], w[1], w[2]).project(camera);
+          return [(v.x + 1) / 2 * rect.width, (1 - v.y) / 2 * rect.height]; };
+        const rows: any[] = [];
+        for (let i = 0; i < n && rows.length < 8; i++) {
+          const x = center.getX(i), y = center.getY(i), z = center.getZ(i);
+          const w = [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]];
+          const half = [0.5 * reach * size.getX(i) * scale, 0.5 * reach * size.getY(i) * scale];
+          const row: any = { center: num(w), rowSize: num([size.getX(i), size.getY(i), size.getZ(i)]), worldScale: num(scale), reach,
+            worldAcross: num(2 * half[0]), cellsAcross: num(2 * half[0] / CELL) };
+          if (right) { const a = px(w), b = px(w.map((v, k) => v + right![k]! * half[0])), c1 = px(w.map((v, k) => v + right![k]! * CELL));
+            if (a && b && c1) { row.pxAcross = num(2 * Math.hypot(b[0] - a[0], b[1] - a[1])); row.pxPerCell = num(Math.hypot(c1[0] - a[0], c1[1] - a[1])); row.pxCenter = num(a); } }
+          rows.push(row);
+        }
+        return { live: n, rows };
+      };
       const want = (names ?? []).map(n => n.toLowerCase()).filter(Boolean);
       const out: any[] = [];
       for (const rec of live) {
@@ -164,7 +195,7 @@ export function installProbes(clock: () => number) {
             count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
             material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
             transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),
-            defines: { ...(m.defines ?? {}) }, textures, uniforms, worldBox: worldBoxOf(o) });
+            defines: { ...(m.defines ?? {}) }, textures, uniforms, worldBox: worldBoxOf(o), quads: quadsOf(o, m) });
         });
       }
       // Where each unit stands now (its root, world/board units), so a draw's worldBox can be read against the caster and
@@ -172,7 +203,18 @@ export function installProbes(clock: () => number) {
       const d3 = typeof window === 'undefined' ? null : (window as any).__render3d;
       const units = d3?.pieces ? [...d3.pieces.entries()].map(([id, v]: [string, any]) => { v.root.updateWorldMatrix(true, false); const e = v.root.matrixWorld.elements;
         return { id, root: num([e[12], e[13], e[14]]), alive: !!v.alive }; }) : null;
-      return { draws: out, units };
+      // Each running system's root pool: the room it was built with (runtime rootRoom, ROOT_PARTICLES when unmeasured), the
+      // particles live now, this play's peak, and the live particles per emitter index, so an emitter that never gets a place is
+      // told apart from one that draws too small.
+      const runs: any[] = [];
+      for (const rec of live) {
+        const fx: any = rec.fx, pool = fx?.driver?.pool; if (!pool) continue;
+        // Keyed by the emitter's index in the system's model (readVfxSystem order: complex list, then simple).
+        const per: Record<string, number> = {};
+        for (let i = 0; i < pool.count; i++) { const k = String(pool.emitter[i]); per[k] = (per[k] ?? 0) + 1; }
+        runs.push({ system: rec.system, capacity: pool.capacity, live: pool.count, peak: fx.peak ?? null, perEmitter: per });
+      }
+      return { draws: out, units, runs };
     },
     attached() {
       if (!scene) return { missing: ['scene'] };
