@@ -631,8 +631,11 @@ export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 
 export const CUE_RULE_STOPS = {
   // Warwick's blood frenzy aura goes when the frenzy does (bloodFrenzyChanged active: false).
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
-  // Blitzcrank's Q shield goes when his ability shield layer ends (shieldLayerChanged depleted / expired / replaced).
-  blitzShieldEnded: { systems: ['fc783cba'], on: 'source' },
+  // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
+  // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
+  viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
   shredEnded: { systems: ['88a717e0'], on: 'target' },
 } as const;

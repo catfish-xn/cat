@@ -719,7 +719,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
-    play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false) });
+    play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
   const anvilIdle = ltk ? createAnvilIdleLoop({
@@ -1464,8 +1464,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
       // Rule events that already end a state: the visuals listed for them end with it (cue-overrides.ts CUE_RULE_STOPS).
       if (event.type === 'bloodFrenzyChanged' && !event.active) ltk?.stopSystems(event.unitId, CUE_RULE_STOPS.frenzyEnded.systems);
-      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed'
-        && event.key.includes('blitzcrank')) ltk?.stopSystems(event.targetId, CUE_RULE_STOPS.blitzShieldEnded.systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEnded.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystems(event.targetId, systems);
       if (event.type === 'statusChanged' && event.kind === 'shred' && event.reason !== 'applied' && event.reason !== 'refreshed')
         ltk?.stopSystemsOn(event.targetId, CUE_RULE_STOPS.shredEnded.systems);
       if (!ANIMATION_EVENTS.has(event.type)) continue;

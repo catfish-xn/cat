@@ -2,6 +2,7 @@ import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { BoardFrame } from '../../board-feed';
 import type { LtkPlayOptions } from './runtime';
 import type { WorldPoint } from './timeline';
+import { CUE_RULE_STOPS } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
@@ -13,6 +14,8 @@ interface Host {
   unit(id: string): Unit | undefined;
   board(): Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'> | null;
   play(champion: string, source: string, targets: readonly string[], action: 'cast' | 'attack', context: LtkPlayOptions): boolean;
+  /** Ends the source's runs of these systems (cue-overrides.ts CUE_RULE_STOPS); absent where nothing runs them. */
+  stopSystems?(source: string, systems: readonly string[]): void;
 }
 export function batch2BoardPoint(frame: ReturnType<Host['board']>): WorldPoint | undefined {
   if (!frame) return;
@@ -108,6 +111,8 @@ export function createBatch2VfxBridge(host: Host) {
         if (storm && ownStorm && storm.targets.includes(event.targetId)
           && event.tick > storm.tick && !attacks.has(`${event.sourceId}:${event.tick}`)) {
           storms.delete(event.sourceId);
+          // The slam lands: the board-wide warning, if still up, goes now.
+          host.stopSystems?.(event.sourceId, CUE_RULE_STOPS.viktorSlamLanded.systems);
           if (current) {
             const targets = storm.targets.filter(id => { const unit = host.unit(id); return unit?.alive && !unit.disposed; });
             // Caster death does not drop the board point or surviving target hits.
