@@ -16,6 +16,9 @@ interface LitPiece {
   readonly alive: boolean;
   readonly team: 'player' | 'enemy';
 }
+/** Contact shadow diameter per unit of drawn body height (fitted value, 2026-11-12, not original data): the shadow follows the
+ * body, so a smaller or 1-star body gets a smaller contact. Chosen so a body fitted to the old 92-unit default keeps the old 64. */
+export const CONTACT_SHARE = 64 / 92;
 const TEAM = { player: '#3d8fd1', enemy: '#d1504a' } as const;
 const TEAM_COLORS = { player: new Color(TEAM.player), enemy: new Color(TEAM.enemy) };
 
@@ -94,7 +97,8 @@ export function createPresentationLighting(scene: Scene, quality: Quality3d) {
     hover(piece: LitPiece | null) { if (closed) return; hovered = piece; outline(piece); },
     /** Detach borrowed skeletons/geometry before the owner releases or replaces its body. Keep the hover identity. */
     detachBody(piece: LitPiece) { if (hovered === piece) clearOutline(); },
-    update(piece: LitPiece) {
+    /** `height`: the body's drawn height (the renderer's starHeight less the star gap); the contact scales with it. */
+    update(piece: LitPiece, height = 92) {
       if (closed) return;
       if (contacts) {
         let shadow = shadows.get(piece.root);
@@ -106,7 +110,7 @@ export function createPresentationLighting(scene: Scene, quality: Quality3d) {
         shadow.position.set(piece.root.position.x, piece.target.y + 1.5, piece.root.position.z);
         // Lifted/arriving pieces have a smaller contact; this shares one material across the whole army.
         const lift = Math.max(0, piece.root.position.y - piece.target.y);
-        shadow.scale.setScalar(64 / (1 + lift / 50));
+        shadow.scale.setScalar(CONTACT_SHARE * height / (1 + lift / 50));
       }
       if (hovered === piece) outline(piece); // also replaces shells after an asynchronous model attaches
     },
