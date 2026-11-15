@@ -912,7 +912,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       claimBuf.length = 0;
       for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);
       if (claimBuf.length) {
-        const states = stencilStates(claimBuf, passes?.board);
+        const states = stencilStates(claimBuf); // REC ONLY (bisect): no board fallback
         for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
       }
     },
