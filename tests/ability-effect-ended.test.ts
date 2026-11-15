@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { CUE_END_STOPS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
 import { battle, unit } from './combat-helpers';
 
 // Same fixed-seed setup as tests/g2-1-skills.test.ts.
@@ -45,9 +46,42 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     expect(volley[0]!.tick).toBeGreaterThan(casts[0]!.tick);
   });
 
+  it('Dr. Mundo: one event the tick his heal over time pays its last part', () => {
+    const r = advance(battle([hero('drmundo'), dummy()], { rngState: 42 }), 200);
+    const cast = r.events.find(e => e.type === 'cast')!;
+    const heal = ended(r.events).filter(e => e.effect === 'drmundo-heal');
+    expect(heal.length).toBeGreaterThan(0);
+    expect(heal[0]).toMatchObject({ unitId: 'p', targetIds: [] });
+    // Parts are paid once a second after the cast; the signal comes with the last one, not before it.
+    expect(heal[0]!.tick).toBeGreaterThan(cast.tick + 20);
+    expect(heal[0]!.tick % 20).toBe(cast.tick % 20);
+  });
+
+  it('Vander: one event when his cast brace (channel) ends', () => {
+    const r = advance(battle([hero('vander'), dummy()], { rngState: 42 }), 120);
+    const cast = r.events.find(e => e.type === 'cast')!;
+    const brace = ended(r.events).filter(e => e.effect === 'vander-brace');
+    expect(brace.length).toBeGreaterThan(0);
+    expect(brace[0]!.unitId).toBe('p');
+    expect(brace[0]!.tick).toBeGreaterThan(cast.tick);
+  });
+
+  it('the existing rule events the renderer ends visuals on are there: Blitzcrank shield layer, Malzahar shred', () => {
+    const blitz = advance(battle([hero('blitzcrank'), dummy()], { rngState: 42 }), 220);
+    const layers = blitz.events.filter(e => e.type === 'shieldLayerChanged') as Extract<CombatEvent, { type: 'shieldLayerChanged' }>[];
+    expect(layers.some(e => e.reason === 'granted' && e.layer.targetId === 'p' && e.layer.key.includes('blitzcrank'))).toBe(true);
+    expect(layers.some(e => e.reason !== 'granted' && e.reason !== 'absorbed' && e.reason !== 'decayed' && e.layer.key.includes('blitzcrank'))).toBe(true);
+    const malz = advance(battle([hero('malzahar'), dummy()], { rngState: 42 }), 120);
+    const shred = malz.events.filter(e => e.type === 'statusChanged' && e.group.kind === 'shred') as Extract<CombatEvent, { type: 'statusChanged' }>[];
+    expect(shred.some(e => e.reason === 'applied')).toBe(true);
+    expect(shred.some(e => e.reason === 'expired' && e.group.targetId === 'e')).toBe(true);
+  });
+
   it('each listed cue plays its own life (no early stop beyond a fade-out tail), so the event is what ends it', () => {
-    const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!];
-    for (const [effect, systems] of Object.entries(CUE_END_STOPS)) {
+    const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!, ...CUE_OVERRIDES.drmundo!, ...CUE_OVERRIDES.vander!, ...CUE_OVERRIDES.blitzcrank!,
+      ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!];
+    const lists = { ...CUE_END_STOPS, ...Object.fromEntries(Object.entries(CUE_RULE_STOPS).map(([k, v]) => [k, v.systems])) };
+    for (const [effect, systems] of Object.entries(lists)) {
       expect(systems.length, effect).toBeGreaterThan(0);
       for (const system of systems) {
         const cue = cues.find(c => c.system === system);

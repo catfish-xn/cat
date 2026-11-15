@@ -435,6 +435,9 @@ export function maintainActivities(ctx: AbilityContext, unit: S13Unit, controlle
     if (!reason) return activity;
     const ended = { ...activity, lifecycle: 'ended' as const, endedAtTick: reason === 'expired'&&!targetDied ? activity.expiresAtTick : ctx.tick, endReason: reason };
     if (unit.statuses.some(s => s.activity?.key === activity.key)) ctx.events.push({ type: 'activityChanged', tick: ctx.tick, activity: ended, reason });
+    // Display only: Vander's cast brace (its channel) is over.
+    if (activity.kind === 'channel' && unit.ability.kind === 's13' && unit.ability.championId === 'vander' && unit.statuses.some(s => s.activity?.key === activity.key))
+      ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'vander-brace', targetIds: [] });
     return ended;
   }) };
   unit.statuses = unit.statuses.filter(s => !s.activity || unit.mechanismState!.activities.some(a => a.key === s.activity!.key && a.lifecycle === 'active'));

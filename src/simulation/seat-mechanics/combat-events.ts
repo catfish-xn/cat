@@ -28,9 +28,10 @@ export type G23CombatEventData =
   | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin }
   /**
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
-   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up.
+   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
+   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.
    */
-  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley'; readonly targetIds: readonly string[] };
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 

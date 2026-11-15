@@ -623,6 +623,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
+    /** As stopSystems, for the runs of these systems on one unit (whoever cast them): the rule's effect on that unit ended. */
+    stopSystemsOn(targetId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.target === targetId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);
