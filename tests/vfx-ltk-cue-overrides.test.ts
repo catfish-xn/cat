@@ -1,14 +1,14 @@
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 import { silco } from '../src/rendering/three-mode/vfx-ltk/batch3/silco';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { createVfxLibrary, parseIndex, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { ARENA_UNIT_SCALE, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { ARENA_UNIT_SCALE, BODY_TO_FX, cueSize, FX_SOURCE_SCALE, measuredAtFxScale, measuredOnBody, SKILL_FX_SIZE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { createLtkParticles, FX_SCALE, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -77,14 +77,16 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')!.delay);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredAtFxScale(0.7));
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
     // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
     const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')?.primary).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')!.delay).toBeLessThan(ezreal.find(cue => cue.system === 'e4979a04')!.delay);
-    // Irelia: the swipe waits for the guard's end; Darius: the hit spark is optional.
-    expect(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')?.delay).toBeGreaterThanOrEqual(1.4);
+    // Irelia: the swipe waits for the guard's end, now her shield's own end event (was delay >= 1.4 on the cast list);
+    // Darius: the hit spark is optional.
+    expect(CUE_OVERRIDES.irelia.some(cue => cue.system === '08b7a939')).toBe(false);
+    expect(CUE_EXTRA_SKILLS['irelia-swipe']!.map(cue => cue.system)).toEqual(['08b7a939']);
     expect(CUE_OVERRIDES.darius.find(cue => cue.system === 'a5373796')?.optional).toBe(true);
     // Morgana: the curse stays on its one target for the 8 pulses.
     expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
@@ -214,9 +216,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
   });
 
   it('keeps weapon-held cues at the body scale and draws every other cue at the arena scale (pr580-report)', () => {
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(1); // Jinx muzzle
-    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(1); // Twitch crossbow glow
-    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(1);
+    // The body is drawn at the arena scale since 2026-11-12, so a weapon-held cue takes BODY_TO_FX (equal to SKILL_FX_SIZE).
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start' })).toBe(BODY_TO_FX); // Jinx muzzle
+    expect(cueSize({ bone: 'Buffbone_Glb_Weapon_1', event: 'cast-start' })).toBe(BODY_TO_FX); // Twitch crossbow glow
+    expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'projectile', stationary: true })).toBe(BODY_TO_FX);
     expect(cueSize({ bone: 'R_Buffbone_Glb_Hand_Loc', event: 'projectile' })).toBe(SKILL_FX_SIZE); // Vex's missile travels
     expect(cueSize({ bone: 'BUFFBONE_GLB_WEAPON_1', event: 'link' })).toBe(SKILL_FX_SIZE); // LeBlanc's chain
     expect(cueSize({ bone: 'C_BUFFBONE_GLB_CHEST_LOC', event: 'cast-start' })).toBe(SKILL_FX_SIZE); // Garen's shield
@@ -226,8 +229,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
-    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
-    for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
+    expect(drawn(CUE_EXTRA_SKILLS['irelia-swipe']!.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
+    for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(BODY_TO_FX, 12); // shield wraps her, so it shrinks with her body
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).
     const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
@@ -241,7 +244,8 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cast.length).toBeGreaterThan(0);
     for (const cue of cast) {
       const drawn = (cue.scale ?? 1) * cueSize(cue);
-      const measured = cue.system === 'b888a24f' ? 1.6 : cue.system === '7ce6b652' ? 0.5 : 1;
+      // The chest hit hugs each rooted target's body, so it shrinks with the body; the ground cues are ranges.
+      const measured = cue.system === 'b888a24f' ? 1.6 : cue.system === '7ce6b652' ? 0.5 : cue.system === '9d413df0' ? BODY_TO_FX : 1;
       expect(drawn, cue.system).toBeCloseTo(measured, 12);
     }
   });
