@@ -136,7 +136,9 @@ const CLEARED = 0;
  */
 function canPass(use: StencilUse, reference: number, written: ReadonlySet<number>): boolean {
   if (writesStencil(use)) return true;
-  if (use.mode === STENCIL_MODE.testEqual) return reference === CLEARED || written.has(reference);
+  // REC ONLY (11-15, Viktor 12ac9712 experiment): a TestEqual tester is always tested, as the engine tests it: with no
+  // writer of its reference in the scene it passes nowhere (it drew untested, everywhere, before).
+  if (use.mode === STENCIL_MODE.testEqual) return true;
   return reference !== CLEARED || written.size > 0;
 }
 

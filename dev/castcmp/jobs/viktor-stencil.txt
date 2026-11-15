@@ -1,0 +1,5 @@
+# REC ONLY (11-15): Viktor R warning 12ac9712 MAP_DISC_HIGH_WRITE (TestEqual ref 4, no writer in its system) — before: drawn
+# untested over everything; after (this branch): tested as the engine tests it (no ref-4 writer in the scene -> drawn nowhere).
+v-capture.cjs viktor vst-real --real 1 --star 2 --ms 3000 --systems 12ac9712 --layers none --snapshot d3ffe5808978
+v-capture.cjs viktor vst-real-only --real 1 --star 2 --ms 3000 --only 12ac9712 --systems 12ac9712 --layers none --snapshot d3ffe5808978
+v-capture.cjs viktor vst-dummy --star 2 --ms 3000 --systems 12ac9712 --layers none --snapshot d3ffe5808978
