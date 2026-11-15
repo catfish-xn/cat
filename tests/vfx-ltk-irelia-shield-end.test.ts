@@ -30,7 +30,7 @@ describe('Irelia: the stance and the swipe follow her shield, not fixed times', 
   it('emptied early or run out: the stance stops and the swipe plays at that end, either way', () => {
     for (const reason of ['depleted', 'expired']) {
       const plans = createBatch1VfxEvents(id => definitions[id]).batch([cast('ire', 10), shield('granted', 'ire', 10), shield(reason, 'ire', 44)]);
-      expect(plans[0]!.skipCast).toBeUndefined();
+      expect(plans[0]!.skipCast).toBeUndefined(); expect(plans[0]!.noCastEffect).toBeUndefined();
       expect(plans[2]!.stopCast).toBe('ire');
       expect(plans[2]!.extra).toEqual([SWIPE]);
     }
@@ -43,9 +43,10 @@ describe('Irelia: the stance and the swipe follow her shield, not fixed times', 
     expect(plans.some(p => p.stopCast)).toBe(false);
   });
 
-  it('a cast that grants her no shield (Blade Dance) draws no stance', () => {
+  it('a cast that grants her no shield (Blade Dance) draws no stance, but is not skipped: she still turns to her target', () => {
     const plans = createBatch1VfxEvents(id => definitions[id]).batch([cast('ire', 10)]);
-    expect(plans[0]!.skipCast).toBe(true);
+    expect(plans[0]!.noCastEffect).toBe(true);
+    expect(plans[0]!.skipCast).toBeUndefined();
   });
 
   it('in real combats the swipe is planned where the shield ends: early when emptied, later when she takes little', () => {
@@ -58,7 +59,7 @@ describe('Irelia: the stance and the swipe follow her shield, not fixed times', 
       const swipe = plans.find(p => p.extra.some(fx => fx.skill === 'irelia-swipe'));
       const end = events.flat().find(e => e.type === 'shieldLayerChanged' && (e.reason === 'depleted' || e.reason === 'expired') && e.targetId === 'me');
       expect(swipe?.event).toBe(end);
-      expect(plans.find(p => p.event.type === 'cast' && (p.event as { sourceId: string }).sourceId === 'me')?.skipCast).toBeUndefined();
+      expect(plans.find(p => p.event.type === 'cast' && (p.event as { sourceId: string }).sourceId === 'me')?.noCastEffect).toBeUndefined();
       return ((end as { tick: number }).tick - run.castIndex) / 20;
     };
     const early = at(2, 2), late = at(1, 1);

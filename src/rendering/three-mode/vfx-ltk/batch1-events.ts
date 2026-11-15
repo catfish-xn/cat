@@ -12,6 +12,8 @@ export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
   event: DisplayCombatEvent; fresh: boolean; variant?: TimelineVariant; targets?: readonly string[];
   skipCast?: boolean; stopCast?: string; extra: Batch1Visual[];
+  /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
+  noCastEffect?: boolean;
 }
 interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
@@ -118,7 +120,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Irelia: her stance and her swipe follow her shield, not fixed times. Her cast plays the stance; when the rules end
         // her ability shield (shieldLayerChanged depleted, emptied early, or expired, at the end of its time) the stance stops
         // and the swipe plays there, as her strike lands (its damage packet follows within a tick). A cast that grants her
-        // no shield (Blade Dance) draws no stance at all.
+        // no shield (Blade Dance) draws no stance at all; she still turns to her target as for any cast.
         if (event.type === 'shieldLayerChanged' && (event.reason === 'depleted' || event.reason === 'expired')
           && definition(event.targetId) === 'irelia' && isIreliaShield(event.key, event.targetId)) {
           plan.stopCast = event.targetId;
@@ -126,7 +128,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         }
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
           && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
-          plan.skipCast = true;
+          plan.noCastEffect = true;
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
