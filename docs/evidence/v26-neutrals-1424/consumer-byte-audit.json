@@ -3640,6 +3640,14 @@
       "currentSha256": "d30725b927fd0617764048608fd14277763b2a9e6292ccef80f37c1d30009be2",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-2cost-bindings.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5680,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "3518e4870cc51514fbc02dacc7b14516e3696bbbd5656eeff004b40207bf388c",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3754,9 +3762,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5241,
+      "currentBytes": 5285,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ecb28763da1164ed3e82ec279f848bffd3629f1ade2258aefe46cf5f8aab110d",
+      "currentSha256": "83334b0ef31d30bf22065b9a98783f782e5ccc12c09e77624fcca42e84aec56e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
