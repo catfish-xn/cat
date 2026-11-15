@@ -12,7 +12,7 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'fe407ac6', event: 'projectile', targetLimit: 3, bone: 'L_Buffbone_Engine', delay: .2, duration: .3, travelSeconds: .3 },
     { system: '801006a8', event: 'hit', targetLimit: 3, delay: .5, duration: .6 },
   ],
-  // No rule event ends these three: each plays to its own end (start + emission + particle life of its emitters), 11-15.
+  // No rule event ends these three: each plays to its system's own end (11-15).
   'mel-third': [...attack,
     { system: 'e2f2798d', event: 'cast-start', delay: 0, duration: 2.3 },
     { system: '4c885a29', event: 'cast-start', delay: 0, duration: 1.2 },

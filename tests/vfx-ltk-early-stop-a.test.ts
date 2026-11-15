@@ -9,12 +9,12 @@ const cue = (list: readonly { system: string }[] | undefined, system: string) =>
 describe('early-stop group A plays to each system\'s own end', () => {
   it.each([
     ['mel-third', 'e2f2798d', 2.3], ['mel-third', '4c885a29', 1.2], ['mel-third', '3857e78b', 6.5], ['elise-front', '6d6525e8', 2.1],
-  ] as const)('%s %s runs %s s', (key, system, duration) => {
+  ] as const)('%s %s plays to its own end (%s)', (key, system, duration) => {
     const entry = cue(CUE_OVERRIDES[key], system);
     expect(entry).toMatchObject({ duration });
     expect(entry.stopAfter).toBeUndefined(); expect(entry.fadeOut).toBeUndefined();
   });
-  it('Ambessa c07aa972 runs 1.0 s with no stop or fade', () => {
+  it('Ambessa c07aa972 plays to its own end with no stop or fade', () => {
     const entry = cue(CUE_ADDITIONS.ambessa, 'c07aa972');
     expect(entry).toMatchObject({ delay: 0.05, duration: 1 });
     expect(entry.stopAfter).toBeUndefined(); expect(entry.fadeOut).toBeUndefined();
