@@ -1211,6 +1211,14 @@
       "currentSha256": "7dc6b518dbdb117f2d9a511120d5a28659e195712ae228273f43fc02350bb75d",
       "firstDifferentByte": 6336
     },
+    "tests/g2-3-jayce-forge-allies.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2992,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b8b0230bac42244485cdf1ea0f6227a1d75ffdfc3a06430c29d0daa67180a6b3",
+      "firstDifferentByte": 0
+    },
     "tests/g2-3-lesser-shimmer-duplicator.test.ts": {
       "previousBytes": 29375,
       "currentBytes": 29750,
