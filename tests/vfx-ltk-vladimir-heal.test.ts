@@ -1,10 +1,13 @@
+import { Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import { withCueOverrides, type VfxIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createVfxLibrary, withCueOverrides, type VfxIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createLtkRuntime, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
+import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // Heal events as the combat view sends them. Measured in a real combat (11-14): Vladimir's ability heal on himself carries
 // sourceKind 'ability', definitionId 'vladimir-ability' and his id.
@@ -47,6 +50,29 @@ describe('Vladimir\'s heal ring follows his own heal, never his cast\'s enemies'
     const played = withCueOverrides({ version: 1, systems, assets: {}, skills: { vladimir: [] } } as unknown as VfxIndex).skills;
     expect(played.vladimir!.filter(cue => (cue.action ?? 'cast') === 'cast').length).toBeGreaterThan(0);
     expect(played['vladimir-heal']).toBe(CUE_EXTRA_SKILLS['vladimir-heal']);
+  });
+
+  it('the runtime plays his cast itself (never refused to the old effects), even when the index lists the exported heal cues', async () => {
+    // The index's own Vladimir rows as exported: the heal missile and the heal ring are his cast there. Systems are synthetic.
+    const exported = [
+      { system: 'ffa688fa', action: 'attack', event: 'projectile', delay: 0.3, duration: 1.5, travelSeconds: 0.3 },
+      { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.6, duration: 1.5 },
+      { system: HEAL_MISSILE, action: 'cast', event: 'projectile', delay: 0.6, duration: 1, travelSeconds: 0.4 },
+      { system: HEAL_RING, action: 'cast', event: 'cast-start', delay: 1, duration: 1.5 },
+    ];
+    const ids = ['ffa688fa', '0f2af66b', HEAL_MISSILE, HEAL_RING, SPIKES];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems: Object.fromEntries(ids.map(s => [s, `systems/${s}.json`])), assets: { 'synthetic.tex': 'texture.png' }, skills: { vladimir: exported } }
+      : syntheticSystem(),
+    readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean }>();
+    const find = (id: string) => { let unit = units.get(id); if (!unit) { unit = { root: new Group(), body: null, alive: true }; unit.root.position.set(units.size * 40, 0, 0); scene.add(unit.root); unit.root.updateMatrixWorld(); units.set(id, unit); } return unit; };
+    const runtime = createLtkRuntime(library, scene, find);
+    await runtime.warm('vladimir');
+    const refused = { ...LTK_RUN_STATS.refused };
+    for (const targets of [['foe'], ['foe', 'foe2']]) expect(runtime.play('vladimir', 'vlad', targets, 'cast')).toBe(true);
+    expect(LTK_RUN_STATS.refused).toEqual(refused);
+    runtime.dispose();
   });
 
   it('in a real combat his cast heals him, the ring is planned on him and nothing heal-like on an enemy', () => {
