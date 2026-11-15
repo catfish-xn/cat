@@ -1,7 +1,7 @@
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 import { silco } from '../src/rendering/three-mode/vfx-ltk/batch3/silco';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
@@ -83,8 +83,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')?.primary).toBe(true);
     expect(ezreal.find(cue => cue.system === 'd887e7a6')!.delay).toBeLessThan(ezreal.find(cue => cue.system === 'e4979a04')!.delay);
-    // Irelia: the swipe waits for the guard's end; Darius: the hit spark is optional.
-    expect(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')?.delay).toBeGreaterThanOrEqual(1.4);
+    // Irelia: the swipe waits for the guard's end, now her shield's own end event (was delay >= 1.4 on the cast list);
+    // Darius: the hit spark is optional.
+    expect(CUE_OVERRIDES.irelia.some(cue => cue.system === '08b7a939')).toBe(false);
+    expect(CUE_EXTRA_SKILLS['irelia-swipe']!.map(cue => cue.system)).toEqual(['08b7a939']);
     expect(CUE_OVERRIDES.darius.find(cue => cue.system === 'a5373796')?.optional).toBe(true);
     // Morgana: the curse stays on its one target for the 8 pulses.
     expect(CUE_OVERRIDES.morgana.find(cue => cue.system === '7fb1a74c')?.duration).toBeGreaterThanOrEqual(8);
@@ -226,7 +228,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ event: 'hit' })).toBe(SKILL_FX_SIZE);
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
-    expect(drawn(CUE_OVERRIDES.irelia.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
+    expect(drawn(CUE_EXTRA_SKILLS['irelia-swipe']!.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
     for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(1, 12); // shield wraps her
     expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).
