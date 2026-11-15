@@ -3730,9 +3730,9 @@
     "tests/vfx-ltk-class2-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5353,
+      "currentBytes": 5415,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8033793a266e10ff045da2909618310241c268f8a8d9db23a0220b3de501da54",
+      "currentSha256": "f2d58650aab4aafabb1462d63a7d65c9c82f7f6dda5d7631eb171bb900f39e73",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
@@ -3832,9 +3832,9 @@
     "tests/vfx-ltk-irelia-shield-end.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4498,
+      "currentBytes": 4705,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4e4ea2888683099a2e623dd1b97ab2f870d13997e7c344fe3074bb47904cafbc",
+      "currentSha256": "8a20f513b1055dfaf8baf7413e143738a33f785e84e67ebcfd7c1c77f480f05a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-long-background.test.ts": {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents, isIreliaShield } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, IRELIA_STANCE_FALLBACK_SECONDS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 
 // Irelia's stance and swipe follow her shield's own end (shieldLayerChanged depleted or expired), not fixed times.
@@ -21,8 +21,9 @@ describe('Irelia: the stance and the swipe follow her shield, not fixed times', 
     expect(isIreliaShield('not json', 'ire')).toBe(false);
   });
 
-  it('the cast list keeps the stance for at most the shield time; the swipe is no longer on it', () => {
-    expect(CUE_OVERRIDES.irelia!.filter(c => c.action === 'cast').map(c => [c.system, c.duration])).toEqual([['67665513', 3]]);
+  it('the cast list keeps the stance, bounded only by a fallback past any shield; the swipe is no longer on it', () => {
+    expect(CUE_OVERRIDES.irelia!.filter(c => c.action === 'cast').map(c => [c.system, c.duration])).toEqual([['67665513', IRELIA_STANCE_FALLBACK_SECONDS]]);
+    expect(IRELIA_STANCE_FALLBACK_SECONDS).toBeGreaterThan(3); // past the rules' ShieldDuration, so it never cuts a shield short
     expect(CUE_EXTRA_SKILLS['irelia-swipe']!.map(c => [c.system, c.action, c.delay])).toEqual([['08b7a939', 'passive', 0]]);
   });
 

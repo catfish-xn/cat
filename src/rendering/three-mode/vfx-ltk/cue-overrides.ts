@@ -60,6 +60,12 @@ export const GP_GROUND_LINE_CELLS = 2.7;
  */
 export const GP_GROUND_LINE_BACK = 0.5;
 /**
+ * Fallback only, not original data: the longest Irelia's stance may play when her shield's end event never arrives. Her
+ * shield's end (shieldLayerChanged depleted or expired, batch1-events.ts) is what stops it; this is set past any shield
+ * the rules grant her so it never cuts one short.
+ */
+export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
+/**
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
@@ -315,12 +321,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
   lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: kept(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
-  // (batch1-events.ts: shieldLayerChanged depleted or expired), not fixed times: the stance plays from the cast for at most
-  // the rules' ShieldDuration (3 s) and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS),
-  // played at that end. The original stance goes almost at once at its end (11-08 blind recheck).
+  // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
+  // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that
+  // end. IRELIA_STANCE_FALLBACK_SECONDS only bounds a stance whose end event never comes. The original stance goes almost
+  // at once at its end (11-08 blind recheck).
   irelia: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.3333333333333333, duration: 1.5 },
-    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: 3, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '67665513', action: 'cast', event: 'cast-start', delay: 0, duration: IRELIA_STANCE_FALLBACK_SECONDS, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
   // Q: the curse rides the target for its 8 pulses (11-06 field review: gone within a second).
   morgana: [
