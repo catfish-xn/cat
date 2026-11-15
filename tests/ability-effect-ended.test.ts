@@ -66,7 +66,13 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     expect(brace[0]!.tick).toBeGreaterThan(cast.tick);
   });
 
-  it('the existing rule events the renderer ends visuals on are there: Blitzcrank shield layer, Malzahar shred', () => {
+  it('the existing rule events the renderer ends visuals on are there: Blitzcrank and Vi shield layers, Malzahar shred', () => {
+    for (const name of ['vi', 'blitzcrank']) {
+      const run = advance(battle([hero(name), dummy()], { rngState: 42 }), 220);
+      const own = run.events.filter(e => e.type === 'shieldLayerChanged' && e.layer.key.includes(JSON.stringify(`${name}-ability`))) as Extract<CombatEvent, { type: 'shieldLayerChanged' }>[];
+      expect(own.some(e => e.reason === 'granted' && e.layer.targetId === 'p'), name).toBe(true);
+      expect(own.some(e => e.reason !== 'granted' && e.reason !== 'absorbed' && e.reason !== 'decayed'), name).toBe(true);
+    }
     const blitz = advance(battle([hero('blitzcrank'), dummy()], { rngState: 42 }), 220);
     const layers = blitz.events.filter(e => e.type === 'shieldLayerChanged') as Extract<CombatEvent, { type: 'shieldLayerChanged' }>[];
     expect(layers.some(e => e.reason === 'granted' && e.layer.targetId === 'p' && e.layer.key.includes('blitzcrank'))).toBe(true);
@@ -79,8 +85,10 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
 
   it('each listed cue plays its own life (no early stop beyond a fade-out tail), so the event is what ends it', () => {
     const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!, ...CUE_OVERRIDES.drmundo!, ...CUE_OVERRIDES.vander!, ...CUE_OVERRIDES.blitzcrank!,
-      ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!];
-    const lists = { ...CUE_END_STOPS, ...Object.fromEntries(Object.entries(CUE_RULE_STOPS).map(([k, v]) => [k, v.systems])) };
+      ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!];
+    const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
+      Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[]>).map(([a, l]) => [`${k} ${a}`, l]));
+    const lists = { ...CUE_END_STOPS, ...Object.fromEntries(ruleLists) };
     for (const [effect, systems] of Object.entries(lists)) {
       expect(systems.length, effect).toBeGreaterThan(0);
       for (const system of systems) {
