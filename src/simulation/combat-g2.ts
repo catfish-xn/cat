@@ -18,10 +18,9 @@ import { burn, modifier, stat, status } from './content/item-programs';
 export const EMPTY_EXPANSION: ExpansionState = { damageDealt: 0, damageTaken: 0, crystals: 0, crystalDamage: 0,
   attacksRemaining: 0, buffUntilTick: 0, lastRetaliationTick: 0, chainUntilTick: 0, chainTargets: [], chainCastSeq: 0, chainKills: 0 };
 /**
- * User-approved 2026-11-15 (Fable after the original frames; the shock lands about 0.4 s after the shield shows):
- * Blitzcrank's shock lands 7 ticks (0.35 s) after the cast; the shield stays on the cast. Fitted to our animation
- * (tft13_blitzcrank_spell, both fists come down at 1.233 s of the 8.63 s clip, which the cast plays in 2.5 s), not
- * original data. See docs/S13_RULES_GAP.md (布里茨).
+ * User-approved 2026-11-15 (Fable after the original frames: the shield first, the shock a moment later):
+ * Blitzcrank's shock lands 7 ticks (0.35 s) after the cast; the shield stays on the cast. Fitted to the frame where both
+ * fists come down in our own cast animation (tft13_blitzcrank_spell, which the cast plays in 2.5 s), not original data. See docs/S13_RULES_GAP.md (布里茨).
  */
 export const BLITZ_SHOCK_TICKS = 7;
 export function expansion(unit: S13Unit): ExpansionState { return unit.expansion ??= structuredClone(EMPTY_EXPANSION); }
