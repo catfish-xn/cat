@@ -47,7 +47,7 @@ export const G23_POLICY = freezeContent({
     stacksPerTakedown:{2:1,4:3,6:6,9:20},radiantConversion:'equipped-board-and-bench-then-new-combinations'},
   highRoller:{first:[3500,3500,2000,1000],triple:[4000,3500,2450,50],mods:['rocket','shield','coin'],tripleMods:['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot'],
     rockets:8,rocketPhysicalDamage:100,shield:500,shieldTicks:80,gold:3,durabilityBps:8000,durabilityTicks:30,
-    /** 14.24 map22 slot machine: right reel stops 1.1 s after it appears 0.15 s past the pull; the spell lands then (G24-SEVIKA-SLOTS-01). */
+    /** The spell lands once the slot machine's right reel has stopped, as in 14.24; 25 ticks is our fitted value, not original data (G24-SEVIKA-SLOTS-01). */
     slotTicks:25,
     /** Spell4 Jackpot: 14.24 notes AD 250%; coin count is 约定值 G24-SEVIKA-JACKPOT-01 (6 coins over 1.5 s). */
     jackpotCoins:6,jackpotCoinAdBps:25000},

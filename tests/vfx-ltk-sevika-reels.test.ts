@@ -16,7 +16,7 @@ const rest = (scroll: ValueCurve, birth: number) => {
   const at = birth + out[1] * 2.2; return Math.abs(at - Math.round(at));
 };
 
-describe('Sevika slot reels (14.24 map22.bin Slots_*_Mirrored, particleUVScrollRate over a 2.2 s life)', () => {
+describe('Sevika slot reels (Slots_*_Mirrored, particleUVScrollRate over the reel\'s life)', () => {
   it('lands every reel on a whole icon, the right one with nothing before its first key at 0.1', () => {
     expect(rest(curve([[0, -20], [.18, -10], [.19, -2], [.21, 2], [.25, -2], [.26, 0]]), 1.1)).toBeLessThan(.05);
     expect(rest(curve([[0, -20], [.3, -10], [.31, -1], [.33, 2], [.38, -2], [.39, 0]]), 1)).toBeLessThan(.05);

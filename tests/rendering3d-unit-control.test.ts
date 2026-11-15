@@ -163,7 +163,7 @@ describe('3D crowd control, client-style (11-10)', () => {
     motion.clear(); expect(motion.active).toBe(false);
   });
 
-  it('two stars half a turn apart at about half a turn per second, each with a trail behind it on the ring', () => {
+  it('two stars half a turn apart at the client\'s turn rate, each with a trail behind it on the ring', () => {
     expect(CONTROL_3D.stars).toBe(2);
     expect(CONTROL_3D.turnsPerSecond).toBeGreaterThanOrEqual(0.4); expect(CONTROL_3D.turnsPerSecond).toBeLessThanOrEqual(0.55);
     const halo = createStunHalo();

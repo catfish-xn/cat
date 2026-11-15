@@ -2,7 +2,7 @@
 import type { TimelineCue } from './timeline';
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
-/** Vi lands on the export's frame 17, where her landing systems start. */
+/** Vi lands on the export's landing frame, where her landing systems start (taken from the asset, not hand-tuned). */
 export const VI_LANDING = frame(17);
 /**
  * Vi's row shockwave (TFT13_Vi_Base_Q_Landing_Mis): a line missile the export lists as a spell of its own, cast at a

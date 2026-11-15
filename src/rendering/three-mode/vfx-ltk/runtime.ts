@@ -38,6 +38,17 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
 /** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
 export const HOLD_FREE_TAILS = 4;
+/**
+ * A long run (LONG_RUN_SECONDS or more) gives up its system slot once it has played LONG_RUN_OPEN seconds, and keeps playing
+ * to its end: a skill body or a long area would otherwise hold a slot for its whole 3–10 s while hits that come after it
+ * wait out their window and are dropped (11-14 audit: LeBlanc's 5 s marks, Mordekaiser's 10 s body and Kog'Maw's 3 s
+ * bodies held the slots at most of the remaining critical drops after the cap went to 20). LONG_RUN_OPEN is the 1 s a skill
+ * body also plays before a hit may evict it (effect-budget.ts BODY_YIELD_SECONDS). At most LONG_BACKGROUND_MAX of them, the
+ * earliest started, are out of the count at once; any more hold a slot as before. They still hold their particles in the
+ * budget and still count toward LTK_PASS_DEGRADE_AT. Node audit (real combats through the batch2 bridge, cap 20, budget
+ * 2250, seeds 42/7/101): critical drops 11 → 5 in an 8 v 8 and 34 → 11 in a late-game 9 v 9, with no long run lost.
+ */
+export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1, LONG_BACKGROUND_MAX = 8;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -361,8 +372,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
     return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
   };
-  const slotsNow = () => { let n = 0; const groups = new Set<string>(), free = freeTails();
-    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  // Long runs past their opening that take no system slot (LONG_RUN_SECONDS), the earliest LONG_BACKGROUND_MAX of them.
+  const backgroundRuns = () => {
+    let long: Running[] | undefined;
+    for (const run of running) if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (long ??= []).push(run);
+    return long ? new Set(long.sort((a, b) => a.started - b.started).slice(0, LONG_BACKGROUND_MAX)) : null;
+  };
+  /** `passes`: the count for LTK_PASS_DEGRADE_AT, which still includes the long runs in the background. */
+  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), free = freeTails(), back = passes ? null : backgroundRuns();
+    for (const run of running) { if (free?.has(run) || back?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
@@ -900,9 +918,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
       liveFx.length = 0;
       for (const { fx } of running) liveFx.push(fx);
-      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow()));
+      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow(true)));
     },
     get active() { return running.size; },
+    /** System slots in use as MAX_LTK_SYSTEMS counts them, and as LTK_PASS_DEGRADE_AT counts them (long runs in the background included). */
+    get slots() { return slotsNow(); },
+    get passSlots() { return slotsNow(true); },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
     get attachedStats() { return { ...attachedStats, layerCap, slots: ATTACHED_SLOTS, peakAlive: ATTACHED_STATS.peakAlive, overSlotFrames: ATTACHED_STATS.overSlotFrames }; },
     get queued() { return waiting.length; },

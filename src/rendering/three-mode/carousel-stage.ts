@@ -590,7 +590,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const top = ctx.championHeight * UNIT_SIZE;
     const itemY = top + ITEM_GAP + ITEM_FRAME / 2, badgeY = itemY + (data.items.length ? ITEM_FRAME / 2 + BADGE_GAP : 0) + BADGE_SIZE / 2;
     const badge = new Sprite(new SpriteMaterial({ color: BADGE_COLOR.off, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
-    badge.name = 'render3d-carousel-inspect'; badge.renderOrder = 1002; badge.scale.set(BADGE_SIZE, BADGE_SIZE * 43 / 46, 1); // the original badge is 46×43
+    badge.name = 'render3d-carousel-inspect'; badge.renderOrder = 1002; badge.scale.set(BADGE_SIZE, BADGE_SIZE * 43 / 46, 1); // the original badge's aspect
     badge.position.set(0, badgeY, 0);
     holder.add(root, badge);
     const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, badge, frames: [], tier: null, items: [], data, takenBy: null,

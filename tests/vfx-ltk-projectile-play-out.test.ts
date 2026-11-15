@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { LONG_RUN_SECONDS, createLtkRuntime, HOLD_FREE_TAILS, MAX_LTK_SYSTEMS, MIN_RESERVE } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { fadeAt } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_OVERRIDES, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { syntheticSystem } from './vfx-ltk-synthetic';
@@ -132,7 +132,8 @@ describe('vfx-ltk projectiles that play out (cue-overrides.ts PLAY_OUT_SYSTEMS)'
     // HOLD_FREE_TAILS + 1 listed flights beside long runs fill every slot; once they all play out, HOLD_FREE_TAILS of them
     // free their slots and the last keeps its own, so exactly HOLD_FREE_TAILS flourishes due then get in, not one more.
     const tails = HOLD_FREE_TAILS + 1, flourish = { system: LATE, event: 'cast-start' as const, delay: 1, duration: 0.5, bone: 'ground' };
-    const filler = Array.from({ length: MAX_LTK_SYSTEMS - tails }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: 3, bone: 'ground' }));
+    // Fillers stay under LONG_RUN_SECONDS so they keep their slots past LONG_RUN_OPEN.
+    const filler = Array.from({ length: MAX_LTK_SYSTEMS - tails }, (): TimelineCue => ({ system: HELD, event: 'cast-start', delay: 0, duration: LONG_RUN_SECONDS - 0.5, bone: 'ground' }));
     const { runtime, scene, advance } = await setup([...Array.from({ length: tails }, () => flight(LISTED)), ...Array.from({ length: tails }, () => flourish)], filler);
     // None plays out on its own here, so each stays through its end.
     for (const fx of built.filter(fx => fx.object.userData.ltkSystem === LISTED)) Object.defineProperty(fx, 'playedOut', { get: () => false });

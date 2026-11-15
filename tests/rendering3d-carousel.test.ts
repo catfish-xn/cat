@@ -343,7 +343,7 @@ describe('3D carousel stage', () => {
         // A square viewport is width-limited (about 1.184 vertically); mainstream ratios must still span 1.2.
         // Span is measured in the un-offset board viewport; the host's larger canvas adds surrounding UI space.
         // These budgets were set with the cradles 7.1 cells out; the camera still frames the same pedestal rim, so the feet
-        // span is compared per 7.1-cell ring now that the cradles sit at the S13 map's 6.7 (2026-11-03).
+        // span is compared per 7.1-cell ring now that the cradles sit where the S13 map puts them (2026-11-03).
         const perRing = (Math.max(...ys) - Math.min(...ys)) * 7.1 / LEGEND_RADIUS;
         if (!withOffset) expect(perRing).toBeGreaterThanOrEqual(aspect === 1 ? 1.15 : 1.2);
       }

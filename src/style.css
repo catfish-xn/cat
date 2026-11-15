@@ -999,7 +999,7 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
   box-shadow: 0 0 0 1px var(--card-cost), 0 6px 16px color-mix(in srgb, var(--card-cost) 50%, transparent); }
 .shop-dock .shop-card .shop-emblem { inset: 0 0 22px; }
 /* TFT's shop art is a landscape splash with the champion on the right. Only the square HUD icons exist, so the icon sits
-   on the card's right ~4/5 (cover-cropped to the face) and fades into a cost-tinted ground on the left, under the traits. */
+   on most of the card's right side (cover-cropped to the face) and fades into a cost-tinted ground on the left, under the traits. */
 .shop-dock .shop-card[data-cost] .shop-emblem { background: radial-gradient(120% 140% at 85% 30%, color-mix(in srgb, var(--card-cost) 38%, #0b151f), #050b12 70%); }
 .shop-dock .shop-card .shop-emblem > :is(img, svg, .hero-fallback) { position: absolute; top: 0; right: 0; width: 80%; height: 100%; object-position: 50% 32%;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 38%); mask-image: linear-gradient(90deg, transparent, #000 38%); }
@@ -1261,7 +1261,7 @@ body[data-online] .augment-strip[data-placed]:is(:hover, :focus-within, [data-op
 .summary-head[role="button"]::after { content: "▾"; font-size: 11px; color: #9aaeb9; }
 .battle-summary[data-folded] .summary-head::after { content: "▸"; }
 .battle-summary[data-folded] > :not(.summary-head) { display: none; }
-/* The dock's height follows the card width so the five shop cards stay landscape (~1.42:1, TFT's shape): card width is
+/* The dock's height follows the card width so the five shop cards stay landscape (TFT's shape): card width is
    (shop width − 250px of side columns, gaps and padding) / 5, plus 41px for the top row, gaps and padding; 140px keeps D/F ≥ 44px. */
 body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-dock-h: clamp(140px, min(19.5dvh, (var(--online-shop-w) - 250px) / 7.1 + 41px), 220px);
   --online-shop-left: max(11.6vw - 8px, 0px); --online-shop-w: min(67vw, 100vw - 236px);
@@ -1316,8 +1316,8 @@ body[data-online]:has(> .render3d-layer) .trait-row { text-shadow: 0 1px 2px #00
 }
 /* TFT: gold sits centred over the shop cards. */
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { justify-self: center; }
-/* Proportions of the TFT screen (user's reference shot): traits from ~20% down the left edge, players from ~13% down the right,
-   the shop ~67% wide starting ~12% in (bottom right stays free for the scouting minimap), streak beside the gold. */
+/* Proportions of the TFT screen (user's reference shot): traits down the left edge, players down the right, the shop across
+   most of the bottom (bottom right stays free for the scouting minimap), streak beside the gold. */
 body[data-online]:has(> .render3d-layer) .left-panel-toggle { position: fixed; z-index: 3; left: 8px; top: 8px; width: auto; min-height: 26px; padding: 2px 10px; }
 body[data-online]:has(> .render3d-layer) :is(#stats-root, #legal-notice) { display: none; }
 body[data-online]:has(> .render3d-layer) #panels-root { top: 20dvh; max-height: calc(80dvh - 24px - var(--online-dock-h)); }
