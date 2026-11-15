@@ -209,7 +209,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0, 0.8 s). The
+  // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
   // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
   // minibombs have no exported system.
   ziggs: [
