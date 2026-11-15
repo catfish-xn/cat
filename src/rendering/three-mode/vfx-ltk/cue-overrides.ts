@@ -8,6 +8,12 @@
  * system about its anchor and does not move the anchor or the flight; it multiplies the cue's size factor
  * (fx-size.ts cueSize: the body scale on a weapon or hand bone, the arena scale elsewhere). `kept(x)` is a size
  * measured against footage at the older 0.44 base, drawn as it was.
+ *
+ * Timings (11-15): every delay, duration, travelSeconds and stopAfter written in this file's tables is fitted against
+ * footage of the original, not an original value, except those that follow from the assets: an index value of the same
+ * system reused, a particle or emitter lifetime, a landing that adds a delay and a flight, a rules or reference-fx
+ * constant, or a receipt event's zero start. Which entries are which is listed in the Library table
+ * agy-C36-手写时序来源分类.md (repository d7c470d5). Entries already marked fitted keep their own notes.
  */
 import type { TimelineCue } from './timeline';
 import { measuredAtFxScale as kept } from './fx-size';
@@ -85,6 +91,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // Body rank, not critical (Fable 11-14 display priority, not original data): with vamp on him a share follows nearly
   // every attack, and it must not crowd skill impacts out. His own heal ring stays critical.
   'steb-share': [
+    // travelSeconds is fitted, not an original value.
     { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
   ],
@@ -343,6 +350,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
     // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline). A hit on the ally
     // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).
+    // stopAfter is fitted, not an original value.
     { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, fadeOut: true, bone: chest },
   ],
   // 弹道发射骨骼按原版 mStartBoneName
