@@ -5,6 +5,9 @@
 //   [--kill foe,foe2 --killlead MS]: dummies only; these drop dead (still drawn) MS before the recorded action
 //   [--hide-units 1]: unit models are not drawn (bars, stars, shadows and effects are); every frame and the keyframes caption say so
 //   [--pin-foe N]: dummies only; one dummy N hexes straight ahead of the caster (overrides --dist/--nfoes; casts target it), labelled 'pinned dummy'
+//   [--anchor attack-hit | event:<type>]: --real only; the window is about me's N-th basic attack that hits, or N-th display event
+//     of that type it sends or is the subject of (real-combat.ts Anchor; N = --cast-index, default 1) instead of its N-th cast:
+//     a unit that never casts (Amumu, Zeri) still gets a window.
 //   [--cast-index N] [--from-start 1 | --lead-ms MS]: --real only; one window choice (real-combat.ts leadTicksFor): the anchor
 //     cast is the N-th cast of the unit (default 1st); the recorded window starts at combat start / MS before the anchor
 //     (default: 500 ms before it). --times must start at 0 for --real (jobs-check.mjs fails it otherwise).
@@ -44,7 +47,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','attached','nfoes','foestar','ally','allystar','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -59,8 +62,8 @@ async function unbind(page, tick, rebind) {
   if (opt('kill') && opt('real')) throw new Error('--kill is for dummies only: a real combat decides who dies');
   if (opt('pin-foe') && opt('real')) throw new Error('--pin-foe is for dummies only: a real combat moves the foes and they hit back');
   if (opt('pin-foe') && opt('nfoes') && Number(opt('nfoes')) !== 1) throw new Error('--pin-foe places exactly one dummy: drop --nfoes');
-  const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined;
-  if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index are for --real only: a dummy cast has no combat before it');
+  const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined || opt('anchor') !== undefined;
+  if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index / --anchor are for --real only: a dummy cast has no combat before it');
   if (['ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally / --ally-cell / --foe-cell / --foe2 / --foe2star / --foe2-cell are for --real only');
   if (opt('foe-offset') !== undefined && !opt('real')) throw new Error('--foe-offset is for --real only (dummies: use --pin-foe / --dist)');
   if (opt('foe-offset') !== undefined && !/^-?[0-9]+$/.test(opt('foe-offset'))) throw new Error(`--foe-offset must be a whole number of columns, got ${opt('foe-offset')}`);
@@ -125,7 +128,7 @@ async function unbind(page, tick, rebind) {
     return runtime?.ATTACHED_LAYER_STATS ? { ...JSON.parse(JSON.stringify(runtime.ATTACHED_LAYER_STATS)), cap: runtime.ATTACHED_LAYER_CAP, ...attached?.ATTACHED_STATS } : null;
   }), null, 2));
   const passed = await g.finish({ out, meta: { gl: launch.gl, foe: { model: target, n: opt('pin-foe') ? (opt('pin-foe2') ? 2 : 1) : Number(opt('nfoes') ?? 4), star: Number(opt('foestar') ?? 1) },
-    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor cast` } } : {}), args: args.slice(2), errors: errors.length } });
+    star: Number(opt('star') ?? 3), dist: Number(opt('pin-foe') ?? dist), ms: times[times.length - 1], real: !!opt('real'), kill: opt('kill') ?? null, ...(opt('pin-foe') ? { pinFoe: Number(opt('pin-foe')) } : {}), ...(opt('pin-foe2') ? { pinFoe2: Number(opt('pin-foe2')) } : {}), ...(opt('hide-units') === '1' ? { hideUnits: true } : {}), ...(opt('foe-offset') !== undefined ? { foeOffset: Number(opt('foe-offset')) } : {}), ...(customStart ? { window: { anchorCast: Number(opt('cast-index') ?? 1), anchor: opt('anchor') ?? 'cast', start: opt('from-start') === '1' ? 'combat start' : `${opt('lead-ms') ?? 500} ms before the anchor` } } : {}), args: args.slice(2), errors: errors.length } });
   if (!passed) process.exit(1);
   console.log('done', unit, 'errors', errors.length);
   mark('frames ' + times.length);
