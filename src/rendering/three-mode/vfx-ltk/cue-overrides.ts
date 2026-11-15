@@ -64,6 +64,10 @@ export const GP_GROUND_LINE_BACK = 0.5;
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
+  // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both run past their own end (about 0.5 s).
+  'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
+  'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -191,6 +195,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0a5d1c08', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
     // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+  ],
+  // The index list without Q_tar: her hit plays at her kick's damage event instead, by damage type (CUE_EXTRA_SKILLS camille-q-*).
+  camille: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.3, duration: 1.5 },
+    { system: 'b0db024b', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
+    { system: '174f1125', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out.
   leblanc: [

@@ -115,6 +115,11 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
+        // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'camille'
+          && (event.damageType === 'physical' || event.damageType === 'magic'))
+          plan.extra.push({ champion: 'camille', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `camille-q-${event.damageType}` });
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
