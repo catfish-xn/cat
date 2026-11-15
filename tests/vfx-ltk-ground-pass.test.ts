@@ -1,9 +1,12 @@
-import { AmbientLight, Bone, BoxGeometry, Camera, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
+import { AmbientLight, Bone, BoxGeometry, Camera, ShaderMaterial, Group, Mesh, MeshBasicMaterial, PlaneGeometry, Scene, SkinnedMesh, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createVfxPasses, floorDepthMaterial, playSurfaceOf } from '../src/rendering/three-mode/vfx-ltk/rendering/passes';
+import { clipUnderPlay, PLAY_SURFACE } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/playSurface';
 import { FLOOR_LAYER, GROUND_LAYER, SCENE_LAYER } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/frame';
-import { syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
+import { struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
+import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
+import type { VfxValue } from '../src/rendering/three-mode/vfx-ltk/bindings';
 import type { WebGLRenderer } from 'three';
 describe('opt-in board ground pass', () => {
   it('accepts ground definitions only for a compatible host', async () => {
@@ -96,12 +99,10 @@ describe('opt-in board ground pass', () => {
     expect(material.colorWrite).toBe(false);
     const shader = { vertexShader: '#include <common>\nvoid main() {\n#include <project_vertex>\n}', fragmentShader: '#include <common>\nvoid main() {\n}', uniforms: {} as Record<string, unknown> };
     material.onBeforeCompile(shader as any, undefined as any);
-    expect(shader.vertexShader).toContain('vFloorWorld = (modelMatrix * floorWorld).xyz;');
+    expect(shader.vertexShader).toContain('vPlayWorld = (modelMatrix * floorWorld).xyz;');
     expect(shader.vertexShader).toContain('instanceMatrix * floorWorld');
-    expect(shader.fragmentShader).toContain('vFloorWorld.x >= vfxPlaySurface.x && vFloorWorld.x <= vfxPlaySurface.y && vFloorWorld.z >= vfxPlaySurface.z && vFloorWorld.z <= vfxPlaySurface.w && vFloorWorld.y <= vfxPlayPlane');
-    expect(shader.uniforms.vfxPlaySurface).toBe(material.userData.surface); expect(shader.uniforms.vfxPlayPlane).toBe(material.userData.plane);
-    // Nothing is left out until a play surface is set: an empty footprint.
-    expect(material.userData.surface.value.x).toBeGreaterThan(material.userData.surface.value.y);
+    expect(shader.fragmentShader).toContain('vPlayWorld.x >= vfxPlaySurface.x && vPlayWorld.x <= vfxPlaySurface.y && vPlayWorld.z >= vfxPlaySurface.z && vPlayWorld.z <= vfxPlaySurface.w && vPlayWorld.y <= vfxPlayPlane');
+    expect(shader.uniforms.vfxPlaySurface).toBe(PLAY_SURFACE.surface); expect(shader.uniforms.vfxPlayPlane).toBe(PLAY_SURFACE.plane);
     material.dispose();
   });
 
@@ -112,13 +113,50 @@ describe('opt-in board ground pass', () => {
     floor.add(plane, overlay); scene.add(floor);
     const seen: { overlay: boolean; surface: number[] }[] = [];
     const gl = { autoClear: true, getRenderTarget: () => null, setRenderTarget() {}, clearDepth() {}, render() {
-      const over = scene.overrideMaterial as ReturnType<typeof floorDepthMaterial> | null;
-      if (over) seen.push({ overlay: overlay.visible, surface: over.userData.surface.value.toArray() });
+      if (scene.overrideMaterial) seen.push({ overlay: overlay.visible, surface: PLAY_SURFACE.surface.value.toArray() });
     } };
     createVfxPasses(gl as unknown as WebGLRenderer, () => [floor]).render(scene, camera, { early: false, late: false, soft: false });
     expect(seen).toEqual([{ overlay: false, surface: [-100, 100, -50, 50] }]);
     expect(overlay.visible).toBe(true);
+    // Without a floor the play surface is empty again: nothing is clipped.
+    createVfxPasses(gl as unknown as WebGLRenderer).render(scene, camera, { early: false, late: false, soft: false });
+    expect(PLAY_SURFACE.surface.value.x).toBeGreaterThan(PLAY_SURFACE.surface.value.y);
     for (const mesh of [plane, overlay]) { mesh.geometry.dispose(); mesh.material.dispose(); }
   });
 
+  // 11-15: a mesh, a ribbon or an arbitrary quad is clipped under the play surface (Garen's falling light column stopped at
+  // the board); a camera-facing quad is not. Fitted, not the original's (playSurface.ts).
+  it('clipUnderPlay wraps a material\'s main: notes the world position and discards strictly under the play surface', () => {
+    const material = clipUnderPlay(new ShaderMaterial({ vertexShader: 'void main() {\n  gl_Position = vec4(0.0);\n}', fragmentShader: 'void main() {\n  gl_FragColor = vec4(1.0);\n}' }));
+    expect(material.vertexShader).toContain('void vfxPlayMain()');
+    expect(material.vertexShader).toContain('vPlayWorld = (inverse(viewMatrix) * playView).xyz;');
+    expect(material.fragmentShader).toContain('vPlayWorld.y < vfxPlayPlane - 0.0010) discard;');
+    expect(material.fragmentShader.indexOf('discard')).toBeLessThan(material.fragmentShader.lastIndexOf('vfxPlayMain();'));
+    expect(material.uniforms.vfxPlaySurface).toBe(PLAY_SURFACE.surface);
+    // Twice is once.
+    const again = material.vertexShader; clipUnderPlay(material); expect(material.vertexShader).toBe(again);
+    material.dispose();
+  });
+
+});
+
+// 11-15: which particles are clipped under the play surface: a camera-facing quad and a ground-layer quad are not; an
+// arbitrary quad is (as are meshes and ribbons, through the same clipUnderPlay call in their components).
+describe('particles clipped under the play surface', () => {
+  async function materialOf(fields: Record<string, VfxValue>, ground = false) {
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : syntheticSystem(fields),
+      readTexture: async () => new Texture() }, ground ? { groundPass: true } : {});
+    const system = await library.load('sample');
+    const root = new Group(), body = new Group(); root.add(body);
+    const fx = createLtkParticles(system, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1 });
+    fx.update(0.05, new Camera());
+    const shader = (fx.draws[0]!.object.material as ShaderMaterial).vertexShader;
+    fx.dispose(); library.dispose();
+    return shader;
+  }
+  it('a camera-facing quad is not clipped; an arbitrary quad is; a ground-layer quad is not', async () => {
+    expect(await materialOf({})).not.toContain('vPlayWorld');
+    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}) })).toContain('vPlayWorld');
+    expect(await materialOf({ primitive: struct('VfxPrimitiveArbitraryQuad', {}), isGroundLayer: { type: 'bool', value: true } }, true)).not.toContain('vPlayWorld');
+  });
 });

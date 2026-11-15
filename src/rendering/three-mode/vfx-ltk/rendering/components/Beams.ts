@@ -46,6 +46,7 @@ import {
 import { borrowRibbonBuffers, releaseRibbonBuffers } from "../utils/drawBufferPool";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay } from '../utils/playSurface';
 
 /** How many beams one emitter draws across every source, which caps its share of the pools. */
 const BEAMS_PER_EMITTER = 256;
@@ -114,14 +115,17 @@ export function createBeams({ emitter, sources, samplers, rank, hidden }: BeamsP
   const beam = emitter.beam;
   const buffers = memo(() => borrowRibbonBuffers(BEAM_VERTICES), []);
   const material = memo(
-    () =>
-      ribbonMaterial(
+    () => {
+      const material = ribbonMaterial(
         emitter.blendMode,
         samplers.base,
         emitter.depthBias,
         layersOf(emitter, samplers, DRAWS),
         fragmentTests(emitter),
-      ),
+      );
+      // 11-15: a ribbon is clipped below the board, as the floor's depth clipped it (playSurface.ts).
+      return emitter.groundLayer ? material : clipUnderPlay(material);
+    },
     [emitter, samplers],
   );
 
