@@ -16,6 +16,9 @@
 // Only the recorded window counts: a tank that stands on the line at combat start and walks off before the window opens
 // gives no warning.
 // --form takes melee or ranged (any line): anything else fails, since the renderer would draw the ranged form.
+// On a real line --form must agree with the caster's row (the rules pick a form swapper's form by row: 4-5 melee, 6-7 ranged);
+// --me-cell R,C (real only) puts the caster on another cell of its side (rows 4-7).
+// Every real line names its gate's systems (--systems, or --systems none): a line without it fails (11-15).
 // Exit 1 if any real line fails.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -50,7 +53,7 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  const realOnly = ['from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
+  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
@@ -68,8 +71,10 @@ for (const line of lines) {
     // --foe-offset K: every foe K columns to the side; all must stay on the board (real-combat.ts foeOffsetProblem).
     ...(o('foe-offset') !== undefined ? [rc.foeOffsetProblem(/^-?[0-9]+$/.test(o('foe-offset')) ? Number(o('foe-offset')) : NaN, Number(o('nfoes') ?? 4))].filter(Boolean) : []),
     // --ally-cell / --foe-cell / --foe2-cell R,C: whole-number cells (the layout itself is checked by realUnits below).
-    ...['ally-cell', 'foe-cell', 'foe2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
+    ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
     ...(o('foe-cell') !== undefined && o('foe-offset') !== undefined ? ['--foe-cell and --foe-offset: give one'] : []),
+    // Rule (11-15): a real recording names the systems its gate judges (--systems), so a row whose effects never start fails.
+    ...(o('systems') === undefined ? ['--systems is required for --real (the systems this row is about; none for a row that is about no system)'] : []),
     // Rule (11-13): a real recording's --times starts at 0, the window's first tick.
     ...(o('times') !== undefined && Number(o('times').split(',')[0]) !== 0 ? [`--times must start at 0 for --real, got ${o('times').split(',')[0]}`] : [])];
   if (startWhy.length) { results.push({ name, unit, mode: 'real', ok: false, why: startWhy }); continue; }
@@ -77,6 +82,7 @@ for (const line of lines) {
   const setup = { unit, star: Number(o('star') ?? 3), form: o('form') ?? null, foe: o('target') ?? 'garen', dist: Number(o('dist') ?? 3),
     nfoes: Number(o('nfoes') ?? 4), foestar: Number(o('foestar') ?? 1), ...(o('foe-offset') !== undefined && Number(o('foe-offset')) !== 0 ? { foeOffset: Number(o('foe-offset')) } : {}),
     ...(o('ally') !== undefined ? { ally: o('ally'), allystar: Number(o('allystar') ?? 2) } : {}),
+    ...(o('me-cell') !== undefined ? { meCell: rc.parseCell(o('me-cell')) } : {}),
     ...(o('ally-cell') !== undefined ? { allyCell: rc.parseCell(o('ally-cell')) } : {}), ...(o('foe-cell') !== undefined ? { foeCell: rc.parseCell(o('foe-cell')) } : {}),
     ...(o('foe2') !== undefined ? { foe2: o('foe2') } : {}), ...(o('foe2star') !== undefined ? { foe2star: Number(o('foe2star')) } : {}),
     ...(o('foe2-cell') !== undefined ? { foe2Cell: rc.parseCell(o('foe2-cell')) } : {}) };

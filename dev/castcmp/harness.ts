@@ -204,9 +204,9 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   // ?allycell=R,C / ?foecell=R,C / ?foe2=X&foe2star=N&foe2cell=R,C (v-capture --ally-cell / --foe-cell / --foe2 --foe2star
   // --foe2-cell): those units on given cells, the second foe another hero (real-combat.ts realUnits; layoutProblem throws).
   const cellParam = (k: string) => { const v = params.get(k); if (v === null) return undefined; const c = rc.parseCell(v); if (!c) throw new Error(`?${k} must be R,C, got ${v}`); return c; };
-  const allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
+  const meCell = cellParam('mecell'), allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
   const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
-    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(foeCell ? { foeCell } : {}),
+    ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(meCell ? { meCell } : {}), ...(foeCell ? { foeCell } : {}),
     ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}) });
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.

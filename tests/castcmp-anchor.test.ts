@@ -55,3 +55,19 @@ describe('castcmp real-combat window anchors', () => {
     expect(auditWindow([[], []], [{}, {}], 1, 1000, 1, { kind: 'attack-hit' }).anchorInWindow).toBe(false);
   });
 });
+
+describe('castcmp --me-cell and form swappers', () => {
+  it('a form swapper fights ranged only from the back two rows, and --form must agree with the row', () => {
+    const base = { unit: 'gangplank', star: 1, foe: 'amumu', dist: 4, nfoes: 1, foestar: 2 };
+    expect(() => realUnits({ ...base, form: 'ranged' })).toThrow(/rows 6-7/);
+    expect(() => realUnits({ ...base, form: 'melee', meCell: { row: 6, col: 3 } })).toThrow(/rows 4-5/);
+    expect(() => realUnits({ ...base, form: null, meCell: { row: 2, col: 3 } })).toThrow(/caster's side/);
+    const units = realUnits({ ...base, form: 'ranged', meCell: { row: 7, col: 3 } });
+    expect(units.find(u => u.id === 'me')!.location.cell).toEqual({ row: 7, col: 3 });
+    const cells: { row: number; col: number }[] = [];
+    const run = runRealCombat(units, 1, state => { const me = state.units.find((u: any) => u.id === 'me'); cells.push({ ...me.cell }); });
+    expect(run.castIndex).toBeGreaterThan(0);
+    // Ranged (attack range 4): it never walks up to its target's side of the board.
+    expect(Math.min(...cells.map(c => c.row))).toBeGreaterThanOrEqual(4);
+  });
+});
