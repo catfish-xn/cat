@@ -2582,10 +2582,10 @@
     },
     "tests/rendering3d-unit-control.test.ts": {
       "previousBytes": 2957,
-      "currentBytes": 12966,
+      "currentBytes": 12305,
       "previousSha256": "292cef5d2b6c513eab2c8fecd4e48ccc29ac1998f7c4d7b2dc2c00162c2462d0",
-      "currentSha256": "46b82b78498fafd8210f5deeee91274d4a0f876ae9ebece460155bacec1fd2c0",
-      "firstDifferentByte": 83
+      "currentSha256": "6fc699e95de7b1fb4affb0d0fa58a134613661480d2498ef2e4f9a43dc147e42",
+      "firstDifferentByte": 219
     },
     "tests/rendering3d-vi-grab.test.ts": {
       "previousExists": false,

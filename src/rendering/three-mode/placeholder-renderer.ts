@@ -60,7 +60,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -818,19 +818,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) view.body.rotation.x += view.leanOffset - radians;
     view.leanOffset = radians;
   };
-  /** White bursts on bodies struck by abilities; parked when spent, never counted against the effect cap. */
-  const flashes: { flash: HitFlash; view: PieceView }[] = [];
-  const spareFlashes: HitFlash[] = [];
-  const strike = (view: PieceView) => {
-    if (!view.alive || !view.root.visible) return;
-    // One flash per body: a second strike in the same frames restarts it rather than stacking a brighter one.
-    const current = flashes.find(entry => entry.view === view);
-    if (current) { current.flash.reset(); return; }
-    const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
-    scene.add(flash.object); flashes.push({ flash, view });
-  };
-  const placeFlash = (flash: HitFlash, view: PieceView) => flash.object.position.copy(view.root.position)
-    .setY(view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset);
   /** Parked stun rings. Control feedback is never counted against the effect cap. */
   const spareHalos: StunHalo[] = [];
   const SPARE_HALOS = 16;
@@ -1077,8 +1064,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const fx of missileSpare) fx.dispose();
     burstSpare.length = 0; shieldSpare.length = 0; missileSpare.length = 0;
   };
-  const drainHaloSpare = () => { for (const halo of spareHalos) halo.dispose(); spareHalos.length = 0;
-    for (const flash of spareFlashes) flash.dispose(); spareFlashes.length = 0; for (const { flash } of flashes) flash.dispose(); flashes.length = 0; };
+  const drainHaloSpare = () => { for (const halo of spareHalos) halo.dispose(); spareHalos.length = 0; };
   const takeBurst = (kind: 'renata' | 'mel', radius: number, reduced: boolean): BurstFx => {
     const index = burstSpare.findIndex(fx => fx.kind === kind && fx.radius === radius && fx.reduced === reduced);
     if (index < 0) return createReferenceBurst(kind, radius, reduced);
@@ -1469,13 +1455,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
-      // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
-      // attacker's effect; a periodic tick does not either, or a damage-over-time zone would strobe its victims).
-      if (event.type === 'packetDamage' && currentEffect && event.hit && event.hpDamage + event.absorbed > 0 && !reducedMotion()
-        && (event as { delivery?: string }).delivery !== 'ability-periodic'
-        && ((event as { sourceKind?: string }).sourceKind === 'ability' || (event as { delivery?: string }).delivery === 'ability-direct')) {
-        const struck = pieces.get(event.targetId); if (struck) strike(struck);
-      }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
@@ -1977,11 +1956,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // A dying piece shows nothing over its head (the tier bar would read as full HP while its death action plays).
       view.overhead.object.visible = view.root.visible && view.overhead.drawn && view.alive;
-    }
-    for (let i = flashes.length - 1; i >= 0; i--) {
-      const { flash, view } = flashes[i]!;
-      if (view.disposed || !flash.update(seconds)) { flashes.splice(i, 1); flash.object.removeFromParent(); if (spareFlashes.length < 16) spareFlashes.push(flash); else flash.dispose(); continue; }
-      placeFlash(flash, view);
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); goldMines?.update(seconds); stage.update(seconds); scout.update(seconds); followBox();

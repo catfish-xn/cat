@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTROL_3D, ControlMotion, HIT_FLASH_3D, createHitFlash, createStunHalo } from '../src/rendering/three-mode/unit-control';
+import { CONTROL_3D, ControlMotion, createStunHalo } from '../src/rendering/three-mode/unit-control';
 import { UnitActionState } from '../src/rendering3d/animation-state';
 import type { Sprite } from 'three';
 
@@ -106,18 +106,6 @@ describe('3D crowd control', () => {
     expect(state.output.state).toBe('attack');
   });
 
-  it('the hit flash grows and fades out over its seconds, then rearms', () => {
-    const flash = createHitFlash();
-    const material = flash.object.material;
-    expect(material.opacity).toBeCloseTo(0.85);
-    expect(flash.update(HIT_FLASH_3D.seconds / 2)).toBe(true);
-    expect(material.opacity).toBeCloseTo(0.425);
-    expect(flash.object.scale.x).toBeGreaterThan(HIT_FLASH_3D.size);
-    expect(flash.update(HIT_FLASH_3D.seconds)).toBe(false);
-    expect(material.opacity).toBe(0);
-    flash.reset(); expect(material.opacity).toBeCloseTo(0.85); expect(flash.object.scale.x).toBe(HIT_FLASH_3D.size);
-    flash.dispose();
-  });
 
   it('the star ring circles over the head and disposes', () => {
     const halo = createStunHalo();

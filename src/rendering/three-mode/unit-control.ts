@@ -59,9 +59,6 @@ export const CONTROL_3D = {
 export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 12 } as const;
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
-/** The white burst on a unit struck by an ability (board units, seconds). */
-export const HIT_FLASH_3D = { size: 58, seconds: 0.14 } as const;
-
 /**
  * Forced moves the rules tag on their movement event (pulled, grabbed, knocked back): drawn as a short hop along the
  * slide instead of a run, the unit being moved rather than walking. Tags from the displacement rules (莫德凯撒/瑟提/赛维卡).
@@ -300,26 +297,3 @@ export function createStunHalo(spec = CONTROL_3D): StunHalo {
   };
 }
 
-export interface HitFlash {
-  /** Scene child: the host places it at the struck body's middle. */
-  readonly object: Sprite;
-  /** Fades over HIT_FLASH_3D.seconds; returns false once spent (the host parks it). */
-  update(seconds: number): boolean;
-  /** Bright again, for the next strike. */
-  reset(): void;
-  dispose(): void;
-}
-/** The white burst on a body struck by an ability: a billboard disc that fades out in a few frames. */
-export function createHitFlash(spec = HIT_FLASH_3D): HitFlash {
-  const material = new SpriteMaterial({ map: glowMap(), color: '#ffffff', opacity: 0.85, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
-  const object = new Sprite(material); object.name = 'render3d-hit-flash'; object.renderOrder = 998;
-  let age = 0;
-  const place = () => { const grow = 1 + age / spec.seconds * 0.35; object.scale.set(spec.size * grow, spec.size * grow, 1); material.opacity = 0.85 * Math.max(0, 1 - age / spec.seconds); };
-  place();
-  return {
-    object,
-    update(seconds) { age = Math.min(spec.seconds, age + seconds); place(); return age < spec.seconds; },
-    reset() { age = 0; place(); },
-    dispose() { object.removeFromParent(); material.dispose(); },
-  };
-}
