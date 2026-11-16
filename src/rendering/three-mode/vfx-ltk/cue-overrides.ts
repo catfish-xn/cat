@@ -76,6 +76,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // REC ONLY (do not merge): Q_cas fc6cdcf0 on Blitzcrank himself at his shock's damage (candidate for the original's burst
+  // at his chest), the same frame as the arcs and target bursts below.
+  'blitzcrank-shock-self': [{ system: 'fc6cdcf0', action: 'passive', event: 'cast-start', delay: 0, duration: 1.2, bone: chest }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
