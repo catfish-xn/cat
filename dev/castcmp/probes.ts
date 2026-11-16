@@ -125,9 +125,43 @@ export function installProbes(clock: () => number) {
     emitters(names?: string[]) {
       // Each draw's geometry bounds in world (board) units, over the vertices it actually draws: an indexed geometry's
       // drawn index range (a ribbon keeps stale vertices past its live strand, which sat at the origin), else its drawn
-      // vertex range. Null for an instanced draw (its per-instance matrices are not read here) or nothing drawn.
+      // vertex range. An instanced draw is read per instance (instancedBoxOf). Null when nothing is drawn.
+      const apply = (e: number[], x: number, y: number, z: number) => [e[0]! * x + e[4]! * y + e[8]! * z + e[12]!, e[1]! * x + e[5]! * y + e[9]! * z + e[13]!, e[2]! * x + e[6]! * y + e[10]! * z + e[14]!];
+      const times = (a: number[], b: ArrayLike<number>, at: number) => { const out = new Array(16).fill(0);
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { let v = 0; for (let k = 0; k < 4; k++) v += a[k * 4 + r]! * b[at + c * 4 + k]!; out[c * 4 + r] = v; }
+        return out; };
+      // Instanced draws place each particle on the GPU, so the shared vertices alone sit at the origin: a mesh emitter
+      // (InstancedMesh, or a geometry carrying `instanceMatrix`) by each instance's matrix over the geometry's bounds, a quad
+      // emitter (InstancedBufferGeometry with a per-instance `center`, the shader's modelMatrix × center) by its centres
+      // widened by each one's largest `size` (an upper bound: a quad's half-extent may be smaller than its largest size
+      // channel, and its turn is not applied). `centers` lists the first few instance centres in world units.
+      const instancedBoxOf = (o: any) => {
+        const g = o.geometry; const at = g?.attributes ?? {};
+        const matrices = o.isInstancedMesh ? o.instanceMatrix : at.instanceMatrix;
+        // three's InstancedBufferGeometry.instanceCount defaults to Infinity: clamp to the instances the attribute holds.
+        const held = matrices ? matrices.count : at.center ? at.center.count : 0;
+        const wanted = o.isInstancedMesh ? o.count : (g?.isInstancedBufferGeometry ? g.instanceCount : (matrices ? o.count ?? g?.instanceCount : 0));
+        const n = Math.min(Number.isFinite(wanted) ? wanted : held, held);
+        if (!(n > 0) || (!matrices && !at.center)) return undefined;
+        o.updateWorldMatrix(true, false); const e: number[] = o.matrixWorld.elements;
+        const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], centers: number[][] = [];
+        const grow = (w: number[], r = 0) => { for (let c = 0; c < 3; c++) { lo[c] = Math.min(lo[c]!, w[c]! - r); hi[c] = Math.max(hi[c]!, w[c]! + r); } };
+        if (matrices) {
+          if (!g.boundingBox) g.computeBoundingBox(); const b = g.boundingBox;
+          for (let i = 0; i < n; i++) { const m = times(e, matrices.array, i * 16);
+            for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) grow(apply(m, x, y, z));
+            if (centers.length < 4) centers.push(num(apply(m, (b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, (b.min.z + b.max.z) / 2))); }
+        } else {
+          const scale = Math.max(Math.hypot(e[0]!, e[1]!, e[2]!), Math.hypot(e[4]!, e[5]!, e[6]!), Math.hypot(e[8]!, e[9]!, e[10]!));
+          for (let i = 0; i < n; i++) { const w = apply(e, at.center.getX(i), at.center.getY(i), at.center.getZ(i));
+            const r = at.size ? Math.max(Math.abs(at.size.getX(i)), Math.abs(at.size.getY(i)), at.size.itemSize > 2 ? Math.abs(at.size.getZ(i)) : 0) * scale : 0;
+            grow(w, r); if (centers.length < 4) centers.push(num(w)); }
+        }
+        return { min: num(lo), max: num(hi), instances: n, from: matrices ? 'instanceMatrix' : 'center', centers };
+      };
       const worldBoxOf = (o: any) => {
-        const g = o.geometry, pos = g?.attributes?.position; if (!pos || o.isInstancedMesh) return null;
+        const instanced = instancedBoxOf(o); if (instanced !== undefined) return instanced;
+        const g = o.geometry, pos = g?.attributes?.position; if (!pos || o.isInstancedMesh || g?.isInstancedBufferGeometry) return null;
         const index = g.index, start = g.drawRange?.start ?? 0, count = g.drawRange?.count ?? Infinity;
         const end = Math.min(index ? index.count : pos.count, start + count); if (end <= start) return null;
         o.updateWorldMatrix(true, false); const e = o.matrixWorld.elements; const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
