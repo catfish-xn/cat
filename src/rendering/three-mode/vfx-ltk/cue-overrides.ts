@@ -699,6 +699,15 @@ export interface PlayOut {
 export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string> }> = {
   hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
 };
+/**
+ * A skill's direct damage that crits (packetDamage: delivery ability-direct, critical) flashes the same crit system on its
+ * target, beside the skill's own hit (Fable 11-16: the original's binding for skill crits is inferred, not read). Every
+ * champion whose package has the system gets this display branch `<champion>-crit`; a periodic tick does not flash.
+ */
+export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue: TimelineCue }> = {
+  skill: champion => `${champion}-crit`,
+  cue: { system: '2436e086', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+};
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether

@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -220,6 +220,11 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     if (override || added.length) (skills ??= { ...index.skills })[champion] = [...(override ?? index.skills[champion] ?? []), ...added];
     const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
     if (branched) (skills ??= { ...index.skills })[champion] = branched;
+  }
+  // A skill crit's flash (CRIT_SKILL_HIT) joins every champion list whose package has its system.
+  if (Object.hasOwn(index.systems, CRIT_SKILL_HIT.cue.system)) for (const champion of Object.keys(index.skills)) {
+    const key = CRIT_SKILL_HIT.skill(champion);
+    if (!champion.includes('-') && !Object.hasOwn(index.skills, key)) (skills ??= { ...index.skills })[key] = [CRIT_SKILL_HIT.cue];
   }
   // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {

@@ -3923,9 +3923,9 @@
     "tests/vfx-ltk-crit-flash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3809,
+      "currentBytes": 4861,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "77b472564357c51b255083344e10d9199869606e49aa78648fc91759c163e47f",
+      "currentSha256": "27fbcb66d8ec7d424deb776698f6dba35e40d23d19e3a2c57d72d02c11bb276d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {

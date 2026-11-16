@@ -175,6 +175,8 @@ export interface LtkPlayOptions {
   cancelWithSource?: boolean;
   /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
   crit?: boolean;
+  /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
+  critFlash?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
@@ -442,6 +444,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
+  const critFlashesOut = () => {
+    let out = 0;
+    for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
+    for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
+    return out;
+  };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
     const held = warming.get(champion); if (held) return held;
@@ -591,12 +599,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
       // A crit's shared hit plays as the crit flash, while fewer than CRIT_FLASH_MAX of them are out and its system is ready.
       if (context.crit && action === 'attack' && !CRIT_ATTACK_HIT.keepHit.has(champion) && catalog.get(CRIT_ATTACK_HIT.crit)) {
-        let out = 0;
-        for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
-        for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
-        if (out < CRIT_FLASH_MAX) selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit
+        if (critFlashesOut() < CRIT_FLASH_MAX) selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit
           ? { ...cue, system: CRIT_ATTACK_HIT.crit } : cue);
       }
       if (context.delay !== undefined) {
