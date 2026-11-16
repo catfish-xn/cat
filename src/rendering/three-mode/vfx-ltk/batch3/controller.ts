@@ -112,7 +112,8 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
       const enemies = targets.filter(t => find(t)?.team !== unit.team && find(t)?.alive);
       // A cast that kills every enemy it hits in its own tick leaves none alive here: it still plays as Rell's cast, its
       // hits where those enemies fell (the runtime places a dead target's hits at its place, or drops a gone one's), and is
-      // never handed back to the host, whose fallback drew a placeholder ring under her (agy C62, 11-16).
+      // never handed back to the host, whose fallback drew a placeholder ring under her (agy C62, 11-16). A cast that names
+      // no enemy at all is handled the same way: her cast plays on its own, never the host's placeholder.
       if (unit.definitionId === 'rell') {
         if (enemies.length) return play(id, 'rell', enemies);
         play(id, 'rell', targets.filter(t => t !== id && find(t) !== undefined && find(t)?.team !== unit.team));
