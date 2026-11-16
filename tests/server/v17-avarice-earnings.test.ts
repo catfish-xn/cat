@@ -128,7 +128,7 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     }
     expect(checked.map(entry => entry.roundId).slice(0, 2)).toEqual(['4-6', '4-7']);
     // Both earnings are random (Sevika's casts, the items' rolls); with seed 42 each kind paid within these battles.
-    expect(paid.highRoller).toBeGreaterThan(0);
+    expect(paid.highRoller, 'premise: Sevika produced High Roller gold').toBeGreaterThan(0);
     expect(paid.items).toBeGreaterThan(0);
     expect(sideBAgainstAvarice).toBe(true);
     // Mogul's Mail stacks in these fights, but none lasts the 35 hits plus 160 ticks its gold needs (its payout is

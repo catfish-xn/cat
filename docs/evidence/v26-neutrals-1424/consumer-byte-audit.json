@@ -3317,9 +3317,9 @@
     },
     "tests/server/v17-avarice-earnings.test.ts": {
       "previousBytes": 11097,
-      "currentBytes": 11604,
+      "currentBytes": 11649,
       "previousSha256": "c070c5d07024ee9ac846348e3f4b1d1ff76a9e2fe38e770c7c0948799b20d323",
-      "currentSha256": "1541c05f85b410c0cef2c4720077672f18820ee9f819c9ba206afb8faa1be917",
+      "currentSha256": "d775bb896cf432a2cc0e3e37b53c6c34ceaa0e867fb1b3b961ea4db32c306300",
       "firstDifferentByte": 2679
     },
     "tests/server/v17-avarice-helpers.ts": {
