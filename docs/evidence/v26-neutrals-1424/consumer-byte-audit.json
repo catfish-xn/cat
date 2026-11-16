@@ -4009,6 +4009,14 @@
       "currentSha256": "a969c8bad75e7232421005959ca2b8d6977f80600a3310b609160e70e7e5bf56",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-row-gate.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4740,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7b4f7e96bdb89452cbce157ae2a453a1a95933d8c952579a9b585073ba8fb4fc",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

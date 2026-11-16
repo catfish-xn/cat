@@ -324,8 +324,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
   // The gate (fitted, 11-16): its bolt Q_mis 7d0f4b1e flies from his body to each enemy the gate hits, and the portal
-  // portal_1 10e4e326 opens on the ground under each of them the moment the bolt lands, so bolt and portal read as one
-  // strike per enemy. Cues target units only, so the gate's empty hexes get no portal (docs/S13_RULES_GAP.md, 11-16).
+  // portal_1 10e4e326 opens the moment the bolt lands, on every cell of the target's row, empty cells too (TimelineCue.
+  // rowGate). The cells come from where the target stands: the rule lays the gate along the target's row (combat-g2.ts
+  // malzahar); the whole row is inferred from that structure, not original data (docs/S13_RULES_GAP.md, 11-16).
   // Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
@@ -333,7 +334,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
     { system: '7d0f4b1e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '10e4e326', action: 'cast', event: 'hit', delay: 0.7, duration: 2, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    { system: '10e4e326', action: 'cast', event: 'hit', delay: 0.7, duration: 2, bone: 'BUFFBONE_GLB_GROUND_LOC', rowGate: true },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },

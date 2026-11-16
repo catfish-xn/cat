@@ -234,6 +234,15 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /**
+ * The centre of every cell of the board row `at` stands in (TimelineCue.rowGate), at `at`'s height: `columns` cells, odd
+ * rows half a cell to the right, as rowReach reads the row.
+ */
+export function rowGatePoints(at: WorldPoint, board: RowBoard): WorldPoint[] {
+  const cell = Math.sqrt(3) * board.radius, row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  const first = board.origin.x + cell * (((row % 2) + 2) % 2) / 2, z = board.origin.y + row * 1.5 * board.radius;
+  return Array.from({ length: board.columns }, (_, column) => [first + cell * column, at[1], z] as WorldPoint);
+}
+/**
  * A ground line's two ends (TimelineCue.lineCells): on the floor along the way from `from` toward `toward`, starting
  * `back` cells behind `from` (TimelineCue.lineBack) and running `cells` cells in all, at `from`'s height. Null when the two
  * stand on one spot, which gives it no direction.
@@ -478,7 +487,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   // target carries (TimelineCue.livingTarget), and a cue on the caster itself (it goes with the caster) do not.
   const keepsPlace = (spawn: TimelineSpawn) => ((spawn.action ?? 'cast') !== 'attack' || !!spawn.variant) && (spawn.event === 'hit' || spawn.event === 'projectile')
     && !spawn.livingTarget && spawn.targetId !== spawn.sourceId;
-  type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean };
+  type Placed = { spawn: TimelineSpawn; snapshot?: WorldPoint; place?: WorldPoint; atPlace?: boolean; fan?: string };
   /**
    * Which of a cast's spawns play, and at what. A living target is followed as before, with its place noted for a cast cue;
    * a dead target whose unit is still there gets each cast cue at its place now; a target whose unit is gone loses its rows.
@@ -614,16 +623,31 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
           part: 'beam', together: split.flight ? together : undefined });
       }
+      const play = ++plays;
+      // A row gate (TimelineCue.rowGate) plays once per cell of its primary target's row instead of once per target: the
+      // first target's row, taken now, each copy a free-room row sharing one fan (no system slot of its own). Without
+      // board geometry or a place for that target it stays on its targets.
+      const gated = new Set<string>();
+      for (let at = 0; at < rows.length; at++) {
+        const { spawn, snapshot, place } = rows[at]!;
+        if (!spawn.rowGate || spawn.event !== 'hit') continue;
+        const board = options.board?.() ?? null, unit = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+        const stand = snapshot ?? place ?? (unit && !unit.disposed ? standingPoint(unit.root) : undefined);
+        if (!board || !stand) continue;
+        const copies = gated.has(spawn.system) ? [] : rowGatePoints(stand, board).map(point => ({
+          spawn: { ...spawn, targetId: undefined, point }, snapshot: point, atPlace: true, fan: `${play}:gate:${spawn.system}` }));
+        gated.add(spawn.system);
+        rows.splice(at, 1, ...copies); at += copies.length - 1;
+      }
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
-      const play = ++plays;
       // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
       // (OFF_SLOT_MAX).
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
         let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
-      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
-        const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
+      for (const { spawn, snapshot: taken, place, atPlace, part, together, fan: gateFan } of rows) {
+        const fan = gateFan ?? (spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined);
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
           // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,

@@ -107,6 +107,13 @@ export interface TimelineCue {
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
   readonly livingTarget?: boolean;
+  /**
+   * A hit that plays once on every cell of its primary target's board row, empty cells included, at each cell's centre on
+   * the floor, instead of once on each target (runtime rowGatePoints). The row is the one the target stands in when the cast
+   * plays; with no board geometry or no target place it plays on its targets as any hit does. Each copy takes no system
+   * slot of its own and only free room, so it never evicts another system (Fable 11-16, Malzahar's gate across the row).
+   */
+  readonly rowGate?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
