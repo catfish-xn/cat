@@ -295,6 +295,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // Ekko: R_Mark on him loops (no end of its own) and no rule event of his skill ends it, so it plays for a fitted time (not
+  // original data) instead of the export's estimated 0.5 s, which showed only a few of its slow-emitting particles.
+  ekko: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'Spine', delay: 0.26666666666666666, duration: 1.5 },
+    { system: '006b32b1', action: 'cast', event: 'cast-start', delay: 0, duration: 1.5, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '5af49b76', action: 'cast', event: 'hit', delay: 0, duration: 0.5 },
+    { system: '970252f2', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+    { system: 'dda9e01c', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+  ],
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
