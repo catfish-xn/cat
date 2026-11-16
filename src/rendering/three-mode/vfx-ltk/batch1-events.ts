@@ -228,6 +228,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'nunu' && isNunuAbility(event)) {
           const state = nunu.get(event.sourceId);
           if (state && state.ended >= 0 && event.tick > state.ended && !state.hit.has(event.targetId)) {
+            // The blast itself on Nunu, once, with its first packet.
+            if (state.hit.size === 0) plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'nunu-blast' });
             state.hit.add(event.targetId);
             plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nunu-blast-hit', snapshotTargets: true });
           }

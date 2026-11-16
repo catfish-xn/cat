@@ -112,6 +112,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
   // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
   // splash followed the blast in his cast list, at the size it had there.
+  // Nunu's blast (batch1-events.ts): R's blast on him when the blast's damage lands, at the default skill size (11-16 review
+  // against footage: at the pool's fit it covered too little of the board).
+  'nunu-blast': [{ system: '8c256426', action: 'passive', event: 'cast-start', delay: 0, duration: 1.5, bone: 'Spine2_Wil', main: true }],
   'nunu-blast-hit': [{ system: '5dfd387b', action: 'passive', event: 'hit', delay: 0.05, duration: 1, scale: hugged(0.7) }],
   'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
   'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
@@ -413,10 +416,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The channel's pool keeps its fitted size (fitted, not original: 2a4dfaba playtest, pale green over most of the screen
     // at full size; 11-16 review: at the default size its outer ring grew a ring too wide). It keeps emitting until the
     // blast starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
-    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The blast draws at the default skill size (11-16 review against footage: at the pool's fit it covered too little of
-    // the board). It no longer shares the pool's scale.
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', main: true },
+    // Wind-up batch 2: the blast now lands NUNU_SECOND_AFTER_PULSE_TICKS (9) after his last tick, at 3.45 s, so the pool keeps
+    // emitting to then (fitted, not original data).
+    { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.75, stopAfter: 3.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
+    // The blast itself plays with the blast's damage (CUE_EXTRA_SKILLS 'nunu-blast', batch1-events.ts), not at a fixed time.
     // The hit splash on each enemy is not here: the cast receipt names no targets, so it plays from the blast's damage instead
     // (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts).
   ],

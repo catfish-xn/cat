@@ -2367,9 +2367,9 @@
     "tests/rendering3d-champion-arena-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4195,
+      "currentBytes": 4262,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c8469c6535ce4970412b257a50d23fd40185e39da8bd6375df37e84233208730",
+      "currentSha256": "1544e80ee69aa8c5ede2e5da60dc23a9e06ed859964ea485ba2abc8e6b32b806",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-champion-lighting.test.ts": {
@@ -3878,9 +3878,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 22718,
+      "currentBytes": 22913,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "24cabd7c90d18e243bbc3f53cc0972d5adf4f1f2c9282bbfe4a32a9734d56a83",
+      "currentSha256": "c86ddad1bf4b27357a4c4f2a05999f92b7f7a5b12cc4508f784957903938a7d1",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
@@ -3926,9 +3926,9 @@
     "tests/vfx-ltk-fade-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7896,
+      "currentBytes": 7915,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "09f4b95c9fa5599f1bbe79958ef1e3cc7ba888fe56ed7bbf86e0f4a31e41ef0d",
+      "currentSha256": "5b0ea2142b95ef091a454042175da96024ae64954057779b136d0d76dfdb81dd",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-falling-projectile.test.ts": {
@@ -4028,9 +4028,9 @@
     "tests/vfx-ltk-nunu-blast-hit.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5343,
+      "currentBytes": 5444,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1394a2ce0c7778b404dea581e0195ce6a14a994430a783c3484c7a9424a863a6",
+      "currentSha256": "aeced9058aec4050b22f057725ca23c8dc720c7fdf68a237b0518879aa0592e9",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-particles.test.ts": {
@@ -4235,14 +4235,6 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
-      "firstDifferentByte": 0
-    },
-    "tests/zz-bracer.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 29974,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8405a6f75a62c08ce2cfc164154c28fb872c98ad1a5374fab1a3808756e45334",
       "firstDifferentByte": 0
     }
   }

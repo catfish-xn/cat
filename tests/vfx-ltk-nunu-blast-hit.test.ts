@@ -24,7 +24,8 @@ describe('Nunu\'s hit splash follows his blast\'s damage', () => {
       ended(60, 4), damage('nu', 60, 5, 'foe'), damage('nu', 60, 6, 'foe2'),
       damage('nu', 69, 7, 'foe'), damage('nu', 69, 8, 'foe2'), damage('nu', 70, 9, 'foe'),
     ]);
-    expect(plans.map(plan => plan.extra)).toEqual([[], [], [], [], [], [], [splash('foe')], [splash('foe2')], []]);
+    expect(plans.map(plan => plan.extra)).toEqual([[], [], [], [], [], [],
+      [{ champion: 'nunu', sourceId: 'nu', targets: ['nu'], action: 'passive', skill: 'nunu-blast' }, splash('foe')], [splash('foe2')], []]);
   });
 
   it('another source\'s packet, his attack or an item proc after the end never counts; a new cast starts over', () => {
