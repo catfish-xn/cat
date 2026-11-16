@@ -193,6 +193,17 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const skill = name === 'trundle' ? 'trundle-bite' : 'zyra-vines';
           plan.extra.push({ champion: name, sourceId: event.sourceId, targets: hitTargets, action: 'passive', skill });
         }
+        // Powder: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather than falling
+        // back to the old placeholder cast effect.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'powder') plan.noCastEffect = true;
+        // Powder: her blast plays once per tick, on every enemy its damage hit that tick.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'powder'
+          && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
+            && isAbilityDirect(e) && e.eventSeq < event.eventSeq)) {
+          const targets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
+          plan.extra.push({ champion: 'powder', sourceId: event.sourceId, targets, action: 'passive', skill: 'powder-blast' });
+        }
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
           && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick

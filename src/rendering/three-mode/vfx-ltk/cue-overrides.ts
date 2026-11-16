@@ -103,6 +103,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
+  // Powder: her blast's target burst and explosion play when its damage lands, on each enemy it hits (batch1-events.ts).
+  'powder-blast': [
+    { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+    { system: '805215e2', action: 'passive', event: 'hit', delay: 0, duration: 1.5 },
+  ],
   // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
   // splash followed the blast in his cast list, at the size it had there.
   'nunu-blast-hit': [{ system: '5dfd387b', action: 'passive', event: 'hit', delay: 0.05, duration: 1, scale: hugged(0.7) }],
@@ -327,6 +332,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
+  // Powder: the target burst and explosion moved from fixed times after her cast to her blast's damage (CUE_EXTRA_SKILLS powder-blast).
+  powder: [
+    { system: '01873936', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.25, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.55, duration: 1.5 },
   ],
   // Q: the missile e0afe94c flies to the primary; when it lands (its delay plus travelSeconds), Q_tar bd903b08 bursts on the
   // primary and Q_Explosion fd5fd6cc on every enemy hit. Both have system files in the asset root now.
