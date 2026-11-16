@@ -1191,12 +1191,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, crit: boolean) => {
     const release = releaseOf(source);
-    return release ? { variant, release } : variant;
+    return release || crit ? { variant, ...(release ? { release } : {}), ...(crit ? { crit } : {}) } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }, crit = false) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
@@ -1204,8 +1204,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, action === 'attack' && crit)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1444,6 +1444,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
+    const crits = new Set<string>();
+    for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
@@ -1506,7 +1509,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
+        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;

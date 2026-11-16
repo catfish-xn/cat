@@ -3920,6 +3920,14 @@
       "currentSha256": "51b3634c8499c47c5463bc6378a56e88de3e334dc7d1c9d9ed5460cb2418cb7e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-crit-flash.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3809,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "77b472564357c51b255083344e10d9199869606e49aa78648fc91759c163e47f",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-cue-override-627.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
