@@ -3770,9 +3770,9 @@
     "tests/vfx-ltk-board-stencil-assets.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2552,
+      "currentBytes": 3409,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0b6b33749da0cdceb172e09ef93b15a4984e54d5bd61cd6279a1b871fb20df54",
+      "currentSha256": "fe44179a6a7a38141a71d7e06e6325ab3bf6ccc9fdf6fdf6ef35ef1982296b23",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
@@ -3988,17 +3988,17 @@
     "tests/vfx-ltk-root-pool.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5955,
+      "currentBytes": 7608,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "54daa1fdf9286692e323173c7f1b0db5c2881aa13a605c9b0789ee68220bb0c7",
+      "currentSha256": "a969c8bad75e7232421005959ca2b8d6977f80600a3310b609160e70e7e5bf56",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 24550,
+      "currentBytes": 27472,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0866f81bded5220af6a28a1a15a41385897fef0d5202c4d773274f95c90a0f99",
+      "currentSha256": "59e64416e76bc5703162090d59a7cdf2131afed6b92c4c7a4667c7f5f413d585",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sett-slam.test.ts": {
@@ -4023,6 +4023,14 @@
       "currentBytes": 9787,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "30bf86c08509d2e8bcc7848e149b6011e3d1e3de2cc38068fd87854831989503",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-stop-first-emission.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2997,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2130b3efe9221f8258ed0813f9c62a598ee661e01d368eed0251f415a0e857b5",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {

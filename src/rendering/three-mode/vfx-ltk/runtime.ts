@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
 import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
@@ -346,7 +346,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
   /**
-   * Slots each system needs: measured in place when its champion warms (measurePeak), then raised by what each finished
+   * Slots each system needs: measured when its champion warms (measurePeak; in place, or a projectile cue's system in
+   * flight over MEASURE_FLIGHT), then raised by what each finished
    * play held. A first play used to reserve the full 250 instead: six systems filled the shared 1500, so a first cast
    * dropped whatever came seventh (Vi's row shockwave, 11-12).
    */
@@ -357,7 +358,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
    */
   const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
-  /** Root places of each skill system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
+  /** Root places of each system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
   const roots = new Map<string, number>();
   /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
   const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
@@ -450,14 +451,17 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A missile stops emitting where it lands, so its children are measured stopped at its flight.
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
-        // A skill system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and
-        // reserves what it holds there; a plain attack's system keeps ROOT_PARTICLES (its spawns never take the room).
+        // A system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and reserves
+        // what it holds there, a skill's up to ROOT_PARTICLES_MOST and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
+        // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
+        const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+        const travel = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds)?.travelSeconds;
         const seconds = Math.min(longest.duration, 10);
-        const unlimited = skill ? measurePeak(prepared, seconds, stopAt, ROOT_PARTICLES_MOST) : 0, wide = skill ? rootRoomOf(unlimited) : ROOT_PARTICLES;
+        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel), wide = rootRoomOf(unlimited, most);
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
         // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
-        const peak = skill && wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide);
+        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel);
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
@@ -868,7 +872,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
-        const rootRoom = (spawn.action ?? 'cast') === 'attack' && !spawn.variant ? undefined : roots.get(spawn.system);
+        const rootRoom = roots.get(spawn.system);
         // A pinned beam reaches for its living target, as does a cast's projectile that kept its target's place (lands); when the
         // target dies its far end holds where it last stood.
         const held = (row.part === 'beam' || lands) && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;

@@ -14,7 +14,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 });
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime, MIN_RESERVE, PLAY_OUT_CAP, rowPath, rowReach, standingPoint } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { FX_SCALE, measurePeak } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { FX_SCALE, measurePeak, ROOT_PARTICLES } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { BOARD_LAYOUT } from '../src/rendering/layout-config';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -262,9 +262,11 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     runtime.dispose();
   });
 
-  it('a first play measured too low in place (a rate the flight drives) keeps every particle, then reserves what it held', async () => {
+  // 11-16: warm measures a projectile cue's system in flight (MEASURE_FLIGHT), so a rate the flight drives is reserved on
+  // the first play. It measured nothing standing still before, and the first play ran over its reservation.
+  it('a first play of a system whose rate the flight drives reserves what its flight holds', async () => {
     built.length = 0;
-    // Its rate comes from its own speed: standing still, warm measures nothing; flying, it emits up to its pool.
+    // Its rate comes from its own speed: standing still it emits next to nothing; flying, it emits up to its pool.
     const flying = syntheticSystem({ rateByVelocityFunction: struct('ValueVector2', { constantValue: { type: 'vector', values: [4, 0] } }),
       MaximumRateByVelocity: num(600), lifetime: num(1), particleLifetime: constant(num(0.5)) });
     const cues: TimelineCue[] = [{ system: 'flying', event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.5, bone: 'ground', targetBone: 'ground' },
@@ -273,6 +275,36 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
       ? { version: 1, systems: { flying: 'systems/flying.json', other: 'systems/other.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } }
       : url.includes('flying') ? flying : syntheticSystem(), readTexture: async () => new Texture() });
     const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * 300, 0, 0); return [id, { root, body: null, alive: true }]; }));
+    const budget = { live: 0, max: 1500 }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
+    await runtime.warm('vi');
+    expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(scene.children.map(o => o.userData.ltkSystem).sort()).toEqual(['flying', 'other']);
+    const reserved = budget.live - MIN_RESERVE;
+    expect(reserved).toBeGreaterThan(MIN_RESERVE);
+    const entry = built.find(entry => entry.fx.object.userData.ltkSystem === 'flying')!, run = entry.fx;
+    let peak = 0; for (let f = 0; f < 20; f++) { runtime.update(1 / 30, new Camera()); peak = Math.max(peak, run.peak); }
+    // The flight it was measured on is longer than this one: the run's room holds all it emits, and the reservation is at
+    // least what it holds or the reserve cap.
+    expect(peak).toBeGreaterThan(MIN_RESERVE); expect(peak).toBeLessThanOrEqual(entry.options.rootRoom);
+    expect(reserved).toBeGreaterThanOrEqual(Math.min(250, peak));
+    runtime.dispose();
+  });
+
+  it('a first play its warm measured too low (a flight far past the measured one) keeps every particle, then reserves what it held', async () => {
+    built.length = 0;
+    // Its rate comes from its own speed: the measured flight (MEASURE_FLIGHT over the cue's travel) holds less than the
+    // floor, while this flight covers many times that distance in the same time and emits well past it.
+    const flying = syntheticSystem({ rateByVelocityFunction: struct('ValueVector2', { constantValue: { type: 'vector', values: [0.03, 0] } }),
+      MaximumRateByVelocity: num(600), lifetime: num(1), particleLifetime: constant(num(0.5)) });
+    const cues: TimelineCue[] = [{ system: 'flying', event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.5, bone: 'ground', targetBone: 'ground' },
+      { system: 'other', event: 'cast-start', delay: 0, duration: 0.6, main: true }];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems: { flying: 'systems/flying.json', other: 'systems/other.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } }
+      : url.includes('flying') ? flying : syntheticSystem(), readTexture: async () => new Texture() });
+    // The target stands about five times the measured flight away (MEASURE_FLIGHT is four cells).
+    const FAR = 1200;
+    const scene = new Scene(), units = new Map(['caster', 'target'].map((id, i) => { const root = new Group(); root.position.set(i * FAR, 0, 0); return [id, { root, body: null, alive: true }]; }));
     // Room for exactly what the two were measured to need: an underestimate does not stop the other from playing.
     const budget = { live: 0, max: 2 * MIN_RESERVE }, runtime = createLtkRuntime(library, scene, id => units.get(id), { budget });
     await runtime.warm('vi');
@@ -282,8 +314,9 @@ describe('vfx-ltk row projectile (TimelineCue.rowSide)', () => {
     expect(budget.live).toBe(2 * MIN_RESERVE);
     const run = built.find(entry => entry.fx.object.userData.ltkSystem === 'flying')!.fx;
     let peak = 0; for (let f = 0; f < 20; f++) { runtime.update(1 / 30, new Camera()); peak = Math.max(peak, run.peak); }
-    // Over its reservation, nothing is cut: the accounting runs short (by peak − reservation) until the play ends.
-    expect(peak).toBeGreaterThan(MIN_RESERVE); expect(budget.live).toBeLessThanOrEqual(budget.max);
+    // Over its reservation, nothing is cut (its peak stays under the run's room): the accounting runs short (by peak −
+    // reservation) until the play ends.
+    expect(peak).toBeGreaterThan(MIN_RESERVE); expect(peak).toBeLessThan(ROOT_PARTICLES); expect(budget.live).toBeLessThanOrEqual(budget.max);
     for (let f = 0; f < 10; f++) runtime.update(1 / 30, new Camera());
     expect(runtime.active).toBe(0);
     // The finished play raised its need: the next one reserves what it held.
