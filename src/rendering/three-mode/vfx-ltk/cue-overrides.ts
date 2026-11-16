@@ -123,7 +123,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 };
 
 /** Singed's flask: released this long into his cast (fitted, not original data), flying its missile data's travel time. */
-const SINGED_FLASK_RELEASE = 0.6, SINGED_FLASK_FLIGHT = 0.35;
+const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
@@ -342,7 +342,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
   // W: Singed lobs a flask (W_Mis, as its missile data says: from his left hand to the ally's head attach point, in the
   // data's flight time, along a gravity arc aimed above the head) at the ally who dealt the most damage, himself included:
-  // on himself it still flies (selfFlight), up from his hand and down onto his own head. Its 0.6 s release is a fitted
+  // on himself it still flies (selfFlight), up from his hand and down onto his own head. Its release time is a fitted
   // value, not original data (the spell data carries none). When the flask lands on the ally's head, the ally gets
   // W_Ally_Activate (flash, burst, splashes), W_Ally_Buf (ground glow, smoke, rays) and W_Buff_Avatar2 (a one-off
   // whole-body edge glow), and Singed's own W_Self_Buff pool starts: their delay is the release plus the flight. All of it
