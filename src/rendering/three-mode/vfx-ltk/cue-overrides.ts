@@ -136,6 +136,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
+/** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
+const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
+/** When the flask lands on the ally's head: what it brings starts then. */
+const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
   // system's own end instead of the default: no rule event ends it (11-15).
@@ -355,6 +359,20 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   renni: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
+  ],
+  // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
+  // W: Singed's flask flies from his left hand to the target's head attach point along a gravity arc; when he is his own
+  // target it still flies (selfFlight). Its release time is a fitted display value. When it lands, the target gets
+  // W_Ally_Activate, W_Ally_Buf and W_Buff_Avatar2 and Singed gets W_Self_Buff: their delay is the release plus the flight.
+  // All of it fades out over SOFT_STOP_SECONDS when his damage reduction ends for any reason or he dies (batch1-events.ts);
+  // the durations are only upper bounds, the fade is what ends them.
+  singed: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
+    { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: SINGED_FLASK_RELEASE, duration: 0.6, travelSeconds: SINGED_FLASK_FLIGHT, arc: { gravity: 10000, targetOffset: 150 }, selfFlight: true },
+    { system: '2639dd7d', action: 'cast', event: 'hit', bone: ground, delay: SINGED_FLASK_LANDS, duration: 2.5 },
+    { system: '6e34a4e1', action: 'cast', event: 'hit', bone: ground, delay: SINGED_FLASK_LANDS, duration: 5 },
+    { system: '58f996d2', action: 'cast', event: 'hit', bone: chest, delay: SINGED_FLASK_LANDS, duration: 4.2 },
+    { system: 'db0f8e0d', action: 'cast', event: 'cast-start', bone: ground, delay: SINGED_FLASK_LANDS, duration: 10 },
   ],
   // R: in 14.24 the gas cloud lasts its whole damage window, then detonates (11-06 field review: ours burst early, white and
   // too wide). The burst and each target's splash wait for the cloud's end; the burst's scale is our fit, not original data.
@@ -601,6 +619,9 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // Singed W_Ally_Activate: Add_PaticlesBurst needs a surface-host-pose emission, which the loader does not support, so it
+  // is muted here by system and emitter; nothing else is skipped. Known missing; its look has not been checked.
+  '2639dd7d': ['Add_PaticlesBurst'],
 };
 
 /**
