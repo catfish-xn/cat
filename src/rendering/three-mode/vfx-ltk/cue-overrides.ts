@@ -100,7 +100,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
   'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
-    { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
+    // REC ONLY: the arcs stop emitting at 0.28 s as before but their particles play out (Temp_Mesh5 lives 0.45 s from 0.12 s).
+    { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.75, stopAfter: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
   // Powder: her blast's target burst and explosion play when its damage lands, on each enemy it hits (batch1-events.ts).
