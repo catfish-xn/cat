@@ -54,25 +54,37 @@ it('Rumble3 self-destruct deals20000% resists before last-unit elimination',()=>
  const r=stepCombat(battle([player,enemy],{rngState:42}));
  const explosion=packets(r.events).find(p=>p.source.definitionId==='junker-king');expect(explosion?.raw).toBe(20000);expect(r.state.result).toBe('draw');
 });
-// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart; the re-leap check comes one tick after the last.
+// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart; a dead target's next stab slot is the re-leap
+// (SMEECH_STAB_TICKS after the death), and a target that dies on the last stab is checked SMEECH_STAB_TICKS after it.
 it('Smeech stabs three times, SMEECH_STAB_TICKS apart, each 190 taken on the cast',()=>{
  let state=battle([hero('smeech'),dummy()],{rngState:42});const at:[number,number][]=[];
  for(let i=0;i<=2*SMEECH_STAB_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;
   for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability'))at.push([i,p.raw]);}
  expect(at).toEqual([[0,190],[SMEECH_STAB_TICKS,190],[2*SMEECH_STAB_TICKS,190]]);
 });
-it('Smeech leaps again only after a kill, with the next three slashes reduced by source30%',()=>{
+it('Smeech leaps again one stab interval after a kill, with the next three slashes reduced by source30%',()=>{
  let state=battle([hero('smeech'),dummy('e',{hp:1,maxHp:1}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});
  const first=stepCombat(state);state=first.state;
  expect(state.units.find(u=>u.id==='e')!.alive).toBe(false);
  expect(state.units.find(u=>u.id==='p')!.tasks?.some(t=>t.kind==='g23Smeech')).toBe(true);
  const later:CombatEvent[]=[];
- for(let i=0;i<4*SMEECH_STAB_TICKS+1;i++){const step=stepCombat(state);state=step.state;later.push(...step.events);}
+ for(let i=0;i<4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;later.push(...step.events);}
  const hits=packets(later).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability');
- // The dead target takes its two later stabs as nothing; the re-leap's three stabs are 133 each, the first on the leap.
+ // The target dies on the cast's first stab; the next stab slot is the re-leap, whose three stabs are 133 each.
  expect(hits.map(p=>[p.unitId,p.raw])).toEqual([['far',133],['far',133],['far',133]]);
- expect(new Set(hits.map(p=>p.tick)).size).toBe(3);
+ expect(hits.map(p=>p.tick-first.state.tick)).toEqual([1,2,3].map(i=>i*SMEECH_STAB_TICKS));
  expect(later.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
+});
+
+it('Smeech: a target killed by a later stab is followed by the re-leap one stab interval later; a target that lives takes all three',()=>{
+ for(const [hp,leapAt] of [[380,2*SMEECH_STAB_TICKS],[570,3*SMEECH_STAB_TICKS]] as const){
+  let state=battle([hero('smeech'),dummy('e',{hp,maxHp:hp}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});const start=state.tick;const all:CombatEvent[]=[];
+  for(let i=0;i<=4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;all.push(...step.events);}
+  const hits=packets(all).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>[p.unitId,p.tick-start-1]);
+  const onE=hits.filter(([id])=>id==='e'),onFar=hits.filter(([id])=>id==='far');
+  expect(onE.map(([,t])=>t),String(hp)).toEqual(Array.from({length:leapAt/SMEECH_STAB_TICKS},(_,i)=>i*SMEECH_STAB_TICKS));
+  expect(onFar[0]?.[1],String(hp)).toBe(leapAt);
+ }
 });
 
 import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';

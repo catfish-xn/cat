@@ -48,13 +48,15 @@ function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
  if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
-/** One leap's stabs: the first now, the rest SMEECH_STAB_TICKS apart (amounts taken now); one tick after the last, the
- * re-leap check. leap 0 is the cast (packet ordinals 0..n-1); a re-leap numbers its packets 2000+leap*n+i as before. */
+/** One leap's stabs: the first now, the rest SMEECH_STAB_TICKS apart (amounts taken now); SMEECH_STAB_TICKS after the last,
+ * the re-leap check. A stab that finds its target dead runs that check at once instead (the re-leap comes one stab interval
+ * after the death, not after the remaining stabs). leap 0 is the cast (packet ordinals 0..n-1); a re-leap numbers its packets
+ * 2000+leap*n+i as before. */
 function smeechStabs(ctx:AbilityContext,u:S13Unit,target:S13Unit,raw:number,seq:number,leap:number,total:number):void{
  const n=variable(u,'BaseNumStabs'),ordinal=(i:number)=>leap===0?i:2000+leap*n+i;
  hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');
  for(let i=1;i<n;i++)later(ctx,u,target,'g23Stab',i*SMEECH_STAB_TICKS,split(raw,n,i),seq,ordinal(i),n);
- later(ctx,u,target,'g23Smeech',(n-1)*SMEECH_STAB_TICKS+1,raw,seq,leap+1,total);
+ later(ctx,u,target,'g23Smeech',n*SMEECH_STAB_TICKS,raw,seq,leap+1,total);
 }
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
@@ -249,7 +251,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
   if(task.kind==='g23Stab'){
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
-   if(target)hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;
+   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;}
+   const round=(x:CombatTask)=>x.actionSeq===task.actionSeq&&x.targetId===task.targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
+   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
+   u.tasks=u.tasks.filter(x=>!round(x));executeG23Task(ctx,u,check);return;
   }
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});
