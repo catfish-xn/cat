@@ -11,10 +11,13 @@ const read = d => { const f = path.join(d, 'render-meta.json'); return fs.exists
   if (!ma?.ref || !mb?.ref) { console.log(JSON.stringify({ paired: false, why: 'no render-meta.json / ref-units.png (recorded before 11-15 meta)' })); process.exit(2); }
   const diffs = {};
   const pick = m => ({ renderer: m.main?.renderer, vendor: m.main?.vendor, samples: m.main?.samples, antialias: m.main?.attributes?.antialias, dpr: m.dpr,
-    size: m.main && [m.main.width, m.main.height], drawingBuffer: m.main?.drawingBuffer, loads: m.loads?.count, loadOrder: m.loads?.orderSha,
-    quiet: m.quiet ? m.quiet.ok : null });
+    size: m.main && [m.main.width, m.main.height], drawingBuffer: m.main?.drawingBuffer, quiet: m.quiet ? m.quiet.ok : null });
   const pa = pick(ma), pb = pick(mb);
   for (const k of Object.keys(pa)) if (JSON.stringify(pa[k]) !== JSON.stringify(pb[k])) diffs[k] = [pa[k], pb[k]];
+  // Loads compared as sets: the order parallel fetches finish in differs run to run and says nothing about the frame.
+  const setA = new Set(ma.loads?.order ?? []), setB = new Set(mb.loads?.order ?? []);
+  const onlyA = [...setA].filter(x => !setB.has(x)), onlyB = [...setB].filter(x => !setA.has(x));
+  if (onlyA.length || onlyB.length) diffs.loadsOnlyIn = [onlyA, onlyB];
   if (JSON.stringify(ma.ref.clip) !== JSON.stringify(mb.ref.clip)) {
     console.log(JSON.stringify({ paired: false, why: 'reference clips differ (units not on the same spots)', clip: [ma.ref.clip, mb.ref.clip], meta: diffs }, null, 1)); process.exit(1);
   }
