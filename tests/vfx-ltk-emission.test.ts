@@ -54,6 +54,16 @@ describe('LTK static emission surfaces', () => {
     expect(held!.surface!.sample(0, new Rng(1), point)).toBe(true);
     library.dispose();
   });
+  // An empty emissionSurfaceDefinition (a mesh-kind surface naming nothing) used to refuse its whole system. It now gives
+  // nothing to sample: the emitter emits from its own shape.
+  it('an empty mesh surface loads the system, notes the emitter, and emits from the shape', async () => {
+    const library = createVfxLibrary('/', {readJson: async url => url.endsWith('index.json') ? {version:1, systems:{s:'s.json'}, assets:{'synthetic.tex':'t.png'}, skills:{}} : syntheticSystem({emissionSurfaceDefinition:struct('VfxEmissionMeshData', {})}), readTexture: async()=>new Texture(), readBinary:async()=>binaryFixture('mesh',false)});
+    const prepared = await library.load('s');
+    expect(prepared.notes).toContain('surface-empty:synthetic-only');
+    const fx = createLtkParticles(prepared, { anchor: { originAt: () => [0, 0, 0] as const, basisInto: (_t: number, out: Float32Array) => { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } }, target: null, joints: () => null, duration: 1, seed: 1 } as never);
+    fx.update(0.2, new Camera()); expect(fx.driver.pool.count).toBeGreaterThan(0);
+    fx.dispose(); library.dispose();
+  });
   it('retains fallback for a missing mesh or an unposed skeletal surface', async () => {
     for (const value of [struct('VfxEmissionMeshData', {meshName:{type:'asset',path:'missing.scb',asset:null}}), struct('VfxEmissionSkeletonData', {})]) {
       const library = createVfxLibrary('/', {readJson: async url => url.endsWith('index.json') ? {version:1, systems:{s:'s.json'}, assets:{'synthetic.tex':'t.png'}, skills:{}} : syntheticSystem({emissionSurfaceDefinition:value}), readTexture: async()=>new Texture(), readBinary:async()=>binaryFixture('mesh',false)});
