@@ -45,6 +45,17 @@ describe('batch 3 display lifecycle', () => {
   it('separates Rell self shield from actual enemy hits and selects frozen shapeshifter forms', () => {
     const f = fixture('rell'); f.controller.cast('s', ['s', 't']);
     expect(f.runtime.playVariant).toHaveBeenCalledWith('rell', 'rell', 's', ['t'], undefined);
+    // A cast that killed every enemy it hit in its own tick (agy C62): still her cast, at the fallen enemies, and handled,
+    // so the host never draws its placeholder ring; even when the runtime cannot play any of it.
+    const dead = fixture('rell'); dead.units.get('t')!.alive = false;
+    expect(dead.controller.cast('s', ['s', 't'])).toBe(true);
+    expect(dead.runtime.playVariant).toHaveBeenCalledWith('rell', 'rell', 's', ['t'], undefined);
+    dead.runtime.playVariant.mockReturnValue(false);
+    expect(dead.controller.cast('s', ['s', 't'])).toBe(true);
+    // An enemy already gone from the board is not passed on.
+    const gone = fixture('rell'); gone.units.delete('t');
+    expect(gone.controller.cast('s', ['s', 't'])).toBe(true);
+    expect(gone.runtime.playVariant).toHaveBeenCalledWith('rell', 'rell', 's', [], undefined);
     for (const hero of ['elise', 'swain']) {
       const { controller, source, runtime } = fixture(hero);
       controller.cast('s', ['t']); source.form = 'back'; controller.cast('s', ['t']);

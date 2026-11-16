@@ -82,6 +82,16 @@ describe('review R: whole-action target coverage', () => {
     expect(runtime.play('vander', 'self', ['ally', 'self', 'ally'])).toBe(true); expect(runtime.queued).toBe(4);
   });
 
+  it('flies a self projectile marked selfFlight to the caster itself and keeps its landing hit; an unmarked one is still left out', () => {
+    const marked: TimelineCue = { ...flight, selfFlight: true };
+    const flown = mapSkillTimeline([start, marked, hit], 'self', ['self']);
+    expect(flown.unsupported).toEqual([]);
+    expect(flown.spawns.map(c => [c.system, c.targetId, c.delay])).toEqual([['start', undefined, 0], ['flight', 'self', flight.delay], ['hit', 'self', hit.delay]]);
+    const left = mapSkillTimeline([start, flight, hit], 'self', ['self']);
+    expect(left.unsupported).toEqual([{ cue: flight, reason: 'self-projectile' }]);
+    expect(left.spawns.map(c => [c.system, c.targetId, c.delay])).toEqual([['start', undefined, 0], ['hit', 'self', flight.delay]]);
+  });
+
   // Fable 11-13: a cue the timeline cannot map is played without, never the whole cast (before, these casts were refused).
   it.each([['self'], ['self', 'ally'], ['self', 'enemy']])('skips a self flight without retargeting %j: its own landing hit plays at the launch', async (...targets) => {
     const mapped = mapSkillTimeline([start, flight, hit], 'self', targets);

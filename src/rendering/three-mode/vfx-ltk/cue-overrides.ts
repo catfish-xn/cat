@@ -78,10 +78,13 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  */
 export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6 } as const);
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Dr. Mundo (batch1-events.ts): the beam from him to the enemy his once-a-second damage hits; at his closing blast, the blast
+  // body on him and the zap on each enemy it hits.
+  'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],
+  'drmundo-zap': [{ system: '56c38cb9', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: chest }],
+  'drmundo-zap-body': [{ system: 'b8021b81', action: 'passive', event: 'cast-start', delay: 0, duration: 2, bone: chest }],
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
-  // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
-  // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
   // Trundle's bite and Zyra's vines (batch1-events.ts): their hits play when the damage lands, CAST_WINDUP_TICKS after the cast,
   // on every enemy hit that tick (Zyra's first is her primary target). Cues as in their cast lists before.
   'trundle-bite': [{ system: '8bb9f6ab', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
@@ -92,12 +95,28 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
   ],
+  // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
+  // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
+  'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
+  // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
+  // splash followed the blast in his cast list, at the size it had there.
+  'nunu-blast-hit': [{ system: '5dfd387b', action: 'passive', event: 'hit', delay: 0.05, duration: 1, scale: hugged(0.7) }],
   'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
   'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
+  // Renni's grab (batch1-events.ts): Q_tar on the enemy her cast holds, when her stun lands. Event, bone and duration
+  // are our fit (not original data).
+  'renni-grab': [{ system: 'be12cd52', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: chest }],
+  // Renni's final slam (batch1-events.ts): the impact on the ground under the held enemy, and FinalSlam_Tar on each
+  // enemy the slam strikes, on the tick its damage lands. Bones and durations are our fit (not original data).
+  'renni-slam': [
+    { system: '2f79da6f', action: 'passive', event: 'hit', delay: 0, duration: 2, bone: ground, primary: true },
+    { system: '32bd44a4', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: chest },
+  ],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -138,6 +157,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
+/** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
+const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
+/** When the flask lands on the ally's head: what it brings starts then. */
+const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
   // system's own end instead of the default: no rule event ends it (11-15).
@@ -190,7 +213,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
     { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
-    { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
   // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
   tristana: [
@@ -306,10 +328,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
-  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
-  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // Q: the missile e0afe94c flies to the primary; when it lands (its delay plus travelSeconds), Q_tar bd903b08 bursts on the
+  // primary and Q_Explosion fd5fd6cc on every enemy hit. Both have system files in the asset root now.
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'bd903b08', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: 'fd5fd6cc', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
@@ -333,33 +357,54 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
-  // No q_mis; spell ring on targets then infection. Portal mesh ids are not in the asset root.
+  // The gate (fitted, 11-16): its bolt Q_mis 7d0f4b1e flies from his body to each enemy the gate hits, and the portal
+  // portal_1 10e4e326 opens on the ground under each of them the moment the bolt lands, so bolt and portal read as one
+  // strike per enemy. Cues target units only, so the gate's empty hexes get no portal (docs/S13_RULES_GAP.md, 11-16).
+  // Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
     { system: '3c65ee71', action: 'attack', event: 'projectile', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.8666666666666667, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
+    { system: '7d0f4b1e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '10e4e326', action: 'cast', event: 'hit', delay: 0.7, duration: 2, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Asset root only ships WeaponSmoke + BA hit; q_tar / slam systems lack JSON files.
+  // Q_tar and the final slam's Impact / Tar play from Renni's grab and slam events (batch1-events.ts, CUE_EXTRA_SKILLS
+  // renni-*): her cast names no targets.
   renni: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
+  // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
+  // W: Singed's flask flies from his left hand to the target's head attach point along a gravity arc; when he is his own
+  // target it still flies (selfFlight). Its release time is a fitted display value. When it lands, the target gets
+  // W_Ally_Activate, W_Ally_Buf and W_Buff_Avatar2 and Singed gets W_Self_Buff: their delay is the release plus the flight.
+  // All of it fades out over SOFT_STOP_SECONDS when his damage reduction ends for any reason or he dies (batch1-events.ts);
+  // the durations are only upper bounds, the fade is what ends them.
+  singed: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
+    { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: SINGED_FLASK_RELEASE, duration: 0.6, travelSeconds: SINGED_FLASK_FLIGHT, arc: { gravity: 10000, targetOffset: 150 }, selfFlight: true },
+    { system: '2639dd7d', action: 'cast', event: 'hit', bone: ground, delay: SINGED_FLASK_LANDS, duration: 2.5 },
+    { system: '6e34a4e1', action: 'cast', event: 'hit', bone: ground, delay: SINGED_FLASK_LANDS, duration: 5 },
+    { system: '58f996d2', action: 'cast', event: 'hit', bone: chest, delay: SINGED_FLASK_LANDS, duration: 4.2 },
+    { system: 'db0f8e0d', action: 'cast', event: 'cast-start', bone: ground, delay: SINGED_FLASK_LANDS, duration: 10 },
+  ],
   // R: in 14.24 the gas cloud lasts its whole damage window, then detonates (11-06 field review: ours burst early, white and
-  // too wide). The burst and each target's splash wait for the cloud's end; the burst's scale is our fit, not original data.
+  // too wide). The burst and each target's splash wait for the cloud's end.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
-    // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
-    // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
-    // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
+    // The channel's pool keeps its fitted size (fitted, not original: 2a4dfaba playtest, pale green over most of the screen
+    // at full size; 11-16 review: at the default size its outer ring grew a ring too wide). It keeps emitting until the
+    // blast starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: hugged(0.7), optional: true },
+    // The blast draws at the default skill size (11-16 review against footage: at the pool's fit it covered too little of
+    // the board). It no longer shares the pool's scale.
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', main: true },
+    // The hit splash on each enemy is not here: the cast receipt names no targets, so it plays from the blast's damage instead
+    // (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts).
   ],
   // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
   // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).

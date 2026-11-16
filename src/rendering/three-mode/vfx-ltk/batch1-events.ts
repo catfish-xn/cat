@@ -1,8 +1,20 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { TimelineAction, TimelineVariant } from './timeline';
 
+/** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
+export const SOFT_STOP_SECONDS = 0.6;
+
+/** Play one extra visual; a `once` visual is skipped while its source already runs that action at full strength. */
+export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
+  if (fx.once && ltk.playing(fx.sourceId, fx.action)) return false;
+  return ltk.play(fx.champion, fx.sourceId, fx.targets, fx.action,
+    fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
+}
+
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
+  /** Skip it while the source already runs this action at full strength (one that is fading out does not count). */
+  once?: boolean;
   /** A display branch of the champion's catalogue (LtkPlayOptions.skill) instead of its own list. */
   skill?: string;
   /** Its targets' places are taken when it plays, alive or not (LtkPlayOptions.snapshotTargets): a hit that may have killed them. */
@@ -11,7 +23,9 @@ export interface Batch1Visual {
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
   event: DisplayCombatEvent; fresh: boolean; variant?: TimelineVariant; targets?: readonly string[];
-  skipCast?: boolean; stopCast?: string; extra: Batch1Visual[];
+  skipCast?: boolean; stopCast?: string;
+  /** Fade this unit's cast cues out over SOFT_STOP_SECONDS (Singed's W when his damage reduction ends, or before his next cast). */
+  fadeCast?: string; extra: Batch1Visual[];
   /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
   noCastEffect?: boolean;
 }
@@ -47,6 +61,10 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
+/** Nunu's ability as its damage packets name it (combat-replay-view.ts packetDamage definitionId). */
+const NUNU_ABILITY = 'nunu-ability';
+const isNunuAbility = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) => (event as { definitionId?: string }).definitionId === NUNU_ABILITY;
+
 /** Vladimir's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
 const VLADIMIR_ABILITY = 'vladimir-ability';
 /** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
@@ -64,6 +82,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
   const shots = new Map<string, { count: number; tick: number }>();
+  /** Dr. Mundo since his last cast: the enemy his pulses hit, and the tick his heal ended (-1 before). */
+  const mundo = new Map<string, { target: string | undefined; ended: number }>();
+  /** Renni: her running cast's stun, until its final slam lands: the units stunned on her cast's tick, and which one she holds. */
+  const grabs = new Map<string, { candidates: readonly string[]; held: string | null }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -71,7 +93,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -94,6 +116,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (event.eventSeq <= lastSeq) { plan.fresh = !tracked; return plan; }
           lastSeq = event.eventSeq;
         }
+        // Singed's cast visuals (cue-overrides.ts) last while his damage reduction does: they fade when it ends for any
+        // reason or he dies, and a new cast fades the last one's before its own start. An interrupted cast plays nothing.
+        if (owner !== undefined && definition(owner) === 'singed') {
+          if (event.type === 'cast') { if (event.completed === false) plan.skipCast = true; else plan.fadeCast = event.sourceId; }
+          else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason !== 'applied' && event.reason !== 'refreshed') plan.fadeCast = event.targetId;
+          else if (event.type === 'death') plan.fadeCast = event.unitId;
+        }
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'caitlyn') shots.set(event.sourceId, { count: 0, tick: -1 });
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'caitlyn') {
           const seen = shots.get(event.sourceId) ?? { count: 0, tick: -1 };
@@ -105,6 +134,32 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
               plan.extra.push({ champion: 'caitlyn', sourceId: event.sourceId, targets: [centre], action: 'passive', skill, snapshotTargets: true });
             }
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
+          }
+        }
+        // Renni (combat-g2-3.ts 'renni'): her cast stuns one enemy and mauls it every tick of the stun; on the stun's last
+        // tick the final slam strikes that enemy and every enemy next to it. Her cast event names no targets and a stun event
+        // names no source, so the grab is the stun applied on her cast's tick; should another stun land on that tick too,
+        // the held one is the first of them her ability-direct packets strike. The slam is the tick those packets strike the
+        // held enemy twice (its last maul and the slam): every enemy they strike that tick takes FinalSlam_Tar.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') {
+          const candidates = [...new Set(events.filter(e => e.type === 'statusChanged' && e.tick === event.tick && e.kind === 'stun'
+            && e.reason === 'applied' && e.targetId !== event.sourceId).map(e => (e as { targetId: string }).targetId))];
+          const held = candidates.length === 1 ? candidates[0]! : null;
+          grabs.set(event.sourceId, { candidates, held });
+          if (held !== null) plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held], action: 'passive', skill: 'renni-grab' });
+        }
+        const grab = event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'renni' ? grabs.get(event.sourceId) : undefined;
+        if (grab && event.type === 'packetDamage') {
+          if (grab.held === null && grab.candidates.includes(event.targetId)) {
+            grab.held = event.targetId;
+            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'renni-grab' });
+          }
+          const held = grab.held;
+          const struck = events.filter(e => e.type === 'packetDamage' && e.tick === event.tick && e.sourceId === event.sourceId && isAbilityDirect(e)) as Extract<DisplayCombatEvent, { type: 'packetDamage' }>[];
+          if (held !== null && struck.filter(e => e.targetId === held).length >= 2) {
+            grabs.delete(event.sourceId);
+            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held, ...new Set(struck.map(e => e.targetId).filter(id => id !== held))],
+              action: 'passive', skill: 'renni-slam', snapshotTargets: true });
           }
         }
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
@@ -145,6 +200,20 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const targets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets, action: 'passive', skill: 'blitzcrank-shock' });
+          // The white flash on Blitzcrank himself plays on the same tick (ab66b54f, blitzcrank-shock-self).
+          plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'blitzcrank-shock-self' });
+        }
+        // Nunu: his hit splash (R_hit_tar) plays on each enemy his blast strikes. His cast names no targets (each damage tick is
+        // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself: the tick an enemy takes two of
+        // his ability's direct packets, its last tick and SecondDamage. Display packets carry no segment index, so the pair is
+        // the marker (inferred from the rule's schedule); it plays once, on the second packet. Another source's packet in that
+        // tick, his attack, or an item proc never counts. It depends on that schedule: should his last tick and SecondDamage
+        // stop sharing a tick, the splash silently stops (the real-combat case in tests/vfx-ltk-nunu-blast-hit.test.ts fails).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'nunu' && isNunuAbility(event)) {
+          const pair = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.tick === event.tick && e.sourceId === event.sourceId && e.targetId === event.targetId && isAbilityDirect(e) && isNunuAbility(e));
+          if (pair.length >= 2 && pair[1] === event)
+            plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nunu-blast-hit', snapshotTargets: true });
         }
         // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
         // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.
@@ -163,6 +232,26 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
           && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
           plan.noCastEffect = true;
+        // Dr. Mundo: his once-a-second damage plays the beam to the enemy it hits; his closing blast plays the zap on each enemy it
+        // hits and the blast body on him once. The blast is told by his heal's end (abilityEffectEnded drmundo-heal, sent whether or
+        // not his target lives): his ability hits on that tick, but for the pulse to the enemy his earlier pulses hit, and any after
+        // it until his next cast, are the blast.
+        if (event.type === 'cast' && definition(event.sourceId) === 'drmundo') mundo.set(event.sourceId, { target: undefined, ended: -1 });
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'drmundo') {
+          const state = mundo.get(event.sourceId) ?? { target: undefined, ended: -1 }; mundo.set(event.sourceId, state);
+          if (state.ended < 0 && events.some(e => e.type === 'abilityEffectEnded' && e.effect === 'drmundo-heal' && e.unitId === event.sourceId && e.tick === event.tick))
+            state.ended = event.tick;
+          const same = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e));
+          const lastPulse = state.ended === event.tick && state.target !== undefined ? same.find(e => e.targetId === state.target) : undefined;
+          if (state.ended < 0 || event === lastPulse) {
+            if (state.ended < 0) state.target = event.targetId;
+            plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-beam' });
+          } else {
+            plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-zap' });
+            if (same.filter(e => e !== lastPulse)[0] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'drmundo-zap-body' });
+          }
+        }
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
