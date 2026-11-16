@@ -95,6 +95,24 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(() => serializeMatch(candidate)).toThrow(/^Invalid Match save: uncompiled mechanism definitions$/);
   });
 
+  // Fixed scene for the cold-replay path (Fable 2026-11-16), independent of the epoch's trial seed: seed 22496 takes Support
+  // Mining, whose training dummy sits in the frozen combat preparation, so the save is authenticated by full cold replay
+  // (validateDynamicCombat) and an edited grant diverges from it ("Mirror forge" is that replay's fallback label).
+  it.each(['restore', 'serialize'] as const)('fixed seed 22496 (training dummy): an in-place grant edit is refused by the cold replay after %s validation', warmup => {
+    const fixed = startFight(22496), receiver = (state: MatchState) => state.combat!.units.find(u => u.id === fixed.receiverId)!;
+    let candidate = fixed.state;
+    while (candidate.phase === 'combat' && !(receiver(candidate).combatItemGrants ?? []).length) candidate = stepMatch(candidate).state;
+    candidate = structuredClone(candidate);
+    expect(candidate.combatInputBasis!.inputs.preparation.units.some(u => u.definitionId === 'training-dummy'), 'premise: a training dummy').toBe(true);
+    const grants = receiver(candidate).combatItemGrants!;
+    expect(grants[0].definitionId).toBe('last-whisper'); // this seed's chest grants Last Whisper
+    if (warmup === 'restore') expect(restoreMatch(candidate)).toEqual(candidate);
+    else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
+    (grants[0] as { definitionId: string }).definitionId = 'shojin';
+    expect(() => restoreMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
+    expect(() => serializeMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
+  });
+
   it.each(checkpointCases.flatMap(([label,tick]) => (['JSON','object'] as const).map(entry => ({label,tick,entry}))))('$label @$tick: $entry restore preserves the entire state and uninterrupted continuation', ({tick,entry}) => {
     const { state, eventOffset } = checkpoints.get(tick)!;
     const saved = serializeMatch(state);

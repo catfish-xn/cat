@@ -735,9 +735,9 @@
     },
     "tests/chest-bracer-integration-trial.test.ts": {
       "previousBytes": 6430,
-      "currentBytes": 7231,
+      "currentBytes": 8847,
       "previousSha256": "01d8e67078df50fb6eefedad7a3ce758b015a8adbdcec868fc4886934fd6df4d",
-      "currentSha256": "bb715cc0f31d86698476de7e39d0aa17a1f01be2229ccc4df8e7574e45cc9b58",
+      "currentSha256": "eece81f98faebab45decf8fd42c994eba7c5a737957ad5adc1919361911389f0",
       "firstDifferentByte": 469
     },
     "tests/combat-fx-pool.test.ts": {
