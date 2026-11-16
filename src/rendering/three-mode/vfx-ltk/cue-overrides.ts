@@ -376,6 +376,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
+  // The asset index bakes an older Leona list; batch1-timelines.ts holds the reviewed one.
+  leona: BATCH1_TIMELINES.leona,
   lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
