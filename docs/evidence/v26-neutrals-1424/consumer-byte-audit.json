@@ -1853,9 +1853,9 @@
     },
     "tests/m8-b8-live-growth.test.ts": {
       "previousBytes": 18886,
-      "currentBytes": 19801,
+      "currentBytes": 20530,
       "previousSha256": "16a558bb9756b75f69e3b8dc0bc0dc663a05eb1c305d02ef0f8997b9a8e7b2a7",
-      "currentSha256": "73c326df189b32e8574b377a78b7f8108dc2f62450581be80e01a1aed7df1d87",
+      "currentSha256": "093c38d6834ab817f17294717024ee0e2bce927af8d7f2284b1b4231752ca614",
       "firstDifferentByte": 2863
     },
     "tests/m8-b8-live-reveal.test.ts": {
@@ -3353,14 +3353,6 @@
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
       "firstDifferentByte": 0
     },
-    "tests/server/zz-g7.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 3788,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1e50ef71d2fc371751d8aae0fe4fd0feedc0322d5399d46ef962de45a4d7c45b",
-      "firstDifferentByte": 0
-    },
     "tests/sevika-high-roller-triple.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4155,14 +4147,6 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
-      "firstDifferentByte": 0
-    },
-    "tests/zz-lg.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 2199,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ce234652ea013850dd831087b8e7388b8ea536d045af16c11f8047c1af1694e4",
       "firstDifferentByte": 0
     }
   }
