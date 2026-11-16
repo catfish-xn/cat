@@ -191,7 +191,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
       { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
     listener.frame({ ...board, fighting: false }); await debug().ltk.warm('leona'); await flush(); listener.frame(board); loads.mockClear();
     listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]); await advance();
-    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['8d9a4ccc']);
+    // Her burst (dda108d2) also plays at the cast now, as at the end (batch1-timelines.ts leona; fitted, not original data).
+    expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['8d9a4ccc', 'dda108d2']);
     listener.events([
       { type: 'statusChanged', eventSeq: 2, tick: 61, targetId: 'a', kind: 'damage-reduction', effectiveMagnitudeBps: 0, reason: 'expired' },
       { type: 'packetDamage', eventSeq: 3, tick: 61, sourceId: 'a', targetId: 'b', damageType: 'magic', hit: true, hpDamage: 10, absorbed: 0, critical: false, killingPacket: false },
