@@ -3988,17 +3988,17 @@
     "tests/vfx-ltk-root-pool.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5955,
+      "currentBytes": 7606,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "54daa1fdf9286692e323173c7f1b0db5c2881aa13a605c9b0789ee68220bb0c7",
+      "currentSha256": "57b78374e5ec2ec07f479ee137ef8f306390f20becfc246a46da4d2a5b0bc880",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-row-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 24550,
+      "currentBytes": 24420,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0866f81bded5220af6a28a1a15a41385897fef0d5202c4d773274f95c90a0f99",
+      "currentSha256": "2b4f6ae2433b87bc3b9c01d439f15b48e339d5be924c5f111f5dacb469f42530",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-sett-slam.test.ts": {

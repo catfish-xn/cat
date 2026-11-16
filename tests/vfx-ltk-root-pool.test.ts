@@ -14,7 +14,8 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { createLtkParticles, measurePeak, pointAnchor, rootRoomOf, ROOT_PARTICLES, ROOT_PARTICLES_MOST } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { createLtkParticles, MEASURE_FLIGHT, measurePeak, pointAnchor, rootRoomOf, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { nameHash } from '../src/rendering/three-mode/vfx-ltk/binHash';
 import { constant, num, struct, vec } from './vfx-ltk-synthetic';
 
@@ -66,11 +67,29 @@ describe('vfx-ltk root particle room', () => {
     expect(measurePeak(prepared, 0.5, undefined, ROOT_PARTICLES_MOST)).toBe(300);
   });
 
-  it('the runtime gives a skill cue the room its system measured, and a plain attack cue ROOT_PARTICLES', async () => {
+  // 11-16: a trail emits by the distance its system travels, so a measure standing still missed it (Renata's attack bolt
+  // measured 10 where a flight holds 378). A projectile cue's system is measured flown MEASURE_FLIGHT (four cells).
+  it('a projectile cue\'s system is measured in flight, where a trail emitting by distance fills it', async () => {
+    const trail = struct('VfxEmitterDefinitionData', { emitterName: { type: 'string', value: 'trail' }, rate: constant(num(1)),
+      rateByVelocityFunction: struct('ValueVector2', { constantValue: vec(1, 1), dynamics: { type: 'null' } }), particleLifetime: constant(num(1)),
+      birthScale0: constant(vec(4, 4, 4)), texture: { type: 'asset', path: 'synthetic.tex', asset: null } });
+    const prepared = await prepare(system(trail));
+    expect(MEASURE_FLIGHT).toBeCloseTo((4 * BOARD_CELL) / 0.44);
+    const still = measurePeak(prepared, 1, undefined, ROOT_PARTICLES_MOST), flown = measurePeak(prepared, 1, undefined, ROOT_PARTICLES_MOST, 0.3);
+    expect(still).toBe(1);
+    expect(flown).toBeGreaterThan(50);
+  });
+  it('a plain attack\'s room grows like a skill\'s, under ROOT_PARTICLES_ATTACK_MOST', () => {
+    expect(ROOT_PARTICLES_ATTACK_MOST).toBe(250);
+    expect(rootRoomOf(120, ROOT_PARTICLES_ATTACK_MOST)).toBe(150); expect(rootRoomOf(162, ROOT_PARTICLES_ATTACK_MOST)).toBe(203);
+    expect(rootRoomOf(661, ROOT_PARTICLES_ATTACK_MOST)).toBe(250); expect(rootRoomOf(661)).toBe(400);
+  });
+
+  it('the runtime gives a skill cue the room its system measured, and a plain attack cue its own under the attack cap', async () => {
     built.length = 0;
-    const cues: TimelineCue[] = [{ system: 'sample', event: 'cast-start', delay: 0, duration: 1 }, { system: 'sample', action: 'attack', event: 'cast-start', delay: 0, duration: 1 }];
+    const cues: TimelineCue[] = [{ system: 'sample', event: 'cast-start', delay: 0, duration: 1 }, { system: 'bolt', action: 'attack', event: 'cast-start', delay: 0, duration: 1 }];
     const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
-      ? { version: 1, systems: { sample: 'systems/sample.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { probe: cues } }
+      ? { version: 1, systems: { sample: 'systems/sample.json', bolt: 'systems/bolt.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { probe: cues } }
       : system(oneShot('debris', 300), oneShot('flash', 1)), readTexture: async () => new Texture() });
     const scene = new Scene(), units = new Map([['caster', { root: new Group(), body: null, alive: true }]]);
     const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
@@ -78,7 +97,7 @@ describe('vfx-ltk root particle room', () => {
     expect(runtime.play('probe', 'caster', ['caster'])).toBe(true);
     expect(runtime.play('probe', 'caster', ['caster'], 'attack')).toBe(true);
     runtime.update(1 / 30, new Camera());
-    expect(built.map(entry => entry.options.rootRoom)).toEqual([rootRoomOf(301), undefined]);
+    expect(built.map(entry => entry.options.rootRoom)).toEqual([rootRoomOf(301), rootRoomOf(301, ROOT_PARTICLES_ATTACK_MOST)]);
     runtime.dispose();
   });
 });
