@@ -84,6 +84,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
   'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
   'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
+  // Renni's grab (batch1-events.ts): Q_tar on the enemy her cast holds, when her stun lands. Event, bone and duration
+  // are our fit (not original data).
+  'renni-grab': [{ system: 'be12cd52', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: chest }],
+  // Renni's final slam (batch1-events.ts): the impact on the ground under the held enemy, and FinalSlam_Tar on each
+  // enemy the slam strikes, on the tick its damage lands. Bones and durations are our fit (not original data).
+  'renni-slam': [
+    { system: '2f79da6f', action: 'passive', event: 'hit', delay: 0, duration: 2, bone: ground, primary: true },
+    { system: '32bd44a4', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: chest },
+  ],
   // One Air Raid shot (batch1-events.ts caitlynShots): the comet falls onto the shot's damage centre and bursts there.
   'caitlyn-shot': [
     { system: '92bbeaf7', action: 'passive', event: 'projectile', targetBone: ground, delay: 0, duration: CAITLYN_COMET.fall + CAITLYN_COMET.linger,
@@ -333,7 +342,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Asset root only ships WeaponSmoke + BA hit; q_tar / slam systems lack JSON files.
+  // Q_tar and the final slam's Impact / Tar play from Renni's grab and slam events (batch1-events.ts, CUE_EXTRA_SKILLS
+  // renni-*): her cast names no targets.
   renni: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
