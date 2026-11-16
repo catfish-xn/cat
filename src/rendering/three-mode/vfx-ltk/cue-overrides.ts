@@ -375,15 +375,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'db0f8e0d', action: 'cast', event: 'cast-start', bone: ground, delay: SINGED_FLASK_LANDS, duration: 10 },
   ],
   // R: in 14.24 the gas cloud lasts its whole damage window, then detonates (11-06 field review: ours burst early, white and
-  // too wide). The burst and each target's splash wait for the cloud's end; the burst's scale is our fit, not original data.
+  // too wide). The burst and each target's splash wait for the cloud's end.
   nunu: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.48566665649414065, duration: 1.5 },
-    // The channel's pool marks where the blast lands, so it takes the blast's own scale (2a4dfaba playtest: pale green over
-    // most of the screen once the mesh pool stopped lending other systems' meshes). It keeps emitting until the blast
-    // starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
+    // The channel's pool keeps its fitted size (fitted, not original: 2a4dfaba playtest, pale green over most of the screen
+    // at full size; 11-16 review: at the default size its outer ring grew a ring too wide). It keeps emitting until the
+    // blast starts: stopping at 2.8 s left the board empty for 0.2 s before the blast (clean4 frames 58-61).
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
-    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
+    // The blast draws at the default skill size (11-16 review against footage: at the pool's fit it covered too little of
+    // the board). It no longer shares the pool's scale.
+    { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', main: true },
     // The hit splash on each enemy is not here: the cast receipt names no targets, so it plays from the blast's damage instead
     // (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts).
   ],

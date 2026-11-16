@@ -2337,9 +2337,9 @@
     "tests/rendering3d-champion-arena-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3930,
+      "currentBytes": 3999,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "00de815671c6cca1da90fceb40b16370dacc06bff3405d8a5da16a331dbefab7",
+      "currentSha256": "a10beb36d0cb1e0ddeebf14722f2cd9b0a26311f48e70ecdfc88936499f33300",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-champion-lighting.test.ts": {
@@ -3841,9 +3841,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 21723,
+      "currentBytes": 22075,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "837284cfdf0b7d1fb89eef23294bb517c67403abccc75ae16ecc6e9d39a08a4c",
+      "currentSha256": "c0b7c4b0c8c8cefa7065fce47afa35c7bee722dbfc8381be9b67dfae5c896411",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
