@@ -3870,6 +3870,14 @@
       "currentSha256": "aec5970c7916196a876be371ae30d392acf495edd2130ee40ccb94871446fa6a",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-ekko-hit.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1672,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "368d010a47e9a8851be6f469dda9e48e14f27ff936a6cffd866dbe23dc435a51",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-emission.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

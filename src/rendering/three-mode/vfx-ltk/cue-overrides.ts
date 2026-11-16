@@ -76,6 +76,12 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // Ekko: the mark, proc and impact on each enemy his skill's damage hits, when it lands (batch1-events.ts).
+  'ekko-hit': [
+    { system: '5af49b76', action: 'passive', event: 'hit', delay: 0, duration: 0.5 },
+    { system: '970252f2', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+    { system: 'dda9e01c', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+  ],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
@@ -294,13 +300,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
   // Ekko: R_Mark on him loops (no end of its own) and no rule event of his skill ends it, so it plays for a fitted time (not
-  // original data) instead of the export's estimated 0.5 s, which showed only a few of its slow-emitting particles.
+  // original data) instead of the export's estimated 0.5 s, which showed only a few of its slow-emitting particles. His hits on
+  // the enemies moved from estimated times after the cast to his skill's damage (CUE_EXTRA_SKILLS ekko-hit).
   ekko: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'Spine', delay: 0.26666666666666666, duration: 1.5 },
     { system: '006b32b1', action: 'cast', event: 'cast-start', delay: 0, duration: 1.5, bone: 'C_Buffbone_Glb_Center_Loc' },
-    { system: '5af49b76', action: 'cast', event: 'hit', delay: 0, duration: 0.5 },
-    { system: '970252f2', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
-    { system: 'dda9e01c', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
