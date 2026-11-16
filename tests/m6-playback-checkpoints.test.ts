@@ -52,7 +52,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     const archivedTerminal = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'settlement')!.combat;
     expect(expected.terminal).toEqual(archivedTerminal);
     // #690 (2026-11-16): 4 abilityEffectEnded display events (Vander's brace ends) join the ledger: 4493 -> 4497.
-    expect(record.endTick).toBe(602); expect(record.events).toHaveLength(4497);
+    // #693 (2026-11-16): Zyra's vines land CAST_WINDUP_TICKS after her cast, so the fight runs differently from her first cast
+    // on: 4497 -> 4499 events.
+    expect(record.endTick).toBe(602); expect(record.events).toHaveLength(4499);
     // Independent native stepping of the v26 input: pin all 603 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
     // v26 re-pin (edaa63dd sniper golden; v25 values: frames cf8c0c91…, record 64fb5f0a…,
@@ -63,7 +65,15 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // and openingDeaths[].eventSeq, the ledger's eventSeq), so frames/record/events/terminal move (was frames f829909b…,
     // record 5dbcbbf5…, events ce06c357…, terminal 004d6c06…). Taking those events out and renumbering every eventSeq and
     // nextEventSeq gives back the previous frames, events and terminal exactly (asserted below).
-    expect(bytesHash([...expected.hashes])).toBe('65d2768bfe2df7ad3aba4a1dbf1383fd9c83aa8aa3d897f0652d396f044fb1a8');
+    // #693 re-pin (2026-11-16, as #509): Zyra's wind-up changes the trajectory from her first cast (was frames 65d2768b…,
+    // record b8985888…, events a0dc4509…, terminal 22ed8d9b…; the #690 chain below was ce06c357…, f829909b…, 004d6c06…,
+    // cfbb7c9a…, 3386bb98…, 0f637a24…). Up to that cast nothing moved: the frames and ledger before it are byte-identical to
+    // #690's (hashes taken from #690's trajectory), and the first cast after them is Zyra's.
+    const zyraCast = record.events.find(e => e.type === 'cast' && e.receipt.source.definitionId === 'zyra-ability')!.tick;
+    expect(zyraCast).toBe(118);
+    expect(bytesHash([...expected.hashes].filter(([tick]) => tick < zyraCast))).toBe('bb37fca6724d2c39b7ef4d763fd6f07c4734e5dcf26800c4509ce791aaeb8ab3');
+    expect(bytesHash(record.events.filter(e => e.tick < zyraCast))).toBe('6fd1e5a6188e60ee3040c6da78caeb767521ad56d09763f08b27783236632176');
+    expect(bytesHash([...expected.hashes])).toBe('fe8c3d4db1a118d4ddd1a9e0113eae4e4501b4c30d30523c0a3e380e5fb8d4cc');
     const ended = record.events.filter(e => e.type === 'abilityEffectEnded');
     expect(ended).toHaveLength(4);
     const shift = (seq: number) => ended.filter(e => e.eventSeq! < seq).length;
@@ -71,11 +81,11 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
       ? Object.fromEntries(Object.entries(value).map(([key, x]) => [key, (key === 'eventSeq' || key === 'nextEventSeq') && typeof x === 'number' ? x - shift(x) : renumber(x)]))
       : value;
     const before690Events = record.events.filter(e => e.type !== 'abilityEffectEnded').map(renumber);
-    expect(bytesHash(before690Events)).toBe('ce06c3578ceaaa3ac74a1eedd257d9a7942c5218051d68051ff1e8f271647634');
+    expect(bytesHash(before690Events)).toBe('3c23e8e68260bc958d9fc9bf2a5908a714844fe97630c8da199a17efafc7cd93');
     let replayed = structuredClone(record.initial); const before690Frames: [number, string][] = [[0, bytesHash(renumber(replayed))]];
     while (replayed.tick < record.endTick) { replayed = stepCombat(replayed).state; before690Frames.push([replayed.tick, bytesHash(renumber(replayed))]); }
-    expect(bytesHash(before690Frames)).toBe('f829909b825f48471b9ffa771c2a52725c50315619f92143d38d7605b7943821');
-    expect(bytesHash(renumber(expected.terminal))).toBe('004d6c06b1d5f8491412f5a2ee55a64a4c9d2f2ba5d5da31faa003527d72ff23');
+    expect(bytesHash(before690Frames)).toBe('11bcd0fff3a92adaf7419a766421656b4a930baea21c72e67fe59743ac485520');
+    expect(bytesHash(renumber(expected.terminal))).toBe('5c334b61948520d88f5a7ff85755049b16bfd05a283e6b331aa9013b7e997f4b');
     // The record with #690 undone (its own ledger and nextEventSeq only; record.context belongs to earlier combats).
     const before690 = { ...record, events: before690Events, nextEventSeq: record.nextEventSeq - ended.length,
       eventHash: digestContent(before690Events), stateHash: digestContent(renumber(expected.terminal)) };
@@ -95,13 +105,13 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     const before628 = JSON.parse(JSON.stringify(before690, castFields));
     before628.version = { ...before628.version, replayFormatVersion: 8 }; before628.eventHash = digestContent(before628.events);
     const newer = JSON.stringify(before628).split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
-    expect(bytesHash(JSON.parse(newer))).toBe('cfbb7c9aedd24f266de5195ced67a49d64a3c76bd6feb282cd50f38e932104cc');
+    expect(bytesHash(JSON.parse(newer))).toBe('107d51c6aaf514e8cbf19c1f35117cdd9f1fa72167ccb98c922b582f74e20f7e');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
-    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('3386bb98675bd054a17cf38a9fdac5271ebe07a66e765acae353ed3fa3e3fab9');
-    expect(bytesHash(JSON.parse(back))).toBe('0f637a2408a6018be99e96db4212aaa71cdf8d8eeb4a4dcd8789c6eda2b23793');
-    expect(bytesHash(record)).toBe('b8985888dedc7b3e9f71c52215dbd947d2284323afba02423bf1b108b5e7ac9f');
-    expect(bytesHash(record.events)).toBe('a0dc4509ee82242123fcc76f3d583330c9a1f2b8ef9998951e45941312efcb77');
-    expect(bytesHash(expected.terminal)).toBe('22ed8d9b3f484fded34a243ade2dd5927071cd8de486bb9e4c734c9f1a9d15dd');
+    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('9332c2b392f6a29803d789bcb5ecd6b18a6298b62a9903105c5fa830acb37fcd');
+    expect(bytesHash(JSON.parse(back))).toBe('4a40a89b11154af4b5d2a11148571cbceba56c0ab6fd73bb3dd92122ae3c062f');
+    expect(bytesHash(record)).toBe('5fcc287ac8cefa517c86a923bbd258c8c1bcb99d792ed55ea4285a96fcb0da42');
+    expect(bytesHash(record.events)).toBe('2eba6280ecc0884aa488737b1c16b265748fcc8ac672cb160bd849c1110ec30a');
+    expect(bytesHash(expected.terminal)).toBe('de60ac0e56dbdcfea10ea0b929f6fd21dae611d96dec75d88d2e81021f886fae');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);
