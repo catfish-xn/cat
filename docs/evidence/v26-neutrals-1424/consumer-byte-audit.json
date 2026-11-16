@@ -3948,6 +3948,14 @@
       "currentSha256": "e5656f3b542c7742de3c314fc575c5c06356a1d0b54f09ae84f7e8109862801e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-malzahar-gate.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1285,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e9dc114776f13fafcffe745408ddb865309fdc29d50f4da858b1047970003532",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-mesh-pool-matrix.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
