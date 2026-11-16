@@ -283,6 +283,8 @@ const NEVER_EXPIRES = -1;
 /** The emitter spawns nothing more at system time `now`, its end having passed. */
 export function emissionEnded(emitter: EmitterModel, now: number): boolean {
   const end = emissionEnd(emitter);
+  /* REC ONLY (11-16 experiment, do not merge): an emitter whose delay reaches its end counts its lifetime from the delay. */
+  if (end !== null && emitter.timeBeforeFirstEmission >= end) return now >= emitter.timeBeforeFirstEmission + end;
   return end !== null && now >= end;
 }
 
