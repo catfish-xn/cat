@@ -125,6 +125,9 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Powder: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather than falling
+        // back to the old placeholder cast effect.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'powder') plan.noCastEffect = true;
         // Powder: her blast plays once per tick, on every enemy its damage hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'powder'
           && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick

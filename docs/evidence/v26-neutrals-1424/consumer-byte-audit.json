@@ -3958,9 +3958,9 @@
     "tests/vfx-ltk-powder-blast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1848,
+      "currentBytes": 2267,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a1a01c95333d63d047cbc63140dece11086a0b122e4ed73bc7138d2c8fb5a2f9",
+      "currentSha256": "f5bcc768616a9f1a70fa449d9b4f0efc4c076cd689aa17bf376b36f2af385cfb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-projectile-beam.test.ts": {

@@ -15,6 +15,11 @@ describe('Powder\'s blast follows its damage', () => {
       damage(3, 6, 'f1', 'attack', 'basic-attack'), damage(4, 25, 'f1', 'ability', 'ability-periodic')]);
     expect(plans.map(p => p.extra.filter(x => x.skill === 'powder-blast').map(x => x.targets))).toEqual([[['f1', 'f2']], [], [], []]);
   });
+  it('her cast plays nothing (no fallback to the old placeholder cast effect)', () => {
+    const cast = { type: 'cast', sourceId: 'pw', eventSeq: 1, tick: 1, actionSeq: 1, completed: true, actualManaSpent: 60, refundedMana: 0,
+      targetIds: ['f1'], completionCell: { col: 0, row: 0 } } as DisplayCombatEvent;
+    expect(createBatch1VfxEvents(id => definitions[id]).batch([cast])[0]!.noCastEffect).toBe(true);
+  });
   it('both cues at the damage with no delay; her cast list no longer plays them', () => {
     expect(CUE_EXTRA_SKILLS['powder-blast']!.map(c => [c.system, c.event, c.delay])).toEqual([['8747b362', 'hit', 0], ['805215e2', 'hit', 0]]);
     expect(CUE_OVERRIDES.powder!.some(c => (c.action ?? 'cast') === 'cast')).toBe(false);
