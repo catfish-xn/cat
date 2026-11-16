@@ -133,11 +133,15 @@ export function installProbes(clock: () => number) {
       // Instanced draws place each particle on the GPU, so the shared vertices alone sit at the origin: a mesh emitter
       // (InstancedMesh, or a geometry carrying `instanceMatrix`) by each instance's matrix over the geometry's bounds, a quad
       // emitter (InstancedBufferGeometry with a per-instance `center`, the shader's modelMatrix × center) by its centres
-      // widened by each one's largest `size`. `centers` lists the first few instance centres in world units.
+      // widened by each one's largest `size` (an upper bound: a quad's half-extent may be smaller than its largest size
+      // channel, and its turn is not applied). `centers` lists the first few instance centres in world units.
       const instancedBoxOf = (o: any) => {
         const g = o.geometry; const at = g?.attributes ?? {};
         const matrices = o.isInstancedMesh ? o.instanceMatrix : at.instanceMatrix;
-        const n = o.isInstancedMesh ? o.count : (g?.isInstancedBufferGeometry ? g.instanceCount : (matrices ? o.count ?? g?.instanceCount : 0));
+        // three's InstancedBufferGeometry.instanceCount defaults to Infinity: clamp to the instances the attribute holds.
+        const held = matrices ? matrices.count : at.center ? at.center.count : 0;
+        const wanted = o.isInstancedMesh ? o.count : (g?.isInstancedBufferGeometry ? g.instanceCount : (matrices ? o.count ?? g?.instanceCount : 0));
+        const n = Math.min(Number.isFinite(wanted) ? wanted : held, held);
         if (!(n > 0) || (!matrices && !at.center)) return undefined;
         o.updateWorldMatrix(true, false); const e: number[] = o.matrixWorld.elements;
         const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], centers: number[][] = [];
