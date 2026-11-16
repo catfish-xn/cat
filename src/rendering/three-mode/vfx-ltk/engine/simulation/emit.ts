@@ -43,6 +43,21 @@ const SPAWN_AT = new Float32Array(3);
 const BASE = new Float32Array(3);
 
 /**
+ * Seconds a first emission may fall past the stop and still count as due by it: float rounding of an authored time, not a
+ * look value (11-16: an authored delay equal to a cue's stop reads a hair past it as a float, and the layer never spawned).
+ */
+export const FIRST_EMISSION_SLACK = 1e-4;
+
+/**
+ * An emitter whose first emission falls no later than the rig's stop is owed it, on the first step to reach it, though
+ * that step lies past the stop: the stop ends emission after it, never before an emission it was due by (ours, 11-16:
+ * eight emitters whose delay equals their cue's stop never spawned). Every later step obeys the stop as before.
+ */
+function owesFirstEmission(emitter: EmitterModel, state: EmitterState, step: SystemStep): boolean {
+  return !state.opened && step.stopAge != null && emitter.timeBeforeFirstEmission <= step.stopAge + FIRST_EMISSION_SLACK;
+}
+
+/**
  * The particles one emitter owes this step, born with their birth values.
  *
  * Every time is the system's own, counted from its start: the emitter spawns once that
@@ -76,8 +91,9 @@ export function emit(
   if (emitter.singleParticle && state.emitted) return;
 
   const now = state.age;
-  if (step.stopped && now > stopWaitSeconds(emitter)) return;
+  if (step.stopped && now > stopWaitSeconds(emitter) && !owesFirstEmission(emitter, state, step)) return;
   if (now < emitter.timeBeforeFirstEmission || emissionEnded(emitter, now)) return;
+  state.opened = true;
   if (!periodActive(emitter.period, now)) return;
 
   const phase = emitterPhase(emitter, now);

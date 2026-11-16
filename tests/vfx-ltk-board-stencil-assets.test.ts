@@ -27,18 +27,28 @@ function stencilsOf(doc: unknown): { emitter: string; mode: number; ref: number;
 }
 describe.skipIf(!existsSync(ROOT))('no shipped emitter names the board stencil value', () => {
   it(`no emitter's stencilRef is ${BOARD_FALLBACK_REFERENCE} (low six bits)`, () => {
-    const hits: string[] = []; let scanned = 0;
+    const hits: string[] = []; let scanned = 0, packs = 0;
+    // A champion's pack sits either one level down (batch2/tft13_x, set13/tft13_x) or at the root itself (the first batch,
+    // tft13_lux and eleven more, 11-16: the walk read only the first layout and left those twelve unchecked).
+    const packDirs: string[] = [];
     for (const group of readdirSync(ROOT)) {
       const dir = join(ROOT, group); if (!statSync(dir).isDirectory()) continue;
-      for (const hero of readdirSync(dir)) {
-        const systems = join(dir, hero, 'systems'); if (!existsSync(systems)) continue;
-        for (const file of readdirSync(systems)) {
-          const doc = JSON.parse(readFileSync(join(systems, file), 'utf8')); scanned++;
-          for (const s of stencilsOf(doc.root ?? doc)) if (s.id === null && (s.ref & 0x3f) === BOARD_FALLBACK_REFERENCE) hits.push(`${hero}/${file}:${s.emitter}`);
-        }
+      if (existsSync(join(dir, 'systems'))) { packDirs.push(dir); continue; }
+      for (const hero of readdirSync(dir)) if (existsSync(join(dir, hero, 'systems'))) packDirs.push(join(dir, hero));
+    }
+    for (const pack of packDirs) {
+      packs++;
+      const systems = join(pack, 'systems');
+      for (const file of readdirSync(systems)) {
+        const doc = JSON.parse(readFileSync(join(systems, file), 'utf8')); scanned++;
+        for (const s of stencilsOf(doc.root ?? doc)) if (s.id === null && (s.ref & 0x3f) === BOARD_FALLBACK_REFERENCE) hits.push(`${pack.slice(ROOT.length + 1)}/${file}:${s.emitter}`);
       }
     }
     expect(scanned).toBeGreaterThan(0);
+    // Both layouts are walked: every pack the asset index names is among them.
+    const named = Object.values(JSON.parse(readFileSync(join(ROOT, 'index.json'), 'utf8')).champions as Record<string, string>).map(path => join(ROOT, path.replace(/\/index\.json$/, '')));
+    expect(named.filter(path => !packDirs.includes(path))).toEqual([]);
+    expect(packs).toBeGreaterThanOrEqual(new Set(named).size);
     expect(hits).toEqual([]);
   });
 });

@@ -26,7 +26,7 @@
 //   [--pin-foe2 M]: with --pin-foe N (M > N, at most 5): a second still dummy on the line from the caster through the first, about M hexes out
 // Records one cast as 1920x1080 jpg frames on a virtual clock (dev/castcmp/harness.ts). Serve the repo with vite on --port and the asset root on --assetPort (assets.cjs).
 const { chromium } = require('playwright');
-const { launchOptions, timeline, timer, formProblem, renderMeta } = require('./common.cjs');
+const { launchOptions, timeline, timer, formProblem, renderMeta, waitQuiet } = require('./common.cjs');
 const gate = require('./gate.cjs');
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2); const unit = args[0], out = path.resolve(args[1]);
@@ -106,6 +106,8 @@ async function unbind(page, tick, rebind) {
     mark('warm measured ' + waited);
   }
   if (opt('real') || opt('fresh')) { await page.evaluate(() => window.__h.fresh()); await page.waitForTimeout(200); }
+  // The reference frame (and the clock reset below) waits for the warm-up and the asset loads to settle (common.cjs waitQuiet).
+  const quiet = await waitQuiet(page, { skipWarming: cold }); mark(`quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms (${quiet.loads} loads, warming ${quiet.pending})`);
   // Every unit's animation clock to 0 (harness.ts __resetClocks): an idle dummy's pose no longer depends on its load timing.
   const clocks = await page.evaluate(() => window.__resetClocks?.() ?? null); mark(`clocks reset (${clocks} mixers)`);
   mark('warm done'); const boxes = await page.evaluate(() => ['me', 'foe', 'foe2', 'foe3', 'foe4'].map(id => window.__h.box(id)).filter(Boolean));
@@ -114,7 +116,7 @@ async function unbind(page, tick, rebind) {
   const clip = { x: Math.max(0, cx - half), y: Math.max(0, cy - half * 3 / 4), width: Math.min(960, half * 2), height: Math.min(720, half * 1.5) };
   const fullClip = { x: 0, y: 0, width: 1920, height: 1080 }; fs.writeFileSync(path.join(out, 'boxes.json'), JSON.stringify({ boxes, ids: ['me', 'foe', 'foe2', 'foe3', 'foe4'] }));
   // Render state and reference frame (units standing, before the recorded cast): render-meta.json, ref-units.png.
-  const render = await renderMeta(page, out, boxes); mark(`render ${render.renderer} samples ${render.samples} dpr ${render.dpr} ref ${render.refSha}`);
+  const render = await renderMeta(page, out, boxes, quiet); mark(`render ${render.renderer} samples ${render.samples} dpr ${render.dpr} ref ${render.refSha}`);
   // The overlay counts below cover the recorded window only: peaks and counters the warm pass left are cleared here.
   await page.evaluate(async () => {
     const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
