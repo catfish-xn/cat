@@ -2,7 +2,7 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { CRIT_ATTACK_HIT } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CRIT_ATTACK_HIT, CRIT_SKILL_HIT } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { createLtkRuntime, CRIT_FLASH_MAX, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
@@ -13,7 +13,7 @@ const attack: TimelineCue[] = [
   { system: 'shot', action: 'attack', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3 },
   { system: HIT, action: 'attack', event: 'hit', delay: 0.5, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
 ];
-const skills: Record<string, TimelineCue[]> = { gunner: attack, zeri: attack };
+const skills: Record<string, TimelineCue[]> = { gunner: attack, zeri: attack, mage: [{ system: 'shot', action: 'cast', event: 'hit', delay: 0, duration: 0.5 }] };
 
 async function setup() {
   const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
@@ -60,4 +60,19 @@ describe('vfx-ltk crit flash', () => {
     expect(started(CRIT)).toBe(CRIT_FLASH_MAX + 1);
     runtime.dispose();
   });
+
+  it('a skill crit flashes the crit system on its target beside the skill, every champion gets the branch, CRIT_FLASH_MAX shared', async () => {
+    const { runtime, step, started } = await setup();
+    expect(runtime.play('mage', 'm', ['t'], 'cast')).toBe(true);
+    expect(runtime.play('mage', 'm', ['t'], 'passive', { skill: CRIT_SKILL_HIT.skill('mage'), critFlash: true })).toBe(true);
+    step(0.1);
+    expect(started('shot')).toBe(1); expect(started(CRIT)).toBe(1);
+    // Attack crits and skill crits count against the one CRIT_FLASH_MAX: once it is out, a skill crit flashes nothing.
+    for (let i = 1; i < CRIT_FLASH_MAX; i++) expect(runtime.play('gunner', `a${i}`, [`t${i}`], 'attack', { crit: true })).toBe(true);
+    step(0.6);
+    expect(started(CRIT)).toBe(CRIT_FLASH_MAX);
+    expect(runtime.play('gunner', 'm2', ['t'], 'passive', { skill: CRIT_SKILL_HIT.skill('gunner'), critFlash: true })).toBe(false);
+    runtime.dispose();
+  });
 });
+

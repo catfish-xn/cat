@@ -66,7 +66,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
@@ -1447,6 +1447,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
     const crits = new Set<string>();
     for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
+    // A skill's direct damage that crits flashes the crit system on its target (CRIT_SKILL_HIT). Only CRIT_FLASH_MAX are out at
+    // once, so the batch's crits go hardest first (then by target id), never by chance: a recording replays the same flashes.
+    if (!reducedMotion()) {
+      const skillCrits = events.flatMap(event => event.type === 'packetDamage' && event.critical && event.delivery === 'ability-direct' && event.hit
+        && event.hpDamage + event.absorbed > 0 && (tickOf(event) ?? latest) > latest - EFFECT_TICKS ? [event] : [])
+        .sort((a, b) => (b.hpDamage + b.absorbed) - (a.hpDamage + a.absorbed) || (a.targetId < b.targetId ? -1 : a.targetId > b.targetId ? 1 : 0));
+      for (const event of skillCrits) {
+        const owner = pieces.get(event.sourceId), struck = pieces.get(event.targetId);
+        if (owner && struck?.alive) ltk?.play(owner.definitionId, event.sourceId, [event.targetId], 'passive', { skill: CRIT_SKILL_HIT.skill(owner.definitionId), critFlash: true });
+      }
+    }
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
