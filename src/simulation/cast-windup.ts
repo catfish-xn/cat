@@ -5,3 +5,9 @@
  * See docs/S13_RULES_GAP.md (技能生效前摇对齐).
  */
 export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6 } as const);
+
+/**
+ * Wind-up batch 2 (user-approved 2026-11-15 authorization, timing only; fitted, not original data): Smeech's stabs land one
+ * after another, SMEECH_STAB_TICKS apart, instead of all on the cast tick. Each stab's amount is still taken on the cast.
+ */
+export const SMEECH_STAB_TICKS = 7;

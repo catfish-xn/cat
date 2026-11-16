@@ -9,7 +9,7 @@ function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'e
 const raw=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.raw);
 it.each([
  ['renata',[310]],['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
- ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190,190,190]],['jayce',[500]],['jayce-ranged',[625,400,400]],
+ ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190]],['jayce',[500]],['jayce-ranged',[625,400,400]],
 ] as const)('%s source-backed first-cast coefficients',(name,expected)=>{
  const initial=freeze(battle([hero(name),dummy()],{rngState:42})),saved=JSON.stringify(initial);
  expect(raw(stepCombat(initial).events)).toEqual(expected);expect(JSON.stringify(initial)).toBe(saved);
@@ -54,21 +54,32 @@ it('Rumble3 self-destruct deals20000% resists before last-unit elimination',()=>
  const r=stepCombat(battle([player,enemy],{rngState:42}));
  const explosion=packets(r.events).find(p=>p.source.definitionId==='junker-king');expect(explosion?.raw).toBe(20000);expect(r.state.result).toBe('draw');
 });
+// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart; the re-leap check comes one tick after the last.
+it('Smeech stabs three times, SMEECH_STAB_TICKS apart, each 190 taken on the cast',()=>{
+ let state=battle([hero('smeech'),dummy()],{rngState:42});const at:[number,number][]=[];
+ for(let i=0;i<=2*SMEECH_STAB_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;
+  for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability'))at.push([i,p.raw]);}
+ expect(at).toEqual([[0,190],[SMEECH_STAB_TICKS,190],[2*SMEECH_STAB_TICKS,190]]);
+});
 it('Smeech leaps again only after a kill, with the next three slashes reduced by source30%',()=>{
  let state=battle([hero('smeech'),dummy('e',{hp:1,maxHp:1}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});
  const first=stepCombat(state);state=first.state;
  expect(state.units.find(u=>u.id==='e')!.alive).toBe(false);
  expect(state.units.find(u=>u.id==='p')!.tasks?.some(t=>t.kind==='g23Smeech')).toBe(true);
- const second=stepCombat(state);
- expect(packets(second.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>p.raw)).toEqual([133,133,133]);
- expect(second.events.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
+ const later:CombatEvent[]=[];
+ for(let i=0;i<4*SMEECH_STAB_TICKS+1;i++){const step=stepCombat(state);state=step.state;later.push(...step.events);}
+ const hits=packets(later).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability');
+ // The dead target takes its two later stabs as nothing; the re-leap's three stabs are 133 each, the first on the leap.
+ expect(hits.map(p=>[p.unitId,p.raw])).toEqual([['far',133],['far',133],['far',133]]);
+ expect(new Set(hits.map(p=>p.tick)).size).toBe(3);
+ expect(later.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
 });
 
 import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

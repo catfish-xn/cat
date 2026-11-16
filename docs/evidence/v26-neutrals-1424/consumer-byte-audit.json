@@ -1268,10 +1268,10 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 7087,
+      "currentBytes": 8037,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "ad3145acc3b3b8f2db3f2627da1be2ed4520a97e7f23dd703cf8b13c769d4cfb",
-      "firstDifferentByte": 1990
+      "currentSha256": "f3b9f5240be7e3da749b47d84e8cdfcc5608138bf256ce2b74b32e0d54a8bf38",
+      "firstDifferentByte": 1370
     },
     "tests/g2-4a-crown-gold.test.ts": {
       "previousBytes": 13490,
