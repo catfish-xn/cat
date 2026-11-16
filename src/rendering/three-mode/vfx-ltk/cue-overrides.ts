@@ -299,13 +299,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
-  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
-  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   // Maddie: her volley's shots and hits moved from one estimated time after her cast to each shot's damage (maddie-shot).
   maddie: [
     { system: 'ec4a03aa', action: 'attack', event: 'projectile', bone: 'C_Barrel_Root', delay: 0.23333333333333334, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5333333333333333, duration: 1.5 },
   ],
+  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
+  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
