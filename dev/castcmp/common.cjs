@@ -43,7 +43,28 @@ function formProblem(form) {
 // fingerprint of its pixels: two recordings may be pixel-compared only when their reference frames match on the unit area.
 // What is recorded: the WebGL renderer/vendor strings, context attributes, MSAA samples, drawing-buffer and canvas sizes,
 // devicePixelRatio, and the order the asset server's files finished loading (a proxy for texture upload order).
-async function renderMeta(page, out, boxes) {
+// Before the reference frame: every champion's effect warm-up done (runtime.ts LTK_WARMING.pending 0) and the page's
+// resource list unchanged for QUIET_MS of real time (Fable 11-16: a reference frame taken while textures were still
+// loading one by one gave two recordings different load lists, so ref-pair flagged a difference that was only timing).
+// Gives up after maxMs and says so; render-meta.json keeps what it saw (quiet.ok false = taken mid-load).
+const QUIET_MS = 1500;
+// skipWarming (v-capture --cold 1): a cold recording must not wait for the warm-up, only for the loads in flight.
+async function waitQuiet(page, { maxMs = 30000, skipWarming = false } = {}) {
+  const began = Date.now(); let last = -1, since = Date.now(), pending = null;
+  while (Date.now() - began < maxMs) {
+    const now = await page.evaluate(async () => {
+      const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+      return { loads: performance.getEntriesByType('resource').length, pending: runtime?.LTK_WARMING?.pending ?? null };
+    });
+    pending = skipWarming ? null : now.pending;
+    if (now.loads !== last) { last = now.loads; since = Date.now(); }
+    if ((pending === null || pending === 0) && Date.now() - since >= QUIET_MS) return { ok: true, waitedMs: Date.now() - began, loads: last, pending };
+    await page.waitForTimeout(250);
+  }
+  return { ok: false, waitedMs: Date.now() - began, loads: last, pending };
+}
+
+async function renderMeta(page, out, boxes, quiet = null) {
   const crypto = require('crypto'), path = require('path');
   const gl = await page.evaluate(() => {
     const canvases = [...document.querySelectorAll('canvas')].map(c => {
@@ -77,10 +98,10 @@ async function renderMeta(page, out, boxes) {
   }
   const loadOrder = crypto.createHash('sha256').update(gl.loads.join('\n')).digest('hex').slice(0, 16);
   const main = gl.canvases.slice().sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? null;
-  const meta = { at: new Date().toISOString(), dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, anim: gl.anim, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads } };
+  const meta = { at: new Date().toISOString(), quiet, dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, anim: gl.anim, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads } };
   fs.writeFileSync(path.join(out, 'render-meta.json'), JSON.stringify(meta, null, 1));
   return { renderer: main?.renderer ?? null, samples: main?.samples ?? null, antialias: main?.attributes?.antialias ?? null, dpr: gl.dpr,
-    size: main ? [main.width, main.height] : null, refSha: ref?.sha256?.slice(0, 16) ?? null, loads: gl.loads.length, loadOrder };
+    size: main ? [main.width, main.height] : null, refSha: ref?.sha256?.slice(0, 16) ?? null, loads: gl.loads.length, loadOrder, quiet: quiet?.ok ?? null };
 }
 
-module.exports = { launchOptions, timeline, timer, FORMS, formProblem, renderMeta };
+module.exports = { launchOptions, timeline, timer, FORMS, formProblem, renderMeta, waitQuiet };
