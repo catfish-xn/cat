@@ -440,6 +440,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
+  // Leona: the asset index bakes an older list, the same systems with her end burst cut short and no burst at the cast;
+  // batch1-timelines.ts holds the reviewed one, used whole.
+  leona: BATCH1_TIMELINES.leona,
   // The batch-1 list, with the shield bubble at the size that wraps her shoulders (1.3 cells at the 0.44 base; 0.83 at the
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).

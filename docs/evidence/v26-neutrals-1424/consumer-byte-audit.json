@@ -2351,9 +2351,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 49912,
+      "currentBytes": 50354,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "298be73d47390c76ece10b5a83686e763727b53e4b03f3549b7f11b3d3ae31af",
+      "currentSha256": "3aa9277d214251bf8e5136e7fcc759788b8c465ef22eb19868366b0213c73946",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -3975,6 +3975,14 @@
       "currentBytes": 4860,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "47c7754a7f47b32d6ed11e037f45499c5e94a03f20fa22afc36818c18da60c39",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-leona-burst.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1325,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0053fe739dcbe1b0765927e9fb736db7045300b090de5af89f7d7973d2d13e6e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-long-background.test.ts": {
