@@ -116,7 +116,7 @@ export type ColorLookup = (typeof COLOR_LOOKUP)[keyof typeof COLOR_LOOKUP];
  * The 16.17 reading put the low-spec stand-in at 4. The 14.24 bins authored here use 4 for
  * the high-end extras instead (Viktor's `MAP_DISC_HIGH_WRITE`, the `Avatar_*` overlays,
  * Vex's `DarkBG`), none of which has a cheaper twin, and the original footage shows them
- * (Viktor's board-wide disc, TYNlhRomM1w 146.4 s), so 4 and 5 trade places.
+ * (Viktor's board-wide disc), so 4 and 5 trade places.
  */
 export const IMPORTANCE = {
   low: 0,

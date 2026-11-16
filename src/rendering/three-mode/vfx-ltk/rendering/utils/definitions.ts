@@ -79,7 +79,7 @@ const PASS_LOG = Math.log1p(PASS_MAX);
 
 /**
  * `pass` mapped strictly increasing into (-90, 90): sign · log, so every distinct pass keeps its
- * own place (11-09 survey: 5584 emitters, passes from -9999 to 32767, 870 at 100 or more) while
+ * own place (11-09 survey of the authored passes: they span far into both signs, many past 100) while
  * none reaches another object's order. Small passes, the bulk, keep the widest spacing.
  */
 export function passOrder(pass: number): number {
@@ -93,9 +93,9 @@ export function passOrder(pass: number): number {
  * The engine sorts every live emitter by `pass` first, across systems, so the order is the
  * pass with the tree's own rank as a fraction of the gap to the next pass: two systems drawn
  * together interleave by pass, and one tree keeps the comparator's order within a pass.
- * Sevika's slot icons (pass 33/34, their own system) draw over the machine's reel backs
- * (pass 30) and under its white lock-in flashes (45) and border (50); a bare rank drew the 33
- * backs and boards of the machine over the icons' 10 emitters (11-09 #579 recording: every reel empty).
+ * Sevika's slot icons (their own system) carry passes above the machine's reel backs and below
+ * its white lock-in flashes and border; a bare rank drew the
+ * backs and boards of the machine over the icons' emitters (11-09 #579 recording: every reel empty).
  */
 function orderOf(emitter: EmitterModel, rank: number): number {
   const at = passOrder(emitter.pass), gap = passOrder(emitter.pass + 1) - at;

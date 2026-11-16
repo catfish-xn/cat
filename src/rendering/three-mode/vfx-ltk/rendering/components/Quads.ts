@@ -44,6 +44,7 @@ import { quadMaterial, quadOrientation } from "../utils/materials";
 import { sourcesScrollInto } from "../utils/palette";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { layerOf, uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay, clipsUnderPlay } from '../utils/playSurface';
 
 /** Scratch the appearance pass writes into, reused across every particle of a frame. */
 const DRAWN = { scale: new Float32Array(3), color: new Float32Array(4) };
@@ -114,15 +115,19 @@ export function createQuads({
   const buffers = memo(() => borrowQuadBuffers(room), [room]);
   const orientation = memo(() => quadOrientation(emitter), [emitter]);
   const material = memo(
-    () =>
-      quadMaterial(
+    () => {
+      const material = quadMaterial(
         emitter.blendMode,
         samplers.base,
         { bias: emitter.depthBias, pushPull: emitter.depthPushPull },
         orientation,
         layersOf(emitter, samplers, DRAWS),
         fragmentTests(emitter),
-      ),
+      );
+      // 11-15: only a camera-facing quad is drawn whole below the board; any other quad is clipped there unless its depth
+      // test is off (playSurface.ts).
+      return orientation.billboard || !clipsUnderPlay(emitter) ? material : clipUnderPlay(material);
+    },
     [emitter, samplers, orientation],
   );
 

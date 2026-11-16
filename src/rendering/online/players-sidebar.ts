@@ -16,7 +16,7 @@ type Pairing = 'opponent' | 'candidate' | null;
 /** How long a seat's HP drop stays marked (lost segment and -N chip). */
 const HIT_MS = 2600;
 const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', carousel: '选秀', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
-/** 14.24 tftstage right block: one 14px phase icon before the timer (planning clock, combat swords, draft, overtime). */
+/** 14.24 tftstage right block: one small phase icon before the timer (planning clock, combat swords, draft, overtime). */
 const PHASE_ICON: Record<keyof typeof PHASE_TEXT, string> = {
   lobby: 'M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11zM8 5v3.2l2.2 1.4', preparation: 'M8 2.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11zM8 5v3.2l2.2 1.4',
   choice: 'M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z', carousel: 'M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3',
@@ -35,7 +35,7 @@ export class PlayersSidebar {
   private countdownRound: HTMLElement | null = null;
   /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
   private stageTrack: StageTrack | null = null;
-  /** 14.24 tftstage left block's 25×25 slot, left of the stage number: the opening encounter's entry (OpeningEncounterHud mounts its chip here). */
+  /** 14.24 tftstage left block's square slot, left of the stage number: the opening encounter's entry (OpeningEncounterHud mounts its chip here). */
   readonly encounterSlot: HTMLElement | null = null;
   private phaseIcon: HTMLElement | null = null;
   /** My results by round ordinal, from my private seat view (set separately: the view does not carry them). */

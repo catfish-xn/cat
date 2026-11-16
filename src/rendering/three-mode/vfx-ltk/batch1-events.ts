@@ -26,6 +26,8 @@ export interface Batch1EventPlan {
   skipCast?: boolean; stopCast?: string;
   /** Fade this unit's cast cues out over SOFT_STOP_SECONDS (Singed's W when his damage reduction ends, or before his next cast). */
   fadeCast?: string; extra: Batch1Visual[];
+  /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
+  noCastEffect?: boolean;
 }
 interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
@@ -58,6 +60,19 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
 }
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
+
+/** Vladimir's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
+const VLADIMIR_ABILITY = 'vladimir-ability';
+/** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
+const STEB_ABILITY = 'steb-ability';
+/**
+ * Whether a shield layer key (combat-replay-view.ts 'shieldLayerChanged': the layer's source key, a JSON array
+ * [combat, owner, kind, definition, ...]) is Irelia's own ability shield on `holder`.
+ */
+export function isIreliaShield(key: unknown, holder: string): boolean {
+  if (typeof key !== 'string') return false;
+  try { const k = JSON.parse(key); return Array.isArray(k) && k[1] === holder && k[2] === 'ability' && k[3] === 'irelia-ability'; } catch { return false; }
+}
 
 export function createBatch1VfxEvents(definition: (id: string) => string | undefined, star: (id: string) => number | undefined = () => undefined) {
   const units = new Map<string, SeenUnit>();
@@ -113,6 +128,52 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
+        // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
+        // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
+        // vamp heals draw nothing here.
+        if (event.type === 'heal' && definition(event.targetId) === 'vladimir'
+          && event.shares.some(s => s.sourceId === event.targetId && s.sourceKind === 'ability' && s.definitionId === VLADIMIR_ABILITY && s.actual > 0))
+          plan.extra.push({ champion: 'vladimir', sourceId: event.targetId, targets: [event.targetId], action: 'passive', skill: 'vladimir-heal' });
+        // Steb: his heal visuals come from his own heal events, not from his cast's target (an enemy). Only a share his ability
+        // sends counts (sourceKind ability, definitionId steb-ability, actual > 0): one to someone else is his passive share
+        // and flies his heal missile to that ally, one to himself is his ability's heal and rings on him. Item or vamp heals
+        // (sourceKind item) and every other unit's heals draw nothing here. Telling his share from his own heal by whether
+        // the target is himself is all today's heal events allow: both carry the same share fields (tests/vfx-ltk-steb-heal.test.ts
+        // asserts them). Should the rules give the share its own definitionId, change this and that test with it.
+        if (event.type === 'heal') {
+          const share = event.shares.find(s => s.sourceId !== undefined && s.sourceKind === 'ability' && s.definitionId === STEB_ABILITY
+            && definition(s.sourceId) === 'steb' && s.actual > 0);
+          if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
+            skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
+        }
+        // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
+          && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
+            && isAbilityDirect(e) && e.eventSeq < event.eventSeq)) {
+          const targets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
+          plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets, action: 'passive', skill: 'blitzcrank-shock' });
+        }
+        // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
+        // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'camille'
+          && (event.damageType === 'physical' || event.damageType === 'magic'))
+          plan.extra.push({ champion: 'camille', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `camille-q-${event.damageType}` });
+        // Irelia: her stance and her swipe follow her shield, not fixed times. Her cast plays the stance; when the rules end
+        // her ability shield (shieldLayerChanged depleted, emptied early, or expired, at the end of its time) the stance stops
+        // and the swipe plays there, as her strike lands (its damage packet follows within a tick). A cast that grants her
+        // no shield (Blade Dance) draws no stance at all; she still turns to her target as for any cast.
+        if (event.type === 'shieldLayerChanged' && (event.reason === 'depleted' || event.reason === 'expired')
+          && definition(event.targetId) === 'irelia' && isIreliaShield(event.key, event.targetId)) {
+          plan.stopCast = event.targetId;
+          plan.extra.push({ champion: 'irelia', sourceId: event.targetId, targets: [], action: 'passive', skill: 'irelia-swipe' });
+        }
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
+          && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
+          plan.noCastEffect = true;
+        // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
+          plan.variant = 'single';
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);

@@ -2,7 +2,7 @@
 import type { TimelineCue } from './timeline';
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC', ground = 'BUFFBONE_GLB_GROUND_LOC';
 const frame = (at: number) => at / 30; // Presentation fallback only; exporter does not supply the animation graph's clock.
-/** Vi lands on the export's frame 17, where her landing systems start. */
+/** Vi lands on the export's landing frame, where her landing systems start (taken from the asset, not hand-tuned). */
 export const VI_LANDING = frame(17);
 /**
  * Vi's row shockwave (TFT13_Vi_Base_Q_Landing_Mis): a line missile the export lists as a spell of its own, cast at a
@@ -46,7 +46,8 @@ export const S13_TIMELINES: Record<'jinx' | 'vi', readonly TimelineCue[]> = {
     { system: 'd27b3044', event: 'hit', delay: frame(17), duration: 1.5, bone: ground, primary: true },
     { system: '66c600e8', event: 'hit', delay: frame(17), duration: 1, bone: chest },
     viRowCue(-1), viRowCue(1),
-    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 1.5, bone: chest, stopAfter: 0.6, fadeOut: true },
+    // Q shield: its own life with the fade-out tail; it ends with the shield (cue-overrides.ts CUE_RULE_STOPS).
+    { system: '9614ffb4', event: 'cast-start', delay: 0, duration: 3.3, bone: chest, stopAfter: 2.9, fadeOut: true },
   ],
 };
 /** Opt in only to the complete known export. An explicit caller timeline always wins. */

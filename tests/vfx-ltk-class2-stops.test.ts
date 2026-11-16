@@ -6,7 +6,7 @@ import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevi
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
 import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
-import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES, IRELIA_STANCE_FALLBACK_SECONDS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 const cue = (list: readonly TimelineCue[] | undefined, system: string) => {
@@ -43,11 +43,13 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
 
   it('fades Nocturne\'s shadow disc from its stop and keeps Irelia\'s stance to its end (3b-2)', () => {
     const nocturne = CUE_OVERRIDES.nocturne?.filter(entry => entry.system === '3e224f4a') ?? [];
-    expect(nocturne).toHaveLength(2);
-    expect(nocturne.find(entry => entry.action === 'cast')).toMatchObject({ delay: 0.35, duration: 0.8, stopAfter: 0.3, fadeOut: true });
+    // 11-15: the disc left his cast (the original's cast shows none); it stays on each empowered swing.
+    expect(nocturne).toHaveLength(1);
+    expect(nocturne.find(entry => entry.action === 'cast')).toBeUndefined();
     expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', duration: 0.5, stopAfter: 0.1, fadeOut: true });
     const stance = cue(CUE_OVERRIDES.irelia, '67665513');
-    expect(stance).toMatchObject({ delay: 0, duration: 1.6 });
+    // Was duration 1.6 (fixed); now stopped where the shield ends (batch1-events.ts), bounded only by a fallback.
+    expect(stance).toMatchObject({ delay: 0, duration: IRELIA_STANCE_FALLBACK_SECONDS });
     expect(stance.stopAfter).toBeUndefined();
   });
 

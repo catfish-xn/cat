@@ -72,8 +72,12 @@ export function installProbes(clock: () => number) {
   const add = Set.prototype.add, del = Set.prototype.delete;
   // Read only where there is a page (node tests import this module with neither).
   const filter = drawFilterOf(typeof location === 'undefined' ? '' : location.search, typeof window === 'undefined' ? null : (window as any).__only ?? null);
+  // Only the runtime's own running set counts: the first set a run record is added to. The runtime also builds passing
+  // sets of the same records (new Set(...) calls add, e.g. the runs that take no system slot this frame); counted, each
+  // looked like a fresh start and kept its run "running" after it was gone (11-14).
+  let owner: Set<unknown> | null = null;
   Set.prototype.add = function (this: Set<unknown>, value: unknown) {
-    if (looksRunning(value) && this !== (live as unknown)) {
+    if (looksRunning(value) && this !== (live as unknown) && (owner ??= this) === this) {
       live.add(value); started.push({ t: clock(), system: value.system, source: value.source, action: value.action });
       // A system is added to the runtime's running set before the frame it first draws in, so it is filtered from its first frame.
       if (filtering(filter)) applyDrawFilter(filter, value);
@@ -81,7 +85,7 @@ export function installProbes(clock: () => number) {
     return add.call(this, value) as any;
   };
   Set.prototype.delete = function (this: Set<unknown>, value: unknown) {
-    if (looksRunning(value) && this !== (live as unknown)) del.call(live, value);
+    if (looksRunning(value) && this === owner) del.call(live, value);
     return del.call(this, value);
   };
   // WebGLRenderer defines render() per instance, so the scene and camera are found another way: the scene is the parent
@@ -156,7 +160,10 @@ export function installProbes(clock: () => number) {
             else if (v && typeof v === 'object' && typeof v.x === 'number') uniforms[k] = num([v.x, v.y, v.z, v.w].filter((x: unknown) => typeof x === 'number'));
           }
           let parentVisible = true; for (let p = o; p; p = p.parent) if (p.visible === false) { parentVisible = false; break; }
-          out.push({ system: rec.system, source: rec.source ?? null, name, index, visible: !!o.visible && parentVisible, kind: o.isInstancedMesh ? 'instanced' : o.isSkinnedMesh ? 'skinned' : 'mesh',
+          // visible is the object's own switch only; the draw filter (--only/--mute/--solo) leaves draws out by their layer mask
+          // and --nocolor by colourWrite, so `drawn` says whether this draw actually reaches the frame.
+          const drawn = !!o.visible && parentVisible && o.layers.mask !== 0 && m.colorWrite !== false;
+          out.push({ system: rec.system, source: rec.source ?? null, name, index, visible: !!o.visible && parentVisible, drawn, layerMask: o.layers.mask, colorWrite: m.colorWrite !== false, kind: o.isInstancedMesh ? 'instanced' : o.isSkinnedMesh ? 'skinned' : 'mesh',
             count: o.isInstancedMesh ? o.count : (o.geometry?.drawRange?.count ?? null), renderOrder: o.renderOrder,
             material: m.type, blending: m.blending, blendSrc: m.blendSrc, blendDst: m.blendDst, blendEquation: m.blendEquation,
             transparent: m.transparent, depthTest: m.depthTest, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaRef: num(m.uniforms?.alphaRef?.value ?? null),

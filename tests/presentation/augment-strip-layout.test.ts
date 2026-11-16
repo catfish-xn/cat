@@ -22,7 +22,7 @@ describe('owned augment row at the board corner', () => {
     expect(layout).toMatchObject({ left: 476, columns: 2, width: 92 });
   });
 
-  it('3D: centres on the S13 anchor (26.7vw, 23.8vh) and moves right of an open left drawer', () => {
+  it('3D: centres on the S13 anchor and moves right of an open left drawer', () => {
     const free = augmentStripLayout({ viewportWidth: 1600, viewportHeight: 900, count: 3, threeD: true, board: { left: 240, top: 60, right: 1360, bottom: 760 }, left: [{ left: 0, top: 0, right: 260, bottom: 700 }] });
     expect(free).toEqual({ left: Math.round(1600 * 0.267 - 70), top: Math.round(900 * 0.238 - 22), columns: 3, width: 140, height: 44 });
     const drawer = augmentStripLayout({ viewportWidth: 1366, viewportHeight: 768, count: 3, threeD: true, board: { left: 200, top: 60, right: 1160, bottom: 660 }, left: [{ left: 0, top: 40, right: 368, bottom: 700 }] });

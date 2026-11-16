@@ -5,7 +5,8 @@ export const warwickSkills: Record<string, readonly TimelineCue[]> = {
   warwick: [
     { system: '6b46d17d', action: 'attack', event: 'cast-start', delay: 0, duration: .4 },
     { system: '9371a532', action: 'attack', event: 'hit', bone: CHEST, delay: .2, duration: .5 },
-    { system: '8c054bed', event: 'cast-start', delay: 0, duration: 1, stopAfter: .3 },
+    // The frenzy aura plays its own life and ends with the frenzy (cue-overrides.ts CUE_RULE_STOPS).
+    { system: '8c054bed', event: 'cast-start', delay: 0, duration: 10 },
     { system: 'f7e4f133', event: 'cast-start', delay: .1, duration: 1, stopAfter: .3 },
   ],
   // A devoured receipt follows death: the renderer snapshots its actual endpoint.

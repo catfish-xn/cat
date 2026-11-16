@@ -2,6 +2,7 @@
 import { Box3, BufferAttribute, Camera, Group, Matrix4, Vector3, type BufferGeometry, type Object3D } from 'three';
 import type { PreparedVfx } from './loader';
 import { AXIS_SIGN } from './space';
+import { BOARD_CELL } from './fx-size';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
 import type { MissileFlight } from './engine/model/missile';
 import { createDriver } from './engine/simulation/driver';
@@ -31,10 +32,21 @@ export const ROOT_PARTICLES = 150, CHILD_PARTICLES = 100;
  * thirteen systems' later emitters, Caitlyn's burst of seventeen, Garen's R landing of eight).
  */
 export const ROOT_PARTICLES_MOST = 400;
-/** A skill system's root places for what it measured without a limit: ROOT_PARTICLES up to that, then a quarter more, at most ROOT_PARTICLES_MOST. */
-export function rootRoomOf(need: number): number {
-  return need > ROOT_PARTICLES ? Math.min(ROOT_PARTICLES_MOST, Math.ceil(need * 1.25)) : ROOT_PARTICLES;
+/**
+ * The most root places a plain attack's system may take (11-16): it measures and grows like a skill's, under this lower
+ * cap, since attacks repeat and overlap. Viktor's attack bolt measures past it and keeps some of its trail cut.
+ */
+export const ROOT_PARTICLES_ATTACK_MOST = 250;
+/** A system's root places for what it measured without a limit: ROOT_PARTICLES up to that, then a quarter more, at most `most`. */
+export function rootRoomOf(need: number, most = ROOT_PARTICLES_MOST): number {
+  return need > ROOT_PARTICLES ? Math.min(most, Math.ceil(need * 1.25)) : ROOT_PARTICLES;
 }
+/**
+ * How far a measure flies a projectile cue's system, in engine units: four board cells. Fitted, not the original's: a
+ * trail emits by the distance it travels, so a measure standing still counted trail systems (Renata's and Viktor's
+ * attack bolts) far below what a flight holds (11-16).
+ */
+export const MEASURE_FLIGHT = (4 * BOARD_CELL) / FX_SCALE;
 /**
  * The most child room (pool slots, as the engine's child budget counts them) and live child systems one run may take,
  * however much its system measures (measureChildren). A run whose system was never measured keeps CHILD_PARTICLES and 8.
@@ -326,15 +338,19 @@ export function childRoomOf(measured: { room: number; live: number } | null): Ch
   return { budget: Math.min(CHILD_ROOM_CAP, Math.max(CHILD_PARTICLES, Math.ceil(measured.room * 1.5))), most: Math.min(CHILD_COUNT_CAP, Math.max(8, Math.ceil(measured.live * 1.5))) };
 }
 /**
- * The most root particles a run of `prepared` holds at once: the same engine runs it in place, without drawing, for
- * `seconds` at 1/30 s steps (stopped at `stopAfter` when given). What a first play reserves before any play was seen.
+ * The most root particles a run of `prepared` holds at once: the same engine runs it, without drawing, for `seconds` at
+ * 1/30 s steps (stopped at `stopAfter` when given). In place, or, given a projectile cue's `travelSeconds`, flown
+ * MEASURE_FLIGHT over that time, as the cue flies it. What a first play reserves before any play was seen.
  */
-export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES): number {
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES, travelSeconds?: number): number {
   const anchor = pointAnchor([0, 0, 0]);
+  const flies = travelSeconds !== undefined && travelSeconds > 0;
   const driver = createDriver(1, { capacity, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
-  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: { kind: 'bone', anchor, target: null } });
+  driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: flies
+    ? { kind: 'missile', from: [0, 0, 0], to: [MEASURE_FLIGHT, 0, 0], flight: { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: MEASURE_FLIGHT / travelSeconds! } } }
+    : { kind: 'bone', anchor, target: null } });
   let peak = 0;
   for (let at = 0; at < seconds; at += 1 / 30) { driver.advance(1 / 30); peak = Math.max(peak, driver.pool.count); }
   return peak;

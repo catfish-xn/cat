@@ -1,7 +1,7 @@
 import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
-import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
+import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
 import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
@@ -36,8 +36,27 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
 export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
-/** At most this many hold tails playing out at once take no system slot (slotsNow); any more hold a slot as before. */
-export const HOLD_FREE_TAILS = 4;
+/**
+ * Runs that keep drawing without taking a system slot, at most OFF_SLOT_MAX of them at once (the earliest started); any
+ * more hold a slot as before. All of them still hold their particles in the budget. Three kinds share this one room:
+ * - a hold tail playing out (cue-overrides.ts PlayOut.hold; Fable 11-13: Gangplank's scorch held a slot through its 2.3 s
+ *   end and kept others' hits out at cap 20);
+ * - a long run (LONG_RUN_SECONDS or more) once it has played LONG_RUN_OPEN seconds: it keeps playing to its end, where it
+ *   would otherwise hold a slot for its whole 3–10 s (11-14 audit: LeBlanc's 5 s marks, Mordekaiser's 10 s body, Kog'Maw's
+ *   3 s bodies). LONG_RUN_OPEN is the 1 s a skill body also plays before a hit may evict it (BODY_YIELD_SECONDS);
+ * - every row but the first of a fan-out (Running.fan: one cast's cue on several targets, a row each), so one cast's hits
+ *   take one slot (11-14 audit: every critical drop left in a 3-star Caitlyn fight was Nami's second hit on each target,
+ *   behind Ekko's and Heimerdinger's hits on five targets each).
+ * One shared room so the runs drawn at once stay bounded: MAX_LTK_SYSTEMS + OFF_SLOT_MAX, plus the second runs of together
+ * groups. Long runs and fan-out rows still count toward LTK_PASS_DEGRADE_AT; hold tails do not, as before. Node audit
+ * (real combats through the batch2 bridge, cap 20, budget 2250, seeds 42/7/101; OFF_SLOT_MAX 8 against the separate
+ * 4 hold tails and 8 long runs before it): critical starts 98.2 → 100% in an 8 v 8, 94.6 → 99.3% in a late-game 9 v 9
+ * and 87.3 → 100% with three 3-star Caitlyns. 8 is a performance trade-off fitted on GPU frame time, not a value from the original: in 11-15 Windows
+ * runs (cap 20, budget 2250, 6 rounds) 8 kept the mean frame time of the code before it with no budget refusals, where 12
+ * ran slower and had the budget refuse attack projectiles.
+ */
+export const OFF_SLOT_MAX = 8;
+export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -57,6 +76,11 @@ export const ATTACHED_LAYER_CAP = 24;
  * to it, so with several runtimes `layers`/`draws` are the last one's.
  */
 export const ATTACHED_LAYER_STATS = { layers: 0, draws: 0, peakDraws: 0, peakLayers: 0, peakSystems: {} as Record<string, number>, capEvents: 0, cappedFrames: 0 };
+/**
+ * Champion warms still in flight (files loading, systems being measured), over every runtime. Dev tools wait for 0 before a
+ * recorded cast, so its systems run with their measured room (castcmp v-capture), not the default one a first play takes.
+ */
+export const LTK_WARMING = { pending: 0 };
 /**
  * Admission counters across every runtime, for the dev load harness (dev/castcmp/board-load.cjs), which resets them after
  * its warm pass: the most systems running at once, and starts and drops by system. A drop is a cue that missed its
@@ -154,7 +178,9 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** One side of a projectile split by beamSplit: its flight, or its beams pinned between caster and target. */
   part?: 'flight' | 'beam';
   /** The clock of the first frame it was put back to wait for room. */
-  waitingSince?: number }
+  waitingSince?: number;
+  /** One play() call's cue on several targets, a row each (`${play}:${system}`): its rows after the first take no slot (OFF_SLOT_MAX). */
+  fan?: string }
 interface Running { reserved: number; system: string; stopped?: boolean;
   /** fadeAction is easing it out: it no longer counts as playing. */
   fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
@@ -176,7 +202,9 @@ interface Running { reserved: number; system: string; stopped?: boolean;
    */
   holdTarget?: () => void;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
-  together?: string }
+  together?: string;
+  /** Its row's Waiting.fan. */
+  fan?: string }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
 const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /**
@@ -320,7 +348,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const liveFx: { passes: LtkPassFlags }[] = [];
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
   /**
-   * Slots each system needs: measured in place when its champion warms (measurePeak), then raised by what each finished
+   * Slots each system needs: measured when its champion warms (measurePeak; in place, or a projectile cue's system in
+   * flight over MEASURE_FLIGHT), then raised by what each finished
    * play held. A first play used to reserve the full 250 instead: six systems filled the shared 1500, so a first cast
    * dropped whatever came seventh (Vi's row shockwave, 11-12).
    */
@@ -331,7 +360,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * admits every run. `childLive` is the child particles a run of the system holds at most, which its reserve adds.
    */
   const rooms = new Map<string, ChildRoom>(), childLive = new Map<string, number>();
-  /** Root places of each skill system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
+  /** Root places of each system that measures more than ROOT_PARTICLES (rootRoomOf); absent means ROOT_PARTICLES. */
   const roots = new Map<string, number>();
   /** `children`: the child particles the system holds at most, or true for a system with children never measured. */
   const reserveOf = (peak: number, children: number | boolean) => Math.min(slots, Math.max(MIN_RESERVE, Math.ceil(peak * 1.25)
@@ -355,16 +384,23 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * (Vi's two row shockwaves, a beam and its flight) are one slot. Particles still count per run (reservedNow).
    * 11-13 audit: Vi's row pair needed two slots in one frame, never found them in an 8 v 8, and never started.
    */
-  // Hold tails (cue-overrides.ts PlayOut.hold) playing out take no system slot, the earliest HOLD_FREE_TAILS of them; their
-  // particles still count against the budget (Fable 11-13: Gangplank's scorch held a slot through its 2.3 s end and kept
-  // others' hits out at cap 20).
-  const freeTails = () => {
-    let free: Running[] | undefined;
-    for (const run of running) if (run.ending && run.playOutEnd?.hold) (free ??= []).push(run);
-    return free ? new Set(free.sort((a, b) => a.started - b.started).slice(0, HOLD_FREE_TAILS)) : null;
+  // The runs that take no system slot (OFF_SLOT_MAX), each with its kind: hold tails, long runs past their opening, and the
+  // rows of a fan-out after its first.
+  const offSlot = () => {
+    let first: Map<string, Running> | undefined;
+    for (const run of running) if (run.fan) { const at = (first ??= new Map()).get(run.fan); if (!at || run.started < at.started) first.set(run.fan, run); }
+    let off: { run: Running; kind: 'tail' | 'long' | 'fan' }[] | undefined;
+    for (const run of running) {
+      if (run.ending && run.playOutEnd?.hold) (off ??= []).push({ run, kind: 'tail' });
+      else if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (off ??= []).push({ run, kind: 'long' });
+      else if (run.fan && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
+    }
+    return off ? new Map(off.sort((a, b) => a.run.started - b.run.started).slice(0, OFF_SLOT_MAX).map(({ run, kind }) => [run, kind])) : null;
   };
-  const slotsNow = () => { let n = 0; const groups = new Set<string>(), free = freeTails();
-    for (const run of running) { if (free?.has(run)) continue; if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /** `passes`: the count for LTK_PASS_DEGRADE_AT, where only hold tails stay out (long runs and fan-out rows count). */
+  const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), off = offSlot();
+    for (const run of running) { const kind = off?.get(run); if (kind && (!passes || kind === 'tail')) continue;
+      if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
@@ -417,17 +453,21 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A missile stops emitting where it lands, so its children are measured stopped at its flight.
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
-        // A skill system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and
-        // reserves what it holds there; a plain attack's system keeps ROOT_PARTICLES (its spawns never take the room).
+        // A system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and reserves
+        // what it holds there, a skill's up to ROOT_PARTICLES_MOST and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
+        // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
+        const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+        const travel = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds)?.travelSeconds;
         const seconds = Math.min(longest.duration, 10);
-        const unlimited = skill ? measurePeak(prepared, seconds, stopAt, ROOT_PARTICLES_MOST) : 0, wide = skill ? rootRoomOf(unlimited) : ROOT_PARTICLES;
+        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel), wide = rootRoomOf(unlimited, most);
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
         // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
-        const peak = skill && wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide);
+        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel);
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
+    LTK_WARMING.pending++; void pending.finally(() => { LTK_WARMING.pending--; });
     warming.set(champion, pending); return pending;
   };
   // Where a cue meets its target, as a world point: the way LtkPlayOptions.snapshotTargets takes it.
@@ -579,7 +619,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
+      // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
+      // (OFF_SLOT_MAX).
+      const fanned = new Map<string, Set<string>>();
+      for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
       for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+        const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
           // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
@@ -589,9 +635,22 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
-          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
+          ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
       return true;
+    },
+    /**
+     * A rule says these systems of the source's are over (an ability effect ended, CUE_END_STOPS): queued rows go, running
+     * ones stop emitting and leave within half a second, the way stopGroup ends them.
+     */
+    stopSystems(sourceId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
+    /** As stopSystems, for the runs of these systems on one unit (whoever cast them): the rule's effect on that unit ended. */
+    stopSystemsOn(targetId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.target === targetId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
@@ -741,7 +800,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const own = reserveOfRow(row), need = own + partners.reduce((sum, other) => sum + reserveOfRow(other), 0);
         // A together group takes one slot: none more once one of its rows runs. The particle budget still counts every row.
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
-        const slot = row.together && [...running].some(run => run.together === row.together) ? 0 : 1;
+        // A row of a fan-out whose cast already runs takes no slot of its own while the off-slot room has space (OFF_SLOT_MAX).
+        const slot = (row.together && [...running].some(run => run.together === row.together))
+          || (row.fan && [...running].some(run => run.fan === row.fan) && (offSlot()?.size ?? 0) < OFF_SLOT_MAX) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
         const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
@@ -818,7 +879,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
-        const rootRoom = (spawn.action ?? 'cast') === 'attack' && !spawn.variant ? undefined : roots.get(spawn.system);
+        const rootRoom = roots.get(spawn.system);
         // A pinned beam reaches for its living target, as does a cast's projectile that kept its target's place (lands); when the
         // target dies its far end holds where it last stood.
         const held = (row.part === 'beam' || lands) && target && !fixed ? holdable(unitAnchor(target.root, target.body, spawn.targetBone)) : null;
@@ -850,7 +911,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
@@ -896,7 +957,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       claimBuf.length = 0;
       for (const run of running) for (const claim of run.fx.stencils) claimBuf.push(claim);
       if (claimBuf.length) {
-        const states = stencilStates(claimBuf);
+        const states = stencilStates(claimBuf, passes?.board);
         for (let index = 0; index < claimBuf.length; index++) applyStencil(claimBuf[index].material, states[index]);
       }
     },
@@ -908,9 +969,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!running.size) { options.renderer!.render(scene as Scene, camera); return; }
       liveFx.length = 0;
       for (const { fx } of running) liveFx.push(fx);
-      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow()));
+      passes.render(scene as Scene, camera, ltkRenderNeeds(liveFx, slotsNow(true)));
     },
     get active() { return running.size; },
+    /** System slots in use as MAX_LTK_SYSTEMS counts them, and as LTK_PASS_DEGRADE_AT counts them (long runs in the background included). */
+    get slots() { return slotsNow(); },
+    get passSlots() { return slotsNow(true); },
     /** Field data for the overlay caps (11-11, Fable): times and frames the screen cap hid overlays, the most wanted at once. */
     get attachedStats() { return { ...attachedStats, layerCap, slots: ATTACHED_SLOTS, peakAlive: ATTACHED_STATS.peakAlive, overSlotFrames: ATTACHED_STATS.overSlotFrames }; },
     get queued() { return waiting.length; },

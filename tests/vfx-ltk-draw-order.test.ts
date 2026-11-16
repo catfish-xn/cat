@@ -8,8 +8,8 @@ const system = (emitters: EmitterModel[]) => ({ emitters }) as unknown as System
 const orders = (model: SystemModel) => drawnEmitters(model).map(each => each.rank);
 
 describe('draw order across systems', () => {
-  // 14.24 map22.bin, TFT13_Lieutenant_Base_Slots_Mirrored and its Punch child: reel backs at pass 30, white lock-in at 45,
-  // border at 50; the icons, a system of their own, at 33 (alpha) and 34 (alpha-add).
+  // Sevika's slot machine as authored (TFT13_Lieutenant_Base_Slots_Mirrored and its Punch child): reel backs below the icons,
+  // the white lock-in and the border above; the icons, a system of their own, between them (alpha and alpha-add).
   const frame = system([emitter(0, 30), emitter(1, 35), emitter(2, 30), emitter(3, 30), emitter(4, 100), emitter(5, 0), emitter(6, 50),
     emitter(7, 25), emitter(8, 20), emitter(9, 45), ...Array.from({ length: 23 }, (_, at) => emitter(10 + at, 8))]);
   const icons = system([emitter(0, 0), emitter(1, 33), emitter(2, 33), emitter(3, 33), emitter(4, 34, { blendMode: 4 })]);
@@ -30,7 +30,7 @@ describe('draw order across systems', () => {
     expect(ground[0]).toBeLessThan(ground[1]);
   });
   it('maps every pass strictly increasing inside ±90, under the damage numbers (100) and over the ground layer', () => {
-    // 11-09 survey: passes from -9999 to 32767 across 5584 emitters; the field is signed 16-bit.
+    // 11-09 survey: authored passes span far into both signs; the field is signed 16-bit.
     const passes = [-32768, -9999, -100, -5, -2, -1, 0, 1, 2, 5, 10, 33, 34, 45, 99, 100, 101, 1000, 9999, 32766, 32767];
     const mapped = passes.map(passOrder);
     for (let at = 1; at < mapped.length; at++) expect(mapped[at], `${passes[at]}`).toBeGreaterThan(mapped[at - 1]);

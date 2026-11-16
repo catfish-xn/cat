@@ -174,8 +174,9 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       later(ctx,u,target,'g23Smeech',1,raw,seq,1,28);break;
     }
     case 'jayce':{
+      // User 2026-11-15: the forge measures "the nearest allies" but is not one of them (as g2-3-combat.ts's heal excludes it).
       const forge=reviveG23Forge(ctx,u)??u;
-      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesShield')))
+      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&!x.definitionId.startsWith('g23-forge'))).slice(0,v('NumAlliesShield')))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events,false,'',undefined,true);
       // P (user 2026-10-23): the target is knocked to the gate 3 hexes behind it (away from Jayce, cut at the board edge)
@@ -186,7 +187,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
       const targets=foes();for(let i=0;i<v('NumOfCrystals');i++)strike(targets[i%targets.length],physical(i===0?'ClosestEnemyPercentAD':'PercentAttackDamage'),'physical');
-      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesAS')))
+      for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&!x.definitionId.startsWith('g23-forge'))).slice(0,v('NumAlliesAS')))
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
     case 'sevika':{
@@ -241,6 +242,8 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});
   else hit(ctx,u,target,task.amount,task.actionSeq,1000+task.ordinal,task.kind==='g23Physical'?'physical':task.kind==='g23True'?'true':'magic');
+  // Display only: Dr. Mundo's heal over time paid its last part.
+  if(task.kind==='g23Heal'&&champion(u)==='drmundo'&&task.ordinal===task.total-1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'drmundo-heal',targetIds:[]});
 }
 
 /** Timed Swain pulses sample current adjacency; takedown extensions remain in the snapshot. */

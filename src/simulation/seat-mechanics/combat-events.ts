@@ -25,7 +25,13 @@ export type G23CombatEventData =
   /** Sion bound (true) / broke free (false); reason e.g. 'combat-start' | 'casts' | 'hp-threshold'. */
   | { readonly type: 'bindingChanged'; readonly tick: number; readonly unitId: string; readonly bound: boolean; readonly reason: string }
   /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */
-  | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin };
+  | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin }
+  /**
+   * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
+   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
+   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.
+   */
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 

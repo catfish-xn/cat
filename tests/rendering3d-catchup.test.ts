@@ -15,8 +15,11 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { CUE_END_STOPS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-replay';
 
+// Vander is left out: the tests below play him from this index's own synthetic cues.
+const RULE_END_CHAMPIONS = ['warwick', 'blitzcrank', 'vi', 'malzahar', 'drmundo'];
 const SINGED_BUFF = 'singed_tft13_singed_base_w_ally_buf';
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -43,7 +46,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: { ...Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: { ...Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', 'leblanc', ...RULE_END_CHAMPIONS, ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
       // Listed cast clips (overhead-follow.ts CAST_TRAVEL_CLIPS): Ambessa's chain strike, Smeech's leap on the jumper's skeleton.
       ambessa: { path: 'ambessa.glb', animations: { idle: 'idle', attack: 'attack', cast: 'tft13_ambessa_spellchain_strike', death: 'death' } },
       smeech: { path: 'smeech.glb', animations: { idle: 'idle', attack: 'attack', cast: 'spell', death: 'death' } } },
@@ -57,15 +60,17 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     }));
     vi.doMock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
       domElement = { className: '', style: {}, addEventListener() {}, removeEventListener() {}, remove() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-      setPixelRatio() {} setSize() {} render() {} dispose() {} forceContextLoss() {} initTexture() {} async compileAsync() {}
+      setPixelRatio() {} setSize() {} render() {} clearDepth() {} dispose() {} forceContextLoss() {} initTexture() {} async compileAsync() {}
       getRenderTarget() { return null; } setRenderTarget() {}
     } }));
     three = await import('three'); core = await import('../src/rendering3d');
     const start: TimelineCue = { system: 'start', event: 'cast-start', delay: 0, duration: 1 };
     const hit: TimelineCue = { system: 'hit', event: 'hit', delay: .1, duration: 1 };
     const flight: TimelineCue = { system: 'flight', event: 'projectile', delay: .05, duration: .3, travelSeconds: .3 };
-    const ltkIndex = { version: 1, systems: { ...Object.fromEntries(Object.values(BATCH1_TIMELINES).flatMap(cues => cues.map(c => [c.system, c.system + '.json']))), start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
-      assets: { 'synthetic.tex': 'texture.png' }, skills: { ...BATCH1_TIMELINES, vander: [start, hit], kogmaw: [start, flight, hit] } };
+    const ltkIndex = { version: 1, systems: { ...Object.fromEntries(Object.values(BATCH1_TIMELINES).flatMap(cues => cues.map(c => [c.system, c.system + '.json']))),
+      // The systems a rule's end stops, LeBlanc's and the status champions' (their cues come from cue-overrides.ts, which wins over this index).
+      ...Object.fromEntries([...Object.values(CUE_END_STOPS).flat(), ...['leblanc', ...RULE_END_CHAMPIONS].flatMap(id => CUE_OVERRIDES[id]!.map(cue => cue.system))].map(system => [system, system + '.json'])), start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
+      assets: { 'synthetic.tex': 'texture.png' }, skills: { ...BATCH1_TIMELINES, vander: [start, hit], kogmaw: [start, flight, hit], leblanc: [start], ...Object.fromEntries(RULE_END_CHAMPIONS.map(id => [id, [start]])) } };
     vi.doMock('../src/rendering/three-mode/asset-reader', () => ({ createAssetReader: () => ({
       readJson: async (url: string) => url.includes('/vfx-ltk/') ? url.endsWith('/index.json') ? ltkIndex : syntheticSystem()
         : ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
@@ -194,6 +199,58 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(2); await advance();
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['dda108d2', '6f29051a']);
     expect(loads).not.toHaveBeenCalled();
+  });
+
+  // Through the real event loop (not the handler alone): the end signal passes the animation-event gate and stops the
+  // listed visuals, which otherwise play their own life (11-15: written after the gate, these stops never ran).
+  it.each([
+    ['twitch', 'twitch-volley', ['900dd2d2'], []],
+    ['leblanc', 'leblanc-chain', ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'], ['b']],
+  ] as const)('%s: abilityEffectEnded %s stops its visuals through the event loop', async (champion, effect, stopped, targetIds) => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion },
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
+    const shown = () => debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem as string);
+    listener.events([{ ...cast(1), targetIds: champion === 'twitch' ? ['a'] : ['b'] } as DisplayCombatEvent]);
+    for (let i = 0; i < 80; i++) await advance(25);
+    const before = shown();
+    for (const system of stopped) expect(before).toContain(system);
+    listener.events([{ type: 'abilityEffectEnded', tick: 41, eventSeq: 9, unitId: 'a', effect, targetIds: [...targetIds] } as unknown as DisplayCombatEvent]);
+    // A stopped run lingers at most half a second for its particles to die.
+    for (let i = 0; i < 30; i++) await advance(25);
+    const after = shown();
+    for (const system of stopped) expect(after).not.toContain(system);
+  });
+
+  // Through the real event loop (not the handler alone): each rule's end passes the animation-event gate and stops the
+  // visuals listed for it (cue-overrides.ts CUE_RULE_STOPS / CUE_END_STOPS), which otherwise play their own life
+  // (11-15: written after the gate, these stops never ran).
+  const shieldEnd = (ability: string): DisplayCombatEvent => ({ type: 'shieldLayerChanged', tick: 41, eventSeq: 9, reason: 'expired', remaining: 0,
+    targetId: 'a', key: JSON.stringify(['standalone', 'a', 'ability', ability, 'a', 0, null, 'a', 'source']) }) as unknown as DisplayCombatEvent;
+  it.each([
+    ['warwick', '8c054bed', { type: 'bloodFrenzyChanged', tick: 41, eventSeq: 9, unitId: 'a', active: false, permanent: false }],
+    ['blitzcrank', 'fc783cba', shieldEnd('blitzcrank-ability')],
+    ['vi', '9614ffb4', shieldEnd('vi-ability')],
+    ['malzahar', '88a717e0', { type: 'statusChanged', tick: 41, eventSeq: 9, targetId: 'b', kind: 'shred', effectiveMagnitudeBps: 0, reason: 'expired' }],
+    ['drmundo', '4caada37', { type: 'abilityEffectEnded', tick: 41, eventSeq: 9, unitId: 'a', effect: 'drmundo-heal', targetIds: [] }],
+  ] as const)('%s: the rule\'s end stops %s through the event loop', async (champion, system, end) => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion },
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
+    const shown = () => debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem as string);
+    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    for (let i = 0; i < 40; i++) await advance(25);
+    expect(shown()).toContain(system);
+    listener.events([end as unknown as DisplayCombatEvent]);
+    // A stopped run lingers at most half a second for its particles to die.
+    for (let i = 0; i < 30; i++) await advance(25);
+    expect(shown()).not.toContain(system);
+  });
+
+  it('vander: the brace\'s end reaches the runtime through the event loop', async () => {
+    const stop = vi.spyOn(debug().ltk, 'stopSystems');
+    listener.events([{ type: 'abilityEffectEnded', tick: 41, eventSeq: 9, unitId: 'a', effect: 'vander-brace', targetIds: [] } as unknown as DisplayCombatEvent]);
+    expect(stop).toHaveBeenCalledExactlyOnceWith('a', ['68e8ca37']);
   });
 
   it.each([false, true])('batch 1: Lux self/ally shield uses one form and no self projectile (self=%s)', async self => {
