@@ -193,12 +193,15 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     listener.events([{ ...cast(1), targetIds: [] } as DisplayCombatEvent]); await advance();
     // Her burst (dda108d2) also plays at the cast now, as at the end (batch1-timelines.ts leona; fitted, not original data).
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['8d9a4ccc', 'dda108d2']);
+    const castBurst = debug().scene.children.find(o => o.name === 'ltk-vfx' && o.userData.ltkSystem === 'dda108d2')!;
     listener.events([
       { type: 'statusChanged', eventSeq: 2, tick: 61, targetId: 'a', kind: 'damage-reduction', effectiveMagnitudeBps: 0, reason: 'expired' },
       { type: 'packetDamage', eventSeq: 3, tick: 61, sourceId: 'a', targetId: 'b', damageType: 'magic', hit: true, hpDamage: 10, absorbed: 0, critical: false, killingPacket: false },
     ]);
+    // The cast's burst has released its slot by now (nothing active), so the end burst is a new run, not a leftover.
     expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(2); await advance();
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['dda108d2', '6f29051a']);
+    expect(debug().scene.children.includes(castBurst)).toBe(false);
     expect(loads).not.toHaveBeenCalled();
   });
 

@@ -2329,9 +2329,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 50050,
+      "currentBytes": 50354,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "de3491cde480e07f31bedec79e9e44899710142569c590f8a3d33b314b68e9da",
+      "currentSha256": "3aa9277d214251bf8e5136e7fcc759788b8c465ef22eb19868366b0213c73946",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {

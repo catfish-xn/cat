@@ -46,9 +46,8 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
   leona: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 11 / 30, duration: .45, stopAfter: .1, bone: chest },
     { action: 'cast', system: '8d9a4ccc', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.8, bone: chest },
-    // W_cas_hit plays twice, each to its own end: at the cast (the original's burst comes on the mana-empty frame) and at the
-    // end of her damage reduction (driven by its expiration). Whether the original's two bursts are this same system cannot be
-    // told from the data; treated as one (fitted, not original data). The end burst was cut at 0.1 s before.
+    // W_cas_hit plays twice, each to its own end: at the cast and at the end of her damage reduction (driven by its
+    // expiration); the same system both times (fitted, not original data). The end burst was cut at 0.1 s before.
     { action: 'cast', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
     { action: 'end', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
     { action: 'passive', system: '6f29051a', event: 'hit', delay: 0, duration: .6, stopAfter: .1, bone: chest },
