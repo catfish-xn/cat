@@ -3346,6 +3346,14 @@
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
       "firstDifferentByte": 0
     },
+    "tests/server/zz-g7.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3788,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1e50ef71d2fc371751d8aae0fe4fd0feedc0322d5399d46ef962de45a4d7c45b",
+      "firstDifferentByte": 0
+    },
     "tests/sevika-high-roller-triple.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
