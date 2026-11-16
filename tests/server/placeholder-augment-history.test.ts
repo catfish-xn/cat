@@ -187,7 +187,10 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     const choice = mine().pendingChoice!;
     command({ type: 'anomalyTarget', choiceId: choice.choiceId, generation: choice.generation, unitId: target });
     answer();
-    command({ type: 'deploy', unitId: target, target: { kind: 'board', cell: { col: 1, row: 5 } } });
+    // #693 (2026-11-16, scene change approved by Fable): at (1,5) the bound unit now kills four enemies in round 23 (Zyra's
+    // wind-up changed the fight), crossing Golden Find's threshold a round early. At (3,5) it kills one, below the threshold,
+    // on #693 and on wind-up batch 2; tried (0,4) (0,5) (1,4) (2,5) (2,6): three or four kills each.
+    command({ type: 'deploy', unitId: target, target: { kind: 'board', cell: { col: 3, row: 5 } } });
     runUntil(room, clock, s => s.round === 23 && s.phase === 'settlement');
     expect(room.state.fault).toBeNull();
     const [binding] = requireAugmentFacts(mine(), 'combat-binding', 23);
@@ -195,7 +198,9 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     expect(requireAugmentFacts(mine(), 'combat-roster', 23).map(f => f.battleId)).toEqual([binding.battleId]);
     const kills = requireAugmentFacts(mine(), 'deaths', 23).flatMap(f => f.deaths)
       .filter(d => d.team === 'enemy' && d.ownerSeatId === null && d.killer?.ownerId === target);
-    expect(kills).toHaveLength(2);
+    // Premise: round 23's kills stay below Golden Find's three-kill threshold, so its gold comes in round 24.
+    expect(kills.length, 'premise: round 23 below the threshold').toBeLessThan(3);
+    expect(kills).toHaveLength(1);
     expect(killsInEvents(23, target)).toBe(kills.length);
     expect(goldenFindGold(0, kills.length)).toBe(0);
     expect(goldenFindGoldPlan(mine())).toEqual([]);
@@ -206,10 +211,12 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     const state = mine();
     const kills = requireAugmentFacts(state, 'deaths', 24).flatMap(f => f.deaths)
       .filter(d => d.team === 'enemy' && d.killer?.ownerId === target);
-    expect(kills).toHaveLength(4);
+    expect(kills).toHaveLength(3);
     expect(killsInEvents(24, target)).toBe(kills.length);
     const before = killsInEvents(23, target), gold = goldenFindGold(before, before + kills.length);
-    expect(gold).toBe(4);
+    // Premise: round 24 crosses the threshold, so it pays.
+    expect(gold, 'premise: round 24 pays').toBeGreaterThan(0);
+    expect(gold).toBe(2);
     const plan = goldenFindGoldPlan(state);
     expect(plan).toEqual([{ receiptId: JSON.stringify([GOLDEN_FIND_SOURCE, 'round:4-2:augment', 24]), source: GOLDEN_FIND_SOURCE, round: 24, amount: gold }]);
     expect(state.seatMechanics!.receipts.filter(r => r.source === GOLDEN_FIND_SOURCE))

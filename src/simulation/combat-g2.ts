@@ -191,6 +191,17 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
     }
+  } else if (t.kind === 'g2Landing') {
+    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs only while the caster is alive; a control on
+    // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
+    const name = champion(unit);
+    if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    if (!target) return;
+    if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'zyra') {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);
+    }
   } else if (t.kind === 'g2BlitzShock') {
     // Runs only while Blitzcrank is alive; a control on him after the cast does not stop it. A target that died in the
     // meantime takes nothing and no other target is picked; one that moved away is still hit.

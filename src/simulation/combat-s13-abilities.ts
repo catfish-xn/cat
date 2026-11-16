@@ -1,4 +1,5 @@
 import { castMadChemist, isMadChemist } from './augment-pool-batch5-r4';
+import { CAST_WINDUP_TICKS } from './cast-windup';
 import { batch2Rocket } from './augment-pool-batch2-combat';
 import { executeV20Teamup } from './combat-v20-traits';
 import { sixCostCast, sixCostAttack } from './combat-six-cost';
@@ -105,9 +106,10 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       unit.runtime.nextAttackMagic = mag('Damage'); break;
     }
     case 'zyra': {
-      hit(target, mag('TargetDamage'));
-      applyStatus(target, source, 'stun', 0, duration('StunDuration', 1), tick, events);
-      for (const enemy of byDistance(unit, enemies(unit, units).filter(u => u.id !== target.id)).slice(0, v('NumSmallerVines', 2))) hit(enemy, mag('AOEDamage')); break;
+      // The vines land CAST_WINDUP_TICKS later (g2Landing; ordinal 0 is the target, stunned); targets and amounts are taken now.
+      const vines = [target, ...byDistance(unit, enemies(unit, units).filter(u => u.id !== target.id)).slice(0, v('NumSmallerVines', 2))];
+      vines.forEach((enemy, n) => { addTask(unit, 'g2Landing', tick + CAST_WINDUP_TICKS.zyra, enemy.id, mag(n === 0 ? 'TargetDamage' : 'AOEDamage'), seq, n, vines.length); targets.push(enemy.id); });
+      break;
     }
     case 'tristana': hit(target, physical('PercentAttackDamage', 'APDamage'), 'physical', true); break;
     case 'urgot': {

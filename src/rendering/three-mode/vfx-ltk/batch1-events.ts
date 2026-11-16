@@ -180,6 +180,19 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Trundle's cast list holds only his bite's hit, which now comes with the bite's damage: his cast itself plays nothing.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'trundle') plan.noCastEffect = true;
+        // Trundle, Zyra: their hits play when the skill's damage lands (cast-windup.ts), once per tick, on every enemy hit
+        // that tick, in hit order (Zyra's primary target first).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && ['trundle', 'zyra'].includes(definition(event.sourceId) ?? '')
+          && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
+            && isAbilityDirect(e) && e.eventSeq < event.eventSeq)) {
+          const name = definition(event.sourceId)!;
+          const hitTargets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
+          const skill = name === 'trundle' ? 'trundle-bite' : 'zyra-vines';
+          plan.extra.push({ champion: name, sourceId: event.sourceId, targets: hitTargets, action: 'passive', skill });
+        }
         // Powder: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather than falling
         // back to the old placeholder cast effect.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'powder') plan.noCastEffect = true;

@@ -98,34 +98,36 @@ describe('B8 real simultaneous loot-source deaths', () => {
     } finally { spy.mockRestore(); }
   });
   it('reveals both carrier entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
+    // 2026-11-16 (Zyra's vines land CAST_WINDUP_TICKS.zyra after her cast): the old seed-15972 board no longer has a same-tick
+    // pair. One public deploy of Zyra restores each obligation on the same seed: from (3,4) r02 and r04 die in one live tick
+    // (this branch); from (4,7) r00 and r01 die together in the action that ends combat (the terminal branch below).
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
-    while (state.phase === 'combat' && state.combat.tick < 126) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 55) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(126);
+    expect(state.combat!.tick).toBe(55);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
     state = transition.state;
     expect(state.phase).toBe('combat');
     const revealed = transition.events.filter(event => event.type === 'lootRevealed');
-    expect(revealed).toHaveLength(3); // r02's two entries and r03's hero, in a live combat batch.
+    expect(revealed).toHaveLength(5); // r02's two entries and r04's three, in a live combat batch.
     const plan = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7')!;
     expect(revealed.map(event => event.dropId)).toEqual([
-      ...plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r02"]')||d.sourceUnitId!.endsWith('r03"]')).map(drop => drop.dropId), ...plan.choices.map(choice => choice.dropId),
+      ...plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r02"]')||d.sourceUnitId!.endsWith('r04"]')).map(drop => drop.dropId), ...plan.choices.map(choice => choice.dropId),
     ]);
     const expectedDeaths = [
-      // Seed 15972 after the lawful Leona/Loris swap. r04 dies alone, then
-      // r02/r03 die in the tick-127 batch, and r00/r01 close the fight together.
-      // These are recorded public-combat checkpoints, not independently derived constants.
-      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 40, eventSeq: 446 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 127, eventSeq: 1226 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 127, eventSeq: 1227 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 165, eventSeq: 1504 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 165, eventSeq: 1505 },
+      // Seed 15972 after the lawful Leona/Loris swap and Zyra's deploy to (3,4). r02/r04 die in the tick-56 batch, then r03,
+      // r01 and r00 each alone. These are recorded public-combat checkpoints, not independently derived constants.
+      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 56, eventSeq: 508 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 56, eventSeq: 509 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 86, eventSeq: 708 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 128, eventSeq: 920 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 147, eventSeq: 1030 },
     ];
-    expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths.slice(0,3));
-    expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(expectedDeaths.slice(1,3).map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([1226, 1226, 1227]);
+    expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths.slice(0,2));
+    expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(expectedDeaths.slice(0,2).map(death => [death.unitId, death.tick, death.eventSeq]));
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([508, 508, 509, 509, 509]);
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -136,34 +138,53 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[2].dropId).death.eventSeq = 1226; // Substitute r02's real death identity for r03's evidence.
+    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[2].dropId).death.eventSeq = 508; // Substitute r02's real death identity for r04's evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: duplicate death identity');
-    let resumed = restoredReveal, terminalEvents:readonly api.MatchEvent[]=[];
+    let resumed = restoredReveal;
     while (state.phase === 'combat') {
       const a = api.stepMatch(state), b = api.stepMatch(resumed);
       expect(b).toEqual(a); state = a.state; resumed = b.state;
-      if(state.phase!=='combat')terminalEvents=a.events;
     }
     expect(state.phase).toBe('settlement');
     expect(state.combat!.neutralReceipts!.deaths).toEqual(expectedDeaths);
-    // The last two birds die in the action that ends combat.
+    const liveIds=new Set(plan.encounterPlan.drops.map(drop=>drop.dropId));
+    expect(state.m8.loot.receipts.filter(receipt=>liveIds.has(receipt.dropId))).toHaveLength(9);
+
+    // Terminal branch: same seed and swap, Zyra deployed to (4,7). The last two birds die in the action that ends combat.
     // Preserve both obligations: live reveal above, and atomic terminal reveal+grant here.
+    let terminal = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix, {col:4, row:7}))));
+    let terminalResumed = clone(terminal), terminalEvents:readonly api.MatchEvent[]=[];
+    while (terminal.phase === 'combat') {
+      const a = api.stepMatch(terminal), b = api.stepMatch(terminalResumed);
+      expect(b).toEqual(a); terminal = a.state; terminalResumed = b.state;
+      if(terminal.phase!=='combat')terminalEvents=a.events;
+    }
+    const terminalDeaths = [
+      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 40, eventSeq: 447 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 127, eventSeq: 1219 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 135, eventSeq: 1273 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 165, eventSeq: 1502 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 165, eventSeq: 1503 },
+    ];
+    expect(terminal.phase).toBe('settlement');
+    expect(terminal.combat!.neutralReceipts!.deaths).toEqual(terminalDeaths);
+    const terminalPlan = terminal.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7')!;
     const terminalRevealed=terminalEvents.filter(e=>e.type==='lootRevealed');
     expect(terminalRevealed).toHaveLength(3);
-    expect(terminalRevealed.map(e=>e.dropId)).toEqual(plan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r00"]')||d.sourceUnitId!.endsWith('r01"]')).map(d=>d.dropId));
-    expect(terminalRevealed.map(e=>e.death.eventSeq)).toEqual([1504,1504,1505]);
-    expect(terminalEvents.flatMap(e=>e.type==='death'?[[e.unitId,e.tick,e.eventSeq]]:[])).toEqual(expectedDeaths.slice(3).map(d=>[d.unitId,d.tick,d.eventSeq]));
-    const forgedTerminal=JSON.parse(serializeMatch(state));
-    forgedTerminal.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===terminalRevealed[2].dropId).death.eventSeq=1504;
+    expect(terminalRevealed.map(e=>e.dropId)).toEqual(terminalPlan.encounterPlan.drops.filter(d=>d.sourceUnitId!.endsWith('r00"]')||d.sourceUnitId!.endsWith('r01"]')).map(d=>d.dropId));
+    expect(terminalRevealed.map(e=>e.death.eventSeq)).toEqual([1502,1502,1503]);
+    expect(terminalEvents.flatMap(e=>e.type==='death'?[[e.unitId,e.tick,e.eventSeq]]:[])).toEqual(terminalDeaths.slice(3).map(d=>[d.unitId,d.tick,d.eventSeq]));
+    const forgedTerminal=JSON.parse(serializeMatch(terminal));
+    forgedTerminal.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===terminalRevealed[2].dropId).death.eventSeq=1502;
     expect(()=>restoreMatch(forgedTerminal)).toThrow('Invalid B8 Match: duplicate death identity');
-    expect(revealMatchLoot(state,state.combat!)).toEqual({state,events:[]});
-    expect(state.pendingChoice).toBeNull();expect(clone(state)).toEqual(state);
-    const ids=new Set(plan.encounterPlan.drops.map(drop=>drop.dropId));
-    expect(state.m8.loot.receipts.filter(receipt=>ids.has(receipt.dropId))).toHaveLength(9); // v22 adds the 4-7 component anvil entry.
-    unchangedStep(state);
-    rejected(state,()=>api.selectChoice(state,'obsolete-pve-choice',0,'tear'),'wrong-phase');
-    expect(api.nextRound(clone(state),state.round)).toEqual(api.nextRound(state,state.round));
-  });
+    expect(revealMatchLoot(terminal,terminal.combat!)).toEqual({state:terminal,events:[]});
+    expect(terminal.pendingChoice).toBeNull();expect(clone(terminal)).toEqual(terminal);
+    const ids=new Set(terminalPlan.encounterPlan.drops.map(drop=>drop.dropId));
+    expect(terminal.m8.loot.receipts.filter(receipt=>ids.has(receipt.dropId))).toHaveLength(9); // v22 adds the 4-7 component anvil entry.
+    unchangedStep(terminal);
+    rejected(terminal,()=>api.selectChoice(terminal,'obsolete-pve-choice',0,'tear'),'wrong-phase');
+    expect(api.nextRound(clone(terminal),terminal.round)).toEqual(api.nextRound(terminal,terminal.round));
+  }, 60_000);
 
   it.each([
     // Restored birds defeat bare two-star Loris before he scores a kill.
