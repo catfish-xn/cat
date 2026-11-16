@@ -682,6 +682,14 @@ export interface PlayOut {
    */
   readonly hold?: boolean;
 }
+/**
+ * A basic attack that crits (the display's packetDamage: delivery basic-attack, critical) plays the shared crit flash in
+ * place of the shared attack hit, at the same bone and moment (a swap, never both). The binding per champion is the
+ * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
+ */
+export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string> }> = {
+  hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
+};
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
