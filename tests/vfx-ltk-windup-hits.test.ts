@@ -49,7 +49,7 @@ describe('wind-up hits follow the damage', () => {
       let castTick = -1, landTick = -1;
       runRealCombat(units, 40, (_s, shown) => {
         for (const e of shown) if (e.type === 'cast' && e.sourceId === 'me' && castTick < 0) castTick = e.tick;
-        for (const p of batch.batch(shown)) if (p.extra.some(x => x.sourceId === 'me' && /slam|vines/.test(x.skill)) && landTick < 0) landTick = (p.event as any).tick;
+        for (const p of batch.batch(shown)) if (p.extra.some(x => x.sourceId === 'me' && /slam|vines/.test(x.skill ?? '')) && landTick < 0) landTick = (p.event as any).tick;
       });
       expect(castTick, unit).toBeGreaterThan(0);
       expect(landTick - castTick, unit).toBe(CAST_WINDUP_TICKS[unit]);
