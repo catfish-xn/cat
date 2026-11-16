@@ -25,6 +25,10 @@ const read = d => { const f = path.join(d, 'render-meta.json'); return fs.exists
   const c = A.info.channels; let max = 0, over = 0;
   for (let i = 0; i < A.data.length; i += c) { let d = 0; for (let k = 0; k < 3; k++) d = Math.max(d, Math.abs(A.data[i + k] - B[i + k])); if (d > max) max = d; if (d > LIMIT) over++; }
   const paired = max <= LIMIT;
-  console.log(JSON.stringify({ paired, maxDiff: max, pixelsOver8: over, limit: LIMIT, sameFingerprint: ma.ref.sha256 === mb.ref.sha256, meta: diffs }, null, 1));
+  // A reference frame taken before the loads settled (render-meta quiet.ok false) may differ only by timing (review 11-16).
+  const notQuiet = [['A', ma], ['B', mb]].filter(([, m]) => m.quiet && m.quiet.ok === false).map(([n]) => n);
+  const warning = notQuiet.length ? `reference frame ${notQuiet.join(' and ')} was taken before the loads settled (quiet.ok false): re-record before trusting this pairing` : undefined;
+  if (warning) console.error(`ref-pair: ${warning}`);
+  console.log(JSON.stringify({ paired, maxDiff: max, pixelsOver8: over, limit: LIMIT, sameFingerprint: ma.ref.sha256 === mb.ref.sha256, meta: diffs, ...(warning ? { warning } : {}) }, null, 1));
   process.exit(paired ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(2); });
