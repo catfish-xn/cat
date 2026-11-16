@@ -64,8 +64,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
   const shots = new Map<string, { count: number; tick: number }>();
-  /** Dr. Mundo: the tick of his last once-a-second damage. */
-  const mundoPulse = new Map<string, number>();
+  /** Dr. Mundo since his last cast: the enemy his pulses hit, and the tick his heal ended (-1 before). */
+  const mundo = new Map<string, { target: string | undefined; ended: number }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -73,7 +73,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); mundoPulse.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); mundo.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -153,19 +153,23 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
           plan.noCastEffect = true;
         // Dr. Mundo: his once-a-second damage plays the beam to the enemy it hits; his closing blast plays the zap on each enemy it
-        // hits and the blast body on him once. A tick's first hit is a pulse unless it comes less than a second after his last pulse
-        // (the blast); any further hits that tick are the blast (it may share the last pulse's tick).
+        // hits and the blast body on him once. The blast is told by his heal's end (abilityEffectEnded drmundo-heal, sent whether or
+        // not his target lives): his ability hits on that tick, but for the pulse to the enemy his earlier pulses hit, and any after
+        // it until his next cast, are the blast.
+        if (event.type === 'cast' && definition(event.sourceId) === 'drmundo') mundo.set(event.sourceId, { target: undefined, ended: -1 });
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'drmundo') {
+          const state = mundo.get(event.sourceId) ?? { target: undefined, ended: -1 }; mundo.set(event.sourceId, state);
+          if (state.ended < 0 && events.some(e => e.type === 'abilityEffectEnded' && e.effect === 'drmundo-heal' && e.unitId === event.sourceId && e.tick === event.tick))
+            state.ended = event.tick;
           const same = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e));
-          const pulse = same[0] === event && event.tick - (mundoPulse.get(event.sourceId) ?? -Infinity) >= 20;
-          if (pulse) {
-            mundoPulse.set(event.sourceId, event.tick);
+          const lastPulse = state.ended === event.tick && state.target !== undefined ? same.find(e => e.targetId === state.target) : undefined;
+          if (state.ended < 0 || event === lastPulse) {
+            if (state.ended < 0) state.target = event.targetId;
             plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-beam' });
           } else {
             plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-zap' });
-            const blast = same.filter(e => !(e === same[0] && mundoPulse.get(event.sourceId) === event.tick));
-            if (blast[0] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'drmundo-zap-body' });
+            if (same.filter(e => e !== lastPulse)[0] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'drmundo-zap-body' });
           }
         }
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
