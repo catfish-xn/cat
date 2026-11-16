@@ -3762,9 +3762,9 @@
     "tests/vfx-ltk-blitz-shock.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2729,
+      "currentBytes": 3609,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b02a80ec7d94ca0913ed22c47f5e2c63f5a699a9a0d1192a42f247db8d52abcd",
+      "currentSha256": "cc2e7d4892ba8285793335caa826bd6fc153b80c734b789dd3b1c0623d829830",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-board-stencil-assets.test.ts": {
