@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9726,
+      "currentBytes": 11080,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f309ade05e952224a33d5cf32d95fa070363460fb32694f826392356c78fc166",
+      "currentSha256": "a7cdc0cb2caa5c0114851b8b73291ccbc02996f126dfaa0b57ccbce705b965f8",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {

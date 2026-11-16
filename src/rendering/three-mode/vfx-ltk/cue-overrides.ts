@@ -465,7 +465,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   mel: melSkills.mel,
   'mel-third': melSkills['mel-third'],
   'mel-shield': melSkills['mel-shield'],
-  'mel-save': melSkills['mel-save'],
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
