@@ -293,10 +293,21 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
-  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
-  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // REC ONLY (do not merge): candidate. Q_tar bd903b08 on the primary and Q_Explosion fd5fd6cc on every enemy hit, when the
+  // missile lands (both now have system files in the asset root).
+  // REC ONLY (do not merge): Heimerdinger candidate. One W_Mis c8d6ee2e per rocket target (the rule's rockets), from his rocket
+  // bone to each target's centre, and W_Tar 07c9833a on each target when it lands.
+  heimerdinger: [
+    { system: '9ad2672c', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.20078125, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.50078125, duration: 1.5 },
+    { system: 'c44d51d0', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'C_Buffbone_Cstm_Rocket' },
+    { system: 'c8d6ee2e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC', targetLimit: 12 },
+    { system: '07c9833a', action: 'cast', event: 'hit', delay: 0.7, duration: 1, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'bd903b08', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: 'fd5fd6cc', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
