@@ -65,6 +65,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
   const shots = new Map<string, { count: number; tick: number }>();
+  const smeechStabs = new Map<string, number>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -140,12 +141,12 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: name, sourceId: event.sourceId, targets: hitTargets, action: 'passive', skill });
         }
         // REC ONLY (do not merge): Smeech candidate C. One vertical swipe on his weapon per stab (each ability packet), and Q_tar
-        // on the stabbed enemy's chest: on every stab (C1) or only on the last stab of the tick (C2).
+        // on the stabbed enemy's chest: on every stab (C1) or only on the third stab at one enemy since his cast (C2).
+        if (event.type === 'cast' && definition(event.sourceId) === 'smeech') for (const k of [...smeechStabs.keys()]) if (k.startsWith(event.sourceId + '|')) smeechStabs.delete(k);
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'smeech') {
           plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'smeech-swipe' });
-          const last = !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
-            && isAbilityDirect(e) && e.eventSeq > event.eventSeq);
-          if (SMEECH_QTAR_EVERY_STAB || last)
+          const key = event.sourceId + '|' + event.targetId, count = (smeechStabs.get(key) ?? 0) + 1; smeechStabs.set(key, count);
+          if (SMEECH_QTAR_EVERY_STAB || count % 3 === 0)
             plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-qtar' });
         }
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
