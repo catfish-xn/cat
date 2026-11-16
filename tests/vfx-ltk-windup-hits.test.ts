@@ -35,7 +35,7 @@ describe('wind-up hits follow the damage', () => {
       let cast = -1; const planned: string[] = [];
       runRealCombat(units, 40, (state, shown) => {
         for (const e of shown) if (e.type === 'cast' && e.sourceId === 'me' && cast < 0) { cast = e.tick; Object.assign(state.units.find((u: any) => u.id === 'me'), { hp: 0, alive: false }); }
-        for (const p of batch.batch(shown)) for (const x of p.extra) if (x.sourceId === 'me') planned.push(x.skill);
+        for (const p of batch.batch(shown)) for (const x of p.extra) if (x.sourceId === 'me') planned.push(x.skill ?? '');
       });
       expect(cast, name).toBeGreaterThan(0);
       expect(planned, name).toEqual([]);

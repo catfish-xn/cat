@@ -4099,9 +4099,9 @@
     "tests/vfx-ltk-windup-hits.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4471,
+      "currentBytes": 4477,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "805e4abf8de22d9c288a7dbbfe172017a1c12bfba15a7ca5857f7ed8536a8d66",
+      "currentSha256": "dc5e668132a7778a15de3aecd700546b796ff954bacd480b374d7550aed352d1",
       "firstDifferentByte": 0
     },
     "tests/vi-grab-slam.test.ts": {
