@@ -1002,17 +1002,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17768,
+      "currentBytes": 17767,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2ec9f581ab029c12e9feab90ef9e073ab6498cfd4ad47e080d54e228951b2909",
+      "currentSha256": "2cc03cc55285571acb48df201b91dbf93afcd42544edcf5bc23da8eb63ed20b9",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23726,
+      "currentBytes": 23750,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f30d07720f05635a4c180ad2be6670838da2fc4e5e593e78bfb7f71dc8501a3a",
+      "currentSha256": "7bdee8b9b38430e60c386b2e58c75fc76cd89860f5c19cf5815b455ff7a96456",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1613,9 +1613,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 14454,
+      "currentBytes": 14851,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "9df625cdaa5852871ae506475226c0d1b0fb8ed6f9b372622073c359b3b13c4d",
+      "currentSha256": "c49bf8f5862c58fbc9d4beeedeb8fac94b1c8214e0e3abac5284cad8edcfbf87",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -1867,9 +1867,9 @@
     },
     "tests/m8-b8-live-transfer.test.ts": {
       "previousBytes": 22501,
-      "currentBytes": 23244,
+      "currentBytes": 23418,
       "previousSha256": "a52404c57bbba2f15fc3f85e94c457a45dc9a047969788d3e3f2d297c47b088b",
-      "currentSha256": "5e41ddfd25bd92a4d732370fab9d738993eaf7e6c9a9c5dd5998d728171f448c",
+      "currentSha256": "b92da7577b7e4ad410e3197d5d5874b43ea0ff9d368f365458363a420a1d81f1",
       "firstDifferentByte": 1022
     },
     "tests/m8-b8-loot-freeze.test.ts": {
@@ -3033,9 +3033,9 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 13286,
+      "currentBytes": 13344,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "acd5f6508b003ddd718464cd6133fc5a6e791dd34a136436524ee9853e992f94",
+      "currentSha256": "e3f21d6ac8180ac605ac85d1fb14a9e2cf9525250c4dcebc68d332a6767a9e35",
       "firstDifferentByte": 809
     },
     "tests/server/carousel-room.test.ts": {
