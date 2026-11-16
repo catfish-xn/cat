@@ -31,11 +31,13 @@ export function createBatch2VfxBridge(host: Host) {
   const energyTicks = new Map<string, number>();
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
   let release: LtkPlayOptions['release'];
+  // The attack being played crits (LtkPlayOptions.crit); only attack plays carry it.
+  let crit = false;
   // The rule branch of the cast being played (cast.branch.branch); a branched cue plays only with its own branch.
   let branch: string | undefined;
   const play = (champion: string, source: string, targets: readonly string[], skill: string, action: 'cast' | 'attack' = 'cast', snapshotTargets = false, channelSeconds?: number, boardOnly = false, delay?: number) =>
     host.play(champion, source, targets, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}),
-      ...(action === 'attack' && release ? { release } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
+      ...(action === 'attack' && release ? { release } : {}), ...(action === 'attack' && crit ? { crit } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
   const bridge = {
     branch(cast: Cast): string | undefined {
       // The rule's own branch output (cast event `branch`) wins; Sevika's roll still comes from her castOutcome.
@@ -55,11 +57,13 @@ export function createBatch2VfxBridge(host: Host) {
         consequences.set(`${event.sourceId}:${event.actionSeq}`, events.slice(at + 1, end));
       });
     },
-    /** `timing`: the attack's release mapping (LtkPlayOptions.release) when the mixer retimed this swing; casts ignore it. */
-    action(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast, timing?: LtkPlayOptions['release']): boolean | undefined {
+    /** `timing`: the attack's release mapping (LtkPlayOptions.release) when the mixer retimed this swing; `critical`: the attack
+     * crits (LtkPlayOptions.crit). Casts ignore both. */
+    action(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast, timing?: LtkPlayOptions['release'], critical = false): boolean | undefined {
       release = action === 'attack' ? timing : undefined;
+      crit = action === 'attack' && critical;
       branch = action === 'cast' ? cast?.branch?.branch : undefined;
-      try { return bridge.dispatch(action, source, targets, cast); } finally { release = undefined; branch = undefined; }
+      try { return bridge.dispatch(action, source, targets, cast); } finally { release = undefined; branch = undefined; crit = false; }
     },
     dispatch(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast): boolean | undefined {
       const unit = host.unit(source); if (!unit) return;

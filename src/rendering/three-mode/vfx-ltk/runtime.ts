@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -57,6 +57,12 @@ export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
  */
 export const OFF_SLOT_MAX = 8;
 export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
+/**
+ * Crit flashes (CRIT_ATTACK_HIT.crit) playing or waiting at once; a crit past them plays the plain hit. Crits come often in
+ * a brawl (a few in one tick): the flash only swaps a hit, so it takes no extra slot, and this keeps its own count small.
+ * A fitted value, not the original's.
+ */
+export const CRIT_FLASH_MAX = 4;
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -167,6 +173,8 @@ export interface LtkPlayOptions {
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
+  /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
+  crit?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
@@ -438,7 +446,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     const pending = library.champion(champion).then(async catalog => {
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
-      const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      const own = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      // A crit plays its shared hit as the crit flash (CRIT_ATTACK_HIT): that system is loaded and measured with the hit's cue.
+      const cues = CRIT_ATTACK_HIT.keepHit.has(champion) ? own : [...own, ...own.filter(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit'
+        && cue.system === CRIT_ATTACK_HIT.hit && catalog.index?.systems[CRIT_ATTACK_HIT.crit]).map(cue => ({ ...cue, system: CRIT_ATTACK_HIT.crit }))];
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
       // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
@@ -577,6 +588,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (!Number.isFinite(context.releaseShift)) return false;
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
+      }
+      // A crit's shared hit plays as the crit flash, while fewer than CRIT_FLASH_MAX of them are out and its system is ready.
+      if (context.crit && action === 'attack' && !CRIT_ATTACK_HIT.keepHit.has(champion) && catalog.get(CRIT_ATTACK_HIT.crit)) {
+        let out = 0;
+        for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
+        for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
+        if (out < CRIT_FLASH_MAX) selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit
+          ? { ...cue, system: CRIT_ATTACK_HIT.crit } : cue);
       }
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
