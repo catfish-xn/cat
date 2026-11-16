@@ -5,7 +5,7 @@ export interface FeedbackAnchor { readonly x: number; readonly y: number; readon
 export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
 export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
 type FloatKind = 'physical' | 'magic' | 'true' | 'shield' | 'heal' | 'status';
-type LabelStyle = 'color' | 'left' | 'top' | 'transform' | 'opacity';
+type LabelStyle = 'color' | 'fontSize' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number; measured: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
@@ -17,6 +17,8 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 /** Damage type is told apart by color and by a suffix, so color is never the only cue. */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#c9a8ff', true: '#ffffff', shield: '#a7dcff', heal: '#78efab', status: '#ff9d8a' };
 const SUFFIX: Readonly<Record<FloatKind, string>> = { physical: '', magic: ' 魔', true: ' 真', shield: '', heal: '', status: '' };
+/** A crit's damage (packetDamage `critical`) shows larger, in its own label; every other float keeps FONT. Fitted to the look. */
+const FONT = '14px', CRIT_FONT = '20px';
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
@@ -26,11 +28,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   const pool: Label[] = [];
   function release(item: Label): void { item.label.remove(); pool.push({ label: item.label, styles: item.styles }); }
   function reset(): void { for (const item of floats) release(item); floats = []; }
-  function acquire(kind: FloatKind): Label {
+  function acquire(kind: FloatKind, crit: boolean): Label {
     let item = pool.pop();
     if (!item) {
       const label = document.createElement('span');
-      Object.assign(label.style, { position: 'absolute', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', color: COLORS[kind], pointerEvents: 'none' });
+      Object.assign(label.style, { position: 'absolute', fontSize: crit ? CRIT_FONT : FONT, fontWeight: '700', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', color: COLORS[kind], pointerEvents: 'none' });
       item = { label, styles: { color: COLORS[kind] } };
     } else {
       // Match a fresh label even if it has no anchor, or cannot be placed on its first frame.
@@ -38,26 +40,27 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       hidden(item.label, false);
       for (const key of ['left', 'top', 'transform', 'opacity'] as const) style(item, key, '');
       style(item, 'color', COLORS[kind]);
+      style(item, 'fontSize', crit ? CRIT_FONT : FONT);
     }
     root.append(item.label); return item;
   }
-  /** Floats of one tick and unit merge; reset() runs on every new battle, so the tick identifies the batch. */
-  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, text = ''): void {
+  /** Floats of one tick and unit merge (a crit's apart from the rest); reset() runs on every new battle, so the tick identifies the batch. */
+  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, text = '', crit = false): void {
     if (amount <= 0) return;
-    const key = `${tick}/${unitId}/${kind}${text}`;
+    const key = `${tick}/${unitId}/${kind}${text}${crit ? '/crit' : ''}`;
     const old = floats.find(item => item.key === key);
     if (old) { if (kind !== 'status') old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
     if (perUnit.length >= 3) { const first = perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= 24) release(floats.shift()!);
-    floats.push({ ...acquire(kind), key, unitId, kind, amount, text, at, measured: Number.NaN });
+    floats.push({ ...acquire(kind, crit), key, unitId, kind, amount, text, at, measured: Number.NaN });
   }
   return {
     push(events, at) {
       if (disposed) return;
       // Local ledger and §14.2 wire events read through the same display whitelist (event-carried numbers only).
       for (const event of asDisplayEvents(events)) {
-        if (event.type === 'packetDamage') { add(event.tick, event.targetId, event.damageType, event.hpDamage, at); add(event.tick, event.targetId, 'shield', event.absorbed, at); }
+        if (event.type === 'packetDamage') { add(event.tick, event.targetId, event.damageType, event.hpDamage, at, '', !!event.critical); add(event.tick, event.targetId, 'shield', event.absorbed, at); }
         else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
         else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event.tick, event.targetId, 'status', 1, at, status); }
       }
