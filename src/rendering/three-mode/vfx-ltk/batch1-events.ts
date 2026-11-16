@@ -150,6 +150,17 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
           && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
           plan.noCastEffect = true;
+        // REC ONLY (do not merge): Mundo. Per tick, his first ability hit is the once-a-second damage (beam to that enemy); any
+        // further ability hits in the same tick are the closing blast (zap on each, the blast body on him once).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'drmundo') {
+          const same = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e));
+          if (same[0] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-beam' });
+          else {
+            plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-zap' });
+            if (same[1] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'drmundo-zap-body' });
+          }
+        }
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
