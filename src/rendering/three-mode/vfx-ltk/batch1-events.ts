@@ -44,6 +44,7 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
   if (last !== undefined) CAITLYN_SHOT_STATS.fallback++;
   return last;
 }
+const SMEECH_QTAR_EVERY_STAB = true;
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
@@ -124,6 +125,15 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             && definition(s.sourceId) === 'steb' && s.actual > 0);
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
+        }
+        // REC ONLY (do not merge): Smeech candidate C. One vertical swipe on his weapon per stab (each ability packet), and Q_tar
+        // on the stabbed enemy's chest: on every stab (C1) or only on the last stab of the tick (C2).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'smeech') {
+          plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'smeech-swipe' });
+          const last = !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
+            && isAbilityDirect(e) && e.eventSeq > event.eventSeq);
+          if (SMEECH_QTAR_EVERY_STAB || last)
+            plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-qtar' });
         }
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
