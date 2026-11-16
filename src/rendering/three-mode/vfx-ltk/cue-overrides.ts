@@ -320,12 +320,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
-  // No q_mis; spell ring on targets then infection. Portal mesh ids are not in the asset root.
+  // Candidate (11-16, from the original's spell and system data; timings fitted): the gate's bolt Q_mis 7d0f4b1e flies from
+  // his body to each enemy the gate hits (the original's missile starts at his root and flies at body height to a spot),
+  // and the gate portal_1 10e4e326 (a one-hex ground portal; its sound is the bolt's crystal break) opens on the ground
+  // under each of them where the bolt lands. Hexes of the 5-hex gate with no enemy get neither: cues target units only.
+  // Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
     { system: '3c65ee71', action: 'attack', event: 'projectile', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.8666666666666667, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
+    { system: '7d0f4b1e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '10e4e326', action: 'cast', event: 'hit', delay: 0.7, duration: 2, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
