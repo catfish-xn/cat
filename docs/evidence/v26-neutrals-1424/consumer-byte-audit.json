@@ -3754,9 +3754,9 @@
     "tests/vfx-ltk-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23249,
+      "currentBytes": 24093,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ba6aa28de5711c4b367ea1dcff58340c5e1f224c17457bf02ac5201b40910f14",
+      "currentSha256": "5ef98d496745ae60b52cb70f9c87916f74b3b2d696b12fde34f356e002c18e2a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-beam-trim.test.ts": {
@@ -3970,6 +3970,14 @@
       "currentBytes": 3907,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "45dc37dc275fce131c41c073ee4bd0eb99f38d85b1a3dddfc49443c0fd68ed72",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-mundo-blast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3747,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bedc95850bc951da1eb15b7622d094dd917dfa860d058fd124f32cf539bfc7ee",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-nunu-blast-hit.test.ts": {
