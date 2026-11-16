@@ -61,6 +61,22 @@ const BASE = new Float32Array(3);
  * `ParticlesShareRandomValue`. `particleLifetime` draws its own, and every channel of a
  * birth vector another.
  */
+/**
+ * Seconds a first emission may fall past the stop and still count as due by it: float rounding of an authored time, not a
+ * look value (11-16: `timeBeforeFirstEmission` 0.1 reads 0.100000001 and a cue stopping at 0.1 lost the whole layer).
+ */
+export const FIRST_EMISSION_SLACK = 1e-4;
+
+/**
+ * An emitter whose first emission falls no later than the rig's stop is owed it, on the first step to reach it, though
+ * that step lies past the stop: the stop ends emission after it, never before an emission it was due by (ours, 11-16:
+ * Lux's empowered stars, Leona's ring and Mel's shield never spawned, their delay equal to the cue's stop). Every later
+ * step obeys the stop as before.
+ */
+function owesFirstEmission(emitter: EmitterModel, state: EmitterState, step: SystemStep): boolean {
+  return !state.opened && step.stopAge != null && emitter.timeBeforeFirstEmission <= step.stopAge + FIRST_EMISSION_SLACK;
+}
+
 export function emit(
   pool: Pool,
   emitter: EmitterModel,
@@ -76,8 +92,9 @@ export function emit(
   if (emitter.singleParticle && state.emitted) return;
 
   const now = state.age;
-  if (step.stopped && now > stopWaitSeconds(emitter)) return;
+  if (step.stopped && now > stopWaitSeconds(emitter) && !owesFirstEmission(emitter, state, step)) return;
   if (now < emitter.timeBeforeFirstEmission || emissionEnded(emitter, now)) return;
+  state.opened = true;
   if (!periodActive(emitter.period, now)) return;
 
   const phase = emitterPhase(emitter, now);
