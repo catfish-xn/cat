@@ -63,6 +63,19 @@ export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
  * A fitted value, not the original's.
  */
 export const CRIT_FLASH_MAX = 4;
+/**
+ * An attack's cues as a crit plays them (CRIT_ATTACK_HIT): the champion's own crit variants swap in, and with `flash` the
+ * shared hit plays as the crit flash (not for keepHit champions), or the champion's own flash cue joins. A system `ready`
+ * does not have keeps the cue as it was.
+ */
+function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
+  const own = Object.hasOwn(CRIT_ATTACK_HIT.own, champion) ? CRIT_ATTACK_HIT.own[champion] : undefined;
+  const swap = (cue: TimelineCue, id: string | undefined) => id && ready(id) ? { ...cue, system: id } : cue;
+  const out = cues.map(cue => (cue.action ?? 'cast') !== 'attack' ? cue
+    : own?.swap && Object.hasOwn(own.swap, cue.system) ? swap(cue, own.swap[cue.system])
+    : flash && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit && !CRIT_ATTACK_HIT.keepHit.has(champion) ? swap(cue, CRIT_ATTACK_HIT.crit) : cue);
+  return flash && own?.flash && ready(own.flash.system) && cues.some(cue => (cue.action ?? 'cast') === 'attack') ? [...out, own.flash] : out;
+}
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -457,9 +470,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
       const own = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
-      // A crit plays its shared hit as the crit flash (CRIT_ATTACK_HIT): that system is loaded and measured with the hit's cue.
-      const cues = CRIT_ATTACK_HIT.keepHit.has(champion) ? own : [...own, ...own.filter(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit'
-        && cue.system === CRIT_ATTACK_HIT.hit && catalog.index?.systems[CRIT_ATTACK_HIT.crit]).map(cue => ({ ...cue, system: CRIT_ATTACK_HIT.crit }))];
+      // A crit plays its attack as critAttack does (CRIT_ATTACK_HIT): those systems are loaded and measured with their cues.
+      const cues = [...own, ...critAttack(champion, own.filter(cue => (cue.action ?? 'cast') === 'attack'), true, id => !!catalog.index?.systems[id])
+        .filter(cue => !own.includes(cue))];
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
       // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
@@ -600,11 +613,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
       if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
-      // A crit's shared hit plays as the crit flash, while fewer than CRIT_FLASH_MAX of them are out and its system is ready.
-      if (context.crit && action === 'attack' && !CRIT_ATTACK_HIT.keepHit.has(champion) && catalog.get(CRIT_ATTACK_HIT.crit)) {
-        if (critFlashesOut() < CRIT_FLASH_MAX) selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit
-          ? { ...cue, system: CRIT_ATTACK_HIT.crit } : cue);
-      }
+      // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
+      if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
         const shift = context.delay;

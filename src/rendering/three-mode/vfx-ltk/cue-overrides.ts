@@ -687,8 +687,15 @@ export interface PlayOut {
  * place of the shared attack hit, at the same bone and moment (a swap, never both). The binding per champion is the
  * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
  */
-export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string> }> = {
+export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string>;
+  /** A champion's own crit variants: `swap` replaces its attack systems on a crit, `flash` is its crit flash cue when its hit is its own. */
+  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
   hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
+  own: {
+    // Warwick (inferred, Fable 11-16): his own swipe 6b46d17d plays as BA_Swipe_crit 94adb056 on a crit, and his hit is his
+    // own slash, so the crit flash plays on the target beside it at the slash's moment.
+    warwick: { swap: { '6b46d17d': '94adb056' }, flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+  },
 };
 /**
  * A skill's direct damage that crits (packetDamage: delivery ability-direct, critical) flashes the same crit system on its
