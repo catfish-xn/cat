@@ -1,4 +1,5 @@
 import { recordAerialMovement, startAerialDash } from './augment-pool-batch5-g3-combat';
+import { CAST_WINDUP_TICKS } from './cast-windup';
 import { batch2AutomataBlast } from './augment-pool-batch2-combat';
 import { detonateMenaces, teamup } from './combat-v20-traits';
 import { canMove } from './combat-movement';
@@ -121,10 +122,13 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       }
       break;
     }
-    case 'violet':
-      for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
-      strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
-      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
+    case 'violet': {
+      // Her strikes and the uppercut land CAST_WINDUP_TICKS later (g2Landing; the last one knocks up); amounts are taken now.
+      const raws = [...Array(v('NumStrikes')).fill(amount(unit, ctx.tick, { ad: v('PercentAttackDamage') })),
+        amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') })];
+      raws.forEach((raw, n) => task(unit, 'g2Landing', ctx.tick + CAST_WINDUP_TICKS.violet, target.id, raw, seq, n, raws.length));
+      ids.push(target.id); break;
+    }
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
@@ -190,6 +194,23 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     if (victim) {
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
+    }
+  } else if (t.kind === 'g2Landing') {
+    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs only while the caster is alive; a control on
+    // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
+    const name = champion(unit);
+    if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    if (!target) return;
+    if (name === 'sett') {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
+      applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration') * (t.total === 1 ? 1 + variable(unit, 'SoloBonus') : 1) * 20), ctx.tick, ctx.events);
+    } else if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'violet') {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', false, t.source);
+      if (t.ordinal === t.total - 1) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration') * 20), ctx.tick, ctx.events, false, '', undefined, true); // the uppercut knocks up
+    } else if (name === 'zyra') {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);
     }
   } else if (t.kind === 'g2BlitzShock') {
     // Runs only while Blitzcrank is alive; a control on him after the cast does not stop it. A target that died in the

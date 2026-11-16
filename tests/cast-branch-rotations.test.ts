@@ -23,7 +23,9 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
   }
   return out;
 }
-const MIXED_DIGEST = '49e1d29a58fb069e6a6d2493b461bca599f21376d65379668018b2680a2976bc';
+// 2026-11-16: the enemy Sett's slam lands CAST_WINDUP_TICKS.sett after his cast; was 49e1d29a… (with that wind-up set to 0
+// this run gives the old digest again, so nothing else moved).
+const MIXED_DIGEST = '215e50f3ed5071db273e8f56a11061888595fff80eb3428304ecf0698bbf051d';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

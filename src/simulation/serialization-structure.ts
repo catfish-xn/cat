@@ -631,7 +631,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','g2Landing','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');
@@ -640,6 +640,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
       if(task.kind.startsWith('g24')) requireValue((task.source.sourceKind === 'item' || task.source.sourceKind === 'trait' && task.source.definitionId === 'pit-fighter') && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');
       if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
+      if(task.kind === 'g2Landing') requireValue(['sett','trundle','violet','zyra'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability' && task.total >= 1, 'G2 landing source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
     }
     if (task.kind === 'g22ViSlam') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 2 && task.targetId !== null, 'Vi slam task'); }

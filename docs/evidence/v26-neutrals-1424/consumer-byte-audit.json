@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8364,
+      "currentBytes": 8509,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "32a2852fbffae075a4eea62ed326ebfc6cf0ff2ae7d11a6da0c9c7a0d7aecae6",
+      "currentSha256": "85aa4a91910a418b4761726f7c92fb504b06ab0e97736a5dac75d0323d2f49cd",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -617,9 +617,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 38061,
+      "currentBytes": 38187,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "bf97d56989375860700cfdba1cec55644570ae8497ca684d3d27853df76c8155",
+      "currentSha256": "c7d72d0b22fbf14b31fad0d6d52493ca543413be62b13515df16309b199bcba7",
       "firstDifferentByte": 5077
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -664,9 +664,17 @@
     "tests/cast-branch-rotations.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6958,
+      "currentBytes": 7148,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "25c00d52a9b694028a8bdb8a0615a6fbc1bec2903e549c549580a7e21d3fae43",
+      "currentSha256": "1eb7f9affa8ed7ba92bf5e2fa41ec94eabe263382e31b3c9181e0906892f1005",
+      "firstDifferentByte": 0
+    },
+    "tests/cast-windup-batch1.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 8804,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "54f201c9ffcb4e4ea2794f4cbd40bba449d087674ded109f5e6d051733a0cab1",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
