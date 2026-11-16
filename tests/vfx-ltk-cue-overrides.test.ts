@@ -76,8 +76,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
     // The pool keeps emitting until the blast starts: no empty gap between them (clean4 frames 58-61).
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')!.delay);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
+    // Each target's splash is no longer a cast hit cue (the cast names no targets, so it never played): it plays from the
+    // blast's damage (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts), at the body size it had.
+    expect(CUE_OVERRIDES.nunu.some(cue => cue.system === '5dfd387b')).toBe(false);
+    expect(CUE_EXTRA_SKILLS['nunu-blast-hit']!.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
     // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
     const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);

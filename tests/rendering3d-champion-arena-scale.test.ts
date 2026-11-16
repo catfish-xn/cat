@@ -44,7 +44,8 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     // Hugging a body: Lux's shield, Zyra's chest hit on each rooted target, Nunu's per-target splash.
     expect(scaleOf('lux', '44c9516a')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
     expect(scaleOf('zyra', '9d413df0')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
-    expect(scaleOf('nunu', '5dfd387b')).toEqual([measuredOnBody(0.7)]);
+    // Nunu's per-target splash plays from his blast's damage (CUE_EXTRA_SKILLS 'nunu-blast-hit'), at the same body size.
+    expect(CUE_EXTRA_SKILLS['nunu-blast-hit']!.filter(cue => cue.system === '5dfd387b').map(cue => cue.scale)).toEqual([measuredOnBody(0.7)]);
     // Ranges measured in cells: unchanged.
     expect(scaleOf('nunu', '78d04f27')).toEqual([measuredAtFxScale(0.43)]);
     expect(scaleOf('nunu', '8c256426')).toEqual([measuredAtFxScale(0.43)]);
