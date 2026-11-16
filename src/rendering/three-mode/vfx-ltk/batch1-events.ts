@@ -125,6 +125,9 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Maddie: one shot per damage packet of her volley, to the enemy it hit.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
+          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
           && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
