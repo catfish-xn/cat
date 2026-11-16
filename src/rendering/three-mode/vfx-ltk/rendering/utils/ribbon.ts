@@ -231,8 +231,10 @@ export function writeTrail(
     const span = tilingV > 0 ? half / tilingV : tilingV === 0 ? 1 : -tilingV;
 
     const vertex = cursor.vertex + emitted * 2;
-    vertexInto(out, vertex, POINT, ACROSS, half, u, 0.5 - span / 2, held, at, build.layers);
-    vertexInto(out, vertex + 1, POINT, ACROSS, -half, u, 0.5 + span / 2, held, at, build.layers);
+    /* REC ONLY experiment: the multiply texture runs once along the whole strand, 0 at the walk's start and 1 at its end. */
+    const multU = seen / (points - 1);
+    vertexInto(out, vertex, POINT, ACROSS, half, u, 0.5 - span / 2, held, at, build.layers, multU);
+    vertexInto(out, vertex + 1, POINT, ACROSS, -half, u, 0.5 + span / 2, held, at, build.layers, multU);
 
     if (emitted > 0) {
       out.index[cursor.index] = vertex;
@@ -299,13 +301,14 @@ function vertexInto(
   held: Strand,
   at: number,
   layers: RibbonLayers,
+  multU: number,
 ): void {
   for (let axis = 0; axis < 3; axis += 1) {
     out.position[vertex * 3 + axis] = (point[axis] + across[axis] * along) * AXIS_SIGN[axis];
   }
   uvInto(out, vertex, u, v, held.uv, at * UV_STRIDE, layers.base);
   if (layers.mult !== null) {
-    placedInto(out.multUv, out.multCell, vertex, u, v, held.multUv, at * UV_STRIDE, layers.mult);
+    placedInto(out.multUv, out.multCell, vertex, multU, v, held.multUv, at * UV_STRIDE, layers.mult);
   }
   for (let channel = 0; channel < 4; channel += 1) {
     out.tint[vertex * 4 + channel] = held.color[at * 4 + channel];
@@ -517,6 +520,7 @@ export function writeBeam(
     -width / 2,
     0,
     0,
+    0,
     particle,
     layers,
   );
@@ -529,6 +533,7 @@ export function writeBeam(
     WIDE,
     width / 2,
     across,
+    0,
     0,
     particle,
     layers,
@@ -543,6 +548,7 @@ export function writeBeam(
     width / 2,
     across,
     along,
+    1,
     particle,
     layers,
   );
@@ -556,6 +562,7 @@ export function writeBeam(
     -width / 2,
     0,
     along,
+    1,
     particle,
     layers,
   );
@@ -587,6 +594,9 @@ function cornerInto(
   half: number,
   across: number,
   along: number,
+  /** REC ONLY experiment: the multiply texture runs once along the whole beam, 0 at the target and 1 at the source,
+   * whatever the base texture's tiling (11-16 Blitzcrank arc probe). */
+  multAlong: number,
   particle: BeamParticle,
   layers: RibbonLayers,
 ): void {
@@ -598,7 +608,7 @@ function cornerInto(
   transposeInto(out.uv, vertex);
   transposeInto(out.alphaUv, vertex);
   if (layers.mult !== null) {
-    placedInto(out.multUv, out.multCell, vertex, along, across, particle.multUv, 0, layers.mult);
+    placedInto(out.multUv, out.multCell, vertex, multAlong, across, particle.multUv, 0, layers.mult);
     transposeInto(out.multUv, vertex);
   }
   for (let channel = 0; channel < 4; channel += 1) {
