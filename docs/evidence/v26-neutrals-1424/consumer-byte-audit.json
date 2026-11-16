@@ -3972,6 +3972,14 @@
       "currentSha256": "45dc37dc275fce131c41c073ee4bd0eb99f38d85b1a3dddfc49443c0fd68ed72",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-mundo-blast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3747,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bedc95850bc951da1eb15b7622d094dd917dfa860d058fd124f32cf539bfc7ee",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-nunu-blast-hit.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
