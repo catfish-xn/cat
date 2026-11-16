@@ -67,7 +67,8 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
   // Live effects using each resource (by URL), and when the last of them ended.
   const uses = new Map<string, { refs: number; last: number }>();
   const used = (url: string) => { let use = uses.get(url); if (!use) uses.set(url, use = { refs: 0, last: now() }); return use; };
-  const budget: ParticleBudget = { live: 0, max: maxParticles };
+  // REC BRANCH ONLY (never merge): dev/castcmp/frame-time.cjs sets the shared budget per run (?fxbudget=).
+  const budget: ParticleBudget = { live: 0, max: (globalThis as any).__FX_BUDGET ?? maxParticles };
   const pool = new ParticleMaterialPool();
   return {
     budget, pool, reads,
