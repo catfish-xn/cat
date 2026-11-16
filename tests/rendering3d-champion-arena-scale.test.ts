@@ -44,10 +44,12 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     // Hugging a body: Lux's shield, Zyra's chest hit on each rooted target, Nunu's per-target splash.
     expect(scaleOf('lux', '44c9516a')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
     expect(scaleOf('zyra', '9d413df0')).toEqual([measuredOnBody(1), measuredOnBody(1)]);
-    expect(scaleOf('nunu', '5dfd387b')).toEqual([measuredOnBody(0.7)]);
+    // Nunu's per-target splash plays from his blast's damage (CUE_EXTRA_SKILLS 'nunu-blast-hit'), at the same body size.
+    expect(CUE_EXTRA_SKILLS['nunu-blast-hit']!.filter(cue => cue.system === '5dfd387b').map(cue => cue.scale)).toEqual([measuredOnBody(0.7)]);
     // Ranges measured in cells: unchanged.
     expect(scaleOf('nunu', '78d04f27')).toEqual([measuredAtFxScale(0.43)]);
-    expect(scaleOf('nunu', '8c256426')).toEqual([measuredAtFxScale(0.43)]);
+    // Nunu's blast at the default skill size (11-16 review), its pool at its fit.
+    expect(scaleOf('nunu', '8c256426')).toEqual([undefined]);
     // Irelia's swipe plays at her shield's end (#677: CUE_EXTRA_SKILLS 'irelia-swipe'), still sized in cells.
     expect(CUE_EXTRA_SKILLS['irelia-swipe']!.filter(cue => cue.system === '08b7a939').map(cue => cue.scale)).toEqual([measuredAtFxScale(1)]);
     expect(scaleOf('garen', '5bbccb8c')).toEqual([measuredAtFxScale(0.45)]);
