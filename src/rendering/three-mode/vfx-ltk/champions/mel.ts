@@ -21,9 +21,12 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: '3857e78b', event: 'hit', primary: true, delay: 1.2, duration: 6.5 },
   ],
   'mel-energy': [{ system: '3eab3582', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2 }],
-  'mel-shield': [{ system: '71e871c8', event: 'hit', delay: 0, duration: .2, stopAfter: .1 }],
+  // Her shield's visual plays its own life (its glows last the 4 s shield) and ends when that ally's shield from her ability ends
+  // (cue-overrides.ts CUE_RULE_STOPS abilityShieldEndedOnHolder); was stopped at 0.1 s, before StarsUp_Center (0.2 s) began.
+  'mel-shield': [{ system: '71e871c8', event: 'hit', delay: 0, duration: 4.2 }],
   'mel-save': [
-    { system: 'a111b8d1', event: 'cast-start', location: 'board', delay: 0, duration: 1, stopAfter: .3 },
+    // No rule event ends the save's burst: it plays its own life (was stopped at 0.3 s, before W_Mis_Electricity at 0.4 s).
+    { system: 'a111b8d1', event: 'cast-start', location: 'board', delay: 0, duration: 2.9 },
     { system: '56881fb1', event: 'cast-start', location: 'board', delay: .3, duration: 1.7, stopAfter: .6 },
   ],
 };

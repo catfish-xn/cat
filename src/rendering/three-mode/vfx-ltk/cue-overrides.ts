@@ -461,8 +461,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   jinx: jinxSkills.jinx,
   'jayce-front': jayceSkills['jayce-front'],
   'jayce-back': jayceSkills['jayce-back'],
+  'jayce-forge-front': jayceSkills['jayce-forge-front'],
   mel: melSkills.mel,
   'mel-third': melSkills['mel-third'],
+  'mel-shield': melSkills['mel-shield'],
+  'mel-save': melSkills['mel-save'],
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
@@ -685,6 +688,9 @@ export const CUE_RULE_STOPS = {
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
   abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
+  // (Mel's shield, Jayce's forge shield).
+  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
   // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
