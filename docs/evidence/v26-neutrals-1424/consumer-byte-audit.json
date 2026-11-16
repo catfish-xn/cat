@@ -4080,6 +4080,14 @@
       "currentSha256": "34abf1fe66f51258e7762609c31d0f7a20ab43d8fa638fc527e71d2504cf844c",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-urgot-blast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1395,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "106be1f0aced6fbce96bc882aab9641245aad8770a8b5cb33d1b1c3d9823435d",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-vladimir-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
