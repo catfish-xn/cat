@@ -894,9 +894,9 @@
     },
     "tests/fixtures/g2-3-b8-public.ts": {
       "previousBytes": 1743,
-      "currentBytes": 1766,
+      "currentBytes": 2364,
       "previousSha256": "205c4f5d110decac34735255865f884c68bc9faf3d827dfc42ec8da69885e198",
-      "currentSha256": "91de46b4306293f059f049b7446b3f2c253832c088cbf7e592a4be6d5110bc89",
+      "currentSha256": "c42e8c8f9ae8d944b2fb52d990de06249f6ab94f3f83726b4f7661577393b8b8",
       "firstDifferentByte": 204
     },
     "tests/fixtures/g24-pr161-natural-forge.ts": {
@@ -1838,9 +1838,9 @@
     },
     "tests/m8-b8-live-reveal.test.ts": {
       "previousBytes": 13403,
-      "currentBytes": 18004,
+      "currentBytes": 19723,
       "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-      "currentSha256": "274e1d1987622b0e8655af93ada9f8442755a30b971a3a4cf89f2f18056ad29f",
+      "currentSha256": "2046fd242af0abf721012d6fb9621a37efb7c3be2dbbd57f0b426601ed2dcacd",
       "firstDifferentByte": 527
     },
     "tests/m8-b8-live-transfer.test.ts": {
