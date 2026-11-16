@@ -295,6 +295,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // REC ONLY (do not merge): Smeech candidate A. The index list's stage times were estimates (export note "estimated stage
+  // timing"): the swipes move onto the cast (his leap and stabs land on the cast tick in the rules) and Q_tar plays on the
+  // target's chest at the cast instead of 0.7 s on its feet. All four swipes kept.
+  smeech: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.30833333333333335, duration: 1.5 },
+    { system: '17b8eb5c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '5cde9f59', action: 'cast', event: 'cast-start', delay: 0, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: '16749c2e', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: '343e410d', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: '73020613', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: '90b31f27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: '9acdae50', action: 'cast', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
