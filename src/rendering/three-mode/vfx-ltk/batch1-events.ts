@@ -47,6 +47,10 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
+/** Nunu's ability as its damage packets name it (combat-replay-view.ts packetDamage definitionId). */
+const NUNU_ABILITY = 'nunu-ability';
+const isNunuAbility = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) => (event as { definitionId?: string }).definitionId === NUNU_ABILITY;
+
 /** Vladimir's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
 const VLADIMIR_ABILITY = 'vladimir-ability';
 /** Steb's ability as heal shares name it (combat-replay-view.ts 'heal' shares: definitionId). */
@@ -162,6 +166,18 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets, action: 'passive', skill: 'blitzcrank-shock' });
           // The white flash on Blitzcrank himself plays on the same tick (ab66b54f, blitzcrank-shock-self).
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'blitzcrank-shock-self' });
+        }
+        // Nunu: his hit splash (R_hit_tar) plays on each enemy his blast strikes. His cast names no targets (each damage tick is
+        // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself: the tick an enemy takes two of
+        // his ability's direct packets, its last tick and SecondDamage. Display packets carry no segment index, so the pair is
+        // the marker (inferred from the rule's schedule); it plays once, on the second packet. Another source's packet in that
+        // tick, his attack, or an item proc never counts. It depends on that schedule: should his last tick and SecondDamage
+        // stop sharing a tick, the splash silently stops (the real-combat case in tests/vfx-ltk-nunu-blast-hit.test.ts fails).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'nunu' && isNunuAbility(event)) {
+          const pair = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.tick === event.tick && e.sourceId === event.sourceId && e.targetId === event.targetId && isAbilityDirect(e) && isNunuAbility(e));
+          if (pair.length >= 2 && pair[1] === event)
+            plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nunu-blast-hit', snapshotTargets: true });
         }
         // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
         // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.

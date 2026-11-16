@@ -82,6 +82,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
+  // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
+  // splash followed the blast in his cast list, at the size it had there.
+  'nunu-blast-hit': [{ system: '5dfd387b', action: 'passive', event: 'hit', delay: 0.05, duration: 1, scale: hugged(0.7) }],
   'camille-q-physical': [{ system: '69b207a4', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
   'camille-q-magic': [{ system: 'aff93381', action: 'passive', event: 'hit', delay: 0, duration: 1.2 }],
   // Renni's grab (batch1-events.ts): Q_tar on the enemy her cast holds, when her stun lands. Event, bone and duration
@@ -358,8 +361,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '78d04f27', action: 'cast', event: 'cast-start', delay: 0, duration: 3.3, stopAfter: 3.05, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
     // The blast spans the 2-hex cloud: at 0.5 it measured a little wider than the cloud (cdacbcc9), so 0.43 is our fit.
     { system: '8c256426', action: 'cast', event: 'cast-start', delay: 3, duration: 1.5, bone: 'Spine2_Wil', scale: kept(0.43), main: true },
-    // The cast receipt names no targets (damage is scheduled per tick), so this splash is optional or the whole cast fell back.
-    { system: '5dfd387b', action: 'cast', event: 'hit', delay: 3.05, duration: 1, scale: hugged(0.7), optional: true },
+    // The hit splash on each enemy is not here: the cast receipt names no targets, so it plays from the blast's damage instead
+    // (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts).
   ],
   // W then Q, as 14.24 plays it: the orb flies to the primary and its ring bursts there, then the shot lands on it.
   // The exported list fired both missiles with no target bone and every ring on every recipient (one heap by Ezreal).
