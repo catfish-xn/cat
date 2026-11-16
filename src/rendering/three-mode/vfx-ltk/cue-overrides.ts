@@ -76,6 +76,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // Dr. Mundo (batch1-events.ts): the beam from him to the enemy his once-a-second damage hits; at his closing blast, the blast
+  // body on him and the zap on each enemy it hits.
+  'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],
+  'drmundo-zap': [{ system: '56c38cb9', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: chest }],
+  'drmundo-zap-body': [{ system: 'b8021b81', action: 'passive', event: 'cast-start', delay: 0, duration: 2, bone: chest }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },

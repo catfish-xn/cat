@@ -64,6 +64,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
   const shots = new Map<string, { count: number; tick: number }>();
+  /** Dr. Mundo: the tick of his last once-a-second damage. */
+  const mundoPulse = new Map<string, number>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -71,7 +73,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); mundoPulse.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -150,6 +152,22 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'irelia'
           && !events.some(e => e.type === 'shieldLayerChanged' && e.reason === 'granted' && e.tick === event.tick && e.targetId === event.sourceId && isIreliaShield(e.key, e.targetId)))
           plan.noCastEffect = true;
+        // Dr. Mundo: his once-a-second damage plays the beam to the enemy it hits; his closing blast plays the zap on each enemy it
+        // hits and the blast body on him once. A tick's first hit is a pulse unless it comes less than a second after his last pulse
+        // (the blast); any further hits that tick are the blast (it may share the last pulse's tick).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'drmundo') {
+          const same = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e));
+          const pulse = same[0] === event && event.tick - (mundoPulse.get(event.sourceId) ?? -Infinity) >= 20;
+          if (pulse) {
+            mundoPulse.set(event.sourceId, event.tick);
+            plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-beam' });
+          } else {
+            plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'drmundo-zap' });
+            const blast = same.filter(e => !(e === same[0] && mundoPulse.get(event.sourceId) === event.tick));
+            if (blast[0] === event) plan.extra.push({ champion: 'drmundo', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'drmundo-zap-body' });
+          }
+        }
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
