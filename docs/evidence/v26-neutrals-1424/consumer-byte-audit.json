@@ -1705,9 +1705,9 @@
     },
     "tests/m8-b5-equipment-history.test.ts": {
       "previousBytes": 20393,
-      "currentBytes": 21558,
+      "currentBytes": 21833,
       "previousSha256": "6fcd98ef718be6bf923a330967cba67e5dae602f2f001fc97c10bde398fccdfc",
-      "currentSha256": "09eb7bca7f0775ab27902f1aa2dbc004aa39af55f54b1377fb691d514231be49",
+      "currentSha256": "86c49fad05c60b877c9698b1574761a19ee54ef90780bdffe5f6ed37d76f7b11",
       "firstDifferentByte": 1072
     },
     "tests/m8-b5-grant-upgrade.test.ts": {
