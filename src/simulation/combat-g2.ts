@@ -197,10 +197,7 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     const name = champion(unit);
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
     if (!target) return;
-    if (name === 'sett') {
-      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
-      applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration') * (t.total === 1 ? 1 + variable(unit, 'SoloBonus') : 1) * 20), ctx.tick, ctx.events);
-    } else if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
     else if (name === 'zyra') {
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
       if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);

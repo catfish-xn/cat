@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 
@@ -10,20 +10,16 @@ import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 const castCues = (variant?: 'single') => CUE_OVERRIDES.sett!.filter(cue => (cue.action ?? 'cast') === 'cast' && cue.variant === variant);
 
 describe('Sett\'s slam: one grabbed enemy vs two (11-15)', () => {
-  // 2026-11-16 (cast wind-up): the slam's hits moved from the cast list (was delay 0.6) to his damage event, delay 0
-  // ('sett-slam' / 'sett-slam-single', batch1-events.ts picks by the number of enemies hit).
   it('two enemies: E_cas at the cast, then the collision hit and dust on each enemy', () => {
-    expect(castCues().map(cue => [cue.system, cue.event, cue.delay])).toEqual([['f7d4d344', 'cast-start', 0]]);
-    expect(CUE_EXTRA_SKILLS['sett-slam']!.map(cue => [cue.system, cue.event, cue.delay])).toEqual([['5c1a47f1', 'hit', 0], ['c6d42f70', 'hit', 0]]);
-    const spawns = [...mapSkillTimeline(castCues(), 'me', ['foe', 'foe2']).spawns, ...mapSkillTimeline(CUE_EXTRA_SKILLS['sett-slam']!, 'me', ['foe', 'foe2']).spawns];
+    expect(castCues().map(cue => [cue.system, cue.event, cue.delay])).toEqual([['f7d4d344', 'cast-start', 0], ['5c1a47f1', 'hit', 0.6], ['c6d42f70', 'hit', 0.6]]);
+    const spawns = mapSkillTimeline(castCues(), 'me', ['foe', 'foe2']).spawns;
     expect(spawns.filter(s => s.system === 'f7d4d344')).toHaveLength(1);
     for (const system of ['5c1a47f1', 'c6d42f70']) expect(spawns.filter(s => s.system === system).map(s => s.targetId).sort()).toEqual(['foe', 'foe2']);
   });
 
   it('one enemy: E_cas at the cast and the one-target slam on him', () => {
-    expect(castCues('single').map(cue => [cue.system, cue.event, cue.delay])).toEqual([['f7d4d344', 'cast-start', 0]]);
-    expect(CUE_EXTRA_SKILLS['sett-slam-single']!.map(cue => [cue.system, cue.event, cue.delay])).toEqual([['2794d903', 'hit', 0]]);
-    expect(mapSkillTimeline(CUE_EXTRA_SKILLS['sett-slam-single']!, 'me', ['foe']).spawns.map(s => s.system)).toEqual(['2794d903']);
+    expect(castCues('single').map(cue => [cue.system, cue.event, cue.delay])).toEqual([['f7d4d344', 'cast-start', 0], ['2794d903', 'hit', 0.6]]);
+    expect(mapSkillTimeline(castCues('single'), 'me', ['foe']).spawns.map(s => s.system)).toEqual(['f7d4d344', '2794d903']);
   });
 
   it('the cast plan marks a one-enemy cast single and a two-enemy cast plain', () => {

@@ -16,9 +16,9 @@ it.each([
  ['jinx',[265]],['ambessa',[250]],['mordekaiser',[200]],
 ] as const)('%s independently sourced first-cast raw damage', (name,values)=>{const initial=freeze(battle([hero(name),dummy()],{rngState:42}));
   // Vi's damage lands at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11), Camille's at her kick, CAMILLE_KICK_TICKS
-  // after the cast (user 2026-11-15); Sett's and Trundle's CAST_WINDUP_TICKS after it (user 2026-11-16); every other skill on
-  // the cast tick.
-  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS,sett:CAST_WINDUP_TICKS.sett,trundle:CAST_WINDUP_TICKS.trundle} as Record<string,number>)[name];
+  // after the cast (user 2026-11-15); Trundle's CAST_WINDUP_TICKS after it (user 2026-11-16); every other skill on the cast
+  // tick.
+  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS,trundle:CAST_WINDUP_TICKS.trundle} as Record<string,number>)[name];
   expect(raw(later?run(initial,1+later).events:stepCombat(initial).events)).toEqual(values);
   if(later)expect(raw(run(initial,later).events)).toEqual([]);
   expect(initial.tick).toBe(0);});

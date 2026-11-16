@@ -64,8 +64,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'sett': {
       const targets=foes().slice(0,DISPLACEMENT_POLICY.sett.targets),mult=targets.length===1?1+v('SoloBonus'):1;
       grabAdjacent(ctx,u,targets,'sett-grab');
-      // The grab now; the slam's damage and stun land CAST_WINDUP_TICKS later on the enemies grabbed (g2Landing).
-      targets.forEach((x,n)=>{schedule(u,'g2Landing',ctx.tick+CAST_WINDUP_TICKS.sett,x,Math.floor(mag('Damage')*mult),seq,n,targets.length);ids.push(x.id);});break;
+      for(const x of targets){strike(x,Math.floor(mag('Damage')*mult),'magic',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*mult*20),ctx.tick,ctx.events);}break;
     }
     case 'draven':ids.push(u.id);break;
     case 'heimerdinger': {

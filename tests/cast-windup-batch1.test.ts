@@ -36,7 +36,7 @@ const stuns = (events: readonly CombatEvent[]) => events.filter(e => e.type === 
 const kill = (state: CombatState, id: string) => { const next = structuredClone(state); Object.assign(next.units.find(u => u.id === id)!, { hp: 0, alive: false }); return next; };
 const start = (name: string) => battle([hero(name), dummy('e', 2), dummy('f', 1, 2), dummy('g', 2, 2)], { rngState: 42 });
 
-const cases = [['sett', true], ['trundle', true], ['zyra', true], ['drmundo', false]] as const;
+const cases = [['trundle', true], ['zyra', true], ['drmundo', false]] as const;
 for (const [name, stunsOrBites] of cases) describe(`${name}: lands CAST_WINDUP_TICKS.${name} after the cast`, () => {
   const w = CAST_WINDUP_TICKS[name];
   it('nothing on the cast or before; damage (and heal, stun) on the landing tick', () => {
@@ -81,7 +81,7 @@ function army(name: string, star: 1 | 2 | 3 = 3): MatchState {
     preparation: { ...base.preparation, units: [name, 'drmundo', 'drmundo'].map((definitionId, i) => ({ id: `unit-${i + 1}`, definitionId,
       team: 'player', starLevel: i === 0 ? star : 3, location: { kind: 'board', cell: { col: 2 + i, row: i === 0 ? 5 : 4 } } })) } };
 }
-for (const name of ['sett', 'trundle', 'zyra'] as const) {
+for (const name of ['trundle', 'zyra'] as const) {
   it(`${name} synchronous / 1- and 7-tick slices / replay preserve complete bytes`, () => {
     const source = compileBattle(snapshotForBattle(army(name), 'A'), snapshotForBattle(army('garen'), 'B'), 42, { battleId: `${name}-windup` });
     const expected = resolveTwoSidedBattle(source, 901), expectedReplay = toCombatReplay(expected);
