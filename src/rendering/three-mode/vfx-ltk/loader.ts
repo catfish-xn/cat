@@ -309,10 +309,16 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           const surface = e.emissionSurface;
           if (e.emissionMesh && !reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
           if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
-          if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
+          // A mesh-kind surface naming no mesh, skeleton or joints (an empty emissionSurfaceDefinition) gives nothing to sample:
+          // the emitter emits from its own shape and the system loads (11-16: Mundo's R_Zap_AoE and R_Beam_Tar, Singed's and
+          // two of Mel's systems were refused whole for one such emitter each). Fitted, not the original's. A surface on the
+          // host's own pose (a skeleton or joints) is still refused, so the host keeps its fallback.
+          const empty = !!surface && surface.kind === 'mesh' && !surface.mesh && !surface.skeleton && surface.joints.length === 0;
+          if (empty) notes.push(`surface-empty:${e.name}`);
+          if (surface && !empty && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
             throw new VfxLoadError('unsupported', 'surface-host-pose');
           // Mesh bytes stay on the birth-mesh loop below. This pass only installs the surface so that loop can keep it.
-          if (surface) {
+          if (surface && !empty) {
             const sampled = await emission(surface.mesh!, surface.submeshes);
             let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
             held.set(e.index, { mesh: held.get(e.index)?.mesh ?? null, surface: sampled });
