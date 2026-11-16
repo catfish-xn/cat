@@ -3770,9 +3770,9 @@
     "tests/vfx-ltk-board-stencil-assets.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2552,
+      "currentBytes": 3409,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0b6b33749da0cdceb172e09ef93b15a4984e54d5bd61cd6279a1b871fb20df54",
+      "currentSha256": "fe44179a6a7a38141a71d7e06e6325ab3bf6ccc9fdf6fdf6ef35ef1982296b23",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-caitlyn-shots.test.ts": {
