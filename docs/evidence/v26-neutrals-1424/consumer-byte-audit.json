@@ -3971,6 +3971,14 @@
       "currentSha256": "51a747398a6dd66e3e1dfea1310f4f5a732f0a3e3457a8d53c8519c0823675bd",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-renni-q.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4645,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "91f6843006ce464781fffcbdf66cf977beb8031ae7ab6c876981a4a3bdc8923e",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
       "currentBytes": 9710,
