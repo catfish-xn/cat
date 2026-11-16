@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES, CAST_WINDUP_TICKS as CAST_WINDUP_3D } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 
@@ -12,6 +12,9 @@ const definitions: Record<string, string> = { zyra: 'zyra', f1: 'amumu', f2: 'am
 const skillsOf = (events: DisplayCombatEvent[]) => createBatch1VfxEvents(id => definitions[id]).batch(events).map(p => p.extra.map(x => [x.skill, x.targets]));
 
 describe('wind-up hits follow the damage', () => {
+  it('the 3D mirror of the rules\' wind-ups is equal to them', () => {
+    expect(CAST_WINDUP_3D).toEqual(CAST_WINDUP_TICKS);
+  });
   it('Zyra: one landing per tick, her primary first', () => {
     expect(skillsOf([damage('zyra', 1, 7, 'f2'), damage('zyra', 2, 7, 'f1'), damage('zyra', 3, 7, 'f3')])).toEqual([[['zyra-vines', ['f2', 'f1', 'f3']]], [], []]);
   });
