@@ -677,6 +677,14 @@
       "currentSha256": "bce8d05a625755434f9b567d5e5cc915023c8cc027c7c03731e62f3f26591d60",
       "firstDifferentByte": 0
     },
+    "tests/cast-windup-batch2.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10342,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1c9dda221aeed2c9872484cd11bfd92b87e8e86e3b42307626f3fc3a7047407e",
+      "firstDifferentByte": 0
+    },
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

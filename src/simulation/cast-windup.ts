@@ -15,3 +15,7 @@ export const SMEECH_STAB_TICKS = 7;
 /** Wind-up batch 2 (same authorization; fitted, not original data): Dr. Mundo's closing blast lands this many ticks after his
  * last once-a-second damage instead of on the same tick. Its amount is still taken on the cast. */
 export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
+
+/** Wind-up batch 2 (same authorization; fitted, not original data): Nunu's second damage lands this many ticks after his last
+ * periodic damage instead of on the same tick. Its amount is still taken on the cast. */
+export const NUNU_SECOND_AFTER_PULSE_TICKS = 9;
