@@ -132,6 +132,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const targets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets, action: 'passive', skill: 'blitzcrank-shock' });
+          // The white flash on Blitzcrank himself plays on the same tick (ab66b54f, blitzcrank-shock-self).
+          plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'blitzcrank-shock-self' });
         }
         // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
         // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.

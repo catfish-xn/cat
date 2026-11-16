@@ -76,6 +76,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
+  'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
@@ -177,7 +179,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
     { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
-    { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
   // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
   tristana: [
