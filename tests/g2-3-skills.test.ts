@@ -26,9 +26,12 @@ it('Cassiopeia every third cast splashes only two other targets',()=>{
 it('Mundo splits the complete 1550 healing without truncation or duplicate pulses',()=>{
  let state=battle([hero('drmundo'),dummy()],{rngState:42});const events:CombatEvent[]=[];
  // 2026-11-16: the whole heal and pulses start CAST_WINDUP_TICKS.drmundo after the cast; the window grows by as much.
- for(let i=0;i<41+CAST_WINDUP_TICKS.drmundo;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
+ // Wind-up batch 2: the closing blast lands DRMUNDO_BLAST_AFTER_PULSE_TICKS after the last pulse; the window grows by as much.
+ for(let i=0;i<41+CAST_WINDUP_TICKS.drmundo+DRMUNDO_BLAST_AFTER_PULSE_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
  expect(heals(events).filter(e=>e.unitId==='p').map(e=>e.requested)).toEqual([620,465,465]);
  expect(raw(events)).toEqual([120,120,350]);
+ const ticks=packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.tick);
+ expect(ticks[2]!-ticks[1]!).toBe(DRMUNDO_BLAST_AFTER_PULSE_TICKS);
 });
 it('Renni delayed damage and healing conserve complete source amounts',()=>{
  let state=battle([hero('renni'),dummy()],{rngState:42});const events:CombatEvent[]=[];
@@ -91,7 +94,7 @@ import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

@@ -11,3 +11,7 @@ export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 
  * after another, SMEECH_STAB_TICKS apart, instead of all on the cast tick. Each stab's amount is still taken on the cast.
  */
 export const SMEECH_STAB_TICKS = 7;
+
+/** Wind-up batch 2 (same authorization; fitted, not original data): Dr. Mundo's closing blast lands this many ticks after his
+ * last once-a-second damage instead of on the same tick. Its amount is still taken on the cast. */
+export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;

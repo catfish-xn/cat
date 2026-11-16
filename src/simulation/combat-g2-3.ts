@@ -1,5 +1,5 @@
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -149,14 +149,15 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'drmundo':{
       const total=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('PercentHealthHeal')}),initial=Math.floor(total*v('PercentofHealImmediately')),seconds=Math.round(v('Duration'));
-      // Everything lands CAST_WINDUP_TICKS after the cast (the first heal too); amounts and the pulse target are taken now.
+      // Everything lands CAST_WINDUP_TICKS after the cast (the first heal too); amounts and the pulse target are taken now. The
+      // closing blast lands DRMUNDO_BLAST_AFTER_PULSE_TICKS after the last pulse.
       const w=CAST_WINDUP_TICKS.drmundo;
       later(ctx,u,u,'g23Heal',w,initial,seq,0,seconds+1);
       for(let i=0;i<seconds;i++){
         later(ctx,u,u,'g23Heal',w+(i+1)*20,split(total-initial,seconds,i),seq,i+1,seconds+1);
         later(ctx,u,t,'g23Magic',w+(i+1)*20,mag('APDamage'),seq,i,seconds);
       }
-      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=2))later(ctx,u,x,'g23Magic',w+seconds*20,amount(u,ctx.tick,{hp:v('PercentHealthDamage')}),seq,seconds,seconds+1);break;
+      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=2))later(ctx,u,x,'g23Magic',w+seconds*20+DRMUNDO_BLAST_AFTER_PULSE_TICKS,amount(u,ctx.tick,{hp:v('PercentHealthDamage')}),seq,seconds,seconds+1);break;
     }
     case 'elise':
       heal(mag('FlatHealth'));

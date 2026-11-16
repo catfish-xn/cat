@@ -1268,9 +1268,9 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 9091,
+      "currentBytes": 9431,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "7afd426864b3082eeb116af05f494e72f2e4a9a3ece57e1cae53dc77120f7ed6",
+      "currentSha256": "305a234bca9a8a0401a2617dbf7b019020349bdd37c46d973eb053fd813a8007",
       "firstDifferentByte": 1370
     },
     "tests/g2-4a-crown-gold.test.ts": {
