@@ -516,7 +516,8 @@ export function writeBeam(
     WIDE,
     -width / 2,
     0,
-    0,
+    along,
+    1,
     particle,
     layers,
   );
@@ -529,7 +530,8 @@ export function writeBeam(
     WIDE,
     width / 2,
     across,
-    0,
+    along,
+    1,
     particle,
     layers,
   );
@@ -542,7 +544,8 @@ export function writeBeam(
     WIDE,
     width / 2,
     across,
-    along,
+    0,
+    0,
     particle,
     layers,
   );
@@ -555,7 +558,8 @@ export function writeBeam(
     WIDE,
     -width / 2,
     0,
-    along,
+    0,
+    0,
     particle,
     layers,
   );
@@ -587,6 +591,8 @@ function cornerInto(
   half: number,
   across: number,
   along: number,
+  /** REC ONLY experiment: the multiply texture runs once along the whole beam, whatever the base texture's tiling. */
+  multAlong: number,
   particle: BeamParticle,
   layers: RibbonLayers,
 ): void {
@@ -598,7 +604,7 @@ function cornerInto(
   transposeInto(out.uv, vertex);
   transposeInto(out.alphaUv, vertex);
   if (layers.mult !== null) {
-    placedInto(out.multUv, out.multCell, vertex, along, across, particle.multUv, 0, layers.mult);
+    placedInto(out.multUv, out.multCell, vertex, multAlong, across, particle.multUv, 0, layers.mult);
     transposeInto(out.multUv, vertex);
   }
   for (let channel = 0; channel < 4; channel += 1) {
