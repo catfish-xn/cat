@@ -354,6 +354,7 @@ export function createDriver(
         world,
         stopped:
           (rig.stopAt != null && reached >= rig.stopAt) || landed(rig.motion, reached, rig.height),
+        stopAge: rig.stopAt != null ? rig.stopAt + system.buildUpTime : null,
         pinned: lineage.pinned,
         surfaces: lineage.surfaces.get(""),
         scale: lineage.scale,

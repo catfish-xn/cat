@@ -66,6 +66,11 @@ export interface SystemStep extends Step {
   readonly world: World;
   /** The rig has soft-stopped the system, as the engine does. */
   readonly stopped: boolean;
+  /**
+   * The system age the rig's stop falls at (its stop plus the build-up), null or omitted without one. An emitter whose
+   * first emission is due by then is owed that emission even when the first step to reach it lies past the stop.
+   */
+  readonly stopAge?: number | null;
   /** The number every birth reads its tables at in place of its own, while the reader pins one. */
   readonly pinned?: number | null;
   /**
@@ -122,6 +127,8 @@ export interface EmitterState {
   age: number;
   /** The emitter has emitted at least once. */
   emitted: boolean;
+  /** The step clock has reached the emitter's `timeBeforeFirstEmission`: its first emission has had its step. */
+  opened: boolean;
   /** Number of particles the emitter spawned in this run, wrapped at 65,536 like the engine's u16. */
   spawned: number;
   /** The system time of the last spawn, which the next count runs from, and zero before any. */
@@ -168,6 +175,7 @@ export function createEmitterStates(emitters: readonly EmitterModel[], rng?: Rng
     return {
       age: 0,
       emitted: false,
+      opened: false,
       spawned: 0,
       lastSpawn: 0,
       absent: chance > 0 && rng !== undefined && chance > rng.unitFloat(),
