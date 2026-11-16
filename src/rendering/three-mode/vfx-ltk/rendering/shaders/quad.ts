@@ -291,7 +291,8 @@ vec4 warped(vec2 at, float mask) {
   float shown = mask * held.a;
   vec2 push = (held.xy * 2.0 - 1.0) * warp * shown * vec2(viewport.y / viewport.x, 1.0);
   vec2 taken = clamp(onScreen() + push, 0.0, 1.0);
-  return vec4(texture2D(frame, taken).rgb, shown);
+  /* REC ONLY (11-16 experiment, do not merge): the warp is scaled by the mask once (in push) and laid over whole. */
+  return vec4(texture2D(frame, taken).rgb, shown > 0.001 ? 1.0 : 0.0);
 }
 #endif
 `;
