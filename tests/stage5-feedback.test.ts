@@ -48,7 +48,9 @@ describe('stage5 floating text equivalence and DOM work', () => {
     setup(); const oldHost = host(), newHost = host(), old = before(oldHost), next = createCombatFeedbackRenderer(newHost);
     const input = JSON.stringify(sequence);
     for (const frame of sequence.ticks) {
-      const at = frame.tick * 50, events = frame.events as SceneCombatEvent[];
+      // Both renderers get every packet as a plain hit: a crit now shows larger and apart from the frozen renderer's merged
+      // label (Fable 11-16). Everything else must still match it exactly; 'crit floats' below guards how crits show.
+      const at = frame.tick * 50, events = (frame.events as SceneCombatEvent[]).map(event => event.type === 'packetDamage' ? { ...event, critical: false } : event);
       old.push(events, at); next.push(events, at);
       if (frame.tick === 45) size = { width: 380, height: 400 };
       const anchors = new Map<string, FeedbackAnchor>(sequence.units.filter((_, i) => (frame.tick + i) % 11 !== 0).map((u, i) =>
@@ -151,4 +153,44 @@ describe('stage5 floating text equivalence and DOM work', () => {
     expect(resets).toHaveBeenCalledTimes(2);
     renderer.dispose();
   });
+
+  describe('crit floats', () => {
+    const crit = (tick: number, targetId = 'a', hpDamage = 10) => ({ ...damage(tick, targetId, hpDamage), critical: true }) as const;
+    const heal = (tick: number, targetId = 'a', actual = 7) => ({ type: 'heal', tick, eventSeq: tick, targetId, actual, shares: [] }) as unknown as SceneCombatEvent;
+    const labels = (events: readonly SceneCombatEvent[]) => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push(events, 0); renderer.render(0, new Map([['a', { x: 200, y: 300, radius: 20 }]]));
+      const out = snapshot(h)[0].children; renderer.dispose(); return out;
+    };
+    it('a crit shows in its own label, larger than a plain hit, with the same colour and text rules', () => {
+      const [plain] = labels([damage(1)]), [big] = labels([crit(1)]);
+      expect(big.text).toBe(plain.text);
+      expect(big.style.color).toBe(plain.style.color);
+      expect(parseFloat(big.style.fontSize)).toBeGreaterThan(parseFloat(plain.style.fontSize));
+    });
+    it('crits of one tick and unit merge into one crit label, apart from that tick\'s plain hits', () => {
+      const shown = labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]);
+      expect(shown.map(e => e.text).sort()).toEqual(['−15', '−4']);
+    });
+    it('the plain label of a tick that also has a crit is exactly the label of the plain hit alone', () => {
+      const alone = labels([damage(1, 'a', 4)]);
+      const mixed = labels([damage(1, 'a', 4), crit(1, 'a', 10)]).filter(e => e.text === '−4');
+      expect(mixed).toEqual(alone);
+    });
+    it('heals and shields are not changed by a crit', () => {
+      expect(labels([heal(1), crit(2, 'b')]).filter(e => e.text === '+7')).toEqual(labels([heal(1)]));
+      const shielded = { ...crit(1), absorbed: 6 } as const, plainShielded = { ...damage(1), absorbed: 6 } as const;
+      expect(labels([shielded]).filter(e => e.text === '盾 6')).toEqual(labels([plainShielded]).filter(e => e.text === '盾 6'));
+    });
+    it('a pooled label taken by a crit, then by a plain hit, is plain size again', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 200, y: 300, radius: 20 }]]);
+      renderer.push([crit(1)], 0); renderer.render(0, anchors); const big = snapshot(h)[0].children[0];
+      renderer.reset(); renderer.push([damage(2)], 0); renderer.render(0, anchors); const reused = snapshot(h)[0].children[0];
+      expect(created).toBe(1);
+      expect(reused.style.fontSize).not.toBe(big.style.fontSize);
+      expect(reused).toEqual(labels([damage(2)])[0]);
+      renderer.dispose();
+    });
+  });
 });
+
