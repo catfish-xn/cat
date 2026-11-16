@@ -141,7 +141,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself: the tick an enemy takes two of
         // his ability's direct packets, its last tick and SecondDamage. Display packets carry no segment index, so the pair is
         // the marker (inferred from the rule's schedule); it plays once, on the second packet. Another source's packet in that
-        // tick, his attack, or an item proc never counts.
+        // tick, his attack, or an item proc never counts. It depends on that schedule: should his last tick and SecondDamage
+        // stop sharing a tick, the splash silently stops (the real-combat case in tests/vfx-ltk-nunu-blast-hit.test.ts fails).
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'nunu' && isNunuAbility(event)) {
           const pair = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.tick === event.tick && e.sourceId === event.sourceId && e.targetId === event.targetId && isAbilityDirect(e) && isNunuAbility(e));

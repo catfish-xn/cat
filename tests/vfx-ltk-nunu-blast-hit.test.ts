@@ -43,18 +43,21 @@ describe('Nunu\'s hit splash follows his blast\'s damage', () => {
     runRealCombat(units, 120, (_state, events) => { shown.push(events as DisplayCombatEvent[]); }, 1, { kind: 'cast' });
     const vfx = createBatch1VfxEvents(id => (id === 'me' ? 'nunu' : 'amumu'));
     const splashes: { tick: number; target: string }[] = [];
-    let castTick = -1;
+    const castTicks: number[] = [];
     for (const batch of shown) for (const plan of vfx.batch(batch)) {
-      if (plan.event.type === 'cast' && plan.event.sourceId === 'me' && castTick < 0) castTick = plan.event.tick;
+      if (plan.event.type === 'cast' && plan.event.sourceId === 'me') castTicks.push(plan.event.tick);
       for (const extra of plan.extra) if (extra.skill === 'nunu-blast-hit') splashes.push({ tick: (plan.event as { tick: number }).tick, target: extra.targets[0]! });
     }
-    expect(castTick).toBeGreaterThanOrEqual(0);
-    // His ability's packets after his first cast: the splash lands on the last tick each enemy took them, once per enemy.
-    const packets = shown.flat().filter((e: any) => e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'ability-direct' && e.tick > castTick) as any[];
+    expect(castTicks.length).toBeGreaterThan(0);
+    // The first cast's span only: from it to his next cast (or the run's end).
+    const [castTick, nextCast = Infinity] = castTicks;
+    const inFirst = (tick: number) => tick > castTick! && tick < nextCast;
+    const packets = shown.flat().filter((e: any) => e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'ability-direct' && inFirst(e.tick)) as any[];
     const lastByTarget = new Map<string, number>();
     for (const p of packets) lastByTarget.set(p.targetId, Math.max(lastByTarget.get(p.targetId) ?? -1, p.tick));
-    const firstCast = splashes.filter(s => s.tick <= Math.max(...lastByTarget.values()));
+    const firstCast = splashes.filter(s => inFirst(s.tick));
     expect(firstCast.length).toBeGreaterThan(0);
+    expect(firstCast.length).toBe(lastByTarget.size);
     expect(new Set(firstCast.map(s => s.target)).size).toBe(firstCast.length);
     for (const s of firstCast) expect(s.tick).toBe(lastByTarget.get(s.target));
   });
