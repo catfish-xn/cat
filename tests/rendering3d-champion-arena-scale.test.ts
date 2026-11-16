@@ -47,7 +47,8 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     expect(scaleOf('nunu', '5dfd387b')).toEqual([measuredOnBody(0.7)]);
     // Ranges measured in cells: unchanged.
     expect(scaleOf('nunu', '78d04f27')).toEqual([measuredAtFxScale(0.43)]);
-    expect(scaleOf('nunu', '8c256426')).toEqual([measuredAtFxScale(0.43)]);
+    // Nunu's blast at the default skill size (11-16 review), its pool at its fit.
+    expect(scaleOf('nunu', '8c256426')).toEqual([undefined]);
     // Irelia's swipe plays at her shield's end (#677: CUE_EXTRA_SKILLS 'irelia-swipe'), still sized in cells.
     expect(CUE_EXTRA_SKILLS['irelia-swipe']!.filter(cue => cue.system === '08b7a939').map(cue => cue.scale)).toEqual([measuredAtFxScale(1)]);
     expect(scaleOf('garen', '5bbccb8c')).toEqual([measuredAtFxScale(0.45)]);
