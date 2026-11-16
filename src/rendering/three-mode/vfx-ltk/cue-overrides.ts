@@ -76,6 +76,25 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // Heimerdinger: one rocket per damage packet (batch1-events.ts), from his rocket bone to that enemy's centre, and its hit there
+  // when it lands. A second, third... rocket at the same enemy in one cast leaves a little later (k = its order, capped), so the
+  // rockets do not draw as one (stagger fitted, not original data).
+  'heimerdinger-rocket-0': [
+    { system: 'c8d6ee2e', action: 'passive', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+    { system: '07c9833a', action: 'passive', event: 'hit', delay: 0.7, duration: 1, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
+  'heimerdinger-rocket-1': [
+    { system: 'c8d6ee2e', action: 'passive', event: 'projectile', delay: 0.25, duration: 0.7, bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+    { system: '07c9833a', action: 'passive', event: 'hit', delay: 0.75, duration: 1, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
+  'heimerdinger-rocket-2': [
+    { system: 'c8d6ee2e', action: 'passive', event: 'projectile', delay: 0.3, duration: 0.7, bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+    { system: '07c9833a', action: 'passive', event: 'hit', delay: 0.8, duration: 1, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
+  'heimerdinger-rocket-3': [
+    { system: 'c8d6ee2e', action: 'passive', event: 'projectile', delay: 0.35, duration: 0.7, bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+    { system: '07c9833a', action: 'passive', event: 'hit', delay: 0.85, duration: 1, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
@@ -295,6 +314,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // Heimerdinger: his rockets and their hits come one per damage packet (CUE_EXTRA_SKILLS heimerdinger-rocket-*), not from his cast.
+  heimerdinger: [
+    { system: '9ad2672c', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.20078125, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.50078125, duration: 1.5 },
+    { system: 'c44d51d0', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'C_Buffbone_Cstm_Rocket' },
+  ],
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },

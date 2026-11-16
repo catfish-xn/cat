@@ -44,6 +44,8 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
   if (last !== undefined) CAITLYN_SHOT_STATS.fallback++;
   return last;
 }
+/** Heimerdinger's rockets drawn per cast tick (fitted, not original data). */
+export const HEIMER_ROCKETS_PER_TICK = 8;
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
@@ -124,6 +126,16 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             && definition(s.sourceId) === 'steb' && s.actual > 0);
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
+        }
+        // Heimerdinger: one rocket per damage packet of his cast, at most HEIMER_ROCKETS_PER_TICK a tick (on-screen cap, fitted, not
+        // original data); repeats at one enemy leave in order (heimerdinger-rocket-0..3).
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'heimerdinger') {
+          const before = events.filter(e => e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)
+            && e.eventSeq < event.eventSeq) as Extract<DisplayCombatEvent, { type: 'packetDamage' }>[];
+          if (before.length < HEIMER_ROCKETS_PER_TICK) {
+            const k = Math.min(3, before.filter(e => e.targetId === event.targetId).length);
+            plan.extra.push({ champion: 'heimerdinger', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `heimerdinger-rocket-${k}` });
+          }
         }
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
