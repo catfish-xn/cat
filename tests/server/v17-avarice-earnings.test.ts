@@ -35,7 +35,10 @@ function fieldSevika(room: Room, seatId: string): void {
     expect(room.handle(seatId, slot >= 0 ? { type: 'buy', slot, generation: shop.generation } : { type: 'reroll' })).toMatchObject({ ok: true });
   }
   const sevika = seatOf(room.state, seatId).match.preparation.units.find(unit => unit.definitionId === 'sevika')!;
-  expect(room.handle(seatId, { type: 'deploy', unitId: sevika.id, target: { kind: 'board', cell: { col: 3, row: 5 } } })).toMatchObject({ ok: true });
+  // #693 (2026-11-16, scene change approved by Fable): at (3,5) her High Roller casts no longer paid any gold before the room
+  // ended (an opponent's wind-up changed the fights). At (2,5) they do, on #693 and on wind-up batch 2; (1,5) (3,4) (3,6)
+  // (4,5) (5,5) also pass on #693.
+  expect(room.handle(seatId, { type: 'deploy', unitId: sevika.id, target: { kind: 'board', cell: { col: 2, row: 5 } } })).toMatchObject({ ok: true });
 }
 /** Gives the seat's avarice unit the three gold items through the legal test entry, written back as the seat's state. */
 function grantGoldItems(room: Room, seatId: string): void {
@@ -89,6 +92,8 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     const fieldIdle = () => { for (const seatId of HUMANS) if (seatId !== EARNER) { levelForBench(room, seatId, 0); fieldBench(room, seatId); } };
     for (let roundName = '4-6'; checked.length < 2 || paid.highRoller === 0 || !kinds.has('gamblers') || !kinds.has('collector') || !sideBAgainstAvarice;) {
       expect(checked.length).toBeLessThan(20);
+      // Premise: the room plays on until Sevika's High Roller has paid gold (and the other cases below were seen).
+      expect(room.state.phase, 'premise: Sevika produced gold before the room ended').not.toBe('ended');
       if (checked.length) roundName = (yield* routeUntil(room, clock, state => { claimAllOrbs(room); fieldIdle(); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; })).roundName;
       else yield* nextBattleRoute(room, clock, roundName);
       const own = pvpBattleOf(room.state, EARNER);

@@ -2862,9 +2862,9 @@
     },
     "tests/server/augment-pool-batch5-g7-room.test.ts": {
       "previousBytes": 10523,
-      "currentBytes": 11954,
+      "currentBytes": 12448,
       "previousSha256": "0a7674de487e695fc5af821f9bb5e08445c514dbaced57121ac72ded56369e7f",
-      "currentSha256": "f7fd2e41c30586d9f570403cbfea94f63ac1cbbf3463e883a7d18084477d6fed",
+      "currentSha256": "6049757ded0fed0ac149a24327f42515b610c4364be604ff12d2c408f50a3bf9",
       "firstDifferentByte": 1253
     },
     "tests/server/augment-pool-batch5-h6-room.test.ts": {
@@ -3208,9 +3208,9 @@
     "tests/server/placeholder-augment-history.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15650,
+      "currentBytes": 16321,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b23b3f339c0a14f2a3703f224a4afdd5d1336409aede5ad587febc174672620a",
+      "currentSha256": "2585efb4726e433444f82c834fb2c3dbce3300ef6cdb33e494fa274464992ba8",
       "firstDifferentByte": 0
     },
     "tests/server/placeholder-resolver-helper.ts": {
@@ -3322,6 +3322,13 @@
       "previousSha256": "e64a8ef5877d3e802c60d8f562466b8c1382fa992715fdec07d5cd069c2a9893",
       "currentSha256": "18cbd5eb7a94cec089b8d5f1429c78774241a71cb3e754501951f24a57d3fd1b",
       "firstDifferentByte": 1020
+    },
+    "tests/server/v17-avarice-earnings.test.ts": {
+      "previousBytes": 11097,
+      "currentBytes": 11604,
+      "previousSha256": "c070c5d07024ee9ac846348e3f4b1d1ff76a9e2fe38e770c7c0948799b20d323",
+      "currentSha256": "1541c05f85b410c0cef2c4720077672f18820ee9f819c9ba206afb8faa1be917",
+      "firstDifferentByte": 2679
     },
     "tests/server/v17-avarice-helpers.ts": {
       "previousBytes": 12766,
