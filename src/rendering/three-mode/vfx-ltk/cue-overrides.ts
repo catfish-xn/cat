@@ -74,11 +74,6 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
-  // Powder: her blast's target burst and explosion play when its damage lands, on each enemy it hits (batch1-events.ts).
-  'powder-blast': [
-    { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
-    { system: '805215e2', action: 'passive', event: 'hit', delay: 0, duration: 1.5 },
-  ],
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
@@ -86,6 +81,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
+  ],
+  // Powder: her blast's target burst and explosion play when its damage lands, on each enemy it hits (batch1-events.ts).
+  'powder-blast': [
+    { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+    { system: '805215e2', action: 'passive', event: 'hit', delay: 0, duration: 1.5 },
   ],
   // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
   // splash followed the blast in his cast list, at the size it had there.
