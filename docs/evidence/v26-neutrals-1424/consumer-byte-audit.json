@@ -3762,9 +3762,9 @@
     "tests/vfx-ltk-blitz-shock.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2729,
+      "currentBytes": 3609,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b02a80ec7d94ca0913ed22c47f5e2c63f5a699a9a0d1192a42f247db8d52abcd",
+      "currentSha256": "cc2e7d4892ba8285793335caa826bd6fc153b80c734b789dd3b1c0623d829830",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-board-stencil-assets.test.ts": {
@@ -3873,9 +3873,9 @@
     "tests/vfx-ltk-emission.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5271,
+      "currentBytes": 6411,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "af391160e64226c16ec42d20f19ede618ea38dc0df7761db5036a86267849f32",
+      "currentSha256": "e91a7b48a405008c2abf92bc220adb8156fc14a6cb963a074f0811ca11b26e8c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-fade-out.test.ts": {
@@ -3954,6 +3954,14 @@
       "currentBytes": 1285,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e9dc114776f13fafcffe745408ddb865309fdc29d50f4da858b1047970003532",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-mesh-pool-matrix.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3907,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "45dc37dc275fce131c41c073ee4bd0eb99f38d85b1a3dddfc49443c0fd68ed72",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-particles.test.ts": {
@@ -4086,6 +4094,14 @@
       "currentBytes": 1976,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "34abf1fe66f51258e7762609c31d0f7a20ab43d8fa638fc527e71d2504cf844c",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-urgot-blast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1395,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "106be1f0aced6fbce96bc882aab9641245aad8770a8b5cb33d1b1c3d9823435d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-vladimir-heal.test.ts": {
