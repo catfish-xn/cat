@@ -46,6 +46,8 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
   leona: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 11 / 30, duration: .45, stopAfter: .1, bone: chest },
     { action: 'cast', system: '8d9a4ccc', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.8, bone: chest },
+    // REC ONLY (do not merge): candidate B, W_cas_hit also at her cast (candidate for the original's 0.5 s orange burst).
+    { action: 'cast', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
     // Driven by the observed damageReduction expiration; no explosion at cast start.
     // REC ONLY (do not merge): candidate A, the end burst plays to its own end (was stopAfter .1: SpikeShapes never started).
     { action: 'end', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
