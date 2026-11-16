@@ -620,9 +620,6 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
-  // Singed W_Ally_Activate: Add_PaticlesBurst needs a surface-host-pose emission, which the loader does not support, so it
-  // is muted here by system and emitter; nothing else is skipped. Known missing; its look has not been checked.
-  '2639dd7d': ['Add_PaticlesBurst'],
 };
 
 /**
