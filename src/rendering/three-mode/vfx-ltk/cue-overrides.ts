@@ -20,7 +20,6 @@ import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
-import { CAST_WINDUP_TICKS } from '../../../simulation/cast-windup';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
@@ -72,6 +71,12 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
+/**
+ * The rules' cast wind-ups (src/simulation/cast-windup.ts CAST_WINDUP_TICKS), mirrored here: importing that module from the 3D
+ * code pulled it into the render3d chunk and made the 2D entry load that chunk eagerly (rendering3d-isolation). The test
+ * vfx-ltk-windup-hits checks the two stay equal.
+ */
+export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6 } as const);
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
