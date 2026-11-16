@@ -340,14 +340,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'da33678c', action: 'cast', event: 'cast-start', bone: 'L_Rotor', delay: 0, duration: 2.2 },
   ],
   // The attack hit is the exported list's own cue, unchanged (an override replaces the whole list).
-  // W: Singed lobs a flask (W_Mis, its missile data: left hand → the ally's head attach point in 0.35 s, a gravity arc
-  // aimed 150 above it) at the ally who dealt the most damage, himself included: on himself it still flies (selfFlight),
-  // up from his hand and down onto his own head. Its 0.6 s release is a fitted value, not original data (the spell data
-  // carries none). When the flask lands on the ally's head, the ally gets W_Ally_Activate (flash, burst, splashes), W_Ally_Buf
-  // (ground glow, smoke, rays) and W_Buff_Avatar2 (a single whole-body edge glow, 4 s particle), and Singed's own
-  // W_Self_Buff pool starts: their delay is the release plus the flight. All of it fades out over SOFT_STOP_SECONDS when
-  // his damage reduction ends for any reason or he dies (batch1-events.ts), so the durations are only bounds:
-  // W_Self_Buff's emitters never end, W_Ally_Buf's rays run 5 s.
+  // W: Singed lobs a flask (W_Mis, as its missile data says: from his left hand to the ally's head attach point, in the
+  // data's flight time, along a gravity arc aimed above the head) at the ally who dealt the most damage, himself included:
+  // on himself it still flies (selfFlight), up from his hand and down onto his own head. Its 0.6 s release is a fitted
+  // value, not original data (the spell data carries none). When the flask lands on the ally's head, the ally gets
+  // W_Ally_Activate (flash, burst, splashes), W_Ally_Buf (ground glow, smoke, rays) and W_Buff_Avatar2 (a one-off
+  // whole-body edge glow), and Singed's own W_Self_Buff pool starts: their delay is the release plus the flight. All of it
+  // fades out over SOFT_STOP_SECONDS when his damage reduction ends for any reason or he dies (batch1-events.ts), so the
+  // durations are only bounds: W_Self_Buff's emitters never end, and W_Ally_Buf's rays outlast the damage reduction.
   singed: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.4881666819254557, duration: 1.5 },
     { system: '4fb68964', action: 'cast', event: 'projectile', bone: 'L_Hand', targetBone: 'C_BUFFBONE_GLB_HEAD_LOC', delay: SINGED_FLASK_RELEASE, duration: 0.6, travelSeconds: SINGED_FLASK_FLIGHT, arc: { gravity: 10000, targetOffset: 150 }, selfFlight: true },
@@ -602,8 +602,8 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
   // Singed W_Ally_Activate: Add_PaticlesBurst emits from the host's posed surface (surface-host-pose), which the loader
-  // does not support; the other 17 emitters load. One emitter is knowingly missing (small motes; its look could not
-  // be rendered to check). Listed by system and emitter only: no other unsupported emitter is skipped.
+  // does not support; the rest of the system's emitters load. One emitter is knowingly missing (small motes; its look
+  // could not be rendered to check). Listed by system and emitter only: no other unsupported emitter is skipped.
   '2639dd7d': ['Add_PaticlesBurst'],
 };
 
