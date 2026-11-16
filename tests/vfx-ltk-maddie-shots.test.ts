@@ -15,6 +15,11 @@ describe('Maddie\'s shots follow their damage', () => {
     const plans = createBatch1VfxEvents(id => definitions[id]).batch([damage(1, 5, 'f1'), damage(2, 9, 'f1'), damage(3, 12, 'f1', 'attack', 'basic-attack')]);
     expect(plans.map(p => p.extra.filter(x => x.skill === 'maddie-shot').map(x => x.targets))).toEqual([[['f1']], [['f1']], []]);
   });
+  it('her cast plays nothing (no fallback to the old placeholder cast effect)', () => {
+    const cast = { type: 'cast', sourceId: 'md', eventSeq: 1, tick: 1, actionSeq: 1, completed: true, actualManaSpent: 60, refundedMana: 0,
+      targetIds: ['f1'], completionCell: { col: 0, row: 0 } } as DisplayCombatEvent;
+    expect(createBatch1VfxEvents(id => definitions[id]).batch([cast])[0]!.noCastEffect).toBe(true);
+  });
   it('the shot lands with its hit; her cast list no longer plays them', () => {
     const [shot, hit] = CUE_EXTRA_SKILLS['maddie-shot']!;
     expect(hit!.delay).toBeCloseTo(shot!.delay + shot!.travelSeconds!);

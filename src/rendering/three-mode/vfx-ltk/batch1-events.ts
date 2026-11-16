@@ -128,6 +128,9 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Maddie: one shot per damage packet of her volley, to the enemy it hit.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
           plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
+        // Maddie: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather
+        // than falling back to the old placeholder cast effect.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'maddie') plan.noCastEffect = true;
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'blitzcrank'
           && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
