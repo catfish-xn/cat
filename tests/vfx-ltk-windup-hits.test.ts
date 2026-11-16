@@ -19,8 +19,27 @@ describe('wind-up hits follow the damage', () => {
   it('Zyra: one landing per tick, her primary first', () => {
     expect(skillsOf([damage('zyra', 1, 7, 'f2'), damage('zyra', 2, 7, 'f1'), damage('zyra', 3, 7, 'f3')])).toEqual([[['zyra-vines', ['f2', 'f1', 'f3']]], [], []]);
   });
-  it('Trundle: the bite hit sits at the wind-up in his cast list', () => {
-    expect(CUE_OVERRIDES.trundle!.find(c => c.system === '8bb9f6ab')).toMatchObject({ event: 'hit', delay: CAST_WINDUP_TICKS.trundle / 20 });
+  it('Trundle: his cast plays nothing; the bite hit comes with the bite damage', () => {
+    const cast = { type: 'cast', sourceId: 'trundle', eventSeq: 1, tick: 1, actionSeq: 1, completed: true, actualManaSpent: 60, refundedMana: 0,
+      targetIds: ['f1'], completionCell: { col: 0, row: 0 } } as DisplayCombatEvent;
+    const plans = createBatch1VfxEvents(id => ({ ...definitions, trundle: 'trundle' } as Record<string, string>)[id]).batch([cast, damage('trundle', 2, 5, 'f1')]);
+    expect(plans[0]!.noCastEffect).toBe(true);
+    expect(plans.map(p => p.extra.map(x => [x.skill, x.targets]))).toEqual([[], [['trundle-bite', ['f1']]]]);
+    expect(CUE_OVERRIDES.trundle).toBeUndefined();
+  });
+  it('a caster dead during the wind-up: no landing damage, so no hit is planned', () => {
+    for (const name of ['sett', 'trundle', 'zyra'] as const) {
+      const units = realUnits({ unit: name, star: 1, form: null, foe: 'amumu', dist: name === 'zyra' ? 4 : 1, nfoes: 2, foestar: 2 } as any);
+      const defs: Record<string, string> = Object.fromEntries(units.map((u: any) => [u.id, u.definitionId]));
+      const batch = createBatch1VfxEvents(id => defs[id]);
+      let cast = -1; const planned: string[] = [];
+      runRealCombat(units, 40, (state, shown) => {
+        for (const e of shown) if (e.type === 'cast' && e.sourceId === 'me' && cast < 0) { cast = e.tick; Object.assign(state.units.find((u: any) => u.id === 'me'), { hp: 0, alive: false }); }
+        for (const p of batch.batch(shown)) for (const x of p.extra) if (x.sourceId === 'me') planned.push(x.skill);
+      });
+      expect(cast, name).toBeGreaterThan(0);
+      expect(planned, name).toEqual([]);
+    }
   });
   it('real combat: the landing plan comes on the damage tick, CAST_WINDUP_TICKS after the cast', () => {
     for (const [unit, foes] of [['sett', 2], ['zyra', 2]] as const) {

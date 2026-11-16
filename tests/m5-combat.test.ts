@@ -15,6 +15,7 @@ import { makeSourcedEffects, resolveEffects, cloneEffect } from '../src/simulati
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { battle, unit } from './combat-helpers';
 import { packets, heals, casts } from './helpers/replay2-views';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name: string, id = 'p', overrides: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, id.startsWith('e') ? 'enemy' : 'player', id.startsWith('e') ? 2 : 1, 3, {
@@ -77,10 +78,11 @@ describe('M5 independent finite combat rules', () => {
     }
   });
   it('uses AP-scaled Zyra damage, distinct secondary targets, and next-tick stun', () => {
-    const result = stepCombat(battle([hero('zyra'), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)]));
+    // 2026-11-16: her vines land CAST_WINDUP_TICKS.zyra after the cast (tick 1); the stun starts the tick after they land.
+    const result = advance(battle([hero('zyra'), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)]), 1 + CAST_WINDUP_TICKS.zyra);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.unitId, p.raw])).toEqual([['e', 260], ['e2', 95], ['e3', 95]]);
     const stun = result.state.units.find(u => u.id === 'e')!.statuses![0];
-    expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2, expiresAtTick: 22 });
+    expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2 + CAST_WINDUP_TICKS.zyra, expiresAtTick: 22 + CAST_WINDUP_TICKS.zyra });
   });
   it('Lux selects lowest current HP rather than percentage and buffs only the next attack', () => {
     const result = stepCombat(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]));
@@ -185,7 +187,9 @@ describe('M5 independent finite combat rules', () => {
     expect(result.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ key: 'b', remaining: 30, absorbed: 10 })]);
   });
   it('simultaneous lethal casts both land and no same-tick healing revives the dead', () => {
-    const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('zyra', 'e', { hp: 50 })]));
+    // 2026-11-16: Zyra's vines now land after a wind-up (cast-windup.ts); Ezreal still strikes on his cast tick, so he keeps
+    // the two casts simultaneous here (was zyra).
+    const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('ezreal', 'e', { hp: 50 })]));
     expect(result.state.result).toBe('draw');
     expect(result.state.units.every(u => !u.alive && u.hp === 0 && u.mana === 0)).toBe(true);
     expect(heals(result.events)).toEqual([]);
@@ -207,8 +211,8 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => p.mitigated)).toEqual([100, 140]);
   });
   it('Gunblade consumes actual HP damage, healing cannot recursively cause damage', () => {
-    const result = stepCombat(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
-      dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]));
+    const result = advance(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
+      dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]), 1 + CAST_WINDUP_TICKS.zyra); // vines land after the wind-up
     expect(heals(result.events).map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
   });
@@ -273,14 +277,16 @@ describe('M5 independent finite combat rules', () => {
   });
   it('Kill Streak belongs to the first lethal packet and only a surviving owner gets mana', () => {
     const m = mechanic('p', 'killStreak', { mana: 20 });
-    const alive = stepCombat(battle([hero('zyra', 'p', { mechanics: [m] }), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
+    // 2026-11-16: Zyra's vines now land after a wind-up (cast-windup.ts), so Ezreal (still lethal on his cast tick) keeps the
+    // kill inside the cast's mana lock here (was zyra).
+    const alive = stepCombat(battle([hero('ezreal', 'p', { mechanics: [m] }), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
     // v22 cast mana lock: the surviving owner's 20 kill mana is requested in the lethal cast's tick and fully blocked.
     const killMana = (events: readonly CombatEvent[]) =>
       events.flatMap(e => e.type === 'manaChanged' && 'outcome' in e && e.outcome.reason === 'kill' ? [e.outcome] : []);
     expect(killMana(alive.events)).toEqual([expect.objectContaining({ targetId: 'p', amount: 20, before: 0, blocked: 20, applied: 0, after: 0 })]);
     expect(alive.state.units.find(u => u.id === 'p')!.mana).toBe(0);
     expect(alive.events.filter(e => e.type === 'kill')).toEqual([expect.objectContaining({ unitId: 'e', source: expect.objectContaining({ ownerId: 'p' }) })]);
-    const dead = stepCombat(battle([hero('zyra', 'p', { hp: 50, mechanics: [m] }), hero('zyra', 'e', { hp: 50 })]));
+    const dead = stepCombat(battle([hero('ezreal', 'p', { hp: 50, mechanics: [m] }), hero('ezreal', 'e', { hp: 50 })]));
     expect(killMana(dead.events)).toEqual([]);
     expect(dead.state.units.find(u => u.id === 'p')!.mana).toBe(0);
   });
@@ -358,11 +364,12 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(run(mechanics).events).map(p => p.packetOrdinal)).toEqual([0, 3, 4]);
   });
   it('one-second next-tick stun blocks exactly20 logical action opportunities before expiring', () => {
-    const first = stepCombat(battle([hero('zyra'), dummy('e', 2, 3, { cooldownTicks: 0, attackIntervalTicks: 1, baseAttackSpeedBps: 200000 })]));
+    // 2026-11-16: Zyra's stun lands CAST_WINDUP_TICKS.zyra after her cast; the 20 blocked opportunities start from there.
+    const first = advance(battle([hero('zyra'), dummy('e', 2, 3, { cooldownTicks: 0, attackIntervalTicks: 1, baseAttackSpeedBps: 200000 })]), 1 + CAST_WINDUP_TICKS.zyra);
     const blocked = advance(first.state, 20);
     expect(blocked.events.filter(e => e.type === 'attack' && e.attackerId === 'e')).toHaveLength(0);
     const expired = stepCombat(blocked.state);
-    expect(expired.state.tick).toBe(22);
+    expect(expired.state.tick).toBe(22 + CAST_WINDUP_TICKS.zyra);
     expect(expired.events.filter(e => e.type === 'attack' && e.attackerId === 'e')).toHaveLength(1);
   });
   // replay2 (M8_B9_U7_PLAN §2): ManaOutcome.reason is frozen to attack/damage/incoming-basic-hit/periodic/

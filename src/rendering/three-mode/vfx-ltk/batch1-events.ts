@@ -125,15 +125,17 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
-        // Sett, Zyra: their hits play when the skill's damage lands (cast-windup.ts), once per tick, on every enemy hit
+        // Trundle's cast list holds only his bite's hit, which now comes with the bite's damage: his cast itself plays nothing.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'trundle') plan.noCastEffect = true;
+        // Sett, Trundle, Zyra: their hits play when the skill's damage lands (cast-windup.ts), once per tick, on every enemy hit
         // that tick, in hit order (Zyra's primary target first). Sett's one-target slam plays its single variant.
-        if (event.type === 'packetDamage' && isAbilityDirect(event) && ['sett', 'zyra'].includes(definition(event.sourceId) ?? '')
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && ['sett', 'trundle', 'zyra'].includes(definition(event.sourceId) ?? '')
           && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
             && isAbilityDirect(e) && e.eventSeq < event.eventSeq)) {
           const name = definition(event.sourceId)!;
           const hitTargets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
-          const skill = name === 'sett' ? (hitTargets.length === 1 ? 'sett-slam-single' : 'sett-slam') : 'zyra-vines';
+          const skill = name === 'sett' ? (hitTargets.length === 1 ? 'sett-slam-single' : 'sett-slam') : name === 'trundle' ? 'trundle-bite' : 'zyra-vines';
           plan.extra.push({ champion: name, sourceId: event.sourceId, targets: hitTargets, action: 'passive', skill });
         }
         // Blitzcrank: his shock's arcs and bursts play when its damage lands, once per tick, to every enemy it hit that tick.

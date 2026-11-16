@@ -7,6 +7,7 @@ import { unitControl } from '../src/presentation/control-display';
 import { toCombatViewState } from '../src/simulation/combat-replay-view';
 import { battle, unit } from './combat-helpers';
 import { VI_SLAM_TICKS } from '../src/simulation/combat-g2-2';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name: string): CombatUnit {
   return unit('p', 'player', 1, 3, { definitionId: name, ability: resolveAbility(name + '-ability', 1), hp: 4000, maxHp: 5000, armor: 0, magicResist: 0, mana: 100, maxMana: 100,
@@ -17,8 +18,10 @@ function dummy(id: string, col: number): CombatUnit {
     cooldownTicks: 1000, moveCooldownTicks: 1000, runtime: { ...EMPTY_RUNTIME }, statuses: [], shieldLayers: [], tasks: [] });
 }
 /** Per stunned unit: whether the stun the cast applied is marked as a knock-up. */
-function stunsOf(name: string) {
-  const { state, events } = stepCombat(battle([hero(name), dummy('e', 2), dummy('f', 3)], { rngState: 42 }));
+function stunsOf(name: string, after = 0) {
+  // `after` steps past the cast: a skill that lands CAST_WINDUP_TICKS after its cast (cast-windup.ts, 2026-11-16).
+  let { state, events } = stepCombat(battle([hero(name), dummy('e', 2), dummy('f', 3)], { rngState: 42 }));
+  for (let n = 0; n < after; n++) { const step = stepCombat(state); state = step.state; events = [...events, ...step.events]; }
   const applied = events.filter((e): e is Extract<CombatEvent, { type: 'statusChanged' }> => e.type === 'statusChanged' && e.reason === 'applied' && e.group.kind === 'stun');
   return { state, marks: Object.fromEntries(applied.map(e => [e.group.targetId, e.group.contributions.some(c => c.application.knockup === true)])) };
 }
@@ -37,7 +40,7 @@ describe('knock-up stuns carry the rules mark', () => {
   it('蔚 stuns the slammed target and knocks up the rest of its row at the slam', () => expect(viSlam().marks).toEqual({ e: false, f: true }));
   it('杰斯锤形态 knocks its target into the gate', () => expect(stunsOf('jayce').marks).toEqual({ e: true }));
   it('维克托 knocks up every enemy', () => expect(stunsOf('viktor').marks).toEqual({ e: true, f: true }));
-  it('瑟提 stuns without a knock-up', () => expect(Object.values(stunsOf('sett').marks)).toEqual([false, false]));
+  it('瑟提 stuns without a knock-up (at his slam, CAST_WINDUP_TICKS.sett after the cast)', () => expect(Object.values(stunsOf('sett', CAST_WINDUP_TICKS.sett).marks)).toEqual([false, false]));
 
   it('the board float says 击飞 for a knock-up stun and 眩晕 for a plain one (local ledger); the wire event stays 眩晕', () => {
     const { applied } = viSlam();
