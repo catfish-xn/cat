@@ -320,10 +320,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
-  // Candidate (11-16, from the original's spell and system data; timings fitted): the gate's bolt Q_mis 7d0f4b1e flies from
-  // his body to each enemy the gate hits (the original's missile starts at his root and flies at body height to a spot),
-  // and the gate portal_1 10e4e326 (a one-hex ground portal; its sound is the bolt's crystal break) opens on the ground
-  // under each of them where the bolt lands. Hexes of the 5-hex gate with no enemy get neither: cues target units only.
+  // The gate (fitted, 11-16): its bolt Q_mis 7d0f4b1e flies from his body to each enemy the gate hits, and the portal
+  // portal_1 10e4e326 opens on the ground under each of them the moment the bolt lands, so bolt and portal read as one
+  // strike per enemy. Cues target units only, so the gate's empty hexes get no portal (docs/S13_RULES_GAP.md, 11-16).
   // Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
