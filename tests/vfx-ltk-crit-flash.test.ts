@@ -13,11 +13,12 @@ const attack: TimelineCue[] = [
   { system: 'shot', action: 'attack', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3 },
   { system: HIT, action: 'attack', event: 'hit', delay: 0.5, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
 ];
-const skills: Record<string, TimelineCue[]> = { gunner: attack, zeri: attack, mage: [{ system: 'shot', action: 'cast', event: 'hit', delay: 0, duration: 0.5 }] };
+const skills: Record<string, TimelineCue[]> = { gunner: attack, zeri: attack, mage: [{ system: 'shot', action: 'cast', event: 'hit', delay: 0, duration: 0.5 }],
+  warwick: [{ system: '6b46d17d', action: 'attack', event: 'cast-start', delay: 0, duration: 0.4 }, { system: 'slash', action: 'attack', event: 'hit', delay: 0.2, duration: 0.5 }] };
 
 async function setup() {
   const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
-    ? { version: 1, systems: { shot: 'systems/shot.json', [HIT]: 'systems/hit.json', [CRIT]: 'systems/crit.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills }
+    ? { version: 1, systems: { shot: 'systems/shot.json', slash: 'systems/slash.json', '6b46d17d': 'systems/swipe.json', '94adb056': 'systems/swipe-crit.json', [HIT]: 'systems/hit.json', [CRIT]: 'systems/crit.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills }
     : syntheticSystem(),
   readTexture: async () => new Texture() });
   const units = new Map<string, { root: Group; body: null; alive: boolean }>();
@@ -72,6 +73,18 @@ describe('vfx-ltk crit flash', () => {
     step(0.6);
     expect(started(CRIT)).toBe(CRIT_FLASH_MAX);
     expect(runtime.play('gunner', 'm2', ['t'], 'passive', { skill: CRIT_SKILL_HIT.skill('gunner'), critFlash: true })).toBe(false);
+    runtime.dispose();
+  });
+
+  it('Warwick crits with his own swipe in place of the plain one, and the crit flash on the target beside his slash', async () => {
+    const { runtime, step, started } = await setup();
+    expect(runtime.play('warwick', 'w', ['t'], 'attack', { crit: true })).toBe(true);
+    step(0.3);
+    expect(started('94adb056')).toBe(1); expect(started('6b46d17d')).toBe(0);
+    expect(started('slash')).toBe(1); expect(started(CRIT)).toBe(1);
+    expect(runtime.play('warwick', 'w2', ['t'], 'attack')).toBe(true);
+    step(0.3);
+    expect(started('6b46d17d')).toBe(1); expect(started('94adb056')).toBe(1); expect(started(CRIT)).toBe(1);
     runtime.dispose();
   });
 });
