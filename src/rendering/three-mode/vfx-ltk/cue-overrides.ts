@@ -324,9 +324,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
   // The gate (fitted, 11-16): its bolt Q_mis 7d0f4b1e flies from his body to each enemy the gate hits, and the portal
-  // portal_1 10e4e326 opens the moment the bolt lands, on every cell of the target's row, empty cells too (TimelineCue.
-  // rowGate). The cells come from where the target stands: the rule lays the gate along the target's row (combat-g2.ts
-  // malzahar); the whole row is inferred from that structure, not original data (docs/S13_RULES_GAP.md, 11-16).
+  // portal_1 10e4e326 opens the moment the bolt lands, on the cells of the target's row, empty cells too (TimelineCue.
+  // rowGate; how many cells is pending the original-footage review, docs/S13_RULES_GAP.md 11-16).
   // Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [

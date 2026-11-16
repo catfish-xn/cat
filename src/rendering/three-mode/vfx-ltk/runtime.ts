@@ -234,13 +234,19 @@ export function rowReach(at: WorldPoint, side: -1 | 1, board: RowBoard): number 
   return Math.max(0, side < 0 ? (at[0] - first) / cell : (last - at[0]) / cell);
 }
 /**
- * The centre of every cell of the board row `at` stands in (TimelineCue.rowGate), at `at`'s height: `columns` cells, odd
- * rows half a cell to the right, as rowReach reads the row.
+ * The cells a row gate plays on (TimelineCue.rowGate), as points on the floor at `at`'s height: the row `at` stands in,
+ * odd rows half a cell to the right as rowReach reads it, every cell (`reach` undefined) or those within `reach` columns
+ * of `at`'s own cell. In the order they take room when it is short: `at`'s own cell first, then by distance from it,
+ * nearest first, the left one (lower x) first at equal distance.
  */
-export function rowGatePoints(at: WorldPoint, board: RowBoard): WorldPoint[] {
+export function rowGatePoints(at: WorldPoint, board: RowBoard, reach?: number): WorldPoint[] {
   const cell = Math.sqrt(3) * board.radius, row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
   const first = board.origin.x + cell * (((row % 2) + 2) % 2) / 2, z = board.origin.y + row * 1.5 * board.radius;
-  return Array.from({ length: board.columns }, (_, column) => [first + cell * column, at[1], z] as WorldPoint);
+  const own = Math.min(board.columns - 1, Math.max(0, Math.round((at[0] - first) / cell)));
+  return Array.from({ length: board.columns }, (_, column) => column)
+    .filter(column => reach === undefined || Math.abs(column - own) <= reach)
+    .sort((a, b) => Math.abs(a - own) - Math.abs(b - own) || a - b)
+    .map(column => [first + cell * column, at[1], z] as WorldPoint);
 }
 /**
  * A ground line's two ends (TimelineCue.lineCells): on the floor along the way from `from` toward `toward`, starting
@@ -634,7 +640,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const board = options.board?.() ?? null, unit = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         const stand = snapshot ?? place ?? (unit && !unit.disposed ? standingPoint(unit.root) : undefined);
         if (!board || !stand) continue;
-        const copies = gated.has(spawn.system) ? [] : rowGatePoints(stand, board).map(point => ({
+        const copies = gated.has(spawn.system) ? [] : rowGatePoints(stand, board, spawn.rowGate === true ? undefined : spawn.rowGate).map(point => ({
           spawn: { ...spawn, targetId: undefined, point }, snapshot: point, atPlace: true, fan: `${play}:gate:${spawn.system}` }));
         gated.add(spawn.system);
         rows.splice(at, 1, ...copies); at += copies.length - 1;

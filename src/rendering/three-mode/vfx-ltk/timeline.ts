@@ -108,12 +108,14 @@ export interface TimelineCue {
    */
   readonly livingTarget?: boolean;
   /**
-   * A hit that plays once on every cell of its primary target's board row, empty cells included, at each cell's centre on
-   * the floor, instead of once on each target (runtime rowGatePoints). The row is the one the target stands in when the cast
-   * plays; with no board geometry or no target place it plays on its targets as any hit does. Each copy takes no system
-   * slot of its own and only free room, so it never evicts another system (Fable 11-16, Malzahar's gate across the row).
+   * A hit that plays once on each cell of its primary target's board row, empty cells included, at each cell's centre on
+   * the floor, instead of once on each target (runtime rowGatePoints): `true` every cell of the row, a number the cells
+   * within that many columns of the target's own. The row is the one the target stands in when the cast plays; with no
+   * board geometry or no target place it plays on its targets as any hit does. Each copy only takes free room, so it never
+   * evicts another system; when room is short the target's own cell goes first, then the nearest, the left one first at
+   * equal distance (Fable 11-16, Malzahar's gate).
    */
-  readonly rowGate?: boolean;
+  readonly rowGate?: true | number;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
