@@ -89,7 +89,9 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
 
   it('each listed cue plays its own life (no early stop beyond a fade-out tail), so the event is what ends it', () => {
     const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!, ...CUE_OVERRIDES.drmundo!, ...CUE_OVERRIDES.vander!, ...CUE_OVERRIDES.blitzcrank!,
-      ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!];
+      ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!,
+      // 2026-11-16: shields on others (Mel's, Jayce's forge) end with the shielded ally's layer (abilityShieldEndedOnHolder).
+      ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
       Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[]>).map(([a, l]) => [`${k} ${a}`, l]));
     const lists = { ...CUE_END_STOPS, ...Object.fromEntries(ruleLists) };
@@ -115,4 +117,36 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
       expect(at, handler).toBeLessThan(gate);
     }
   });
+});
+
+describe('A3: cue stops that came before an emitter first emission (2026-11-16)', () => {
+  it('Mel shield and Jayce forge shield play their own life and end with the holder\'s layer', () => {
+    const cue = (key: string, system: string) => CUE_OVERRIDES[key]!.find(c => c.system === system)!;
+    // Was stopAfter 0.1 / 0.5, before some of their layers began. Durations are caps past each system's own end (fitted). Mel's
+    // save stays as it is until the recording tool can trigger the Banished Mage ceremony.
+    for (const [key, system, end] of [['mel-shield', '71e871c8', 4.2], ['jayce-forge-front', 'e8cd793f', 4.5]] as const) {
+      expect(cue(key, system).stopAfter, system).toBeUndefined();
+      expect(cue(key, system).duration, system).toBe(end);
+    }
+    expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems).toEqual({ 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] });
+    const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
+    expect(source).toContain('CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems');
+    expect(source).toContain('ltk?.stopSystemsOn(event.targetId, systems)');
+  });
+});
+
+describe('A3: the shields those stops listen for really carry their ability in the layer key (real combat)', () => {
+  it('Mel\'s and Jayce\'s cast shields name mel-ability / jayce-ability, on the caster and on an ally', async () => {
+    const { realUnits, runRealCombat } = await import('../dev/castcmp/real-combat');
+    for (const [unit, form, ability] of [['mel', null, 'mel-ability'], ['jayce', 'front', 'jayce-ability']] as const) {
+      const units = realUnits({ unit, star: 1, form, foe: 'amumu', dist: unit === 'mel' ? 4 : 1, nfoes: 2, foestar: 2, ally: 'amumu', allystar: 2,
+        ...(unit === 'mel' ? { allyCell: { col: 3, row: 4 }, meCell: { col: 3, row: 6 } } : {}) } as any);
+      const granted: { holder: string; key: string }[] = [];
+      runRealCombat(units, 20, (_s, shown) => { for (const e of shown) if (e.type === 'shieldLayerChanged' && e.reason === 'granted') granted.push({ holder: e.targetId, key: e.key }); });
+      const mine = granted.filter(g => g.key.includes(JSON.stringify(ability)));
+      expect(mine.map(g => g.holder).sort(), unit).toEqual(['ally', 'me']);
+      // The renderer's holder stop matches on exactly this text (placeholder-renderer.ts).
+      expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems[ability].length, unit).toBe(1);
+    }
+  }, 60_000);
 });
