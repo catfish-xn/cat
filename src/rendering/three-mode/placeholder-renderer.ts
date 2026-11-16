@@ -1469,6 +1469,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEnded.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystems(event.targetId, systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOn(event.targetId, systems);
       if (event.type === 'statusChanged' && event.kind === 'shred' && event.reason !== 'applied' && event.reason !== 'refreshed')
         ltk?.stopSystemsOn(event.targetId, CUE_RULE_STOPS.shredEnded.systems);
       if (!ANIMATION_EVENTS.has(event.type)) continue;
