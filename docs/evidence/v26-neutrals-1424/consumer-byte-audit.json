@@ -735,9 +735,9 @@
     },
     "tests/chest-bracer-integration-trial.test.ts": {
       "previousBytes": 6430,
-      "currentBytes": 7009,
+      "currentBytes": 7231,
       "previousSha256": "01d8e67078df50fb6eefedad7a3ce758b015a8adbdcec868fc4886934fd6df4d",
-      "currentSha256": "a1eac5f11537ab1e477fb451f709da092b0c8e0e8b413ac55ffe05d0f09e9aca",
+      "currentSha256": "bb715cc0f31d86698476de7e39d0aa17a1f01be2229ccc4df8e7574e45cc9b58",
       "firstDifferentByte": 469
     },
     "tests/combat-fx-pool.test.ts": {
@@ -4235,6 +4235,14 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
+      "firstDifferentByte": 0
+    },
+    "tests/zz-bracer.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 29974,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8405a6f75a62c08ce2cfc164154c28fb872c98ad1a5374fab1a3808756e45334",
       "firstDifferentByte": 0
     }
   }

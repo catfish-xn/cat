@@ -85,13 +85,14 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
     (grants[0] as { definitionId: string }).definitionId = 'shojin';
     expect(receiverOf(candidate).combatItemGrants).toBe(grants);
-    // v26 trial seed 22496 takes Support Mining (v25 seed 585 took Placebo), whose training dummy sits in the
-    // frozen combat preparation. Dummy combats are authenticated by full cold replay (validateDynamicCombat,
-    // g2-4b-gold-restore.ts), which runs before and replaces the bounds preflight ('uncompiled mechanism
-    // definitions'); the edited grant diverges from that replay. Its fallback label is "Mirror forge".
-    expect(candidate.combatInputBasis!.inputs.preparation.units.some(u => u.definitionId === 'training-dummy')).toBe(true);
-    expect(() => restoreMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
-    expect(() => serializeMatch(candidate)).toThrow(/^Invalid authoritative Mirror forge replay$/);
+    // Wind-up batch 2 (2026-11-16): the official trial search (record-chest-trial-v26.cjs, re-run in the epoch) now picks seed
+    // 31728, whose frozen combat preparation has no training dummy (v26 seed 22496 took Support Mining and had one). Without a
+    // dummy the save is not authenticated by full cold replay (validateDynamicCombat), so the edited grant is refused by the
+    // bounds preflight, as with v25 seed 585: "Invalid Match save: uncompiled mechanism definitions".
+    // (Seed 22496's dummy combat was refused by its replay instead: "Invalid authoritative Mirror forge replay".)
+    expect(candidate.combatInputBasis!.inputs.preparation.units.some(u => u.definitionId === 'training-dummy'), 'premise: no training dummy').toBe(false);
+    expect(() => restoreMatch(candidate)).toThrow(/^Invalid Match save: uncompiled mechanism definitions$/);
+    expect(() => serializeMatch(candidate)).toThrow(/^Invalid Match save: uncompiled mechanism definitions$/);
   });
 
   it.each(checkpointCases.flatMap(([label,tick]) => (['JSON','object'] as const).map(entry => ({label,tick,entry}))))('$label @$tick: $entry restore preserves the entire state and uninterrupted continuation', ({tick,entry}) => {
