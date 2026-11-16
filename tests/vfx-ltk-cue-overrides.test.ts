@@ -16,6 +16,7 @@ import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/
 import { syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 // @ts-expect-error Offline Node module.
 import { BOARD_PICKS } from '../scripts/assets3d/boards-plan.mjs';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 describe('reviewed vfx-ltk cue overrides', () => {
   const exported: TimelineCue[] = [{ system: 'aa', action: 'cast', event: 'hit', delay: 0.8, duration: 1 }];
@@ -107,15 +108,21 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(zyra.unsupported).toEqual([]);
     const vines = zyra.spawns.filter(spawn => spawn.system === '857fe049');
     expect(vines.map(spawn => [spawn.event, spawn.targetId])).toEqual([['projectile', 'a'], ['projectile', 'b'], ['projectile', 'c']]);
-    const [main] = vines, root = zyra.spawns.find(spawn => spawn.system === 'b888a24f')!;
-    expect(root).toMatchObject({ event: 'hit', targetId: 'a' });
-    expect(Math.abs(main!.delay + main!.travelSeconds! - root.delay)).toBeLessThanOrEqual(0.05);
+    // 2026-11-16 (cast wind-up, cast-windup.ts): the hits moved from the cast list to her damage event ('zyra-vines', delay 0),
+    // so the root and branching vines are mapped from that list; every vine missile lands on the damage tick (was: the main
+    // missile landed on the root's fixed delay, the short ones a beat later).
+    const landing = mapSkillTimeline(CUE_EXTRA_SKILLS['zyra-vines']!, 'zyra', ['a', 'b', 'c']);
+    expect(landing.unsupported).toEqual([]);
+    const [main] = vines, root = landing.spawns.find(spawn => spawn.system === 'b888a24f')!;
+    expect(root).toMatchObject({ event: 'hit', targetId: 'a', delay: 0 });
+    for (const vine of vines) expect(Math.abs(vine.delay + vine.travelSeconds! - CAST_WINDUP_TICKS.zyra / 20)).toBeLessThanOrEqual(0.05);
+    expect(main).toBeDefined();
     expect(vines.every(spawn => effectImportance(spawn) === 'critical')).toBe(true);
     // The branching vines fade out instead of being cut at their end, and the root cluster draws larger than authored.
-    expect(CUE_OVERRIDES.zyra.filter(cue => cue.system === '7ce6b652').every(cue => cue.stopAfter! < cue.duration - 0.3)).toBe(true);
+    expect(CUE_EXTRA_SKILLS['zyra-vines']!.filter(cue => cue.system === '7ce6b652').every(cue => cue.stopAfter! < cue.duration - 0.3)).toBe(true);
     expect(root.scale).toBeGreaterThan(1);
     // The branching vines sprout on the targets the vines reach, never at Zyra's feet.
-    expect(zyra.spawns.filter(spawn => spawn.system === '7ce6b652').map(spawn => [spawn.event, spawn.targetId])).toEqual([['hit', 'a'], ['hit', 'b'], ['hit', 'c']]);
+    expect(landing.spawns.filter(spawn => spawn.system === '7ce6b652').map(spawn => [spawn.event, spawn.targetId])).toEqual([['hit', 'a'], ['hit', 'b'], ['hit', 'c']]);
     // Alone, the short vines have nobody else to reach and are left out without refusing the cast.
     const alone = mapSkillTimeline(CUE_OVERRIDES.zyra.filter(cue => cue.action === 'cast'), 'zyra', ['a']);
     expect(alone.unsupported).toEqual([]);

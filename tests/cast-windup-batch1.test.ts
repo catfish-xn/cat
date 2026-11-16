@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, createCombatWithEvents, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle,
   startCombatReplay, toCombatReplay, type MatchState } from '../src/server-entry';
@@ -36,7 +36,7 @@ const stuns = (events: readonly CombatEvent[]) => events.filter(e => e.type === 
 const kill = (state: CombatState, id: string) => { const next = structuredClone(state); Object.assign(next.units.find(u => u.id === id)!, { hp: 0, alive: false }); return next; };
 const start = (name: string) => battle([hero(name), dummy('e', 2), dummy('f', 1, 2), dummy('g', 2, 2)], { rngState: 42 });
 
-const cases = [['sett', true], ['trundle', true], ['violet', true], ['zyra', true], ['drmundo', false]] as const;
+const cases = [['sett', true], ['trundle', true], ['zyra', true], ['drmundo', false]] as const;
 for (const [name, stunsOrBites] of cases) describe(`${name}: lands CAST_WINDUP_TICKS.${name} after the cast`, () => {
   const w = CAST_WINDUP_TICKS[name];
   it('nothing on the cast or before; damage (and heal, stun) on the landing tick', () => {
@@ -50,6 +50,14 @@ for (const [name, stunsOrBites] of cases) describe(`${name}: lands CAST_WINDUP_T
     else expect(hits(land.events).length).toBeGreaterThan(0);
     if (stunsOrBites && name !== 'trundle') expect(stuns(land.events).length).toBeGreaterThan(0);
     if (name === 'trundle') expect(myHeals(land.events).length).toBe(1);
+  });
+  it('a control on the caster after the cast does not stop the landing', () => {
+    const state = structuredClone(run(start(name), 1).state);
+    const p = state.units.find(u => u.id === 'p')! as S13Unit, e = state.units.find(u => u.id === 'e')!;
+    applyStatus(p, origin(e), 'stun', 0, 40, state.tick, [], true);
+    const after = run(state, w);
+    if (name === 'drmundo') expect(myHeals(after.events).length).toBeGreaterThan(0);
+    else expect(hits(after.events).length).toBeGreaterThan(0);
   });
   it('a caster dead before the landing deals nothing', () => {
     const after = run(kill(run(start(name), 2).state, 'p'), w + 45);
@@ -73,7 +81,7 @@ function army(name: string, star: 1 | 2 | 3 = 3): MatchState {
     preparation: { ...base.preparation, units: [name, 'drmundo', 'drmundo'].map((definitionId, i) => ({ id: `unit-${i + 1}`, definitionId,
       team: 'player', starLevel: i === 0 ? star : 3, location: { kind: 'board', cell: { col: 2 + i, row: i === 0 ? 5 : 4 } } })) } };
 }
-for (const name of ['sett', 'trundle', 'violet', 'zyra'] as const) {
+for (const name of ['sett', 'trundle', 'zyra'] as const) {
   it(`${name} synchronous / 1- and 7-tick slices / replay preserve complete bytes`, () => {
     const source = compileBattle(snapshotForBattle(army(name), 'A'), snapshotForBattle(army('garen'), 'B'), 42, { battleId: `${name}-windup` });
     const expected = resolveTwoSidedBattle(source, 901), expectedReplay = toCombatReplay(expected);

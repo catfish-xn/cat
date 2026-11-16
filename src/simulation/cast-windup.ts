@@ -4,4 +4,4 @@
  * (not original data). What is chosen on the cast (targets, amounts) stays on the cast; what lands, lands then.
  * See docs/S13_RULES_GAP.md (技能生效前摇对齐).
  */
-export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, sett: 4, trundle: 4, zyra: 6, violet: 6 } as const);
+export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, sett: 4, trundle: 4, zyra: 6 } as const);

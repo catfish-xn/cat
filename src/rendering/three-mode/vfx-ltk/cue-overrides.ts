@@ -20,6 +20,7 @@ import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES } from './s13-timelines';
+import { CAST_WINDUP_TICKS } from '../../../simulation/cast-windup';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
@@ -76,6 +77,20 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // Sett's slam and Zyra's vines (batch1-events.ts): their hits play when the damage lands, CAST_WINDUP_TICKS
+  // after the cast, on every enemy hit that tick (Zyra's first is her primary target). Cues as in their cast lists before.
+  'sett-slam': [
+    { system: '5c1a47f1', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+    { system: 'c6d42f70', action: 'passive', event: 'hit', delay: 0, duration: 1 },
+  ],
+  'sett-slam-single': [{ system: '2794d903', action: 'passive', event: 'hit', delay: 0, duration: 1 }],
+  'zyra-vines': [
+    { system: '7ce6b652', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
+    { system: '7ce6b652', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, others: true, targetLimit: 2, optional: true, scale: kept(0.5) },
+    { system: 'b888a24f', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
+    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
+    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
+  ],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
@@ -165,13 +180,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // far too wide and was cut off at its end; the root cluster drew too thin to read as the vine mass.
     // Faded out (3e90bd1c, d650fcf2 fields: both drew at full strength to the end, then vanished): their long-lived single
     // particles never reach their own authored fade inside the cue, so from the stop the cue eases them out itself.
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
-    { system: '7ce6b652', action: 'cast', event: 'hit', delay: 1, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, others: true, targetLimit: 2, optional: true, scale: kept(0.5) },
-    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
-    { system: '857fe049', action: 'cast', event: 'projectile', delay: 0.6, duration: 0.7, travelSeconds: 0.4, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
-    { system: 'b888a24f', action: 'cast', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 0.5, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
-    { system: '9d413df0', action: 'cast', event: 'hit', delay: 1, duration: 0.6, bone: chest, scale: hugged(1) },
+    // The vines' damage lands CAST_WINDUP_TICKS.zyra after the cast (cast-windup.ts): every vine missile arrives then, and the
+    // hits on the rooted targets play at that damage event ('zyra-vines', batch1-events.ts), not at fixed times.
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: CAST_WINDUP_TICKS.zyra / 20 - 0.3, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, primary: true, scale: kept(1) },
+    { system: '857fe049', action: 'cast', event: 'projectile', delay: CAST_WINDUP_TICKS.zyra / 20 - 0.3, duration: 0.6, travelSeconds: 0.3, bone: ground, targetBone: ground, others: true, targetLimit: 2, optional: true, scale: kept(1) },
   ],
   // The shield plays its own life (up to the index cap) and ends with the rule's shield (CUE_RULE_STOPS). Arcs finish before the purple burst so the burst cannot evict the bubble. Hook missile and Q_cas stay out.
   blitzcrank: [
@@ -288,10 +300,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sett: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.2990000089009603, duration: 1.5 },
     { system: 'f7d4d344', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
-    { system: '5c1a47f1', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
-    { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
-    { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
+  // The bite's hit plays at its damage, CAST_WINDUP_TICKS.trundle after the cast (cast-windup.ts). It stays in the cast list
+  // (an empty cast list would fall back to the old effects); the rule's one bite always lands on the cast's target then.
+  trundle: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.23333333333333334, duration: 1.5 },
+    { system: '8bb9f6ab', action: 'cast', event: 'hit', delay: CAST_WINDUP_TICKS.trundle / 20, duration: 1 },
   ],
   // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
   // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
