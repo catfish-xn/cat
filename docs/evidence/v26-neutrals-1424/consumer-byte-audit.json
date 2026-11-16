@@ -3200,9 +3200,9 @@
     "tests/server/placeholder-augment-history.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15650,
+      "currentBytes": 16321,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b23b3f339c0a14f2a3703f224a4afdd5d1336409aede5ad587febc174672620a",
+      "currentSha256": "2585efb4726e433444f82c834fb2c3dbce3300ef6cdb33e494fa274464992ba8",
       "firstDifferentByte": 0
     },
     "tests/server/placeholder-resolver-helper.ts": {
@@ -3315,6 +3315,13 @@
       "currentSha256": "18cbd5eb7a94cec089b8d5f1429c78774241a71cb3e754501951f24a57d3fd1b",
       "firstDifferentByte": 1020
     },
+    "tests/server/v17-avarice-earnings.test.ts": {
+      "previousBytes": 11097,
+      "currentBytes": 11604,
+      "previousSha256": "c070c5d07024ee9ac846348e3f4b1d1ff76a9e2fe38e770c7c0948799b20d323",
+      "currentSha256": "1541c05f85b410c0cef2c4720077672f18820ee9f819c9ba206afb8faa1be917",
+      "firstDifferentByte": 2679
+    },
     "tests/server/v17-avarice-helpers.ts": {
       "previousBytes": 12766,
       "currentBytes": 12771,
@@ -3336,14 +3343,6 @@
       "currentBytes": 11516,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
-      "firstDifferentByte": 0
-    },
-    "tests/server/zz-g7.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 3788,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1e50ef71d2fc371751d8aae0fe4fd0feedc0322d5399d46ef962de45a4d7c45b",
       "firstDifferentByte": 0
     },
     "tests/sevika-high-roller-triple.test.ts": {
