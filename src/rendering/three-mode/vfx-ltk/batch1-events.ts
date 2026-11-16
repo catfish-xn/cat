@@ -44,7 +44,7 @@ export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: n
   if (last !== undefined) CAITLYN_SHOT_STATS.fallback++;
   return last;
 }
-const SMEECH_QTAR_EVERY_STAB = true;
+const SMEECH_QTAR_EVERY_STAB = false;
 const isAbilityDirect = (event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>) =>
   (event as { sourceKind?: string }).sourceKind === 'ability' && (event as { delivery?: string }).delivery === 'ability-direct';
 
