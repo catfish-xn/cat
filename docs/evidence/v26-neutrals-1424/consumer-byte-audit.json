@@ -1476,9 +1476,9 @@
     },
     "tests/m5-combat.test.ts": {
       "previousBytes": 37429,
-      "currentBytes": 38673,
+      "currentBytes": 38954,
       "previousSha256": "4656efcd5b60f141e4c6c66849b8a7428be3177eeb45e609ddc92daf6b6faa96",
-      "currentSha256": "5b45e542ed0c5a57622d120f0bfd9762393cf26bfa9ed282044da311683fa5dc",
+      "currentSha256": "1e47840619f2e088811efeb43951920b8fbfef36da72e8687a0671b2e77a56fe",
       "firstDifferentByte": 1376
     },
     "tests/m5-command-phases.test.ts": {
@@ -1655,9 +1655,9 @@
     },
     "tests/m8-b3-integration.test.ts": {
       "previousBytes": 10077,
-      "currentBytes": 10855,
+      "currentBytes": 11054,
       "previousSha256": "7137c5fa232e745d1ffa59a06b23d63a3ebf612137e62b493f318227dad97917",
-      "currentSha256": "f3b91b9d59558a0007766624b74f9db06eb26e65b136c64b1b1a715aaf136756",
+      "currentSha256": "45a4d9d8e5f8f6f012582f0c89952757814f8b65b0b015e35b5e864a397a3f35",
       "firstDifferentByte": 846
     },
     "tests/m8-b3-periodic-integration.test.ts": {
@@ -2734,9 +2734,9 @@
     },
     "tests/s13-augments-p3.test.ts": {
       "previousBytes": 18552,
-      "currentBytes": 20070,
+      "currentBytes": 20275,
       "previousSha256": "272594abcf2c822964bab40e394e4b12bda12d378856ad04724ee2693628898e",
-      "currentSha256": "3fc4a6df883f40a816257d22b4fab9a0c11c1f1557ae989d5630c43248e268a9",
+      "currentSha256": "8cee5eb21e20ab70f521182d60b6a30f95b2a265fcbcb7169cf466362752c83c",
       "firstDifferentByte": 816
     },
     "tests/s13-mech-ownership.test.ts": {

@@ -72,6 +72,8 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
+/** Tristana's shell flight in seconds (fitted, not original data). */
+const TRISTANA_SHELL_TRAVEL = 0.4;
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
@@ -187,14 +189,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
     { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
-  // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
+  // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event. The shell's damage
+  // lands CAST_WINDUP_TICKS.tristana after the cast (cast-windup.ts): the shell is fired TRISTANA_SHELL_TRAVEL before that and
+  // arrives with it, the muzzle flash with the firing (travel fitted, not original data).
   tristana: [
     { system: 'ed157b4e', action: 'attack', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0.21541666984558105, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5154166698455811, duration: 1.5 },
-    { system: '7d4c2d45', action: 'cast', event: 'cast-start', bone: 'Buffbone_Glb_Weapon_1', delay: 0.15, duration: 0.5 },
-    { system: '98c2c347', action: 'cast', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', targetBone: chest, delay: 0.2, duration: 0.5, travelSeconds: 0.3, primary: true },
-    { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: 0.5, duration: 0.8, primary: true },
-    { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: 0.5, duration: 0.7, primary: true },
+    { system: '7d4c2d45', action: 'cast', event: 'cast-start', bone: 'Buffbone_Glb_Weapon_1', delay: CAST_WINDUP_TICKS.tristana / 20 - TRISTANA_SHELL_TRAVEL - 0.05, duration: 0.5 },
+    { system: '98c2c347', action: 'cast', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', targetBone: chest, delay: CAST_WINDUP_TICKS.tristana / 20 - TRISTANA_SHELL_TRAVEL, duration: TRISTANA_SHELL_TRAVEL + 0.2, travelSeconds: TRISTANA_SHELL_TRAVEL, primary: true },
+    { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: CAST_WINDUP_TICKS.tristana / 20, duration: 0.8, primary: true },
+    { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: CAST_WINDUP_TICKS.tristana / 20, duration: 0.7, primary: true },
   ],
   // R (Air Raid): the exported list without the comet (R_Bombardment_Mis) and its burst (R_Bombardment_Impact). The export
   // kept the comet as a cast-start with no bone, so it stood on Caitlyn's feet (11-03 castcmp review; #622 keyframes), and

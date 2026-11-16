@@ -4,7 +4,7 @@
  * (not original data). What is chosen on the cast (targets, amounts) stays on the cast; what lands, lands then.
  * See docs/S13_RULES_GAP.md (技能生效前摇对齐).
  */
-export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6 } as const);
+export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12 } as const);
 
 /**
  * Wind-up batch 2 (user-approved 2026-11-15 authorization, timing only; fitted, not original data): Smeech's stabs land one

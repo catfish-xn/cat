@@ -198,6 +198,9 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
     if (!target) return;
     if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
+      ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
+        delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
     else if (name === 'zyra') {
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
       if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);

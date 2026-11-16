@@ -74,8 +74,8 @@ it.each([['piercing-lotus-i', 3000, 'tristana'], ['piercing-lotus-ii', 4500, 'tr
   // draws nothing; P0 keeps an alive, in-range target.
   const s = patch(initial([id], undefined, undefined, champion), 'p0', { targetId: 'e0' }); expect(unit(s).spellCrit!.chanceBps).toBe(chance); expect(unit(s).spellCrit!.enabled).toBe(true);
   // Seed 0's next word is <30%; preserve the compiled authorization and roll through the standard pipeline.
-  // 2026-11-16: Zyra's vines (and their crit roll) land CAST_WINDUP_TICKS.zyra after her cast; Tristana's shot on the cast.
-  const w = champion === 'zyra' ? CAST_WINDUP_TICKS.zyra : 0;
+  // 2026-11-16: Zyra's vines and Tristana's shell (and their crit roll) land CAST_WINDUP_TICKS after the cast (Tristana: batch 2).
+  const w = CAST_WINDUP_TICKS[champion];
   let r = stepCombat({ ...cast(s), rngState: 0 }); const events = [...r.events];
   for (let n = 0; n < w; n++) { r = stepCombat(r.state); events.push(...r.events); }
   const hit = events.find(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0');
@@ -116,9 +116,12 @@ it('终结者: shared Collector execution kills at 185/1240 after hit, strict 18
 });
 it('冰霜触摸: spell chills for 80 ticks; chilled enemy death stuns the nearest surviving enemy for 20 ticks', () => {
   // targeting-p1 (8106acee): lock p0 on e0; the e0/e1 equal-distance tie would otherwise draw the combat stream.
-  const r = stepCombat(cast(patch(initial([], 'touch-of-frost', undefined, 'tristana'), 'p0', { targetId: 'e0' }))), chilled = unit(r.state, 'e0');
+  // Wind-up batch 2: Tristana's shell (and the chill) lands CAST_WINDUP_TICKS.tristana after her cast.
+  let r = stepCombat(cast(patch(initial([], 'touch-of-frost', undefined, 'tristana'), 'p0', { targetId: 'e0' })));
+  for (let n = 0; n < CAST_WINDUP_TICKS.tristana; n++) r = stepCombat(r.state);
+  const chilled = unit(r.state, 'e0');
   const c = chilled.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.application.modifier?.stat === 'attackSpeed')!;
-  expect(c.application.modifier!.value).toEqual({ kind: 'constant', amount: -2000 }); expect(c.expiresAtTick).toBe(81);
+  expect(c.application.modifier!.value).toEqual({ kind: 'constant', amount: -2000 }); expect(c.expiresAtTick).toBe(81 + CAST_WINDUP_TICKS.tristana);
   expect(readCombatStats(chilled, r.state).attackIntervalTicks).toBeGreaterThan(readCombatStats(unit(initial(), 'e0'), initial()).attackIntervalTicks);
   const killed = stepCombat(attack(patch(r.state, 'e0', { hp: 1, armor: 0 })));
   const stun = unit(killed.state, 'e1').mechanismState!.statuses.find(g => g.kind === 'stun')!.contributions[0];
