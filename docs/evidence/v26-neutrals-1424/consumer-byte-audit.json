@@ -680,9 +680,9 @@
     "tests/cast-windup-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10342,
+      "currentBytes": 10069,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1c9dda221aeed2c9872484cd11bfd92b87e8e86e3b42307626f3fc3a7047407e",
+      "currentSha256": "7882f1183d9be354960e194485c11b6c09d9d26749c99fe2e808b0c3e91ba990",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
@@ -4126,6 +4126,14 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
+      "firstDifferentByte": 0
+    },
+    "tests/zz-lg.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2199,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ce234652ea013850dd831087b8e7388b8ea536d045af16c11f8047c1af1694e4",
       "firstDifferentByte": 0
     }
   }
