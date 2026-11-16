@@ -25,6 +25,7 @@ const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
 import { AnimationMixer } from 'three';
+import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
 // Animation clocks (Fable 11-15): a unit that idles from its model's load (a dummy, a little legend, never recast) carried
 // a phase set by which loading step its model finished on, so separate recordings of one build drew those units in one of
 // two poses (GPU batches 11-15: max diff 96 on the units, 0 on the board). Every three.js mixer that updates is kept here;
@@ -113,7 +114,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   const start = { fromStart: params.get('fromstart') === '1', leadMs: params.get('leadms') !== null ? Number(params.get('leadms')) : null,
     castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
-  const numbers = params.get('numbers') !== '0' && real ? createDamageNumbers(host, id => listener.screenBox?.(id)) : null;
+  // The game's own combat floats (damage by type, shield absorbed, heals, statuses), not a recording-only copy.
+  const numbers = params.get('numbers') !== '0' && real ? createGameFloats(host, id => listener.screenBox?.(id), () => real.frames[0]!.map((p: any) => p.id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
     let at = 0, carry = 0;
@@ -263,32 +265,29 @@ async function createBoardReplay(mine: string[], theirs: string[], star: number)
 }
 const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 
-/** Recording-only damage numbers (the online 3D board shows none): one per packetDamage, rising and fading. */
-function createDamageNumbers(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined) {
-  const live: { el: HTMLElement; age: number }[] = [];
+/**
+ * The game's combat floats (src/stats/combat-feedback-renderer.ts: what BoardScene draws over the 3D board) on the recording's
+ * virtual clock. Each unit's anchor is its projected body box, as BoardScene builds it (x at the box centre, y one half-width
+ * below its top, radius = half width). One float per event kind and unit per tick, as in the game: heals, shields and
+ * statuses included, which the recording-only damage numbers before this left out.
+ */
+function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[]) {
   host.style.position = 'relative';
-  const color = (type: string) => type === 'magic' ? '#4fb6ff' : type === 'true' ? '#ffffff' : '#ff8a3d';
+  const feedback = createCombatFeedbackRenderer(host);
+  let now = 0;
+  const render = () => {
+    const anchors = new Map<string, { x: number; y: number; radius: number }>();
+    const origin = host.getBoundingClientRect();
+    for (const id of ids()) {
+      const b = box(id); if (!b) continue;
+      const radius = (b.right - b.left) / 2;
+      anchors.set(id, { x: b.left + radius - origin.left, y: b.top + radius - origin.top, radius });
+    }
+    feedback.render(now, anchors);
+  };
   return {
-    add(events: any[]) {
-      for (const e of events) {
-        if (e.type !== 'packetDamage' || !e.hit) continue;
-        const amount = (e.hpDamage ?? 0) + (e.absorbed ?? 0); const b = box(e.targetId);
-        if (!(amount > 0) || !b) continue;
-        const el = document.createElement('div');
-        el.textContent = String(Math.round(amount));
-        Object.assign(el.style, { position: 'absolute', left: `${(b.left + b.right) / 2}px`, top: `${b.top + 10}px`, transform: 'translate(-50%,0)',
-          font: `bold ${e.critical ? 34 : 26}px "Noto Sans CJK SC",sans-serif`, color: color(e.damageType), textShadow: '0 0 3px #000,0 0 3px #000',
-          pointerEvents: 'none', zIndex: '50' });
-        host.append(el); live.push({ el, age: 0 });
-      }
-    },
-    update(ms: number) {
-      for (let i = live.length - 1; i >= 0; i--) {
-        const n = live[i]!; n.age += ms;
-        n.el.style.marginTop = `${-n.age * 0.05}px`; n.el.style.opacity = String(Math.max(0, 1 - Math.max(0, n.age - 500) / 400));
-        if (n.age > 900) { n.el.remove(); live.splice(i, 1); }
-      }
-    },
-    clear() { for (const n of live) n.el.remove(); live.length = 0; },
+    add(events: any[]) { feedback.push(events, now); render(); },
+    update(ms: number) { now += ms; render(); },
+    clear() { feedback.reset(); },
   };
 }

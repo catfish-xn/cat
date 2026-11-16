@@ -76,6 +76,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
+  'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
@@ -180,7 +182,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   blitzcrank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.43200000127156574, duration: 1.5 },
     { system: 'fc783cba', action: 'cast', event: 'cast-start', delay: 0, duration: 10, bone: center },
-    { system: 'ab66b54f', action: 'cast', event: 'cast-start', delay: 0.95, duration: 1.6, bone: center },
   ],
   // R: muzzle flash, one spiked shell, then the burst and dust on the primary. Ricochet is a later event.
   tristana: [
@@ -296,10 +297,12 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
-  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
-  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
+  // Q: the missile e0afe94c flies to the primary; when it lands (its delay plus travelSeconds), Q_tar bd903b08 bursts on the
+  // primary and Q_Explosion fd5fd6cc on every enemy hit. Both have system files in the asset root now.
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'bd903b08', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: 'fd5fd6cc', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
@@ -464,8 +467,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   jinx: jinxSkills.jinx,
   'jayce-front': jayceSkills['jayce-front'],
   'jayce-back': jayceSkills['jayce-back'],
+  'jayce-forge-front': jayceSkills['jayce-forge-front'],
   mel: melSkills.mel,
   'mel-third': melSkills['mel-third'],
+  'mel-shield': melSkills['mel-shield'],
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
@@ -688,6 +693,9 @@ export const CUE_RULE_STOPS = {
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
   abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
+  // (Mel's shield, Jayce's forge shield).
+  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
   // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).

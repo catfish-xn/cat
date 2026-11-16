@@ -136,6 +136,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const targets = [...new Set(events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId))];
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets, action: 'passive', skill: 'blitzcrank-shock' });
+          // The white flash on Blitzcrank himself plays on the same tick (ab66b54f, blitzcrank-shock-self).
+          plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'blitzcrank-shock-self' });
         }
         // Nunu: his hit splash (R_hit_tar) plays on each enemy his blast strikes. His cast names no targets (each damage tick is
         // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself: the tick an enemy takes two of

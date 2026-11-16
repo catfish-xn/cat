@@ -21,7 +21,10 @@ export const jayceSkills: Record<string, readonly TimelineCue[]> = {
     { system: '1ae6ef1d', event: 'hit', targetLimit: 3, delay: .7, duration: 1 },
   ],
   'jayce-forge-front': [
-    { system: 'e8cd793f', event: 'hit', delay: 0, duration: 1.5, stopAfter: .5 },
+    // The forge shield's visual plays its own life (including its closing layer) and ends early only when that ally's shield from
+    // his ability ends (CUE_RULE_STOPS abilityShieldEndedOnHolder). The duration is a cap past the system's own end (fitted, not
+    // original data); the old 0.5 s stop came before some of its layers began.
+    { system: 'e8cd793f', event: 'hit', delay: 0, duration: 4.5 },
   ],
   'jayce-forge-back': [
     { system: 'afb2ec69', event: 'cast-start', delay: 0, duration: 1, stopAfter: .5 },
