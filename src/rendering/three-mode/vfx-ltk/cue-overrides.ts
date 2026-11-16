@@ -298,13 +298,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
-  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
-  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   // Powder: the target burst and explosion moved from fixed times after her cast to her blast's damage (CUE_EXTRA_SKILLS powder-blast).
   powder: [
     { system: '01873936', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.25, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.55, duration: 1.5 },
   ],
+  // Q_tar (bd903b08) and Q_Explosion (fd5fd6cc) are named in the index but have no system file.
+  // Dropping this cue lets the legacy cast run; that still has no orange blast, only a charge ring.
   urgot: [
     { system: 'e0afe94c', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.85, travelSeconds: 0.25, bone: 'LowerBarrel', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
