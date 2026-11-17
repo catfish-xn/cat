@@ -93,6 +93,7 @@ function viewIncludesUnit(event: DisplayCombatEvent, id: string): boolean {
     case 'combatFinished': return false;
     case 'effectTriggered': return event.ownerId === id || event.targetId === id;
     case 'unitEntered': return event.unit.id === id;
+    case 'carryChanged': return event.holderId === id || event.targetId === id;
     default: return event.unitId === id;
   }
 }

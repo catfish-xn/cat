@@ -1,18 +1,24 @@
 import { expect,it } from 'vitest';
 import { stepCombat,type CombatUnit,type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, variable } from '../src/simulation/combat-s13-state';
 import { battle,unit,freeze } from './combat-helpers';
 import { packets,heals } from './helpers/replay2-views';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:1,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 const raw=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.raw);
 it.each([
- ['renata',[310]],['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
+ ['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
  ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190]],['jayce',[500]],['jayce-ranged',[625,400,400]],
 ] as const)('%s source-backed first-cast coefficients',(name,expected)=>{
  const initial=freeze(battle([hero(name),dummy()],{rngState:42})),saved=JSON.stringify(initial);
  expect(raw(stepCombat(initial).events)).toEqual(expected);expect(JSON.stringify(initial)).toBe(saved);
+});
+// Wind-up batch 3 (2026-11-17): Renata's missiles land CAST_WINDUP_TICKS.renata after her cast; her shields stay on the cast.
+it('renata source-backed first-cast coefficients, landing CAST_WINDUP_TICKS.renata after the cast',()=>{
+ let state=freeze(battle([hero('renata'),dummy()],{rngState:42}));const at:[number,number][]=[];
+ for(let i=0;i<=CAST_WINDUP_TICKS.renata;i++){const step=stepCombat(freeze(state));state=step.state;for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'))at.push([i,p.raw]);}
+ expect(at).toEqual([[CAST_WINDUP_TICKS.renata,310]]);
 });
 it('Cassiopeia every third cast splashes only two other targets',()=>{
  const r=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
@@ -107,4 +113,13 @@ it('forge revival relocates in owner coordinates, mirrors on the enemy side, and
   expect(ctx.events.map(e=>e.type)).toEqual(['movement','unitRevived']);
   expect(reviveG23Forge(ctx,jayce)).toBe(forge);expect(ctx.events).toHaveLength(2);expect(ctx.units).toHaveLength(3);
  }
+});
+
+// Display only (2026-11-17): Renni's lift for the renderer's carry, start on her cast, end on her stun's last pulse.
+it('Renni lifts her target on the cast and puts it down with the stun\'s last pulse (carryChanged, display only)', () => {
+  let state = battle([hero('renni'), dummy()], { rngState: 42 }); const carry: [number, string, string, boolean][] = []; let castTick = -1;
+  for (let i = 0; i < 80; i++) { const step = stepCombat(state); state = step.state;
+    for (const e of step.events) { if (e.type === 'cast' && castTick < 0) castTick = e.tick; if (e.type === 'carryChanged') carry.push([e.tick, e.holderId, e.targetId, e.carried]); } }
+  const n = Math.round(variable(state.units.find(u => u.id === 'p')!, 'StunDuration') * 20); // her stun, in ticks
+  expect(carry).toEqual([[castTick, 'p', 'e', true], [castTick + n, 'p', 'e', false]]);
 });
