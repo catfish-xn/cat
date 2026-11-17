@@ -61,7 +61,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -347,6 +347,10 @@ interface PieceView {
   hop: number | null;
   /** The world (x, z) the lunge has moved the body by (lungeOffset before it was turned into the body's frame). */
   lungeWorld: { x: number; z: number };
+  /** Held up by another piece (unit-control.ts CarryMotion; presentation only), its holder's id, and the body-local (x, z) it has put on `body`. */
+  readonly carry: CarryMotion;
+  carryHolder: string | null;
+  carryApplied: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
   follow: OverheadFollow;
   /** The loaded model's manifest id: picks its cast clips that move the bars (overhead-follow.ts CAST_TRAVEL_CLIPS). */
@@ -811,6 +815,38 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     applied.x = localX; applied.z = localZ; view.lungeWorld.x = x; view.lungeWorld.z = z;
   };
   function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
+  // A held body moves the same way, on its own applied offset so a lunge and a carry never undo each other.
+  const setCarryOffset = (view: PieceView, x: number, z: number) => {
+    const turn = view.root.rotation.y, cos = Math.cos(turn), sin = Math.sin(turn);
+    const localX = x * cos - z * sin, localZ = x * sin + z * cos, applied = view.carryApplied;
+    if (view.body) { view.body.position.x += localX - applied.x; view.body.position.z += localZ - applied.z; }
+    applied.x = localX; applied.z = localZ;
+  };
+  const gripPoint = new Vector3(), bonePoint = new Vector3(), gripBones = new WeakMap<object, readonly Object3D[]>();
+  /**
+   * Where the holder's grip wants the held body, as a world offset of its feet from the held piece's spot: the highest of
+   * the holder's grip bones (CARRY_HOLDS), raised one body height for a body hung upside down from there; the holder's
+   * chest height without the bones.
+   */
+  const gripOffset = (view: PieceView, holder: PieceView): CarryOffset => {
+    const body = holder.body, hold = CARRY_HOLDS[holder.definitionId];
+    let bones = body ? gripBones.get(body) : undefined;
+    if (body && bones === undefined) { bones = (hold?.bones ?? []).map(name => body.getObjectByName(name)).filter((bone): bone is Object3D => !!bone); gripBones.set(body, bones); }
+    if (bones?.length) {
+      gripPoint.set(0, -Infinity, 0);
+      for (const bone of bones) { bone.getWorldPosition(bonePoint); if (bonePoint.y > gripPoint.y) gripPoint.copy(bonePoint); }
+    } else gripPoint.copy(holder.root.position).setY(holder.root.position.y + (holder.starHeight - STAR_GAP) * 0.6);
+    const height = view.starHeight - STAR_GAP;
+    return { x: gripPoint.x - view.root.position.x, z: gripPoint.z - view.root.position.z,
+      y: Math.max(0, gripPoint.y - view.root.position.y + (hold?.upsideDown ? height : 0)) };
+  };
+  /** A piece is held up by another (presentation only): it rises to the holder's grip and follows it until let go. */
+  const startCarry = (targetId: string, holderId: string) => {
+    const view = pieces.get(targetId), holder = pieces.get(holderId);
+    if (!view?.alive || !holder?.alive || view === holder) return;
+    view.carryHolder = holderId; view.carry.start();
+  };
+  const endCarry = (targetId: string, drop = false) => { pieces.get(targetId)?.carry.release(drop); };
   // Knock-ups lift the body the same way: a change from what was applied, never its fitted y.
   const setLiftOffset = (view: PieceView, y: number) => {
     if (view.body) view.body.position.y += y - view.liftOffset;
@@ -872,7 +908,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     lighting.detachBody(view);
     const request = Symbol(); attaching.set(view, request);
     const revision = ++view.bodyRevision;
-    cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0);
+    cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; view.starScale = 1; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
@@ -900,7 +936,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (measured) envelopes.set(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
-      cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
+      cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
@@ -997,7 +1033,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1010,6 +1046,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
+    view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0);
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
@@ -1466,6 +1503,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
+      // Held up by another unit (display-only signal, PROVISIONAL shape until the rules' event lands): starts and ends a
+      // carry; a death ends every carry it is part of at once.
+      const lifted = event as unknown as { type: string; holderId?: string; targetId?: string; lifted?: boolean };
+      if (lifted.type === 'unitLifted' && lifted.targetId) {
+        if (lifted.lifted && lifted.holderId) startCarry(lifted.targetId, lifted.holderId); else endCarry(lifted.targetId);
+      }
+      if (event.type === 'death') for (const [id, view] of pieces) if (id === event.unitId || view.carryHolder === event.unitId) endCarry(id, true);
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
       // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
@@ -1940,11 +1984,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       portal.apply(id);
       lighting.update(view, view.starHeight - STAR_GAP); // the contact shadow follows the drawn body
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
+      // Held up by another piece: it follows the holder's grip, and drops back at once if either of them dies.
+      let carryLift = 0, carryX = 0, carryZ = 0;
+      if (view.carry.active || view.carryApplied.x || view.carryApplied.z) {
+        const holder = view.carryHolder ? pieces.get(view.carryHolder) : undefined;
+        const toward = view.carry.held && view.alive && holder?.alive ? gripOffset(view, holder) : null;
+        const carried = view.carry.update(seconds, toward);
+        carryX = carried.x; carryZ = carried.z; carryLift = carried.y;
+        setCarryOffset(view, carryX, carryZ);
+        if (!view.carry.active) view.carryHolder = null;
+      }
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;
       let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
+      lift = Math.max(lift, carryLift);
       releaseControl(view);
-      if (view.leanOffset || view.control.lean) setLean(view, view.control.lean);
+      // A body hung upside down turns over as it rises (about its feet, which the carry put one body height up).
+      const flip = view.carryHolder && CARRY_HOLDS[pieces.get(view.carryHolder)?.definitionId ?? '']?.upsideDown ? view.carry.progress * Math.PI : 0;
+      if (view.leanOffset || view.control.lean || flip) setLean(view, Math.max(view.control.lean, flip));
       if (view.hop !== null) {
         view.hop += seconds;
         if (view.hop >= DISPLACEMENT_HOP.seconds) view.hop = null;
@@ -1974,7 +2031,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // a cast changes nothing.
       const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);
       const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
-      const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
+      const overX = view.root.position.x + (travel?.x ?? 0) + carryX, overZ = view.root.position.z + (travel?.z ?? 0) + carryZ;
       const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
         headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.

@@ -57,6 +57,55 @@ export const CONTROL_3D = {
  * VI_SLAM_TICKS (a 3D module must not import the rules); tests/rendering3d-vi-grab.test.ts keeps the two equal.
  */
 export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 12 } as const;
+/**
+ * Held up by another unit (presentation only; the rules keep the unit on its cell): the body goes up to the holder's grip
+ * point (a bone, CARRY_BONES) in `riseSeconds`, follows it while held, and comes back down onto its own spot in
+ * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once.
+ */
+export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.22 } as const;
+/**
+ * How each holder holds (by definition id): the bones of what it grips with, the held body going to the highest of them
+ * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down
+ * from there (its head at that point, its feet one body height above).
+ */
+export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean }>> = {
+  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true },
+};
+export interface CarryOffset { x: number; y: number; z: number }
+const smooth = (t: number) => t * t * (3 - 2 * t);
+/**
+ * The world offset (x, y, z) of a held body from its own spot. `update` takes where the grip wants the body this frame,
+ * as an offset from the body's own spot, or null when the holder is gone (then it drops at once).
+ */
+export class CarryMotion {
+  private holding = false;
+  /** 0 on its own spot, 1 at the grip. */
+  private share = 0;
+  private toward: CarryOffset = { x: 0, y: 0, z: 0 };
+  readonly offset: CarryOffset = { x: 0, y: 0, z: 0 };
+  constructor(private readonly spec: { readonly riseSeconds: number; readonly fallSeconds: number } = CARRY_3D) {}
+  /** True while held or on its way back down. */
+  get active(): boolean { return this.holding || this.share > 0; }
+  get held(): boolean { return this.holding; }
+  /** 0 on its own spot, 1 at the grip (eased): how far a held body has turned over, for one that hangs upside down. */
+  get progress(): number { return smooth(this.share); }
+  start(): void { this.holding = true; }
+  /** Let go: the body comes back down over fallSeconds, or at once with `drop` (holder or held unit dead). */
+  release(drop = false): void {
+    this.holding = false;
+    if (drop) { this.share = 0; this.toward = { x: 0, y: 0, z: 0 }; this.offset.x = this.offset.y = this.offset.z = 0; }
+  }
+  update(seconds: number, toward: CarryOffset | null): CarryOffset {
+    if (this.holding && toward === null) this.release(true);
+    if (this.holding && toward) this.toward = { ...toward };
+    const step = this.holding ? seconds / Math.max(1e-6, this.spec.riseSeconds) : -seconds / Math.max(1e-6, this.spec.fallSeconds);
+    this.share = Math.min(1, Math.max(0, this.share + step));
+    const k = smooth(this.share);
+    this.offset.x = this.toward.x * k; this.offset.y = this.toward.y * k; this.offset.z = this.toward.z * k;
+    if (this.share === 0) this.toward = { x: 0, y: 0, z: 0 };
+    return this.offset;
+  }
+}
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
 /** The white burst on a unit struck by an ability (board units, seconds). */
