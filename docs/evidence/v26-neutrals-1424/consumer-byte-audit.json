@@ -3201,9 +3201,9 @@
     "tests/server/orb-ledger-partial-forge-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4437,
+      "currentBytes": 5878,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fceb54bb39055f20f062e48b455067461db7c3bb87af131d9c79fb49ee34abe9",
+      "currentSha256": "a4b51661d5439ce6eebe20840a9f6441feaed82ea4844be277e5c021a8fc56eb",
       "firstDifferentByte": 0
     },
     "tests/server/pairing-room.test.ts": {
