@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as rc from '../dev/castcmp/real-combat';
 import { createBatch1VfxEvents, type Batch1Visual } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
 import { CUE_EXTRA_SKILLS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import { MALZAHAR_EDGE_TIMING, malzaharEdgeSpots } from '../src/rendering/three-mode/vfx-ltk/malzahar-edges';
+import { MALZAHAR_EDGE_COUNTS, MALZAHAR_EDGE_TIMING, malzaharEdgeSpots } from '../src/rendering/three-mode/vfx-ltk/malzahar-edges';
 import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { skipOf } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
@@ -14,19 +14,28 @@ const center = ({ row, col }: { row: number; col: number }) => [col * 10 + (row 
 
 describe('Malzahar 3 stars: the board spots', () => {
   const spots = malzaharEdgeSpots({ rows: 8, columns: 7 }, center);
-  const walls = spots.filter(s => s.group === 'wall'), swirls = spots.filter(s => s.group === 'swirl');
-  it('a wall on both side columns of every other row, from the bottom row up, later the higher it stands', () => {
-    expect(walls).toHaveLength(8);
-    expect(walls.map(s => s.point)).toEqual([7, 5, 3, 1].flatMap(row => [center({ row, col: 0 }), center({ row, col: 6 })]));
-    const delays = [...new Set(walls.map(s => s.delay))];
-    expect(delays[0]).toBe(MALZAHAR_EDGE_TIMING.wallFirst);
-    for (let k = 1; k < delays.length; k++) expect(delays[k]).toBeGreaterThan(delays[k - 1]!);
+  const walls = spots.filter(s => s.group === 'wall'), rings = spots.filter(s => s.group === 'swirl');
+  const sides = (list: typeof spots) => [list.filter(s => s.point[0] < 30), list.filter(s => s.point[0] > 30)];
+  it('clusters evenly along both side edges, bottom row to top row, each next one up later', () => {
+    expect(walls).toHaveLength(2 * MALZAHAR_EDGE_COUNTS.walls);
+    for (const side of sides(walls)) {
+      expect(side).toHaveLength(MALZAHAR_EDGE_COUNTS.walls);
+      expect(side[0]!.point[2]).toBe(70); expect(side.at(-1)!.point[2]).toBe(0);
+      const gaps = side.slice(1).map((s, k) => side[k]!.point[2] - s.point[2]);
+      for (const gap of gaps) expect(gap).toBeCloseTo(gaps[0]!);
+      expect(side[0]!.delay).toBe(MALZAHAR_EDGE_TIMING.first); expect(side.at(-1)!.delay).toBe(MALZAHAR_EDGE_TIMING.last);
+      for (let k = 1; k < side.length; k++) expect(side[k]!.delay).toBeGreaterThan(side[k - 1]!.delay);
+    }
+    // On the board's outer line: the left side at the leftmost x the edge column reaches, the right at the rightmost.
+    expect(new Set(sides(walls)[0]!.map(s => s.point[0]))).toEqual(new Set([0]));
+    expect(new Set(sides(walls)[1]!.map(s => s.point[0]))).toEqual(new Set([65]));
   });
-  it('five swirls inside the board, the lower ones first', () => {
-    expect(swirls).toHaveLength(5);
-    for (const s of swirls) { expect(s.point[0]).toBeGreaterThan(0); expect(s.point[0]).toBeLessThan(60); }
-    const byRow = [...swirls].sort((a, b) => b.point[2] - a.point[2]);
-    for (let k = 1; k < byRow.length; k++) expect(byRow[k]!.delay).toBeGreaterThanOrEqual(byRow[k - 1]!.delay);
+  it('a ring with each of the lowest clusters, at its height and moment, nearer the middle the lower it is', () => {
+    expect(rings).toHaveLength(2 * MALZAHAR_EDGE_COUNTS.rings);
+    for (const ring of rings) expect(walls.some(w => w.point[2] === ring.point[2] && w.delay === ring.delay)).toBe(true);
+    const [left, right] = sides(rings);
+    for (let k = 1; k < left!.length; k++) expect(left![k]!.point[0]).toBeLessThan(left![k - 1]!.point[0]);
+    for (let k = 1; k < right!.length; k++) expect(right![k]!.point[0]).toBeGreaterThan(right![k - 1]!.point[0]);
   });
   it('no spots on a board too small to have edges', () => {
     expect(malzaharEdgeSpots({ rows: 1, columns: 7 }, center)).toEqual([]);
