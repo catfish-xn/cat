@@ -14,7 +14,7 @@ import { writeGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node utility.
 import { characterForPath, propertyReferences } from '../scripts/assets3d/plan-fetch.mjs';
 // @ts-expect-error Pure Node utility.
-import { stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
+import { rangedClipsFor, stageClipRanges } from '../scripts/assets3d/stage-clip-ranges.mjs';
 // @ts-expect-error Pure Node utility.
 import { stageFormAnimations } from '../scripts/assets3d/stage-form-animations.mjs';
 // @ts-expect-error Pure Node utility.
@@ -280,7 +280,12 @@ describe('initial material and action binding', () => {
       ],
     });
   });
-  it('writes clipRanges only for cast-referenced clips and records non-cast ranged clips as non-cast-action skips', async () => {
+  it('ranges the basic attack clip only for a model without an attackSequence', () => {
+    expect([...rangedClipsFor({ animations: { attack: 'unit_attack1', cast: 'unit_spell1' } })].sort()).toEqual(['unit_attack1', 'unit_spell1']);
+    expect([...rangedClipsFor({ animations: { attack: 'unit_attack1', cast: 'unit_spell1' }, attackSequence: { in: 'unit_attack1' } })]).toEqual(['unit_spell1']);
+  });
+
+  it('writes clipRanges for cast-referenced clips and the basic attack clip, and records other non-cast ranged clips as non-cast-action skips', async () => {
     const rules = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8')).$animationRules;
     const graph = obj('AnimationGraphData', {
       mClipDataMap: {
@@ -290,6 +295,13 @@ describe('initial material and action binding', () => {
             obj('AtomicClipData', {
               EndFrame: 9,
               mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'unit_attack1.anm' }),
+            }),
+          ],
+          [
+            { hash: fnv1a('Attack2') },
+            obj('AtomicClipData', {
+              EndFrame: 7,
+              mAnimationResourceData: obj('Resource', { mAnimationFilePath: 'unit_attack2.anm' }),
             }),
           ],
           [
@@ -314,18 +326,20 @@ describe('initial material and action binding', () => {
     const selected = selectAnimations(clips, rules);
     const animation = {
       ...selected,
-      files: { ...selected.files, unit_spell1_out: 'unit_spell1_out.anm' },
+      files: { ...selected.files, unit_spell1_out: 'unit_spell1_out.anm', unit_attack2: 'unit_attack2.anm' },
     };
     const built = resolveUnitClipRanges(animation, clips, [], {
       castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' },
     });
+    // The basic attack clip (animations.attack, no attackSequence) gets its graph range (Fable 11-17); a second attack clip
+    // the manifest does not name is still a non-cast-action skip.
     expect(built.clipRanges).toEqual({
+      unit_attack1: [0, 9 / 30],
       unit_spell1: [6 / 30, 24 / 30],
       unit_spell1_out: [0, 15 / 30],
     });
-    expect(built.clipRanges).not.toHaveProperty('unit_attack1');
     expect(built.clipRangeSkips).toEqual([
-      { name: 'unit_attack1', reason: 'non-cast-action', startFrame: null, endFrame: 9 },
+      { name: 'unit_attack2', reason: 'non-cast-action', startFrame: null, endFrame: 7 },
     ]);
 
     const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
@@ -340,7 +354,7 @@ describe('initial material and action binding', () => {
       const glb = writeGlb(
         {
           asset: { version: '2.0' },
-          animations: [{ name: 'unit_attack1' }, { name: 'unit_spell1' }, { name: 'unit_spell1_out' }],
+          animations: [{ name: 'unit_attack1' }, { name: 'unit_attack2' }, { name: 'unit_spell1' }, { name: 'unit_spell1_out' }],
         },
         Buffer.alloc(0),
       );
@@ -392,6 +406,10 @@ describe('initial material and action binding', () => {
                     embed('AtomicClipData', field('EndFrame', 7, u32(9)), field('mAnimationFilePath', 16, str('unit_attack1.anm'))),
                   ]),
                   Buffer.concat([
+                    u32(fnv1a('Attack2')),
+                    embed('AtomicClipData', field('EndFrame', 7, u32(7)), field('mAnimationFilePath', 16, str('unit_attack2.anm'))),
+                  ]),
+                  Buffer.concat([
                     u32(fnv1a('Spell1')),
                     embed(
                       'AtomicClipData',
@@ -413,23 +431,23 @@ describe('initial material and action binding', () => {
       await writeFile(join(extracted, 'data/characters/synthetic_unit/skins/skin0.bin'), skin0);
       await writeFile(join(extracted, 'data/characters/synthetic_unit/skins/root.bin'), rootBin);
       await writeFile(join(extracted, 'unit_attack1.anm'), Buffer.alloc(0));
+      await writeFile(join(extracted, 'unit_attack2.anm'), Buffer.alloc(0));
       await writeFile(join(extracted, 'unit_spell1.anm'), Buffer.alloc(0));
       await writeFile(join(extracted, 'unit_spell1_out.anm'), Buffer.alloc(0));
 
       const staged = await stageClipRanges({ assets, extracted, out: outPath });
       expect(staged.manifest.models.synthetic_unit.clipRanges).toEqual({
+        unit_attack1: [0, 9 / 30],
         unit_spell1: [6 / 30, 24 / 30],
         unit_spell1_out: [0, 15 / 30],
       });
-      expect(staged.manifest.models.synthetic_unit.clipRanges).not.toHaveProperty('unit_attack1');
       expect(staged.skippedClips).toEqual([
         expect.objectContaining({
           id: 'synthetic_unit',
-          clipName: 'unit_attack1',
+          clipName: 'unit_attack2',
           reason: 'non-cast-action',
           startFrame: null,
-          endFrame: 9,
-          refs: ['attack'],
+          endFrame: 7,
         }),
       ]);
 
