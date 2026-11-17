@@ -3098,6 +3098,13 @@
       "currentSha256": "bc4a11fb04a1b7c3080a7cdd1d5f578907415afbbbc68e2bf004bb96eeb3904f",
       "firstDifferentByte": 294
     },
+    "tests/server/combat-stream.test.ts": {
+      "previousBytes": 19245,
+      "currentBytes": 19634,
+      "previousSha256": "cc4cce1f11a2bc1be1b58e06e9ce477c896cb6d8747a91c368dd51b9eff7e00f",
+      "currentSha256": "dff0d4e3c4f9499c4ac7c640a7c5bbcce106824d0019f2333793535662785443",
+      "firstDifferentByte": 12937
+    },
     "tests/server/d01-damage-dealt-room.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3254,9 +3261,9 @@
     "tests/server/orb-ledger-partial-forge-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5878,
+      "currentBytes": 6305,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a4b51661d5439ce6eebe20840a9f6441feaed82ea4844be277e5c021a8fc56eb",
+      "currentSha256": "a72465789731bc539975e784001d9a9cc13f81967b4bd155898cb9d7c4b4a461",
       "firstDifferentByte": 0
     },
     "tests/server/pairing-room.test.ts": {

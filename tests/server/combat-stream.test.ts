@@ -206,7 +206,10 @@ it('reuses a terminal settlement plan, and replans only when a tail operation ch
   }
 }, 60_000);
 
-it.each([5, 11])('round %i: buys/sells/rerolls during battle use settlement gold for interest with deterministic slicing', round => {
+// Cast wind-up batch 4 (scene change, premises unchanged): Powder's new release timing changes seed 42's earlier battles, so at
+// round 5 s0's opening gold no longer reaches the next interest step and the "interest drops" premise fails there; round 6
+// (the next PvP round, 2-3) keeps every premise and assertion.
+it.each([6, 11])('round %i: buys/sells/rerolls during battle use settlement gold for interest with deterministic slicing', round => {
   const play = (sliceTicks: number) => {
     const { room, clock } = fixture(42, sliceTicks);
     try {
@@ -214,6 +217,7 @@ it.each([5, 11])('round %i: buys/sells/rerolls during battle use settlement gold
       clock.advance(50);
       const match = () => room.state.seats[0]!.match;
       const openingGold = match().gold;
+      expect(room.state.roundKind, 'premise: a PvP round').toBe('pvp');
       const openingUnits = new Set(match().preparation.units.map(u => u.id));
       expect(room.combatStreamFor('s0')!.terminal).toBeNull();
       const slot = match().shop.slots.findIndex(o => o.status === 'available');
