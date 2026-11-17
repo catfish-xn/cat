@@ -120,7 +120,12 @@ describe('v20-traits approved custom rules',()=>{
     expect(p.mechanics!.some(m=>m.mechanic==='family')).toBe(false);expect(unit(c,'violet').mechanics!.some(m=>m.mechanic==='family')).toBe(true);
     expect(p.mechanics!.some(m=>m.mechanic==='g23Trait'&&m.source.definitionId==='dominator')).toBe(true);
     expect(p.v20Traits?.silcoSample).toMatchObject({star,attacks:5,durationTicks:240,damage:star===1?36:55});
-    const a=stepCombat(idle(c,['powder'])),b=stepCombat({...a.state,units:a.state.units.map(u=>['powder','silco'].includes(u.id)?{...u,hp:0,alive:false}:u)});
+    const a=stepCombat(idle(c,['powder']));
+    // Wind-up batch 3: the monkey explodes on reaching its landing cell (the Menaces detonation with it), even after Powder's death.
+    const sent=a.events.find(e=>e.type==='abilityMarker'&&e.marker==='powder-monkey-sent') as Extract<LedgerCombatEvent,{type:'abilityMarker'}>;
+    let dead:CombatState={...a.state,units:a.state.units.map(u=>['powder','silco'].includes(u.id)?{...u,hp:0,alive:false}:u)};
+    while(dead.tick<sent.arrivalTick-1)dead=stepCombat(dead).state;
+    const b=stepCombat(dead);
     expect(b.events.filter(e=>e.type==='unitSpawned'&&e.definitionId==='v20-silco-minion')).toHaveLength(3);
     expect(b.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='silco')).toHaveLength(0);
     expect(b.state.units.filter(u=>u.definitionId==='v20-silco-minion')).toHaveLength(3);
