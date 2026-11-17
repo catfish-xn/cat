@@ -631,9 +631,9 @@
     },
     "tests/blistering-restore.test.ts": {
       "previousBytes": 9117,
-      "currentBytes": 9758,
+      "currentBytes": 10111,
       "previousSha256": "4cabe944fa80f0c2de59cce615deed7bafb23b9f7ad45f60f20f6d0b8fbc4c0c",
-      "currentSha256": "298da8ee5d451b119b04a6acf6d5cde234fff06dad9d5897ec195276dbddef75",
+      "currentSha256": "2114577a8e39c9e8fefe9d9357f3b6b8a04b872f8b2ce69473c3d210825317ef",
       "firstDifferentByte": 431
     },
     "tests/bot-free-summon-formation.test.ts": {
@@ -646,9 +646,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 38808,
+      "currentBytes": 39525,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "d39ba70b7846e05d34d28be9dbe8656f1d019bc6a7da5020009305278fe8ab10",
+      "currentSha256": "0bac598f2607453a35a56b6d6f3066979644475ce88910ed6acc845c7e666925",
       "firstDifferentByte": 5077
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -712,6 +712,14 @@
       "currentBytes": 10069,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "7882f1183d9be354960e194485c11b6c09d9d26749c99fe2e808b0c3e91ba990",
+      "firstDifferentByte": 0
+    },
+    "tests/cast-windup-batch3.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 11333,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "50d70aad93a9e1674c2add23120ba6a0831f0bfaa6538bb58c9021311b7b75f5",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
@@ -1203,7 +1211,7 @@
       "previousBytes": 0,
       "currentBytes": 69614,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fad1919810586d1e683251dc3f4131c47b9f695ef9d876f93c9f4195ad30bd85",
+      "currentSha256": "26e209cc8a7db1e5d4f292ac29cc631355b0a59ac404c6a56e89968a497f451f",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1270,9 +1278,9 @@
     },
     "tests/g2-1-skills.test.ts": {
       "previousBytes": 8625,
-      "currentBytes": 9103,
+      "currentBytes": 10336,
       "previousSha256": "20bcd6ee5e5f97f70f5314a0ecda687a9a2a8a962308c424d59e28e2ec10d389",
-      "currentSha256": "6d2126e57177fe6c45c498711500badef739188a1b7b9ee053e9ff32251ae1f2",
+      "currentSha256": "a9ac89f58b9118b4a979783fb95533d14db6c9a93f8d20a7c7d4875f4a5eb50f",
       "firstDifferentByte": 406
     },
     "tests/g2-2-skills.test.ts": {
@@ -1313,10 +1321,10 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 9431,
+      "currentBytes": 10862,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "305a234bca9a8a0401a2617dbf7b019020349bdd37c46d973eb053fd813a8007",
-      "firstDifferentByte": 1370
+      "currentSha256": "5eddfb0dbaecc479908fb0f41ad2bf33bd791627002f47460323bf034674e946",
+      "firstDifferentByte": 215
     },
     "tests/g2-4a-crown-gold.test.ts": {
       "previousBytes": 13490,
@@ -3154,7 +3162,7 @@
       "previousBytes": 4979457,
       "currentBytes": 4893938,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "8ef03665659c1f5843bb35ec428dc1f6ab9983b1098d978cab919a1176905028",
+      "currentSha256": "281b35706886bddaf982f1aee65fdfb2b4c6894b6d7a2481f70afa1d51481ebe",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {
@@ -3642,9 +3650,9 @@
     },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
-      "currentBytes": 30747,
+      "currentBytes": 31136,
       "previousSha256": "306db3e2e9990c8e5ae43c10897bc689428b864fbc5ac687f0aad1e329d3d62d",
-      "currentSha256": "2fde3afecd36a4de344a7afa3486fd2de92e30810f0c90efc1872fb9c2a3241d",
+      "currentSha256": "8e14cc41742733ad4f0a174030c3fe0408886c113ee72e131a70ad9c3ab432c5",
       "firstDifferentByte": 7461
     },
     "tests/v23-restore-fuzz.test.ts": {
