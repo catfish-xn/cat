@@ -4,10 +4,13 @@ import { stepCombat } from '../src/simulation/combat';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { vi } from 'vitest';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+// #693 (2026-11-16): the wearer is Zyra; her vines (and their crit roll) land CAST_WINDUP_TICKS.zyra after her cast.
+const LAND=1+CAST_WINDUP_TICKS.zyra,skill=(events:Parameters<typeof packets>[0])=>packets(events).filter(e=>e.source.sourceKind==='ability');
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 describe('B4 tear recipes: hand vectors and real effects',()=>{
- it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const r=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mana).toBe(10);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161)).toBe(true);expect(packets(r.events)[0].hpDamage).toBe(100);});
+ it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const cast=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(cast.p.mana).toBe(10);const r=run(wearing('blue-buff',{mana:1000}),LAND,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161+CAST_WINDUP_TICKS.zyra)).toBe(true);expect(skill(r.events)[0].hpDamage).toBe(100);});
  it('vow:positive hit at40% grants250 shield+20 permanent resists,armor20+20=40',()=>{const r=run(wearing('protectors-vow',{hp:400,cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.p.shield).toBe(250);expect(readCombatStats(r.p,r.state)).toMatchObject({armor:40,magicResist:20});});
  it('helm front:armor40 mitigates100→71;gain1 incoming+floor(1+71×.03)=3 mana on top15',()=>{const r=run(wearing('adaptive-helm',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(71);expect(r.p.mana).toBe(19);expect(readCombatStats(r.p,r.state).magicResist).toBe(60);});
  it('helm back:AP100+10+15=125;tick60 adds10 mana,original branch survives movement',()=>{const r=run(wearing('adaptive-helm',{cell:{col:1,row:6},startingCell:{col:1,row:6},cooldownTicks:1000,attackRange:1,moveCooldownTicks:0}),60,[enemy('e',1,1)]);expect(r.events.some(e=>e.type==='movement'&&e.unitId==='p'&&e.to.row<=5)).toBe(true);expect(r.p.cell.row).toBeLessThanOrEqual(5);expect(readCombatStats(r.p,r.state)).toMatchObject({abilityPower:125,magicResist:20,armor:0});expect(r.p.mana).toBe(25);});

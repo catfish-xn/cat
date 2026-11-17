@@ -28,17 +28,26 @@ async function main(){
   if(deaths.length)batches.push({terminal:state.phase!=='combat',deaths,reveals:step.events.filter(e=>e.type==='lootRevealed').map(e=>e.death.eventSeq)});}
  return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),batches,result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-base.m8.loot.receipts.length,unitSerialDelta:state.nextUnitSerial-base.nextUnitSerial,itemSerialDelta:state.nextItemSerial-base.nextItemSerial};
  }
- const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix))};
- // Seed 15972 after the lawful Leona/Loris swap: r04 alone at tick 40, r02/r03 in the live
- // tick-127 batch, then r00/r01 in the terminal batch (tests/m8-b8-live-reveal.test.ts).
- const expectedDeaths=[{unitId:bird('r04'),tick:40,eventSeq:446},{unitId:bird('r02'),tick:127,eventSeq:1226},{unitId:bird('r03'),tick:127,eventSeq:1227},{unitId:bird('r00'),tick:165,eventSeq:1504},{unitId:bird('r01'),tick:165,eventSeq:1505}];
+ const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix)),terminal:resolve(helpers.simultaneousB8Preparation(prefix,{col:4,row:7}))};
+ // 2026-11-16 (#693: Zyra's vines land CAST_WINDUP_TICKS.zyra after her cast) the old board lost its same-tick pairs. Seed 15972
+ // after the lawful Leona/Loris swap and one public deploy of Zyra, as tests/m8-b8-live-reveal.test.ts: from (3,4) r02/r04 die in
+ // the live tick-56 batch; from (4,7) r00/r01 die in the terminal tick-165 batch.
+ const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:508},{unitId:bird('r04'),tick:56,eventSeq:509},{unitId:bird('r03'),tick:86,eventSeq:708},{unitId:bird('r01'),tick:128,eventSeq:920},{unitId:bird('r00'),tick:147,eventSeq:1030}];
  assert.deepEqual(branches.simultaneous.deaths,expectedDeaths);
- const sameTick=branches.simultaneous.deaths.slice(1,3),terminalBatch=branches.simultaneous.deaths.slice(3);
+ const sameTick=branches.simultaneous.deaths.slice(0,2);
  const batches=branches.simultaneous.batches;
- assert.deepEqual(batches.map(b=>b.deaths),[expectedDeaths.slice(0,1),sameTick,terminalBatch]);
- assert.deepEqual(batches.map(b=>b.terminal),[false,false,true]);
- assert.deepEqual(batches[1].reveals,[1226,1226,1227]);assert.deepEqual(batches[2].reveals,[1504,1504,1505]);
+ assert.deepEqual(batches.map(b=>b.deaths),[sameTick,expectedDeaths.slice(2,3),expectedDeaths.slice(3,4),expectedDeaths.slice(4)]);
+ assert.deepEqual(batches.map(b=>b.terminal),[false,false,false,true]);
+ assert.deepEqual(batches[0].reveals,[508,508,509,509,509]);
  assert.equal(branches.simultaneous.phase,'settlement');
+ const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:447},{unitId:bird('r02'),tick:127,eventSeq:1219},{unitId:bird('r03'),tick:135,eventSeq:1273},{unitId:bird('r00'),tick:165,eventSeq:1502},{unitId:bird('r01'),tick:165,eventSeq:1503}];
+ assert.deepEqual(branches.terminal.deaths,expectedTerminalDeaths);
+ const terminalBatch=branches.terminal.deaths.slice(3);
+ const terminalBatches=branches.terminal.batches;
+ assert.deepEqual(terminalBatches.map(b=>b.deaths),[expectedTerminalDeaths.slice(0,1),expectedTerminalDeaths.slice(1,2),expectedTerminalDeaths.slice(2,3),terminalBatch]);
+ assert.deepEqual(terminalBatches.map(b=>b.terminal),[false,false,false,true]);
+ assert.deepEqual(terminalBatches[3].reveals,[1502,1502,1503]);
+ assert.equal(branches.terminal.phase,'settlement');
  // Seed 54239 inventory Shojin/Gargoyle/Crownguard on bare two-star Loris: (6,7) kills only r04, (0,6) only r01.
  for(const [source,cell,deathTick,directReceipts,itemBirths,unitBirths] of [['r04',{col:6,row:7},520,2,0,1],['r01',{col:0,row:6},353,1,1,0]]){
   let prepared=helpers.partialB8Preparation(lorisPrefix,'loris');
@@ -84,7 +93,7 @@ async function main(){
  const byteEvidence={previousCommit:baseCommit,previousBytes:oldTest.length,currentBytes:newTest.length,previousSha256:createHash('sha256').update(oldTest).digest('hex'),currentSha256:createHash('sha256').update(newTest).digest('hex'),firstDifferentByte:oldTest.equals(newTest)?null:first};
  const fileSha=p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
  const audit={baseCommit,sourceDigests,contentDigest:prefix.contentDigest,route:'mage',seed:routes.SIMULTANEOUS_REVEAL_SEED,partialSeed:routes.PARTIAL_REVEAL_SEEDS.loris,roundId:'4-7',prefixHash:sha(prefix),previousAssertions,currentAssertions,assertionBytes:{previous:evidence(previousAssertions),current:evidence(currentAssertions)},drift,byteEvidence,helperSha256:fileSha('tests/fixtures/g2-3-b8-public.ts'),routesSha256:fileSha('tests/fixtures/b8-live-reveal-routes.ts'),neutralRouteSha256:fileSha('tests/fixtures/m8-neutral-public-route.ts'),driverSha256:fileSha('scripts/generate-m5-route.cjs'),branches};
- migration.verifySources(sourceDigests);const output=JSON.stringify(audit,null,2)+'\n',destination='docs/evidence/v26-neutrals-1424/live-reveal-audit.json';if(process.argv.includes('--check'))assert.equal(fs.readFileSync(destination,'utf8'),output);else{fs.mkdirSync('docs/evidence/v26-neutrals-1424',{recursive:true});fs.writeFileSync(destination,output);}console.log(JSON.stringify({contentDigest:prefix.contentDigest,branches:Object.keys(branches),sameTick127:true,terminalTick165:true,partialReceipts:[branches['loris-r04'].receipts,branches['loris-r01'].receipts],unloadedCarrierReveals:branches.unloadedCarrier.newReveals}));
+ migration.verifySources(sourceDigests);const output=JSON.stringify(audit,null,2)+'\n',destination='docs/evidence/v26-neutrals-1424/live-reveal-audit.json';if(process.argv.includes('--check'))assert.equal(fs.readFileSync(destination,'utf8'),output);else{fs.mkdirSync('docs/evidence/v26-neutrals-1424',{recursive:true});fs.writeFileSync(destination,output);}console.log(JSON.stringify({contentDigest:prefix.contentDigest,branches:Object.keys(branches),sameTick56:true,terminalTick165:true,partialReceipts:[branches['loris-r04'].receipts,branches['loris-r01'].receipts],unloadedCarrierReveals:branches.unloadedCarrier.newReveals}));
  }finally{await server.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

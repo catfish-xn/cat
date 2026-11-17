@@ -46,8 +46,10 @@ export const BATCH1_TIMELINES: Record<keyof typeof BATCH1_DIRECTORIES, readonly 
   leona: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 11 / 30, duration: .45, stopAfter: .1, bone: chest },
     { action: 'cast', system: '8d9a4ccc', event: 'cast-start', delay: 0, duration: 3, stopAfter: 2.8, bone: chest },
-    // Driven by the observed damageReduction expiration; no explosion at cast start.
-    { action: 'end', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 1, stopAfter: .1, bone: ground },
+    // W_cas_hit plays twice, each to its own end: at the cast and at the end of her damage reduction (driven by its
+    // expiration); the same system both times (fitted, not original data). The end burst was cut at 0.1 s before.
+    { action: 'cast', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
+    { action: 'end', system: 'dda108d2', event: 'cast-start', delay: 0, duration: 2, bone: ground },
     { action: 'passive', system: '6f29051a', event: 'hit', delay: 0, duration: .6, stopAfter: .1, bone: chest },
   ],
   nocturne: [

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkParticles, fadeAt, unitAnchor, unitJoints } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAST_BODY_SECONDS, effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { constant, num, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 
@@ -65,9 +65,10 @@ describe('a fading cue eases its lingering particles out by its end (Zyra E, 11-
     expect(() => parseIndex(index({ stopAfter: 0.5, fadeOut: 1 }))).toThrow();
   });
   it('fades both of Zyra\'s lingering E systems', () => {
-    const zyra = CUE_OVERRIDES.zyra.filter(cue => cue.fadeOut);
+    // 2026-11-16: Zyra's E hits play at her damage event ('zyra-vines'), no longer in her cast list.
+    const zyra = CUE_EXTRA_SKILLS['zyra-vines']!.filter(cue => cue.fadeOut);
     expect(zyra.map(cue => cue.system)).toEqual(['7ce6b652', '7ce6b652', 'b888a24f']);
-    for (const cue of Object.values(CUE_OVERRIDES).flat()) if (cue.fadeOut) expect(cue.stopAfter).toBeLessThan(cue.duration);
+    for (const cue of [...Object.values(CUE_OVERRIDES), ...Object.values(CUE_EXTRA_SKILLS)].flat()) if (cue.fadeOut) expect(cue.stopAfter).toBeLessThan(cue.duration);
   });
 });
 
