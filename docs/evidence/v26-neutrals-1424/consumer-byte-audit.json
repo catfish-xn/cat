@@ -54,6 +54,13 @@
       "currentSha256": "5e92c345c5e20987f46e142f8eef0d873793e304d5cbc9df546eb453de52a1af",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-batch.test.ts": {
+      "previousBytes": 14572,
+      "currentBytes": 17644,
+      "previousSha256": "082405722b31256ce4924abf810e652c960d1507ec1f982211953553d088904c",
+      "currentSha256": "d1a011e00ba60780f7d8670503782d5695b17b4b6738177eafb586df64881eec",
+      "firstDifferentByte": 10514
+    },
     "tests/assets3d-bin.test.ts": {
       "previousBytes": 12171,
       "currentBytes": 41933,
@@ -82,6 +89,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "c366ca3681ab77ba102ca2a7f6d333a59ba162a6c53b055a50c0ae0f16d1f716",
       "firstDifferentByte": 0
+    },
+    "tests/assets3d-convert.test.ts": {
+      "previousBytes": 13630,
+      "currentBytes": 14803,
+      "previousSha256": "8b78130eaad6c076ea6f555cdee92fce36773f522a4513b76a4369e27f281edb",
+      "currentSha256": "c781498ecac4d6097cfa62fc3e5f4eb9e12898461f9e9cddefd833455029a7df",
+      "firstDifferentByte": 412
     },
     "tests/assets3d-neutrals.test.ts": {
       "previousBytes": 5474,
