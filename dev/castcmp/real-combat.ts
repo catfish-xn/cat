@@ -4,6 +4,7 @@ import { createCombatWithEvents, stepCombat } from '../../src/simulation/combat'
 import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
 import { DEFAULT_BOARD } from '../../src/simulation/board';
 import { toDisplayEvents, toCombatViewState } from '../../src/presentation/combat-display';
+import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 
 export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number;
   /** v-capture --foe-offset K: every foe K columns to the side (+ right), so the target stands ahead and to the side. */
@@ -21,7 +22,47 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
   foeCell?: Cell;
   /** v-capture --foe2 X / --foe2star N / --foe2-cell R,C: the second foe as another hero, of its own star, on its own cell
    * (e.g. a melee foe far off for the ally to walk to, so it leaves the caster's line). Needs --nfoes 2 or more. */
-  foe2?: string; foe2star?: number; foe2Cell?: Cell }
+  foe2?: string; foe2star?: number; foe2Cell?: Cell;
+  /** v-capture --ally2 X / --ally2star N (default 2) / --ally2-cell R,C: a second unit of `me`'s team (e.g. a tank and a
+   * partner), by default one row ahead of `me` and one column to the right. */
+  ally2?: string; ally2star?: number; ally2Cell?: Cell;
+  /** v-capture --items me=a+b,ally=c: completed or component items on `me`, `ally` and `ally2` (up to 3 each, slots in the
+   * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: not yet (the one-sided
+   * combat takes the enemy's items from the round's projection, round-enemies.ts, not from this list). */
+  items?: ItemSetup }
+/** Item ids per unit of `me`'s team, in slot order. */
+export type ItemSetup = Partial<Record<ItemHolder, string[]>>;
+export type ItemHolder = 'me' | 'ally' | 'ally2';
+const ITEM_HOLDERS: readonly ItemHolder[] = ['me', 'ally', 'ally2'];
+/** "me=a+b,ally=c" (v-capture --items) as items per unit, or a reason it cannot be: unknown unit or item, a unit named twice,
+ * more than 3 items on one unit, an empty list. */
+export function parseItems(text: string | null | undefined): { items: ItemSetup } | { why: string } {
+  if (!text) return { why: '--items is empty' };
+  const items: ItemSetup = {};
+  for (const part of text.split(',')) {
+    const [holder, list, extra] = part.split('=');
+    if (extra !== undefined || !list) return { why: `--items wants unit=item+item, got ${part}` };
+    if (/^foe[2-4]?$/.test(holder)) return { why: `--items: items on foes are not supported yet (${holder})` };
+    if (!ITEM_HOLDERS.includes(holder as ItemHolder)) return { why: `--items: ${holder} is not one of ${ITEM_HOLDERS.join(', ')}` };
+    if (items[holder as ItemHolder]) return { why: `--items names ${holder} twice` };
+    const ids = list.split('+');
+    if (ids.length > 3) return { why: `--items: ${holder} has ${ids.length} items, at most 3` };
+    const unknown = ids.filter(id => !Object.hasOwn(ITEM_DEFINITIONS, id));
+    if (unknown.length) return { why: `--items: unknown item ${unknown.join(', ')}` };
+    items[holder as ItemHolder] = ids;
+  }
+  return { items };
+}
+/** The recording's items as the game holds them (strategy-types.ts ItemInstance): on their unit, slot by slot. */
+export function realItems(s: RealSetup): any[] {
+  return ITEM_HOLDERS.flatMap(holder => (s.items?.[holder] ?? []).map((definitionId, slot) =>
+    ({ id: `item-${holder}-${slot}`, definitionId, location: { kind: 'unit', unitId: holder, slot } })));
+}
+/** "me=a+b ally=c" for captions and logs, or null without items. */
+export function itemsLabel(items: ItemSetup | null | undefined): string | null {
+  const parts = ITEM_HOLDERS.filter(h => items?.[h]?.length).map(h => `${h}=${items![h]!.join('+')}`);
+  return parts.length ? parts.join(' ') : null;
+}
 export interface Cell { row: number; col: number }
 /** The board (src/simulation/board.ts DEFAULT_BOARD): rows 0-7, columns 0-6; `me` stands on row 5, column 3. */
 const ROWS = 8, COLS = 7;
@@ -101,6 +142,7 @@ export function realUnits(s: RealSetup): any[] {
       ({ id, definitionId: id === 'foe2' && s.foe2 ? s.foe2 : foe, team: 'enemy', starLevel: id === 'foe2' && s.foe2star !== undefined ? s.foe2star : s.foestar,
         location: { kind: 'board', cell: asked[id as string] ? { ...asked[id as string]! } : { col: (col as number) + (s.foeOffset ?? 0), row } } })),
     ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: meCell.col }) } } }] : []),
+    ...(s.ally2 ? [{ id: 'ally2', definitionId: s.ally2, team: 'player', starLevel: s.ally2star ?? 2, location: { kind: 'board', cell: { ...(s.ally2Cell ?? { row: meRow - 1, col: meCell.col + 1 }) } } }] : []),
   ];
   const why = layoutProblem(s, units);
   if (why) throw new Error(why);
@@ -109,6 +151,8 @@ export function realUnits(s: RealSetup): any[] {
 /** Why this layout cannot be placed (a cell option without its unit, a unit off the board, two on one cell), or null. */
 export function layoutProblem(s: RealSetup, units: any[]): string | null {
   if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
+  if ((s.ally2Cell || s.ally2star !== undefined) && !s.ally2) return '--ally2-cell / --ally2star need --ally2';
+  for (const holder of ['ally', 'ally2'] as const) if (s.items?.[holder]?.length && !s[holder]) return `--items ${holder}=... needs --${holder}`;
   // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
   // never by --form, which only picks what the renderer draws: the two must agree.
   const meRow = (s.meCell ?? ME_CELL).row;
@@ -139,9 +183,9 @@ export function lineClearance(a: Cell, b: Cell, c: Cell): number {
 
 /** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
  * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
-export function startRealCombat(units: any[]): { state: any; events: any[] } {
+export function startRealCombat(units: any[], items: any[] = []): { state: any; events: any[] } {
   const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
-  const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items: [], temporaryEquipment: [],
+  const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items, temporaryEquipment: [],
     augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'castcmp', 42);
   // Self-check: a replay that skipped combat start would silently change who casts and when.
   if (!(started.state as any).startEffectsApplied) throw new Error('real combat: combat-start hooks not applied');
@@ -152,8 +196,8 @@ export function startRealCombat(units: any[]): { state: any; events: any[] } {
  * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
  * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR) {
-  const started = startRealCombat(units);
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = []) {
+  const started = startRealCombat(units, items);
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {

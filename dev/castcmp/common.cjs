@@ -64,7 +64,7 @@ async function waitQuiet(page, { maxMs = 30000, skipWarming = false } = {}) {
   return { ok: false, waitedMs: Date.now() - began, loads: last, pending };
 }
 
-async function renderMeta(page, out, boxes, quiet = null) {
+async function renderMeta(page, out, boxes, quiet = null, extra = null) {
   const crypto = require('crypto'), path = require('path');
   const gl = await page.evaluate(() => {
     const canvases = [...document.querySelectorAll('canvas')].map(c => {
@@ -98,7 +98,7 @@ async function renderMeta(page, out, boxes, quiet = null) {
   }
   const loadOrder = crypto.createHash('sha256').update(gl.loads.join('\n')).digest('hex').slice(0, 16);
   const main = gl.canvases.slice().sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? null;
-  const meta = { at: new Date().toISOString(), quiet, dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, anim: gl.anim, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads } };
+  const meta = { at: new Date().toISOString(), quiet, dpr: gl.dpr, userAgent: gl.userAgent, main, canvases: gl.canvases, ref, anim: gl.anim, loads: { count: gl.loads.length, orderSha: loadOrder, order: gl.loads }, ...(extra ?? {}) };
   fs.writeFileSync(path.join(out, 'render-meta.json'), JSON.stringify(meta, null, 1));
   return { renderer: main?.renderer ?? null, samples: main?.samples ?? null, antialias: main?.attributes?.antialias ?? null, dpr: gl.dpr,
     size: main ? [main.width, main.height] : null, refSha: ref?.sha256?.slice(0, 16) ?? null, loads: gl.loads.length, loadOrder, quiet: quiet?.ok ?? null };
