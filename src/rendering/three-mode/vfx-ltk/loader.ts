@@ -163,6 +163,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.optional !== undefined && (typeof cue.optional !== 'boolean' || cue.event === 'cast-start'))
         || (cue.livingTarget !== undefined && (typeof cue.livingTarget !== 'boolean' || (cue.event !== 'hit' && cue.event !== 'projectile')))
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
+        || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self', 'single'].includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
@@ -276,6 +277,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
       const muted = [...(MUTED_EMITTERS[id] ?? []), ...(ATTACHED_HELD_BACK[id] ?? [])];
       const notes: string[] = [];
       for (const { emitter: e } of listed) if (!e.disabled && attachedMeshDeferred(e)) notes.push(`attached-deferred:${e.name}`);
+      if (MUTED_EMITTERS[id]?.length) notes.push(`muted:${MUTED_EMITTERS[id]!.join(',')}`);
       const drawn = listed.filter(({ emitter: e }) => !(e.quadType === QUAD_TYPE.mesh && e.mesh === null && !e.childSet)
         && !muted.includes(e.name ?? '') && !attachedMeshOfItsOwn(e));
       if (listed.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
@@ -309,10 +311,15 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
           const surface = e.emissionSurface;
           if (e.emissionMesh && !reader.readBinary) throw new VfxLoadError('unsupported', 'emission-mesh-binary-reader');
           if (surface && !reader.readBinary) throw new VfxLoadError('unsupported', 'surface-binary-reader');
-          if (surface && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
+          // A mesh-kind surface naming no mesh, skeleton or joints (an empty emissionSurfaceDefinition) gives nothing to sample:
+          // the emitter emits from its own shape and the system loads instead of being refused whole. Our choice, not the
+          // original's. A surface on the host's own pose (a skeleton or joints) is still refused, so the host keeps its fallback.
+          const empty = !!surface && surface.kind === 'mesh' && !surface.mesh && !surface.skeleton && surface.joints.length === 0;
+          if (empty) notes.push(`surface-empty:${e.name}`);
+          if (surface && !empty && (surface.kind !== 'mesh' || !surface.mesh || surface.skeleton || surface.joints.length))
             throw new VfxLoadError('unsupported', 'surface-host-pose');
           // Mesh bytes stay on the birth-mesh loop below. This pass only installs the surface so that loop can keep it.
-          if (surface) {
+          if (surface && !empty) {
             const sampled = await emission(surface.mesh!, surface.submeshes);
             let held = surfaces.get(path); if (!held) surfaces.set(path, held = new Map());
             held.set(e.index, { mesh: held.get(e.index)?.mesh ?? null, surface: sampled });

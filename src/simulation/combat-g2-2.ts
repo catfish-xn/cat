@@ -1,4 +1,5 @@
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
+import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
 import { dashAmbessaChain } from './combat-ambessa-dash';
 /** G2-2 finite skill execution. All counters, zones and marks live in Combat JSON. */
@@ -73,7 +74,9 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'trundle': {
       const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
       // Shocking Troll (P): no heal; the bite stays, then SpeedBps attack speed for SpeedTicks and permanent AD growth.
-      if(!hero)heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');
+      // The bite and its heal land CAST_WINDUP_TICKS later (g2Landing: ordinal 0 heals, 1 bites); amounts are taken now.
+      if(!hero)schedule(u,'g2Landing',ctx.tick+CAST_WINDUP_TICKS.trundle,u,Math.floor(mag('GainHealth')*bps/10000),seq,0,2);
+      schedule(u,'g2Landing',ctx.tick+CAST_WINDUP_TICKS.trundle,t,Math.floor(ad('PercentAttackDamage')*bps/10000),seq,1,2);ids.push(t.id);
       if(hero){
         applyStatus(u,origin(u),'attackSpeed',hero.speedBps,hero.speedTicks,ctx.tick,ctx.events,true);
         u.runtime.permanentAdBps+=hero.permanentAdBps;

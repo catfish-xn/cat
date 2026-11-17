@@ -33,3 +33,15 @@ describe('Blitzcrank\'s shock visuals follow its damage', () => {
       [ARCS, BURST].flatMap(system => ['f1', 'f2', 'f3'].map(id => [system, id])).sort());
   });
 });
+
+describe('Blitzcrank\'s own flash plays with the shock, on him', () => {
+  it('ab66b54f is planned on Blitzcrank on the shock tick, not on his cast', () => {
+    const plans = createBatch1VfxEvents(id => definitions[id]).batch([cast('blitz', 1, ['f1']), damage('blitz', 2, 6, 'f1'), damage('blitz', 3, 6, 'f2')]);
+    expect(plans.map(plan => plan.extra.filter(x => x.skill === 'blitzcrank-shock-self').map(x => x.targets))).toEqual([[], [['blitz']], []]);
+    expect(CUE_OVERRIDES.blitzcrank!.some(c => c.system === 'ab66b54f')).toBe(false);
+    expect(CUE_EXTRA_SKILLS['blitzcrank-shock-self']!.map(c => [c.system, c.delay])).toEqual([['ab66b54f', 0]]);
+    const mapped = mapSkillTimeline(CUE_EXTRA_SKILLS['blitzcrank-shock-self']!, 'blitz', ['blitz']);
+    expect(mapped.unsupported).toEqual([]);
+    expect(mapped.spawns.map(s => s.system)).toEqual(['ab66b54f']);
+  });
+});

@@ -9,6 +9,7 @@ import type { S13Unit } from '../src/simulation/combat-s13-state';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { S13_P3_SOURCE } from '../src/simulation/content/s13-p3-source';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 function initial(augments: string[] = [], anomaly?: string, item?: string, champion = 'leona', stage = 2): CombatState {
   const base = createMatch(42);
@@ -73,12 +74,15 @@ it.each([['piercing-lotus-i', 3000, 'tristana'], ['piercing-lotus-ii', 4500, 'tr
   // draws nothing; P0 keeps an alive, in-range target.
   const s = patch(initial([id], undefined, undefined, champion), 'p0', { targetId: 'e0' }); expect(unit(s).spellCrit!.chanceBps).toBe(chance); expect(unit(s).spellCrit!.enabled).toBe(true);
   // Seed 0's next word is <30%; preserve the compiled authorization and roll through the standard pipeline.
-  const r = stepCombat({ ...cast(s), rngState: 0 });
-  const hit = r.events.find(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0');
+  // 2026-11-16: Zyra's vines (and their crit roll) land CAST_WINDUP_TICKS.zyra after her cast; Tristana's shot on the cast.
+  const w = champion === 'zyra' ? CAST_WINDUP_TICKS.zyra : 0;
+  let r = stepCombat({ ...cast(s), rngState: 0 }); const events = [...r.events];
+  for (let n = 0; n < w; n++) { r = stepCombat(r.state); events.push(...r.events); }
+  const hit = events.find(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0');
   expect(hit?.type === 'packetDamage' && hit.outcome.critical).toBe(true);
   for (const kind of ['sunder', 'shred']) {
     const c = unit(r.state, 'e0').mechanismState!.statuses.find(g => g.kind === kind)!.contributions[0];
-    expect(c.application.magnitudeBps).toBe(2000); expect(c.expiresAtTick).toBe(61);
+    expect(c.application.magnitudeBps).toBe(2000); expect(c.expiresAtTick).toBe(61 + w);
   }
   validate(r.state); expect(stepCombat(JSON.parse(JSON.stringify(r.state)))).toEqual(stepCombat(r.state));
 });
