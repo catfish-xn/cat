@@ -60,9 +60,11 @@ export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSl
 /**
  * Held up by another unit (presentation only; the rules keep the unit on its cell): the body goes up to the holder's grip
  * point (a bone, CARRY_BONES) in `riseSeconds`, follows it while held, and comes back down onto its own spot in
- * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once.
+ * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once. The fall is the
+ * slam: two rule ticks (0.1 s), the gap between the rules' let-go and the slam's damage (Renni: RENNI_SLAM_AFTER_STUN_TICKS),
+ * so the body lands on the damage tick. Fitted, not original data.
  */
-export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.22 } as const;
+export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1 } as const;
 /**
  * How each holder holds (by definition id): the bones of what it grips with, the held body going to the highest of them
  * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down

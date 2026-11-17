@@ -1503,11 +1503,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
-      // Held up by another unit (display-only signal, PROVISIONAL shape until the rules' event lands): starts and ends a
-      // carry; a death ends every carry it is part of at once.
-      const lifted = event as unknown as { type: string; holderId?: string; targetId?: string; lifted?: boolean };
-      if (lifted.type === 'unitLifted' && lifted.targetId) {
-        if (lifted.lifted && lifted.holderId) startCarry(lifted.targetId, lifted.holderId); else endCarry(lifted.targetId);
+      // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's
+      // last tick or when either dies). A death also ends every carry it is part of at once, below.
+      if (event.type === 'carryChanged') {
+        if (event.carried) startCarry(event.targetId, event.holderId); else endCarry(event.targetId);
       }
       if (event.type === 'death') for (const [id, view] of pieces) if (id === event.unitId || view.carryHolder === event.unitId) endCarry(id, true);
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
