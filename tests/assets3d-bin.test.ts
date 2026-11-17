@@ -341,6 +341,12 @@ describe('initial material and action binding', () => {
     expect(built.clipRangeSkips).toEqual([
       { name: 'unit_attack2', reason: 'non-cast-action', startFrame: null, endFrame: 7 },
     ]);
+    // A model with an attackSequence keeps its attack clip whole: its sequence already splits it.
+    const sequenced = resolveUnitClipRanges(animation, clips, [], {
+      castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' }, attackSequence: { in: 'unit_attack1' },
+    });
+    expect(sequenced.clipRanges).not.toHaveProperty('unit_attack1');
+    expect(sequenced.clipRangeSkips.map(skip => skip.name).sort()).toEqual(['unit_attack1', 'unit_attack2']);
 
     const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
     await mkdir(local, { recursive: true });
