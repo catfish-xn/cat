@@ -69,6 +69,7 @@ for (const tick of [1, 150, 300]) it(`streams 6-1 through tick ${tick}`, () => r
 it('plays 6-1 to the end of the room', () => {
   runUntilClaiming(room, clock, s => s.phase === 'ended', 5000);
   expect(room.state.phase).toBe('ended');
+  expect(room.state.roundId).toBe('6-1');
 });
 it('restores the same orb after elimination forfeits the waiting forge', () => {
   expect(room.state.seats.find(s => s.seatId === seatId)!.alive).toBe(false);
