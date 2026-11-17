@@ -2676,9 +2676,9 @@
     "tests/rendering3d-submesh-visibility.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12690,
+      "currentBytes": 13718,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "523636aef60cc02e900ec26d107cb936ee7911644508c7cecb9b6bf916b8fbcc",
+      "currentSha256": "e613e66edc06d92436bab5f0a77037982e63057f2bd0473d5ec5d24ff9ac7c9a",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-tabletop.test.ts": {

@@ -168,6 +168,18 @@ describe('submesh visibility from the manifest', () => {
     mixer.dispose();
   });
 
+  it('the model cache applies the held list by model id: the lease drops the clip that would show a held submesh', async () => {
+    const [held] = HELD_SUBMESHES.drmundo;
+    const visibility: SubmeshVisibility = { initiallyHidden: [held], events: { enter: [{ frame: 0, show: [held], hide: ['Base'] }], fall: [{ frame: 0, show: [], hide: ['Base'] }] } };
+    const manifest: AssetManifest = { schemaVersion: 1, models: { drmundo: { path: 'units/a.glb', submeshVisibility: visibility }, other: { path: 'units/b.glb', submeshVisibility: visibility } } };
+    const cache = new ModelCache(manifest, '', async () => ({ scene: model('Base', held), animations: [] }));
+    const [heldLease, otherLease] = [await cache.load('drmundo'), await cache.load('other')];
+    expect(Object.keys(heldLease.submeshVisibility!.events!)).toEqual(['fall']);
+    expect(otherLease.submeshVisibility).toEqual(visibility);
+    expect(visible(heldLease.scene)).toEqual(['Base']);
+    heldLease.release(); otherLease.release(); cache.dispose();
+  });
+
   it('matches clips by name regardless of case (the manifest keys clips in lowercase)', () => {
     const root = model('Base', 'Prop');
     const mixer = new UnitAnimationMixer(root, [clip('Rest', 30), clip('X_SpellProp', 30)], { idle: 'Rest', cast: 'X_SpellProp' },
