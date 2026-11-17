@@ -2,7 +2,7 @@ import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility } from './contracts';
-import { hideInitialSubmeshes, unswitchedClips } from './submesh-visibility';
+import { HELD_SUBMESHES, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
 import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
@@ -140,7 +140,7 @@ export class ModelCache {
     const current = entry;
     const model = await current.promise;
     const scene = clone(model.scene);
-    const submeshVisibility = this.manifest.models[id]?.submeshVisibility;
+    const submeshVisibility = withoutHeld(this.manifest.models[id]?.submeshVisibility, Object.hasOwn(HELD_SUBMESHES, id) ? HELD_SUBMESHES[id] : undefined);
     hideInitialSubmeshes(scene, submeshVisibility);
     let released = false;
     return { scene, animations: model.animations, placeholder: current.placeholder,

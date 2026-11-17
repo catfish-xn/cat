@@ -34,6 +34,20 @@ export function unswitchedClips(root: Object3D, visibility: SubmeshVisibility | 
     .filter(entry => entry.missing.length);
 }
 
+/**
+ * Submeshes kept at their default per model: a clip that would show one of them switches nothing. Dr. Mundo's ultimate
+ * body: the clips that show it are too short and too late for the transformation it stands for, so a brief swap would
+ * read worse than none until a timed ultimate form exists. The geometry stays in the model.
+ */
+export const HELD_SUBMESHES: Readonly<Record<string, readonly string[]>> = { drmundo: ['BodyUlt'] };
+
+/** The model's visibility without the clips that show a held submesh (the visibility itself when nothing is held). */
+export function withoutHeld(visibility: SubmeshVisibility | undefined, held: readonly string[] | undefined): SubmeshVisibility | undefined {
+  if (!visibility?.events || !held?.length) return visibility;
+  const events = Object.fromEntries(Object.entries(visibility.events).filter(([, list]) => !list.some(event => event.show.some(name => held.includes(name)))));
+  return { ...visibility, events };
+}
+
 /** Hide the submeshes a model starts without (a model that does not carry them is left as it is). */
 export function hideInitialSubmeshes(root: Object3D, visibility: SubmeshVisibility | undefined): void {
   const hidden = new Set(visibility?.initiallyHidden ?? []);

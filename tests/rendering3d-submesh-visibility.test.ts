@@ -4,7 +4,7 @@ import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
 import type { ActionOutput } from '../src/rendering3d/animation-state';
 import { ModelCache } from '../src/rendering3d/assets';
 import { assertManifest, type AssetManifest, type SubmeshVisibility } from '../src/rendering3d/contracts';
-import { SUBMESH_EVENT_FPS, SubmeshSwitch, hideInitialSubmeshes, unswitchedClips } from '../src/rendering3d/submesh-visibility';
+import { HELD_SUBMESHES, SUBMESH_EVENT_FPS, SubmeshSwitch, hideInitialSubmeshes, unswitchedClips } from '../src/rendering3d/submesh-visibility';
 
 /** A model with one mesh per submesh (material of the same name), as the exporter writes a multi-submesh skin. */
 function model(...submeshes: string[]): Group {
@@ -146,6 +146,25 @@ describe('submesh visibility from the manifest', () => {
     mixer.apply(output('death')); mixer.update(0.5);
     expect(visible(root)).toEqual(['BodyNormal']);
     mixer.dispose();
+  });
+
+  it('a held submesh (Dr. Mundo\'s ultimate body) stays hidden: the clip that shows it switches nothing, its geometry stays', async () => {
+    expect(HELD_SUBMESHES.drmundo).toEqual(['BodyUlt']);
+    const visibility: SubmeshVisibility = { initiallyHidden: ['BodyUlt', 'ToeTag'], events: {
+      enter: [{ frame: 0, show: [], hide: ['BodyUlt'] }, { frame: 0, show: ['BodyNormal'], hide: [] }],
+      leave: [{ frame: 0, show: [], hide: ['BodyNormal'] }, { frame: 0, show: ['BodyUlt'], hide: [] }],
+      fall: [{ frame: 0, show: ['ToeTag'], hide: [] }],
+    } };
+    const manifest: AssetManifest = { schemaVersion: 1, models: { drmundo: { path: 'units/m.glb', animations: { idle: 'rest', cast: 'enter', death: 'fall' }, castSequence: { main: 'enter', out: 'leave' }, submeshVisibility: visibility } } };
+    const cache = new ModelCache(manifest, '', async () => ({ scene: model('BodyNormal', 'BodyUlt', 'ToeTag'), animations: [clip('rest', 30), clip('enter', 30), clip('leave', 30), clip('fall', 30)] }));
+    const lease = await cache.load('drmundo');
+    expect(Object.keys(lease.submeshVisibility!.events!)).toEqual(['enter', 'fall']);
+    expect(visible(lease.scene)).toEqual(['BodyNormal']);
+    const mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
+    mixer.apply(output('cast', ['enter', 'leave'], 2));
+    for (let i = 0; i < 8; i++) { mixer.update(0.25); expect(visible(lease.scene)).toEqual(['BodyNormal']); }
+    mixer.apply(output('death')); mixer.update(0.1); expect(visible(lease.scene)).toEqual(['BodyNormal', 'ToeTag']);
+    mixer.dispose(); lease.release(); cache.dispose();
   });
 
   it('ignores names the model does not carry and leaves submeshes outside the data alone', () => {
