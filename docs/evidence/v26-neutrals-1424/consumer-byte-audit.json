@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11225,
+      "currentBytes": 11620,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "250b30c3ac37ea483b594db2a333ac0f574a06701c6868fce4780071579ae36c",
+      "currentSha256": "3a0b0940728d549c291f649f5edabe425c90911e9a8421393e43679d43ad8fe7",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -2404,9 +2404,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 50354,
+      "currentBytes": 51533,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "3aa9277d214251bf8e5136e7fcc759788b8c465ef22eb19868366b0213c73946",
+      "currentSha256": "8a442c71d098888ac6ac5b9f63f9328f0c94749b42be44a605f810e8e1f6eb19",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -2691,9 +2691,9 @@
     "tests/rendering3d-timed-form.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5717,
+      "currentBytes": 6272,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0a1c3110d3513cec0d1d28f44c782af2f69dfb2c6c737be1b007c461339df500",
+      "currentSha256": "f935a200afa84aa5311106ac4bdd53a3b75b8c27c42e78fac2d279108138786a",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-trait-props.test.ts": {

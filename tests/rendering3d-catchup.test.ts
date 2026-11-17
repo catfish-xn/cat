@@ -236,7 +236,6 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     ['blitzcrank', 'fc783cba', shieldEnd('blitzcrank-ability')],
     ['vi', '9614ffb4', shieldEnd('vi-ability')],
     ['malzahar', '88a717e0', { type: 'statusChanged', tick: 41, eventSeq: 9, targetId: 'b', kind: 'shred', effectiveMagnitudeBps: 0, reason: 'expired' }],
-    ['drmundo', '4caada37', { type: 'abilityEffectEnded', tick: 41, eventSeq: 9, unitId: 'a', effect: 'drmundo-heal', targetIds: [] }],
   ] as const)('%s: the rule\'s end stops %s through the event loop', async (champion, system, end) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion },
       { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
@@ -249,6 +248,21 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     // A stopped run lingers at most half a second for its particles to die.
     for (let i = 0; i < 30; i++) await advance(25);
     expect(shown()).not.toContain(system);
+  });
+
+  it('drmundo: his cast and buff systems end with his timed form (at his closing blast\'s tick), not at his heal\'s end', async () => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: 'drmundo' },
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm('drmundo'); await flush(); listener.frame(board);
+    const stop = vi.spyOn(debug().ltk, 'stopSystems');
+    const heal = (tick: number, eventSeq: number) => ({ type: 'heal', tick, eventSeq, targetId: 'a', actual: 10,
+      shares: [{ sourceId: 'a', sourceKind: 'ability', definitionId: 'drmundo', delivery: 'ability', actual: 10 }] }) as unknown as DisplayCombatEvent;
+    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    listener.events([heal(11, 2)]);
+    listener.events([{ type: 'abilityEffectEnded', tick: 51, eventSeq: 3, unitId: 'a', effect: 'drmundo-heal', targetIds: [] } as unknown as DisplayCombatEvent]);
+    expect(stop).not.toHaveBeenCalledWith('a', ['5443cd9f', '4caada37']);
+    listener.events([{ type: 'manaChanged', tick: 56, eventSeq: 4, targetId: 'b', before: 0, after: 10 } as unknown as DisplayCombatEvent]);
+    expect(stop).toHaveBeenCalledWith('a', ['5443cd9f', '4caada37']);
   });
 
   it('vander: the brace\'s end reaches the runtime through the event loop', async () => {

@@ -3,6 +3,8 @@ import { AnimationClip, Bone, BoxGeometry, Group, Mesh, MeshBasicMaterial, Numbe
 import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
 import { TIMED_FORMS } from '../src/rendering3d/submesh-visibility';
 import { createTimedFormEvents } from '../src/rendering/three-mode/timed-form-events';
+import { DRMUNDO_BLAST_AFTER_PULSE_TICKS as DRMUNDO_BLAST_3D, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { DRMUNDO_BLAST_AFTER_PULSE_TICKS } from '../src/simulation/cast-windup';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 
 let seq = 0;
@@ -28,13 +30,18 @@ describe('timed form events (rule events only)', () => {
     expect(f.next(hit(155))).toEqual({ id: 'm', on: false });
     expect(f.next(hit(156))).toBeUndefined();
   });
-  it('ends on death at once, and with the next attack when the closing blast hits no one', () => {
+  it('ends on death at once, and at the blast\'s tick when the closing blast hits no one', () => {
+    expect(DRMUNDO_BLAST_3D).toBe(DRMUNDO_BLAST_AFTER_PULSE_TICKS);
+    expect(TIMED_FORM_STOPS.drmundo).toEqual(['5443cd9f', '4caada37']);
     const f = forms();
     f.next(cast(0)); f.next(heal(10));
     expect(f.next(attack(30))).toBeUndefined();
     expect(f.next(death(31))).toEqual({ id: 'm', on: false });
     f.next(cast(0, 'm2')); f.next(heal(10, 'm2')); f.next(ended(50, 'm2'));
-    expect(f.next(attack(62, 'm2'))).toEqual({ id: 'm2', on: false });
+    expect(f.next(attack(52, 'm2'))).toBeUndefined();
+    expect(f.advance(50 + DRMUNDO_BLAST_AFTER_PULSE_TICKS - 1)).toEqual([]);
+    expect(f.advance(50 + DRMUNDO_BLAST_AFTER_PULSE_TICKS)).toEqual([{ id: 'm2', on: false }]);
+    expect(f.advance(80)).toEqual([]);
   });
   it('ignores other units, replayed events and an interrupted cast; a new combat starts with every form off', () => {
     const f = forms();

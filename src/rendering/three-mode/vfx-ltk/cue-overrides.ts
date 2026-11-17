@@ -73,6 +73,8 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * vfx-ltk-windup-hits checks the two stay equal.
  */
 export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12, renata: 17 } as const);
+/** The rules' DRMUNDO_BLAST_AFTER_PULSE_TICKS (src/simulation/cast-windup.ts), mirrored like CAST_WINDUP_TICKS (vfx-ltk-windup-hits checks it). */
+export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
 /** Tristana's shell flight in seconds (fitted, not original data). */
 const TRISTANA_SHELL_TRAVEL = 0.4;
 /**
@@ -744,6 +746,11 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   '5afb9708': ['Avatar_Fresnel'],
 };
 
+/** Systems a unit's timed form (timed-form-events.ts) ends when it turns off: the form's look ends with it. */
+export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
+  drmundo: ['5443cd9f', '4caada37'],
+};
+
 /**
  * Systems a rule's display-only "effect ended" event (abilityEffectEnded) ends early: the caster's runs of these systems
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
@@ -753,7 +760,8 @@ export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
   'twitch-volley': ['900dd2d2'],
-  'drmundo-heal': ['5443cd9f', '4caada37'],
+  // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
+  'drmundo-heal': [],
   'vander-brace': ['68e8ca37'],
 };
 

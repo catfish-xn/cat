@@ -67,7 +67,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
@@ -1447,6 +1447,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    // A form ends with its systems (cue-overrides.ts TIMED_FORM_STOPS).
+    const setForm = (form: { id: string; on: boolean }) => {
+      const view = pieces.get(form.id); view?.mixer?.setTimedForm(form.on);
+      if (!form.on && view) ltk?.stopSystems(form.id, TIMED_FORM_STOPS[view.definitionId] ?? []);
+    };
+    for (const form of timedForms.advance(latest)) setForm(form);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
@@ -1456,7 +1462,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const pose = statusPoses.next(event);
       if (pose) pieces.get(pose.id)?.mixer?.setStatusPose(pose.on);
       const form = timedForms.next(event);
-      if (form) pieces.get(form.id)?.mixer?.setTimedForm(form.on);
+      if (form) setForm(form);
       if (currentEffect && !reducedMotion()) for (const fx of planned.extra) if (ltk) playBatch1Visual(ltk, fx);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
