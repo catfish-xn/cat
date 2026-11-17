@@ -702,9 +702,9 @@
     "tests/cast-windup-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12095,
+      "currentBytes": 13152,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7713520587d18f38cebcc07a657ec8274ee5c2d5ccef99b561906d64879fe90c",
+      "currentSha256": "f1e1b7528ac46cfd398b5a43e5a5cd243fe53c9580ff683e56f2adbbb320533c",
       "firstDifferentByte": 0
     },
     "tests/cast-windup-batch4.test.ts": {
@@ -897,10 +897,10 @@
     },
     "tests/five-cost-geometry.test.ts": {
       "previousBytes": 6253,
-      "currentBytes": 6551,
+      "currentBytes": 7495,
       "previousSha256": "373025bb8bd6bdb0687fc34154b55ab6f11fc8b821a08459ccb7e750d5d7882d",
-      "currentSha256": "6abc36290eaab83f4560aabd595d119d0c1e5b1fe283a3befec33575c1fceecf",
-      "firstDifferentByte": 5533
+      "currentSha256": "ad879a49301ca4b5667d42fedf3fbfb2b5dd2758f0f417d7d71ebe57886a5574",
+      "firstDifferentByte": 145
     },
     "tests/five-cost-replay.test.ts": {
       "previousBytes": 5666,

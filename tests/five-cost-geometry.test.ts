@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { DEFAULT_BOARD, type HexCell } from '../src/simulation/board';
-import { stepCombat, type CombatEvent } from '../src/simulation/combat';
+import { stepCombat, type CombatEvent, type CombatState } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, type S13Unit } from '../src/simulation/combat-s13-state';
 import { lineContains, lineDirections } from '../src/simulation/combat-skill-lines';
@@ -8,6 +8,7 @@ import { planG22Cast } from '../src/simulation/combat-g2-2';
 import { planG2Cast } from '../src/simulation/combat-g2';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { battle, freeze, unit } from './combat-helpers';
+import { MALZAHAR_3STAR_GATE_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name:string, star:1|2|3=3, cell:HexCell={col:3,row:4}):S13Unit {
   return unit('p','player',cell.col,cell.row,{definitionId:name,starLevel:star,ability:resolveAbility(name+'-ability',star),
@@ -82,9 +83,20 @@ it.each([1,2,3,4,5])('Malzahar divides exactly five stacks across %s hits in hit
   expect(p.tasks.every(t=>t.executeAtTick===21)).toBe(true);
 });
 it.each(['jinx','mordekaiser','malzahar'])('%s whole-step packets/state/RNG survive JSON checkpoint and input permutation',(name)=>{
-  // Malzahar at 2 stars: his 3-star gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (cast wind-up batch 4), so its
-  // packets are not on this step; the 3-star landing's restore and replay are in cast-windup-batch4.
-  const p=hero(name,name==='malzahar'?2:3);p.runtime.castCount=0;
+  const p=hero(name);p.runtime.castCount=0;
+  const initial=battle([p,foe('a',4,4),foe('b',5,4),foe('c',5,5)],{rngState:42});
+  // Malzahar's 3-star gate lands MALZAHAR_3STAR_GATE_TICKS after his cast (cast wind-up batch 4): the whole-step check runs
+  // on that landing step, reached from the frozen input and from the permuted one alike.
+  const lead=name==='malzahar'?MALZAHAR_3STAR_GATE_TICKS:0;
+  let before: CombatState=freeze(initial),permuted: CombatState={...initial,units:[...initial.units].reverse()};
+  for(let n=0;n<lead;n++){before=stepCombat(before).state;permuted=stepCombat(permuted).state;}
+  const first=stepCombat(before);expect(damage(first.events).length).toBeGreaterThan(0);expect(first.state.rngDraws).toBe(0);
+  expect(stepCombat(permuted)).toEqual(first);
+  expect(stepCombat(JSON.parse(JSON.stringify(before)))).toEqual(first);
+  expect(stepCombat(JSON.parse(JSON.stringify(first.state)))).toEqual(stepCombat(first.state));
+});
+it('malzahar 2 star whole-step packets/state/RNG survive JSON checkpoint and input permutation (his gate lands on the cast)',()=>{
+  const p=hero('malzahar',2);p.runtime.castCount=0;
   const initial=battle([p,foe('a',4,4),foe('b',5,4),foe('c',5,5)],{rngState:42});
   const first=stepCombat(freeze(initial));expect(damage(first.events).length).toBeGreaterThan(0);expect(first.state.rngDraws).toBe(0);
   expect(stepCombat({...initial,units:[...initial.units].reverse()})).toEqual(first);
