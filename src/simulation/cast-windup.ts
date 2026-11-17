@@ -19,3 +19,8 @@ export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
 /** Wind-up batch 2 (same authorization; fitted, not original data): Nunu's second damage lands this many ticks after his last
  * periodic damage instead of on the same tick. Its amount is still taken on the cast. */
 export const NUNU_SECOND_AFTER_PULSE_TICKS = 9;
+
+/** Wind-up batch 3 (fitted, not original data): Powder's monkey walks to the landing cell taken on her cast and explodes on
+ * arriving, POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × the hexes from her to that cell after the cast. */
+export const POWDER_MONKEY_BASE_TICKS = 18;
+export const POWDER_MONKEY_TICKS_PER_HEX = 6;

@@ -31,7 +31,10 @@ function start(seed: number, requireBlistering = false): MatchState {
     for (const [index, offer] of s.shop.slots.entries()) if (offer.status === 'available' && offer.definitionId === 'powder') s = accepted(buyUnit(s, index, s.shop.generation));
   }
   const powder = s.preparation.units.find(u => u.team === 'player' && u.definitionId === 'powder')!;
-  s = accepted(deployMatchUnit(s, powder.id, { kind: 'board', cell: { col: seed === 648 ? 3 : 0, row: seed === 648 ? 4 : 7 } }));
+  // Wind-up batch 3 (2026-11-17, scene change): Powder's monkey now explodes only on reaching its cell (and not if she dies
+  // first), so at (3,4) / (0,7) seeds 648 / 273 never reach her ignite. Every player cell was tried: 648 reaches it from 16
+  // cells, the first in row order (5,4); 273 only from (6,7). Seed 16 keeps (0,7).
+  s = accepted(deployMatchUnit(s, powder.id, { kind: 'board', cell: { col: seed === 648 ? 5 : seed === 273 ? 6 : 0, row: seed === 648 ? 4 : 7 } }));
   return accepted(startMatchCombat(s));
 }
 function igniteGroups(s: MatchState) {

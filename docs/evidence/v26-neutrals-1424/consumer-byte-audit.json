@@ -602,9 +602,9 @@
     },
     "tests/blistering-restore.test.ts": {
       "previousBytes": 9117,
-      "currentBytes": 9758,
+      "currentBytes": 10111,
       "previousSha256": "4cabe944fa80f0c2de59cce615deed7bafb23b9f7ad45f60f20f6d0b8fbc4c0c",
-      "currentSha256": "298da8ee5d451b119b04a6acf6d5cde234fff06dad9d5897ec195276dbddef75",
+      "currentSha256": "2114577a8e39c9e8fefe9d9357f3b6b8a04b872f8b2ce69473c3d210825317ef",
       "firstDifferentByte": 431
     },
     "tests/bot-free-summon-formation.test.ts": {
@@ -683,6 +683,14 @@
       "currentBytes": 10069,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "7882f1183d9be354960e194485c11b6c09d9d26749c99fe2e808b0c3e91ba990",
+      "firstDifferentByte": 0
+    },
+    "tests/cast-windup-batch3.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10177,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6d5e3634bd12913ff0154625107563c5da8b96d56a27bda3aee802c0a3bcf416",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
@@ -1233,9 +1241,9 @@
     },
     "tests/g2-1-skills.test.ts": {
       "previousBytes": 8625,
-      "currentBytes": 9103,
+      "currentBytes": 10336,
       "previousSha256": "20bcd6ee5e5f97f70f5314a0ecda687a9a2a8a962308c424d59e28e2ec10d389",
-      "currentSha256": "6d2126e57177fe6c45c498711500badef739188a1b7b9ee053e9ff32251ae1f2",
+      "currentSha256": "a9ac89f58b9118b4a979783fb95533d14db6c9a93f8d20a7c7d4875f4a5eb50f",
       "firstDifferentByte": 406
     },
     "tests/g2-2-skills.test.ts": {
@@ -3605,9 +3613,9 @@
     },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
-      "currentBytes": 30747,
+      "currentBytes": 31136,
       "previousSha256": "306db3e2e9990c8e5ae43c10897bc689428b864fbc5ac687f0aad1e329d3d62d",
-      "currentSha256": "2fde3afecd36a4de344a7afa3486fd2de92e30810f0c90efc1872fb9c2a3241d",
+      "currentSha256": "8e14cc41742733ad4f0a174030c3fe0408886c113ee72e131a70ad9c3ab432c5",
       "firstDifferentByte": 7461
     },
     "tests/v23-restore-fuzz.test.ts": {
