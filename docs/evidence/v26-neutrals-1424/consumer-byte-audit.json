@@ -82,6 +82,13 @@
       "currentSha256": "a2588caac5d56bb5cec710222f5b238b23f28412ebc722f4364263041bef88ec",
       "firstDifferentByte": 1244
     },
+    "tests/assets3d-build-root.test.ts": {
+      "previousBytes": 13375,
+      "currentBytes": 14003,
+      "previousSha256": "3c65f9797e35ccb3d6d07feccccd325332889a7d8c40f4aa4171676d41c58c87",
+      "currentSha256": "d7a3fcecf48467488218a49bcf6305372e35b7db6c34a012c0a2553d3e35a57a",
+      "firstDifferentByte": 3337
+    },
     "tests/assets3d-champion-lighting.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -110,6 +117,14 @@
       "previousSha256": "6805136484f9f92681aaf9dc386981cace5efc2bd1c562aa63c9aa66061704fe",
       "currentSha256": "39cac61f13bfbd5e68df2307780d85a66d4ba96e9de7b9f5fdd8bea432466a85",
       "firstDifferentByte": 3231
+    },
+    "tests/assets3d-submesh-patch.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 11193,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e1fe5af50c237a20a4acef4e8c98b58a4f0713336ccb86b75e5ff608b035ca74",
+      "firstDifferentByte": 0
     },
     "tests/assets3d-ui-batch.test.ts": {
       "previousExists": false,

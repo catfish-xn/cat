@@ -44,7 +44,14 @@ function checkKeys(value, kind) {
   }
 }
 
-export async function buildAssetRoot({ roots, out, force = false } = {}) {
+/**
+ * `submeshSource` (the extraction cache, e.g. assets3d-local/trial/local): run the submesh patch (submesh-patch.mjs) on the
+ * merged models before publishing: every model's exported clips' submesh visibility events go into the manifest. The CLI
+ * does this by default; a root whose models are all compressed skips it (the patch runs before compression). Without it,
+ * models are merged as they come and merge-report says the patch did not run. `submeshGeometry` (off by default) also
+ * appends the hidden submeshes an exported clip shows; it stays off until the renderer hides them by default.
+ */
+export async function buildAssetRoot({ roots, out, force = false, submeshSource, submeshGeometry = false } = {}) {
   const selected = Array.isArray(roots) ? roots : (roots ?? '').split(',');
   if (!selected.length || selected.some(p => !p) || !out) throw new Error('usage: --roots <root> [<root> ...] --out <root> [--force]');
   const output = await ignoredOutput(out), inputs = [], sources = [];
@@ -114,6 +121,24 @@ export async function buildAssetRoot({ roots, out, force = false } = {}) {
     plan(merged.manifest.models[id].path, data, i);
     provenance.models[id] = sources[i];
   }
+  let submeshPatch = { applied: false, reason: submeshSource ? 'all-models-compressed' : 'no-submesh-source' };
+  if (submeshSource) {
+    const { readGlb } = await import('./glb.mjs');
+    const models = new Map(Object.keys(merged.owners.models).map(id => [id, { entry: merged.manifest.models[id], data: payloads.get(merged.manifest.models[id].path).data }]));
+    const uncompressed = [...models.values()].some(m => !(readGlb(m.data).document.extensionsUsed ?? []).includes('EXT_meshopt_compression'));
+    if (uncompressed) {
+      const [{ patchModels }, { loadUnitMap }] = await Promise.all([import('./submesh-patch.mjs'), import('./local-config.mjs')]);
+      const results = await patchModels({ models, source: submeshSource, map: await loadUnitMap(), appendGeometry: submeshGeometry }), rows = {};
+      for (const [id, result] of Object.entries(results)) {
+        const path = merged.manifest.models[id].path;
+        if (result.data !== payloads.get(path).data) payloads.set(path, { data: result.data, bytes: result.data.length, sha256: hash(result.data) });
+        merged.manifest.models[id] = result.entry; rows[id] = result.report;
+      }
+      assertManifest(merged.manifest);
+      submeshPatch = { applied: true, geometry: submeshGeometry, changed: Object.entries(rows).filter(([, r]) => r.changed).map(([id, r]) => ({ id, appended: r.appended.map(a => a.name), before: r.before, after: r.after })),
+        models: rows };
+    }
+  }
   for (const [id, i] of Object.entries(merged.owners.effects)) {
     const doc = structuredClone(parseParticleDocument(JSON.parse(await bytes(i, inputs[i].manifest.effects[id].path))));
     for (const emitter of doc.emitters) {
@@ -144,7 +169,7 @@ export async function buildAssetRoot({ roots, out, force = false } = {}) {
   for (const [variant, actions] of Object.entries(provenance.variants)) if (!Object.keys(actions).length) delete provenance.variants[variant];
   const report = { schemaVersion: 1, generator: ROOT_GENERATOR, ready: true, roots: sources, convention: 'later-input-root-wins',
     models: Object.keys(merged.manifest.models).length, effects: Object.keys(merged.manifest.effects).length,
-    files: payloads.size, bytes: [...payloads.values()].reduce((n, p) => n + p.bytes, 0), sources: provenance };
+    files: payloads.size, bytes: [...payloads.values()].reduce((n, p) => n + p.bytes, 0), sources: provenance, submeshPatch };
   const files = new Map([...payloads].map(([path, p]) => [path, p.data]));
   files.set('manifest.json', json(merged.manifest));
   files.set('action-bindings.json', json(merged.bindings));
@@ -155,7 +180,7 @@ export async function buildAssetRoot({ roots, out, force = false } = {}) {
 }
 
 export function buildArguments(args) {
-  const result = { roots: [], force: false };
+  const result = { roots: [], force: false, submeshSource: 'assets3d-local/trial/local' };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--roots') {
       const start = result.roots.length;
@@ -163,6 +188,9 @@ export function buildArguments(args) {
       if (result.roots.length === start) throw new Error('missing-merge-roots');
     } else if (args[i] === '--out' && args[i + 1] && !args[i + 1].startsWith('--') && !result.out) result.out = args[++i];
     else if (args[i] === '--force' && !result.force) result.force = true;
+    else if (args[i] === '--submesh-source' && args[i + 1] && !args[i + 1].startsWith('--')) result.submeshSource = args[++i];
+    else if (args[i] === '--no-submesh-patch') result.submeshSource = undefined;
+    else if (args[i] === '--submesh-geometry') result.submeshGeometry = true;
     else throw new Error(`invalid-merge-argument:${args[i]}`);
   }
   return result;
