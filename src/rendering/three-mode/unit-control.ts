@@ -9,6 +9,7 @@
  * and sizes (11-10 side-by-side, ccvs-*). Nothing here reads original assets.
  */
 import { AdditiveBlending, CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial } from 'three';
+import type { ActionOutput } from '../../rendering3d/animation-state';
 
 export type ControlKind = 'stun' | 'airborne';
 
@@ -72,9 +73,47 @@ export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1, holdFloor: 0.85 } 
  * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down
  * from there (its head at that point, its feet one body height above).
  */
-export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean }>> = {
-  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true },
+export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean; readonly pose?: HoldClips }>> = {
+  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true,
+    pose: { in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' } },
 };
+/** A holder's own clips for a hold: its cast's lift (`in`), the held pose looped until the rules let go, the slam after. */
+export interface HoldClips { readonly in: string; readonly loop: string; readonly slam: string }
+/** How long a holder's cast waits for its lift before it plays as a plain cast again (no target was lifted). */
+export const HOLD_LIFT_WAIT_SECONDS = 1;
+/**
+ * A holder's body while it holds someone up (presentation only, Fable 11-17): from its cast it plays its lift, then keeps
+ * the held pose looping until the rules let go (an attack the rules resolve meanwhile does not swing; the body stays
+ * in the pose), then plays the slam once and gives the unit's own action back. Its revisions are its own (the mixer
+ * starts a clip only on a changed revision), so other actions of the unit during the hold restart nothing.
+ */
+export class HolderPose {
+  private phase: 'in' | 'slam' | null = null;
+  private since = 0;
+  private lifted = false;
+  private count = 0;
+  /** A cast of the holder: its lift starts now. */
+  cast(now: number): void { this.phase = 'in'; this.since = now; this.lifted = false; this.count++; }
+  /** The rules lifted someone (the cast's lift; a lift with no cast seen, e.g. a replay joined late, starts here). */
+  lift(now: number): void { if (this.phase !== 'in') this.cast(now); this.lifted = true; }
+  /** The rules let go: the slam plays from now. */
+  release(now: number): void { if (this.phase === 'in') { this.phase = 'slam'; this.since = now; this.count++; } }
+  /** The holder died or left: its own action again. */
+  stop(): void { if (this.phase !== null) { this.phase = null; this.count++; } }
+  get active(): boolean { return this.phase !== null; }
+  map(output: ActionOutput, now: number, clips: HoldClips, seconds: (clip: string) => number | undefined): ActionOutput {
+    if (output.state === 'death') { this.stop(); return output; }
+    const left = now - this.since;
+    if (this.phase === 'in' && !this.lifted && left > HOLD_LIFT_WAIT_SECONDS) this.stop();
+    if (this.phase === 'slam' && left >= (seconds(clips.slam) ?? 0)) this.stop();
+    if (this.phase === null) return output;
+    const inSeconds = seconds(clips.in) ?? 0;
+    const [clip, sub, loop] = this.phase === 'slam' ? [clips.slam, 2, false] : left < inSeconds ? [clips.in, 0, false] : [clips.loop, 1, true];
+    const length = seconds(clip);
+    if (length === undefined || !(length > 0)) return output;
+    return { ...output, state: 'cast', loop, revision: 7_000_000 + this.count * 4 + sub, playback: { clips: [clip], durationSeconds: length } };
+  }
+}
 export interface CarryOffset { x: number; y: number; z: number }
 const smooth = (t: number) => t * t * (3 - 2 * t);
 /**

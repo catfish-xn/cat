@@ -30,7 +30,7 @@ import {
 } from 'three';
 import {
   ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, hexCenter,
-  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
+  type ActionOutput, type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
@@ -61,7 +61,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CARRY_HOLDS, CarryMotion, CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -349,6 +349,8 @@ interface PieceView {
   lungeWorld: { x: number; z: number };
   /** Held up by another piece (unit-control.ts CarryMotion; presentation only), its holder's id, and the body-local (x, z) it has put on `body`. */
   readonly carry: CarryMotion;
+  /** As a holder (CARRY_HOLDS pose): its lift, held pose and slam over its own action while it holds someone up. */
+  readonly holdPose: HolderPose;
   carryHolder: string | null;
   carryApplied: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
@@ -1033,7 +1035,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), holdPose: new HolderPose(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -1046,7 +1048,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
-    view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0);
+    view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0); view.holdPose.stop();
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
@@ -1088,6 +1090,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // dispose drops everything still queued, loading or playing.
   interface LiveEffect { fx: ParticleEffect; left: number; from?: Vector3; to?: Vector3; travel?: number; elapsed: number; importance: EffectImportance }
   let clock = 0, generation = 0;
+  /** The action a piece's mixer plays: its state's, through batch3's own poses and a holder's hold pose (HolderPose). */
+  const actionOf = (id: string, view: PieceView, output: ActionOutput): ActionOutput => {
+    const mapped = batch3?.animation(id, output) ?? output, clips = CARRY_HOLDS[view.definitionId]?.pose, mixer = view.mixer;
+    return clips && mixer ? view.holdPose.map(mapped, clock, clips, name => mixer.clipSeconds(name)) : mapped;
+  };
   const queued: { at: number; generation: number; run: () => void }[] = [];
   const live = new Set<LiveEffect>();
   type BurstFx = ReturnType<typeof createReferenceBurst>;
@@ -1507,6 +1514,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // last tick or when either dies). A death also ends every carry it is part of at once, below.
       if (event.type === 'carryChanged') {
         if (event.carried) startCarry(event.targetId, event.holderId); else endCarry(event.targetId);
+        const holder = pieces.get(event.holderId);
+        if (holder && CARRY_HOLDS[holder.definitionId]?.pose) { if (event.carried) holder.holdPose.lift(clock); else holder.holdPose.release(clock); }
       }
       if (event.type === 'death') for (const [id, view] of pieces) if (id === event.unitId || view.carryHolder === event.unitId) endCarry(id, true);
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
@@ -1549,12 +1558,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
+        // A holder holding someone up keeps its held pose (HolderPose): the rules' attack lands, but no swing is drawn.
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
         face(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh && !planned.noCastEffect) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        // A holder's cast is its lift: its hold pose runs from here until the rules let go (or no lift comes).
+        const caster = pieces.get(event.sourceId);
+        if (current && caster && CARRY_HOLDS[caster.definitionId]?.pose) caster.holdPose.cast(clock);
         // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.
         if (current && pieces.get(event.sourceId)?.definitionId === 'vi') { const held = pieces.get(event.targetIds[0]); if (held?.alive) held.control.grab(GRAB_3D.viSlamTicks / 20); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
@@ -1567,7 +1580,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
-    for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(batch3?.animation(id, view.state.output) ?? view.state.output);
+    for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(actionOf(id, view, view.state.output));
   };
   // Hover cards and combat floats: the drawn piece's fitted body bounds projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
@@ -2019,7 +2032,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (hold !== undefined) { if (hold - seconds > 0) holds.set(view, hold - seconds); else holds.delete(view); }
         if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
-        if (view.dance !== 'clip') view.mixer.apply(batch3?.animation(id, output) ?? output); // a dance clip runs outside the action state
+        if (view.dance !== 'clip') view.mixer.apply(actionOf(id, view, output)); // a dance clip runs outside the action state
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }

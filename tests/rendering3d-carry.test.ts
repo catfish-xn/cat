@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CARRY_3D, CARRY_HOLDS, CarryMotion } from '../src/rendering/three-mode/unit-control';
+import { CARRY_3D, CARRY_HOLDS, CarryMotion, HOLD_LIFT_WAIT_SECONDS, HolderPose } from '../src/rendering/three-mode/unit-control';
+import type { ActionOutput } from '../src/rendering3d/animation-state';
 
 // A unit held up by another (presentation only; the rules keep it on its cell): it rises to the holder's grip, follows it
 // while held, comes back down onto its own spot when let go, and drops at once if the holder or the held unit dies.
@@ -66,5 +67,45 @@ describe('3D: carried by another unit (CarryMotion)', () => {
   it('Renni holds the enemy upside down on the upper end of her chainsaw', () => {
     expect(CARRY_HOLDS.renni!.upsideDown).toBe(true);
     expect(CARRY_HOLDS.renni!.bones.some(bone => /chainsaw/i.test(bone))).toBe(true);
+  });
+
+  // The holder's own body (Fable 11-17): lift, held pose looping until the rules let go (no attack swing), then the slam.
+  const clips = { in: 'lift', loop: 'held', slam: 'slam' }, lengths: Record<string, number> = { lift: 1.4, held: 0.4, slam: 1.1 };
+  const seconds = (name: string) => lengths[name];
+  const out = (state: ActionOutput['state'], revision: number): ActionOutput => ({ state, previous: 'idle', blendSeconds: 0.12, loop: state === 'idle', revision });
+  const clipOf = (o: ActionOutput) => o.playback?.clips[0];
+
+  it('a holder lifts, holds its pose through an attack, and slams when the rules let go', () => {
+    const pose = new HolderPose();
+    pose.cast(10);
+    const lifting = pose.map(out('cast', 1), 10.2, clips, seconds);
+    expect(clipOf(lifting)).toBe('lift'); expect(lifting.loop).toBe(false);
+    pose.lift(10.4);
+    // The rules' attack mid-hold: the unit's state says attack, the body keeps the lift and then the looping pose.
+    expect(pose.map(out('attack', 2), 11, clips, seconds).revision).toBe(lifting.revision);
+    const held = pose.map(out('attack', 2), 11.5, clips, seconds);
+    expect(clipOf(held)).toBe('held'); expect(held.loop).toBe(true);
+    expect(pose.map(out('idle', 3), 12.2, clips, seconds).revision).toBe(held.revision);
+    pose.release(12.3);
+    const slam = pose.map(out('idle', 3), 12.3, clips, seconds);
+    expect(clipOf(slam)).toBe('slam'); expect(slam.loop).toBe(false); expect(slam.revision).not.toBe(held.revision);
+    // After the slam the unit's own action is back.
+    expect(pose.map(out('idle', 3), 12.3 + 1.2, clips, seconds)).toEqual(out('idle', 3));
+    expect(pose.active).toBe(false);
+  });
+
+  it('a holder cast that lifts nobody plays as a plain cast after the wait; a death ends the pose at once', () => {
+    const none = new HolderPose();
+    none.cast(0);
+    expect(clipOf(none.map(out('cast', 1), 0.5, clips, seconds))).toBe('lift');
+    expect(none.map(out('cast', 1), HOLD_LIFT_WAIT_SECONDS + 0.1, clips, seconds)).toEqual(out('cast', 1));
+    const dying = new HolderPose();
+    dying.cast(0); dying.lift(0.4);
+    expect(dying.map(out('death', 5), 0.8, clips, seconds)).toEqual(out('death', 5));
+    expect(dying.active).toBe(false);
+  });
+
+  it('Renni holds with her own stun clips', () => {
+    expect(CARRY_HOLDS.renni!.pose).toEqual({ in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' });
   });
 });

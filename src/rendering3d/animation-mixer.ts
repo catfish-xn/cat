@@ -123,6 +123,11 @@ export class UnitAnimationMixer {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
   }
+  /** A clip's own length in seconds, undefined when the model has no usable clip of that name. */
+  clipSeconds(name: string): number | undefined {
+    const clip = this.clips.get(name);
+    return clip && Number.isFinite(clip.duration) && clip.duration > 0 ? clip.duration : undefined;
+  }
   setForm(form?: 'front' | 'back'): void {
     if (this.form !== form) {
       this.form = form;
