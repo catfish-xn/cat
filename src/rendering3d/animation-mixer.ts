@@ -1,6 +1,7 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations } from './contracts';
+import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility } from './contracts';
+import { SubmeshSwitch } from './submesh-visibility';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
 /**
@@ -119,9 +120,19 @@ export class UnitAnimationMixer {
   /** The status pose: wanted on/off, its current fraction, and its actions (built on first use). */
   private pose?: { on: boolean; fraction: number; parts: { action: AnimationAction; weight: number }[] };
   private baseState: ActionState = 'idle';
-  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations } = {}) {
+  /** Submeshes the playing clip shows or hides (absent when the model has none to switch). */
+  private submeshes?: SubmeshSwitch;
+  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
+    this.submeshes = SubmeshSwitch.create(root, metadata.submeshVisibility);
+    this.submeshes?.apply(undefined, 0);
+  }
+  /** The playing clip's submeshes at its current time; a parallel stage's split clips count as their source clip. */
+  private switchSubmeshes(): void {
+    if (!this.submeshes) return;
+    const action = this.active;
+    this.submeshes.apply(action?.getClip().name.replace(/#.*$/, ''), action?.time ?? 0);
   }
   setForm(form?: 'front' | 'back'): void {
     if (this.form !== form) {
@@ -249,6 +260,7 @@ export class UnitAnimationMixer {
     next.play();
     if (previous && previous !== next) next.crossFadeFrom(previous, blend, false);
     this.active = next;
+    this.switchSubmeshes();
   }
   /**
    * Hold (or release) the manifest's status pose. It eases in and out over its blendSeconds, and only shows while the
@@ -335,7 +347,7 @@ export class UnitAnimationMixer {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
     this.updatePose(seconds);
     if (this.releaseLeft > 0) {
-      if (seconds < this.releaseLeft) { this.mixer.update(seconds); this.releaseLeft -= seconds; return; }
+      if (seconds < this.releaseLeft) { this.mixer.update(seconds); this.releaseLeft -= seconds; this.switchSubmeshes(); return; }
       this.mixer.update(this.releaseLeft); seconds -= this.releaseLeft; this.releaseLeft = 0;
       this.speed = this.tailSpeed; this.active?.setEffectiveTimeScale(this.speed);
     }
@@ -358,6 +370,7 @@ export class UnitAnimationMixer {
     }
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
+    this.switchSubmeshes();
   }
   dispose(): void { for (const part of this.pose?.parts ?? []) part.action.stop(); this.pose = undefined; this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
 }

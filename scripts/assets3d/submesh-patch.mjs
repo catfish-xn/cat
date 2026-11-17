@@ -153,7 +153,6 @@ export async function patchModels({ models, source, map, appendGeometry = false 
   const { parseBin } = await import('./bin.mjs');
   const { skinBindings, canonicalAsset } = await import('./bin-bindings.mjs');
   const { decodeTexture, encodePng } = await import('./texture.mjs');
-  const { validateModel } = await import('./model.mjs');
   const { safeInputPath } = await import('./safe-path.mjs');
   const hash = b => createHash('sha256').update(b).digest('hex');
   const cache = resolve(source), raw = join(cache, 'extracted');
