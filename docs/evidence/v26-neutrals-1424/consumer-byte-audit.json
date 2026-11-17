@@ -2719,6 +2719,14 @@
       "currentSha256": "0dc97d2043a79557c4c90c4acc508b4f99aca76510d6fb532c2b8d36eb9a10e6",
       "firstDifferentByte": 0
     },
+    "tests/renni-lift-channel.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2901,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "eee7fd21292f7cda0924f5e515b5a559a2166bd33d0a95b6126232e8f670bb34",
+      "firstDifferentByte": 0
+    },
     "tests/replay-cache-branch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
