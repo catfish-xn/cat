@@ -6,7 +6,8 @@ export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
  */
 export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab' | 'spawn';
 export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab', 'spawn'];
-export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
+/** `crit`: the clip a basic attack that crits plays instead of `attack` (the original's Crit clip); absent, a crit swings as any attack. */
+export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null; crit?: string };
 /**
  * Array main rotates between casts; the other stages each play once. `layers` play together with the main stage
  * (an original Parallel clip). `masks` (by clip name: main or a layer) is that clip's original bone mask, bone → weight
@@ -205,7 +206,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
       && entry.unitScale >= UNIT_SCALE_RANGE.min && entry.unitScale <= UNIT_SCALE_RANGE.max)) throw new Error('invalid-unit-scale');
     if (entry.selfIllumination !== undefined && !lightTerm(entry.selfIllumination)) throw new Error('invalid-self-illumination');
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
-      !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
+      !((MODEL_ACTIONS as readonly string[]).includes(key) || key === 'crit') || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);

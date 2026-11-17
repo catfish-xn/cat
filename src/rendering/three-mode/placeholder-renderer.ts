@@ -958,8 +958,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.follow = OverheadFollow.of(lease.scene, lease.animations, lease.animationNames.idle);
       view.bodyModelId = definitionId;
       if (import.meta.env?.DEV) { const missing = missingCastTravelClips(definitionId, lease.animations); if (missing.length) console.warn(`[overhead] ${definitionId}: listed cast travel clips not in the model: ${missing.join(', ')}`); }
-      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
-        { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
+      view.state.setPlaybackResolver((action, detail) => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
+        { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds, crit: detail?.crit }));
       view.mixer.apply(view.state.output);
       flushRise(view);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
@@ -1015,8 +1015,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
       view.mixer.setForm(view.form);
-      view.state.setPlaybackResolver(action => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
-        { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds }));
+      view.state.setPlaybackResolver((action, detail) => view.mixer!.resolvePlayback(action, action === 'cast' ? view.castIndex : 0,
+        { starLevel: view.starLevel, form: view.form, branch: view.castBranch, attackIntervalSeconds: view.attackCadence.intervalSeconds, crit: detail?.crit }));
       view.mixer.apply(view.state.output);
     }
   };
@@ -1432,6 +1432,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const tickOf = (event: DisplayCombatEvent) => 'tick' in event && typeof event.tick === 'number' ? event.tick : null;
     let latest = -Infinity;
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
+    // Swings whose packet of the same tick crits (the rules deal an attack's damage on its tick): such a swing may play the
+    // model's Crit clip (AnimationNames.crit).
+    const critSwings = new Set<string>();
+    for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') critSwings.add(`${event.sourceId}@${event.tick}`);
     // The shield is granted with the cast, but it shows as the rocket reaches the ally: launch, then the share of the
     // flight to the cast's target that the ally stands at (11-07 field: it lit a frame before the cast itself).
     const renataShieldDelay = (shield: DisplayCombatEvent, batch: readonly DisplayCombatEvent[], ally: { root: Object3D }) => {
@@ -1501,7 +1505,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
-      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      const animated = event.type === 'attack' && critSwings.has(`${event.attackerId}@${event.tick}`) ? { ...event, crit: true } : event;
+      for (const view of pieces.values()) view.state.consume(animated as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];

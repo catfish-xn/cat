@@ -3,7 +3,8 @@ import type { ActionState } from './contracts';
 /** Structural subset of combat-replay-view events; extra replay fields are ignored. */
 export type AnimationEvent =
   | { type: 'movement' | 'death' | 'unitRevived'; unitId: string }
-  | { type: 'attack'; attackerId: string }
+  /** `crit`: the attack's packet of the same tick crits (presentation reads it off the batch); it may play the Crit clip. */
+  | { type: 'attack'; attackerId: string; crit?: boolean }
   | { type: 'cast'; sourceId: string }
   | { type: 'heal'; targetId: string }
   | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number;
@@ -21,7 +22,7 @@ export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetD
 export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number; release?: { atSeconds: number; headSpeed: number; tailSpeed: number } }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 /** The cast's own number comes from the rule's cast event (the resolver reads it); this state machine counts nothing. */
-export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn') => ActionPlayback | null;
+export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', detail?: { crit?: boolean }) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
 export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
 const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
@@ -60,10 +61,10 @@ export class UnitActionState {
     this.previous = this.state; this.state = 'cast'; this.revision++; this.remaining = playback.durationSeconds;
     return this.output;
   }
-  private enter(state: ActionState): void {
+  private enter(state: ActionState, crit = false): void {
     let playback: ActionPlayback | undefined;
     if (state === 'cast' || state === 'attack') {
-      const resolved = this.resolvePlayback?.(state);
+      const resolved = this.resolvePlayback?.(state, crit ? { crit } : undefined);
       if (resolved === null) return;
       playback = resolved;
       if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0
@@ -100,7 +101,7 @@ export class UnitActionState {
     switch (event.type) {
       case 'death': this.held = false; this.enter('death'); break;
       case 'movement': this.enter('move'); break;
-      case 'attack': this.enter('attack'); break;
+      case 'attack': this.enter('attack', !!event.crit); break;
       case 'cast': this.enter('cast'); break;
       case 'packetDamage': if (event.hit && event.hpDamage + event.absorbed > 0) this.enter('hit'); break;
       case 'heal': break; // Healing has no dedicated action and does not interrupt one.
