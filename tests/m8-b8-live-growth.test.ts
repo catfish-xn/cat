@@ -41,7 +41,13 @@ const stop=new Error('captured genuine 3-7 preparation');
 // reward, loot carried). A scan of 375 non-crab seeds up to 7125 with a 3-7 Tristana drop found none whose two
 // isolated Tristanas win 3-7. The battle therefore keeps the route's real board beside the two originals; Tristana is
 // still the only growth source, and the won 3-7 earns exactly one current bounce kill (v25: three, isolated).
-try { await run(api,{seed:3,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+// Wind-up batch 2 (2026-11-16, scene change approved by Fable): with Tristana's shell landing after a wind-up, seed 3's
+// second original Tristana no longer has a prior bounce kill before 3-7, so the premise below fails. Searched seeds 0..2999
+// with the same route options: those meeting every premise (both originals with prior kills, a 3-7 Tristana drop, Giant
+// Slayer and Gargoyle) were 219 310 347 538 681 952 1156 1206 1313 1379 1380 1562 1754 1831 1853 2015 2027 2157 2171 2562
+// 2583 2587 2657 2786 2899; 1853 is the smallest that passes the whole file on #693 and on batch 2 (219 loses 3-7, 681 earns
+// two current bounces, 1379 fails one strict boundary on #693, the rest fail or do not reach a live reveal).
+try { await run(api,{seed:1853,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}
