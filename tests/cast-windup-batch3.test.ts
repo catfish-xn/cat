@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, createCombatWithEvents, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
-import { CAST_WINDUP_TICKS, POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, RENATA_MISSILE_FLIGHT_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS, RENATA_MISSILE_FLIGHT_TICKS } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle,
   startCombatReplay, toCombatReplay, type MatchState } from '../src/server-entry';
@@ -69,24 +69,50 @@ describe('Renata: the missiles land CAST_WINDUP_TICKS.renata after the cast; the
 
 describe('Powder: the monkey explodes on reaching the landing cell taken on the cast', () => {
   const sentOf = (events: readonly CombatEvent[]) => events.find(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-sent') as Extract<CombatEvent, { type: 'abilityMarker' }>;
-  it('arrives POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × hexes after the cast; nothing before', () => {
-    const cast = run(start('powder'), 1), sent = sentOf(cast.events), p = cast.state.units.find(u => u.id === 'p')!;
-    expect(sent.arrivalTick - sent.tick).toBe(POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * hexDistance(p.cell, sent.cell));
+  it('lets go POWDER_MONKEY_RELEASE_TICKS after the cast and arrives POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × hexes later; nothing before', () => {
+    const cast = run(start('powder'), 1), p = cast.state.units.find(u => u.id === 'p')!;
+    expect(sentOf(cast.events)).toBeUndefined();
+    const held = run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 1);
+    expect(sentOf(held.events)).toBeUndefined();
+    const go = run(held.state, 1), sent = sentOf(go.events);
+    expect(sent.tick - cast.state.tick).toBe(POWDER_MONKEY_RELEASE_TICKS);
+    expect(sent.arrivalTick - sent.tick).toBe(POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * hexDistance(p.cell, sent.cell));
     const before = run(cast.state, sent.arrivalTick - cast.state.tick - 1);
     expect(hits(before.events)).toEqual([]);
     const land = run(before.state, 1);
     expect(hits(land.events).length).toBeGreaterThan(0);
     expect(land.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
   });
-  it('explodes at the cell taken on the cast even when everyone there moved away, and after her death (the monkey has left her)', () => {
-    const cast = run(start('powder'), 1), sent = sentOf(cast.events), moved = structuredClone(cast.state);
+  const arrived = (events: readonly CombatEvent[]) => events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived');
+  it('explodes at the cell taken on the cast even when everyone there moved away, and after her death once let go', () => {
+    const cast = run(start('powder'), 1), go = run(cast.state, POWDER_MONKEY_RELEASE_TICKS), sent = sentOf(go.events), moved = structuredClone(go.state);
     for (const u of moved.units.filter(u => u.team === 'enemy')) Object.assign(u, { cell: { col: 6, row: 0 } });
-    const after = run(moved, sent.arrivalTick - cast.state.tick);
-    expect(after.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
+    const after = run(moved, sent.arrivalTick - go.state.tick);
+    expect(arrived(after.events)).toBe(true);
     expect(hits(after.events)).toEqual([]);
-    const afterDeath = run(fell(cast.state, 'p'), sent.arrivalTick - cast.state.tick + 2);
-    expect(afterDeath.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
+    const afterDeath = run(fell(go.state, 'p'), sent.arrivalTick - go.state.tick + 2);
+    expect(arrived(afterDeath.events)).toBe(true);
     expect(hits(afterDeath.events).length).toBeGreaterThan(0);
+  });
+  // Boundaries: a death settled on the tick before the release stops it; one settled on the release tick does not.
+  it('her death on the tick before the release stops it; her death on the release tick does not', () => {
+    const cast = run(start('powder'), 1);
+    const dyingBefore = run(fell(run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 2).state, 'p'), 60);
+    expect(dyingBefore.events.find(e => e.type === 'death' && e.unitId === 'p')?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS - 1);
+    expect(sentOf(dyingBefore.events)).toBeUndefined();
+    expect(arrived(dyingBefore.events)).toBe(false);
+    const dyingOn = run(fell(run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 1).state, 'p'), 60);
+    expect(dyingOn.events.find(e => e.type === 'death' && e.unitId === 'p')?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS);
+    expect(sentOf(dyingOn.events)?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS);
+    expect(arrived(dyingOn.events)).toBe(true);
+    expect(hits(dyingOn.events).length).toBeGreaterThan(0);
+  });
+  it('her death before letting go stops it: no monkey, no explosion', () => {
+    const cast = run(start('powder'), 1), held = run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 2);
+    const dead = run(fell(held.state, 'p'), 60);
+    expect(sentOf(dead.events)).toBeUndefined();
+    expect(arrived(dead.events)).toBe(false);
+    expect(hits(dead.events)).toEqual([]);
   });
 });
 
