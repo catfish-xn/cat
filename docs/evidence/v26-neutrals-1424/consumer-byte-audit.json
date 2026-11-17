@@ -631,9 +631,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 38808,
+      "currentBytes": 39440,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "d39ba70b7846e05d34d28be9dbe8656f1d019bc6a7da5020009305278fe8ab10",
+      "currentSha256": "05d7d7392dc6e88779edd20e465c053542204a4090295734380e65dc287929f1",
       "firstDifferentByte": 5077
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -4257,6 +4257,14 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
+      "firstDifferentByte": 0
+    },
+    "tests/zz-trig.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 884,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "790794a619a0d02ee69c06868905cd2601f3f61170d8e951dc901dbdde0ecb4a",
       "firstDifferentByte": 0
     }
   }
