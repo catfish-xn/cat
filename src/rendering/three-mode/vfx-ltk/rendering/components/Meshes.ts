@@ -154,8 +154,20 @@ export function createMeshes({
   }, [emitter, samplers, buffers.pose]);
 
   const instanced = new InstancedMesh(geometry, material, MESHES_PER_EMITTER);
+  /* Nothing draws before the first frame writes the matrices: pooled buffers still hold the last effect's. */
+  instanced.count = 0;
+  /* The mesh's own matrix attribute, handed back before dispose. InstancedMesh.dispose has the renderer delete the GPU
+     buffer of whatever `instanceMatrix` holds; holding the pooled one, that deleted the buffer the pooled geometry's vertex
+     array still binds, and on a GPU the next effect on those buffers drew its mesh from the stale matrices, held still
+     (Tristana's attack shell, 11-16 Windows). */
+  const ownMatrix = instanced.instanceMatrix;
   const pair = { solid: instanced };
-  cleanup(() => () => { buffers.pose?.texture.dispose(); instanced.dispose(); releaseMeshBuffers(buffers, meshKey); });
+  cleanup(() => () => {
+    buffers.pose?.texture.dispose();
+    instanced.instanceMatrix = ownMatrix;
+    instanced.dispose();
+    releaseMeshBuffers(buffers, meshKey);
+  });
   const drawn = !hidden && !emitter.disabled;
 
   let frameSlot: FrameSlot | undefined;

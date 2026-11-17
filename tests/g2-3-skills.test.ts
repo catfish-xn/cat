@@ -25,7 +25,8 @@ it('Cassiopeia every third cast splashes only two other targets',()=>{
 });
 it('Mundo splits the complete 1550 healing without truncation or duplicate pulses',()=>{
  let state=battle([hero('drmundo'),dummy()],{rngState:42});const events:CombatEvent[]=[];
- for(let i=0;i<41;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
+ // 2026-11-16: the whole heal and pulses start CAST_WINDUP_TICKS.drmundo after the cast; the window grows by as much.
+ for(let i=0;i<41+CAST_WINDUP_TICKS.drmundo;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
  expect(heals(events).filter(e=>e.unitId==='p').map(e=>e.requested)).toEqual([620,465,465]);
  expect(raw(events)).toEqual([120,120,350]);
 });
@@ -67,6 +68,7 @@ import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

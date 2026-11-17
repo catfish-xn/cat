@@ -6,6 +6,7 @@ import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS } from '../src/rendering/t
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 // Same fixed-seed setup as tests/g2-1-skills.test.ts.
 function hero(name: string, patch: Partial<CombatUnit> = {}): CombatUnit {
@@ -56,9 +57,9 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     const heal = ended(r.events).filter(e => e.effect === 'drmundo-heal');
     expect(heal.length).toBeGreaterThan(0);
     expect(heal[0]).toMatchObject({ unitId: 'p', targetIds: [] });
-    // Parts are paid once a second after the cast; the signal comes with the last one, not before it.
-    expect(heal[0]!.tick).toBeGreaterThan(cast.tick + 20);
-    expect(heal[0]!.tick % 20).toBe(cast.tick % 20);
+    // Parts are paid once a second after the wind-up (CAST_WINDUP_TICKS, 2026-11-16); the signal comes with the last one.
+    expect(heal[0]!.tick).toBeGreaterThan(cast.tick + CAST_WINDUP_TICKS.drmundo + 20);
+    expect(heal[0]!.tick % 20).toBe((cast.tick + CAST_WINDUP_TICKS.drmundo) % 20);
   });
 
   it('Vander: one event when his cast brace (channel) ends', () => {

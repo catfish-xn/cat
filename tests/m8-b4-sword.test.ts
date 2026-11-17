@@ -2,6 +2,9 @@ import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { vi } from 'vitest';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+// #693 (2026-11-16): the wearer is Zyra; her vines (and their crit roll) land CAST_WINDUP_TICKS.zyra after her cast.
+const LAND=1+CAST_WINDUP_TICKS.zyra,skill=(events:Parameters<typeof packets>[0])=>packets(events).filter(e=>e.source.sourceKind==='ability');
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 describe('B4 sword recipes: independent hand arithmetic and actual combat',()=>{
@@ -13,5 +16,5 @@ describe('B4 sword recipes: independent hand arithmetic and actual combat',()=>{
  it('edge:HP500/1000≤60%;after hit gains prevention and untargetable for20ticks, then15% AS',()=>{const r=run(wearing('edge-of-night',{hp:500,cooldownTicks:1000}),21,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.events.filter(e=>e.type==='statusChanged'&&e.reason==='applied'&&e.group.contributions.some(c=>c.source.definitionId==='edge-of-night'))).toHaveLength(3);expect(readCombatStats(r.p,r.state).attackIntervalTicks).toBe(18);});
  it('bloodthirster:115×20%→23 vamp;HP390 receives25%×1000=250 shield after surviving damage',()=>{const v=run(wearing('bloodthirster',{hp:500}));expect(heals(v.events)[0].actual).toBe(23);const r=run(wearing('bloodthirster',{hp:390,cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.p.shield).toBe(250);});
  it('sterak: (1000+150)×1.25→1437, add287 HP; AD100×(1+.15+.35)=150',()=>{const r=run(wearing('steraks-gage',{hp:600,cooldownTicks:1000}));expect(r.p.maxHp).toBe(1437);expect(r.p.hp).toBe(887);expect(readCombatStats(r.p,r.state).attackDamage).toBe(150);});
- it('infinity:100×1.35=135;25%+35%=60%, seed42 crit135×1.4=189',()=>{const r=run(wearing('infinity-edge'));expect(r.p.spellCrit?.enabled).toBe(true);expect(r.p.spellCrit?.chanceBps).toBe(6000);expect(packets(r.events)[0].hpDamage).toBe(189);const cast=run(wearing('infinity-edge',{mana:1000}));expect(packets(cast.events)[0].hpDamage).toBe(364);expect(cast.state.rngDraws).toBe(1);});
+ it('infinity:100×1.35=135;25%+35%=60%, seed42 crit135×1.4=189',()=>{const r=run(wearing('infinity-edge'));expect(r.p.spellCrit?.enabled).toBe(true);expect(r.p.spellCrit?.chanceBps).toBe(6000);expect(packets(r.events)[0].hpDamage).toBe(189);const cast=run(wearing('infinity-edge',{mana:1000}),LAND);expect(skill(cast.events)[0].hpDamage).toBe(364);expect(cast.state.rngDraws).toBe(1);});
 });

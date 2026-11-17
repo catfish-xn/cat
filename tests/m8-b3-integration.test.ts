@@ -11,6 +11,7 @@ import { effectIdentity } from '../src/simulation/m8/identity';
 import { source, context } from './fixtures/m8-contract-cases';
 import { heals, packets as packetViews, statusEvents } from './helpers/replay2-views';
 import { vi } from 'vitest';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -40,7 +41,7 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // as floor(raw×14000/10000)); fourth column = the pre-crit raw, i.e. the hand amount before ×1.4.
   it.each([
     ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21, [504], [360]],
-    ['zyra', 1, [364], [260]], ['tristana', 1, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
+    ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
     ['leona', 61, [161], [115]], ['kogmaw', 21, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
     ['loris', 81, [210], [150]], ['nami', 1, [168], [120]], ['corki', 1, [57], [41]], ['garen', 1, [350], [250]], ['zoe', 1, [196], [140]], ['caitlyn', 1, [280, 392], [200, 280]],
   ] as const)('%s authorizes only its skill damage packets', (name, ticks, firstExpected, firstPreCrit) => {
@@ -69,7 +70,8 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // next three words: eA .088 (crit), eB .577 (no crit), eC (crit). v25: eA primary, rolls .252/.088/.577, three draws.
   it('rolls A/B/C independently in target order after the tie draw: seed42 words .252 (tie) then .088/.577/next', () => {
     const actor = hero('zyra', true), auth = actor.spellCrit!;
-    const result = stepCombat(battle([{ ...actor, spellCrit: { ...auth, chanceBps: 2500 } }, dummy('eA'), dummy('eB', 3, 3), dummy('eC', 2, 4)], { rngState: 42, rngDraws: 0 }));
+    // 2026-11-16: the vines (and their crit rolls) land CAST_WINDUP_TICKS.zyra after the cast; the tie draw stays on the cast.
+    const result = advance(battle([{ ...actor, spellCrit: { ...auth, chanceBps: 2500 } }, dummy('eA'), dummy('eB', 3, 3), dummy('eC', 2, 4)], { rngState: 42, rngDraws: 0 }), 1 + CAST_WINDUP_TICKS.zyra);
     expect(result.state.units.find(u => u.id === 'p')!.targetId).toBe('eC');
     // replay2 pre-crit raw on the critical packets: old post-crit 133 = floor(95×14000/10000).
     expect(packets(result.events).map(e => [e.unitId, e.raw, e.critical])).toEqual([['eA', 95, true], ['eB', 95, false], ['eC', 260, true]]);
@@ -106,7 +108,7 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
     const gun = { source: source('gunblade', 'i2', 'p'), mechanic: 'gunblade', values: { selfHealBps: 1500, allyHealBps: 2500 } };
     const shieldSource = source('shield', 's', 'e');
     const target = { ...dummy(), shield: 1000, shieldExpiresAtTick: 100, shieldLayers: [{ key: 's', source: shieldSource, granted: 1000, remaining: 1000, absorbed: 0, expiresAtTick: 100 }] };
-    const result = stepCombat(battle([{ ...hero('zyra', false), mechanics: [gun] }, target]));
+    const result = advance(battle([{ ...hero('zyra', false), mechanics: [gun] }, target]), 1 + CAST_WINDUP_TICKS.zyra); // vines land after the wind-up
     expect(packets(result.events).map(e => [e.absorbed, e.hpDamage])).toEqual([[260, 0]]);
     expect(heals(result.events).map(e => [e.unitId, e.requested])).toEqual([['p', 39]]); // 260*.15; no ally => no second self heal
   });
