@@ -10,9 +10,13 @@ import { getMultiplayerRoundById } from '../../src/simulation/multiplayer-round'
  * granted+revealed(forge). A real room also leaves a claimed component orb's forge 'carried' after a PvE loss parked it
  * (8f794062) and the claim could not place the forge's unit, and elimination's forfeitUnclaimedOrbs later turns that waiting forge
  * 'forfeited' beside the granted item. Both room checkpoints were rejected on restore.
- * Seed 2, seat s2: loses 4-7, claims the parked 4-7 item+forge orb at 5-7 (forge left waiting), and is out by 6-1.
+ * Seed 9, seat s2: loses 4-7, claims the parked 4-7 item+forge orb at 5-7 (forge left waiting), is still in at 6-1's
+ * preparation with that forge waiting, and is the last seat out in 6-1 (the room ends there).
+ * Wind-up batch 2 (2026-11-16, scene change approved by Fable): seed 2's s2 no longer parks that orb. Searched seeds 0..135 for a
+ * seat with the 5-7 orb [granted, carried]: 23 seats; most stay in past 6-2 or the room ends first; seed 9 s2 is the first
+ * eliminated with the forge still waiting (in 6-1). The elimination check moves from 6-1's preparation to the room's end.
  */
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 2, combatStreaming: true });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 9, combatStreaming: true });
 const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 const mixedOrbs = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(r => r.orbs).map(orb => ({ orb,
@@ -53,6 +57,19 @@ it('restores the claimed 4-7 orb whose forge stays carried beside the granted it
 for (const tick of SLICES) it(`streams 5-7 through tick ${tick}`, () => reach('5-7', 'settlement', tick));
 it('settles 5-7', () => reach('5-7', 'settlement'));
 it('reaches 6-1', () => reach('6-1', 'preparation'));
+it('premise: before the elimination the seat is still in and the same 4-7 forge still waits, carried', () => {
+  expect(room.state.seats.find(s => s.seatId === seatId)!.alive, 'premise: alive before the elimination').toBe(true);
+  const state = mine();
+  expect(mixedOrbs(state).map(o => [o.orb.roundId, o.orb.entries.map(e => e.payload.kind), o.statuses]), 'premise: forge waiting')
+    .toEqual([['4-7', ['item', 'forge'], ['granted', 'carried']]]);
+  expect(state.m8.loot.carry?.some(row => row.deliverRoundId === '5-7'), 'premise: the carried row').toBe(true);
+});
+for (const tick of [1, 150, 300]) it(`streams 6-1 through tick ${tick}`, () => reach('6-1', 'settlement', tick));
+// s2 is the last seat out in 6-1, so the room ends there instead of reaching 6-2.
+it('plays 6-1 to the end of the room', () => {
+  runUntilClaiming(room, clock, s => s.phase === 'ended', 5000);
+  expect(room.state.phase).toBe('ended');
+});
 it('restores the same orb after elimination forfeits the waiting forge', () => {
   expect(room.state.seats.find(s => s.seatId === seatId)!.alive).toBe(false);
   const state = mine(), mixed = mixedOrbs(state);
