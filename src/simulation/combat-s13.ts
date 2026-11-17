@@ -37,7 +37,7 @@ import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-ker
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {advanceSpectralCutlass,returnZephyrUnits} from './combat-g2-4b';
-import { advanceG23Skills,recordG23SkillDamage,extendG23Swain,renniHolding } from './combat-g2-3';
+import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
 import { advanceG23Summons,deathG23Sion,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
 import { openingB4Combat, castB4Combat, attackB4Combat, damageB4Combat } from './augment-pool-batch4-b4combat';
@@ -63,7 +63,7 @@ import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
 import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, heroLive, interval,
-  mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
+  mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, renniHolding, type S13Unit } from './combat-s13-state';
 import { allocateDamage, permissionsFor, prepareDamage, type DamageSample } from './m8/damage';
 import { rollCrit } from './m8/crit';
 import { resolveStat, safeNumber } from './m8/stats';

@@ -57,3 +57,21 @@ it('a control on her cancels the channel, but she still does not attack until th
   expect(rest.out[0]!.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.definitionId === 'renni-ability')).toBe(true);
   expect(rest.out.flatMap(s => attacks(s.events)).length).toBeGreaterThan(0);
 });
+
+it('after a control cancels her channel she does not move until the slam lands; she moves after it', () => {
+  const cast = stepCombat(battle([renni(), dummy('e', 1, 2)], { rngState: 42 })), castTick = cast.state.tick;
+  const n = Math.round(variable(cast.state.units.find(u => u.id === 'p')!, 'StunDuration') * 20), slam = castTick + RENNI_LIFT_TICKS + n + RENNI_SLAM_AFTER_STUN_TICKS;
+  const lifted = steps(cast.state, RENNI_LIFT_TICKS + 2).state, stunned = structuredClone(lifted);
+  applyStatus(stunned.units.find(u => u.id === 'p')! as S13Unit, origin(stunned.units.find(u => u.id === 'e')!), 'stun', 0, 10, stunned.tick, [], true);
+  const control = steps(stunned, 12), moved = structuredClone(control.state);
+  // Her target is out of reach now, so an unheld Renni would walk toward it.
+  Object.assign(moved.units.find(u => u.id === 'e')!, { cell: { col: 6, row: 0 } });
+  const start = { ...moved.units.find(u => u.id === 'p')!.cell };
+  // Premise: the channel is cancelled and the stun is over well before the slam.
+  expect((moved.units.find(u => u.id === 'p')!.statuses ?? []).some(s => (s.kind === 'channel' || s.kind === 'stun') && s.expiresAtTick > moved.tick)).toBe(false);
+  expect(moved.tick).toBeLessThan(slam - 1);
+  const held = steps(moved, slam - 1 - moved.tick);
+  expect(held.state.units.find(u => u.id === 'p')!.cell).toEqual(start);
+  const rest = steps(held.state, 60);
+  expect(rest.state.units.find(u => u.id === 'p')!.cell).not.toEqual(start);
+});

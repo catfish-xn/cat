@@ -2753,9 +2753,9 @@
     "tests/renni-lift-channel.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4726,
+      "currentBytes": 6208,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8434c650f37a30602eb960822932c04024b4a55f407c59a778669cf54ca1f342",
+      "currentSha256": "8ce3cd83e91f13752e4b682b74c55865e94c35024905359c27e94e9f020047de",
       "firstDifferentByte": 0
     },
     "tests/replay-cache-branch.test.ts": {
