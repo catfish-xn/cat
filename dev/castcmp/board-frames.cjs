@@ -15,7 +15,7 @@ const opt = k => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1]
 const port = Number(opt('port') ?? 5311), assetPort = Number(opt('assetPort') ?? 5419);
 const board = opt('board'), foes = opt('foes') ?? board, star = opt('star') ?? '2';
 // Cap, budget, degrade and OFF_SLOT_MAX: the code's own values unless given (rec overrides ?ltkcap ?fxbudget ?degrade ?offslot).
-const over = [['ltkcap', opt('cap')], ['fxbudget', opt('budget')], ['degrade', opt('degrade')], ['offslot', opt('offslot')]].filter(([, v]) => v != null).map(([k, v]) => `&${k}=${v}`).join('');
+const over = [['ltkcap', opt('cap')], ['fxbudget', opt('budget')], ['degrade', opt('degrade')], ['offslot', opt('offslot')], ['critstyle', opt('critstyle')]].filter(([, v]) => v != null).map(([k, v]) => `&${k}=${v}`).join('');
 const systems = (opt('systems') ?? '').split(',').filter(Boolean), every = Number(opt('every') ?? 3), max = Number(opt('max') ?? 12), pad = Number(opt('pad') ?? 2.2);
 const frames = (opt('frames') ?? '').split(',').filter(Boolean).map(Number);
 // --count SYS: per frame, how many runs of that system are live (live.json `count`), e.g. the crit flash 2436e086.
