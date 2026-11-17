@@ -114,8 +114,11 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const cells=path(ctx.board,u.cell,t.cell);
       for(const ally of ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,mag('TargetDamage'));
-      for(const x of foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1))strike(x,mag('ExplosionDamage'),'magic',true);break;
+      // Wind-up batch 3: the missiles' damage lands CAST_WINDUP_TICKS.renata after the cast (g2Landing; ordinal 0 is the target,
+      // the rest its neighbours, area); the shields above stay on the cast. Targets and amounts are taken now.
+      const struck=[t,...foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1)];
+      struck.forEach((x,n)=>{u.tasks.push({key:JSON.stringify([u.id,seq,'g2Landing',n,x.id]),kind:'g2Landing',source:origin(u),executeAtTick:ctx.tick+CAST_WINDUP_TICKS.renata,
+        targetId:x.id,amount:mag(n===0?'TargetDamage':'ExplosionDamage'),actionSeq:seq,ordinal:n,total:struck.length,cancellable:false});ids.push(x.id);});break;
     }
     case 'cassiopeia': {
       // One read decides the splash and the branch reported (display output only).
