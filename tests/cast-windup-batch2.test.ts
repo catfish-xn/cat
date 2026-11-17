@@ -11,7 +11,7 @@ import { freezeCombatInput } from '../src/simulation/combat-input';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 import { validateM5Runtime } from '../src/simulation/serialization-structure';
 import { battle, unit } from './combat-helpers';
-import { packets, heals } from './helpers/replay2-views';
+import { packets } from './helpers/replay2-views';
 
 // Cast wind-up alignment, batch 2 (user-approved timing only, 2026-11-16; fitted values, not original data): Tristana's shell
 // lands CAST_WINDUP_TICKS.tristana after her cast, Smeech's stabs SMEECH_STAB_TICKS apart, Dr. Mundo's blast and Nunu's second
@@ -32,8 +32,6 @@ function run(state: CombatState, count: number) {
 }
 const hits = (events: readonly CombatEvent[], target?: string) => packets(events)
   .filter(x => x.source.ownerId === 'p' && x.source.sourceKind === 'ability' && (target === undefined || x.unitId === target));
-const myHeals = (events: readonly CombatEvent[]) => heals(events).filter(x => x.unitId === 'p');
-const stuns = (events: readonly CombatEvent[]) => events.filter(e => e.type === 'statusChanged' && (e as any).reason === 'applied' && (e as any).group.kind === 'stun');
 const kill = (state: CombatState, id: string) => { const next = structuredClone(state); Object.assign(next.units.find(u => u.id === id)!, { hp: 0, alive: false }); return next; };
 const start = (name: string) => battle([hero(name), dummy('e', 2), dummy('f', 1, 2), dummy('g', 2, 2)], { rngState: 42 });
 
