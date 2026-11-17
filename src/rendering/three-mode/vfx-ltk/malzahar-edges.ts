@@ -11,7 +11,7 @@ import type { BoardSpot, WorldPoint } from './timeline';
  * Seconds after the cast: when the bottom cluster rises and when the top one does (the rest evenly between, so the top
  * one is the last to end, about 1.8 s after the cast). Fitted, not original data.
  */
-export const MALZAHAR_EDGE_TIMING = { first: 0.35, last: 0.7 } as const;
+export const MALZAHAR_EDGE_TIMING = { first: 0.35, last: 1.05 } as const;
 /** Clusters on each side edge, and rings on each side (on the lowest clusters' rows). Fable 11-17's budget. */
 export const MALZAHAR_EDGE_COUNTS = { walls: 5, rings: 4 } as const;
 
