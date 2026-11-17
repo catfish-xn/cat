@@ -1188,7 +1188,7 @@
       "previousBytes": 0,
       "currentBytes": 69614,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fad1919810586d1e683251dc3f4131c47b9f695ef9d876f93c9f4195ad30bd85",
+      "currentSha256": "8a4e45a81f76d731c17d934c9e6a6778abfcb22353199435909c30520e80ecdf",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -3139,7 +3139,7 @@
       "previousBytes": 4979457,
       "currentBytes": 4893938,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "8ef03665659c1f5843bb35ec428dc1f6ab9983b1098d978cab919a1176905028",
+      "currentSha256": "281b35706886bddaf982f1aee65fdfb2b4c6894b6d7a2481f70afa1d51481ebe",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {
@@ -4257,14 +4257,6 @@
       "currentBytes": 9161,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
-      "firstDifferentByte": 0
-    },
-    "tests/zz-trig.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 884,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "790794a619a0d02ee69c06868905cd2601f3f61170d8e951dc901dbdde0ecb4a",
       "firstDifferentByte": 0
     }
   }
