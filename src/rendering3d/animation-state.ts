@@ -3,7 +3,8 @@ import type { ActionState } from './contracts';
 /** Structural subset of combat-replay-view events; extra replay fields are ignored. */
 export type AnimationEvent =
   | { type: 'movement' | 'death' | 'unitRevived'; unitId: string }
-  | { type: 'attack'; attackerId: string }
+  /** `crit`: the attack's packet of the same tick crits (presentation reads it off the batch); it may play the Crit clip. */
+  | { type: 'attack'; attackerId: string; crit?: boolean }
   | { type: 'cast'; sourceId: string }
   | { type: 'heal'; targetId: string }
   | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number;
@@ -21,9 +22,19 @@ export const isForcefulPacket = (event: Extract<AnimationEvent, { type: 'packetD
 export interface ActionPlayback { clips: readonly string[]; durationSeconds: number; holdSeconds?: number; release?: { atSeconds: number; headSpeed: number; tailSpeed: number } }
 /** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
 /** The cast's own number comes from the rule's cast event (the resolver reads it); this state machine counts nothing. */
-export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn') => ActionPlayback | null;
+export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', detail?: { crit?: boolean }) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
-export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
+export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback;
+  /** The unit's observed attack interval (seconds), when known: a finished swing holds its last pose for the next one (ATTACK_HOLD). */
+  attackInterval?: () => number | undefined }
+/**
+ * A finished swing holds its last pose until ATTACK_HOLD × the observed attack interval has passed since it started, so
+ * back-to-back attacks stay in the attack stance (the original keeps a unit in it between swings; Twitch's footage). A
+ * swing that sees no next attack by then, or any run, cast, control or death, returns to idle as before. A slow attacker
+ * whose gap would be longer than ATTACK_HOLD_MAX seconds is not held (it would stand frozen): it rests in idle between
+ * swings as before. Both are fits.
+ */
+export const ATTACK_HOLD = 1.25, ATTACK_HOLD_MAX = 0.6;
 const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
 /** Pure visual clock, independent of rules, AnimationMixer, Phaser and DOM. */
 export class UnitActionState {
@@ -37,10 +48,14 @@ export class UnitActionState {
   private playback?: ActionPlayback;
   /** Crowd control (presentation): the flinch pose is held until recover(), and no event but death moves it. */
   private held = false;
+  /** A finished swing holding its last pose for the next attack (ATTACK_HOLD). */
+  private holding = false;
+  private attackInterval?: () => number | undefined;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
     this.blend = config.blendSeconds ?? 0.12;
     this.durations = { ...defaults, ...config.durations };
     this.resolvePlayback = config.resolvePlayback;
+    this.attackInterval = config.attackInterval;
     if (![this.blend, ...Object.values(this.durations)].every(n => Number.isFinite(n) && n >= 0)) throw new Error('invalid-action-config');
   }
   /** True while a stun holds the flinch pose (stun()). */
@@ -51,6 +66,9 @@ export class UnitActionState {
       ...(this.playback ? { playback: this.playback } : {}) };
   }
   setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
+  setAttackInterval(interval: () => number | undefined): void { this.attackInterval = interval; }
+  /** True while a finished swing holds its last pose for the next attack. */
+  get holdingAttack(): boolean { return this.holding; }
   /** A summon rising (it appears or is revived) plays its spawn clip once, when its model names one. */
   spawn(): ActionOutput {
     const playback = this.resolvePlayback?.('spawn');
@@ -60,16 +78,16 @@ export class UnitActionState {
     this.previous = this.state; this.state = 'cast'; this.revision++; this.remaining = playback.durationSeconds;
     return this.output;
   }
-  private enter(state: ActionState): void {
+  private enter(state: ActionState, crit = false): void {
     let playback: ActionPlayback | undefined;
     if (state === 'cast' || state === 'attack') {
-      const resolved = this.resolvePlayback?.(state);
+      const resolved = this.resolvePlayback?.(state, crit ? { crit } : undefined);
       if (resolved === null) return;
       playback = resolved;
       if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0
         || playback.holdSeconds !== undefined && !(Number.isFinite(playback.holdSeconds) && playback.holdSeconds >= 0 && playback.holdSeconds <= playback.durationSeconds))) throw new Error('invalid-playback');
     }
-    this.playback = playback;
+    this.playback = playback; this.holding = false;
     this.previous = this.state; this.state = state; this.revision++;
     this.remaining = state === 'death' ? Infinity : state === 'idle' ? 0 : playback?.durationSeconds ?? this.durations[state];
   }
@@ -100,7 +118,7 @@ export class UnitActionState {
     switch (event.type) {
       case 'death': this.held = false; this.enter('death'); break;
       case 'movement': this.enter('move'); break;
-      case 'attack': this.enter('attack'); break;
+      case 'attack': this.enter('attack', !!event.crit); break;
       case 'cast': this.enter('cast'); break;
       case 'packetDamage': if (event.hit && event.hpDamage + event.absorbed > 0) this.enter('hit'); break;
       case 'heal': break; // Healing has no dedicated action and does not interrupt one.
@@ -131,7 +149,14 @@ export class UnitActionState {
   }
   update(seconds: number): ActionOutput {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
-    if (this.state !== 'idle' && this.state !== 'death' && (this.remaining -= seconds) <= 0) this.enter('idle');
+    if (this.state !== 'idle' && this.state !== 'death' && (this.remaining -= seconds) <= 0) {
+      if (this.state === 'attack' && !this.holding) {
+        const interval = this.attackInterval?.(), swing = this.playback?.durationSeconds ?? this.durations.attack;
+        const hold = interval !== undefined && Number.isFinite(interval) && interval > 0 ? interval * ATTACK_HOLD - swing : 0;
+        if (hold > 0 && hold <= ATTACK_HOLD_MAX) { this.holding = true; this.remaining = hold; return this.output; }
+      }
+      this.enter('idle');
+    }
     return this.output;
   }
 }

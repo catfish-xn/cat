@@ -3,7 +3,9 @@ import type { ActionOutput, ActionPlayback } from './animation-state';
 import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility } from './contracts';
 import { SubmeshSwitch } from './submesh-visibility';
 
-export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
+export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number;
+  /** The attack crits: a model with a `crit` clip swings it instead of its attack (sequence and release timing aside). */
+  crit?: boolean }
 /**
  * Select only supplied display context; never infer a random ability or hero augment. `castIndex` is the rule's cast
  * number from the cast event (1 on the unit's first cast); 0 means the event did not report it (an older replay), and a
@@ -214,15 +216,16 @@ export class UnitAnimationMixer {
     if (state === 'cast' && this.names.cast === null) return null;
     const form = context.form ?? this.form;
     const formAttack = state === 'attack' && form ? this.metadata.formAnimations?.[form]?.attack : undefined;
+    const critClip = state === 'attack' && context.crit && this.names.crit && this.clips.has(this.names.crit) ? this.names.crit : undefined;
     const sequence = state === 'cast'
       ? selectCastSequence(this.metadata, castIndex, context)
-      : state === 'attack' && !(formAttack && this.clips.has(formAttack))
+      : state === 'attack' && !critClip && !(formAttack && this.clips.has(formAttack))
         ? this.metadata.attackSequence
         : undefined;
     // A clip list rotates by the rule's cast number (Ekko's three spell clips); unreported (0) plays the first.
     const main = sequence && (Array.isArray(sequence.main) ? sequence.main[Math.max(0, castIndex - 1) % sequence.main.length] : sequence.main as string);
     const names = sequence ? [sequence.in, sequence.hold, main, sequence.out].filter((v): v is string => !!v)
-      : [this.nameFor(state, context.form)];
+      : [critClip ?? this.nameFor(state, context.form)];
     const clips = names.map(name => this.clips.get(name));
     if (clips.some(c => !c || !Number.isFinite(c.duration) || c.duration <= 0)) return null;
     const layers = sequence?.layers?.map(name => this.clips.get(name)).filter((c): c is AnimationClip => !!c && Number.isFinite(c.duration) && c.duration > 0) ?? [];
@@ -238,7 +241,7 @@ export class UnitAnimationMixer {
       : interval !== undefined && Number.isFinite(interval) && interval > 0 ? Math.min(duration, interval * 0.9) : duration;
     if (sequence) this.lastResolved = { clips: names, sequence };
     if (hold !== undefined) return { clips: names, durationSeconds, holdSeconds: hold };
-    const release = state === 'attack' && !sequence && !(formAttack && this.clips.has(formAttack)) ? this.release(clips[0]!, interval) : undefined;
+    const release = state === 'attack' && !sequence && !critClip && !(formAttack && this.clips.has(formAttack)) ? this.release(clips[0]!, interval) : undefined;
     if (release) return { clips: names, durationSeconds: release.durationSeconds, release: release.release };
     return { clips: names, durationSeconds };
   }
