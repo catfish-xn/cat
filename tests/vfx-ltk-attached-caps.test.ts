@@ -32,6 +32,18 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     fx.update(0.1, new Camera()); expect(fx.attached.some(draw => draw.object.visible)).toBe(true);
     fx.dispose(); library.dispose();
   });
+  it('gives a part hidden at the start its overlay too, drawn only while the part is shown (a later body swap)', async () => {
+    const { library, prepared } = await prepare(attached({ mSubmeshesToDraw: parts('Alt', 'Body') }));
+    const root = new Group(), body = new Group(), alt = part('alt'), base = part('body'); root.add(body); body.add(base, alt);
+    alt.visible = false;
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body } });
+    expect(fx.attached).toHaveLength(2 * ATTACHED_SLOTS);
+    const on = (host: SkinnedMesh) => fx.attached.some(draw => (draw.object as SkinnedMesh).geometry === host.geometry && draw.object.visible);
+    fx.update(0.1, new Camera()); expect(on(base)).toBe(true); expect(on(alt)).toBe(false);
+    alt.visible = true; base.visible = false;
+    fx.update(0.05, new Camera()); expect(on(alt)).toBe(true); expect(on(base)).toBe(false);
+    fx.dispose(); library.dispose();
+  });
   it('draws nothing and logs once when the host holds none of the named parts (no whole-body fallback)', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { library, prepared } = await prepare(attached({ mSubmeshesToDraw: parts('cape') }));
