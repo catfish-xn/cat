@@ -346,7 +346,7 @@ describe('initial material and action binding', () => {
       castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' }, attackSequence: { in: 'unit_attack1' },
     });
     expect(sequenced.clipRanges).not.toHaveProperty('unit_attack1');
-    expect(sequenced.clipRangeSkips.map(skip => skip.name).sort()).toEqual(['unit_attack1', 'unit_attack2']);
+    expect(sequenced.clipRangeSkips.map((skip: { name: string }) => skip.name).sort()).toEqual(['unit_attack1', 'unit_attack2']);
 
     const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
     await mkdir(local, { recursive: true });
