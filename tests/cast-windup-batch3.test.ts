@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, createCombatWithEvents, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
-import { CAST_WINDUP_TICKS, POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, RENATA_MISSILE_FLIGHT_TICKS } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle,
   startCombatReplay, toCombatReplay, type MatchState } from '../src/server-entry';
@@ -34,7 +34,11 @@ function run(state: CombatState, count: number) {
 const hits = (events: readonly CombatEvent[], target?: string) => packets(events)
   .filter(x => x.source.ownerId === 'p' && x.source.sourceKind === 'ability' && (target === undefined || x.unitId === target));
 const kill = (state: CombatState, id: string) => { const next = structuredClone(state); Object.assign(next.units.find(u => u.id === id)!, { hp: 0, alive: false }); return next; };
-const start = (name: string) => battle([hero(name), dummy('e', 2), dummy('f', 1, 2), dummy('g', 2, 2)], { rngState: 42 });
+/** A death the next step settles (hp 0 while still alive), as a lethal hit would leave it: its death cleanup runs then. */
+const fell = (state: CombatState, id: string) => { const next = structuredClone(state); Object.assign(next.units.find(u => u.id === id)!, { hp: 0 }); return next; };
+// A passive ally far back keeps the fight running after the caster's death.
+const ally = () => ({ ...dummy('ally', 6, 7), team: 'player' as const });
+const start = (name: string) => battle([hero(name), ally(), dummy('e', 2), dummy('f', 1, 2), dummy('g', 2, 2)], { rngState: 42 });
 
 
 
@@ -46,8 +50,12 @@ describe('Renata: the missiles land CAST_WINDUP_TICKS.renata after the cast; the
     const before = run(cast.state, w - 1); expect(hits(before.events)).toEqual([]);
     expect(hits(run(before.state, 1).events).length).toBeGreaterThan(0);
   });
-  it('her death stops it, a control does not; a dead target takes nothing and nobody else is picked', () => {
-    expect(hits(run(kill(run(start('renata'), 2).state, 'p'), w + 5).events)).toEqual([]);
+  it('her death before the missiles leave stops them, after they leave it does not; a control does not; a dead target takes nothing', () => {
+    // The missiles leave her RENATA_MISSILE_FLIGHT_TICKS before they land; a death settled on an earlier tick stops them.
+    const castState = run(start('renata'), 1).state, lands = castState.units.find(u => u.id === 'p')!.tasks!.find(t => t.kind === 'g2Landing')!.executeAtTick;
+    const leave = lands - RENATA_MISSILE_FLIGHT_TICKS, upTo = (tick: number) => run(castState, tick - castState.tick).state;
+    expect(hits(run(fell(upTo(leave - 2), 'p'), w + 5).events)).toEqual([]); // dies on leave - 1
+    expect(hits(run(fell(upTo(leave - 1), 'p'), w + 5).events).length).toBeGreaterThan(0); // dies on leave
     const state = structuredClone(run(start('renata'), 1).state);
     applyStatus(state.units.find(u => u.id === 'p')! as S13Unit, origin(state.units.find(u => u.id === 'e')!), 'stun', 0, 40, state.tick, [], true);
     expect(hits(run(state, w).events).length).toBeGreaterThan(0);
@@ -70,13 +78,15 @@ describe('Powder: the monkey explodes on reaching the landing cell taken on the 
     expect(hits(land.events).length).toBeGreaterThan(0);
     expect(land.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
   });
-  it('explodes at the cell taken on the cast even when everyone there moved away; her death stops it', () => {
+  it('explodes at the cell taken on the cast even when everyone there moved away, and after her death (the monkey has left her)', () => {
     const cast = run(start('powder'), 1), sent = sentOf(cast.events), moved = structuredClone(cast.state);
     for (const u of moved.units.filter(u => u.team === 'enemy')) Object.assign(u, { cell: { col: 6, row: 0 } });
     const after = run(moved, sent.arrivalTick - cast.state.tick);
     expect(after.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
     expect(hits(after.events)).toEqual([]);
-    expect(run(kill(cast.state, 'p'), sent.arrivalTick - cast.state.tick + 2).events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(false);
+    const afterDeath = run(fell(cast.state, 'p'), sent.arrivalTick - cast.state.tick + 2);
+    expect(afterDeath.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
+    expect(hits(afterDeath.events).length).toBeGreaterThan(0);
   });
 });
 

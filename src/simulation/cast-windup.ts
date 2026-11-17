@@ -24,3 +24,17 @@ export const NUNU_SECOND_AFTER_PULSE_TICKS = 9;
  * arriving, POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × the hexes from her to that cell after the cast. */
 export const POWDER_MONKEY_BASE_TICKS = 18;
 export const POWDER_MONKEY_TICKS_PER_HEX = 6;
+
+/** Wind-up batch 3 (fitted, not original data): Renata's missiles fly this many ticks, so they leave her CAST_WINDUP_TICKS.renata
+ * minus this after the cast. Once they have left, her death no longer stops them; before that it does. */
+export const RENATA_MISSILE_FLIGHT_TICKS = 12;
+
+/**
+ * Wind-up batch 3 (fitted, not original data): a pending landing that has already left its caster lands even if the caster
+ * dies; one still in the wind-up does not. Powder's monkey leaves on her cast; Renata's missiles leave
+ * RENATA_MISSILE_FLIGHT_TICKS before they land.
+ */
+export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string } }, tick: number): boolean {
+  if (task.kind === 'g2PowderMonkey') return true;
+  return task.kind === 'g2Landing' && task.source.definitionId === 'renata-ability' && task.executeAtTick - RENATA_MISSILE_FLIGHT_TICKS <= tick;
+}

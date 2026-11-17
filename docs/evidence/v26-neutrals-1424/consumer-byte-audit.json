@@ -688,9 +688,9 @@
     "tests/cast-windup-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10177,
+      "currentBytes": 11333,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6d5e3634bd12913ff0154625107563c5da8b96d56a27bda3aee802c0a3bcf416",
+      "currentSha256": "50d70aad93a9e1674c2add23120ba6a0831f0bfaa6538bb58c9021311b7b75f5",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
