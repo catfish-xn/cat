@@ -94,6 +94,19 @@ describe('Powder: the monkey explodes on reaching the landing cell taken on the 
     expect(arrived(afterDeath.events)).toBe(true);
     expect(hits(afterDeath.events).length).toBeGreaterThan(0);
   });
+  // Boundaries: a death settled on the tick before the release stops it; one settled on the release tick does not.
+  it('her death on the tick before the release stops it; her death on the release tick does not', () => {
+    const cast = run(start('powder'), 1);
+    const dyingBefore = run(fell(run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 2).state, 'p'), 60);
+    expect(dyingBefore.events.find(e => e.type === 'death' && e.unitId === 'p')?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS - 1);
+    expect(sentOf(dyingBefore.events)).toBeUndefined();
+    expect(arrived(dyingBefore.events)).toBe(false);
+    const dyingOn = run(fell(run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 1).state, 'p'), 60);
+    expect(dyingOn.events.find(e => e.type === 'death' && e.unitId === 'p')?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS);
+    expect(sentOf(dyingOn.events)?.tick).toBe(cast.state.tick + POWDER_MONKEY_RELEASE_TICKS);
+    expect(arrived(dyingOn.events)).toBe(true);
+    expect(hits(dyingOn.events).length).toBeGreaterThan(0);
+  });
   it('her death before letting go stops it: no monkey, no explosion', () => {
     const cast = run(start('powder'), 1), held = run(cast.state, POWDER_MONKEY_RELEASE_TICKS - 2);
     const dead = run(fell(held.state, 'p'), 60);

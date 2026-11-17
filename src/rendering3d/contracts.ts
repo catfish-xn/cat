@@ -54,6 +54,8 @@ export function attackReleaseSeconds(release: AttackRelease | undefined, interva
   return release.windupRatio * interval;
 }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
+export interface SubmeshVisibilityEvent { frame: number; show: readonly string[]; hide: readonly string[] }
+export interface SubmeshVisibility { initiallyHidden?: readonly string[]; events?: Record<string, readonly SubmeshVisibilityEvent[]> }
 export interface AssetManifest {
   schemaVersion: 1;
   /**
@@ -70,6 +72,12 @@ export interface AssetManifest {
     selfIllumination?: number;
     clipRanges?: Record<string, readonly [number, number]>;
     clipSegments?: Record<string, readonly [string, number, number]>;
+    /**
+     * `submeshVisibility` (optional, written by scripts/assets3d/submesh-patch.mjs): `initiallyHidden` names the submeshes
+     * (materials of the same name) the model carries but starts hidden; `events` lists, per clip, the frames at which
+     * submeshes are shown or hidden, as the source animation graph's SubmeshVisibilityEventData does.
+     */
+    submeshVisibility?: SubmeshVisibility;
   } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
@@ -204,6 +212,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);
     if (entry.attackRelease !== undefined) assertAttackRelease(entry.attackRelease);
     if (entry.statusPose !== undefined) assertStatusPose(entry.statusPose);
+    if (entry.submeshVisibility !== undefined) assertSubmeshVisibility(entry.submeshVisibility);
     if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
     if (entry.castVariants !== undefined) {
       const variants = entry.castVariants;
@@ -245,6 +254,21 @@ function assertFormAnimations(value: unknown): void {
       if ((action !== 'idle' && action !== 'move' && action !== 'attack') || typeof name !== 'string' || !name.trim()) {
         throw new Error('invalid-form-animations');
       }
+    }
+  }
+}
+function assertSubmeshVisibility(value: unknown): void {
+  const names = (list: unknown) => Array.isArray(list) && list.length <= 64 && list.every(n => typeof n === 'string' && n.trim().length > 0);
+  if (!isPlainObject(value)) throw new Error('invalid-submesh-visibility');
+  const { initiallyHidden, events } = value as { initiallyHidden?: unknown; events?: unknown };
+  if (initiallyHidden !== undefined && !names(initiallyHidden)) throw new Error('invalid-submesh-visibility');
+  if (events !== undefined) {
+    if (!isPlainObject(events) || Object.keys(events).length > 128) throw new Error('invalid-submesh-visibility');
+    for (const [clip, list] of Object.entries(events)) {
+      if (!clip.trim() || !Array.isArray(list) || !list.length || list.length > 64 || list.some(e => !isPlainObject(e)
+        || !finite((e as { frame: unknown }).frame) || (e as { frame: number }).frame < 0
+        || !Array.isArray((e as { show: unknown }).show) || !Array.isArray((e as { hide: unknown }).hide)
+        || ![...(e as { show: unknown[] }).show, ...(e as { hide: unknown[] }).hide].every(n => typeof n === 'string' && n.trim().length > 0))) throw new Error('invalid-submesh-visibility');
     }
   }
 }

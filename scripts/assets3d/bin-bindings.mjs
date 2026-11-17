@@ -50,9 +50,21 @@ export function skinBindings(documents, submeshes) {
     if (typeof path === 'string') textures[name] = path;
     else if (path) solidMaterials[name] = path;
   }
+  // Initially hidden submeshes' own diffuse, for the submesh patch (submesh-patch.mjs) to append the ones a clip shows.
+  // Kept apart from `textures` so the model build is unchanged; a hidden submesh without a usable diffuse is reported.
+  const hiddenTextures = {}, hiddenSolidMaterials = {}, hiddenTextureErrors = {};
+  for (const name of submeshes.filter(n => hidden.some(h => h.toLowerCase() === n.toLowerCase()))) {
+    const override = overrides.find(o => field(o, 'submesh').toLowerCase() === name.toLowerCase());
+    try {
+      const path = diffuse(override ?? mesh);
+      if (typeof path === 'string') hiddenTextures[name] = path;
+      else if (path) hiddenSolidMaterials[name] = path;
+    } catch (error) { hiddenTextureErrors[name] = error.message; }
+  }
   return { mesh: field(mesh, 'simpleSkin'), skeleton: field(mesh, 'skeleton'), textures, solidMaterials,
     animationGraphHash: field(field(skin, 'skinAnimationProperties'), 'animationGraphData')?.hash ?? null,
-    hidden: submeshes.filter(n => hidden.some(h => h.toLowerCase() === n.toLowerCase())) };
+    hidden: submeshes.filter(n => hidden.some(h => h.toLowerCase() === n.toLowerCase())),
+    hiddenTextures, hiddenSolidMaterials, hiddenTextureErrors };
 }
 export function animationClips(documents) {
   const clips = [];
