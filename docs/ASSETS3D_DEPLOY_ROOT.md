@@ -36,9 +36,19 @@ node scripts/assets3d/build-asset-root.mjs --roots "<HEROES_ROOT>" "<FX_BATCH1_R
 
 `precache.json` 调用与批次合并、压缩脚本相同的 `createPrecache`，按 path 排序，每项仅含 path/bytes/sha256。索引仅包含实际运行载荷，不包含 manifest、action-bindings、merge-report 或 precache 自身。`merge-report.json` 写入上述固定生成器标识，并列出各模型、特效、动作单位、playback、variant/单位、notes 和载荷的输入真实根来源，`sources.unavailable` 按输出 unavailable 数组索引标明来源；已合并根作为一个输入，不猜测其历史来源。报告没有时间戳和本次写入计数，相同输入顺序和字节重复执行时所有输出字节一致。
 
+## 子网格补丁（合并之后、压缩之前，固定一步）
+
+源数据里有的子网格初始隐藏（skin 的 `initialSubmeshToHide`），由片段里的 SubmeshVisibilityEventData 在某一帧显示或隐藏（如安蓓萨的锁链 Chain）。模型构建不导出初始隐藏的子网格；`scripts/assets3d/submesh-patch.mjs` 在合并后的未压缩根上，把**已导出片段会显示的**那几块追加回模型（默认隐藏），并把每个模型已导出片段的显示/隐藏事件连同帧号写进 manifest 的 `submeshVisibility`。没有要追加的模型，载荷原样复制（逐字节不变）；`submesh-patch-report.json` 逐模型列出改前改后 sha256、追加了哪块、未追加的及原因。源文件按 `extraction.json` 校验，源已存在但被改动即停止；本提取里没有的单位（另一套源构建）原样保留并在报告里标出。它必须在 `cast-animations` 之后运行（施法片段由那一步追加，显示事件常在施法片段里），在压缩之前运行（压缩会重写 GLB）。相同输入重复执行，所有输出逐字节一致。
+
+```powershell
+node scripts/assets3d/submesh-patch.mjs --from "<OUT_DIR>" --source "<ASSETS_LOCAL>/trial/local" --out "<ASSETS_LOCAL>/deploy-submesh"
+```
+
+之后的压缩以 `<ASSETS_LOCAL>/deploy-submesh` 作为 `--from`。
+
 ## 压缩顺序
 
-建议先合并一次，再压缩一次，最后把压缩根部署到外部真实目录。这样只压缩最终选中的模型，避免重复处理被覆盖的载荷。`compress.mjs` 的输出仍受原策略限制，须是本仓库 `<ASSETS_LOCAL>` 下不存在的真实目录；本次不扩大压缩器权限。
+建议先合并一次，打子网格补丁，再压缩一次，最后把压缩根部署到外部真实目录。这样只压缩最终选中的模型，避免重复处理被覆盖的载荷。`compress.mjs` 的输出仍受原策略限制，须是本仓库 `<ASSETS_LOCAL>` 下不存在的真实目录；本次不扩大压缩器权限。
 
 ```powershell
 node scripts/assets3d/compress.mjs --from "<OUT_DIR>" --out "<ASSETS_LOCAL>/deploy-compressed"
