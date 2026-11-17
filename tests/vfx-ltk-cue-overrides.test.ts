@@ -70,15 +70,21 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'eb9da1d5')?.scale).toBe(measuredAtFxScale(0.68));
     expect(CUE_OVERRIDES.vex.find(cue => cue.system === 'c4da788c')?.scale).toBeUndefined();
     // 11-06 field review: the cloud holds its damage window, then the burst and each target's splash.
-    // At 0.5 the burst measured a little wider than the cloud (cdacbcc9): 0.43, our fit, lands on it.
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale).toBe(measuredAtFxScale(0.43));
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.delay).toBe(3);
+    // 11-16 review: the burst draws at the default skill size (at the cloud's fit it covered too little of the board).
+    // Wind-up batch 2: the burst plays with the blast's damage (CUE_EXTRA_SKILLS 'nunu-blast'), 3 s + 9 ticks after the cast.
+    expect(CUE_EXTRA_SKILLS['nunu-blast']!.find(cue => cue.system === '8c256426')?.scale).toBeUndefined();
+    expect(CUE_EXTRA_SKILLS['nunu-blast']!.find(cue => cue.system === '8c256426')?.delay).toBe(0);
+    expect(CUE_OVERRIDES.nunu.some(cue => cue.system === '8c256426')).toBe(false);
     expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.duration).toBeGreaterThanOrEqual(3);
     // The pool keeps emitting until the blast starts: no empty gap between them (clean4 frames 58-61).
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')!.delay);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(CUE_OVERRIDES.nunu.find(cue => cue.system === '8c256426')?.scale);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.delay).toBeGreaterThanOrEqual(3);
-    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.stopAfter).toBeGreaterThanOrEqual(3 + 9 / 20);
+    // Each pinned on its own (11-16 review): the burst back at the default size, the cloud kept at its fit (fitted, not
+    // original), since at the default size the cloud's outer ring drew a ring too wide. They no longer share one scale.
+    expect(CUE_OVERRIDES.nunu.find(cue => cue.system === '78d04f27')?.scale).toBe(measuredAtFxScale(0.43));
+    // Each target's splash is no longer a cast hit cue (the cast names no targets, so it never played): it plays from the
+    // blast's damage (CUE_EXTRA_SKILLS 'nunu-blast-hit', batch1-events.ts), at the body size it had.
+    expect(CUE_OVERRIDES.nunu.some(cue => cue.system === '5dfd387b')).toBe(false);
+    expect(CUE_EXTRA_SKILLS['nunu-blast-hit']!.find(cue => cue.system === '5dfd387b')?.scale).toBe(measuredOnBody(0.7)); // per-target splash: hugs the body
     // Ezreal: W's orb and ring on the primary before Q's shot; both missiles aim at a target bone.
     const ezreal = CUE_OVERRIDES.ezreal.filter(cue => cue.action === 'cast');
     expect(ezreal.filter(cue => cue.event === 'projectile').every(cue => cue.targetBone)).toBe(true);
@@ -243,7 +249,9 @@ describe('reviewed vfx-ltk cue overrides', () => {
     const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
     expect(drawn(pistol)).toBe(SKILL_FX_SIZE);
     expect(jinxSkills.jinx.find(c => c.system === '3496e112')!.scale).toBeUndefined();
-    for (const system of ['78d04f27', '8c256426']) expect(drawn(CUE_OVERRIDES.nunu.find(c => c.system === system)!), system).toBeCloseTo(0.43, 12);
+    // The cloud at its fit (fitted, not original), the burst at the default skill size (11-16 review).
+    expect(drawn(CUE_OVERRIDES.nunu.find(c => c.system === '78d04f27')!)).toBeCloseTo(0.43, 12);
+    expect(drawn(CUE_EXTRA_SKILLS['nunu-blast']!.find(c => c.system === '8c256426')!)).toBe(SKILL_FX_SIZE);
   });
 
   it('draws every cast cue of Zyra at the size it was measured at, so the vines and sprouts stay in proportion', () => {

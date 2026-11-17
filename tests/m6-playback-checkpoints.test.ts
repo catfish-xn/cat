@@ -102,14 +102,17 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // undone. Its three pins moved because the sniper golden was re-recorded in #690's epoch and record.context (round 32's
     // preparation, built from earlier combats that also gained abilityEffectEnded events) drifted with it, e.g.
     // roundResults[3].combatEventCount 877 -> 881 and earnedEvidence death.eventSeq. Were b73401ac…, b8cf8acd…, edfa8dc9….
+    // Wind-up batch 2 re-pin of this chain (2026-11-16, as #690/#693): B9 itself fields none of batch 2's heroes, so its frames,
+    // ledger and terminal are unchanged; the chain's pins and the record moved with record.context (round 32's preparation, built
+    // from earlier combats where Tristana, Smeech, Dr. Mundo or Nunu fought). Were 107d51c6…, 9332c2b3…, 4a40a89b…, 5fcc287a….
     const before628 = JSON.parse(JSON.stringify(before690, castFields));
     before628.version = { ...before628.version, replayFormatVersion: 8 }; before628.eventHash = digestContent(before628.events);
     const newer = JSON.stringify(before628).split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
-    expect(bytesHash(JSON.parse(newer))).toBe('107d51c6aaf514e8cbf19c1f35117cdd9f1fa72167ccb98c922b582f74e20f7e');
+    expect(bytesHash(JSON.parse(newer))).toBe('588e92b331f4da91cdc1537f023359bf7ae9c5c37634e322269006fc6e5216ca');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
-    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('9332c2b392f6a29803d789bcb5ecd6b18a6298b62a9903105c5fa830acb37fcd');
-    expect(bytesHash(JSON.parse(back))).toBe('4a40a89b11154af4b5d2a11148571cbceba56c0ab6fd73bb3dd92122ae3c062f');
-    expect(bytesHash(record)).toBe('5fcc287ac8cefa517c86a923bbd258c8c1bcb99d792ed55ea4285a96fcb0da42');
+    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('0b44dbf3e890d7251026ba3b5101bb1f133b910f75d9803f471a9bdc204592a5');
+    expect(bytesHash(JSON.parse(back))).toBe('d123865eee28760df86abc4e6cac6f485ffd0bb5c4ecb5866e46b6c05b895017');
+    expect(bytesHash(record)).toBe('bf2635be73bf77453e9ac0801ad998d416c057354c512ea9cd1d52505cb7c09d');
     expect(bytesHash(record.events)).toBe('2eba6280ecc0884aa488737b1c16b265748fcc8ac672cb160bd849c1110ec30a');
     expect(bytesHash(expected.terminal)).toBe('de60ac0e56dbdcfea10ea0b929f6fd21dae611d96dec75d88d2e81021f886fae');
     // An external JSON record is cold on each constructor, like browser fixtures.

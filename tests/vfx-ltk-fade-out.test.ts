@@ -75,7 +75,7 @@ describe('a fading cue eases its lingering particles out by its end (Zyra E, 11-
 describe('a skill body on its caster ranks with impacts (Nunu R, d650fcf2 field)', () => {
   it('ranks sustained cast-start bodies and main cues as bodies while short windups and non-cast actions stay decorative', () => {
     const nunu = CUE_OVERRIDES.nunu;
-    for (const system of ['78d04f27', '8c256426']) expect(effectImportance(nunu.find(cue => cue.system === system)!)).toBe('body');
+    for (const cue of [nunu.find(cue => cue.system === '78d04f27')!, CUE_EXTRA_SKILLS['nunu-blast']![0]!]) expect(effectImportance(cue)).toBe('body');
     expect(effectImportance({ event: 'cast-start', action: 'cast' })).toBe('decorative');
     expect(effectImportance({ event: 'cast-start', action: 'cast', duration: CAST_BODY_SECONDS })).toBe('body');
     expect(effectImportance({ event: 'cast-start', action: 'cast', duration: 2.2 })).toBe('body');

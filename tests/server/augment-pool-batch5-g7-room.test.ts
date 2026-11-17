@@ -18,7 +18,11 @@ import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 const ID='loot-explosion',SOURCE='augment-pool-batch5-g7';
 let found:{seed:number;seatId:string}|undefined;
 // Cheap offer-only discovery, bounded by the user's 0..100 limit; the actual route below verifies it.
-for(let seed=0;seed<=100&&!found;seed++){
+// #693 (2026-11-16, scene change approved by Fable): the first offer seed, 9, still gets its Ambusher last hit at 2-1 but no
+// Loot Explosion award through 2-3 any more (an opponent's Zyra lands her vines after a wind-up, which moves the later
+// rolls). The search now starts at 10; the next offer seed, 15, meets the premise (a real last hit and at least one award)
+// on #693 and on wind-up batch 2. Searched 0..150: seeds 9 and 137 have no award, every other offer seed has one or more.
+for(let seed=10;seed<=100&&!found;seed++){
   let rng=seed;
   for(let index=0;index<4;index++){
     const draw=nextRandom(rng);rng=draw.state;
