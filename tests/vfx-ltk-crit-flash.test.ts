@@ -76,15 +76,15 @@ describe('vfx-ltk crit flash', () => {
     runtime.dispose();
   });
 
-  it('Warwick crits with his own swipe in place of the plain one, and the crit flash on the target beside his slash', async () => {
+  it('Warwick crits with the crit flash on the target beside his own slash, and keeps his plain swipe', async () => {
     const { runtime, step, started } = await setup();
     expect(runtime.play('warwick', 'w', ['t'], 'attack', { crit: true })).toBe(true);
     step(0.3);
-    expect(started('94adb056')).toBe(1); expect(started('6b46d17d')).toBe(0);
+    expect(started('6b46d17d')).toBe(1); expect(started('94adb056')).toBe(0);
     expect(started('slash')).toBe(1); expect(started(CRIT)).toBe(1);
     expect(runtime.play('warwick', 'w2', ['t'], 'attack')).toBe(true);
     step(0.3);
-    expect(started('6b46d17d')).toBe(1); expect(started('94adb056')).toBe(1); expect(started(CRIT)).toBe(1);
+    expect(started('6b46d17d')).toBe(2); expect(started('94adb056')).toBe(0); expect(started(CRIT)).toBe(1);
     runtime.dispose();
   });
 });
