@@ -10,7 +10,9 @@
 // --cast-index N / --from-start 1 / --lead-ms MS / --anchor attack-hit|event:<type> (real only) choose the window (anchor = the N-th cast, or attack hit or event; start = combat start or
 // MS before the anchor); a real line's --times must start at 0, and that t=0 frame is the start only, never a keyframe (WARN).
 // --foe-offset K (real only) moves every foe K columns to the side; each must stay on columns 0-6.
-// --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
+// --ally2 X / --ally2star N / --ally2-cell R,C add a second unit of the caster's team; --items me=a+b,ally=c puts items on the
+// caster's side (checked ids; items not advised for acceptance rows are a warning, item-advice.cjs) and the line
+// prints them. // --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
 // cell; --foe2* need --nfoes 2+). With --ally the line prints "ally line D": how near (hex widths, cell centres) the ally came
 // to the caster->first target line in the window ("clear": never between them); under 0.5 is a WARN.
 // Only the recorded window counts: a tank that stands on the line at combat start and walks off before the window opens
@@ -26,6 +28,7 @@ import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+const { itemAdvice } = createRequire(import.meta.url)('./item-advice.cjs');
 
 const argv = process.argv.slice(2), opt = k => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : undefined; };
 if (!argv[0]) { console.error('usage: jobs-check.mjs <jobs.txt> [--out check.json]'); process.exit(2); }
@@ -53,7 +56,7 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'];
+  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell', 'ally2', 'ally2star', 'ally2-cell', 'items'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
@@ -71,7 +74,9 @@ for (const line of lines) {
     // --foe-offset K: every foe K columns to the side; all must stay on the board (real-combat.ts foeOffsetProblem).
     ...(o('foe-offset') !== undefined ? [rc.foeOffsetProblem(/^-?[0-9]+$/.test(o('foe-offset')) ? Number(o('foe-offset')) : NaN, Number(o('nfoes') ?? 4))].filter(Boolean) : []),
     // --ally-cell / --foe-cell / --foe2-cell R,C: whole-number cells (the layout itself is checked by realUnits below).
-    ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
+    ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell', 'ally2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
+    // --items me=a+b,ally=c: known item ids on the caster's side only, at most 3 per unit (real-combat.ts parseItems).
+    ...(o('items') !== undefined && 'why' in rc.parseItems(o('items')) ? [rc.parseItems(o('items')).why] : []),
     ...(o('foe-cell') !== undefined && o('foe-offset') !== undefined ? ['--foe-cell and --foe-offset: give one'] : []),
     // Rule (11-15): a real recording names the systems its gate judges (--systems), so a row whose effects never start fails.
     ...(o('systems') === undefined ? ['--systems is required for --real (the systems this row is about; none for a row that is about no system)'] : []),
@@ -85,13 +90,16 @@ for (const line of lines) {
     ...(o('me-cell') !== undefined ? { meCell: rc.parseCell(o('me-cell')) } : {}),
     ...(o('ally-cell') !== undefined ? { allyCell: rc.parseCell(o('ally-cell')) } : {}), ...(o('foe-cell') !== undefined ? { foeCell: rc.parseCell(o('foe-cell')) } : {}),
     ...(o('foe2') !== undefined ? { foe2: o('foe2') } : {}), ...(o('foe2star') !== undefined ? { foe2star: Number(o('foe2star')) } : {}),
-    ...(o('foe2-cell') !== undefined ? { foe2Cell: rc.parseCell(o('foe2-cell')) } : {}) };
+    ...(o('foe2-cell') !== undefined ? { foe2Cell: rc.parseCell(o('foe2-cell')) } : {}),
+    ...(o('ally2') !== undefined ? { ally2: o('ally2') } : {}), ...(o('ally2star') !== undefined ? { ally2star: Number(o('ally2star')) } : {}),
+    ...(o('ally2-cell') !== undefined ? { ally2Cell: rc.parseCell(o('ally2-cell')) } : {}),
+    ...(o('items') !== undefined ? { items: rc.parseItems(o('items')).items } : {}) };
   const events = [], alive = [], cells = [];
   let run;
   try {
     run = rc.runRealCombat(rc.realUnits(setup), rc.afterTicksFor(ms, start), (state, shown) => {
       events.push(shown); alive.push(Object.fromEntries(state.units.map(u => [u.id, !!u.alive]))); cells.push(rc.cellsOf(state));
-    }, start.castNumber, anchor);
+    }, start.castNumber, anchor, rc.realItems(setup));
   } catch (e) { results.push({ name, unit, mode: 'real', ok: false, why: [String(e.message ?? e)] }); continue; }
   if (run.castIndex < 0) { results.push({ name, unit, mode: 'real', ok: false, why: [anchor.kind === 'cast' ? `never cast${start.castNumber !== 1 ? ` ${start.castNumber} times` : ''} in ${run.ticks} ticks` : `no ${rc.anchorName(anchor)}${start.castNumber !== 1 ? ` #${start.castNumber}` : ''} in ${run.ticks} ticks`] }); continue; }
   const a = rc.auditWindow(events, alive, run.castIndex, ms, rc.leadTicksFor(run.castIndex, start), anchor);
@@ -124,10 +132,14 @@ for (const line of lines) {
   }
   // Rule (11-13): t=0 is the window's start only (the replay was just reset; the units are stand-in pawns there).
   if (o('times') !== undefined && o('times').split(',').some(t => Number(t) === 0)) warn.push('t=0 is the window start (stand-in pawns), not a keyframe: keyframes.cjs skips it');
+  // --items: items not advised for acceptance rows, and items that change attack/mana timing (item-advice.cjs). Warnings only.
+  const advice = itemAdvice(setup.items);
+  if (advice.warn.length) warn.push(`items not advised for acceptance rows (item-advice.cjs): ${advice.warn.join(', ')}`);
+  if (advice.tempo.length) warn.push(`items change attack/mana timing (caption says so): ${advice.tempo.join(', ')}`);
   // With an asked-for window the anchor cast may fall after it (fine when the attacks are the point): say so.
   if (custom && a.castTick > a.to) warn.push(`anchor cast (#${start.castNumber}) at tick ${a.castTick} is after the window (ticks ${a.from}-${a.to})`);
-  results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, anchorLabel: anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'attack-hit' : `event:${anchor.type}`, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts, ...modeTags, ...(o('foe-offset') !== undefined ? { foeOffset: Number(o('foe-offset')) } : {}), ...(allyLine ? { allyLine: { ...allyLine, min: Number.isFinite(allyLine.min) ? +allyLine.min.toFixed(2) : null } } : {}), ...(custom ? { anchorCast: start.castNumber, anchor: o('anchor') ?? 'cast', windowStart: start.fromStart ? 'combat start' : `${start.leadMs ?? 500} ms before the anchor cast` } : {}) });
+  results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, anchorLabel: anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'attack-hit' : `event:${anchor.type}`, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts, ...modeTags, ...(setup.items ? { items: rc.itemsLabel(setup.items) } : {}), ...(setup.ally2 ? { ally2: setup.ally2 } : {}), ...(o('foe-offset') !== undefined ? { foeOffset: Number(o('foe-offset')) } : {}), ...(allyLine ? { allyLine: { ...allyLine, min: Number.isFinite(allyLine.min) ? +allyLine.min.toFixed(2) : null } } : {}), ...(custom ? { anchorCast: start.castNumber, anchor: o('anchor') ?? 'cast', windowStart: start.fromStart ? 'combat start' : `${start.leadMs ?? 500} ms before the anchor cast` } : {}) });
 }
-for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.pinFoe ? ` pinned dummy ${r.pinFoe} hex${r.pinFoe2 ? ` + ${r.pinFoe2} in line` : ''}` : ''}${r.hideUnits ? ' units hidden' : ''}${r.castTick !== undefined ? ` ${r.anchorLabel ?? 'cast'}@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.allyLine ? ` ally line to ${r.allyLine.to} ${r.allyLine.min ?? 'clear'}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}${r.warn?.length ? ' | WARN ' + r.warn.join('; ') : ''}`);
+for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.mode.padEnd(5)} ${r.name}${r.pinFoe ? ` pinned dummy ${r.pinFoe} hex${r.pinFoe2 ? ` + ${r.pinFoe2} in line` : ''}` : ''}${r.hideUnits ? ' units hidden' : ''}${r.items ? ` items ${r.items}` : ''}${r.castTick !== undefined ? ` ${r.anchorLabel ?? 'cast'}@${r.castTick} window ${r.window.join('-')} targets ${r.targets.join(',')}` : ''}${r.allyLine ? ` ally line to ${r.allyLine.to} ${r.allyLine.min ?? 'clear'}` : ''}${r.why?.length ? ' | ' + r.why.join('; ') : ''}${r.warn?.length ? ' | WARN ' + r.warn.join('; ') : ''}`);
 if (opt('out')) writeFileSync(resolve(opt('out')), JSON.stringify(results, null, 2));
 process.exit(results.some(r => !r.ok) ? 1 : 0);
