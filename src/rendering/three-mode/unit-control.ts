@@ -73,10 +73,26 @@ export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1, holdFloor: 0.85 } 
  * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down
  * from there (its head at that point, its feet one body height above).
  */
-export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean; readonly pose?: HoldClips }>> = {
-  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true,
+export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean; readonly gripShare?: number; readonly pose?: HoldClips }>> = {
+  // Renni impales the enemy on her chainsaw: the saw's top holds it at the middle of its body (gripShare 0.5, fitted on
+  // the original's lift frames), not by its head.
+  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true, gripShare: 0.5,
     pose: { in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' } },
 };
+/**
+ * How high a held body's feet go above its own spot: the grip's rise, plus, for a body hung upside down, the part of the
+ * body between the grip and its feet (gripShare from its head: 0 by the head, 0.5 at its middle).
+ */
+export function carryRise(gripRise: number, bodyHeight: number, hold: { readonly upsideDown: boolean; readonly gripShare?: number } | undefined): number {
+  return Math.max(0, gripRise + (hold?.upsideDown ? bodyHeight * (1 - (hold.gripShare ?? 0)) : 0));
+}
+/**
+ * The lift its bars and stars take over a held body turned over by `flip` radians about its feet: they sit over the
+ * body's highest point, the feet once it hangs, not one body height above them.
+ */
+export function heldBarLift(lift: number, bodyHeight: number, flip: number): number {
+  return flip ? lift - bodyHeight * (1 - Math.max(0, Math.cos(flip))) : lift;
+}
 /** A holder's own clips for a hold: its cast's lift (`in`), the held pose looped until the rules let go, the slam after. */
 export interface HoldClips { readonly in: string; readonly loop: string; readonly slam: string }
 /** How long a holder's cast waits for its lift before it plays as a plain cast again (no target was lifted). */

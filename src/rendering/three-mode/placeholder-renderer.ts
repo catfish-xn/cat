@@ -61,7 +61,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -827,7 +827,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const gripPoint = new Vector3(), bonePoint = new Vector3(), gripBones = new WeakMap<object, readonly Object3D[]>();
   /**
    * Where the holder's grip wants the held body, as a world offset of its feet from the held piece's spot: the highest of
-   * the holder's grip bones (CARRY_HOLDS), raised one body height for a body hung upside down from there; the holder's
+   * the holder's grip bones (CARRY_HOLDS), raised for a body hung upside down from there (carryRise); the holder's
    * chest height without the bones.
    */
   const gripOffset = (view: PieceView, holder: PieceView): CarryOffset => {
@@ -838,9 +838,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       gripPoint.set(0, -Infinity, 0);
       for (const bone of bones) { bone.getWorldPosition(bonePoint); if (bonePoint.y > gripPoint.y) gripPoint.copy(bonePoint); }
     } else gripPoint.copy(holder.root.position).setY(holder.root.position.y + (holder.starHeight - STAR_GAP) * 0.6);
-    const height = view.starHeight - STAR_GAP;
     return { x: gripPoint.x - view.root.position.x, z: gripPoint.z - view.root.position.z,
-      y: Math.max(0, gripPoint.y - view.root.position.y + (hold?.upsideDown ? height : 0)) };
+      y: carryRise(gripPoint.y - view.root.position.y, view.starHeight - STAR_GAP, hold) };
   };
   /** A piece is held up by another (presentation only): it rises to the holder's grip and follows it until let go. */
   const startCarry = (targetId: string, holderId: string) => {
@@ -2011,7 +2010,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
       lift = Math.max(lift, carryLift);
       releaseControl(view);
-      // A body hung upside down turns over as it rises (about its feet, which the carry put one body height up).
+      // A body hung upside down turns over as it rises (about its feet, which carryRise put above the grip).
       const flip = view.carryHolder && CARRY_HOLDS[pieces.get(view.carryHolder)?.definitionId ?? '']?.upsideDown ? view.carry.progress * Math.PI : 0;
       if (view.leanOffset || view.control.lean || flip) setLean(view, Math.max(view.control.lean, flip));
       if (view.hop !== null) {
@@ -2044,7 +2043,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);
       const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
       const overX = view.root.position.x + (travel?.x ?? 0) + carryX, overZ = view.root.position.z + (travel?.z ?? 0) + carryZ;
-      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
+      // Bars over a held body follow it (x/z with the carry, y over its highest point once it hangs: heldBarLift).
+      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift: heldBarLift(lift, height, flip),
         headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
       const benchedInCombat = !!fighting && view.onBench;

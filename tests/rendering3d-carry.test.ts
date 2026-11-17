@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CARRY_3D, CARRY_HOLDS, CarryMotion, HOLD_LIFT_WAIT_SECONDS, HolderPose } from '../src/rendering/three-mode/unit-control';
+import { CARRY_3D, CARRY_HOLDS, CarryMotion, HOLD_LIFT_WAIT_SECONDS, HolderPose, carryRise, heldBarLift } from '../src/rendering/three-mode/unit-control';
 import type { ActionOutput } from '../src/rendering3d/animation-state';
 
 // A unit held up by another (presentation only; the rules keep it on its cell): it rises to the holder's grip, follows it
@@ -107,5 +107,28 @@ describe('3D: carried by another unit (CarryMotion)', () => {
 
   it('Renni holds with her own stun clips', () => {
     expect(CARRY_HOLDS.renni!.pose).toEqual({ in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' });
+  });
+
+  it('an impaled body hangs with its middle on the grip, not its head (gripShare)', () => {
+    // Grip 100 above the held spot, body 40 tall, hung upside down: feet at 120, head at 80, middle on the grip.
+    expect(carryRise(100, 40, { upsideDown: true, gripShare: 0.5 })).toBe(120);
+    expect(carryRise(100, 40, { upsideDown: true })).toBe(140);
+    expect(carryRise(100, 40, { upsideDown: false })).toBe(100);
+    expect(carryRise(-10, 40, undefined)).toBe(0);
+    expect(CARRY_HOLDS.renni!.gripShare).toBe(0.5);
+  });
+
+  it('bars over a held body follow it up and sit over its feet once it hangs (heldBarLift)', () => {
+    // Upright (no turn): the bars take the whole lift, as a knock-up.
+    expect(heldBarLift(120, 40, 0)).toBe(120);
+    // Fully turned over: the body's top is its feet, so the bars sit one body height lower than over an upright body.
+    expect(heldBarLift(120, 40, Math.PI)).toBeCloseTo(80);
+    // Half way the top is still the feet (the body lies flat).
+    expect(heldBarLift(120, 40, Math.PI / 2)).toBeCloseTo(80);
+    // A quarter turn keeps part of the body above the feet.
+    expect(heldBarLift(120, 40, Math.PI / 4)).toBeCloseTo(120 - 40 * (1 - Math.cos(Math.PI / 4)));
+    // And they move with the carry sideways: the carry's offset is a world offset of the whole body.
+    const m = new CarryMotion(); m.start(); const at = run(m, 0.5, { x: 30, y: 120, z: -10 });
+    expect([at.x, at.z]).toEqual([30, -10]);
   });
 });
