@@ -8,7 +8,7 @@ import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { hexDistance } from './board';
-import { POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from './cast-windup';
+import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -109,19 +109,14 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'powder': {
-      // Wind-up batch 3: the monkey walks to the landing cell taken now (the centre of the most enemies within 2 hexes) and
-      // explodes there on arriving, POWDER_MONKEY_* ticks by distance later (fitted, not original data). Damage and burn are
-      // taken now; who stands within 2 hexes of the cell is read on arrival.
+      // Wind-up batches 3–4: the landing cell (the centre of the most enemies within 2 hexes), the walk's hexes (total - 2),
+      // the amount and whether Menaces is active (ordinal 1) are taken now; she lets the monkey go POWDER_MONKEY_RELEASE_TICKS
+      // later (g2PowderRelease: her death before then stops it), and it explodes POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX per hex after
+      // that (fitted, not original data). Who stands within 2 hexes of the cell is read on arrival.
       const center = enemies(unit, ctx.units).map(t => ({ t, count: enemies(unit, ctx.units).filter(u => hexDistance(t.cell, u.cell) <= 2).length }))
         .sort((a, b) => b.count - a.count || (a.t.id < b.t.id ? -1 : 1))[0]?.t ?? target;
-      const arrival = ctx.tick + POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * hexDistance(unit.cell, center.cell);
-      ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-sent', cell: { ...center.cell }, arrivalTick: arrival });
-      if(teamup(unit,'menaces')){
-        unit.tasks.push({key:JSON.stringify(['v20-powder',unit.id,seq]),kind:'v20Powder',source:origin(unit),executeAtTick:arrival,targetId:target.id,cell:{...center.cell},amount:mag('Damage'),actionSeq:seq,ordinal:ticks('IgniteDuration'),total:Math.round(v('FalloffPercent')*10000),cancellable:false,attachedDot:true});
-        ids.push(target.id);break;
-      }
-      unit.tasks.push({ key: JSON.stringify(['g2-powder-monkey', unit.id, seq]), kind: 'g2PowderMonkey', source: origin(unit), executeAtTick: arrival, targetId: target.id,
-        cell: { ...center.cell }, amount: mag('Damage'), actionSeq: seq, ordinal: 0, total: 1, cancellable: false });
+      unit.tasks.push({ key: JSON.stringify(['g2-powder-release', unit.id, seq]), kind: 'g2PowderRelease', source: origin(unit), executeAtTick: ctx.tick + POWDER_MONKEY_RELEASE_TICKS,
+        targetId: target.id, cell: { ...center.cell }, amount: mag('Damage'), actionSeq: seq, ordinal: teamup(unit, 'menaces') ? 1 : 0, total: 2 + hexDistance(unit.cell, center.cell), cancellable: false });
       ids.push(target.id);
       break;
     }
@@ -132,9 +127,15 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
-      for (const t of targets) { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      // Wind-up batch 4: at 3 stars the gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (g2Landing: damage and shred, targets
+      // taken now); 1 and 2 stars land on the cast. The infection lands 20 ticks after the gate either way.
+      const wait = unit.starLevel === 3 ? MALZAHAR_3STAR_GATE_TICKS : 0;
+      for (const [n, t] of targets.entries()) {
+        if (wait) { task(unit, 'g2Landing', ctx.tick + wait, t.id, mag('Damage'), seq, n, targets.length); ids.push(t.id); }
+        else { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      }
       // Five total stacks: round-robin gives floor(5/N), then +1 in hit order.
-      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
+      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + wait + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
       break;
     }
   }
@@ -195,6 +196,14 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
     }
+  } else if (t.kind === 'g2PowderRelease') {
+    // Powder lets the monkey go: it walks t.total - 2 hexes to its cell (the arrival task, kept through her death from now on).
+    const arrival = ctx.tick + POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * (t.total - 2), cell = { ...t.cell! };
+    ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-sent', cell: { ...cell }, arrivalTick: arrival });
+    if (t.ordinal === 1) unit.tasks.push({ key: JSON.stringify(['v20-powder', unit.id, t.actionSeq]), kind: 'v20Powder', source: t.source, executeAtTick: arrival, targetId: t.targetId,
+      cell, amount: t.amount, actionSeq: t.actionSeq, ordinal: Math.round(variable(unit, 'IgniteDuration') * 20), total: Math.round(variable(unit, 'FalloffPercent') * 10000), cancellable: false, attachedDot: true });
+    else unit.tasks.push({ key: JSON.stringify(['g2-powder-monkey', unit.id, t.actionSeq]), kind: 'g2PowderMonkey', source: t.source, executeAtTick: arrival, targetId: t.targetId,
+      cell, amount: t.amount, actionSeq: t.actionSeq, ordinal: 0, total: 1, cancellable: false });
   } else if (t.kind === 'g2PowderMonkey') {
     // Powder's monkey arrives at its landing cell: everyone within 2 hexes of it now takes the amount taken on the cast, less
     // FalloffPercent per hex, and burns; whoever was the target, alive or not.
@@ -215,6 +224,10 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
         delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
+    else if (name === 'malzahar') { // the 3-star gate: damage (packet n) and shred, on a target taken on the cast
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
+      effect(ctx, unit, target, status('shred', 2000, Math.round(variable(unit, 'ShredDuration') * 20), { activation: 'immediate' }), t.actionSeq);
+    }
     else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
     else if (name === 'zyra') {
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);

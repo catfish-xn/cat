@@ -20,18 +20,30 @@ export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
  * periodic damage instead of on the same tick. Its amount is still taken on the cast. */
 export const NUNU_SECOND_AFTER_PULSE_TICKS = 9;
 
-/** Wind-up batch 3 (fitted, not original data): Powder's monkey walks to the landing cell taken on her cast and explodes on
- * arriving, POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × the hexes from her to that cell after the cast. */
-export const POWDER_MONKEY_BASE_TICKS = 18;
+/** Wind-up batches 3–4 (fitted, not original data): Powder lets her monkey go POWDER_MONKEY_RELEASE_TICKS after her cast; it
+ * walks to the landing cell taken on the cast and explodes on arriving, POWDER_MONKEY_WALK_BASE_TICKS +
+ * POWDER_MONKEY_TICKS_PER_HEX × the hexes from her (where she stood on the cast) to that cell after letting go. */
+export const POWDER_MONKEY_RELEASE_TICKS = 23;
+export const POWDER_MONKEY_WALK_BASE_TICKS = 1;
 export const POWDER_MONKEY_TICKS_PER_HEX = 6;
 
 /** Wind-up batch 3 (fitted, not original data): Renata's missiles fly this many ticks, so they leave her CAST_WINDUP_TICKS.renata
  * minus this after the cast. Once they have left, her death no longer stops them; before that it does. */
 export const RENATA_MISSILE_FLIGHT_TICKS = 12;
 
+/** Wind-up batch 4 (fitted, not original data; based on 3-star footage only): Malzahar's gate at 3 stars lands this many ticks
+ * after the cast (damage and shred; the infection keeps landing 20 ticks after it). 1 and 2 stars keep landing on the cast. */
+export const MALZAHAR_3STAR_GATE_TICKS = 26;
+
+/** Wind-up batch 4 (fitted, not original data): Renni lifts her target (stun start) this many ticks after her cast; her stun's
+ * per-tick damage and self-heal move with it, and the closing slam lands RENNI_SLAM_AFTER_STUN_TICKS after the stun ends. */
+export const RENNI_LIFT_TICKS = 8;
+export const RENNI_SLAM_AFTER_STUN_TICKS = 2;
+
 /**
  * Wind-up batch 3 (fitted, not original data): a pending landing that has already left its caster lands even if the caster
- * dies; one still in the wind-up does not. Powder's monkey leaves on her cast; Renata's missiles leave
+ * dies; one still in the wind-up does not. Powder's monkey walks once she has let it go (the arrival task is only made then);
+ * Renata's missiles leave
  * RENATA_MISSILE_FLIGHT_TICKS before they land.
  */
 export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string } }, tick: number): boolean {

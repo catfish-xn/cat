@@ -853,6 +853,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.alive = false; unit.targetId = null; delete unit.targetEngaged; delete unit.meleeApproach; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
+      // Display only: a Renni lift in progress (stun started, its per-tick pulses still pending) ends at once when its holder or
+      // its target dies (carryChanged false).
+      for (const holder of units) {
+        if (champion(holder) !== 'renni' || !(holder.id === unit.id || holder.alive)) continue;
+        const n = Math.round(variable(holder, 'StunDuration') * 20);
+        const pulse = holder.tasks.find(t => t.kind === 'g23Physical' && t.source.definitionId === 'renni-ability' && t.total === n
+          && !holder.tasks.some(l => l.kind === 'g23RenniLift' && l.actionSeq === t.actionSeq) && (holder.id === unit.id || t.targetId === unit.id));
+        if (pulse) events.push({ type: 'carryChanged', tick, holderId: holder.id, targetId: pulse.targetId!, carried: false });
+      }
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce' || releasedLanding(t, tick)));
       events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit, killed.get(unit.id) ?? null,
         tracksCabalTakedowns(units)?sampleCabalTakedowns(units,unit.id,[...(killed.has(unit.id)?[killed.get(unit.id)!.ownerId]:[]),...(damageContributors[unit.id]??[])]):undefined, lootExplosionKills.get(unit.id)));

@@ -445,10 +445,10 @@
     },
     "tests/augment-pool-batch5-r2-anomaly.test.ts": {
       "previousBytes": 19930,
-      "currentBytes": 22375,
+      "currentBytes": 23548,
       "previousSha256": "d06518bad5e9f17370aeefe7168f363560419c66c543665ca71c01438ab4b2f2",
-      "currentSha256": "038388952bab81787efc0afb20e2b02b4fcffc54f5b719bb7462cb9772968fca",
-      "firstDifferentByte": 1467
+      "currentSha256": "21649f0b0094796633aed7168feb7dc896957dc1a54126cda6cae6633424fe48",
+      "firstDifferentByte": 1080
     },
     "tests/augment-pool-batch5-r2.test.ts": {
       "previousBytes": 14065,
@@ -702,9 +702,17 @@
     "tests/cast-windup-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11333,
+      "currentBytes": 12095,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "50d70aad93a9e1674c2add23120ba6a0831f0bfaa6538bb58c9021311b7b75f5",
+      "currentSha256": "7713520587d18f38cebcc07a657ec8274ee5c2d5ccef99b561906d64879fe90c",
+      "firstDifferentByte": 0
+    },
+    "tests/cast-windup-batch4.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10757,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2cac00f6d0e005a64b1a37c9e1186ab87071fece43227a5fa7b079620ea3c740",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
@@ -882,16 +890,16 @@
     },
     "tests/five-cost-fixes.test.ts": {
       "previousBytes": 10037,
-      "currentBytes": 10481,
+      "currentBytes": 10888,
       "previousSha256": "fe2713cec2f30cb12732f948fb7a72e1307ea8c685527fadc2bfa74de4944bc2",
-      "currentSha256": "9b6f4af772dead0076bdf3ddb16d54fa0f41aea6f0c7abadcf88741026ab450e",
-      "firstDifferentByte": 2261
+      "currentSha256": "48e1c922803ae5bcd118ca1447459bcd2c55a2de18c1b4f8b8d4d372fbfacbbe",
+      "firstDifferentByte": 502
     },
     "tests/five-cost-geometry.test.ts": {
       "previousBytes": 6253,
-      "currentBytes": 6307,
+      "currentBytes": 6551,
       "previousSha256": "373025bb8bd6bdb0687fc34154b55ab6f11fc8b821a08459ccb7e750d5d7882d",
-      "currentSha256": "44c9241a3c64a0cfe8756b924806ac4073613cf58c122ff98879d69ec82cc674",
+      "currentSha256": "6abc36290eaab83f4560aabd595d119d0c1e5b1fe283a3befec33575c1fceecf",
       "firstDifferentByte": 5533
     },
     "tests/five-cost-replay.test.ts": {
@@ -1263,9 +1271,9 @@
     },
     "tests/g2-1-skills.test.ts": {
       "previousBytes": 8625,
-      "currentBytes": 10336,
+      "currentBytes": 10801,
       "previousSha256": "20bcd6ee5e5f97f70f5314a0ecda687a9a2a8a962308c424d59e28e2ec10d389",
-      "currentSha256": "a9ac89f58b9118b4a979783fb95533d14db6c9a93f8d20a7c7d4875f4a5eb50f",
+      "currentSha256": "48eb637834bbcb3b7a7c35fdc29809235536ff3411f581f0928e52dfdc17bbba",
       "firstDifferentByte": 406
     },
     "tests/g2-2-skills.test.ts": {
@@ -1306,9 +1314,9 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 10862,
+      "currentBytes": 11144,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "5eddfb0dbaecc479908fb0f41ad2bf33bd791627002f47460323bf034674e946",
+      "currentSha256": "f60564cb0431e537b387bc22908b0071850318f46c2721af455d56b24cc3a664",
       "firstDifferentByte": 215
     },
     "tests/g2-4a-crown-gold.test.ts": {
@@ -3356,9 +3364,9 @@
     },
     "tests/server/v17-avarice-battle-end-frozen.test.ts": {
       "previousBytes": 1925,
-      "currentBytes": 2874,
+      "currentBytes": 2997,
       "previousSha256": "e64a8ef5877d3e802c60d8f562466b8c1382fa992715fdec07d5cd069c2a9893",
-      "currentSha256": "18cbd5eb7a94cec089b8d5f1429c78774241a71cb3e754501951f24a57d3fd1b",
+      "currentSha256": "2a5f37e9350a3c2311ade41521ee5c22c5f44a67de6dda62df2f6aa41cc9dfa2",
       "firstDifferentByte": 1020
     },
     "tests/server/v17-avarice-earnings.test.ts": {
@@ -3635,10 +3643,10 @@
     },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
-      "currentBytes": 31136,
+      "currentBytes": 31425,
       "previousSha256": "306db3e2e9990c8e5ae43c10897bc689428b864fbc5ac687f0aad1e329d3d62d",
-      "currentSha256": "8e14cc41742733ad4f0a174030c3fe0408886c113ee72e131a70ad9c3ab432c5",
-      "firstDifferentByte": 7461
+      "currentSha256": "ad25afb5555fde5b4d7c3bdf2515a9eb65c7a021188cc759fd5d94e337aab1ed",
+      "firstDifferentByte": 56
     },
     "tests/v23-restore-fuzz.test.ts": {
       "previousBytes": 18126,
@@ -4105,9 +4113,9 @@
     "tests/vfx-ltk-renni-q.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4645,
+      "currentBytes": 4902,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "91f6843006ce464781fffcbdf66cf977beb8031ae7ab6c876981a4a3bdc8923e",
+      "currentSha256": "ec0fa89430e1f85ecf70df43a222b45d10bf90ae95c3afff196c560042f04ad7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
