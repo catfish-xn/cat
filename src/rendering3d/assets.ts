@@ -1,7 +1,8 @@
 import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata } from './contracts';
+import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility } from './contracts';
+import { HELD_SUBMESHES, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
 import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
@@ -9,6 +10,8 @@ export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
 export interface ModelLease extends ModelTemplate, CastMetadata {
   placeholder: boolean;
   animationNames: AnimationNames;
+  /** The manifest's submesh visibility; the lease's scene already hides its `initiallyHidden` submeshes. */
+  submeshVisibility?: SubmeshVisibility;
   release(): void;
 }
 interface Entry { promise: Promise<ModelTemplate>; model?: ModelTemplate; refs: number; retired: boolean; placeholder: boolean }
@@ -122,6 +125,11 @@ export class ModelCache {
           }
           model = { ...model, animations };
         }
+        const unswitched = created.placeholder ? [] : unswitchedClips(model.scene, definition?.submeshVisibility);
+        if (unswitched.length) {
+          const missing = [...new Set(unswitched.flatMap(entry => entry.missing))].join(', ');
+          console.warn(`[submesh-visibility] ${id}: ${unswitched.length} clip(s) switch nothing, model lacks ${missing}: ${unswitched.map(entry => entry.clip).join(', ')}`);
+        }
         created.model = model;
         return model;
       });
@@ -132,6 +140,8 @@ export class ModelCache {
     const current = entry;
     const model = await current.promise;
     const scene = clone(model.scene);
+    const submeshVisibility = withoutHeld(this.manifest.models[id]?.submeshVisibility, Object.hasOwn(HELD_SUBMESHES, id) ? HELD_SUBMESHES[id] : undefined);
+    hideInitialSubmeshes(scene, submeshVisibility);
     let released = false;
     return { scene, animations: model.animations, placeholder: current.placeholder,
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
@@ -139,6 +149,7 @@ export class ModelCache {
       attackSequence: this.manifest.models[id]?.attackSequence,
       attackRelease: this.manifest.models[id]?.attackRelease,
       statusPose: this.manifest.models[id]?.statusPose,
+      submeshVisibility,
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

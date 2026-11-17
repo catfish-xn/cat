@@ -127,6 +127,10 @@ export async function buildAssetRoot({ roots, out, force = false, submeshSource,
     const models = new Map(Object.keys(merged.owners.models).map(id => [id, { entry: merged.manifest.models[id], data: payloads.get(merged.manifest.models[id].path).data }]));
     const uncompressed = [...models.values()].some(m => !(readGlb(m.data).document.extensionsUsed ?? []).includes('EXT_meshopt_compression'));
     if (uncompressed) {
+      const { access } = await import('node:fs/promises');
+      await access(resolve(submeshSource, 'extraction.json')).catch(() => {
+        throw new Error(`submesh-source-missing:${submeshSource}/extraction.json (no extraction cache here: pass --submesh-source <cache> or --no-submesh-patch)`);
+      });
       const [{ patchModels }, { loadUnitMap }] = await Promise.all([import('./submesh-patch.mjs'), import('./local-config.mjs')]);
       const results = await patchModels({ models, source: submeshSource, map: await loadUnitMap(), appendGeometry: submeshGeometry }), rows = {};
       for (const [id, result] of Object.entries(results)) {

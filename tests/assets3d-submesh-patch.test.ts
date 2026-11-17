@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { createHash } from 'node:crypto';
+// @ts-expect-error Offline Node script.
+import { buildAssetRoot } from '../scripts/assets3d/build-asset-root.mjs';
 // @ts-expect-error Pure Node build utility.
 import { makeModel, validateModel } from '../scripts/assets3d/model.mjs';
 // @ts-expect-error Pure Node build utility.
@@ -147,4 +153,73 @@ describe('submesh patch', () => {
     expect(entry.submeshVisibility.initiallyHidden).toEqual(['Prop']);
     expect(report).toMatchObject({ changed: true, appended: [{ name: 'Prop', shownIn: ['x_spellprop'] }] });
   });
+
+  it('the merge entry runs it from an extraction cache: models stay byte for byte, the manifest gets the events', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'submesh-merge-'));
+    try {
+      const put = async (path: string, data: string | Buffer) => { await mkdir(dirname(join(root, path)), { recursive: true }); await writeFile(join(root, path), data); };
+      const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+      const f = fixtures(), model = makeModel(f.mesh, f.rig, [{ name: 'x_spellprop', bytes: anm() }], { Body: f.body }, { hiddenSubmeshes: ['Prop'] }).glb;
+      await put('input/manifest.json', JSON.stringify({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb' } } }));
+      await put('input/models/x/model.glb', model);
+      // The extraction cache: the mesh and the skin bin (holding the animation graph too), each recorded in extraction.json.
+      const files: Record<string, Buffer> = {
+        'assets/characters/x/skins/base/x.skn': f.mesh,
+        'data/characters/x/skins/skin0.bin': prop([
+          { hash: 1, type: 'SkinCharacterDataProperties', fields: [
+            field('skinMeshProperties', embed('SkinMeshDataProperties', [
+              field('simpleSkin', str('x.skn')), field('skeleton', str('x.skl')), field('texture', str('body.tex')),
+              field('initialSubmeshToHide', str('Prop')),
+              field('materialOverride', list(0x83, [embed('SkinMeshDataProperties_MaterialOverride', [field('texture', str('prop.tex')), field('submesh', str('Prop'))])])),
+            ])),
+            field('skinAnimationProperties', embed('SkinAnimationProperties', [field('animationGraphData', [0x84, u32(77)])])),
+          ] },
+          { hash: 77, type: 'AnimationGraphData', fields: [
+            field('mClipDataMap', map(17, 0x82, [[u32(fnv1a('Spell')), embed('AtomicClipData', [
+              field('mAnimationResourceData', embed('AnimationResourceData', [field('mAnimationFilePath', str('ASSETS/Characters/X/Skins/Base/Animations/X_SpellProp.TFT_Set13.anm'))], 0x82)),
+              field('mEventDataMap', map(17, 0x82, [[u32(1), embed('SubmeshVisibilityEventData', [
+                field('mStartFrame', [10, f32(4)]), field('mShowSubmeshList', list(17, [u32(fnv1a('Prop'))])),
+              ], 0x82)[1]]])),
+            ], 0x82)[1]]])),
+          ] },
+        ]),
+      };
+      for (const [path, bytes] of Object.entries(files)) await put(`cache/extracted/${path}`, bytes);
+      await put('cache/extraction.json', JSON.stringify({ files: Object.entries(files).map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: sha(bytes) })) }));
+      await put('unit-map.json', JSON.stringify({ $animationRules: { idle: 1, move: 1, attack: 1, cast: 1, hit: 1, death: 1 },
+        x: { sourceName: 'x', base: 'assets/characters/x/skins/base', mesh: 'x.skn' } }));
+      vi.stubEnv('ASSETS3D_UNIT_MAP', join(root, 'unit-map.json'));
+      await buildAssetRoot({ roots: [join(root, 'input')], out: join(root, 'out'), submeshSource: join(root, 'cache') });
+      const manifest = JSON.parse(await readFile(join(root, 'out/manifest.json'), 'utf8'));
+      expect(manifest.models.x.submeshVisibility).toEqual({ events: { x_spellprop: [{ frame: 4, show: ['Prop'], hide: [] }] } });
+      expect(sha(await readFile(join(root, 'out', manifest.models.x.path)))).toBe(sha(model));
+      const report = JSON.parse(await readFile(join(root, 'out/merge-report.json'), 'utf8')).submeshPatch;
+      expect(report).toMatchObject({ applied: true, geometry: false, changed: [], models: { x: { changed: false, wouldAppend: [{ name: 'Prop' }] } } });
+      // Without an extraction cache the merge stops and says how to go on.
+      await expect(buildAssetRoot({ roots: [join(root, 'input')], out: join(root, 'out2'), submeshSource: join(root, 'none') }))
+        .rejects.toThrow(/submesh-source-missing.*--no-submesh-patch/);
+    } finally { vi.unstubAllEnvs(); await rm(root, { recursive: true, force: true }); }
+  });
 });
+
+// A minimal binary PROP writer for the cache fixture: each value is [type, encoded bytes] in parseBin's layout.
+type Bin = [number, Buffer];
+function u32(n: number) { const b = Buffer.alloc(4); b.writeUInt32LE(n >>> 0); return b; }
+function u16(n: number) { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; }
+function f32(n: number) { const b = Buffer.alloc(4); b.writeFloatLE(n); return b; }
+const sized = (b: Buffer) => Buffer.concat([u32(b.length), b]);
+const fieldList = (fields: Buffer[]) => Buffer.concat([u16(fields.length), ...fields]);
+function field(name: string, [type, bytes]: Bin) { return Buffer.concat([u32(fnv1a(name)), Buffer.from([type]), bytes]); }
+function str(s: string): Bin { const b = Buffer.from(s, 'utf8'); return [16, Buffer.concat([u16(b.length), b])]; }
+function embed(type: string, fields: Buffer[], kind = 0x83): Bin { return [kind, Buffer.concat([u32(fnv1a(type)), sized(fieldList(fields))])]; }
+function list(itemType: number, items: (Buffer | Bin)[]): Bin {
+  return [0x80, Buffer.concat([Buffer.from([itemType]), sized(Buffer.concat([u32(items.length), ...items.map(i => Buffer.isBuffer(i) ? i : i[1])]))])];
+}
+function map(keyType: number, valueType: number, pairs: [Buffer, Buffer][]): Bin {
+  return [0x86, Buffer.concat([Buffer.from([keyType, valueType]), sized(Buffer.concat([u32(pairs.length), ...pairs.flat()]))])];
+}
+function prop(entries: { hash: number; type: string; fields: Buffer[] }[]) {
+  return Buffer.concat([Buffer.from('PROP'), u32(3), u32(0), u32(entries.length), ...entries.map(e => u32(fnv1a(e.type))),
+    ...entries.map(e => sized(Buffer.concat([u32(e.hash), fieldList(e.fields)])))]);
+}
+
