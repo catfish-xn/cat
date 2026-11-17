@@ -200,11 +200,15 @@
   {
     "seed": 631,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415
+    ],
+    "deathTick": 500,
+    "lastLivingPulse": 4
   },
   {
     "seed": 639,
@@ -236,14 +240,9 @@
   {
     "seed": 1453,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      199,
-      287,
-      404,
-      521
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -641,9 +640,14 @@
   {
     "seed": 4533,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415,
+      532
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1213,14 +1217,9 @@
   {
     "seed": 9130,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      154,
-      227,
-      300,
-      361
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1326,9 +1325,14 @@
   {
     "seed": 10631,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415,
+      530
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1362,11 +1366,13 @@
   {
     "seed": 10647,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      201
+    ],
+    "deathTick": 362,
+    "lastLivingPulse": 2
   },
   {
     "seed": 10653,
@@ -1479,14 +1485,9 @@
   {
     "seed": 10747,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      199,
-      287,
-      404,
-      521
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1789,7 +1790,7 @@
     "firstPulse": 197,
     "bracerTicks": [
       222,
-      281,
+      286,
       404,
       521
     ],
@@ -1900,11 +1901,15 @@
   {
     "seed": 16289,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415
+    ],
+    "deathTick": 500,
+    "lastLivingPulse": 4
   },
   {
     "seed": 16290,
@@ -1918,9 +1923,14 @@
   {
     "seed": 16305,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      202,
+      284,
+      393,
+      502
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2017,14 +2027,9 @@
   {
     "seed": 16680,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      198,
-      286,
-      403,
-      520
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2157,14 +2162,9 @@
   {
     "seed": 16821,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      199,
-      287,
-      404,
-      521
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2441,9 +2441,14 @@
   {
     "seed": 22419,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415,
+      532
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2486,14 +2491,9 @@
   {
     "seed": 22441,
     "accepted": false,
-    "grantTick": 80,
-    "firstPulse": 180,
-    "bracerTicks": [
-      199,
-      287,
-      404,
-      521
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2589,14 +2589,1411 @@
   },
   {
     "seed": 22496,
-    "accepted": true,
-    "grantTick": 80,
-    "firstPulse": 180,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22503,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22504,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22511,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22512,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22519,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22520,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22527,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23105,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23113,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23120,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23121,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23131,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23132,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23138,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23139,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23146,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23147,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23856,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23857,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23942,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23943,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23950,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23951,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23958,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23974,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23981,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23982,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23989,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23990,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23997,
+    "accepted": false,
+    "grantTick": 92,
+    "firstPulse": 192,
     "bracerTicks": [
-      199,
-      375
+      210,
+      298,
+      415,
+      532
     ],
-    "deathTick": 446,
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24004,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24005,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24012,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24013,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24020,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24021,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24028,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24029,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24036,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24043,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24044,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24051,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24052,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24059,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24060,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28422,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28429,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28430,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28437,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28438,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28446,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28452,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28453,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28460,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28461,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28468,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28469,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28476,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28507,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28515,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28516,
+    "accepted": false,
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      197
+    ],
+    "deathTick": 366,
+    "lastLivingPulse": 2
+  },
+  {
+    "seed": 28522,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28523,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28530,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28531,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28539,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28554,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28608,
+    "accepted": false,
+    "grantTick": 226,
+    "firstPulse": 326,
+    "bracerTicks": [
+      264,
+      390,
+      410,
+      551
+    ],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28609,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28616,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28624,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28631,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28632,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28639,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28648,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28656,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28657,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28658,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28666,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29953,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29962,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29969,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29970,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29977,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29978,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29985,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29986,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29992,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29993,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30000,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30001,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30008,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30009,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30048,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30055,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30070,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30078,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30079,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30086,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30087,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30094,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30095,
+    "accepted": false,
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      210,
+      298,
+      415
+    ],
+    "deathTick": 500,
+    "lastLivingPulse": 4
+  },
+  {
+    "seed": 30101,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30102,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30109,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30148,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30149,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30156,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30157,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30164,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30172,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30179,
+    "reason": "Error: Public B8 equipment fixture: wrong-phase"
+  },
+  {
+    "seed": 30180,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30195,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30196,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30203,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30204,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31493,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31494,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31501,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31502,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31509,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31510,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31517,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31525,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31532,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31533,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31540,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31541,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31548,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31549,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31619,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31626,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31627,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31633,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31634,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31641,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31642,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31649,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31657,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31658,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31680,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31681,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31688,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31689,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31696,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31697,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31704,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31705,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31712,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31719,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31720,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31727,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31728,
+    "accepted": true,
+    "grantTick": 92,
+    "firstPulse": 192,
+    "bracerTicks": [
+      197,
+      396
+    ],
+    "deathTick": 474,
     "lastLivingPulse": 3
   }
 ]

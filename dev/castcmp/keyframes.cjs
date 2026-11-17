@@ -20,6 +20,7 @@ const MAX_BYTES = 2 * 1024 * 1024;
 const columns = ['before', 'after', 'off', 'debug'].filter(k => opt(k)).map(k => ({ key: k, dir: path.resolve(opt(k)) }));
 
 const { frames } = require('./frames.cjs');
+const { itemAdvice } = require('./item-advice.cjs');
 const gateOf = dir => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'gate.json'), 'utf8')); } catch { return null; } };
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 // A caption with CJK text (the --pin-foe / --hide-units labels) names CJK fallback fonts too; plain ASCII captions are unchanged.
@@ -104,6 +105,9 @@ async function encode(base, name) {
     `${opt('hero')}  system ${opt('system')}  t=${rows.map(i => after.frames[i].t).join('/')}ms (peak ${after.frames[peak].t}ms by ${fixed?.length ? 'times' : pickedBy.split(' ')[0]}, mean |before-after| ${best.toFixed(1)})`,
     ...(opt('note') ? [`times: ${opt('note').replace(/_/g, ' ')}`] : []),
     `${sets.map(s => `${s.key}:${commit(s)}`).join('  ')}  assets ${g.snapshot ?? '?'}  ${g.machine ?? '?'} ${g.gl ?? ''}`,
+    // --items (v-capture): what each unit of the caster's side carried, per column when they differ.
+    // Items that change attack or mana timing (item-advice.cjs TEMPO_ITEMS) are named as such.
+    ...(sets.some(s => s.gate?.items) ? [`items ${[...new Set(sets.map(s => s.gate?.items ? Object.entries(s.gate.items).map(([h, l]) => `${h}=${l.join('+')}`).join(' ') : 'none'))].join(' | ')}${(() => { const t = [...new Set(sets.flatMap(s => itemAdvice(s.gate?.items).tempo))]; return t.length ? `  改了出手/攒蓝节奏: ${t.join(', ')}` : ''; })()}`] : []),
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex${g.pinFoe2 ? ` + ${g.pinFoe2} hex in line` : ''} (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];

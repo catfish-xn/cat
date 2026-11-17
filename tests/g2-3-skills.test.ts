@@ -9,7 +9,7 @@ function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'e
 const raw=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.raw);
 it.each([
  ['renata',[310]],['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
- ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190,190,190]],['jayce',[500]],['jayce-ranged',[625,400,400]],
+ ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190]],['jayce',[500]],['jayce-ranged',[625,400,400]],
 ] as const)('%s source-backed first-cast coefficients',(name,expected)=>{
  const initial=freeze(battle([hero(name),dummy()],{rngState:42})),saved=JSON.stringify(initial);
  expect(raw(stepCombat(initial).events)).toEqual(expected);expect(JSON.stringify(initial)).toBe(saved);
@@ -26,9 +26,12 @@ it('Cassiopeia every third cast splashes only two other targets',()=>{
 it('Mundo splits the complete 1550 healing without truncation or duplicate pulses',()=>{
  let state=battle([hero('drmundo'),dummy()],{rngState:42});const events:CombatEvent[]=[];
  // 2026-11-16: the whole heal and pulses start CAST_WINDUP_TICKS.drmundo after the cast; the window grows by as much.
- for(let i=0;i<41+CAST_WINDUP_TICKS.drmundo;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
+ // Wind-up batch 2: the closing blast lands DRMUNDO_BLAST_AFTER_PULSE_TICKS after the last pulse; the window grows by as much.
+ for(let i=0;i<41+CAST_WINDUP_TICKS.drmundo+DRMUNDO_BLAST_AFTER_PULSE_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
  expect(heals(events).filter(e=>e.unitId==='p').map(e=>e.requested)).toEqual([620,465,465]);
  expect(raw(events)).toEqual([120,120,350]);
+ const ticks=packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.tick);
+ expect(ticks[2]!-ticks[1]!).toBe(DRMUNDO_BLAST_AFTER_PULSE_TICKS);
 });
 it('Renni delayed damage and healing conserve complete source amounts',()=>{
  let state=battle([hero('renni'),dummy()],{rngState:42});const events:CombatEvent[]=[];
@@ -54,21 +57,44 @@ it('Rumble3 self-destruct deals20000% resists before last-unit elimination',()=>
  const r=stepCombat(battle([player,enemy],{rngState:42}));
  const explosion=packets(r.events).find(p=>p.source.definitionId==='junker-king');expect(explosion?.raw).toBe(20000);expect(r.state.result).toBe('draw');
 });
-it('Smeech leaps again only after a kill, with the next three slashes reduced by source30%',()=>{
+// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart; a dead target's next stab slot is the re-leap
+// (SMEECH_STAB_TICKS after the death), and a target that dies on the last stab is checked SMEECH_STAB_TICKS after it.
+it('Smeech stabs three times, SMEECH_STAB_TICKS apart, each 190 taken on the cast',()=>{
+ let state=battle([hero('smeech'),dummy()],{rngState:42});const at:[number,number][]=[];
+ for(let i=0;i<=2*SMEECH_STAB_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;
+  for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability'))at.push([i,p.raw]);}
+ expect(at).toEqual([[0,190],[SMEECH_STAB_TICKS,190],[2*SMEECH_STAB_TICKS,190]]);
+});
+it('Smeech leaps again one stab interval after a kill, with the next three slashes reduced by source30%',()=>{
  let state=battle([hero('smeech'),dummy('e',{hp:1,maxHp:1}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});
  const first=stepCombat(state);state=first.state;
  expect(state.units.find(u=>u.id==='e')!.alive).toBe(false);
  expect(state.units.find(u=>u.id==='p')!.tasks?.some(t=>t.kind==='g23Smeech')).toBe(true);
- const second=stepCombat(state);
- expect(packets(second.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>p.raw)).toEqual([133,133,133]);
- expect(second.events.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
+ const later:CombatEvent[]=[];
+ for(let i=0;i<4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;later.push(...step.events);}
+ const hits=packets(later).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability');
+ // The target dies on the cast's first stab; the next stab slot is the re-leap, whose three stabs are 133 each.
+ expect(hits.map(p=>[p.unitId,p.raw])).toEqual([['far',133],['far',133],['far',133]]);
+ expect(hits.map(p=>p.tick-first.state.tick)).toEqual([1,2,3].map(i=>i*SMEECH_STAB_TICKS));
+ expect(later.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
+});
+
+it('Smeech: a target killed by a later stab is followed by the re-leap one stab interval later; a target that lives takes all three',()=>{
+ for(const [hp,leapAt] of [[380,2*SMEECH_STAB_TICKS],[570,3*SMEECH_STAB_TICKS]] as const){
+  let state=battle([hero('smeech'),dummy('e',{hp,maxHp:hp}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});const start=state.tick;const all:CombatEvent[]=[];
+  for(let i=0;i<=4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;all.push(...step.events);}
+  const hits=packets(all).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>[p.unitId,p.tick-start-1]);
+  const onE=hits.filter(([id])=>id==='e'),onFar=hits.filter(([id])=>id==='far');
+  expect(onE.map(([,t])=>t),String(hp)).toEqual(Array.from({length:leapAt/SMEECH_STAB_TICKS},(_,i)=>i*SMEECH_STAB_TICKS));
+  expect(onFar[0]?.[1],String(hp)).toBe(leapAt);
+ }
 });
 
 import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

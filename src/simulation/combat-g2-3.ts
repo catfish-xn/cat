@@ -1,5 +1,5 @@
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -48,6 +48,16 @@ function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
  if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
+/** One leap's stabs: the first now, the rest SMEECH_STAB_TICKS apart (amounts taken now); SMEECH_STAB_TICKS after the last,
+ * the re-leap check. A stab that finds its target dead runs that check at once instead (the re-leap comes one stab interval
+ * after the death, not after the remaining stabs). leap 0 is the cast (packet ordinals 0..n-1); a re-leap numbers its packets
+ * 2000+leap*n+i as before. */
+function smeechStabs(ctx:AbilityContext,u:S13Unit,target:S13Unit,raw:number,seq:number,leap:number,total:number):void{
+ const n=variable(u,'BaseNumStabs'),ordinal=(i:number)=>leap===0?i:2000+leap*n+i;
+ hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');
+ for(let i=1;i<n;i++)later(ctx,u,target,'g23Stab',i*SMEECH_STAB_TICKS,split(raw,n,i),seq,ordinal(i),n);
+ later(ctx,u,target,'g23Smeech',n*SMEECH_STAB_TICKS,raw,seq,leap+1,total);
+}
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
 }
@@ -117,9 +127,10 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       applyStatus(u,origin(u),'damageReduction',Math.round(v('Durability')*10000),Math.round(v('DamageDuration')*20),ctx.tick,ctx.events,true);
       // 原版对照（用户 2026-11-11 批准）：施法期间锁定 DamageDuration 秒，原地不动、不普攻（channel：禁移动/普攻/施法，被控打断）。
       applyStatus(u,origin(u),'channel',0,Math.round(v('DamageDuration')*20),ctx.tick,ctx.events,true,'',seq);
+      // The second damage lands NUNU_SECOND_AFTER_PULSE_TICKS after the last periodic one (wind-up batch 2); amounts taken now.
       for(let n=0;n<ticks;n++)for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))
         later(ctx,u,x,'g23Magic',Math.round((n+1)*20/v('DamageTicksPerSecond')),mag('Damage'),seq,n,ticks);
-      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))later(ctx,u,x,'g23Magic',Math.round(v('DamageDuration')*20),mag('SecondDamage'),seq,ticks,ticks+1);break;
+      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))later(ctx,u,x,'g23Magic',Math.round(v('DamageDuration')*20)+NUNU_SECOND_AFTER_PULSE_TICKS,mag('SecondDamage'),seq,ticks,ticks+1);break;
     }
     case 'renni':{
       // Savage Revenge (P): pounce on the farthest enemy within PounceRange (else the target); enemies on the straight line
@@ -139,14 +150,15 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'drmundo':{
       const total=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('PercentHealthHeal')}),initial=Math.floor(total*v('PercentofHealImmediately')),seconds=Math.round(v('Duration'));
-      // Everything lands CAST_WINDUP_TICKS after the cast (the first heal too); amounts and the pulse target are taken now.
+      // Everything lands CAST_WINDUP_TICKS after the cast (the first heal too); amounts and the pulse target are taken now. The
+      // closing blast lands DRMUNDO_BLAST_AFTER_PULSE_TICKS after the last pulse.
       const w=CAST_WINDUP_TICKS.drmundo;
       later(ctx,u,u,'g23Heal',w,initial,seq,0,seconds+1);
       for(let i=0;i<seconds;i++){
         later(ctx,u,u,'g23Heal',w+(i+1)*20,split(total-initial,seconds,i),seq,i+1,seconds+1);
         later(ctx,u,t,'g23Magic',w+(i+1)*20,mag('APDamage'),seq,i,seconds);
       }
-      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=2))later(ctx,u,x,'g23Magic',w+seconds*20,amount(u,ctx.tick,{hp:v('PercentHealthDamage')}),seq,seconds,seconds+1);break;
+      for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=2))later(ctx,u,x,'g23Magic',w+seconds*20+DRMUNDO_BLAST_AFTER_PULSE_TICKS,amount(u,ctx.tick,{hp:v('PercentHealthDamage')}),seq,seconds,seconds+1);break;
     }
     case 'elise':
       heal(mag('FlatHealth'));
@@ -172,9 +184,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'smeech':{
       const target=smeechTarget(ctx,u)??t;
       leapG23(ctx,u,target);
-      const n=v('BaseNumStabs'),raw=physical('PercentAttackDamage','APDamage');
-      for(let i=0;i<n;i++)strike(target,split(raw,n,i),'physical');
-      later(ctx,u,target,'g23Smeech',1,raw,seq,1,28);break;
+      smeechStabs(ctx,u,target,physical('PercentAttackDamage','APDamage'),seq,0,28);break;
     }
     case 'jayce':{
       // User 2026-11-15: the forge measures "the nearest allies" but is not one of them (as g2-3-combat.ts's heal excludes it).
@@ -238,9 +248,15 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
-   leapG23(ctx,u,next);const raw=Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),n=variable(u,'BaseNumStabs');
-   for(let i=0;i<n;i++)hit(ctx,u,next,split(raw,n,i),task.actionSeq,2000+task.ordinal*n+i,'physical');
-   later(ctx,u,next,'g23Smeech',1,raw,task.actionSeq,task.ordinal+1,task.total);return;
+   leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+  }
+  // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
+  if(task.kind==='g23Stab'){
+   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
+   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;}
+   const round=(x:CombatTask)=>x.actionSeq===task.actionSeq&&x.targetId===task.targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
+   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
+   u.tasks=u.tasks.filter(x=>!round(x));executeG23Task(ctx,u,check);return;
   }
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});

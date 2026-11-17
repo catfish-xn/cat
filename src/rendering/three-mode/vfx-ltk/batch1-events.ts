@@ -82,6 +82,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const units = new Map<string, SeenUnit>();
   /** Caitlyn: shots drawn since her last cast (3 stars alternate comet and burst only), and the last shot's tick. */
   const shots = new Map<string, { count: number; tick: number }>();
+  /** Nunu since his last cast: the tick his damage reduction ended (-1 before), and the enemies his blast splash has played on. */
+  const nunu = new Map<string, { ended: number; hit: Set<string> }>();
   /** Dr. Mundo since his last cast: the enemy his pulses hit, and the tick his heal ended (-1 before). */
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
   /** Renni: her running cast's stun, until its final slam lands: the units stunned on her cast's tick, and which one she holds. */
@@ -93,7 +95,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -221,16 +223,22 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'blitzcrank', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'blitzcrank-shock-self' });
         }
         // Nunu: his hit splash (R_hit_tar) plays on each enemy his blast strikes. His cast names no targets (each damage tick is
-        // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself: the tick an enemy takes two of
-        // his ability's direct packets, its last tick and SecondDamage. Display packets carry no segment index, so the pair is
-        // the marker (inferred from the rule's schedule); it plays once, on the second packet. Another source's packet in that
-        // tick, his attack, or an item proc never counts. It depends on that schedule: should his last tick and SecondDamage
-        // stop sharing a tick, the splash silently stops (the real-combat case in tests/vfx-ltk-nunu-blast-hit.test.ts fails).
+        // scheduled per enemy, combat-g2-3.ts 'nunu'), so the splash waits for the blast itself. The blast lands after his last
+        // periodic tick (NUNU_SECOND_AFTER_PULSE_TICKS, wind-up batch 2), and his last periodic tick is the tick his cast's
+        // damage reduction ends (both last DamageDuration): his ability's direct packets on an enemy after that end, until his
+        // next cast, are the blast; it plays once per enemy. Another source's packet, his attack, or an item proc never counts.
+        if (event.type === 'cast' && definition(event.sourceId) === 'nunu') nunu.set(event.sourceId, { ended: -1, hit: new Set() });
+        if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason !== 'applied' && definition(event.targetId) === 'nunu') {
+          const state = nunu.get(event.targetId); if (state && state.ended < 0) state.ended = event.tick;
+        }
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'nunu' && isNunuAbility(event)) {
-          const pair = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
-            && e.tick === event.tick && e.sourceId === event.sourceId && e.targetId === event.targetId && isAbilityDirect(e) && isNunuAbility(e));
-          if (pair.length >= 2 && pair[1] === event)
+          const state = nunu.get(event.sourceId);
+          if (state && state.ended >= 0 && event.tick > state.ended && !state.hit.has(event.targetId)) {
+            // The blast itself on Nunu, once, with its first packet.
+            if (state.hit.size === 0) plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.sourceId], action: 'passive', skill: 'nunu-blast' });
+            state.hit.add(event.targetId);
             plan.extra.push({ champion: 'nunu', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nunu-blast-hit', snapshotTargets: true });
+          }
         }
         // Camille: her hit plays on the target when her kick's damage lands (CAMILLE_KICK_TICKS after the cast), the variant her
         // adaptive damage picks: physical when the target's armor is below its magic resist, magic otherwise.
