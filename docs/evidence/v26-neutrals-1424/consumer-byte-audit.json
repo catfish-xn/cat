@@ -121,9 +121,9 @@
     "tests/assets3d-submesh-patch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11193,
+      "currentBytes": 17166,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e1fe5af50c237a20a4acef4e8c98b58a4f0713336ccb86b75e5ff608b035ca74",
+      "currentSha256": "ca3d5f941bba3b77bdd1be1f79bf55490cfa0952c4f200a353afa6020200ca95",
       "firstDifferentByte": 0
     },
     "tests/assets3d-ui-batch.test.ts": {
@@ -2679,6 +2679,14 @@
       "currentBytes": 5326,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e11c1249dd6cc50d948b09b7c0b4ee581934f96b7a4e6b50a6bc6b876495f6ef",
+      "firstDifferentByte": 0
+    },
+    "tests/rendering3d-submesh-visibility.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 13718,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e613e66edc06d92436bab5f0a77037982e63057f2bd0473d5ec5d24ff9ac7c9a",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-tabletop.test.ts": {
