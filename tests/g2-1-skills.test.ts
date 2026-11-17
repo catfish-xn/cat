@@ -5,6 +5,8 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 import { packets, heals, casts } from './helpers/replay2-views';
 import { BLITZ_SHOCK_TICKS } from '../src/simulation/combat-g2';
+import { POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from '../src/simulation/cast-windup';
+import { hexDistance } from '../src/simulation/board';
 
 function hero(name: string, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('p', 'player', 1, 3, { definitionId: name, ability: resolveAbility(name + '-ability', 1),
@@ -36,8 +38,18 @@ describe('G2-1 independent fixed-seed skill oracles (seed 42)', () => {
     expect(r.state.units.find(u => u.id === 'e')!.statuses).toContainEqual(expect.objectContaining({ kind: 'stun', startsAtTick: 2, expiresAtTick: 7 }));
   });
   it('Powder: center 350, one hex 245, wound/burn anchored for 100 ticks', () => {
-    const r = stepCombat(battle([hero('powder'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }));
-    expect(raw(r.events)).toEqual([350, 245]);
+    // Wind-up batch 3: nothing on the cast; the monkey explodes on reaching the landing cell taken on the cast.
+    const cast = stepCombat(battle([hero('powder'), dummy(), dummy('e2', { cell: { col: 3, row: 3 } })], { rngState: 42 }));
+    expect(raw(cast.events)).toEqual([]);
+    const sent = cast.events.find(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-sent') as Extract<CombatEvent, { type: 'abilityMarker' }>;
+    const p = cast.state.units.find(u => u.id === 'p')!;
+    expect(sent.arrivalTick - sent.tick).toBe(POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * hexDistance(p.cell, sent.cell));
+    const skill = (events: readonly CombatEvent[]) => packets(events).filter(x => x.source.ownerId === 'p' && x.source.sourceKind === 'ability').map(x => x.raw);
+    let state = cast.state, events: readonly CombatEvent[] = [];
+    while (state.tick < sent.arrivalTick) { const step = stepCombat(state); state = step.state; events = step.events; if (state.tick < sent.arrivalTick) expect(skill(step.events)).toEqual([]); }
+    const r = { state, events };
+    expect(skill(r.events)).toEqual([350, 245]);
+    expect(r.events.some(e => e.type === 'abilityMarker' && e.marker === 'powder-monkey-arrived')).toBe(true);
     expect(r.state.units.find(u => u.id === 'e')!.mechanismState!.statuses.map(s => s.kind)).toContain('burn');
   });
   it('Ekko: primary 300, secondary 150 (14.24b), flat MR reduction 5', () => {

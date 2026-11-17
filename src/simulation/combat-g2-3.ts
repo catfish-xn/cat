@@ -114,8 +114,11 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const cells=path(ctx.board,u.cell,t.cell);
       for(const ally of ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,mag('TargetDamage'));
-      for(const x of foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1))strike(x,mag('ExplosionDamage'),'magic',true);break;
+      // Wind-up batch 3: the missiles' damage lands CAST_WINDUP_TICKS.renata after the cast (g2Landing; ordinal 0 is the target,
+      // the rest its neighbours, area); the shields above stay on the cast. Targets and amounts are taken now.
+      const struck=[t,...foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1)];
+      struck.forEach((x,n)=>{u.tasks.push({key:JSON.stringify([u.id,seq,'g2Landing',n,x.id]),kind:'g2Landing',source:origin(u),executeAtTick:ctx.tick+CAST_WINDUP_TICKS.renata,
+        targetId:x.id,amount:mag(n===0?'TargetDamage':'ExplosionDamage'),actionSeq:seq,ordinal:n,total:struck.length,cancellable:false});ids.push(x.id);});break;
     }
     case 'cassiopeia': {
       // One read decides the splash and the branch reported (display output only).
@@ -142,6 +145,8 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const main=hero?.mainBps??10000;
       const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=Math.floor(physical('ADPercent')*main/10000);
       applyStatus(t,origin(u),'stun',0,n,ctx.tick,ctx.events);
+      // Display only: Renni lifts her target for the stun (put down with the stun's last pulse, executeG23Task).
+      ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:t.id,carried:true});
       for(let i=0;i<n;i++){
         later(ctx,u,u,'g23Heal',i+1,split(healing,n,i),seq,i,n);
         later(ctx,u,t,'g23Physical',i+1,split(damage,n,i),seq,i,n);
@@ -261,6 +266,8 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});
   else hit(ctx,u,target,task.amount,task.actionSeq,1000+task.ordinal,task.kind==='g23Physical'?'physical':task.kind==='g23True'?'true':'magic');
+  // Display only: Renni puts her target down with the stun's last pulse.
+  if(task.kind==='g23Physical'&&champion(u)==='renni'&&task.total===Math.round(variable(u,'StunDuration')*20)&&task.ordinal===task.total-1)ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:task.targetId!,carried:false});
   // Display only: Dr. Mundo's heal over time paid its last part.
   if(task.kind==='g23Heal'&&champion(u)==='drmundo'&&task.ordinal===task.total-1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'drmundo-heal',targetIds:[]});
 }

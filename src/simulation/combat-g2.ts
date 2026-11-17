@@ -8,6 +8,7 @@ import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { hexDistance } from './board';
+import { POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -108,17 +109,20 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'powder': {
-      if(teamup(unit,'menaces')){
-        const center=enemies(unit,ctx.units).map(t=>({t,count:enemies(unit,ctx.units).filter(u=>hexDistance(t.cell,u.cell)<=2).length})).sort((a,b)=>b.count-a.count||(a.t.id<b.t.id?-1:1))[0]?.t??target;
-        unit.tasks.push({key:JSON.stringify(['v20-powder',unit.id,seq]),kind:'v20Powder',source:origin(unit),executeAtTick:ctx.tick+1,targetId:target.id,cell:{...center.cell},amount:mag('Damage'),actionSeq:seq,ordinal:ticks('IgniteDuration'),total:Math.round(v('FalloffPercent')*10000),cancellable:false,attachedDot:true});
-        ids.push(target.id);break;
-      }
+      // Wind-up batch 3: the monkey walks to the landing cell taken now (the centre of the most enemies within 2 hexes) and
+      // explodes there on arriving, POWDER_MONKEY_* ticks by distance later (fitted, not original data). Damage and burn are
+      // taken now; who stands within 2 hexes of the cell is read on arrival.
       const center = enemies(unit, ctx.units).map(t => ({ t, count: enemies(unit, ctx.units).filter(u => hexDistance(t.cell, u.cell) <= 2).length }))
         .sort((a, b) => b.count - a.count || (a.t.id < b.t.id ? -1 : 1))[0]?.t ?? target;
-      for (const t of areaEnemies(unit, ctx.units).filter(t => hexDistance(center.cell, t.cell) <= 2)) {
-        strike(t, Math.floor(mag('Damage') * Math.max(0, 10000 - Math.round(v('FalloffPercent') * 10000) * hexDistance(center.cell, t.cell)) / 10000), 'magic', true);
-        ignite(ctx, unit, t, ticks('IgniteDuration'), seq);
+      const arrival = ctx.tick + POWDER_MONKEY_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * hexDistance(unit.cell, center.cell);
+      ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-sent', cell: { ...center.cell }, arrivalTick: arrival });
+      if(teamup(unit,'menaces')){
+        unit.tasks.push({key:JSON.stringify(['v20-powder',unit.id,seq]),kind:'v20Powder',source:origin(unit),executeAtTick:arrival,targetId:target.id,cell:{...center.cell},amount:mag('Damage'),actionSeq:seq,ordinal:ticks('IgniteDuration'),total:Math.round(v('FalloffPercent')*10000),cancellable:false,attachedDot:true});
+        ids.push(target.id);break;
       }
+      unit.tasks.push({ key: JSON.stringify(['g2-powder-monkey', unit.id, seq]), kind: 'g2PowderMonkey', source: origin(unit), executeAtTick: arrival, targetId: target.id,
+        cell: { ...center.cell }, amount: mag('Damage'), actionSeq: seq, ordinal: 0, total: 1, cancellable: false });
+      ids.push(target.id);
       break;
     }
     case 'violet':
@@ -191,8 +195,18 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
     }
+  } else if (t.kind === 'g2PowderMonkey') {
+    // Powder's monkey arrives at its landing cell: everyone within 2 hexes of it now takes the amount taken on the cast, less
+    // FalloffPercent per hex, and burns; whoever was the target, alive or not.
+    ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-arrived', cell: { ...t.cell! }, arrivalTick: ctx.tick });
+    const falloff = Math.round(variable(unit, 'FalloffPercent') * 10000), burnTicks = Math.round(variable(unit, 'IgniteDuration') * 20);
+    for (const [n, victim] of areaEnemies(unit, ctx.units).filter(v => hexDistance(t.cell!, v.cell) <= 2).entries()) {
+      hit(ctx, unit, victim, Math.floor(t.amount * Math.max(0, 10000 - falloff * hexDistance(t.cell!, victim.cell)) / 10000), t.actionSeq, n, 'magic', true, t.source);
+      ignite(ctx, unit, victim, burnTicks, t.actionSeq);
+    }
   } else if (t.kind === 'g2Landing') {
-    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs only while the caster is alive; a control on
+    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs while the caster is alive, and after its
+    // death once released (releasedLanding: Renata's missiles from RENATA_MISSILE_FLIGHT_TICKS before landing); a control on
     // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
     const name = champion(unit);
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
@@ -201,6 +215,7 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
         delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
+    else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
     else if (name === 'zyra') {
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
       if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);
@@ -278,6 +293,7 @@ export function recordG2Damage(ctx: AbilityContext, owner: S13Unit | undefined, 
 }
 
 export function executeV20Powder(ctx:AbilityContext,u:S13Unit,t:CombatTask):void {
+  ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'powder-monkey-arrived',cell:{...t.cell!},arrivalTick:ctx.tick});
   for(const victim of areaEnemies(u,ctx.units).filter(v=>hexDistance(t.cell!,v.cell)<=2)){
     hit(ctx,u,victim,Math.floor(t.amount*Math.max(0,10000-t.total*hexDistance(t.cell!,victim.cell))/10000),t.actionSeq,10000,'magic',true,t.source);
     ignite(ctx,u,victim,t.ordinal,t.actionSeq);

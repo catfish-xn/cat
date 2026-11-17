@@ -27,6 +27,17 @@ export type G23CombatEventData =
   /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */
   | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin }
   /**
+   * Display only, no rule effect: a marker of an ability's moment for the renderer. 'powder-monkey-sent': Powder's monkey
+   * sets off for its landing cell (cell), arriving at arrivalTick; 'powder-monkey-arrived': it reached that cell and explodes.
+   */
+  | { readonly type: 'abilityMarker'; readonly tick: number; readonly unitId: string; readonly marker: 'powder-monkey-sent' | 'powder-monkey-arrived'; readonly cell: HexCell; readonly arrivalTick: number }
+  /**
+   * Display only, no rule effect: holderId lifts targetId (carried true) or puts it down (carried false), for the renderer's
+   * carry. Renni: lifted on her cast, put down when her stun's last pulse lands (a death of either ends it too: the renderer
+   * also ends a carry on either one's death event).
+   */
+  | { readonly type: 'carryChanged'; readonly tick: number; readonly holderId: string; readonly targetId: string; readonly carried: boolean }
+  /**
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
    * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.

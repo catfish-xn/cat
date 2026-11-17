@@ -72,7 +72,7 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * code pulled it into the render3d chunk and made the 2D entry load that chunk eagerly (rendering3d-isolation). The test
  * vfx-ltk-windup-hits checks the two stay equal.
  */
-export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12 } as const);
+export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12, renata: 17 } as const);
 /** Tristana's shell flight in seconds (fitted, not original data). */
 const TRISTANA_SHELL_TRAVEL = 0.4;
 /**
@@ -482,9 +482,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // The canisters' own launch puffs only: their missiles fly on in a straight line, so past E_Mis's start one crossed the
     // whole screen (11-07 field). The flight itself is E_Mis.
     { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 0.35, bone: 'C_Canister' },
-    { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
-    { system: 'f9926ae8', action: 'cast', event: 'hit', delay: 0.9, duration: 2, bone: ground, primary: true },
-    { system: 'd5579768', action: 'cast', event: 'hit', delay: 0.9, duration: 1, bone: chest, targetLimit: 3, optional: true },
+    // Wind-up batch 3: the missiles' damage lands CAST_WINDUP_TICKS.renata after the cast; the missile flies its 0.6 s to arrive
+    // then, and the blast pool and hits play on its arrival (fitted, not original data).
+    { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: CAST_WINDUP_TICKS.renata / 20 - 0.6, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
+    { system: 'f9926ae8', action: 'cast', event: 'hit', delay: CAST_WINDUP_TICKS.renata / 20, duration: 2, bone: ground, primary: true },
+    { system: 'd5579768', action: 'cast', event: 'hit', delay: CAST_WINDUP_TICKS.renata / 20, duration: 1, bone: chest, targetLimit: 3, optional: true },
     // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
     // shield receipt with that ally as the source ('passive': it is not the caster's cast timeline). A hit on the ally
     // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).

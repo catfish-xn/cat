@@ -110,9 +110,9 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    // v25: seed 84 publicly offers inert Hedge Fund; avoid falling through to Tiniest Titan,
-    // whose replay authority conflicts with the later boundary grants. Keep the tick-60 double kill.
-    let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['hedge-fund']});
+    // The hedge-fund priority keeps the public offer on inert Hedge Fund (v25, then seed 84; seed 18 since cast wind-up batch 3), not Tiniest Titan,
+    // whose replay authority conflicts with the later boundary grants. Keep the double kill (tick 77 since cast wind-up batch 3).
+    let preparation = acquireEquipment(['rod'],{seed:18,augmentPriorities:['hedge-fund']});
     // v26 pve-loot-carryover (8f794062): carried loot can leave an anvil whose sale opens a forge choice; resolve it publicly
     // before the next sale, as frontRowRod does.
     for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=resolveM5Choices(accepted(sellUnit(preparation,u.id)));
@@ -127,14 +127,19 @@ describe('Renata public acquisition fixture', () => {
     // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing; seed 84 now takes Living Forge since D5
     // 7953c99a): from (4,4) Renata's first kill is a single tick-41 kill. (4,6) is the only cell whose tick-60 root-9 action
     // kills two: her ability on enemy-r4-2 plus the Luden splash on enemy-r4-1.
-    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 6 } }));
+    // Wind-up batch 3 (2026-11-17, scene change): Renata's missiles now land after her cast, so seed 84 at (4,6) no longer opens
+    // with the double kill (every seed-84 cell's same-action double kill comes after an earlier kill, leaving the bracer at 3
+    // stacks). Searched seeds 0..149 over all 28 player cells for a first kill that is her ability plus the Luden splash on one
+    // action at 2-1: seeds 1 and 5 hit it but their augments break the later boundary grants' replay authority; seed 18 at
+    // (4,5) is the first that passes, at tick 77 on root action 9 (enemy-r4-2 by her ability, enemy-r4-1 by the splash).
+    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 5 } }));
     deployed = freezeContent(structuredClone(preparation));
   });
 
   // Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
-  it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every complete combat state', () => {
+  it('saves Renata\'s tick-77 double kill, restores object/JSON, and replays every complete combat state', () => {
     let preparation = ownFixture(acquired);
-    expect(preparation.seed).toBe(84); expect(preparation.roundDefinitionId).toBe('2-1');
+    expect(preparation.seed).toBe(18); expect(preparation.roundDefinitionId).toBe('2-1');
     preparation = ownFixture(granted);
     const owner = preparation.preparation.units.find(u => u.definitionId === 'renata' && u.team === 'player')!;
     expect(owner.starLevel).toBe(3);
@@ -151,7 +156,7 @@ describe('Renata public acquisition fixture', () => {
     while (state.phase === 'combat') {
       const before = state, next = stepMatch(state); state = next.state;
       observe(before, state, next.events, 'tick'); states.push(state.combat!);
-      if (state.combat!.tick === 60) {
+      if (state.combat!.tick === 77) {
         earlyBefore = before; earlyAfter = state;
         const packets = next.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
         expect(packets).toHaveLength(2);
