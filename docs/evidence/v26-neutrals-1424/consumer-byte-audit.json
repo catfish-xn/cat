@@ -4266,14 +4266,6 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "67de5b41a1f8249680013bd1c6834597be2524a0bb6b26d7c5d90f5e46b628f7",
       "firstDifferentByte": 0
-    },
-    "tests/zz-trig.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 884,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "790794a619a0d02ee69c06868905cd2601f3f61170d8e951dc901dbdde0ecb4a",
-      "firstDifferentByte": 0
     }
   }
 }
