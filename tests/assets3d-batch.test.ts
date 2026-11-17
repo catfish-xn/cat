@@ -136,6 +136,17 @@ describe('isolated per-unit batch build', () => {
     expect(document.emitters.map((e: { kind: string }) => e.kind)).toEqual(['quad', 'mesh']);
     expect((await readFile(join(unitRoot, document.emitters[1].mesh))).subarray(0, 4).toString()).toBe('glTF');
     expect(result.particleTotals).toMatchObject({ availableUnits: 1, completeUnits: 1, systems: 1, emitters: 2, mapped: 2 });
+    // The same synthetic files built as a non-unit character directory: own output root, own report group, no unit needed.
+    const asCharacter = await buildAll({ characters: 'demo_vi', source, map: { ...map, $characters: { demo_vi: config } }, out: join(root, 'out-character') });
+    expect(asCharacter.units).toEqual({});
+    expect(asCharacter.characters.demo_vi).toMatchObject({ status: 'success', vertices: 3, bones: 1, textures: 1,
+      particles: { available: true, complete: true, mapped: 2, systems: 1, emitters: 2 }, reference: { available: false } });
+    expect(asCharacter.cost).toBeNull();
+    expect(asCharacter.ready).toBe(true);
+    const characterRoot = join(root, 'out-character/characters/demo_vi');
+    const characterManifest = JSON.parse(await readFile(join(characterRoot, 'manifest.json'), 'utf8'));
+    expect(characterManifest.models.demo_vi.path).toBe('models/demo_vi/model.glb');
+    expect((await readFile(join(characterRoot, 'models/demo_vi/model.glb'))).subarray(0, 4).toString()).toBe('glTF');
     // Oversized source has an intentionally stale hash: the byte preflight must
     // reject it before readRaw reaches content hashing or mesh parsing.
     await truncate(join(source, 'extracted', particleMesh), 16 * 1024 * 1024 + 1);
@@ -162,6 +173,31 @@ describe('isolated per-unit batch build', () => {
     expect(result.phase).toBe('complete'); expect(result.ready).toBe(false);
     expect(JSON.parse(await readFile(join(out, 'build-report.json'), 'utf8'))).toEqual(result);
     expect(buildUnit).toHaveBeenCalledTimes(3);
+  });
+  it('builds --characters directories after the units, each in characters/<directory>, and keeps the unit default without it', async () => {
+    const buildUnit = vi.fn(async ({ units, characters, out }: { units: string; characters?: string; out: string }) => {
+      const id = characters ?? units;
+      expect(out).toContain(join(characters ? 'characters' : 'units', id));
+      if (characters) expect(units).toBe('');
+      if (id === 'tft13_broken') throw new Error('synthetic-bad-character');
+      return success(id);
+    });
+    const result = await buildAll({ out: await output(), definitions, units: 'good', characters: 'tft13_pet,tft13_broken',
+      map: { good: config, $characters: { tft13_pet: config } }, buildUnit });
+    expect(Object.keys(result.units)).toEqual(['good']);
+    expect(result.characters.tft13_pet).toMatchObject({ status: 'success', sourceName: 'tft13_synthetic', vertices: 3 });
+    expect(result.characters.tft13_pet.cost).toBeUndefined();
+    // No $characters entry: the conventional directory names are used.
+    expect(result.characters.tft13_broken).toMatchObject({ status: 'failed', reason: 'synthetic-bad-character', sourceName: 'tft13_broken' });
+    expect(result.totals).toMatchObject({ success: 2, failed: 1, missing: 0 });
+    expect(buildUnit).toHaveBeenCalledTimes(3);
+    const onlyCharacters = await buildAll({ out: await output(), definitions, characters: 'tft13_pet', map: { $characters: { tft13_pet: config } }, buildUnit });
+    expect(onlyCharacters.units).toEqual({}); expect(onlyCharacters.ready).toBe(true);
+    const unitsOnly = await buildAll({ out: await output(), definitions, map: { good: config }, buildUnit: vi.fn(async ({ units }: { units: string }) => success(units)) });
+    expect(Object.keys(unitsOnly.units)).toEqual(['bad', 'good', 'unknown', 'expensive']);
+    expect(unitsOnly.characters).toBeUndefined();
+    await expect(buildAll({ out: await output(), definitions, characters: 'good', map: {}, buildUnit })).rejects.toThrow('unsupported-build-characters');
+    await expect(buildAll({ out: await output(), definitions, units: '', map: {}, buildUnit })).rejects.toThrow('invalid-unit-selection');
   });
   it('filters costs before building and reports an explicit missing marker without invoking build', async () => {
     const buildUnit = vi.fn(async ({ units }: { units: string }) => success(units));
