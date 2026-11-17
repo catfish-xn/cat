@@ -122,6 +122,8 @@ export class UnitAnimationMixer {
   private baseState: ActionState = 'idle';
   /** Submeshes the playing clip shows or hides (absent when the model has none to switch). */
   private submeshes?: SubmeshSwitch;
+  /** Seconds the active play-once clip has held its last frame: its events keep their frame times past the clip's end. */
+  private heldSeconds = 0;
   constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
@@ -132,7 +134,7 @@ export class UnitAnimationMixer {
   private switchSubmeshes(): void {
     if (!this.submeshes) return;
     const action = this.active;
-    this.submeshes.apply(action?.getClip().name.replace(/#.*$/, ''), action?.time ?? 0);
+    this.submeshes.apply(action?.getClip().name.replace(/#.*$/, ''), (action?.time ?? 0) + this.heldSeconds);
   }
   setForm(form?: 'front' | 'back'): void {
     if (this.form !== form) {
@@ -260,6 +262,7 @@ export class UnitAnimationMixer {
     next.play();
     if (previous && previous !== next) next.crossFadeFrom(previous, blend, false);
     this.active = next;
+    this.heldSeconds = 0;
     this.switchSubmeshes();
   }
   /**
@@ -368,8 +371,11 @@ export class UnitAnimationMixer {
         this.stageLeft = 0;
       }
     }
+    const last = this.active, from = last?.time ?? 0;
     this.mixer.update(seconds);
     if (this.stageLeft > 0) this.stageLeft -= seconds;
+    if (last && last === this.active && last.loop === LoopOnce)
+      this.heldSeconds += Math.max(0, from + seconds * last.timeScale - last.getClip().duration);
     this.switchSubmeshes();
   }
   dispose(): void { for (const part of this.pose?.parts ?? []) part.action.stop(); this.pose = undefined; this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }

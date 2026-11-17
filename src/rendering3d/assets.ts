@@ -2,7 +2,7 @@ import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture,
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility } from './contracts';
-import { hideInitialSubmeshes } from './submesh-visibility';
+import { hideInitialSubmeshes, unswitchedClips } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
 import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
@@ -124,6 +124,11 @@ export class ModelCache {
             names.add(alias);
           }
           model = { ...model, animations };
+        }
+        const unswitched = created.placeholder ? [] : unswitchedClips(model.scene, definition?.submeshVisibility);
+        if (unswitched.length) {
+          const missing = [...new Set(unswitched.flatMap(entry => entry.missing))].join(', ');
+          console.warn(`[submesh-visibility] ${id}: ${unswitched.length} clip(s) switch nothing, model lacks ${missing}: ${unswitched.map(entry => entry.clip).join(', ')}`);
         }
         created.model = model;
         return model;

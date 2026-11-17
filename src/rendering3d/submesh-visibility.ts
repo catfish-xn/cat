@@ -18,6 +18,22 @@ function meshesByName(root: Object3D, wanted: ReadonlySet<string>): Map<string, 
   return found;
 }
 
+const namedIn = (visibility: SubmeshVisibility) => new Set([...(visibility.initiallyHidden ?? []),
+  ...Object.values(visibility.events ?? {}).flatMap(list => list.flatMap(event => [...event.show, ...event.hide]))]);
+const lacking = (list: readonly { show: readonly string[] }[], has: (name: string) => boolean) =>
+  [...new Set(list.flatMap(event => event.show.filter(name => !has(name))))];
+
+/**
+ * The clips that switch nothing on this model because they show a submesh it lacks (the geometry switch was off when
+ * it was built), with the names it lacks. The model cache prints them when it loads a model.
+ */
+export function unswitchedClips(root: Object3D, visibility: SubmeshVisibility | undefined): { clip: string; missing: string[] }[] {
+  if (!visibility?.events) return [];
+  const meshes = meshesByName(root, namedIn(visibility));
+  return Object.entries(visibility.events).map(([clip, list]) => ({ clip, missing: lacking(list, name => meshes.has(name)) }))
+    .filter(entry => entry.missing.length);
+}
+
 /** Hide the submeshes a model starts without (a model that does not carry them is left as it is). */
 export function hideInitialSubmeshes(root: Object3D, visibility: SubmeshVisibility | undefined): void {
   const hidden = new Set(visibility?.initiallyHidden ?? []);
@@ -38,14 +54,12 @@ export class SubmeshSwitch {
   private shown = new Map<string, boolean>();
   private constructor(root: Object3D, visibility: SubmeshVisibility) {
     this.defaults = new Set(visibility.initiallyHidden ?? []);
-    const named = new Set(this.defaults);
     this.events = new Map();
-    for (const list of Object.values(visibility.events ?? {})) for (const event of list) for (const name of [...event.show, ...event.hide]) named.add(name);
-    this.meshes = meshesByName(root, named);
+    this.meshes = meshesByName(root, namedIn(visibility));
     for (const [clip, list] of Object.entries(visibility.events ?? {})) {
       // A clip that shows a submesh this model lacks would only do half a swap (hide the body, show nothing): it
-      // switches nothing until the model carries that submesh.
-      if (list.some(event => event.show.some(name => !this.meshes.has(name)))) continue;
+      // switches nothing until the model carries that submesh (see unswitchedClips).
+      if (lacking(list, name => this.meshes.has(name)).length) continue;
       this.events.set(clip, [...list].sort((a, b) => a.frame - b.frame)
         .map(event => ({ seconds: event.frame / SUBMESH_EVENT_FPS, show: event.show, hide: event.hide })));
     }
