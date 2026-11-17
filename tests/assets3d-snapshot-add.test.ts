@@ -19,6 +19,8 @@ async function snapshot(local = true) {
   const packIndex = JSON.stringify({ version: 1, systems: { aaaa0001: 'systems/aaaa0001.json' }, assets: { 'tex/old.tex': 'textures/0000.png' }, skills: { hero: [{ system: 'aaaa0001' }] } }, null, 2) + '\n';
   await put(root, 'precache.json', JSON.stringify({ schemaVersion: 1, files: [{ path: 'models/hero/model.glb', bytes: 10, sha256: sha('hero-bytes') }, { path: 'vfx-ltk/pk/index.json', bytes: packIndex.length, sha256: sha(packIndex) }, { path: 'vfx-ltk/pk/textures/0000.png', bytes: 3, sha256: sha('old') }] }));
   await put(root, 'vfx-ltk/pk/index.json', packIndex);
+  await put(root, 'packs.json', JSON.stringify({ schemaVersion: 1, packs: [{ name: 'p', path: 'packs/p.bin', bytes: 1, sha256: 'x',
+    files: [{ path: 'vfx-ltk/pk/index.json', bytes: packIndex.length, sha256: sha(packIndex), offset: 0 }, { path: 'models/hero/model.glb', bytes: 10, sha256: sha('hero-bytes'), offset: 1 }] }] }));
   await put(root, 'vfx-ltk/pk/systems/aaaa0001.json', '{"s":1}');
   await put(root, 'vfx-ltk/pk/textures/0000.png', 'old');
   if (local) await put(root, '.local-snapshot', 'snapshot=000000000000\n');
@@ -49,6 +51,8 @@ describe('snapshot-add: additions only, to a local snapshot', () => {
     const after = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
     expect(after.models.pet).toEqual({ path: 'roots/add-t1/models/pet/model.glb', animations: { idle: 'run' } });
     expect(after.models.hero).toEqual(JSON.parse(before).models.hero);
+    // Adding a model rewrites no packed file: packs.json is left as it was.
+    expect(report.packsRemoved).toEqual([]);
     expect(await readFile(join(root, 'roots/add-t1/models/pet/model.glb'), 'utf8')).toBe('pet-bytes');
     expect(report.manifest.before).toBe(sha(before));
     expect(JSON.parse(await readFile(join(root, 'precache.json'), 'utf8')).files.at(-1)).toEqual({ path: 'roots/add-t1/models/pet/model.glb', bytes: 9, sha256: sha('pet-bytes') });
@@ -69,6 +73,11 @@ describe('snapshot-add: additions only, to a local snapshot', () => {
     const indexText = await readFile(join(root, 'vfx-ltk/pk/index.json'), 'utf8');
     expect(JSON.parse(await readFile(join(root, 'precache.json'), 'utf8')).files.find((f: { path: string }) => f.path === 'vfx-ltk/pk/index.json'))
       .toEqual({ path: 'vfx-ltk/pk/index.json', bytes: Buffer.byteLength(indexText), sha256: sha(indexText) });
+    // ...and leaves its pack's file list (the .bin is not touched), so readPackList keeps the other packed files.
+    const packs = JSON.parse(await readFile(join(root, 'packs.json'), 'utf8')).packs;
+    expect(packs[0].files.map((f: { path: string }) => f.path)).toEqual(['models/hero/model.glb']);
+    expect(packs[0]).toMatchObject({ path: 'packs/p.bin', bytes: 1, sha256: 'x' });
+    expect(report.packsRemoved).toEqual(['packs/p.bin:vfx-ltk/pk/index.json']);
     expect(report.manifest.before).toBe(report.manifest.after);
   });
 

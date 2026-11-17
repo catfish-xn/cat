@@ -10,7 +10,8 @@
 // --vfx-pack/--vfx-from: the export's systems (all, or --systems) go into the pack's systems/ and index.systems; its assets
 //   not yet in the pack go to add-<tag>/<file> and index.assets. The pack's skills are not touched. A pack that does not
 //   exist yet is created (no champions mapping: wiring it to a unit is a separate step). Precache gains the new pack files
-//   only when the pack already has files in precache (or, for a new pack, never).
+//   only when the pack already has files in precache (or, for a new pack, never). A file this run rewrites (a pack's
+//   index.json) gets its precache line updated and leaves its pack's file list in packs.json (the .bin is not touched).
 // After a real run the manifest is checked with assertManifest (src/rendering3d/contracts.ts) and the old and new
 // manifest sha256 and the counts are printed. Re-register the snapshot afterwards (asset-local-register): its id changes.
 import { readFile, writeFile, mkdir, copyFile, stat, realpath, rename } from 'node:fs/promises';
@@ -123,6 +124,14 @@ export function precacheWith(precache, files, pack, changed = new Map()) {
   return { ...precache, files: [...precache.files, ...extra] };
 }
 
+/** packs.json with every file in `rewritten` taken out of its pack's file list (the pack's .bin is left as it is), as the
+ * submesh patch does for changed models: a pack line that no longer matches its file would make readPackList drop all packs. */
+export function packsWithout(packs, rewritten) {
+  const list = Array.isArray(packs) ? packs : packs.packs, removed = [];
+  const next = list.map(pack => ({ ...pack, files: pack.files.filter(file => { const hit = rewritten.has(file.path); if (hit) removed.push(`${pack.path}:${file.path}`); return !hit; }) }));
+  return { packs: Array.isArray(packs) ? next : { ...packs, packs: next }, removed };
+}
+
 export async function snapshotAdd({ root, tag, models, vfxPack, vfxFrom, systems, dry = false, refused, validate } = {}) {
   root = await assertLocalSnapshot(root, refused);
   const plan = await planAdd({ root, tag, models, vfxPack, vfxFrom, systems });
@@ -135,6 +144,9 @@ export async function snapshotAdd({ root, tag, models, vfxPack, vfxFrom, systems
   if (manifestText !== plan.manifestBefore) changed.set('manifest.json', { bytes: Buffer.byteLength(manifestText), sha256: sha256(manifestText) });
   const precache = precacheWith(JSON.parse(precacheBefore), plan.files, plan.pack, changed);
   const precacheChanged = JSON.stringify(precache) !== JSON.stringify(JSON.parse(precacheBefore));
+  const packsPath = join(root, 'packs.json'), packsBefore = await exists(packsPath) ? JSON.parse(await readFile(packsPath, 'utf8')) : null;
+  const { packs, removed: packsRemoved } = packsBefore ? packsWithout(packsBefore, new Set(changed.keys())) : { packs: null, removed: [] };
+  if (plan.pack) await insideRoot(root, join(root, plan.pack.dir, 'index.json'));
   // Only additions: every model that was there is unchanged as JSON, and nothing else at the top level changed.
   const before = JSON.parse(plan.manifestBefore);
   for (const [id, entry] of Object.entries(before.models)) if (JSON.stringify(entry) !== JSON.stringify(plan.manifest.models[id])) fail(`model ${id} would change`);
@@ -145,12 +157,13 @@ export async function snapshotAdd({ root, tag, models, vfxPack, vfxFrom, systems
   const report = { root, tag, dry, addedModels: plan.addedModels, addedSystems: plan.addedSystems, addedAssets: plan.addedAssets.length,
     files: plan.files.map(({ to, bytes, sha256 }) => ({ path: to, bytes, sha256 })),
     manifest: { before: sha256(plan.manifestBefore), after: sha256(manifestAfter) },
-    precacheAdded: precache.files.length - JSON.parse(precacheBefore).files.length, precacheUpdated: [...changed.keys()].filter(p => JSON.parse(precacheBefore).files.some(f => f.path === p)), pack: plan.pack ? { dir: plan.pack.dir, created: plan.pack.created } : null };
+    precacheAdded: precache.files.length - JSON.parse(precacheBefore).files.length, precacheUpdated: [...changed.keys()].filter(p => JSON.parse(precacheBefore).files.some(f => f.path === p)), packsRemoved, pack: plan.pack ? { dir: plan.pack.dir, created: plan.pack.created } : null };
   if (dry) return report;
   for (const f of plan.files) { await mkdir(dirname(join(root, f.to)), { recursive: true }); await copyFile(f.from, join(root, f.to)); }
   const put = async (path, text) => { const tmp = `${path}.tmp-snapshot-add`; await mkdir(dirname(path), { recursive: true }); await writeFile(tmp, text); await rename(tmp, path); };
   if (plan.pack) await put(join(root, plan.pack.dir, 'index.json'), packIndexText);
   if (precacheChanged) await put(join(root, 'precache.json'), json(precache));
+  if (packsRemoved.length) await put(packsPath, json(packs));
   if (plan.addedModels.length) await put(join(root, 'manifest.json'), manifestAfter);
   return report;
 }
