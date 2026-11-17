@@ -121,9 +121,9 @@
     "tests/assets3d-snapshot-add.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8667,
+      "currentBytes": 11181,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "27aa0ea49e8bd84bc575f360b22a8cb4337f37d361b204b116849c7eb221bf64",
+      "currentSha256": "dead6025e47604fe3cfb18daa00123bf6be667609827633aa9433102f67af59d",
       "firstDifferentByte": 0
     },
     "tests/assets3d-submesh-patch.test.ts": {

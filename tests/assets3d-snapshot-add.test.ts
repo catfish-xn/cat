@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -16,8 +16,9 @@ async function snapshot(local = true) {
   const root = await mkdtemp(join(tmpdir(), 'snap-add-')); roots.push(root);
   await put(root, 'manifest.json', JSON.stringify({ schemaVersion: 1, models: { hero: { path: 'models/hero/model.glb', animations: { idle: 'a' } } }, effects: {} }, null, 2) + '\n');
   await put(root, 'models/hero/model.glb', 'hero-bytes');
-  await put(root, 'precache.json', JSON.stringify({ schemaVersion: 1, files: [{ path: 'models/hero/model.glb', bytes: 10, sha256: sha('hero-bytes') }, { path: 'vfx-ltk/pk/textures/0000.png', bytes: 3, sha256: sha('old') }] }));
-  await put(root, 'vfx-ltk/pk/index.json', JSON.stringify({ version: 1, systems: { aaaa0001: 'systems/aaaa0001.json' }, assets: { 'tex/old.tex': 'textures/0000.png' }, skills: { hero: [{ system: 'aaaa0001' }] } }, null, 2) + '\n');
+  const packIndex = JSON.stringify({ version: 1, systems: { aaaa0001: 'systems/aaaa0001.json' }, assets: { 'tex/old.tex': 'textures/0000.png' }, skills: { hero: [{ system: 'aaaa0001' }] } }, null, 2) + '\n';
+  await put(root, 'precache.json', JSON.stringify({ schemaVersion: 1, files: [{ path: 'models/hero/model.glb', bytes: 10, sha256: sha('hero-bytes') }, { path: 'vfx-ltk/pk/index.json', bytes: packIndex.length, sha256: sha(packIndex) }, { path: 'vfx-ltk/pk/textures/0000.png', bytes: 3, sha256: sha('old') }] }));
+  await put(root, 'vfx-ltk/pk/index.json', packIndex);
   await put(root, 'vfx-ltk/pk/systems/aaaa0001.json', '{"s":1}');
   await put(root, 'vfx-ltk/pk/textures/0000.png', 'old');
   if (local) await put(root, '.local-snapshot', 'snapshot=000000000000\n');
@@ -63,7 +64,11 @@ describe('snapshot-add: additions only, to a local snapshot', () => {
     expect(index.skills).toEqual({ hero: [{ system: 'aaaa0001' }] });
     expect(await readFile(join(root, 'vfx-ltk/pk/textures/0000.png'), 'utf8')).toBe('old');
     expect(await readFile(join(root, 'vfx-ltk/pk/add-x1/textures/0000.png'), 'utf8')).toBe('new');
-    expect(report).toMatchObject({ addedSystems: ['bbbb0002'], addedAssets: 1, precacheAdded: 2 });
+    expect(report).toMatchObject({ addedSystems: ['bbbb0002'], addedAssets: 1, precacheAdded: 2, precacheUpdated: ['vfx-ltk/pk/index.json'] });
+    // The pack's index.json was rewritten: its precache line follows it, or the client would see a hash mismatch.
+    const indexText = await readFile(join(root, 'vfx-ltk/pk/index.json'), 'utf8');
+    expect(JSON.parse(await readFile(join(root, 'precache.json'), 'utf8')).files.find((f: { path: string }) => f.path === 'vfx-ltk/pk/index.json'))
+      .toEqual({ path: 'vfx-ltk/pk/index.json', bytes: Buffer.byteLength(indexText), sha256: sha(indexText) });
     expect(report.manifest.before).toBe(report.manifest.after);
   });
 
@@ -85,6 +90,30 @@ describe('snapshot-add: additions only, to a local snapshot', () => {
     const before = await readFile(join(root, 'manifest.json'), 'utf8');
     await expect(snapshotAdd({ root, tag: 't2', models: await built(), validate: () => { throw new Error('invalid-manifest'); } })).rejects.toThrow('invalid-manifest');
     expect(await readFile(join(root, 'manifest.json'), 'utf8')).toBe(before);
+  });
+
+  it('copies a file two assets share once, with one precache line', async () => {
+    const root = await snapshot();
+    const vfxFrom = await exported({}, { 'tex/a.tex': ['textures/0003.png', 'same'], 'tex/b.tex': ['textures/0003.png', 'same'] });
+    const report = await snapshotAdd({ root, tag: 'x1', vfxPack: 'vfx-ltk/pk', vfxFrom, validate: ok });
+    expect(report.files.map((f: { path: string }) => f.path)).toEqual(['vfx-ltk/pk/add-x1/textures/0003.png']);
+    const paths = JSON.parse(await readFile(join(root, 'precache.json'), 'utf8')).files.map((f: { path: string }) => f.path);
+    expect(paths.filter((p: string) => p.endsWith('0003.png'))).toHaveLength(1);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it('refuses .. in an input path before joining it, and a symbolic link that leads out of the root', async () => {
+    const root = await snapshot();
+    const escape = await exported({}, {});
+    await put(escape, 'index.json', JSON.stringify({ version: 1, systems: {}, assets: { 'tex/x.tex': '../../../outside.png' }, skills: {} }));
+    await expect(snapshotAdd({ root, tag: 'x1', vfxPack: 'vfx-ltk/pk', vfxFrom: escape, validate: ok })).rejects.toThrow('unsafe asset tex/x.tex path');
+    const sys = await exported({}, {});
+    await put(sys, 'index.json', JSON.stringify({ version: 1, systems: { cccc0003: 'systems/../../x.json' }, assets: {}, skills: {} }));
+    await expect(snapshotAdd({ root, tag: 'x1', vfxPack: 'vfx-ltk/pk', vfxFrom: sys, validate: ok })).rejects.toThrow('unsafe system cccc0003 path');
+    const outside = await mkdtemp(join(tmpdir(), 'snap-outside-')); roots.push(outside);
+    await mkdir(join(root, 'roots'), { recursive: true });
+    await symlink(outside, join(root, 'roots', 'add-t9'));
+    await expect(snapshotAdd({ root, tag: 't9', models: await built(), validate: ok })).rejects.toThrow('outside the root');
   });
 
   it('reads its command line strictly', () => {
