@@ -692,9 +692,9 @@ export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: Rea
   own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
   hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
   own: {
-    // Warwick (inferred, Fable 11-16): his own swipe 6b46d17d plays as BA_Swipe_crit 94adb056 on a crit, and his hit is his
-    // own slash, so the crit flash plays on the target beside it at the slash's moment.
-    warwick: { swap: { '6b46d17d': '94adb056' }, flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+    // Warwick: his hit is his own slash, so the crit flash plays on the target beside it at the slash's moment. His own crit
+    // swipe (BA_Swipe_crit 94adb056 in place of 6b46d17d) waits for the original's footage (Fable 11-17): not swapped here.
+    warwick: { flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
   },
 };
 /**
