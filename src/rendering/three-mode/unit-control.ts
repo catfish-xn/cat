@@ -64,18 +64,18 @@ export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSl
  * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once. The fall is the
  * slam: two rule ticks (0.1 s), the gap between the rules' let-go and the slam's damage (Renni: RENNI_SLAM_AFTER_STUN_TICKS),
  * so the body lands on the damage tick. Once up, the body stays at least `holdFloor` of the highest grip it reached while
- * held: another clip of the holder (Renni's basic attack mid-hold swings the chainsaw down) sways it but does not put it
- * down before the rules let go. Fitted, not original data.
+ * held, a backstop: should another clip of the holder play mid-hold (the rules give Renni none while she holds, #737), it
+ * sways the body but does not put it down before the rules let go. Fitted, not original data.
  */
 export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1, holdFloor: 0.85 } as const;
 /**
  * How each holder holds (by definition id): the bones of what it grips with, the held body going to the highest of them
- * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down
- * from there (its head at that point, its feet one body height above).
+ * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), whether the held body hangs upside down
+ * from there, and where on the hung body the grip holds it (gripShare: 0 by its head, 0.5 at its middle; carryRise).
  */
 export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean; readonly gripShare?: number; readonly pose?: HoldClips }>> = {
-  // Renni impales the enemy on her chainsaw: the saw's top holds it at the middle of its body (gripShare 0.5, fitted on
-  // the original's lift frames), not by its head.
+  // Renni: the held enemy hangs on her chainsaw's top by the middle of its body (gripShare 0.5), not by its head. Fitted,
+  // not original data.
   renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true, gripShare: 0.5,
     pose: { in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' } },
 };

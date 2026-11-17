@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CARRY_3D, CARRY_HOLDS, CarryMotion, HOLD_LIFT_WAIT_SECONDS, HolderPose, carryRise, heldBarLift } from '../src/rendering/three-mode/unit-control';
 import type { ActionOutput } from '../src/rendering3d/animation-state';
+import { RENNI_SLAM_AFTER_STUN_TICKS } from '../src/simulation/cast-windup';
+import { COMBAT_TICK_MS } from '../src/simulation/combat';
 
 // A unit held up by another (presentation only; the rules keep it on its cell): it rises to the holder's grip, follows it
 // while held, comes back down onto its own spot when let go, and drops at once if the holder or the held unit dies.
@@ -130,5 +132,9 @@ describe('3D: carried by another unit (CarryMotion)', () => {
     // And they move with the carry sideways: the carry's offset is a world offset of the whole body.
     const m = new CarryMotion(); m.start(); const at = run(m, 0.5, { x: 30, y: 120, z: -10 });
     expect([at.x, at.z]).toEqual([30, -10]);
+  });
+
+  it("the held body lands on the slam's damage tick: the fall lasts the rules' let-go-to-slam ticks", () => {
+    expect(CARRY_3D.fallSeconds * 1000).toBeCloseTo(RENNI_SLAM_AFTER_STUN_TICKS * COMBAT_TICK_MS);
   });
 });

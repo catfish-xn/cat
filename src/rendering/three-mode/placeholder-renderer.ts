@@ -1557,7 +1557,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        // A holder holding someone up keeps its held pose (HolderPose): the rules' attack lands, but no swing is drawn.
+        // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
+        // she holds (#737), and should one come it draws no swing.
         if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
       }
       else if (event.type === 'cast') {
