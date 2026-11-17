@@ -1000,6 +1000,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
+    view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     return view;
   };
   // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
@@ -1011,6 +1012,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
+    view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
