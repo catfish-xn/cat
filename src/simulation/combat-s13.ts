@@ -37,7 +37,7 @@ import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-ker
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {advanceSpectralCutlass,returnZephyrUnits} from './combat-g2-4b';
-import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
+import { advanceG23Skills,recordG23SkillDamage,extendG23Swain,renniHolding } from './combat-g2-3';
 import { advanceG23Summons,deathG23Sion,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
 import { openingB4Combat, castB4Combat, attackB4Combat, damageB4Combat } from './augment-pool-batch4-b4combat';
@@ -431,7 +431,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       for (const task of due) if ((!task.cancellable || (unit.alive && unit.hp>0 && !blocked.has(unit.id))) && (unit.alive&&unit.hp>0 || task.attachedDot || task.kind === 'tristanaBounce' || releasedLanding(task, tick))) executeTask(ctx, unit, task);
       advanceMadChemist(ctx, unit, () => actionSeq++);
       if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);continue;}
-      if (unit.definitionId==='g23-forge'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq); continue; }
+      if (unit.definitionId==='g23-forge'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)) { rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq); continue; }
       const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
       const selfCast = isMadChemist(unit) || ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
       const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
