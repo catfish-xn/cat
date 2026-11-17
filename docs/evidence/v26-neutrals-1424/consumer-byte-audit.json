@@ -3453,10 +3453,10 @@
     },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
-      "currentBytes": 13348,
+      "currentBytes": 15767,
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
-      "currentSha256": "d275e2b9ef8cca374369103f98eedee40feb9d2eee816d0508bb723f1483cb22",
-      "firstDifferentByte": 3380
+      "currentSha256": "3297f7ce41110b768968f790875e5d0f828c09eac29282abe39aae7a9a32eb7a",
+      "firstDifferentByte": 216
     },
     "tests/t10-combat-ops.test.ts": {
       "previousBytes": 8062,
