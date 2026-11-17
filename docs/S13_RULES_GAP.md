@@ -1831,3 +1831,13 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
   - 烈娜塔：导弹在落地前 `RENATA_MISSILE_FLIGHT_TICKS` 拍离手（导弹出手拍）；出手前她阵亡不结算，出手后阵亡照常落地。
   - 实现：`cast-windup.ts` 的 `releasedLanding`，死亡清理时保留已离手的落地任务。
 - 实现：烈娜塔用 `g2Landing`；爆爆普通形态用新任务 `g2PowderMonkey`（带落点格，`serialization-structure` 校验所属英雄和格子），"恶霸"形态沿用 `v20Powder`、到达拍改为同一公式。测试 `tests/cast-windup-batch3.test.ts`。
+
+## 技能生效前摇对齐 第四批：马尔扎哈 3★、荏妮（2026-11-17，同一授权：只改生效时刻，不改数值）
+
+- 拍数都是**拟合，非原版**，常量在 `src/simulation/cast-windup.ts`。数值在施法拍锁定。
+- 马尔扎哈：**只改 3★**。3★ 的伤害和击碎在施法后 `MALZAHAR_3STAR_GATE_TICKS` 拍落地（对象施法拍选定，`g2Landing`），感染仍在伤害后 20 拍。依据仅 3★ 画面；**1/2★ 伤害时刻暂无原版依据，维持现状**（施法当拍）。3★ 画面是全场，规则范围仍是原来的一行，范围形状不动。
+- 荏妮：施法后 `RENNI_LIFT_TICKS` 拍举起目标，眩晕从这一拍起算（时长不变）；持续物理伤害和荏妮自己的逐拍回血整体跟着后移；结尾范围伤害（主目标加相邻格）在眩晕结束后 `RENNI_SLAM_AFTER_STUN_TICKS` 拍落下。
+  - 结尾砸地的对象在施法拍锁定：眩晕结束后的这两拍目标能行动、走开也照样挨打，不会砸空（拟合）。
+  - 显示事件 `carryChanged`：举起那拍发 true，眩晕最后一拍发 false；荏妮或目标在举起期间阵亡，当拍发 false。
+  - 实现：新任务 `g23RenniLift`（`serialization-structure` 校验所属英雄）。
+- 前摇期间施法者阵亡不结算，与前几批一致。测试 `tests/cast-windup-batch4.test.ts`。

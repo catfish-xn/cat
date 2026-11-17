@@ -8,7 +8,7 @@ import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { hexDistance } from './board';
-import { POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from './cast-windup';
+import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_BASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -132,9 +132,15 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
-      for (const t of targets) { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      // Wind-up batch 4: at 3 stars the gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (g2Landing: damage and shred, targets
+      // taken now); 1 and 2 stars land on the cast. The infection lands 20 ticks after the gate either way.
+      const wait = unit.starLevel === 3 ? MALZAHAR_3STAR_GATE_TICKS : 0;
+      for (const [n, t] of targets.entries()) {
+        if (wait) { task(unit, 'g2Landing', ctx.tick + wait, t.id, mag('Damage'), seq, n, targets.length); ids.push(t.id); }
+        else { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      }
       // Five total stacks: round-robin gives floor(5/N), then +1 in hit order.
-      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
+      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + wait + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
       break;
     }
   }
@@ -214,6 +220,10 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
         delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
+    else if (name === 'malzahar') { // the 3-star gate: damage (packet n) and shred, on a target taken on the cast
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
+      effect(ctx, unit, target, status('shred', 2000, Math.round(variable(unit, 'ShredDuration') * 20), { activation: 'immediate' }), t.actionSeq);
+    }
     else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
     else if (name === 'zyra') {
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);

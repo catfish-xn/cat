@@ -707,6 +707,14 @@
       "currentSha256": "50d70aad93a9e1674c2add23120ba6a0831f0bfaa6538bb58c9021311b7b75f5",
       "firstDifferentByte": 0
     },
+    "tests/cast-windup-batch4.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10524,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1b86471fd2f045ca375eac46c292840655b286dee9d08f3ecbacc393927da32f",
+      "firstDifferentByte": 0
+    },
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -874,16 +882,16 @@
     },
     "tests/five-cost-fixes.test.ts": {
       "previousBytes": 10037,
-      "currentBytes": 10481,
+      "currentBytes": 10888,
       "previousSha256": "fe2713cec2f30cb12732f948fb7a72e1307ea8c685527fadc2bfa74de4944bc2",
-      "currentSha256": "9b6f4af772dead0076bdf3ddb16d54fa0f41aea6f0c7abadcf88741026ab450e",
-      "firstDifferentByte": 2261
+      "currentSha256": "48e1c922803ae5bcd118ca1447459bcd2c55a2de18c1b4f8b8d4d372fbfacbbe",
+      "firstDifferentByte": 502
     },
     "tests/five-cost-geometry.test.ts": {
       "previousBytes": 6253,
-      "currentBytes": 6307,
+      "currentBytes": 6551,
       "previousSha256": "373025bb8bd6bdb0687fc34154b55ab6f11fc8b821a08459ccb7e750d5d7882d",
-      "currentSha256": "44c9241a3c64a0cfe8756b924806ac4073613cf58c122ff98879d69ec82cc674",
+      "currentSha256": "6abc36290eaab83f4560aabd595d119d0c1e5b1fe283a3befec33575c1fceecf",
       "firstDifferentByte": 5533
     },
     "tests/five-cost-replay.test.ts": {
@@ -1298,9 +1306,9 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 10775,
+      "currentBytes": 11057,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "f6faaa1f98aec9edd8b7846c43dc5dcec31f539f3a98cbf6f2b0f7e2a170411f",
+      "currentSha256": "08634026819d3743eefb50af7e31518a63ef9af12ff18691aa027ed50a78a5fe",
       "firstDifferentByte": 1209
     },
     "tests/g2-4a-crown-gold.test.ts": {
@@ -4097,9 +4105,9 @@
     "tests/vfx-ltk-renni-q.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4645,
+      "currentBytes": 4902,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "91f6843006ce464781fffcbdf66cf977beb8031ae7ab6c876981a4a3bdc8923e",
+      "currentSha256": "ec0fa89430e1f85ecf70df43a222b45d10bf90ae95c3afff196c560042f04ad7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {

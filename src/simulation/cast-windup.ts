@@ -29,6 +29,15 @@ export const POWDER_MONKEY_TICKS_PER_HEX = 6;
  * minus this after the cast. Once they have left, her death no longer stops them; before that it does. */
 export const RENATA_MISSILE_FLIGHT_TICKS = 12;
 
+/** Wind-up batch 4 (fitted, not original data; based on 3-star footage only): Malzahar's gate at 3 stars lands this many ticks
+ * after the cast (damage and shred; the infection keeps landing 20 ticks after it). 1 and 2 stars keep landing on the cast. */
+export const MALZAHAR_3STAR_GATE_TICKS = 26;
+
+/** Wind-up batch 4 (fitted, not original data): Renni lifts her target (stun start) this many ticks after her cast; her stun's
+ * per-tick damage and self-heal move with it, and the closing slam lands RENNI_SLAM_AFTER_STUN_TICKS after the stun ends. */
+export const RENNI_LIFT_TICKS = 8;
+export const RENNI_SLAM_AFTER_STUN_TICKS = 2;
+
 /**
  * Wind-up batch 3 (fitted, not original data): a pending landing that has already left its caster lands even if the caster
  * dies; one still in the wind-up does not. Powder's monkey leaves on her cast; Renata's missiles leave

@@ -82,7 +82,9 @@ it.each([1,2,3,4,5])('Malzahar divides exactly five stacks across %s hits in hit
   expect(p.tasks.every(t=>t.executeAtTick===21)).toBe(true);
 });
 it.each(['jinx','mordekaiser','malzahar'])('%s whole-step packets/state/RNG survive JSON checkpoint and input permutation',(name)=>{
-  const p=hero(name);p.runtime.castCount=0;
+  // Malzahar at 2 stars: his 3-star gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (cast wind-up batch 4), so its
+  // packets are not on this step; the 3-star landing's restore and replay are in cast-windup-batch4.
+  const p=hero(name,name==='malzahar'?2:3);p.runtime.castCount=0;
   const initial=battle([p,foe('a',4,4),foe('b',5,4),foe('c',5,5)],{rngState:42});
   const first=stepCombat(freeze(initial));expect(damage(first.events).length).toBeGreaterThan(0);expect(first.state.rngDraws).toBe(0);
   expect(stepCombat({...initial,units:[...initial.units].reverse()})).toEqual(first);

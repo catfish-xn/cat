@@ -5,6 +5,7 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { nextRandom } from '../src/simulation/rng';
 import { applyStatus, grantShield, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import { battle, freeze, unit } from './combat-helpers';
+import { MALZAHAR_3STAR_GATE_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name: string, star: 1|2|3 = 1, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('p','player',1,3,{definitionId:name,starLevel:star,ability:resolveAbility(name+'-ability',star),
@@ -36,6 +37,8 @@ const raw=(events:readonly CombatEvent[])=>damage(events).map(d=>d.raw);
 const get=(s:CombatState,id='p')=>s.units.find(u=>u.id===id)!;
 /** Sevika's rolled spell lands when the slot machine stops (G24-SEVIKA-SLOTS-01): the pull, then 25 ticks. */
 const SLOT=25,roll=(s:CombatState)=>advance(s,1+SLOT);
+/** Malzahar's gate lands on his cast at 1 and 2 stars, MALZAHAR_3STAR_GATE_TICKS after it at 3 (cast wind-up batch 4). */
+const gate=(star:1|2|3)=>star===3?MALZAHAR_3STAR_GATE_TICKS:0;
 
 describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   it.each([
@@ -107,18 +110,18 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   it.each([1,2,3] as const)('Malzahar %s star gate hits five cells across target, not cells in front',(star)=>{
     const enemies=[0,1,2,3,4,5,6].map(col=>dummy(col===3?'a':`e${col}`,{cell:{col,row:2}}));
     enemies.push(dummy('front',{cell:{col:3,row:5}}));
-    const r=stepCombat(battle([hero('malzahar',star,{cell:{col:3,row:3},targetId:'a'}),...enemies],{rngState:42}));
+    const r=advance(battle([hero('malzahar',star,{cell:{col:3,row:3},targetId:'a'}),...enemies],{rngState:42}),1+gate(star));
     expect(damage(r.events).map(d=>d.context.targetId)).toEqual(['a','e1','e2','e4','e5']);
     expect(raw(r.events)).toEqual(Array(5).fill([80,120,1000][star-1]));
     expect(get(r.state).tasks?.map(t=>t.targetId)).toEqual(['a','e1','e2','e4','e5']);
   });
   it.each([1,2,3] as const)('Malzahar %s star all five stacks survive death and retain their pulse clock',(star)=>{
-    const opening=stepCombat(battle([hero('malzahar',star),dummy('e',{hp:1,maxHp:1}),
-      dummy('a',{cell:{col:2,row:2}}),dummy('b',{cell:{col:2,row:4}})],{rngState:42}));
+    const opening=advance(battle([hero('malzahar',star),dummy('e',{hp:1,maxHp:1}),
+      dummy('a',{cell:{col:2,row:2}}),dummy('b',{cell:{col:2,row:4}})],{rngState:42}),1+gate(star));
     const tasks=get(opening.state).tasks!;
     // 'a' (2,2) and 'b' (2,4) are equally near the dying host 'e' (2,3). Targeting P1 (8106acee, merged c64a756a)
     // breaks equal-distance ties with combat RNG, so at rngState 42 all five stacks now move to 'b' (v25: 'a').
-    expect(tasks).toHaveLength(5);expect(tasks.map(t=>[t.targetId,t.executeAtTick])).toEqual(Array(5).fill(['b',21]));
+    expect(tasks).toHaveLength(5);expect(tasks.map(t=>[t.targetId,t.executeAtTick])).toEqual(Array(5).fill(['b',21+gate(star)]));
     const r=advance(opening.state,20);
     const pulses=damage(r.events).filter(d=>d.context.targetId==='b');
     // 14.24b InfectionDamage 15/22/400 (b-patch-overrides.json).
@@ -126,8 +129,9 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     expect(pulses.every(d=>d.context.rootActionSeq===tasks[0].actionSeq)).toBe(true);
   });
   it('infection moves again when its new host dies, even if Malzahar has died',()=>{
-    const opening=stepCombat(battle([hero('malzahar',3),unit('ally','player',0,7,{cooldownTicks:1000,moveCooldownTicks:1000}),
-      dummy('e',{hp:1,maxHp:1}),dummy('a',{hp:1000,maxHp:1000,cell:{col:2,row:2}}),dummy('b',{cell:{col:6,row:0}})],{rngState:42}));
+    // He dies after his 3-star gate has landed (a death before it cancels the gate: cast wind-up batch 4).
+    const opening=advance(battle([hero('malzahar',3),unit('ally','player',0,7,{cooldownTicks:1000,moveCooldownTicks:1000}),
+      dummy('e',{hp:1,maxHp:1}),dummy('a',{hp:1000,maxHp:1000,cell:{col:2,row:2}}),dummy('b',{cell:{col:6,row:0}})],{rngState:42}),1+gate(3));
     const state=structuredClone(opening.state),p=get(state) as S13Unit;p.hp=0;p.alive=false;
     const r=advance(state,40);
     expect(get(r.state,'a').alive).toBe(false);
