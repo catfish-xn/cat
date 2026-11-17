@@ -197,6 +197,7 @@ describe('isolated per-unit batch build', () => {
     expect(Object.keys(unitsOnly.units)).toEqual(['bad', 'good', 'unknown', 'expensive']);
     expect(unitsOnly.characters).toBeUndefined();
     await expect(buildAll({ out: await output(), definitions, characters: 'good', map: {}, buildUnit })).rejects.toThrow('unsupported-build-characters');
+    await expect(buildAll({ out: await output(), definitions, units: '', map: {}, buildUnit })).rejects.toThrow('invalid-unit-selection');
   });
   it('filters costs before building and reports an explicit missing marker without invoking build', async () => {
     const buildUnit = vi.fn(async ({ units }: { units: string }) => success(units));

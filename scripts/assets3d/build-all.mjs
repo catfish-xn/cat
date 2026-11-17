@@ -31,7 +31,9 @@ export async function buildAll({ units, cost, characters, source = 'assets3d-loc
   map ??= await loadUnitMap();
   // Without --characters the default stays every unit; with it, only the units named alongside (none by default).
   units ??= characters ? '' : 'all';
-  const selected = units === '' ? [] : selectUnits(definitions, units, cost), characterMap = characterConfigs(characters, map, definitions);
+  const characterMap = characterConfigs(characters, map, definitions);
+  // An empty unit list is only valid next to --characters; on its own it stays an invalid selection as before.
+  const selected = units === '' && Object.keys(characterMap).length ? [] : selectUnits(definitions, units, cost);
   const output = await safeOutputPath(out, { directory: true });
   const rel = relative(resolve(source), output);
   if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`))) throw new Error('output-overlaps-source');

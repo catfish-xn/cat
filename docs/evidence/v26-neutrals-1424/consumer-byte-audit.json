@@ -56,9 +56,9 @@
     },
     "tests/assets3d-batch.test.ts": {
       "previousBytes": 14572,
-      "currentBytes": 17644,
+      "currentBytes": 17783,
       "previousSha256": "082405722b31256ce4924abf810e652c960d1507ec1f982211953553d088904c",
-      "currentSha256": "d1a011e00ba60780f7d8670503782d5695b17b4b6738177eafb586df64881eec",
+      "currentSha256": "0818e0532309fece1d1a60e9937513108ab5e1eee7fdcaa9d1829ae95d0fea25",
       "firstDifferentByte": 10514
     },
     "tests/assets3d-bin.test.ts": {
