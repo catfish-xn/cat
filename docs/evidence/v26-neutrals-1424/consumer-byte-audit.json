@@ -2390,9 +2390,9 @@
     "tests/rendering3d-carry.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10649,
+      "currentBytes": 11008,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "973baa5bf918a15bfa1a711a237d3949f31a9e377de310c165ea1920a570f57e",
+      "currentSha256": "61ecb80bc6d2726e1b3ffbc67872b160e2267542bd6d125f1a35cd048c94e006",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-cast-layer-masks.test.ts": {

@@ -151,6 +151,9 @@ describe('3D: carried by another unit (CarryMotion)', () => {
     // A strike the fall cannot hold (before it ends, or past the clip) plays the slam at 1x.
     const plain = new HolderPose(); plain.cast(0); plain.lift(0.4); plain.release(2);
     expect(plain.map(out('idle', 3), 2, clips, seconds, 5).playback).toEqual({ clips: ['slam'], durationSeconds: 1.1 });
+    const early = new HolderPose(); early.cast(0); early.lift(0.4); early.release(2);
+    expect(early.map(out('idle', 3), 2, clips, seconds, CARRY_3D.fallSeconds / 2).playback).toEqual({ clips: ['slam'], durationSeconds: 1.1 });
+    expect(early.map(out('idle', 3), 2, clips, seconds, undefined).playback).toEqual({ clips: ['slam'], durationSeconds: 1.1 });
   });
 
   it('let go, the body comes down along the grip while its holder is there (the slam brings it down with the swing)', () => {

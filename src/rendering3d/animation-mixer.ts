@@ -151,7 +151,7 @@ export class UnitAnimationMixer {
     if (this.lows.has(key)) return this.lows.get(key);
     const clip = this.clips.get(clipName);
     let at: number | undefined;
-    if (clip && Number.isFinite(clip.duration) && clip.duration > 0) {
+    if (clip && Number.isFinite(clip.duration) && clip.duration > 0) try {
       const copy = this.root.clone(true), mixer = new AnimationMixer(copy);
       const bones = boneNames.map(name => copy.getObjectByName(name)).filter((bone): bone is Object3D => !!bone);
       if (bones.length) {
@@ -164,7 +164,7 @@ export class UnitAnimationMixer {
         }
       }
       mixer.stopAllAction(); mixer.uncacheRoot(copy);
-    }
+    } catch { at = undefined; } // a model that cannot be copied or sampled: no strike, the slam plays at 1x
     this.lows.set(key, at);
     return at;
   }
