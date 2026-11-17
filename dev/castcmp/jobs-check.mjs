@@ -12,7 +12,8 @@
 // --foe-offset K (real only) moves every foe K columns to the side; each must stay on columns 0-6.
 // --ally2 X / --ally2star N / --ally2-cell R,C add a second unit of the caster's team; --items me=a+b,ally=c puts items on the
 // caster's side (checked ids; items not advised for acceptance rows are a warning, item-advice.cjs) and the line
-// prints them. // --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
+// prints them.
+// --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
 // cell; --foe2* need --nfoes 2+). With --ally the line prints "ally line D": how near (hex widths, cell centres) the ally came
 // to the caster->first target line in the window ("clear": never between them); under 0.5 is a WARN.
 // Only the recorded window counts: a tank that stands on the line at combat start and walks off before the window opens
