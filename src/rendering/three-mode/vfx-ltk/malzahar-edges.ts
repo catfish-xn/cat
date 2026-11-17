@@ -2,7 +2,7 @@
  * Malzahar's 3-star cast on the board (presentation only; the rules' gate still strikes its target's row ±2, docs/S13_RULES_GAP.md):
  * ice-blue walls rise along both side edges in clusters, the bottom one first and each next one up a little later, and a
  * blue ring on the ground starts with each of the lower clusters, nearer the middle the lower it is, so the edges and
- * the rings read as an "M". Fable 11-17 kept it to a budget: five clusters and four rings a side, all of them one
+ * the rings read as an "M". Fable 11-17 kept it to a budget: five clusters and three rings a side, all of them one
  * cast's fan-out (runtime OFF_SLOT_MAX). Places and delays are fitted, not original data.
  */
 import type { BoardSpot, WorldPoint } from './timeline';
@@ -13,7 +13,7 @@ import type { BoardSpot, WorldPoint } from './timeline';
  */
 export const MALZAHAR_EDGE_TIMING = { first: 0.35, last: 1.05 } as const;
 /** Clusters on each side edge, and rings on each side (on the lowest clusters' rows). Fable 11-17's budget. */
-export const MALZAHAR_EDGE_COUNTS = { walls: 5, rings: 4 } as const;
+export const MALZAHAR_EDGE_COUNTS = { walls: 5, rings: 3 } as const;
 
 export interface EdgeGrid { readonly rows: number; readonly columns: number }
 /**
