@@ -148,6 +148,9 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       // damage and her self-heal move with it, and the closing slam on the target and its neighbours (taken now, wherever
       // they are then) lands RENNI_SLAM_AFTER_STUN_TICKS after the stun ends. Amounts are taken now.
       const w=RENNI_LIFT_TICKS;
+      // User-approved (2026-11-17): from her cast until the slam lands she holds the target and does not attack (channel: no
+      // move, attack or cast; a control on her cancels it), as Nunu and Sevika do. Nothing else changes.
+      applyStatus(u,origin(u),'channel',0,w+n+RENNI_SLAM_AFTER_STUN_TICKS,ctx.tick,ctx.events,true,'',seq);
       later(ctx,u,t,'g23RenniLift',w,n,seq,0,1);
       for(let i=0;i<n;i++){
         later(ctx,u,u,'g23Heal',w+i+1,split(healing,n,i),seq,i,n);

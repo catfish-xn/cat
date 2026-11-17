@@ -1842,3 +1842,9 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
   - 实现：新任务 `g23RenniLift`（`serialization-structure` 校验所属英雄）。
 - 爆爆（第三批的改进）：施法后 `POWDER_MONKEY_RELEASE_TICKS` 拍猴子离手（只给特效用的显示事件 `powder-monkey-sent` 改在这一拍发，带落点格和到达拍），离手后再过 `POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX × 格数` 拍到达爆炸。格数按施法拍时爆爆的位置到落点算，落点仍在施法拍锁定。离手拍之前爆爆阵亡，不炸；离手拍及之后阵亡，照炸。拍数都是拟合，非原版。实现：新任务 `g2PowderRelease`（施法拍排下，离手时排到达任务 `g2PowderMonkey` 或"恶霸"连携的 `v20Powder`）。
 - 前摇期间施法者阵亡不结算，与前几批一致。测试 `tests/cast-windup-batch4.test.ts`。
+
+## 荏妮举着目标期间不普攻（2026-11-17，用户批准：玩法规则改动，不改数值）
+
+- 荏妮从施法拍起到结尾砸地那一拍为止（`RENNI_LIFT_TICKS` + 眩晕拍数 + `RENNI_SLAM_AFTER_STUN_TICKS`）身上有 channel：不移动、不普攻、不施法；她被控时 channel 打断（与努努、塞薇卡同一做法），但只要结尾砸地还没落下，控制结束后她仍不移动、不普攻、不施法（用户 2026-11-17 选定：举着时不走动、不普攻、不放技能，三样都不行）。被控时不提前放下目标，举起、逐拍伤害、回血、砸地都按时发生。
+- 依据：原版动画里举着期间是循环保持的姿势，画面上看不到挥锯普攻（推断）；客户端数据没有"禁普攻"字段，按用户决定执行。
+- 测试 `tests/renni-lift-channel.test.ts`。
