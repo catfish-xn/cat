@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three';
+import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
 import { CARRY_3D, CARRY_HOLDS, CarryMotion, HOLD_LIFT_WAIT_SECONDS, HolderPose, carryRise, heldBarLift } from '../src/rendering/three-mode/unit-control';
 import type { ActionOutput } from '../src/rendering3d/animation-state';
 import { RENNI_SLAM_AFTER_STUN_TICKS } from '../src/simulation/cast-windup';
@@ -136,5 +138,39 @@ describe('3D: carried by another unit (CarryMotion)', () => {
 
   it("the held body lands on the slam's damage tick: the fall lasts the rules' let-go-to-slam ticks", () => {
     expect(CARRY_3D.fallSeconds * 1000).toBeCloseTo(RENNI_SLAM_AFTER_STUN_TICKS * COMBAT_TICK_MS);
+  });
+
+  it("the slam's swing is sped up so the saw is lowest as the held body lands; the rest plays at 1x", () => {
+    const pose = new HolderPose();
+    pose.cast(0); pose.lift(0.4); pose.release(2);
+    // The slam clip (1.1 s) is lowest 0.3 s in: that much of it plays in the fall (0.1 s), three times as fast.
+    const slam = pose.map(out('idle', 3), 2, clips, seconds, 0.3);
+    expect(slam.playback).toEqual({ clips: ['slam'], durationSeconds: CARRY_3D.fallSeconds + 0.8, release: { atSeconds: CARRY_3D.fallSeconds, headSpeed: 0.3 / CARRY_3D.fallSeconds, tailSpeed: 1 } });
+    expect(pose.map(out('idle', 3), 2 + CARRY_3D.fallSeconds + 0.75, clips, seconds, 0.3).revision).toBe(slam.revision);
+    expect(pose.map(out('idle', 3), 2 + CARRY_3D.fallSeconds + 0.85, clips, seconds, 0.3)).toEqual(out('idle', 3));
+    // A strike the fall cannot hold (before it ends, or past the clip) plays the slam at 1x.
+    const plain = new HolderPose(); plain.cast(0); plain.lift(0.4); plain.release(2);
+    expect(plain.map(out('idle', 3), 2, clips, seconds, 5).playback).toEqual({ clips: ['slam'], durationSeconds: 1.1 });
+  });
+
+  it('let go, the body comes down along the grip while its holder is there (the slam brings it down with the swing)', () => {
+    const m = new CarryMotion();
+    m.start(); run(m, 0.5, { x: 30, y: 120, z: 0 });
+    m.release();
+    // Half way down the grip has swung low and to the side: the body is between its own spot and the grip, not above where it was.
+    const mid = run(m, CARRY_3D.fallSeconds / 2, { x: 50, y: 20, z: 0 });
+    expect(mid.x).toBeGreaterThan(0); expect(mid.x).toBeLessThan(50);
+    expect(mid.y).toBeLessThan(20);
+    expect(run(m, CARRY_3D.fallSeconds, { x: 50, y: 20, z: 0 })).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('the strike is when the highest grip bone is lowest in the clip, read off a copy of the model (UnitAnimationMixer.lowestSeconds)', () => {
+    const root = new Object3D(), saw = new Object3D(); saw.name = 'Saw'; root.add(saw);
+    const swing = new AnimationClip('swing', 1, [new VectorKeyframeTrack('Saw.position', [0, 0.2, 0.4, 1], [0, 30, 0, 0, 2, 0, 0, 1, 0, 0, 9, 0])]);
+    const mixer = new UnitAnimationMixer(root, [swing]);
+    expect(mixer.lowestSeconds('swing', ['Saw'])).toBeCloseTo(0.4, 1);
+    expect(saw.position.y).toBe(0); // the live pose is untouched
+    expect(mixer.lowestSeconds('swing', ['None'])).toBeUndefined();
+    expect(mixer.lowestSeconds('missing', ['Saw'])).toBeUndefined();
   });
 });

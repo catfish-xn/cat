@@ -117,17 +117,27 @@ export class HolderPose {
   /** The holder died or left: its own action again. */
   stop(): void { if (this.phase !== null) { this.phase = null; this.count++; } }
   get active(): boolean { return this.phase !== null; }
-  map(output: ActionOutput, now: number, clips: HoldClips, seconds: (clip: string) => number | undefined): ActionOutput {
+  /**
+   * `strike`: when in the slam clip its swing is lowest (UnitAnimationMixer.lowestSeconds over the grip bones). The swing
+   * up to it is played in `fallSeconds` (sped up, as an attack's head is to its release), so the saw comes down as the
+   * held body lands, on the slam's damage tick; the rest plays at 1×. Without it the slam plays at 1× from the let-go.
+   */
+  map(output: ActionOutput, now: number, clips: HoldClips, seconds: (clip: string) => number | undefined, strike?: number, fallSeconds: number = CARRY_3D.fallSeconds): ActionOutput {
     if (output.state === 'death') { this.stop(); return output; }
-    const left = now - this.since;
+    const left = now - this.since, slam = seconds(clips.slam);
+    const hit = strike !== undefined && slam !== undefined && strike > fallSeconds && strike < slam ? strike : undefined;
+    const slamFor = slam === undefined ? 0 : hit === undefined ? slam : fallSeconds + (slam - hit);
     if (this.phase === 'in' && !this.lifted && left > HOLD_LIFT_WAIT_SECONDS) this.stop();
-    if (this.phase === 'slam' && left >= (seconds(clips.slam) ?? 0)) this.stop();
+    if (this.phase === 'slam' && left >= slamFor) this.stop();
     if (this.phase === null) return output;
     const inSeconds = seconds(clips.in) ?? 0;
     const [clip, sub, loop] = this.phase === 'slam' ? [clips.slam, 2, false] : left < inSeconds ? [clips.in, 0, false] : [clips.loop, 1, true];
     const length = seconds(clip);
     if (length === undefined || !(length > 0)) return output;
-    return { ...output, state: 'cast', loop, revision: 7_000_000 + this.count * 4 + sub, playback: { clips: [clip], durationSeconds: length } };
+    const playback = this.phase === 'slam' && hit !== undefined
+      ? { clips: [clip], durationSeconds: slamFor, release: { atSeconds: fallSeconds, headSpeed: hit / fallSeconds, tailSpeed: 1 } }
+      : { clips: [clip], durationSeconds: length };
+    return { ...output, state: 'cast', loop, revision: 7_000_000 + this.count * 4 + sub, playback };
   }
 }
 export interface CarryOffset { x: number; y: number; z: number }
@@ -158,9 +168,10 @@ export class CarryMotion {
   }
   update(seconds: number, toward: CarryOffset | null): CarryOffset {
     if (this.holding && toward === null) this.release(true);
-    if (this.holding && toward) {
+    // Falling, it keeps following the grip (the holder's slam brings it down along the swing) when there is one.
+    if (toward) {
       this.toward = { ...toward };
-      if (this.share >= 1) { this.peak = Math.max(this.peak, toward.y); this.toward.y = Math.max(toward.y, this.peak * (this.spec.holdFloor ?? 0)); }
+      if (this.holding && this.share >= 1) { this.peak = Math.max(this.peak, toward.y); this.toward.y = Math.max(toward.y, this.peak * (this.spec.holdFloor ?? 0)); }
     }
     const step = this.holding ? seconds / Math.max(1e-6, this.spec.riseSeconds) : -seconds / Math.max(1e-6, this.spec.fallSeconds);
     this.share = Math.min(1, Math.max(0, this.share + step));

@@ -1092,7 +1092,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** The action a piece's mixer plays: its state's, through batch3's own poses and a holder's hold pose (HolderPose). */
   const actionOf = (id: string, view: PieceView, output: ActionOutput): ActionOutput => {
     const mapped = batch3?.animation(id, output) ?? output, clips = CARRY_HOLDS[view.definitionId]?.pose, mixer = view.mixer;
-    return clips && mixer ? view.holdPose.map(mapped, clock, clips, name => mixer.clipSeconds(name)) : mapped;
+    const bones = CARRY_HOLDS[view.definitionId]?.bones ?? [];
+    return clips && mixer ? view.holdPose.map(mapped, clock, clips, name => mixer.clipSeconds(name), mixer.lowestSeconds(clips.slam, bones)) : mapped;
   };
   const queued: { at: number; generation: number; run: () => void }[] = [];
   const live = new Set<LiveEffect>();
@@ -2000,7 +2001,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       let carryLift = 0, carryX = 0, carryZ = 0;
       if (view.carry.active || view.carryApplied.x || view.carryApplied.z) {
         const holder = view.carryHolder ? pieces.get(view.carryHolder) : undefined;
-        const toward = view.carry.held && view.alive && holder?.alive ? gripOffset(view, holder) : null;
+        // Held, or on its way down while its holder slams: it follows the grip (a falling body without a living holder drops straight).
+        const toward = view.carry.active && view.alive && holder?.alive ? gripOffset(view, holder) : null;
         const carried = view.carry.update(seconds, toward);
         carryX = carried.x; carryZ = carried.z; carryLift = carried.y;
         setCarryOffset(view, carryX, carryZ);
