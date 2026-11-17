@@ -64,17 +64,19 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     const replay = await createBoardReplay(params.get('board')!.split(','), (params.get('foes') ?? params.get('board')!).split(','), star);
     const frameOf = (i: number) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces: replay.frames[i]!, fighting: true, dragging: null });
     listener.frame({ ...frameOf(0), fighting: false }); step(50);
+    // Rec branch: the game's own combat floats over the whole board too (?numbers=0 leaves them out).
+    const boardFloats = params.get('numbers') !== '0' ? createGameFloats(host, id => listener.screenBox?.(id), () => replay.frames[0]!.map((p: any) => p.id)) : null;
     let at = 0, carry = 0;
     const boardStep = (ms: number) => {
       while (ms > 0) {
         const d = Math.min(ms, 1000 / 60); carry += d;
-        while (carry >= 50 && at < replay.frames.length - 1) { carry -= 50; at++; listener.frame(frameOf(at)); if (replay.events[at]!.length) listener.events(replay.events[at]); }
-        step(d); ms -= d;
+        while (carry >= 50 && at < replay.frames.length - 1) { carry -= 50; at++; listener.frame(frameOf(at)); if (replay.events[at]!.length) { listener.events(replay.events[at]); boardFloats?.add(replay.events[at]); } }
+        step(d); boardFloats?.update(d); ms -= d;
       }
     };
     listener.frame(frameOf(0));
     (window as any).__h = {
-      step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; listener.frame(frameOf(0)); },
+      step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; boardFloats?.clear(); listener.frame(frameOf(0)); },
       // Rec branch: a unit's screen box, for board-frames.cjs crops.
       box: (id: string) => listener.screenBox?.(id),
       clock: () => clock, tick: () => at, status: r.status, detail: r.detail,
