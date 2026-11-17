@@ -145,6 +145,8 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const main=hero?.mainBps??10000;
       const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=Math.floor(physical('ADPercent')*main/10000);
       applyStatus(t,origin(u),'stun',0,n,ctx.tick,ctx.events);
+      // Display only: Renni lifts her target for the stun (put down with the stun's last pulse, executeG23Task).
+      ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:t.id,carried:true});
       for(let i=0;i<n;i++){
         later(ctx,u,u,'g23Heal',i+1,split(healing,n,i),seq,i,n);
         later(ctx,u,t,'g23Physical',i+1,split(damage,n,i),seq,i,n);
@@ -265,6 +267,8 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});
   else hit(ctx,u,target,task.amount,task.actionSeq,1000+task.ordinal,task.kind==='g23Physical'?'physical':task.kind==='g23True'?'true':'magic');
   // Display only: Dr. Mundo's heal over time paid its last part.
+  // Display only: Renni puts her target down with the stun's last pulse.
+  if(task.kind==='g23Physical'&&champion(u)==='renni'&&task.total===Math.round(variable(u,'StunDuration')*20)&&task.ordinal===task.total-1)ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:task.targetId!,carried:false});
   if(task.kind==='g23Heal'&&champion(u)==='drmundo'&&task.ordinal===task.total-1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'drmundo-heal',targetIds:[]});
 }
 

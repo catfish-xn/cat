@@ -36,6 +36,12 @@ export type G23CombatEventData =
    * sets off for its landing cell (cell), arriving at arrivalTick; 'powder-monkey-arrived': it reached that cell and explodes.
    */
   | { readonly type: 'abilityMarker'; readonly tick: number; readonly unitId: string; readonly marker: 'powder-monkey-sent' | 'powder-monkey-arrived'; readonly cell: HexCell; readonly arrivalTick: number }
+  /**
+   * Display only, no rule effect: holderId lifts targetId (carried true) or puts it down (carried false), for the renderer's
+   * carry. Renni: lifted on her cast, put down when her stun's last pulse lands (a death of either ends it too: the renderer
+   * also ends a carry on either one's death event).
+   */
+  | { readonly type: 'carryChanged'; readonly tick: number; readonly holderId: string; readonly targetId: string; readonly carried: boolean }
   | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }

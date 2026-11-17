@@ -152,6 +152,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
     case 'abilityMarker': return { ...envelope, ...pick(event, ['type', 'unitId', 'marker', 'arrivalTick']), cell: cellView(event.cell) };
+    case 'carryChanged': return { ...envelope, ...pick(event, ['type', 'holderId', 'targetId', 'carried']) };
     case 'abilityEffectEnded': return { ...envelope, ...pick(event, ['type', 'unitId', 'effect']), targetIds: [...event.targetIds] };
   }
 }

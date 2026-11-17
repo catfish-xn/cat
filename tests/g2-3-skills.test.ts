@@ -114,3 +114,12 @@ it('forge revival relocates in owner coordinates, mirrors on the enemy side, and
   expect(reviveG23Forge(ctx,jayce)).toBe(forge);expect(ctx.events).toHaveLength(2);expect(ctx.units).toHaveLength(3);
  }
 });
+
+// Display only (2026-11-17): Renni's lift for the renderer's carry, start on her cast, end on her stun's last pulse.
+it('Renni lifts her target on the cast and puts it down with the stun\'s last pulse (carryChanged, display only)', () => {
+  let state = battle([hero('renni'), dummy()], { rngState: 42 }); const carry: [number, string, string, boolean][] = []; let castTick = -1;
+  for (let i = 0; i < 80; i++) { const step = stepCombat(state); state = step.state;
+    for (const e of step.events) { if (e.type === 'cast' && castTick < 0) castTick = e.tick; if (e.type === 'carryChanged') carry.push([e.tick, e.holderId, e.targetId, e.carried]); } }
+  const n = 30; // StunDuration 1.5 s
+  expect(carry).toEqual([[castTick, 'p', 'e', true], [castTick + n, 'p', 'e', false]]);
+});
