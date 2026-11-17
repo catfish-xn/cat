@@ -219,9 +219,17 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   // --foe2-cell): those units on given cells, the second foe another hero (real-combat.ts realUnits; layoutProblem throws).
   const cellParam = (k: string) => { const v = params.get(k); if (v === null) return undefined; const c = rc.parseCell(v); if (!c) throw new Error(`?${k} must be R,C, got ${v}`); return c; };
   const meCell = cellParam('mecell'), allyCell = cellParam('allycell'), foeCell = cellParam('foecell'), foe2Cell = cellParam('foe2cell'), foe2 = params.get('foe2'), foe2star = params.get('foe2star');
-  const units = rc.realUnits({ unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
+  // ?ally2=X&ally2star=N&ally2cell=R,C / ?items=me=a+b,ally=c (v-capture --ally2 / --ally2star / --ally2-cell / --items): a
+  // second unit of `me`'s team, and items on `me`'s side only (real-combat.ts parseItems / realItems).
+  const ally2 = params.get('ally2'), ally2star = params.get('ally2star'), ally2Cell = cellParam('ally2cell'), itemsText = params.get('items');
+  const parsedItems = itemsText !== null ? rc.parseItems(itemsText) : null;
+  if (parsedItems && 'why' in parsedItems) throw new Error(parsedItems.why);
+  const setup = { unit, star, form, foe: foeModel, dist, nfoes, foestar: Number(params.get('foestar') ?? 1), ...(foeOffset !== 0 ? { foeOffset } : {}),
     ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(meCell ? { meCell } : {}), ...(foeCell ? { foeCell } : {}),
-    ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}) });
+    ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}),
+    ...(ally2 ? { ally2 } : {}), ...(ally2star !== null ? { ally2star: Number(ally2star) } : {}), ...(ally2Cell ? { ally2Cell } : {}),
+    ...(parsedItems ? { items: parsedItems.items } : {}) };
+  const units = rc.realUnits(setup);
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
   const window = { ...start, anchor };
@@ -234,7 +242,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
       ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
     })));
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
-  }, start.castNumber ?? 1, anchor);
+  }, start.castNumber ?? 1, anchor, rc.realItems(setup));
   if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
   const lead = rc.leadTicksFor(run.castIndex, window);
   return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
