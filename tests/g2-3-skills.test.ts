@@ -41,7 +41,8 @@ it('Mundo splits the complete 1550 healing without truncation or duplicate pulse
 });
 it('Renni delayed damage and healing conserve complete source amounts',()=>{
  let state=battle([hero('renni'),dummy()],{rngState:42});const events:CombatEvent[]=[];
- for(let i=0;i<31;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
+ // Wind-up batch 4: the lift starts RENNI_LIFT_TICKS after the cast and the slam lands RENNI_SLAM_AFTER_STUN_TICKS after the stun.
+ for(let i=0;i<31+RENNI_LIFT_TICKS+RENNI_SLAM_AFTER_STUN_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;events.push(...step.events);}
  expect(raw(events).reduce((a,b)=>a+b,0)).toBe(700);
  expect(heals(events).filter(e=>e.unitId==='p').reduce((n,e)=>n+e.requested,0)).toBe(1050);
 });
@@ -100,7 +101,7 @@ import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;
@@ -116,10 +117,10 @@ it('forge revival relocates in owner coordinates, mirrors on the enemy side, and
 });
 
 // Display only (2026-11-17): Renni's lift for the renderer's carry, start on her cast, end on her stun's last pulse.
-it('Renni lifts her target on the cast and puts it down with the stun\'s last pulse (carryChanged, display only)', () => {
+it('Renni lifts her target RENNI_LIFT_TICKS after the cast and puts it down with the stun\'s last pulse (carryChanged, display only)', () => {
   let state = battle([hero('renni'), dummy()], { rngState: 42 }); const carry: [number, string, string, boolean][] = []; let castTick = -1;
   for (let i = 0; i < 80; i++) { const step = stepCombat(state); state = step.state;
     for (const e of step.events) { if (e.type === 'cast' && castTick < 0) castTick = e.tick; if (e.type === 'carryChanged') carry.push([e.tick, e.holderId, e.targetId, e.carried]); } }
   const n = Math.round(variable(state.units.find(u => u.id === 'p')!, 'StunDuration') * 20); // her stun, in ticks
-  expect(carry).toEqual([[castTick, 'p', 'e', true], [castTick + n, 'p', 'e', false]]);
+  expect(carry).toEqual([[castTick + RENNI_LIFT_TICKS, 'p', 'e', true], [castTick + RENNI_LIFT_TICKS + n, 'p', 'e', false]]);
 });

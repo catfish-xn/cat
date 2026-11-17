@@ -86,8 +86,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const nunu = new Map<string, { ended: number; hit: Set<string> }>();
   /** Dr. Mundo since his last cast: the enemy his pulses hit, and the tick his heal ended (-1 before). */
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
-  /** Renni: her running cast's stun, until its final slam lands: the units stunned on her cast's tick, and which one she holds. */
-  const grabs = new Map<string, { candidates: readonly string[]; held: string | null }>();
+  /** Renni: the enemy she lifted, until her final slam lands, and the tick she set it down (-1 while held). */
+  const grabs = new Map<string, { held: string; down: number }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -138,31 +138,28 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
-        // Renni (combat-g2-3.ts 'renni'): her cast stuns one enemy and mauls it every tick of the stun; on the stun's last
-        // tick the final slam strikes that enemy and every enemy next to it. Her cast event names no targets and a stun event
-        // names no source, so the grab is the stun applied on her cast's tick; should another stun land on that tick too,
-        // the held one is the first of them her ability-direct packets strike. The slam is the tick those packets strike the
-        // held enemy twice (its last maul and the slam): every enemy they strike that tick takes FinalSlam_Tar.
-        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') {
-          const candidates = [...new Set(events.filter(e => e.type === 'statusChanged' && e.tick === event.tick && e.kind === 'stun'
-            && e.reason === 'applied' && e.targetId !== event.sourceId).map(e => (e as { targetId: string }).targetId))];
-          const held = candidates.length === 1 ? candidates[0]! : null;
-          grabs.set(event.sourceId, { candidates, held });
-          if (held !== null) plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held], action: 'passive', skill: 'renni-grab' });
+        // Renni (combat-g2-3.ts 'renni'): RENNI_LIFT_TICKS after her cast she lifts one enemy (carryChanged true) and holds it
+        // stunned, mauling it every tick; she sets it down on the stun's last tick, or at once if either of them dies
+        // (carryChanged false). RENNI_SLAM_AFTER_STUN_TICKS later the final slam strikes the enemies taken on her cast:
+        // the first tick after the set-down's her ability-direct packets strike, every enemy struck that tick takes
+        // FinalSlam_Tar (the held one first). A new cast drops whatever the last one left.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') grabs.delete(event.sourceId);
+        if (event.type === 'carryChanged' && definition(event.holderId) === 'renni') {
+          if (event.carried) {
+            grabs.set(event.holderId, { held: event.targetId, down: -1 });
+            plan.extra.push({ champion: 'renni', sourceId: event.holderId, targets: [event.targetId], action: 'passive', skill: 'renni-grab' });
+          } else {
+            const grab = grabs.get(event.holderId);
+            if (grab) grab.down = event.tick;
+          }
         }
         const grab = event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'renni' ? grabs.get(event.sourceId) : undefined;
-        if (grab && event.type === 'packetDamage') {
-          if (grab.held === null && grab.candidates.includes(event.targetId)) {
-            grab.held = event.targetId;
-            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'renni-grab' });
-          }
-          const held = grab.held;
-          const struck = events.filter(e => e.type === 'packetDamage' && e.tick === event.tick && e.sourceId === event.sourceId && isAbilityDirect(e)) as Extract<DisplayCombatEvent, { type: 'packetDamage' }>[];
-          if (held !== null && struck.filter(e => e.targetId === held).length >= 2) {
-            grabs.delete(event.sourceId);
-            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held, ...new Set(struck.map(e => e.targetId).filter(id => id !== held))],
-              action: 'passive', skill: 'renni-slam', snapshotTargets: true });
-          }
+        if (grab && grab.down >= 0 && event.type === 'packetDamage' && event.tick > grab.down) {
+          grabs.delete(event.sourceId);
+          const struck = new Set((events.filter(e => e.type === 'packetDamage' && e.tick === event.tick && e.sourceId === event.sourceId && isAbilityDirect(e)) as
+            Extract<DisplayCombatEvent, { type: 'packetDamage' }>[]).map(e => e.targetId));
+          plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: struck.has(grab.held) ? [grab.held, ...[...struck].filter(id => id !== grab.held)] : [...struck],
+            action: 'passive', skill: 'renni-slam', snapshotTargets: true });
         }
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
         // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
