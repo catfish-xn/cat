@@ -30,9 +30,26 @@ export interface TimelineCue {
    * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
    * visual that must not crowd skill impacts out (Steb's heal share). A display priority decision, not original data.
    */
-  readonly rank?: 'body';
+  readonly rank?: 'body' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
+  /**
+   * One run on each board spot of this group the play names (LtkPlayOptions.spots), at the spot's point, its delay added to
+   * the cue's: a cast that covers fixed places of the board (Malzahar's 3-star edges). A fan-out: one cast's runs of a
+   * system share a slot (OFF_SLOT_MAX). Without such spots it does not play.
+   */
+  readonly spots?: string;
+  /**
+   * Only these emitters of the system are drawn (by name); the rest still run but are not shown. The opposite of `hide`,
+   * for a cue that shows one part of a system another cue shows the rest of (Malzahar's gate: walls, ground, hits).
+   */
+  readonly show?: readonly string[];
+  /**
+   * The run starts this many seconds (0 to 2) into its system's own time, or `shown`: where the first emitter it shows
+   * starts (read from the system): layers that wait that long show at once. For a part of a system played on its own
+   * moment (Malzahar's gate hits on the damage). `duration`, `stopAfter` and the fade count from where it starts.
+   */
+  readonly skip?: number | 'shown';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
   readonly targetLimit?: number;
   /** Only the receipt targets after the primary one (Zyra's short vines reach the others, not the one already rooted). */
@@ -119,8 +136,12 @@ export interface TimelineCue {
   readonly livingTarget?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
+/** A board place a play covers (LtkPlayOptions.spots): its point, a delay added to the cues that use it, its group (TimelineCue.spots). */
+export interface BoardSpot { readonly point: WorldPoint; readonly delay: number; readonly group: string }
 export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** Which of the play's board spots it runs on (TimelineCue.spots), by index. */
+  readonly spot?: number;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
 }
@@ -131,10 +152,16 @@ export interface TimelineMapping {
 }
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
-export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], board?: WorldPoint): TimelineMapping {
+export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], board?: WorldPoint, spots: readonly BoardSpot[] = []): TimelineMapping {
   const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
   const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[] = [];
   for (const cue of cues) {
+    if (cue.spots !== undefined) {
+      const mine = spots.map((spot, index) => ({ spot, index })).filter(({ spot }) => spot.group === cue.spots && spot.point.every(Number.isFinite) && Number.isFinite(spot.delay) && spot.delay >= 0);
+      if (!mine.length) { unsupported.push({ cue, reason: 'missing-point' }); continue; }
+      for (const { spot, index } of mine) spawns.push({ ...cue, sourceId, point: spot.point, delay: cue.delay + spot.delay, spot: index });
+      continue;
+    }
     if (cue.location === 'board') {
       if (!board || board.some(n => !Number.isFinite(n))) unsupported.push({ cue, reason: 'missing-point' });
       else spawns.push({ ...cue, sourceId, point: board });

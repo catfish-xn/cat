@@ -34,6 +34,7 @@ import {
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
+import { malzaharEdgeSpots } from './vfx-ltk/malzahar-edges';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
 import type { TimelineVariant } from './vfx-ltk/timeline';
@@ -1195,6 +1196,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const release = releaseOf(source);
     return release ? { variant, release } : variant;
   };
+  /**
+   * A cast's LTK options: its variant and rule branch; Malzahar at 3 stars plays his 3-star list with the board's edge and
+   * swirl spots (malzahar-edges.ts).
+   */
+  const castOptions = (source: PieceView, variant: TimelineVariant | undefined, cast: Extract<DisplayCombatEvent, { type: 'cast' }> | undefined) => {
+    const board = grid;
+    if (source.definitionId === 'malzahar' && source.starLevel === 3 && board && board.rows && board.columns)
+      return { variant, branch: cast?.branch?.branch, skill: 'malzahar-3star', spots: malzaharEdgeSpots({ rows: board.rows, columns: board.columns },
+        cell => { const at = hexCenter(cell, board); return [at.x, at.y, at.z] as const; }) };
+    return cast?.branch ? { variant, branch: cast.branch.branch } : variant;
+  };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
     const source = pieces.get(sourceId);
@@ -1205,7 +1217,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
       if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : castOptions(source, variant, cast))))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);

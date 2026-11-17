@@ -7,7 +7,7 @@ import { AXIS_SIGN } from './space';
 import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
+import { mapSkillTimeline, selectTimeline, type BoardSpot, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
@@ -136,6 +136,8 @@ export interface LtkPlayOptions {
   board?: WorldPoint;
   /** Explicit board stage only, e.g. a confirmed storm after all recipients died. */
   boardOnly?: boolean;
+  /** Board places the play covers (TimelineCue.spots): each cue naming a group runs once on each of its spots. */
+  spots?: readonly BoardSpot[];
   /**
    * Every target's place is taken when it plays, a living target's too: a confirmed post-death effect (devoured). Without
    * it a living target is followed and a dead one gets the cast's hits and projectiles at its place (placeTargets).
@@ -263,16 +265,29 @@ export function releaseCueDelay(cue: Pick<TimelineCue, 'delay' | 'event'>, relea
 }
 /** A loaded system with the named top-level emitters, and everything under them, left out of the draw; one per list. */
 const HIDDEN = new WeakMap<PreparedVfx, Map<string, PreparedVfx>>();
-function withHidden(prepared: PreparedVfx, names: readonly string[]): PreparedVfx {
-  const key = names.join(','); let views = HIDDEN.get(prepared);
+function withHidden(prepared: PreparedVfx, names: readonly string[], shown = false): PreparedVfx {
+  const key = `${shown ? 'show' : 'hide'}:${names.join(',')}`; let views = HIDDEN.get(prepared);
   if (!views) { views = new Map(); HIDDEN.set(prepared, views); }
   let view = views.get(key);
   if (!view) {
     const roots = new Set(prepared.model.emitters.filter(e => names.includes(e.name)).map(e => e.index));
-    view = { ...prepared, drawn: prepared.drawn.filter(d => !roots.has(d.root)) }; views.set(key, view);
+    view = { ...prepared, drawn: prepared.drawn.filter(d => roots.has(d.root) === shown) }; views.set(key, view);
   }
   return view;
 }
+/**
+ * How far into its system's time a spawn starts (TimelineCue.skip, 0 to 2 s): a number as given, or `shown`: where the
+ * first of its shown emitters starts, read from the system itself.
+ */
+export function skipOf(spawn: { readonly skip?: number | 'shown'; readonly show?: readonly string[] }, prepared: PreparedVfx): number {
+  if (spawn.skip === undefined) return 0;
+  const at = spawn.skip === 'shown'
+    ? Math.min(...prepared.model.emitters.filter(e => !spawn.show || spawn.show.includes(e.name)).map(e => e.timeBeforeFirstEmission ?? 0))
+    : spawn.skip;
+  return Number.isFinite(at) ? Math.min(2, Math.max(0, at)) : 0;
+}
+/** What a spawn draws of its system: only TimelineCue.show, or all but TimelineCue.hide. */
+const drawnOf = (prepared: PreparedVfx, spawn: TimelineSpawn) => spawn.show ? withHidden(prepared, spawn.show, true) : spawn.hide ? withHidden(prepared, spawn.hide) : prepared;
 /**
  * A projectile system's beams apart from its flight: `beam` keeps only the top-level beam emitters (VfxPrimitiveBeam,
  * its mesh and camera-segment kinds) and everything under them, `flight` keeps the rest (null when nothing else draws).
@@ -588,7 +603,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
       if (!cues) return refuse('not-ready');
-      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
+      const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board, context.spots);
       // A cue the timeline cannot map (timeline.ts unsupported) is played without; the rest of the cast plays (Fable 11-13:
       // one such cue sent the whole cast back to the host's own effect).
       const skipped = mapped.unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
@@ -609,7 +624,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const { spawn } = placed;
         const loaded = spawn.event === 'projectile' && !spawn.stationary && !spawn.rowSide && !spawn.fromAbove && !Object.hasOwn(UNPINNED_BEAM_SYSTEMS, spawn.system)
           ? catalog.get(spawn.system) : undefined;
-        const split = loaded ? beamSplit(spawn.hide ? withHidden(loaded, spawn.hide) : loaded) : null;
+        const split = loaded ? beamSplit(drawnOf(loaded, spawn)) : null;
         if (!split) { rows.push(placed); continue; }
         const together = spawn.together ? undefined : `beam${rows.length}`;
         if (split.flight) rows.push({ ...placed, part: 'flight', together });
@@ -621,11 +636,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const play = ++plays;
       // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
       // (OFF_SLOT_MAX).
+      // So is one cue system on several board spots (TimelineCue.spots).
       const fanned = new Map<string, Set<string>>();
-      for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
-        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
+      const fanKey = (spawn: TimelineSpawn) => spawn.targetId ?? (spawn.spot !== undefined ? `spot:${spawn.spot}` : undefined);
+      for (const { spawn, together } of rows) { const key = fanKey(spawn); if (key !== undefined && !together && !spawn.together) {
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(key); } }
       for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
-        const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
+        const fan = fanKey(spawn) !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
           // A ground line is cast at a place (TimelineCue.lineCells): where its target stands when the cast comes, kept,
@@ -756,7 +773,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
         const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
-        const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
+        const hidden = drawnOf(loaded, spawn), split = row.part ? beamSplit(hidden) : null;
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
@@ -873,6 +890,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
+        // How far into its system's time the run starts (TimelineCue.skip): its duration, stop and fade count from there.
+        const skip = skipOf(spawn, prepared);
         const tail = Math.min(0.25, runFor / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
@@ -892,13 +911,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const nextOptions = { anchor, attachment,
           target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
-          duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
+          duration: runFor + skip, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
+          stopAfter: spawn.stopAfter === undefined ? undefined : spawn.stopAfter + skip, fadeOut: spawn.fadeOut, fadeFrom: fadeFrom === undefined ? undefined : fadeFrom + skip,
+          seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
-        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}${rootRoom ? `\nroot ${rootRoom}` : ''}`;
+        const poolKey = `${spawn.system}${row.part ? `:${row.part}` : ''}\n${spawn.show ? `show:${spawn.show.join(',')}` : spawn.hide?.join(',') ?? ''}\n${attachment?.root.uuid ?? ''}\n${attachment?.body?.uuid ?? ''}\n${scale}${room ? `\n${room.budget}` : ''}${rootRoom ? `\nroot ${rootRoom}` : ''}`;
         const spared = spareFx.findIndex(item => item.object.userData.poolKey === poolKey);
         let fx: LtkParticles | undefined = spared >= 0 ? spareFx.splice(spared, 1)[0] : undefined;
         try {
@@ -908,6 +928,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // timeline end, so a late flight start cannot displace its landing cue.
           fx.object.userData.ltkSystem = spawn.system;
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
+          // A run that starts into its system's time (TimelineCue.skip) is stepped there first, at most 0.1 s a step as a frame is.
+          for (let done = 0; done < skip - 1e-9; done += 0.1) fx.update(Math.min(0.1, skip - done), camera);
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,

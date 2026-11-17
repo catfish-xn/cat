@@ -160,6 +160,24 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'steb-heal': [
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },
   ],
+  // Malzahar at 3 stars (malzahar-edges.ts; Fable 11-17): his cast as at 1 and 2 stars without the gate under each target,
+  // plus the gate's walls (crystal and upward layers) on the edge spots and its ground layers on the swirl spots, both a
+  // decorative rank so a full board keeps others' damage. The gate's hit layers play on each enemy its damage strikes
+  // ('malzahar-3star-hit'). Durations are fitted, not original data.
+  'malzahar-3star': [
+    { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
+    { system: '7d0f4b1e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, bone: chest, travelSeconds: 0.5, targetBone: chest },
+    { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: ground },
+    { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: chest },
+    { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: chest },
+    { system: '10e4e326', action: 'cast', event: 'hit', spots: 'wall', delay: 0, duration: 1.4, rank: 'decorative',
+      show: ['Temp_Mesh', 'Temp_Mesh1', 'Temp_Mesh2', 'UpAlphaBurst', 'UpAddBurst', 'Add_UpWave', 'LightningUp', 'sparks_shoot_up', 'Add_RingUp', 'Electricity'] },
+    { system: '10e4e326', action: 'cast', event: 'hit', spots: 'swirl', delay: 0, duration: 1.2, rank: 'decorative',
+      show: ['Add_GroundLines', 'Alpha_GroundLines', 'Alpha_GroundGlow', 'Add_LightBelow', 'Alpha_ShockwareGround', 'Alpha_Glow', 'Add_Glow', 'Alpha_Glow1'] },
+  ],
+  // The gate's hits on an enemy its 3-star damage strikes, when it lands: the system from where those layers start.
+  'malzahar-3star-hit': [{ system: '10e4e326', action: 'passive', event: 'hit', delay: 0, skip: 'shown', duration: 0.5, bone: ground,
+    show: ['Alpha_Hit1', 'Add_Hit1', 'Add_SmallHit2', 'Add_Flash', 'Distort_Warp'] }],
   // Irelia's swipe where her shield ends (batch1-events.ts). It reaches the front row, as in the original; at the 0.44 base
   // it drew 2.9 cells and at the arena scale 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
   'irelia-swipe': [

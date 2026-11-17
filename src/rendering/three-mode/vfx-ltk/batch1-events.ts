@@ -88,6 +88,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
   /** Renni: the enemy she lifted, until her final slam lands, and the tick she set it down (-1 while held). */
   const grabs = new Map<string, { held: string; down: number }>();
+  /** Malzahar at 3 stars, since his cast: the tick his gate's damage landed (-1 before), and the enemies its hits played on. */
+  const gates = new Map<string, { tick: number; hit: Set<string> }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -95,7 +97,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); gates.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -144,6 +146,17 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // the first tick after the set-down's her ability-direct packets strike, every enemy struck that tick takes
         // FinalSlam_Tar (the held one first). A new cast drops whatever the last one left.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') grabs.delete(event.sourceId);
+        // Malzahar at 3 stars (malzahar-edges.ts): his gate lands after his cast (the rules' wind-up), on the first tick his
+        // ability-direct packets strike after it; each enemy struck on that tick gets the gate's hits ('malzahar-3star-hit').
+        // Later packets (the infection) do not.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'malzahar') {
+          if (star(event.sourceId) === 3) gates.set(event.sourceId, { tick: -1, hit: new Set() }); else gates.delete(event.sourceId);
+        }
+        const gate = event.type === 'packetDamage' && isAbilityDirect(event) ? gates.get(event.sourceId) : undefined;
+        if (gate && event.type === 'packetDamage' && (gate.tick < 0 || gate.tick === event.tick) && !gate.hit.has(event.targetId)) {
+          gate.tick = event.tick; gate.hit.add(event.targetId);
+          plan.extra.push({ champion: 'malzahar', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'malzahar-3star-hit', snapshotTargets: true });
+        }
         if (event.type === 'carryChanged' && definition(event.holderId) === 'renni') {
           if (event.carried) {
             grabs.set(event.holderId, { held: event.targetId, down: -1 });
