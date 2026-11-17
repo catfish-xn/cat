@@ -36,6 +36,8 @@ function advance(initial: CombatState, ticks: number): { state: CombatState; eve
   for (let n = 0; n < ticks && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
   return { state, events };
 }
+/** Wind-up batch 2 (2026-11-16): Tristana's shell lands CAST_WINDUP_TICKS.tristana after her cast; step through the landing. */
+const tristanaLanded = (initial: CombatState) => advance(initial, 1 + CAST_WINDUP_TICKS.tristana);
 /** B9 replay2: S13 statuses must be anchored by frozen contributions or an activity, so injected
  * fixture statuses are built with the engine's own applyStatus (same source, kind, amount and ticks). */
 function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redirect', value: number, appliedAtTick: number, expiresAtTick: number): CombatUnit {
@@ -157,9 +159,9 @@ describe('M5 independent finite combat rules', () => {
     expect(end.state.units.find(u => u.id === 'p')!.runtime!.nextAttackPhysical).toBe(0);
   });
   it('Tristana overkill schedules one committed bounce and grants exactly 125 AD bps', () => {
-    const initial = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
+    const initial = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
     const owner = initial.state.units.find(u => u.id === 'p')!;
-    expect(owner.tasks).toEqual([expect.objectContaining({ kind: 'tristanaBounce', amount: 475, executeAtTick: 2 })]);
+    expect(owner.tasks).toEqual([expect.objectContaining({ kind: 'tristanaBounce', amount: 475, executeAtTick: 2 + CAST_WINDUP_TICKS.tristana })]);
     expect(owner.runtime!.permanentAdBps).toBe(125);
     const next = stepCombat(initial.state);
     expect(packets(next.events).find(p => p.source.ownerId === 'p')).toMatchObject({ raw: 475, hpDamage: 475 });
@@ -262,9 +264,9 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(end.events).filter(p => p.source.definitionId === 'irelia-ability' && p.source.sourceKind === 'ability')).toEqual([expect.objectContaining({ raw: 70, tick: 61 })]);
   });
   it('Tristana last-enemy kill has no ricochet growth and committed bounce never recurses', () => {
-    const finalKill = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 })]));
+    const finalKill = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 })]));
     expect(finalKill.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(0);
-    const first = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3, { hp: 10 }), dummy('e3', 4, 3)]));
+    const first = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3, { hp: 10 }), dummy('e3', 4, 3)]));
     const next = stepCombat(first.state);
     expect(next.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(125);
     expect(next.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
@@ -414,7 +416,7 @@ describe('M5 independent finite combat rules', () => {
   it('Tristana with Loris redirect cannot create two ricochets, duplicate task keys, or double growth', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 100 }), { // ea/ep are tied; pin the primary.
+    const result = tristanaLanded(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 100 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     // 575 incoming splits288 to primary and287 to protector. Only primary overkill188 may ricochet.
@@ -428,7 +430,7 @@ describe('M5 independent finite combat rules', () => {
   it('killing only a damage-sharing protector does not count as Tristana primary-target ricochet', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 1000 }), { // ea/ep are tied; pin the primary.
+    const result = tristanaLanded(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 1000 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     expect(result.state.units.find(u => u.id === 'ea')!.hp).toBe(712);
@@ -440,7 +442,7 @@ describe('M5 independent finite combat rules', () => {
   it.each([0, 100])('475 Tristana ricochet shares238/237 once with secondary armor %i, without reapplying armor or recursively sharing', armor => {
     const protector = hero('loris', 'ep', { mana: 0, cooldownTicks: 1000, cell: { col: 4, row: 3 } });
     const src = origin(protector);
-    const first = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
+    const first = tristanaLanded(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
       ...withStatus(protector, src, 'redirect', 5000, 0, 80),
     }]));
     expect(first.state.units.find(u => u.id === 'p')!.tasks![0].amount).toBe(475);
