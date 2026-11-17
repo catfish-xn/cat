@@ -263,6 +263,20 @@ node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-loca
 - 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`；下载后须执行下述第 3 步（c）解包器。批量构建直接使用它生成/合并的原始资源及 SHA-256 提取记录，无须改接口。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
 - `assets3d-local/unit-map.local.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。特殊资源名以本地映射为准；不根据领域单位 ID 猜测文件名。
 - 其余 58 单位的材质与运行时动作绑定尚无确认依据，配置保持空，不凭文件名猜测材质或把任意 spell 绑定成 cast。原始动作目录已列出，batch 模式尝试按原名转换全部列出的 ANM；未确认的动作按 idle/move/attack/cast/hit/death 六项报告缺失。严格模型转换仍拒绝 `missing-material-texture:<材质>`，需要后续源材料信息补齐绑定；仅下载缓存不会消除这类失败。
+### 非单位角色目录（`--characters`）
+
+召唤物、宠物这类不是可上场单位、但在原版里有独立角色目录的模型，用 `--characters <目录名,…>`（逗号分隔，小写目录名）来转：
+
+```sh
+node scripts/assets3d/build-all.mjs --characters <目录名> --source assets3d-local/trial/local --out assets3d-local/out/characters
+```
+
+- 每个目录按单位的方式构建，产物放在 `characters/<目录名>/`，模型 id 就是目录名，报告写在 `build-report.json` 的 `characters` 下。
+- 如果本地 unit-map 里有 `$characters.<目录名>` 条目，就按条目构建；没有条目时，按约定路径找文件：`assets/characters/<目录名>/skins/base/<目录名>.tft_set13.skn` 和同名 `.skl`，动作按 `$animationRules` 从动画图里挑。
+- 只给 `--characters` 时不构建任何单位；要同时构建单位，就一起写上 `--units`。不带 `--characters` 时，行为和原来完全一样。
+- 目录名不能和单位 id 相同。这类角色没有独立的参考 GLB，跳过参考对照；结构检查照常做。
+- 源文件先用全量抽取（`extract-from-chunks.mjs --units all`）取出来，取源这一步不需要额外参数。
+
 - Jinx/Vi 保留第 2 步确认的贴图和动作绑定。普通 `build.mjs` 的双单位入口保留独立参考对照和离线 fetch-plan 行为；batch 模式不为每个单位重复生成 fetch-plan，没有独立参考 GLB 时明确报告 unavailable，结构检查仍执行。有参考时照常比较。缺少源 JSON 的单位明确报告粒子不可用，不伪造效果或动作语义。
 
 验证命令（不用完整游戏回归）：

@@ -111,7 +111,10 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       vines.forEach((enemy, n) => { addTask(unit, 'g2Landing', tick + CAST_WINDUP_TICKS.zyra, enemy.id, mag(n === 0 ? 'TargetDamage' : 'AOEDamage'), seq, n, vines.length); targets.push(enemy.id); });
       break;
     }
-    case 'tristana': hit(target, physical('PercentAttackDamage', 'APDamage'), 'physical', true); break;
+    case 'tristana':
+      // The shell lands CAST_WINDUP_TICKS later (g2Landing, wind-up batch 2); its target and amount are taken now.
+      addTask(unit, 'g2Landing', tick + CAST_WINDUP_TICKS.tristana, target.id, physical('PercentAttackDamage', 'APDamage'), seq, 0, 1);
+      targets.push(target.id); break;
     case 'urgot': {
       for (const enemy of areaEnemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) {
         hit(enemy, physical(enemy.id === target.id ? 'PrimaryDamage' : 'SecondaryDamage', 'APDamage'), 'physical');

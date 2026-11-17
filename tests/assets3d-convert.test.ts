@@ -4,7 +4,7 @@ import { parseParticleDocument } from '../src/rendering3d/particles';
 // @ts-expect-error Pure Node build utility.
 import { convertParticles, mapEmitter } from '../scripts/assets3d/particles.mjs';
 // @ts-expect-error Pure Node build utility.
-import { makeManifest, build, writeParticleEffects } from '../scripts/assets3d/build.mjs';
+import { makeManifest, build, writeParticleEffects, characterConfigs } from '../scripts/assets3d/build.mjs';
 // @ts-expect-error Pure Node build utility.
 import { contracts, unitDefinitions } from '../scripts/assets3d/runtime.mjs';
 // @ts-expect-error Pure Node build utility.
@@ -157,6 +157,17 @@ describe('strict particle conversion and public contract integration', () => {
         await expect(build({ units: 'jinx,jinx', map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
         await expect(build({ units: 'gangplank-ranged', map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
         await expect(build({ out: '../bad' })).rejects.toThrow('unsafe-output-path');
+        for (const characters of ['Tft13_pet', 'tft13_pet,tft13_pet', '../x', 'jinx', 'a/b'])
+            await expect(build({ characters, map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-characters');
+        await expect(build({ units: '', map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
+    });
+    it('derives a non-unit character directory config unless the unit map names one', () => {
+        expect(characterConfigs('tft13_pet', {})).toEqual({ tft13_pet: { sourceName: 'tft13_pet', base: 'assets/characters/tft13_pet/skins/base',
+            mesh: 'tft13_pet.tft_set13.skn', skeleton: 'tft13_pet.tft_set13.skl', textures: {}, animations: {}, effectPatterns: {} } });
+        const named = { sourceName: 'x', base: 'b', mesh: 'm.skn', skeleton: 's.skl' };
+        expect(characterConfigs('tft13_pet', { $characters: { tft13_pet: named } })).toEqual({ tft13_pet: named });
+        expect(characterConfigs(undefined, {})).toEqual({});
+        expect(() => characterConfigs('jinx', {}, { jinx: { cost: 1 } })).toThrow('unsupported-build-characters');
     });
     it('deduplicates download chunks across adjacent entry ranges and honors exact end boundaries', () => {
         const file = { size: 30, chunks: [{ id: 'a', fileOffset: 0, targetSize: 10, size: 6 }, { id: 'b', fileOffset: 10, targetSize: 10, size: 7 }, { id: 'c', fileOffset: 20, targetSize: 10, size: 8 }] };
