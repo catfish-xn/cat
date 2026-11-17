@@ -62,9 +62,11 @@ export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSl
  * point (a bone, CARRY_BONES) in `riseSeconds`, follows it while held, and comes back down onto its own spot in
  * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once. The fall is the
  * slam: two rule ticks (0.1 s), the gap between the rules' let-go and the slam's damage (Renni: RENNI_SLAM_AFTER_STUN_TICKS),
- * so the body lands on the damage tick. Fitted, not original data.
+ * so the body lands on the damage tick. Once up, the body stays at least `holdFloor` of the highest grip it reached while
+ * held: another clip of the holder (Renni's basic attack mid-hold swings the chainsaw down) sways it but does not put it
+ * down before the rules let go. Fitted, not original data.
  */
-export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1 } as const;
+export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1, holdFloor: 0.85 } as const;
 /**
  * How each holder holds (by definition id): the bones of what it grips with, the held body going to the highest of them
  * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), and whether the held body hangs upside down
@@ -84,14 +86,16 @@ export class CarryMotion {
   /** 0 on its own spot, 1 at the grip. */
   private share = 0;
   private toward: CarryOffset = { x: 0, y: 0, z: 0 };
+  /** The highest grip reached while held (y), once fully up; 0 before. */
+  private peak = 0;
   readonly offset: CarryOffset = { x: 0, y: 0, z: 0 };
-  constructor(private readonly spec: { readonly riseSeconds: number; readonly fallSeconds: number } = CARRY_3D) {}
+  constructor(private readonly spec: { readonly riseSeconds: number; readonly fallSeconds: number; readonly holdFloor?: number } = CARRY_3D) {}
   /** True while held or on its way back down. */
   get active(): boolean { return this.holding || this.share > 0; }
   get held(): boolean { return this.holding; }
   /** 0 on its own spot, 1 at the grip (eased): how far a held body has turned over, for one that hangs upside down. */
   get progress(): number { return smooth(this.share); }
-  start(): void { this.holding = true; }
+  start(): void { this.holding = true; this.peak = 0; }
   /** Let go: the body comes back down over fallSeconds, or at once with `drop` (holder or held unit dead). */
   release(drop = false): void {
     this.holding = false;
@@ -99,7 +103,10 @@ export class CarryMotion {
   }
   update(seconds: number, toward: CarryOffset | null): CarryOffset {
     if (this.holding && toward === null) this.release(true);
-    if (this.holding && toward) this.toward = { ...toward };
+    if (this.holding && toward) {
+      this.toward = { ...toward };
+      if (this.share >= 1) { this.peak = Math.max(this.peak, toward.y); this.toward.y = Math.max(toward.y, this.peak * (this.spec.holdFloor ?? 0)); }
+    }
     const step = this.holding ? seconds / Math.max(1e-6, this.spec.riseSeconds) : -seconds / Math.max(1e-6, this.spec.fallSeconds);
     this.share = Math.min(1, Math.max(0, this.share + step));
     const k = smooth(this.share);

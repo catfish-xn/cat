@@ -44,6 +44,18 @@ describe('3D: carried by another unit (CarryMotion)', () => {
     expect(dead.active).toBe(false);
   });
 
+  it('once up it stays near the highest grip: another clip of the holder sways it but does not put it down', () => {
+    const m = new CarryMotion();
+    m.start(); run(m, 0.5, { x: 30, y: 40, z: 0 });
+    // The holder's basic attack swings the grip down to the ground: the body keeps holdFloor of its highest grip.
+    expect(run(m, 0.2, { x: 10, y: 2, z: 0 })).toEqual({ x: 10, y: 40 * CARRY_3D.holdFloor, z: 0 });
+    // A higher grip raises it again; letting go still brings it all the way down.
+    expect(run(m, 1 / 60, { x: 0, y: 50, z: 0 }).y).toBe(50);
+    m.release(); expect(run(m, CARRY_3D.fallSeconds * 2, null)).toEqual({ x: 0, y: 0, z: 0 });
+    // The next hold starts with no floor.
+    m.start(); expect(run(m, 0.5, { x: 0, y: 10, z: 0 }).y).toBe(10);
+  });
+
   it('a new hold after a drop starts from its own spot', () => {
     const m = new CarryMotion();
     m.start(); run(m, 0.5, { x: 30, y: 40, z: 0 }); m.release(true);
