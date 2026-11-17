@@ -41,7 +41,7 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // as floor(raw×14000/10000)); fourth column = the pre-crit raw, i.e. the hand amount before ×1.4.
   it.each([
     ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21, [504], [360]],
-    ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
+    ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1 + CAST_WINDUP_TICKS.tristana, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
     ['leona', 61, [161], [115]], ['kogmaw', 21, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
     ['loris', 81, [210], [150]], ['nami', 1, [168], [120]], ['corki', 1, [57], [41]], ['garen', 1, [350], [250]], ['zoe', 1, [196], [140]], ['caitlyn', 1, [280, 392], [200, 280]],
   ] as const)('%s authorizes only its skill damage packets', (name, ticks, firstExpected, firstPreCrit) => {
@@ -96,10 +96,11 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
     expect(result.state.rngDraws).toBe(2);
   });
   it('Tristana overflow retains its critical fact and waits for the next tick without drawing again', () => {
-    const first = stepCombat(battle([hero('tristana', true), { ...dummy('eA'), hp: 100 }, { ...dummy('eB', 3, 3), armor: 100 }], { rngState: 42, rngDraws: 0 }));
+    // Wind-up batch 2: the shell lands CAST_WINDUP_TICKS.tristana after her cast.
+    const first = advance(battle([hero('tristana', true), { ...dummy('eA'), hp: 100 }, { ...dummy('eB', 3, 3), armor: 100 }], { rngState: 42, rngDraws: 0 }), 1 + CAST_WINDUP_TICKS.tristana);
     // replay2 pre-crit raw on the critical first shot: old post-crit 805 = floor(575×14000/10000).
     expect(packets(first.events).map(e => [e.unitId, e.raw])).toEqual([['eA', 575]]);
-    expect(first.state.units.find(u => u.id === 'p')!.tasks).toMatchObject([{ amount: 705, executeAtTick: 2, inherited: { critical: true, portion: 'overkill', resolvedAtTick: 1 } }]);
+    expect(first.state.units.find(u => u.id === 'p')!.tasks).toMatchObject([{ amount: 705, executeAtTick: 2 + CAST_WINDUP_TICKS.tristana, inherited: { critical: true, portion: 'overkill', resolvedAtTick: 1 + CAST_WINDUP_TICKS.tristana } }]);
     const second = stepCombat(first.state);
     expect(packets(second.events).map(e => [e.unitId, e.raw, e.mitigated, e.critical])).toEqual([['eB', 705, 705, true]]);
     expect(second.state.rngDraws).toBe(1);

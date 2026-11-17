@@ -99,7 +99,9 @@ function historicalProgression(equipped = true, history?: BattleHistory): MatchS
     expect(state.phase).toBe('settlement');
     while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1')!;state=accepted(sellUnit(state,extra.id));}
     state = choices(accepted(nextRound(state, state.round)));
-    while(state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
+    // Wind-up batch 2 (2026-11-16): the route now carries one unit too many into the 4-4 supply round, which settles without
+    // a preparation phase; the excess is sold at the next preparation instead (a sale outside preparation is refused).
+    while(state.phase==='preparation'&&state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
       const excess=state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1')
         .sort((a,b)=>a.starLevel-b.starLevel||a.id.localeCompare(b.id)).find(u=>!['darius','vander','maddie','zyra','rell'].includes(u.definitionId))
         ??state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1').sort((a,b)=>a.starLevel-b.starLevel)[0];
