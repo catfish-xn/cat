@@ -21,6 +21,19 @@ import { planFetch, argumentsFor } from './plan-fetch.mjs';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
 const json = value => `${JSON.stringify(value, null, 2)}\n`;
+const CHARACTER_DIRECTORY = /^[a-z][a-z0-9_]{0,63}$/;
+/**
+ * Character directories that are not units (a summon, a pet, a prop creature), built like a unit under their directory
+ * name. The unit map's `$characters[<directory>]` entry is used when present; otherwise the directory's conventional
+ * base/skin/skeleton names, with every action chosen from the animation graph by `$animationRules`.
+ */
+export function characterConfigs(characters, map = {}, definitions = {}) {
+    const list = characters ? String(characters).split(',') : [];
+    if (new Set(list).size !== list.length || list.some(dir => !CHARACTER_DIRECTORY.test(dir) || Object.hasOwn(definitions, dir)))
+        throw new Error('unsupported-build-characters');
+    return Object.fromEntries(list.map(dir => [dir, map.$characters?.[dir] ?? { sourceName: dir, base: `assets/characters/${dir}/skins/base`,
+        mesh: `${dir}.tft_set13.skn`, skeleton: `${dir}.tft_set13.skl`, textures: {}, animations: {}, effectPatterns: {} }]));
+}
 async function walk(root, directory = root) {
     const files = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -166,14 +179,21 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
     }
     return { effects, systems, actionEffects };
 }
-export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode, map } = {}) {
+export async function build({ units, characters, source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode, map } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
     if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)))
         throw new Error('output-overlaps-source');
     map ??= await loadUnitMap();
-    const selected = units.split(','), definitions = await unitDefinitions();
-    if (new Set(selected).size !== selected.length || selected.some(id => !Object.hasOwn(definitions, id) || !map[id]?.mesh))
+    const definitions = await unitDefinitions();
+    // Without --characters the default stays the two trial units; with it, only the units named alongside.
+    const unitList = units === undefined ? (characters ? [] : ['jinx', 'vi']) : units ? units.split(',') : [];
+    if (new Set(unitList).size !== unitList.length || unitList.some(id => !Object.hasOwn(definitions, id) || !map[id]?.mesh))
         throw new Error('unsupported-build-units');
+    const characterMap = characterConfigs(characters, map, definitions), isCharacter = id => Object.hasOwn(characterMap, id);
+    if (!unitList.length && !Object.keys(characterMap).length)
+        throw new Error('unsupported-build-units');
+    map = { ...map, ...characterMap };
+    const selected = [...unitList, ...Object.keys(characterMap)];
     const { assertManifest, assetUrl, parseParticleDocument } = await contracts(), rawRoot = await safeInputPath(root, join(root, 'extracted'));
     const records = JSON.parse(await readFile(await safeInputPath(root, join(root, 'extraction.json')), 'utf8'));
     if (records.version !== '14.24.6442327' || !Array.isArray(records.files))
@@ -332,7 +352,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         try {
             reference = await readFile(await safeInputPath(referenceRoot, join(referenceRoot, id, 'rigged.glb')));
             comparison = { available: true, ...compareModels(result.glb, reference, animation.mapped, result.report.coordinateTransform) };
-        } catch (error) { if (!batch || error.code !== 'ENOENT') throw error; }
+        } catch (error) { if (!(batch || isCharacter(id)) || error.code !== 'ENOENT') throw error; }
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
@@ -391,7 +411,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const fetchBytes = await readFile(join(output, 'fetch-plan.json'));
         files.push({ path: 'fetch-plan.json', bytes: fetchBytes.length, sha256: sha256(fetchBytes) });
     }
-    const ready = Object.values(unitReports).every(u => (u.comparison.passed || batch && !u.comparison.available) && u.structure.passed && (!validator || u.gltfValidation.numErrors === 0 && u.gltfValidation.numWarnings === 0));
+    const ready = Object.entries(unitReports).every(([id, u]) => (u.comparison.passed || (batch || isCharacter(id)) && !u.comparison.available) && u.structure.passed && (!validator || u.gltfValidation.numErrors === 0 && u.gltfValidation.numWarnings === 0));
     const report = { schemaVersion: 1, ready, sourceVersion: records.version, units: unitReports, sourceFiles: sources, textureSummary: { converted: textureReports.filter(t => t.status === 'converted').length, skipped: textureReports.filter(t => t.status === 'skipped').length, missingReferences: [...missingTextureReferences].sort() }, textures: textureReports,
         actionEffects, actionEffectsNote: 'Name-based suggestions for written effects only, no schema extension or runtime wiring. Unsupported emitters are sidecar-only; systems with no writable emitters have no document or manifest effect.',
         contractVerification: { manifest: 'src/rendering3d/contracts.ts assertManifest (direct TS import)', particles: 'src/rendering3d/particles.ts parseParticleDocument (direct TS import)', particleDocuments: Object.keys(effects).length, passed: true },
@@ -412,7 +432,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     return report;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--source', '--out', '--particle-mode']));
+    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--characters', '--source', '--out', '--particle-mode']));
     console.log(JSON.stringify({ ready: report.ready, textures: { converted: report.textureSummary.converted, skipped: report.textureSummary.skipped, missingReferences: report.textureSummary.missingReferences.length }, totals: report.totals, fetchPlan: report.fetchPlan.totals }));
     if (!report.ready)
         process.exitCode = 1;
