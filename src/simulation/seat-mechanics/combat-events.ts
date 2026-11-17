@@ -27,11 +27,6 @@ export type G23CombatEventData =
   /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */
   | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin }
   /**
-   * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
-   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
-   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.
-   */
-  /**
    * Display only, no rule effect: a marker of an ability's moment for the renderer. 'powder-monkey-sent': Powder's monkey
    * sets off for its landing cell (cell), arriving at arrivalTick; 'powder-monkey-arrived': it reached that cell and explodes.
    */
@@ -42,6 +37,11 @@ export type G23CombatEventData =
    * also ends a carry on either one's death event).
    */
   | { readonly type: 'carryChanged'; readonly tick: number; readonly holderId: string; readonly targetId: string; readonly carried: boolean }
+  /**
+   * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
+   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
+   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.
+   */
   | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }

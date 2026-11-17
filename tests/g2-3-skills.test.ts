@@ -1,7 +1,7 @@
 import { expect,it } from 'vitest';
 import { stepCombat,type CombatUnit,type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, variable } from '../src/simulation/combat-s13-state';
 import { battle,unit,freeze } from './combat-helpers';
 import { packets,heals } from './helpers/replay2-views';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:1,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
@@ -120,6 +120,6 @@ it('Renni lifts her target on the cast and puts it down with the stun\'s last pu
   let state = battle([hero('renni'), dummy()], { rngState: 42 }); const carry: [number, string, string, boolean][] = []; let castTick = -1;
   for (let i = 0; i < 80; i++) { const step = stepCombat(state); state = step.state;
     for (const e of step.events) { if (e.type === 'cast' && castTick < 0) castTick = e.tick; if (e.type === 'carryChanged') carry.push([e.tick, e.holderId, e.targetId, e.carried]); } }
-  const n = 30; // StunDuration 1.5 s
+  const n = Math.round(variable(state.units.find(u => u.id === 'p')!, 'StunDuration') * 20); // her stun, in ticks
   expect(carry).toEqual([[castTick, 'p', 'e', true], [castTick + n, 'p', 'e', false]]);
 });

@@ -205,7 +205,8 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       ignite(ctx, unit, victim, burnTicks, t.actionSeq);
     }
   } else if (t.kind === 'g2Landing') {
-    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs only while the caster is alive; a control on
+    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs while the caster is alive, and after its
+    // death once released (releasedLanding: Renata's missiles from RENATA_MISSILE_FLIGHT_TICKS before landing); a control on
     // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
     const name = champion(unit);
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }

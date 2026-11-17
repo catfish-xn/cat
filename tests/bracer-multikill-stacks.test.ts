@@ -110,8 +110,8 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    // v25: seed 84 publicly offers inert Hedge Fund; avoid falling through to Tiniest Titan,
-    // whose replay authority conflicts with the later boundary grants. Keep the tick-60 double kill.
+    // The hedge-fund priority keeps the public offer on inert Hedge Fund (v25, then seed 84; seed 18 since cast wind-up batch 3), not Tiniest Titan,
+    // whose replay authority conflicts with the later boundary grants. Keep the double kill (tick 77 since cast wind-up batch 3).
     let preparation = acquireEquipment(['rod'],{seed:18,augmentPriorities:['hedge-fund']});
     // v26 pve-loot-carryover (8f794062): carried loot can leave an anvil whose sale opens a forge choice; resolve it publicly
     // before the next sale, as frontRowRod does.

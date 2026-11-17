@@ -631,9 +631,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 39440,
+      "currentBytes": 39525,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "05d7d7392dc6e88779edd20e465c053542204a4090295734380e65dc287929f1",
+      "currentSha256": "0bac598f2607453a35a56b6d6f3066979644475ce88910ed6acc845c7e666925",
       "firstDifferentByte": 5077
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -1306,10 +1306,10 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 10775,
+      "currentBytes": 10862,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "f6faaa1f98aec9edd8b7846c43dc5dcec31f539f3a98cbf6f2b0f7e2a170411f",
-      "firstDifferentByte": 1209
+      "currentSha256": "5eddfb0dbaecc479908fb0f41ad2bf33bd791627002f47460323bf034674e946",
+      "firstDifferentByte": 215
     },
     "tests/g2-4a-crown-gold.test.ts": {
       "previousBytes": 13490,
