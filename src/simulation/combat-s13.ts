@@ -1,4 +1,4 @@
-import { releasedLanding } from './cast-windup';
+import { rangedAttackFlightTicks, releasedLanding } from './cast-windup';
 import { settleH11Deaths } from './augment-pool-batch5-h11';
 import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
 import { startR2PortableCopies } from './augment-pool-batch5-r2-combat';
@@ -167,6 +167,29 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
 /** Validate the authorization even on idle units; only packet work is empty. */
+/** Ranged attack landing (fitted, not original data): heroes with attackRange >= 2 — not summons, neutrals or anomaly summons,
+ * and not six-cost Viktor — settle a basic attack when its shot arrives. Zeri's empowered shot is an instant beam (0 ticks). */
+function rangedAttackLands(unit: S13Unit): boolean {
+  const definition = UNIT_DEFINITIONS[unit.definitionId];
+  return !!definition && !definition.summon && unit.unitKind !== 'neutral' && !unit.anomalySummon && unit.attackRange >= 2 && champion(unit) !== 'viktor';
+}
+function instantBeam(unit: S13Unit): boolean {
+  return champion(unit) === 'zeri' && unit.runtime.attackCount % variable(unit, 'NumOfAttacks') === 0;
+}
+/** The shot of a ranged hero's attack seq: its packets (crits already rolled) and on-hit statuses leave the queue and land,
+ * per target, rangedAttackFlightTicks(hexes from her to that target now) later (attackLanding). */
+function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, seq: number): void {
+  const shot = ctx.attackLanding; ctx.attackLanding = undefined;
+  const packets: S13Packet[] = [];
+  for (let i = ctx.packets.length - 1; i >= firstPacket; i--) if (ctx.packets[i]!.actionSeq === seq) packets.unshift(...ctx.packets.splice(i, 1));
+  const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
+  targets.forEach((targetId, ordinal) => {
+    const target = ctx.units.find(u => u.id === targetId)!;
+    unit.tasks.push({ key: JSON.stringify(['attack-landing', unit.id, seq, targetId]), kind: 'attackLanding', source: { ...origin(unit), sourceKind: 'attack' },
+      executeAtTick: ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit)), targetId, amount: 0, actionSeq: seq, ordinal, total: targets.length,
+      cancellable: false, landing: { packets: packets.filter(p => p.targetId === targetId), effects: (shot?.effects ?? []).filter(e => e.targetId === targetId).map(e => e.effect) } });
+  });
+}
 function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: number,
   p3ChargedAttacks: ReadonlySet<number>, guaranteedAttackSeq: number | undefined): void {
   const units = ctx.units;
@@ -175,6 +198,7 @@ function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: num
   const planned = ctx.packets.slice(firstPacket).sort((a, b) => a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   const piercingCrit = new Map<number, boolean>();
   for (const packet of planned) {
+    if (packet.landed) continue;
     const piercing = champion(unit) === 'twitch' && packet.delivery === 'basic-attack';
     const shared = piercing ? piercingCrit.get(packet.actionSeq) : undefined;
     packet.critical = p3ChargedAttacks.has(packet.actionSeq) && packet.delivery === 'basic-attack' ? p3Roll(ctx, unit, packet, true, shared) : shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, p2PacketCrit(packet.source.ownerId===unit.id?unit:units.find(u=>u.id===packet.source.ownerId),packet.targetId,units,packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!)), ctx.draw));
@@ -406,6 +430,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
     for (const unit of units) {
       const firstPacket = ctx.packets.length;
+      let shotSeq: number | undefined;
       if(isAttackProxy(unit))continue;
       let guaranteedAttackSeq: number | undefined;
       const prior = targets.get(unit.id);
@@ -481,6 +506,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           }
         }
         unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
+        if (rangedAttackLands(unit) && !instantBeam(unit)) { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
         const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
@@ -492,6 +518,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
       }
       rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);
+      if (shotSeq !== undefined) launchAttack(ctx, unit, firstPacket, shotSeq);
     }
   }
   planActions();

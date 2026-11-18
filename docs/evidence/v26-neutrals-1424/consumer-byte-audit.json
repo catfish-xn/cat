@@ -2320,6 +2320,14 @@
       "currentSha256": "98599e206e26a048210be17a8182f33632a3b878ec1a4d1182a0e2e9b0e1667b",
       "firstDifferentByte": 590
     },
+    "tests/ranged-attack-landing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10553,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f789f2f33dbaea5ff3434d0a94882a7c531a19b998188caf5071c3774d943800",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-animation.test.ts": {
       "previousBytes": 16727,
       "currentBytes": 19192,

@@ -47,7 +47,17 @@ export const RENNI_SLAM_AFTER_STUN_TICKS = 2;
  * leave RENATA_MISSILE_FLIGHT_TICKS before they land.
  */
 export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string } }, tick: number): boolean {
-  if (task.kind === 'g2PowderMonkey') return true;
+  if (task.kind === 'g2PowderMonkey' || task.kind === 'attackLanding') return true;
   if (task.kind === 'g2PowderRelease') return task.executeAtTick <= tick;
   return task.kind === 'g2Landing' && task.source.definitionId === 'renata-ability' && task.executeAtTick - RENATA_MISSILE_FLIGHT_TICKS <= tick;
+}
+
+/** Ranged basic attacks (fitted, not original data): a ranged hero's shot flies this many ticks per hex from her to its target
+ * (taken on the attack tick) and settles on arrival, at least one tick later. An instant beam (Zeri's empowered shot) settles
+ * on the attack tick. docs/S13_RULES_GAP.md (远程普攻弹道命中才结算). */
+export const RANGED_ATTACK_TICKS_PER_HEX = 2;
+/** Per-champion overrides of RANGED_ATTACK_TICKS_PER_HEX (fitted, not original data); empty in the first version. */
+export const RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION: Readonly<Record<string, number>> = Object.freeze({});
+export function rangedAttackFlightTicks(hexes: number, championId = ''): number {
+  return Math.max(1, Math.ceil(hexes * (RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION[championId] ?? RANGED_ATTACK_TICKS_PER_HEX)));
 }

@@ -9,7 +9,8 @@ import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
-import { executeShieldEnd } from './m8/s13-mechanisms';
+import { executeMechanismEffect, executeShieldEnd } from './m8/s13-mechanisms';
+import { landDragonsoul } from './s13-p3-combat';
 import { knockAway } from './combat-displacement';
 import { GLOVES_OFF } from './content/gloves-off';
 import { hexDistance, type Board, type HexCell } from './board';
@@ -19,7 +20,7 @@ import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enem
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
-export interface S13Packet { sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+export interface S13Packet { landed?: boolean; sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; critMultiplierBps?: number; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
@@ -37,6 +38,8 @@ export interface AbilityContext {
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
+  /** Set while a ranged hero's attack (actionSeq seq) is planned: its on-hit statuses wait for the shot to land. */
+  attackLanding?: { readonly seq: number; readonly attackerId: string; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
@@ -212,7 +215,19 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   }
   return targets;
 }
+/** A ranged hero's shot lands (ranged attack landing): if its target still lives its packets (crits rolled on the attack) join this
+ * tick's queue and its on-hit statuses apply; a target that died in flight takes nothing and no other one is picked. */
+function landAttack(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
+  if (!target) return;
+  for (const packet of task.landing!.packets) if (landDragonsoul(unit, packet)) ctx.packets.push({ ...structuredClone(packet), landed: true });
+  for (const e of task.landing!.effects) {
+    const holder = ctx.units.find(u => u.id === e.holderId);
+    if (holder) executeMechanismEffect(ctx, holder, e.source, target, e.effect, task.actionSeq, e.ordinal);
+  }
+}
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  if(task.kind==='attackLanding'){landAttack(ctx,unit,task);return;}
   if(task.kind==='v20Powder'){executeV20Powder(ctx,unit,task);return;}
   if(task.kind==='v20Teamup'){executeV20Teamup(ctx,unit,task);return;}
   if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
