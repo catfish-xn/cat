@@ -20,7 +20,7 @@ import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enem
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
-export interface S13Packet { landed?: boolean; locked?: import('./combat-s13').AttackerSide; sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+export interface S13Packet { locked?: import('./combat-s13').AttackerSide; sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; critMultiplierBps?: number; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
@@ -39,7 +39,7 @@ export interface AbilityContext {
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
   /** Set while a ranged hero's attack (actionSeq seq) is planned: its on-hit statuses wait for the shot to land. */
-  attackLanding?: { readonly seq: number; readonly attackerId: string; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
+  attackLanding?: { readonly seq: number; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
@@ -221,7 +221,7 @@ function landAttack(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void 
   const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
   ctx.events.push({ type: 'attackLanded', tick: ctx.tick, attackerId: unit.id, targetId: task.targetId!, hit: !!target });
   if (!target) return;
-  for (const packet of task.landing!.packets) if (landDragonsoul(unit, packet)) ctx.packets.push({ ...structuredClone(packet), landed: true });
+  for (const packet of task.landing!.packets) if (landDragonsoul(unit, packet)) ctx.packets.push(structuredClone(packet));
   for (const e of task.landing!.effects) {
     const holder = ctx.units.find(u => u.id === e.holderId);
     if (holder) executeMechanismEffect(ctx, holder, e.source, target, e.effect, task.actionSeq, e.ordinal);

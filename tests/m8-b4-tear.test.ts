@@ -46,7 +46,7 @@ describe('B4 tear recipes: hand vectors and real effects',()=>{
     while(!r.events.some(e=>e.type==='attackLanded'&&e.attackerId==='p'))r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});return r;};
   const second=attack(first.state,'b',120);expect(packets(second.events)[0].hpDamage).toBe(120);expect(second.state.tick).toBe(first.state.tick+1+fb);
   const refreshed=second.state.units.find(u=>u.id==='p')!.mechanismState!.statuses.flatMap(g=>g.contributions).filter(c=>c.application.modifier?.stat==='damageAmp');expect(refreshed).toHaveLength(1);expect(refreshed[0].expiresAtTick).toBe(second.state.tick+160);expect(refreshed[0].application.modifier!.value).toEqual({kind:'constant',amount:500});
-  const expiry=refreshed[0].expiresAtTick;
+  const expiry=refreshed[0].expiresAtTick!;
   // The attacker's side (this buff) is taken on the attack tick: a shot launched on expiry-1 keeps +500 bps wherever it lands,
   // one launched on expiry does not (the half-open boundary, now on the launch tick).
   let state=second.state;while(state.tick<expiry-2)state=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)}).state;

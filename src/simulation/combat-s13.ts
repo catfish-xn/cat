@@ -179,14 +179,12 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
 /** Validate the authorization even on idle units; only packet work is empty. */
 /** Ranged attack landing (fitted, not original data): heroes with attackRange >= 2 — not summons, neutrals or anomaly summons,
  * and not six-cost Viktor — settle a basic attack when its shot arrives. Zeri's empowered shot is an instant beam (0 ticks). */
-function rangedAttackLands(unit: S13Unit): boolean {
+function shotKind(unit: S13Unit): 'flight' | 'beam' | undefined {
   const definition = UNIT_DEFINITIONS[unit.definitionId];
   // The hero's own (form's) attack range decides, not a combat bonus to it: a melee hero given range stays melee.
   const own = unit.form === 'ranged' ? G23_UNITS[unit.definitionId + '-ranged']?.attackRange : definition?.attackRange;
-  return !!definition && !definition.summon && unit.unitKind !== 'neutral' && !unit.anomalySummon && (own ?? 0) >= 2 && champion(unit) !== 'viktor';
-}
-function instantBeam(unit: S13Unit): boolean {
-  return champion(unit) === 'zeri' && unit.runtime.attackCount % variable(unit, 'NumOfAttacks') === 0;
+  if (!definition || definition.summon || unit.unitKind === 'neutral' || unit.anomalySummon || (own ?? 0) < 2 || champion(unit) === 'viktor') return;
+  return champion(unit) === 'zeri' && unit.runtime.attackCount % variable(unit, 'NumOfAttacks') === 0 ? 'beam' : 'flight';
 }
 /** The shot of a ranged hero's attack seq: its packets (crits already rolled) and on-hit statuses leave the queue and land,
  * per target, rangedAttackFlightTicks(hexes from her to that target now) later (attackLanding). */
@@ -213,7 +211,7 @@ function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: num
   const planned = ctx.packets.slice(firstPacket).sort((a, b) => a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   const piercingCrit = new Map<number, boolean>();
   for (const packet of planned) {
-    if (packet.landed) continue;
+    if (packet.locked) continue; // a landing shot's crit was rolled on its attack tick
     const piercing = champion(unit) === 'twitch' && packet.delivery === 'basic-attack';
     const shared = piercing ? piercingCrit.get(packet.actionSeq) : undefined;
     packet.critical = p3ChargedAttacks.has(packet.actionSeq) && packet.delivery === 'basic-attack' ? p3Roll(ctx, unit, packet, true, shared) : shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, p2PacketCrit(packet.source.ownerId===unit.id?unit:units.find(u=>u.id===packet.source.ownerId),packet.targetId,units,packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!)), ctx.draw));
@@ -521,8 +519,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           }
         }
         unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
-        if (rangedAttackLands(unit) && !instantBeam(unit)) { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
-        else if (rangedAttackLands(unit)) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: 'beam' });
+        const shot = shotKind(unit);
+        if (shot === 'flight') { shotSeq = seq; ctx.attackLanding = { seq, effects: [] }; }
+        else if (shot) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot });
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
         const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;

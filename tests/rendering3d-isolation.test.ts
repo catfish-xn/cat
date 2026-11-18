@@ -160,7 +160,10 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
     console.info('2D entry JS gzip-9:', gzip2d);
-    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
+    // Ranged attack landing (2026-11-18, Fable-approved one-off raise of this number only): the rule's simulation code and its
+    // display events grow the 2D entry by about 0.75 KB gzip (636 414 → 637 159); the limit moves from 637 144 by 2 KB.
+    // No rendering3d module enters the 2D entry (the isolation assertions above are unchanged).
+    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(639_192);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))

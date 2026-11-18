@@ -639,7 +639,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
         && landing!.packets.length + landing!.effects.length > 0
         && landing!.packets.every(p => p.actionSeq === task.actionSeq && p.targetId === task.targetId && typeof p.critical === 'boolean' && Number.isSafeInteger(p.raw) && p.raw >= 0 && p.raw <= 100000000)
         && landing!.effects.every(e => combatUnits.some(u => u.id === e.holderId)), 'attack landing');
-    } else requireValue(task.landing === undefined, 'unexpected attack landing');
+    } else requireValue(task.landing === undefined, 'attack landing');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g2PowderRelease:'powder',g2PowderMonkey:'powder',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');

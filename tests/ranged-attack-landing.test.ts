@@ -251,7 +251,7 @@ describe('ranged attack landing: attacker-side snapshot', () => {
     const { launched, shot } = amplifiedShot(), base = landingDamage(launched, shot.executeAtTick);
     expect(base).toEqual([120]);
     const ended = structuredClone(launched), p = ended.units.find(u => u.id === 'p')!;
-    p.mechanismState = { ...p.mechanismState!, statuses: p.mechanismState!.statuses.filter(g => !g.contributions.some(c => c.application.modifier?.stat === 'damageAmp')) };
+    (p as { mechanismState: unknown }).mechanismState = { ...p.mechanismState!, statuses: p.mechanismState!.statuses.filter(g => !g.contributions.some(c => c.application.modifier?.stat === 'damageAmp')) };
     expect(landingDamage(JSON.parse(JSON.stringify(ended)), shot.executeAtTick)).toEqual(base);
   });
   it('the shooter dying in flight: the shot lands with its snapshot', () => {

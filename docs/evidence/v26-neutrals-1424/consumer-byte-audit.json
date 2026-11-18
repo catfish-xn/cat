@@ -1801,9 +1801,9 @@
     },
     "tests/m8-b4-tear.test.ts": {
       "previousBytes": 6092,
-      "currentBytes": 8088,
+      "currentBytes": 8089,
       "previousSha256": "b571e426d7ead9c5e19409fce5b4a968a7128533ceaccb6cdc7299dc35d770f2",
-      "currentSha256": "d4e758bb9f643074563647b026f1c86b755c30162c61549e2b52f96e488f4c38",
+      "currentSha256": "f4238807e641c85e60b3d1cee6d0ca5402502290fe8d0ee4e491c08445791043",
       "firstDifferentByte": 9
     },
     "tests/m8-b5-equipment-history.test.ts": {
@@ -2365,9 +2365,9 @@
     "tests/ranged-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 21269,
+      "currentBytes": 21302,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fb47d93a1459f117e4eedd5ab84769efffd8c16d6178f9f1b8d6e380673cfdb1",
+      "currentSha256": "9183a9c4120a70e56894792db48ff61820b7f7c012d03712099954a5cac5500d",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
@@ -2546,9 +2546,9 @@
     },
     "tests/rendering3d-isolation.test.ts": {
       "previousBytes": 11507,
-      "currentBytes": 14253,
+      "currentBytes": 14601,
       "previousSha256": "410858593844d8fd1f0c8aae9131239745a0cfaf8c73d0653312a53fe96be725",
-      "currentSha256": "b6d87560c1374f719d3733507d098a02f937dca744e1c302fe09bca912bfe417",
+      "currentSha256": "0f547a0b643ba20f53e320546fc1e6dd353292a44cf33f6a847e10e2d862e1ce",
       "firstDifferentByte": 4868
     },
     "tests/rendering3d-jayce-forge.test.ts": {
@@ -2859,6 +2859,13 @@
       "previousSha256": "2e4d63d1603de2903477d70564a8eee50082cf796f68b4c03ec397cc13814855",
       "currentSha256": "dd801305bd1a6eeb63afc3469678182f314db6825d6ae45e65ff407d3dc5be93",
       "firstDifferentByte": 2016
+    },
+    "tests/rules-combat-mana.test.ts": {
+      "previousBytes": 13100,
+      "currentBytes": 14246,
+      "previousSha256": "7c51132d359b42e5823ea7636e8e276de8d7b237465d7dab058d3b4fd1fce552",
+      "currentSha256": "c8734f7c4042ea8ae9d965ee9d8f8f58dfe81ca01349f9782ea585517c8a419b",
+      "firstDifferentByte": 9
     },
     "tests/rules-placebo-stage.test.ts": {
       "previousBytes": 6450,
