@@ -1,6 +1,6 @@
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import { withAttackFlight, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 // Each particle set the runtime builds, with the options it was built with (anchor, target, attachment, flight).
 const built: { options: any; fx: any }[] = [];
@@ -104,6 +104,6 @@ describe('Caitlyn Air Raid override', () => {
   it('applies over the exported list when every system is loaded', () => {
     const systems = Object.fromEntries([...CUE_OVERRIDES.caitlyn, { system: '92bbeaf7' }].map(cue => [cue.system, `systems/${cue.system}.json`]));
     const exported: TimelineCue[] = [{ system: '92bbeaf7', action: 'cast', event: 'cast-start', delay: 0.5, duration: 0.5 }];
-    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn).toEqual(CUE_OVERRIDES.caitlyn);
+    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn).toEqual(CUE_OVERRIDES.caitlyn.map(withAttackFlight));
   });
 });

@@ -5,7 +5,7 @@ import { readVfxSystem } from './engine/parsing/readVfxSystem';
 import { drawnEmitters, type DrawnEmitter } from './rendering/utils/definitions';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import type { EmitterSamplers } from './rendering/hooks/useVfxTextures';
-import type { TimelineCue } from './timeline';
+import { withAttackFlight, type TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
@@ -186,7 +186,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.lineBack !== undefined && (cue.lineCells === undefined || !finite(cue.lineBack) || Number(cue.lineBack) < 0 || Number(cue.lineBack) > 2))
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
-        || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
+        // An attack's flying projectile may leave its flight out: the landing event or the default times it (withAttackFlight).
+        || (cue.event === 'projectile' && (cue.travelSeconds !== undefined || cue.action !== 'attack' || cue.stationary === true)
+          && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
     }
@@ -225,6 +227,12 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
     if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
+  }
+  // An attack projectile without its own flight takes the default one (DEFAULT_ATTACK_FLIGHT_SECONDS): the landing event
+  // times it when there is one.
+  const lists = skills ?? index.skills;
+  for (const [key, cues] of Object.entries(lists)) {
+    if (cues?.some(cue => withAttackFlight(cue) !== cue)) (skills ??= { ...index.skills })[key] = cues.map(withAttackFlight);
   }
   return skills ? { ...index, skills } : index;
 }

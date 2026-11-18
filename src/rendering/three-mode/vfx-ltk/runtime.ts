@@ -7,7 +7,7 @@ import { AXIS_SIGN } from './space';
 import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
+import { DEFAULT_ATTACK_FLIGHT_SECONDS, mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
@@ -165,6 +165,11 @@ export interface LtkPlayOptions {
    * moves at most 2 s either way and never before the start. The default ltk.play path and the batch2 bridge take it.
    */
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
+  /**
+   * A ranged attack's landing as the rules time it (attackLaunched / attackLanded display events): its projectile lands and its
+   * hit plays `seconds` after the attack event, on the arrival tick (landingCues). Applied after `release`.
+   */
+  landing?: AttackLanding;
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
 }
@@ -249,6 +254,48 @@ export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, 
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
+}
+/** A ranged attack's landing (LtkPlayOptions.landing): seconds from the attack event to the rules' arrival tick, and
+ * whether the shot is an instant beam (the rules land it on the attack tick itself). */
+export interface AttackLanding { seconds: number; beam?: boolean }
+/** The shortest flight a projectile is drawn with, so a near shot never jumps across in one frame. Fitted (Fable 11-18),
+ * not original: a target too near for it is hit up to this much after its damage number. */
+export const MIN_FLIGHT_SECONDS = 0.1;
+/** A beam's missile (the rules land it on the attack tick): drawn for one tick, its hit on the attack event with it. */
+export const BEAM_FLIGHT_SECONDS = 0.05;
+/** Where an attack's projectile leaves: at its release frame (the default) or on the attack event itself, the rules'
+ * launch tick, which flies exactly the rules' ticks but leaves before the hand does. Kept to compare the two (Fable 11-18). */
+export const LANDING_DEPART: 'release' | 'event' = 'release';
+/**
+ * Attack cues timed by the rules' landing instead of a fixed flight: each projectile leaves at its own (release-mapped)
+ * delay (or on the attack event, LANDING_DEPART) and lands on the arrival tick, flying at least MIN_FLIGHT_SECONDS, and keeps
+ * what it plays after landing; the attack's hits start when its projectile lands. A beam's projectile and hits play at the
+ * arrival, the attack event itself (a missile drawn for BEAM_FLIGHT_SECONDS). An attack without a projectile (melee) is
+ * returned as it is, and so is a stationary beam the rules give a flight.
+ */
+export function landingCues<T extends Pick<TimelineCue, 'action' | 'event' | 'delay' | 'duration' | 'travelSeconds' | 'stationary'>>(cues: readonly T[], landing: AttackLanding,
+  depart: 'release' | 'event' = LANDING_DEPART): T[] {
+  const attack = (cue: T) => (cue.action ?? 'cast') === 'attack';
+  const arrive = Math.max(0, landing.seconds);
+  if (landing.beam) {
+    // A beam (stationary or drawn as a missile) and its hits go off on the arrival, the attack event itself.
+    if (!cues.some(cue => attack(cue) && cue.event === 'projectile')) return [...cues];
+    return cues.map(cue => !attack(cue) || (cue.event !== 'projectile' && cue.event !== 'hit') ? cue
+      : cue.event === 'projectile' && !cue.stationary ? { ...cue, delay: arrive, travelSeconds: BEAM_FLIGHT_SECONDS,
+        duration: Math.max(BEAM_FLIGHT_SECONDS, cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS) + BEAM_FLIGHT_SECONDS) }
+      : { ...cue, delay: arrive });
+  }
+  const flies = (cue: T) => attack(cue) && cue.event === 'projectile' && !cue.stationary;
+  if (!cues.some(flies)) return [...cues];
+  let lands = arrive;
+  const moved = cues.map(cue => {
+    if (!flies(cue)) return cue;
+    const delay = depart === 'event' ? 0 : cue.delay, travel = Math.max(MIN_FLIGHT_SECONDS, arrive - delay);
+    lands = Math.max(lands, delay + travel);
+    const tail = cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS);
+    return { ...cue, delay, travelSeconds: travel, duration: Math.max(travel, tail + travel) };
+  });
+  return moved.map(cue => attack(cue) && cue.event === 'hit' ? { ...cue, delay: lands } : cue);
 }
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
@@ -579,6 +626,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (!Number.isFinite(context.releaseShift)) return false;
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
+      }
+      if (context.landing !== undefined) {
+        if (!Number.isFinite(context.landing.seconds) || context.landing.seconds < 0 || context.landing.seconds > 5) return false;
+        selected = selected && landingCues(selected, context.landing);
       }
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;

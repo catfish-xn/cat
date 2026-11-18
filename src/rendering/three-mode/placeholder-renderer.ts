@@ -65,7 +65,8 @@ import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, carryRise, heldBarLif
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
-import { createLtkRuntime } from './vfx-ltk/runtime';
+import { createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
+import { attackKey, attackLandings } from './vfx-ltk/attack-landing';
 import { CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -1235,21 +1236,23 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, landing: AttackLanding | undefined) => {
     const release = releaseOf(source);
-    return release ? { variant, release } : variant;
+    return release || landing ? { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}) } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }>; landing?: AttackLanding }) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
       : extra && typeof extra === 'object' && 'cast' in extra ? extra.cast : undefined;
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
+    // The rules' landing of a ranged attack (attackLaunched): its projectile lands and its hit plays on the arrival tick.
+    const landing = action === 'attack' && extra && typeof extra === 'object' && 'landing' in extra ? extra.landing : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, landing)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, landing) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1488,6 +1491,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    const landings = attackLandings(events);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
@@ -1560,7 +1564,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
-        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
+          { variant: planned.variant, landing: landings.get(attackKey(event.attackerId, event.tick)) });
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
