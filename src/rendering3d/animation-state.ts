@@ -23,7 +23,18 @@ export interface ActionPlayback { clips: readonly string[]; durationSeconds: num
 /** The cast's own number comes from the rule's cast event (the resolver reads it); this state machine counts nothing. */
 export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn') => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
-export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
+export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback;
+  /** The unit's observed attack interval (seconds), when known: sets how long a held swing waits at most (ATTACK_HOLD_FALLBACK). */
+  attackInterval?: () => number | undefined;
+  /** This unit stays in its attack pose between swings (attack-hold.ts ATTACK_HOLD_UNITS). */
+  holdAttack?: boolean }
+/**
+ * A unit that holds its attack (holdAttack) stays on its finished swing's last pose while it keeps attacking: the next
+ * attack swings again, and a run, cast, control or death leaves the pose at once. With no next attack it returns to idle
+ * only after a long fallback: ATTACK_HOLD_FALLBACK × the observed interval, at least ATTACK_HOLD_MIN_SECONDS, so a slow
+ * attacker keeps its weapon up between swings. Both numbers are fitted, not original data.
+ */
+export const ATTACK_HOLD_FALLBACK = 2, ATTACK_HOLD_MIN_SECONDS = 3;
 const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
 /** Pure visual clock, independent of rules, AnimationMixer, Phaser and DOM. */
 export class UnitActionState {
@@ -37,10 +48,16 @@ export class UnitActionState {
   private playback?: ActionPlayback;
   /** Crowd control (presentation): the flinch pose is held until recover(), and no event but death moves it. */
   private held = false;
+  /** A finished swing holding its last pose for the next attack (holdAttack). */
+  private holding = false;
+  private holdAttack: boolean;
+  private attackInterval?: () => number | undefined;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
     this.blend = config.blendSeconds ?? 0.12;
     this.durations = { ...defaults, ...config.durations };
     this.resolvePlayback = config.resolvePlayback;
+    this.attackInterval = config.attackInterval;
+    this.holdAttack = config.holdAttack ?? false;
     if (![this.blend, ...Object.values(this.durations)].every(n => Number.isFinite(n) && n >= 0)) throw new Error('invalid-action-config');
   }
   /** True while a stun holds the flinch pose (stun()). */
@@ -51,6 +68,10 @@ export class UnitActionState {
       ...(this.playback ? { playback: this.playback } : {}) };
   }
   setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
+  setAttackInterval(interval: () => number | undefined): void { this.attackInterval = interval; }
+  setHoldAttack(hold: boolean): void { this.holdAttack = hold; }
+  /** True while a finished swing holds its last pose for the next attack. */
+  get holdingAttack(): boolean { return this.holding; }
   /** A summon rising (it appears or is revived) plays its spawn clip once, when its model names one. */
   spawn(): ActionOutput {
     const playback = this.resolvePlayback?.('spawn');
@@ -69,7 +90,7 @@ export class UnitActionState {
       if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0
         || playback.holdSeconds !== undefined && !(Number.isFinite(playback.holdSeconds) && playback.holdSeconds >= 0 && playback.holdSeconds <= playback.durationSeconds))) throw new Error('invalid-playback');
     }
-    this.playback = playback;
+    this.playback = playback; this.holding = false;
     this.previous = this.state; this.state = state; this.revision++;
     this.remaining = state === 'death' ? Infinity : state === 'idle' ? 0 : playback?.durationSeconds ?? this.durations[state];
   }
@@ -131,7 +152,16 @@ export class UnitActionState {
   }
   update(seconds: number): ActionOutput {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
-    if (this.state !== 'idle' && this.state !== 'death' && (this.remaining -= seconds) <= 0) this.enter('idle');
+    if (this.state !== 'idle' && this.state !== 'death' && (this.remaining -= seconds) <= 0) {
+      if (this.state === 'attack' && !this.holding && this.holdAttack) {
+        const interval = this.attackInterval?.(), swing = this.playback?.durationSeconds ?? this.durations.attack;
+        const wait = Math.max(ATTACK_HOLD_MIN_SECONDS, interval !== undefined && Number.isFinite(interval) && interval > 0 ? interval * ATTACK_HOLD_FALLBACK : 0);
+        // The swing's overshoot past its end counts against the wait (a long frame step).
+        const left = wait - swing + this.remaining;
+        if (left > 0) { this.holding = true; this.remaining = left; return this.output; }
+      }
+      this.enter('idle');
+    }
     return this.output;
   }
 }
