@@ -1,6 +1,6 @@
-import { Group, Object3D, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { createPowderMonkeys, dropShare, handMonkeyPose, MONKEY_DROP_SECONDS } from '../src/rendering/three-mode/powder-monkey';
+import { createPowderMonkeys, dropShare, handMonkeyPose, handMonkeyShown, MONKEY_DROP_SECONDS } from '../src/rendering/three-mode/powder-monkey';
 
 // Powder's monkey (Fable 11-17): the hand one and the ground one swap in one frame, the ground one where and as big as the
 // hand one was; it then runs to its cell and is there on the arrival tick.
@@ -67,5 +67,25 @@ describe('3D: Powder\'s monkey', () => {
     monkeys.update(0.01, () => powderBody());
     expect(loads).toBe(1);
     expect(scene.getObjectByName('powder-monkey')!.visible).toBe(true);
+  });
+
+  it('swaps on the frame her clip hides the hand monkey (its submesh), whatever the predicted time says', async () => {
+    const scene = new Group(), lease = monkeyLease(), body = powderBody();
+    const material = new MeshBasicMaterial(); material.name = 'Monkey';
+    const hand = new Mesh(new BoxGeometry(), material); body.add(hand);
+    expect(handMonkeyShown(body)).toBe(true);
+    expect(handMonkeyShown(powderBody())).toBeUndefined();
+    const monkeys = createPowderMonkeys(scene, async () => lease);
+    monkeys.prepare('pw'); await flush();
+    // The predicted swap is long past, but the hand one still shows: no swap, no second monkey.
+    monkeys.send('pw', new Vector3(40, 0, 0), 0, 1); await flush();
+    monkeys.update(0.05, () => body);
+    const group = scene.getObjectByName('powder-monkey')!;
+    expect(group.visible).toBe(false);
+    // Her clip hides it: the ground one shows in that same update.
+    hand.visible = false;
+    monkeys.update(0.05, () => body);
+    expect(group.visible).toBe(true);
+    expect(group.scale.x).toBeCloseTo(2);
   });
 });

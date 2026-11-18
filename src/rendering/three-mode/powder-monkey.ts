@@ -11,7 +11,7 @@ import { AnimationMixer, Group, Quaternion, Vector3, type AnimationClip, type Ob
 /** How long the swapped-in monkey takes to come down from the hand to the floor while it starts to run (s, fitted). */
 export const MONKEY_DROP_SECONDS = 0.2;
 /** The hand monkey's bones in Powder's rig, and the standalone monkey's matching ones. */
-const HAND_ROOT = 'Monkey_Root', ROOT = 'Root';
+const HAND_ROOT = 'Monkey_Root', HAND_MESH = 'Monkey', ROOT = 'Root';
 
 export interface MonkeyLease { readonly scene: Object3D; readonly animations: readonly AnimationClip[]; readonly animationNames: { readonly move?: string }; release(): void; readonly placeholder?: boolean }
 interface Monkey {
@@ -39,6 +39,16 @@ export function handMonkeyPose(body: Object3D): { root: Vector3; size: number; t
   return { root: root.getWorldPosition(new Vector3()), size: (Math.abs(scale.x) + Math.abs(scale.y) + Math.abs(scale.z)) / 3, turn: root.getWorldQuaternion(new Quaternion()) };
 }
 
+/** The hand monkey's own mesh in her body (the submesh her clip shows and hides, named by its material), if any. */
+export function handMonkeyShown(body: Object3D): boolean | undefined {
+  let shown: boolean | undefined;
+  body.traverse(node => {
+    const material = (node as { material?: { name?: string } | { name?: string }[] }).material;
+    const names = Array.isArray(material) ? material.map(m => m.name) : material ? [material.name] : [];
+    if (names.includes(HAND_MESH)) shown = (shown ?? false) || node.visible;
+  });
+  return shown;
+}
 /** The share of the drop done `t` seconds in (eased out), and of the run (linear in ground distance). */
 export const dropShare = (t: number) => { const k = Math.min(1, Math.max(0, t / MONKEY_DROP_SECONDS)); return 1 - (1 - k) * (1 - k); };
 
@@ -87,10 +97,13 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
     update(seconds: number, body: (owner: string) => Object3D | null) {
       for (const [key, m] of monkeys) {
         if (!m.started) {
-          // While the hand one still shows, keep its last pose: the swap frame is the one her clip has hidden it in.
-          if (m.swapIn > 0) { const b = body(m.owner); const pose = b ? handMonkeyPose(b) : null; if (pose) m.hand = pose; }
+          // While the hand one still shows, keep its last pose; the swap is the frame her clip hides it in (its submesh, read
+          // after the mixers ran this frame), or, on a body without that submesh, when the clip's hide time comes.
+          const b = body(m.owner), shown = b ? handMonkeyShown(b) : undefined;
+          if (shown) { const pose = handMonkeyPose(b!); if (pose) m.hand = pose; }
           m.swapIn -= seconds;
-          if (m.swapIn > 0) continue;
+          const hidden = shown === false && !!m.hand;
+          if (!hidden && (shown === true || m.swapIn > 0)) continue;
           const lease = m.lease; if (!lease) continue; // swaps on the frame its model is in
           const hand = m.hand ?? (() => { const b = body(m.owner); return b ? handMonkeyPose(b) : null; })();
           // Its own root bone in model space (the group at rest), to match the hand's root bone point, turn and scale.
