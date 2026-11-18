@@ -3202,6 +3202,13 @@
       "currentSha256": "e3f21d6ac8180ac605ac85d1fb14a9e2cf9525250c4dcebc68d332a6767a9e35",
       "firstDifferentByte": 809
     },
+    "tests/server/bot-driver-helper.ts": {
+      "previousBytes": 17124,
+      "currentBytes": 17492,
+      "previousSha256": "a72f3b0d3e8f1cfc8b284e074904c6d7dac054023afb2cdced2533022b1426b3",
+      "currentSha256": "42e9f9e55affa923ad74d9076ca075e7088ccbfd174054bd4e9c4d2929650431",
+      "firstDifferentByte": 4245
+    },
     "tests/server/carousel-room.test.ts": {
       "previousBytes": 36000,
       "currentBytes": 36769,
