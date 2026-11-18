@@ -227,3 +227,40 @@ describe('form heroes: the current form decides', () => {
     expect(hitTicks(run(swapped, landing - swapped.tick).out)).toEqual([landing]);
   });
 });
+
+// ---- The attacker's side is taken on the attack tick and travels with the shot (saved with it) ----
+import { wearing, enemy as itemEnemy, run as itemRun } from './fixtures/m8-b4-items';
+describe('ranged attack landing: attacker-side snapshot', () => {
+  // Blue Buff: a kill gives +500 bps damage. Kill a, then attack b (2 hexes away); the shot is in flight. A passive ally keeps
+  // the fight running if the shooter falls.
+  function amplifiedShot() {
+    const fa = rangedAttackFlightTicks(1);
+    const killed = itemRun(wearing('blue-buff', { baseCritChanceBps: 0, targetId: 'a' }), 1 + fa, [itemEnemy('a', 1, 3, { hp: 100 }), itemEnemy('b', 2, 3), itemEnemy('z', 3, 3), { ...itemEnemy('ally', 6, 7), team: 'player' as const }]).state;
+    const launched = stepCombat({ ...killed, units: killed.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0, targetId: 'b' } : u) }).state;
+    const shot = launched.units.find(u => u.id === 'p')!.tasks!.find(t => t.kind === 'attackLanding')!;
+    expect(shot.landing!.packets[0]!.locked!.amplifiers.length, 'premise: the shot carries her amplifiers').toBeGreaterThan(0);
+    return { launched, shot };
+  }
+  const landingDamage = (state: CombatState, at: number) => {
+    let s = state; const out: number[] = [];
+    while (s.status === 'running' && s.tick < at) { const r = stepCombat({ ...s, units: s.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 1000 } : u) }); s = r.state;
+      out.push(...packets(r.events).filter(x => x.source.ownerId === 'p' && x.unitId === 'b').map(x => x.hpDamage)); }
+    return out;
+  };
+  it('the buff ending in flight (then a save and restore) does not change the landing damage', () => {
+    const { launched, shot } = amplifiedShot(), base = landingDamage(launched, shot.executeAtTick);
+    expect(base).toEqual([120]);
+    const ended = structuredClone(launched), p = ended.units.find(u => u.id === 'p')!;
+    p.mechanismState = { ...p.mechanismState!, statuses: p.mechanismState!.statuses.filter(g => !g.contributions.some(c => c.application.modifier?.stat === 'damageAmp')) };
+    expect(landingDamage(JSON.parse(JSON.stringify(ended)), shot.executeAtTick)).toEqual(base);
+  });
+  it('the shooter dying in flight: the shot lands with its snapshot', () => {
+    const { launched, shot } = amplifiedShot(), dead = structuredClone(launched);
+    Object.assign(dead.units.find(u => u.id === 'p')!, { hp: 0 });
+    expect(landingDamage(dead, shot.executeAtTick)).toEqual([120]);
+  });
+  it('the crit is decided on the attack tick and travels with the shot', () => {
+    const { shot } = amplifiedShot();
+    expect(shot.landing!.packets.every(p => typeof p.critical === 'boolean')).toBe(true);
+  });
+});

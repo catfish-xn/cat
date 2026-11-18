@@ -137,11 +137,13 @@ function chargedCritBps(owner: S13Unit, packet: S13Packet): number {
   }
   return bonus;
 }
-function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
+/** The attacker's side of a packet's damage sample: her amplifiers, AD/AP, crit multiplier and HP sample. A ranged hero's
+ * shot takes it on its attack tick (attackerSide in launchAttack, packet.locked) and lands with it. */
+export interface AttackerSide { readonly amplifiers: readonly StatModifier[]; readonly attackDamage: number; readonly abilityPower: number; readonly critMultiplierBps: number; readonly holder: DamageSample['holder'] }
+function attackerSide(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[]): AttackerSide {
   const amplifiers: StatModifier[] = [constantModifier('damageAmp', overtimeBonusBps(tick), 'bps'), ...(owner ? statusModifiers(owner, 'damageAmp', tick) : [])];
   if(owner?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))
     amplifiers.push(constantModifier('damageAmp',d11AvariceDamageAmpBps(owner.currentItemBankGold!),'bps'));
-  if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
   if(owner&&g23Anomaly(owner,'bully')&&(target.effectiveStarLevel??target.starLevel)<(owner.effectiveStarLevel??owner.starLevel))amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
@@ -153,6 +155,13 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   // G2-4b Sniper's Focus: the same per-hex reading as the Sniper trait, sampled at resolution.
   if (owner) for (const m of statusModifiers(owner, 'damageAmpPerHex', tick)) if (m.value.kind === 'constant')
     amplifiers.push(constantModifier('damageAmp', m.value.amount * hexDistance(owner.cell, target.cell), 'bps'));
+  return { amplifiers, attackDamage: owner ? ad(owner) : 0, abilityPower: owner ? ap(owner, tick) : 0, holder: hpSample(owner ?? target),
+    critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps };
+}
+function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
+  const side = packet.locked ?? attackerSide(packet, target, owner, tick, units);
+  const amplifiers: StatModifier[] = [...side.amplifiers];
+  if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
   const reduction = (bps: number): StatModifier => ({ ...constantModifier('damageReduction', bps, 'bps'),
     damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
   const reductions = [...(mechanic(target, 'family', 'damageReductionBps') ? [reduction(mechanic(target, 'family', 'damageReductionBps'))] : []), ...statusModifiers(target, 'damageReduction', tick), ...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
@@ -160,11 +169,11 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   if(startingRows(target.team,target.startingCell?.row??target.cell.row)==='front-two')for(const m of target.mechanics??[])if(m.mechanic==='formSwapper')reductions.push(reduction(m.values.frontReductionBps));
   for (const m of target.mechanics ?? []) if (m.mechanic === 'watcher') reductions.push(reduction(
     BigInt(target.hp) * 10000n > BigInt(target.maxHp) * BigInt(m.values.thresholdBps) ? m.values.healthyReductionBps : m.values.reductionBps));
-  return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
-    abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
+  return { holder: side.holder, target: { ...hpSample(target), hp }, attackDamage: side.attackDamage,
+    abilityPower: side.abilityPower, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
     ...(champion(target) === 'amumu' ? { flatReduction: variable(target, 'FlatDamageReduction') } : {}),
     amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: (packet.critical ?? false) && !(owner && hasMechanic(owner, 'badLuck')),
-    critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
+    critMultiplierBps: side.critMultiplierBps,
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
 /** Validate the authorization even on idle units; only packet work is empty. */
@@ -185,6 +194,8 @@ function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, s
   const shot = ctx.attackLanding; ctx.attackLanding = undefined;
   const packets: S13Packet[] = [];
   for (let i = ctx.packets.length - 1; i >= firstPacket; i--) if (ctx.packets[i]!.actionSeq === seq) packets.unshift(...ctx.packets.splice(i, 1));
+  // The attacker's side of each packet is taken now (her amplifiers, AD/AP, crit multiplier); the target's side on landing.
+  for (const p of packets) { const target = ctx.units.find(u => u.id === p.targetId); if (target) p.locked = attackerSide(p, target, unit, ctx.tick, ctx.units); }
   const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
   targets.forEach((targetId, ordinal) => {
     const target = ctx.units.find(u => u.id === targetId)!, arrivalTick = ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit));

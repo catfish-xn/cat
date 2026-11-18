@@ -2,7 +2,8 @@
 import { historyFreeAugments } from './fixtures/history-free-augments';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { describe, expect, it } from 'vitest';
-import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
+import { wearing, enemy, run, packets, LANDING } from './fixtures/m8-b4-items';
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { packets as packetViews } from './helpers/replay2-views';
 import { accepted, emptyBoard } from './match-helpers';
@@ -34,7 +35,9 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   });
 
   it.each(['morellonomicon', 'red-buff'])('%s: ineligible Runaan arrow settles first without spending burn allowance', item => {
-    const r = run(wearing([item, 'runaans-hurricane'], { targetId: 'z' }), 1, [enemy('z', 1, 3), enemy('a', 2, 3)]);
+    // Ranged attack landing (scene change, Fable 11-18): the Runaan target a stands one hex from the wearer like z, so both
+    // arrows land on the same tick (window 1+LANDING) and settle in the original order; different distances: test below.
+    const r = run(wearing([item, 'runaans-hurricane'], { targetId: 'z' }), 1 + LANDING, [enemy('z', 1, 3), enemy('a', 0, 3)]);
     expect(packets(r.events).map(e => e.unitId)).toEqual(['a', 'z']);
     expect(packets(r.events)[0].source.definitionId).toBe('runaans-hurricane');
     expect(contributions(r.state.units.find(u => u.id === 'a')!, item)).toEqual([]);
@@ -42,9 +45,24 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   });
 
   it('Last Whisper applies 30% sunder to both root attack and physical Runaan arrow', () => {
-    const r = run(wearing(['last-whisper', 'runaans-hurricane'], { targetId: 'z' }), 1, [enemy('z', 1, 3), enemy('a', 2, 3)]);
+    // Ranged attack landing (scene change, Fable 11-18): a one hex away like z, so both arrows land on the same tick.
+    const r = run(wearing(['last-whisper', 'runaans-hurricane'], { targetId: 'z' }), 1 + LANDING, [enemy('z', 1, 3), enemy('a', 0, 3)]);
     expect(packets(r.events).map(e => e.unitId)).toEqual(['a', 'z']);
     for (const id of ['a', 'z']) expect(contributions(r.state.units.find(u => u.id === id)!, 'last-whisper')[0].application.magnitudeBps).toBe(3000);
+  });
+
+  // Ranged attack landing: with the Runaan target farther than the main one, each arrow settles on its own landing tick
+  // (rangedAttackFlightTicks of its own distance) and each arrow's effects come once, complete.
+  it.each(['morellonomicon', 'red-buff', 'last-whisper'])('%s + Runaan at different distances: each arrow lands on its own tick, effects complete', item => {
+    const r = run(wearing([item, 'runaans-hurricane'], { targetId: 'z' }), 1 + rangedAttackFlightTicks(2), [enemy('z', 1, 3), enemy('a', 2, 3)]);
+    const landed = r.events.filter(e => e.type === 'attackLanded' && e.attackerId === 'p').map(e => e.type === 'attackLanded' && [e.targetId, e.tick]);
+    expect(landed).toEqual([['z', 1 + rangedAttackFlightTicks(1)], ['a', 1 + rangedAttackFlightTicks(2)]]);
+    const hits = packets(r.events);
+    expect(hits.map(e => e.unitId)).toEqual(['z', 'a']);
+    expect(hits.find(e => e.unitId === 'a')!.source.definitionId).toBe('runaans-hurricane');
+    const kinds = (id: string) => contributions(r.state.units.find(u => u.id === id)!, item).map(c => c.application.kind).sort();
+    if (item === 'last-whisper') { expect(kinds('a')).toEqual(['sunder']); expect(kinds('z')).toEqual(['sunder']); }
+    else { expect(kinds('a')).toEqual([]); expect(kinds('z')).toEqual(['burn', 'wound']); }
   });
 
   it.each([false, true])('Titan same-action Ezreal double packet: two stacks update both attributes at next tick (shield=%s)', shield => {
