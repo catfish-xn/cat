@@ -9,6 +9,7 @@
  * and sizes (11-10 side-by-side, ccvs-*). Nothing here reads original assets.
  */
 import { AdditiveBlending, CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial } from 'three';
+import type { ActionOutput } from '../../rendering3d/animation-state';
 
 export type ControlKind = 'stun' | 'airborne';
 
@@ -57,6 +58,129 @@ export const CONTROL_3D = {
  * VI_SLAM_TICKS (a 3D module must not import the rules); tests/rendering3d-vi-grab.test.ts keeps the two equal.
  */
 export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 12 } as const;
+/**
+ * Held up by another unit (presentation only; the rules keep the unit on its cell): the body goes up to the holder's grip
+ * point (a bone, CARRY_BONES) in `riseSeconds`, follows it while held, and comes back down onto its own spot in
+ * `fallSeconds` when let go. If the holder or the held unit dies while held, it drops back at once. The fall is the
+ * slam: two rule ticks (0.1 s), the gap between the rules' let-go and the slam's damage (Renni: RENNI_SLAM_AFTER_STUN_TICKS),
+ * so the body lands on the damage tick. Once up, the body stays at least `holdFloor` of the highest grip it reached while
+ * held, a backstop: should another clip of the holder play mid-hold (the rules give Renni none while she holds, #737), it
+ * sways the body but does not put it down before the rules let go. Fitted, not original data.
+ */
+export const CARRY_3D = { riseSeconds: 0.2, fallSeconds: 0.1, holdFloor: 0.85 } as const;
+/**
+ * How each holder holds (by definition id): the bones of what it grips with, the held body going to the highest of them
+ * each frame (Renni: her chainsaw, held upright, the enemy on its upper end), whether the held body hangs upside down
+ * from there, and where on the hung body the grip holds it (gripShare: 0 by its head, 0.5 at its middle; carryRise).
+ */
+export const CARRY_HOLDS: Readonly<Record<string, { readonly bones: readonly string[]; readonly upsideDown: boolean; readonly gripShare?: number; readonly pose?: HoldClips }>> = {
+  // Renni: the held enemy hangs on her chainsaw's top by the middle of its body (gripShare 0.5), not by its head. Fitted,
+  // not original data.
+  renni: { bones: ['Weapon', 'ChainsawEngine', 'Bot_Chainsaw', 'Top_ChainsawHandle', 'L_Chainsaw', 'R_Rotor'], upsideDown: true, gripShare: 0.5,
+    pose: { in: 'spell1_stun', loop: 'spell1_stun_loop', slam: 'spell1_throw' } },
+};
+/**
+ * How high a held body's feet go above its own spot: the grip's rise, plus, for a body hung upside down, the part of the
+ * body between the grip and its feet (gripShare from its head: 0 by the head, 0.5 at its middle).
+ */
+export function carryRise(gripRise: number, bodyHeight: number, hold: { readonly upsideDown: boolean; readonly gripShare?: number } | undefined): number {
+  return Math.max(0, gripRise + (hold?.upsideDown ? bodyHeight * (1 - (hold.gripShare ?? 0)) : 0));
+}
+/**
+ * The lift its bars and stars take over a held body turned over by `flip` radians about its feet: they sit over the
+ * body's highest point, the feet once it hangs, not one body height above them.
+ */
+export function heldBarLift(lift: number, bodyHeight: number, flip: number): number {
+  return flip ? lift - bodyHeight * (1 - Math.max(0, Math.cos(flip))) : lift;
+}
+/** A holder's own clips for a hold: its cast's lift (`in`), the held pose looped until the rules let go, the slam after. */
+export interface HoldClips { readonly in: string; readonly loop: string; readonly slam: string }
+/** How long a holder's cast waits for its lift before it plays as a plain cast again (no target was lifted). */
+export const HOLD_LIFT_WAIT_SECONDS = 1;
+/**
+ * A holder's body while it holds someone up (presentation only, Fable 11-17): from its cast it plays its lift, then keeps
+ * the held pose looping until the rules let go (an attack the rules resolve meanwhile does not swing; the body stays
+ * in the pose), then plays the slam once and gives the unit's own action back. Its revisions are its own (the mixer
+ * starts a clip only on a changed revision), so other actions of the unit during the hold restart nothing.
+ */
+export class HolderPose {
+  private phase: 'in' | 'slam' | null = null;
+  private since = 0;
+  private lifted = false;
+  private count = 0;
+  /** A cast of the holder: its lift starts now. */
+  cast(now: number): void { this.phase = 'in'; this.since = now; this.lifted = false; this.count++; }
+  /** The rules lifted someone (the cast's lift; a lift with no cast seen, e.g. a replay joined late, starts here). */
+  lift(now: number): void { if (this.phase !== 'in') this.cast(now); this.lifted = true; }
+  /** The rules let go: the slam plays from now. */
+  release(now: number): void { if (this.phase === 'in') { this.phase = 'slam'; this.since = now; this.count++; } }
+  /** The holder died or left: its own action again. */
+  stop(): void { if (this.phase !== null) { this.phase = null; this.count++; } }
+  get active(): boolean { return this.phase !== null; }
+  /**
+   * `strike`: when in the slam clip its swing is lowest (UnitAnimationMixer.lowestSeconds over the grip bones). The swing
+   * up to it is played in `fallSeconds` (sped up, as an attack's head is to its release), so the saw comes down as the
+   * held body lands, on the slam's damage tick; the rest plays at 1×. Without it the slam plays at 1× from the let-go.
+   */
+  map(output: ActionOutput, now: number, clips: HoldClips, seconds: (clip: string) => number | undefined, strike?: number, fallSeconds: number = CARRY_3D.fallSeconds): ActionOutput {
+    if (output.state === 'death') { this.stop(); return output; }
+    const left = now - this.since, slam = seconds(clips.slam);
+    const hit = strike !== undefined && slam !== undefined && strike > fallSeconds && strike < slam ? strike : undefined;
+    const slamFor = slam === undefined ? 0 : hit === undefined ? slam : fallSeconds + (slam - hit);
+    if (this.phase === 'in' && !this.lifted && left > HOLD_LIFT_WAIT_SECONDS) this.stop();
+    if (this.phase === 'slam' && left >= slamFor) this.stop();
+    if (this.phase === null) return output;
+    const inSeconds = seconds(clips.in) ?? 0;
+    const [clip, sub, loop] = this.phase === 'slam' ? [clips.slam, 2, false] : left < inSeconds ? [clips.in, 0, false] : [clips.loop, 1, true];
+    const length = seconds(clip);
+    if (length === undefined || !(length > 0)) return output;
+    const playback = this.phase === 'slam' && hit !== undefined
+      ? { clips: [clip], durationSeconds: slamFor, release: { atSeconds: fallSeconds, headSpeed: hit / fallSeconds, tailSpeed: 1 } }
+      : { clips: [clip], durationSeconds: length };
+    return { ...output, state: 'cast', loop, revision: 7_000_000 + this.count * 4 + sub, playback };
+  }
+}
+export interface CarryOffset { x: number; y: number; z: number }
+const smooth = (t: number) => t * t * (3 - 2 * t);
+/**
+ * The world offset (x, y, z) of a held body from its own spot. `update` takes where the grip wants the body this frame,
+ * as an offset from the body's own spot, or null when the holder is gone (then it drops at once).
+ */
+export class CarryMotion {
+  private holding = false;
+  /** 0 on its own spot, 1 at the grip. */
+  private share = 0;
+  private toward: CarryOffset = { x: 0, y: 0, z: 0 };
+  /** The highest grip reached while held (y), once fully up; 0 before. */
+  private peak = 0;
+  readonly offset: CarryOffset = { x: 0, y: 0, z: 0 };
+  constructor(private readonly spec: { readonly riseSeconds: number; readonly fallSeconds: number; readonly holdFloor?: number } = CARRY_3D) {}
+  /** True while held or on its way back down. */
+  get active(): boolean { return this.holding || this.share > 0; }
+  get held(): boolean { return this.holding; }
+  /** 0 on its own spot, 1 at the grip (eased): how far a held body has turned over, for one that hangs upside down. */
+  get progress(): number { return smooth(this.share); }
+  start(): void { this.holding = true; this.peak = 0; }
+  /** Let go: the body comes back down over fallSeconds, or at once with `drop` (holder or held unit dead). */
+  release(drop = false): void {
+    this.holding = false;
+    if (drop) { this.share = 0; this.toward = { x: 0, y: 0, z: 0 }; this.offset.x = this.offset.y = this.offset.z = 0; }
+  }
+  update(seconds: number, toward: CarryOffset | null): CarryOffset {
+    if (this.holding && toward === null) this.release(true);
+    // Falling, it keeps following the grip (the holder's slam brings it down along the swing) when there is one.
+    if (toward) {
+      this.toward = { ...toward };
+      if (this.holding && this.share >= 1) { this.peak = Math.max(this.peak, toward.y); this.toward.y = Math.max(toward.y, this.peak * (this.spec.holdFloor ?? 0)); }
+    }
+    const step = this.holding ? seconds / Math.max(1e-6, this.spec.riseSeconds) : -seconds / Math.max(1e-6, this.spec.fallSeconds);
+    this.share = Math.min(1, Math.max(0, this.share + step));
+    const k = smooth(this.share);
+    this.offset.x = this.toward.x * k; this.offset.y = this.toward.y * k; this.offset.z = this.toward.z * k;
+    if (this.share === 0) this.toward = { x: 0, y: 0, z: 0 };
+    return this.offset;
+  }
+}
 /** Draw order of the stun effects: over the health bars (1001), which hid the old ring at board distance (11-09). */
 export const STUN_RENDER_ORDER = 1003;
 /** The white burst on a unit struck by an ability (board units, seconds). */
