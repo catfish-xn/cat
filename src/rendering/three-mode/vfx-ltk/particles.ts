@@ -82,9 +82,16 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   return geometry;
 }
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
-export function pointAnchor(point: readonly [number, number, number]): Anchor {
+export function pointAnchor(point: readonly [number, number, number], facing?: readonly [number, number, number]): Anchor {
+  // Facing a point, the effect turns as a unit on `point` looking at it would (unitAnchor's aim); else it keeps the world axes.
+  const dx = facing ? facing[0] - point[0] : 0, dz = facing ? facing[2] - point[2] : 0;
+  const turned = dx * dx + dz * dz > 1e-6 ? new Matrix4().makeRotationY(Math.atan2(dx, dz)).elements : null;
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
-    basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
+    basisInto(_time, out) {
+      if (!turned) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; }
+      for (let column = 0; column < 3; column++) for (let row = 0; row < 3; row++) out[row * 3 + column] = turned[column * 4 + row] * AXIS_SIGN[row] * AXIS_SIGN[column];
+      return out;
+    } };
 }
 /**
  * Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet).

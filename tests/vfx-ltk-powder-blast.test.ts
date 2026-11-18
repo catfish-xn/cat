@@ -20,9 +20,11 @@ describe('Powder\'s blast follows its damage', () => {
       targetIds: ['f1'], completionCell: { col: 0, row: 0 } } as DisplayCombatEvent;
     expect(createBatch1VfxEvents(id => definitions[id]).batch([cast])[0]!.noCastEffect).toBe(true);
   });
-  it('both cues at the damage with no delay; her cast list no longer plays them', () => {
-    expect(CUE_EXTRA_SKILLS['powder-blast']!.map(c => [c.system, c.event, c.delay])).toEqual([['8747b362', 'hit', 0], ['805215e2', 'hit', 0]]);
+  it('the target burst on each enemy at the damage; the explosion once, on the monkey\'s cell; her cast list plays neither', () => {
+    expect(CUE_EXTRA_SKILLS['powder-blast']!.map(c => [c.system, c.event, c.delay])).toEqual([['8747b362', 'hit', 0]]);
     expect(CUE_OVERRIDES.powder!.some(c => (c.action ?? 'cast') === 'cast')).toBe(false);
-    expect(mapSkillTimeline(CUE_EXTRA_SKILLS['powder-blast']!, 'pw', ['f1', 'f2']).spawns).toHaveLength(4);
+    expect(mapSkillTimeline(CUE_EXTRA_SKILLS['powder-blast']!, 'pw', ['f1', 'f2']).spawns).toHaveLength(2);
+    const arrive = mapSkillTimeline(CUE_EXTRA_SKILLS['powder-arrive']!, 'pw', [], [10, 0, 20]).spawns;
+    expect(arrive.map(c => [c.system, c.point])).toEqual([['805215e2', [10, 0, 20]]]);
   });
 });

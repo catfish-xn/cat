@@ -121,6 +121,8 @@ export interface TimelineCue {
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** A board point's spawn faces this point, as a hit faces from its target toward the caster (LtkPlayOptions.boardFacing). */
+  readonly facing?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
 }
