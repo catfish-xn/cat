@@ -281,8 +281,7 @@ const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col 
  */
 function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[]) {
   host.style.position = 'relative';
-  // ?critstyle=gold (v-capture --critstyle gold): the gold physical-crit alternative of the damage-float table, for the user to choose.
-  const feedback = createCombatFeedbackRenderer(host, { physicalCrit: params.get('critstyle') === 'gold' ? 'gold' : 'orange' });
+  const feedback = createCombatFeedbackRenderer(host);
   let now = 0;
   const render = () => {
     const anchors = new Map<string, { x: number; y: number; radius: number }>();

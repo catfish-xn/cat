@@ -22,40 +22,42 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
  * badge drawn here (no original artwork); a damage-over-time tick is a small number. Sizes and colours are fitted to footage.
  */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#5fd3ff', true: '#ffffff', heal: '#78efab', status: '#ff9d8a' };
-/** A crit's colour: physical as the original's saturated orange, or the gold alternative the user named; magic a bright blue. */
-const CRIT_COLORS = { physical: { orange: '#ff8c1a', gold: '#ffd23f' }, magic: '#2fa8ff', true: '#ffffff' } as const;
+/** A crit's colour: physical gold (the user's 11-17 call: a gold, weapon-like big number; Fable 11-18 chose it over the
+ * orange alternative), magic a bright blue. */
+const CRIT_COLORS = { physical: '#ffd23f', magic: '#2fa8ff', true: '#ffffff' } as const;
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
-const FONT_PX = 14, CRIT_SCALE = 2.4, TICK_SCALE = 0.8;
+const FONT_PX = 14, CRIT_SCALE = 2.9, TICK_SCALE = 0.8;
 /** A new number pops at POP_SCALE where the hit lands and settles to its size over POP_MS while it rises. */
 const POP_SCALE = 1.5, POP_MS = 300;
 const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 850, crit: 1000, tick: 650 };
 const PER_UNIT = 5, ALL = 40;
-const OUTLINE = '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 0 1px 3px #000';
+/** A dark ring around every number (eight directions and a soft edge) so a small light number reads on the bright board. */
+const OUTLINE = '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 0 3px #000, 0 1px 4px #000';
+/**
+ * Where numbers sit (fitted to recordings, Fable 11-18): a number's bottom clears the unit's overhead bar, BAR_CLEAR px above
+ * the top of its body box; it rises at most RISE_PX over its life, so it stays over its own unit's head.
+ */
+const BAR_CLEAR = 44, RISE_PX = 12;
 /** The gold crit's inner highlight: a light edge above the glyphs inside the black outline. */
 const GOLD_OUTLINE = `0 -1px 0 #fff3c4, ${OUTLINE}`;
 /** The crack badge left of a crit (drawn here: a split star with three rays), tinted with the number's colour. */
 const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l2.6 6.2L21 5l-3.6 5.6L23 13l-6.2 1.4L19 21l-5.8-3.6L12 23l-1.6-5.4L4 21l2.6-6.6L1 13l5.6-2.4L3 5l6.6 2.4z' fill='${color}' stroke='#000' stroke-width='1.2'/><path d='M12 6l-1 5 3 1-2 6' fill='none' stroke='#000' stroke-width='1.4'/></svg>`)}")`;
-export interface FeedbackOptions {
-  /** Which physical crit colour to draw: the original's orange (default) or the gold alternative, both kept for the user to choose. */
-  readonly physicalCrit?: 'orange' | 'gold';
-}
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
-export function createCombatFeedbackRenderer(host: HTMLElement, options: FeedbackOptions = {}): CombatFeedbackRenderer {
+export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
-  const gold = options.physicalCrit === 'gold';
   // Detached nodes do not change the active DOM/order or keep expired text on the board. At most ALL are retained.
   const pool: Label[] = [];
   function release(item: Label): void { item.label.remove(); pool.push({ label: item.label, styles: item.styles }); }
   function reset(): void { for (const item of floats) release(item); floats = []; }
   const look = (kind: FloatKind, cls: FloatClass, burn: boolean) => {
-    const color = cls === 'crit' ? (kind === 'physical' ? CRIT_COLORS.physical[gold ? 'gold' : 'orange'] : kind === 'magic' ? CRIT_COLORS.magic : kind === 'true' ? CRIT_COLORS.true : COLORS[kind])
+    const color = cls === 'crit' ? (kind === 'physical' ? CRIT_COLORS.physical : kind === 'magic' ? CRIT_COLORS.magic : kind === 'true' ? CRIT_COLORS.true : COLORS[kind])
       : cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: kind === 'true' || cls === 'crit' ? '900' : '700',
-      textShadow: cls === 'crit' && kind === 'physical' && gold ? GOLD_OUTLINE : OUTLINE,
+      textShadow: cls === 'crit' && kind === 'physical' ? GOLD_OUTLINE : OUTLINE,
       backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.9)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
@@ -128,23 +130,26 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: Feedbac
       for (const item of expired) release(item);
       const lanes = new Map<string, number>();
       const occupied: { x: number; y: number; half: number; px: number }[] = [];
-      const points = [...anchors.values()];
       for (const { item, anchor, half } of measured) {
         // Older numbers stack above newer ones, each lane as tall as its number.
         const lane = lanes.get(item.unitId) ?? 0; lanes.set(item.unitId, lane + item.px + 3);
         const age = Math.max(0, now - item.at);
-        const x = Math.max(half, Math.min(width - half, anchor.x));
-        let y = Math.max(16, Math.min(height - 16, anchor.y - anchor.radius - 22 - lane - age / 70));
-        let placed = false;
-        for (let attempt = 0; attempt < 7; attempt++) {
-          const candidate = y - attempt * (item.px + 7);
-          if (candidate < 12) break;
-          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - x) < rect.half + half + 3 && Math.abs(rect.y - candidate) < (rect.px + item.px) / 2 + 7);
-          const overlapsPiece = points.some(point => Math.abs(point.x - x) < point.radius + half && Math.abs(point.y - candidate) < point.radius + 10);
-          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - x) < rect.w / 2 + half + 2 && Math.abs(rect.y - candidate) < rect.h / 2 + 12);
-          if (!overlapsFloat && !overlapsPiece && !overlapsLabel) { y = candidate; placed = true; occupied.push({ x, y, half, px: item.px }); break; }
+        const x0 = Math.max(half, Math.min(width - half, anchor.x));
+        // Above the overhead bar (BAR_CLEAR), older numbers of the unit above newer ones, rising a little with age.
+        const y0 = Math.max(12 + item.px / 2, Math.min(height - 16, anchor.y - anchor.radius - BAR_CLEAR - item.px / 2 - lane - Math.min(RISE_PX, age / 80)));
+        // A taken spot moves the number a little up or to the side, never far from its unit: one step up, then beside it.
+        const step = item.px / 2 + 4, side = half + 4;
+        const spots = [[0, 0], [0, -step], [side, 0], [-side, 0], [side, -step], [-side, -step]] as const;
+        let x = x0, y = y0;
+        for (const [dx, dy] of spots) {
+          const cx = Math.max(half, Math.min(width - half, x0 + dx)), cy = y0 + dy;
+          if (cy < 12) continue;
+          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - cx) < rect.half + half + 3 && Math.abs(rect.y - cy) < (rect.px + item.px) / 2 + 4);
+          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - cy) < rect.h / 2 + 12);
+          if (!overlapsFloat && !overlapsLabel) { x = cx; y = cy; break; }
         }
-        hidden(item.label, !placed); if (!placed) continue;
+        // A crowded spot still shows the number over its unit rather than dropping it (it may touch another number).
+        occupied.push({ x, y, half, px: item.px });
         // A new number pops where the hit lands and settles over POP_MS.
         const pop = age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
         style(item, 'left', `${x}px`); style(item, 'top', `${y}px`); style(item, 'transform', pop === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${pop.toFixed(3)})`);

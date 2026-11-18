@@ -1,5 +1,5 @@
 // node dev/castcmp/v-capture.cjs <unit> <outdir> [--port 5311] [--assetPort 5419] [--dist 3] [--star 3] [--ms 3000 | --times 0,33,...] [--settle MS] [--fresh 1] [--cold 1] [--unbind 1] [--attached off|debug] [--nfoes 1-4] [--foestar 1-3] [--gl gpu|swift]
-//   [--critstyle gold]: the gold physical-crit floats (damage-float table alternative); default orange
+//   [--critstyle gold]: kept for old job lines only; the floats draw one physical-crit colour (gold, Fable 11-18)
 //   [--systems id,id|none --absent id,id --layers id,id|none --from MS --to MS --column before|after|off|debug --snapshot <asset snapshot>]:
 //     self-check (gate.cjs), written to gate.json; a failed gate exits 1
 //   [--probe overhead]: the caster's overhead bar and body on screen per frame, to overhead.json (and gate.json)

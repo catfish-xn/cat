@@ -158,8 +158,8 @@ describe('stage5 floating text equivalence and DOM work', () => {
   describe('damage-float table (Library 伤害飘字分类表, Fable 11-17)', () => {
     const crit = (tick: number, targetId = 'a', hpDamage = 10) => ({ ...damage(tick, targetId, hpDamage), critical: true }) as const;
     const heal = (tick: number, targetId = 'a', actual = 7) => ({ type: 'heal', tick, eventSeq: tick, targetId, actual, shares: [] }) as unknown as SceneCombatEvent;
-    const labels = (events: readonly SceneCombatEvent[], now = 0, options = {}) => {
-      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h, options);
+    const labels = (events: readonly SceneCombatEvent[], now = 0) => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
       renderer.push(events, 0); renderer.render(now, new Map(['a', 'b'].map((id, i) => [id, { x: 120 + i * 160, y: 300, radius: 20 }])));
       const out = snapshot(h)[0].children; renderer.dispose(); return out;
     };
@@ -180,10 +180,10 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
       expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
     });
-    it('a crit is about 2.4 times a plain number, more saturated, with a drawn badge, in its own label', () => {
+    it('a crit is about 2.9 times a plain number (one size up, Fable 11-18), more saturated, with a drawn badge, in its own label', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400);
       expect(big.text).toBe(plain.text);
-      expect(px(big) / px(plain)).toBeCloseTo(2.4, 1);
+      expect(px(big) / px(plain)).toBeCloseTo(2.9, 1);
       expect(big.style.color).not.toBe(plain.style.color);
       expect(big.style.backgroundImage).toContain('data:image/svg+xml'); expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
@@ -192,11 +192,28 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const alone = labels([damage(1, 'a', 4)]);
       expect(labels([damage(1, 'a', 4), crit(1, 'a', 10)]).filter(e => e.text === '4')).toEqual(alone);
     });
-    it('a physical crit is orange by default and gold with an inner highlight as the alternative; magic crits are bright blue', () => {
-      const [orange] = labels([crit(1)]), [gold] = labels([crit(1)], 0, { physicalCrit: 'gold' }), [magic] = labels([{ ...crit(1), damageType: 'magic' }]);
-      expect(orange.style.color).toBe('#ff8c1a'); expect(gold.style.color).toBe('#ffd23f'); expect(magic.style.color).toBe('#2fa8ff');
-      expect(gold.style.textShadow).not.toBe(orange.style.textShadow);
-      expect(labels([damage(1)], 0, { physicalCrit: 'gold' })).toEqual(labels([damage(1)]));
+    it('a physical crit is gold with an inner highlight (Fable 11-18); magic crits are bright blue', () => {
+      const [gold] = labels([crit(1)]), [magic] = labels([{ ...crit(1), damageType: 'magic' }]), [plain] = labels([damage(1)]);
+      expect(gold.style.color).toBe('#ffd23f'); expect(magic.style.color).toBe('#2fa8ff');
+      expect(gold.style.textShadow).not.toBe(plain.style.textShadow);
+    });
+    it('every number has a dark ring all round, so a small light number reads on the bright board', () => {
+      const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
+      for (const ring of ['1px 1px 0 #000', '-1px -1px 0 #000', '1px -1px 0 #000', '-1px 1px 0 #000']) expect(shadow).toContain(ring);
+    });
+    it('a number sits above the overhead bar, near its unit, and rises only a little; two numbers on one unit never overlap', () => {
+      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
+      // Anchor: y 300, radius 20, so the body box top is 280; the bar takes 44 px above it.
+      const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400);
+      expect(top(plain) + px(plain) / 2).toBeLessThanOrEqual(280 - 44 + 1e-6);
+      expect(top(big) + px(big) / 2).toBeLessThanOrEqual(280 - 44 + 1e-6);
+      expect(top(labels([damage(1)], 0)[0]) - top(labels([damage(1)], 800)[0])).toBeLessThanOrEqual(12);
+      const two = labels([crit(1, 'a', 10), crit(2, 'a', 20)], 400);
+      expect(two).toHaveLength(2);
+      const [a, b] = two, apart = Math.abs(top(a) - top(b)) >= (px(a) + px(b)) / 2 || Math.abs(parseFloat(a.style.left) - parseFloat(b.style.left)) > 20;
+      expect(apart).toBe(true);
+      // Even a crowded board keeps them over their unit: within a few numbers' height of the bar.
+      for (const e of two) expect(280 - 44 - top(e)).toBeLessThan(3 * px(e));
     });
     it('a damage-over-time tick is small (a burn white), shorter-lived; heals are not changed by crits', () => {
       const [plain] = labels([damage(1)], 400), [tick] = labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 400);
