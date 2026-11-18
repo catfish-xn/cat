@@ -38,7 +38,9 @@ describe('3D: Powder\'s monkey', () => {
     expect(group.position.y).toBeCloseTo(0);
     for (let t = 0; t < 0.7 + 1e-9; t += 0.05) monkeys.update(0.05, () => body);
     expect(group.position.x).toBeCloseTo(40); expect(group.position.z).toBeCloseTo(0);
-    expect(monkeys.arrive('pw')!.toArray()).toEqual([40, 0, 0]);
+    const arrived = monkeys.arrive('pw')!;
+    expect(arrived.at.toArray()).toEqual([40, 0, 0]);
+    expect(arrived.from!.toArray()).toEqual([5, 3, 0]); // where it ran from: under her hand at the swap
     expect(scene.getObjectByName('powder-monkey')).toBeUndefined();
     expect(monkeys.arrive('pw')).toBeNull();
   });

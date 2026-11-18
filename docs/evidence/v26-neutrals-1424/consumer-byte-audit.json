@@ -2611,9 +2611,9 @@
     "tests/rendering3d-powder-monkey.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7731,
+      "currentBytes": 7868,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "57402022e78281ae5a707374a5c6b0564716622514526a5108850d03c6c55963",
+      "currentSha256": "1c6de9970076475a6e9508d7ba1bad12574cb22d1eb609fdca7635cdd0cd0b07",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-presentation-lighting.test.ts": {
@@ -3934,6 +3934,14 @@
       "currentBytes": 3609,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "cc2e7d4892ba8285793335caa826bd6fc153b80c734b789dd3b1c0623d829830",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-board-facing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4111,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4dbfa8df11b874e5ceaa4dc00f7b117912242371bfb7199f183a389da0fdbc87",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-board-stencil-assets.test.ts": {

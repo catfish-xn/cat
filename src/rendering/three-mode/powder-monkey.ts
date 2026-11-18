@@ -97,10 +97,14 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
       m.to = to.clone(); m.sent = true;
       m.runFor = Math.max(0.05, m.started ? m.ran + arriveIn : arriveIn - Math.max(0, m.hideAt - m.since));
     },
-    /** The rules' monkey arrived (or its owner's cast was undone): it goes; its cell's point, when it was out. */
-    arrive(owner: string): Vector3 | null {
+    /**
+     * The rules' monkey arrived (or its owner's cast was undone): it goes. Its cell's point, when it was out, and where it
+     * ran from (under her hand at the swap), when it had swapped in.
+     */
+    arrive(owner: string): { at: Vector3; from: Vector3 | null } | null {
       const m = monkeys.get(owner); if (!m) return null;
-      const point = m.to?.clone() ?? null; remove(owner, m); return point;
+      const at = m.to?.clone(), from = m.started && m.from ? m.from.clone() : null; remove(owner, m);
+      return at ? { at, from } : null;
     },
     /** `owner` died: a monkey not yet sent goes with her (the rules send none); a sent one runs on. */
     drop(owner: string) { const m = monkeys.get(owner); if (m && !m.sent) remove(owner, m); },

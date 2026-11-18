@@ -1545,8 +1545,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           monkeys.send(event.unitId, cell, swapIn, (event.arrivalTick - event.tick) / 20); // 20 rule ticks a second
         }
         if (event.marker === 'powder-monkey-arrived') {
-          const at = monkeys.arrive(event.unitId) ?? cell;
-          if (currentEffect && !reducedMotion()) ltk?.play('powder', event.unitId, [], 'passive', { skill: 'powder-arrive', board: [at.x, at.y, at.z] });
+          // Her explosion faces back the way the monkey came (as it faced her when it played on each enemy hit).
+          const arrived = monkeys.arrive(event.unitId), at = arrived?.at ?? cell;
+          const from = arrived?.from ?? (owner?.alive ? owner.root.position : null);
+          if (currentEffect && !reducedMotion()) ltk?.play('powder', event.unitId, [], 'passive', { skill: 'powder-arrive', board: [at.x, at.y, at.z], ...(from ? { boardFacing: [from.x, from.y, from.z] as const } : {}) });
         }
       }
       // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's

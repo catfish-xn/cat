@@ -134,6 +134,8 @@ export interface LtkPlayOptions {
   /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
   skill?: string;
   board?: WorldPoint;
+  /** The point a `board` cue faces (Powder's explosion faces back the way her monkey came); without it, the world axes. */
+  boardFacing?: WorldPoint;
   /** Explicit board stage only, e.g. a confirmed storm after all recipients died. */
   boardOnly?: boolean;
   /**
@@ -589,13 +591,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const source = findUnit(sourceId);
       if (!cues) return refuse('not-ready');
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
+      const facing = context.boardFacing;
+      const faced = facing ? mapped.spawns.map(spawn => spawn.point && spawn.location === 'board' ? { ...spawn, facing } : spawn) : mapped.spawns;
       // A cue the timeline cannot map (timeline.ts unsupported) is played without; the rest of the cast plays (Fable 11-13:
       // one such cue sent the whole cast back to the host's own effect).
       const skipped = mapped.unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
       // Targets: a living one is followed, a dead one whose unit is still there gets the cast's hits and projectiles at its
       // place, a gone one loses its rows (placeTargets). The cast is refused only when none of its targets is usable, or
       // nothing is left of it, or its caster is dead and it rides on the caster.
-      const spawns = placeTargets(mapped.spawns, !!context.snapshotTargets, skipped);
+      const spawns = placeTargets(faced, !!context.snapshotTargets, skipped);
       if (!spawns) return refuse('no-target');
       if (!spawns.length) return refuse('nothing-left');
       const independent = spawns.every(({ spawn: s }) => s.point && s.event !== 'projectile');
@@ -869,7 +873,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
@@ -890,7 +894,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : seed++;
         if (row.part === 'flight' && row.together) flightSeeds.set(row.together, runSeed);
         const nextOptions = { anchor, attachment,
-          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
