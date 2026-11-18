@@ -209,13 +209,15 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(top(big) + px(big) / 2).toBeLessThanOrEqual(280 - 44 + 1e-6);
       expect(top(labels([damage(1)], 0)[0]) - top(labels([damage(1)], 800)[0])).toBeLessThanOrEqual(12);
     });
-    it('a unit\'s numbers stand side by side, right then left by half a number\'s width, never pushed up (Fable 11-18)', () => {
+    it('a unit\'s numbers stand side by side, right then left, never covering each other or pushed up (Fable 11-18)', () => {
       const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
       const three = labels([crit(1, 'a', 10), crit(1, 'a', 20, ), crit(1, 'a', 30)].map((e, i) => ({ ...e, tick: 1 + i, eventSeq: 1 + i })), 400);
       expect(three).toHaveLength(3);
       // Same height (same age here), the first in the middle, then to the right, then to the left.
       expect(new Set(three.map(top)).size).toBe(1);
       expect(left(three[1])).toBeGreaterThan(left(three[0])); expect(left(three[2])).toBeLessThan(left(three[0]));
+      // Neighbours are at least a number's width apart (jsdom measures no text: the 20 px minimum half-width stands in).
+      expect(left(three[1]) - left(three[0])).toBeGreaterThanOrEqual(40); expect(left(three[0]) - left(three[2])).toBeGreaterThanOrEqual(40);
       // Never higher than 1.5 crit heights above the bar.
       for (const e of three) expect(280 - 44 - top(e)).toBeLessThanOrEqual(1.5 * px(e) + 1e-6);
     });

@@ -141,9 +141,10 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       const occupied: { x: number; y: number; half: number; px: number; unit: string }[] = [];
       const critPx = Math.round(FONT_PX * CRIT_SCALE);
       for (const { item, anchor, half } of measured) {
-        // A unit's numbers in order: the first in the middle, then half a number's width to the right, to the left, and so on.
+        // A unit's numbers in order: the first in the middle, then one number's width (and a small gap) to the right, to the
+        // left, and so on, so neighbours never cover each other (half a width let a crit hide most of the one beside it).
         const slot = slots.get(item.unitId) ?? 0; slots.set(item.unitId, slot + 1);
-        const shift = slot === 0 ? 0 : (slot % 2 === 1 ? 1 : -1) * Math.ceil(slot / 2) * half;
+        const shift = slot === 0 ? 0 : (slot % 2 === 1 ? 1 : -1) * Math.ceil(slot / 2) * (2 * half + 4);
         const age = Math.max(0, now - item.at);
         const bar = anchor.y - anchor.radius - BAR_CLEAR;
         // Above the overhead bar (BAR_CLEAR), rising a little with age, never above CEILING_CRITS crit heights over the bar.
