@@ -39,6 +39,12 @@ const OUTLINE = '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 1px 1
  * the top of its body box; it rises at most RISE_PX over its life, so it stays over its own unit's head.
  */
 const BAR_CLEAR = 44, RISE_PX = 12;
+/**
+ * A unit's numbers at once (Fable 11-18): side by side, alternating right and left by half a number's width, never pushed up;
+ * past SHOWN the earliest fades out early (over EARLY_FADE_MS). No number's centre is ever more than CEILING_CRITS crit
+ * heights above the bar.
+ */
+const SHOWN = 3, EARLY_FADE_MS = 200, CEILING_CRITS = 1.5;
 /** The gold crit's inner highlight: a light edge above the glyphs inside the black outline. */
 const GOLD_OUTLINE = `0 -1px 0 #fff3c4, ${OUTLINE}`;
 /** The crack badge left of a crit (drawn here: a split star with three rays), tinted with the number's colour. */
@@ -87,6 +93,9 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const old = floats.find(item => item.key === key);
     if (old) { if (kind !== 'status') old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
+    // A fourth number on a unit: its earliest one fades out now, rather than the numbers stacking up.
+    const showing = perUnit.filter(item => item.at + item.life > at);
+    if (showing.length >= SHOWN) { const first = showing[0]; first.life = Math.min(first.life, Math.max(0, at - first.at) + EARLY_FADE_MS); }
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
@@ -128,28 +137,30 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         return { item, anchor, half: item.measured };
       });
       for (const item of expired) release(item);
-      const lanes = new Map<string, number>();
-      const occupied: { x: number; y: number; half: number; px: number }[] = [];
+      const slots = new Map<string, number>();
+      const occupied: { x: number; y: number; half: number; px: number; unit: string }[] = [];
+      const critPx = Math.round(FONT_PX * CRIT_SCALE);
       for (const { item, anchor, half } of measured) {
-        // Older numbers stack above newer ones, each lane as tall as its number.
-        const lane = lanes.get(item.unitId) ?? 0; lanes.set(item.unitId, lane + item.px + 3);
+        // A unit's numbers in order: the first in the middle, then half a number's width to the right, to the left, and so on.
+        const slot = slots.get(item.unitId) ?? 0; slots.set(item.unitId, slot + 1);
+        const shift = slot === 0 ? 0 : (slot % 2 === 1 ? 1 : -1) * Math.ceil(slot / 2) * half;
         const age = Math.max(0, now - item.at);
-        const x0 = Math.max(half, Math.min(width - half, anchor.x));
-        // Above the overhead bar (BAR_CLEAR), older numbers of the unit above newer ones, rising a little with age.
-        const y0 = Math.max(12 + item.px / 2, Math.min(height - 16, anchor.y - anchor.radius - BAR_CLEAR - item.px / 2 - lane - Math.min(RISE_PX, age / 80)));
-        // A taken spot moves the number a little up or to the side, never far from its unit: one step up, then beside it.
-        const step = item.px / 2 + 4, side = half + 4;
-        const spots = [[0, 0], [0, -step], [side, 0], [-side, 0], [side, -step], [-side, -step]] as const;
-        let x = x0, y = y0;
-        for (const [dx, dy] of spots) {
-          const cx = Math.max(half, Math.min(width - half, x0 + dx)), cy = y0 + dy;
-          if (cy < 12) continue;
-          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - cx) < rect.half + half + 3 && Math.abs(rect.y - cy) < (rect.px + item.px) / 2 + 4);
-          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - cy) < rect.h / 2 + 12);
-          if (!overlapsFloat && !overlapsLabel) { x = cx; y = cy; break; }
+        const bar = anchor.y - anchor.radius - BAR_CLEAR;
+        // Above the overhead bar (BAR_CLEAR), rising a little with age, never above CEILING_CRITS crit heights over the bar.
+        const y0 = Math.max(12 + item.px / 2, bar - CEILING_CRITS * critPx, Math.min(height - 16, bar - item.px / 2 - Math.min(RISE_PX, age / 80)));
+        const x0 = Math.max(half, Math.min(width - half, anchor.x + shift));
+        // Another unit's number in the way moves this one to the side, never up.
+        const side = half + 4;
+        let x = x0;
+        const y = y0;
+        for (const dx of [0, side, -side]) {
+          const cx = Math.max(half, Math.min(width - half, x0 + dx));
+          const overlapsFloat = occupied.some(rect => rect.unit !== item.unitId && Math.abs(rect.x - cx) < rect.half + half + 3 && Math.abs(rect.y - y) < (rect.px + item.px) / 2 + 4);
+          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - y) < rect.h / 2 + 12);
+          if (!overlapsFloat && !overlapsLabel) { x = cx; break; }
         }
         // A crowded spot still shows the number over its unit rather than dropping it (it may touch another number).
-        occupied.push({ x, y, half, px: item.px });
+        occupied.push({ x, y, half, px: item.px, unit: item.unitId });
         // A new number pops where the hit lands and settles over POP_MS.
         const pop = age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
         style(item, 'left', `${x}px`); style(item, 'top', `${y}px`); style(item, 'transform', pop === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${pop.toFixed(3)})`);

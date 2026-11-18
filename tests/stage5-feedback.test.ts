@@ -201,19 +201,33 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
       for (const ring of ['1px 1px 0 #000', '-1px -1px 0 #000', '1px -1px 0 #000', '-1px 1px 0 #000']) expect(shadow).toContain(ring);
     });
-    it('a number sits above the overhead bar, near its unit, and rises only a little; two numbers on one unit never overlap', () => {
+    it('a number sits above the overhead bar, near its unit, and rises only a little', () => {
       const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
       // Anchor: y 300, radius 20, so the body box top is 280; the bar takes 44 px above it.
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400);
       expect(top(plain) + px(plain) / 2).toBeLessThanOrEqual(280 - 44 + 1e-6);
       expect(top(big) + px(big) / 2).toBeLessThanOrEqual(280 - 44 + 1e-6);
       expect(top(labels([damage(1)], 0)[0]) - top(labels([damage(1)], 800)[0])).toBeLessThanOrEqual(12);
-      const two = labels([crit(1, 'a', 10), crit(2, 'a', 20)], 400);
-      expect(two).toHaveLength(2);
-      const [a, b] = two, apart = Math.abs(top(a) - top(b)) >= (px(a) + px(b)) / 2 || Math.abs(parseFloat(a.style.left) - parseFloat(b.style.left)) > 20;
-      expect(apart).toBe(true);
-      // Even a crowded board keeps them over their unit: within a few numbers' height of the bar.
-      for (const e of two) expect(280 - 44 - top(e)).toBeLessThan(3 * px(e));
+    });
+    it('a unit\'s numbers stand side by side, right then left by half a number\'s width, never pushed up (Fable 11-18)', () => {
+      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
+      const three = labels([crit(1, 'a', 10), crit(1, 'a', 20, ), crit(1, 'a', 30)].map((e, i) => ({ ...e, tick: 1 + i, eventSeq: 1 + i })), 400);
+      expect(three).toHaveLength(3);
+      // Same height (same age here), the first in the middle, then to the right, then to the left.
+      expect(new Set(three.map(top)).size).toBe(1);
+      expect(left(three[1])).toBeGreaterThan(left(three[0])); expect(left(three[2])).toBeLessThan(left(three[0]));
+      // Never higher than 1.5 crit heights above the bar.
+      for (const e of three) expect(280 - 44 - top(e)).toBeLessThanOrEqual(1.5 * px(e) + 1e-6);
+    });
+    it('past three numbers on a unit, the earliest fades out early instead of stacking', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
+      for (let i = 0; i < 3; i++) renderer.push([{ ...damage(1 + i), eventSeq: 1 + i }], i * 50);
+      renderer.render(150, anchors); expect(snapshot(h)[0].children).toHaveLength(3);
+      renderer.push([{ ...damage(9), eventSeq: 9 }], 160);
+      // The earliest (shown at 0, normally 850 ms) is gone 200 ms after the fourth came; the other three remain.
+      renderer.render(400, anchors);
+      expect(snapshot(h)[0].children.map(e => e.text)).toHaveLength(3);
+      renderer.dispose();
     });
     it('a damage-over-time tick is small (a burn white), shorter-lived; heals are not changed by crits', () => {
       const [plain] = labels([damage(1)], 400), [tick] = labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 400);
