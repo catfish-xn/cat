@@ -326,7 +326,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     // The cleave disc and the strike on the target play their systems' whole own life (ownLife): only a rule event ends an
     // effect early, and nothing in the rules ends these (Fable 11-18, C71). The disc lies under Nocturne's feet.
-    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 1, ownLife: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // RECORDING VARIANT B (C71): the disc under the swing's target instead of under Nocturne.
+    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'hit', primary: true, delay: 0.3, duration: 1, ownLife: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
