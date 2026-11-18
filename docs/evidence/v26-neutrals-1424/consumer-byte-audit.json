@@ -1034,9 +1034,9 @@
     "tests/fixtures/m5/full-match-golden.v26-neutrals-1424.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 107589,
+      "currentBytes": 107763,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3637b531964d94e6f48de0c8804cbe0079710b787d4d79d554aa81f0f46de946",
+      "currentSha256": "24b6b05dd01fd83f6efae61d19dcc394b8ab791eb1d6544ff906265e86941b19",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m5/h13-inventory-oracle.cjs": {
@@ -1184,7 +1184,7 @@
       "previousBytes": 0,
       "currentBytes": 474,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e815563d22229c781236891d886c363deec2c5306ee384e7e3ca8aa15b583077",
+      "currentSha256": "329d071a456e5bc4038b7231e8e7da563abd815eeeac5718f7315d0d82f63eeb",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-c19-seed-9-minimal.json": {
@@ -1198,9 +1198,9 @@
     "tests/fixtures/v26-neutrals-1424-chest-trial.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 56099,
+      "currentBytes": 54695,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9c9dde892d2022c3989acc0d60344db84a25788e83d54a6a1f827affd33307ee",
+      "currentSha256": "502e50b1929265b4f27f3df8d054058646d9054fe89f5f99d92796254d789492",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-chest-trial.ts": {
@@ -1214,33 +1214,33 @@
     "tests/fixtures/v26-neutrals-1424-herald-raw/edge-of-night.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 293867,
+      "currentBytes": 293863,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0a6cfff88706352e673bac467aac5984b738def93547ff0fb1d8b65488d9c960",
+      "currentSha256": "aa5811f9d944444ce5eb788e9c3410540c3275c84fe59970e8374faef1f21a81",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 293264,
+      "currentBytes": 293570,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4c3ed7bfbdfce26d685541ed519eeb1b9f0bb959f3cd06ffb58f7b300e59dbdc",
+      "currentSha256": "bad43af769adb6073941d1ef7f6b8f8f25483c9a3abaa90020477a3b08ec168c",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 293262,
+      "currentBytes": 293085,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0b3db6c6d586ece0a43d75e05de9172b5b0eee921fd23d7f8e168325c0bd1686",
+      "currentSha256": "16d07e464ac028f26a5f3fc21bf128813b52cc35b2b9057f176b445a06e2d31c",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 293263,
+      "currentBytes": 293569,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f07f1e628f901c711d62a3c2dbed19f814278adec1de88089647eba8bbcec86b",
+      "currentSha256": "a5d2ee76dd3ac2430af157b45b9134cf96dae1843d727912fe36a9f5c4c62d7a",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
@@ -1248,23 +1248,23 @@
       "previousBytes": 0,
       "currentBytes": 69614,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c8ecfe9a15573a5c68b026981a24ce596c967db2d417819d1652b8211459bf9e",
+      "currentSha256": "fc1075fe85ec2fa5f4ff4f2ef2a98c65818b021655006b5bb1925e34b964ba05",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 293272,
+      "currentBytes": 293578,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8405f412a42c43dbaa07aa24aeca77859c2c3f040572895e34f3740601d62295",
+      "currentSha256": "37f9b25b4b7255f2f716610ce8893556f79cb3e41d006bf9e5fd3c2d06c1d0ed",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 335745,
+      "currentBytes": 335766,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "182edeaea364c419e9af537327187f9b592521533a72b505d383a57bdddbc7a6",
+      "currentSha256": "a5159c808e790ab3df3212143a1ea6bf3953bc56699701966631a31875127ef0",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": {
@@ -1278,17 +1278,17 @@
     "tests/fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1160116,
+      "currentBytes": 1160914,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "36f38984a56cccb6bbc22811ac2942327d2462b314a74aff208443bb6dca42b9",
+      "currentSha256": "0e7bd2dd475c53471666e6aedd66deeb8d244f3b1f0020904ae6219d7d91a1ae",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-recorded-states/sniper.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1216070,
+      "currentBytes": 1219895,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5f4da754f41d64d2c412b70444e388c1bd87dce370a5ad9fc6603aa306eaf42b",
+      "currentSha256": "5721f49d108bf9fb7afa9dbed6b845a50db1e1320f24e46924c599fb9fe88d77",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-transfer-route.json": {
@@ -3328,9 +3328,9 @@
     },
     "tests/server/fixtures/battle-start.json": {
       "previousBytes": 4979457,
-      "currentBytes": 4923293,
+      "currentBytes": 3324446,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "cbded7987d8773dc6e06a540ff12336e5e5182013c1d52a6711b6cbf1f80c433",
+      "currentSha256": "3154aae424ff61308b179166b6172726ff69528a26a6df87bc88bdb5fc554228",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {

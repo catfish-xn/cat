@@ -1,13 +1,13 @@
 {
-  "seed": 31728,
+  "seed": 30095,
   "grantTick": 92,
   "firstPulse": 192,
   "bracerTicks": [
-    197,
-    396
+    212,
+    388
   ],
-  "deathTick": 474,
-  "terminalTick": 474,
+  "deathTick": 462,
+  "terminalTick": 462,
   "checkpoints": [
     [
       "before grant",
@@ -27,24 +27,24 @@
     ],
     [
       "first bracer stack",
-      197
+      212
     ],
     [
       "repeated bracer stack",
-      396
+      388
     ],
     [
       "before receiver death",
-      473
+      461
     ],
     [
       "after receiver death",
-      474
+      462
     ]
   ],
-  "initialSha256": "2ed39631319e0c938b18798483668fef2211a71c8dc5884720926489d8523415",
-  "terminalSha256": "3c534d7ae502ab6374b1e26e0c49c170551c1a9fa33cfffc83dbdf2ad5cd0c8a",
-  "eventsSha256": "370c132042b1e7a98f313e29ea8436ab23ec9c0ad633102e4c19b234334c4548",
+  "initialSha256": "5308adc01a18956d5065bc22c3f6a88d7123d926d3c1c171390bfcaa9d184799",
+  "terminalSha256": "d68cdef4d48d702fd23e6dab0c83131ca8aafe44e86eab1879f7f73be98d1b8c",
+  "eventsSha256": "1bb4409eda71ffa4650a67a943c4d950055ebed00cf520ac345b6898883306d7",
   "frames": [
     {
       "tick": 1,
@@ -1421,105 +1421,105 @@
     {
       "tick": 197,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 198,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 199,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 200,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 201,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 202,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 203,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 204,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 205,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 206,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 207,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 208,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 209,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 210,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 211,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
@@ -2758,56 +2758,56 @@
     {
       "tick": 388,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 389,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 390,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 391,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 392,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 393,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 394,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 395,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
@@ -3275,90 +3275,6 @@
     },
     {
       "tick": 462,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 463,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 464,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 465,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 466,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 467,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 468,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 469,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 470,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 471,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 472,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 473,
-      "alive": true,
-      "stacks": 2,
-      "pulse": 3,
-      "holderAlive": false
-    },
-    {
-      "tick": 474,
       "alive": false,
       "stacks": 2,
       "pulse": 0,
