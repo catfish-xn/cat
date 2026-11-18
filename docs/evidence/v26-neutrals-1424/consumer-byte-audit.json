@@ -654,9 +654,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 41658,
+      "currentBytes": 42460,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "0de1952e75d28bf03d2dd1935a87fff6b851d0d528f8141751a76963069abc9b",
+      "currentSha256": "f94bbba234cebba7c0c9c9f31ced995ee6b4f64e023336173cb4b82a972151ab",
       "firstDifferentByte": 9
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -3722,9 +3722,9 @@
     },
     "tests/task-mechanism-restore.test.ts": {
       "previousBytes": 32101,
-      "currentBytes": 32652,
+      "currentBytes": 32853,
       "previousSha256": "519a512569b7bf8f67aac1eb868284e373490e58477643b55f76057c7cbee9ff",
-      "currentSha256": "c1953c0809ab7662069fbbed48ed8594c2916b69962fb6345339800c5c45e0eb",
+      "currentSha256": "44901ac49002bfafc4cfdd753054e9bdc4a79da46f80d7478445cea4e3c059bd",
       "firstDifferentByte": 1721
     },
     "tests/team-planner-highlight.test.ts": {
