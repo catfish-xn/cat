@@ -184,8 +184,6 @@ export function lineClearance(a: Cell, b: Cell, c: Cell): number {
   return Math.abs((r.x - p.x) * dy - (r.y - p.y) * dx) / Math.sqrt(len2);
 }
 
-/** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
- * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
 /** "0.6" (v-capture --as-scale) as a number in 0.2–1, or why it cannot be. */
 export function parseAsScale(text: string | null | undefined): { asScale: number } | { why: string } {
   const value = Number(text);
@@ -195,6 +193,8 @@ export function parseAsScale(text: string | null | undefined): { asScale: number
 export function asScaleLabel(asScale: number | undefined): string | null {
   return asScale !== undefined && asScale !== 1 ? `录制专用：攻速×${asScale}` : null;
 }
+/** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
+ * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
 export function startRealCombat(units: any[], items: any[] = [], asScale = 1): { state: any; events: any[] } {
   const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
   const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items, temporaryEquipment: [],
