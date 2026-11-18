@@ -27,6 +27,8 @@ const skills: Record<string, TimelineCue[]> = {
   later: [hit('boom', 0.3)],
   missile: [shot],
   swing: [{ ...hit('spark', 0), action: 'attack' }],
+  // A plain attack's missile.
+  volley: [{ ...shot, action: 'attack' }],
   // An attack and its empowered form (a variant), each landing 0.3 s in.
   bolt: [{ ...hit('spark', 0.3), action: 'attack' }, { ...hit('boom', 0.3), action: 'attack', variant: 'empowered' }],
   curse: [hit('curse', 0.3, { livingTarget: true }), hit('boom', 0.3)],
@@ -239,6 +241,24 @@ describe('vfx-ltk casts at dead targets', () => {
       step(1 / 60);
       expect(of('spark').filter(entry => entry.fx.object.parent === scene).length).toBe(before);
       expect(of('boom').filter(entry => entry.fx.object.parent === scene)).toHaveLength(0);
+      runtime.dispose();
+    }
+  });
+
+  // Fable 11-18: a plain attack's missile with no flourish to end ends the earliest plain attack's hit; never the other way.
+  it('a plain attack missile on a board full of attack hits ends the earliest hit; hits and missiles never end their own kind', async () => {
+    for (const fill of ['swing', 'volley'] as const) for (const newcomer of ['swing', 'volley'] as const) {
+      const { runtime, scene, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play(fill, 'caster', ['a'], 'attack')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      const filler = fill === 'swing' ? 'spark' : 'shot', first = of(filler)[0]!;
+      const before = of(filler).filter(entry => entry.fx.object.parent === scene).length;
+      expect(runtime.play(newcomer, 'caster', ['b'], 'attack')).toBe(true);
+      step(1 / 60);
+      const ends = fill === 'swing' && newcomer === 'volley';
+      expect(first.fx.object.parent === null).toBe(ends);
+      if (fill !== newcomer) expect(of(newcomer === 'swing' ? 'spark' : 'shot').filter(entry => entry.fx.object.parent === scene)).toHaveLength(ends ? 1 : 0);
+      else expect(of(filler).filter(entry => entry.fx.object.parent === scene)).toHaveLength(before);
       runtime.dispose();
     }
   });
