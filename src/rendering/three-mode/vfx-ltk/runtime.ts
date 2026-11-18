@@ -184,6 +184,8 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** One play() call's cue on several targets, a row each (`${play}:${system}`): its rows after the first take no slot (OFF_SLOT_MAX). */
   fan?: string }
 interface Running { reserved: number; system: string; stopped?: boolean;
+  /** Its cue's event (a plain attack's missile may end a plain attack's hit: see the admission loop). */
+  event?: TimelineCue['event'];
   /** fadeAction is easing it out: it no longer counts as playing. */
   fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
@@ -869,7 +871,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
           const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
-          if (!decision.admit) break;
+          if (!decision.admit) {
+            // A plain attack's missile with no flourish left to end ends the earliest plain attack's hit (Fable 11-18): a
+            // dropped missile shows damage with nothing flying to it. Missiles never end missiles, hits never end hits.
+            if (importance === 'attack' && spawn.event === 'projectile') {
+              let hit: Running | undefined;
+              for (const run of running) if (run.importance === 'attack' && run.event === 'hit' && !run.persistent && !run.atPlace) { hit = run; break; }
+              if (hit) { leave(hit); continue; }
+            }
+            break;
+          }
           const victim = [...running][decision.evict];
           if (!victim) break;
           leave(victim);
@@ -940,7 +951,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           for (let done = 0; done < skip - 1e-9; done += 0.1) fx.update(Math.min(0.1, skip - done), camera);
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
             playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
