@@ -136,6 +136,39 @@ export class UnitAnimationMixer {
     const action = this.active;
     this.submeshes.apply(action?.getClip().name.replace(/#.*$/, ''), (action?.time ?? 0) + this.heldSeconds);
   }
+  /** A clip's own length in seconds, undefined when the model has no usable clip of that name. */
+  clipSeconds(name: string): number | undefined {
+    const clip = this.clips.get(name);
+    return clip && Number.isFinite(clip.duration) && clip.duration > 0 ? clip.duration : undefined;
+  }
+  /**
+   * When in a clip the highest of these bones is lowest (seconds, sampled at 30 per second on a copy of the model, so the
+   * live pose is untouched): where a downward swing strikes (a holder's slam, CARRY_HOLDS). Undefined without the clip
+   * or the bones. Cached per clip and bones.
+   */
+  lowestSeconds(clipName: string, boneNames: readonly string[]): number | undefined {
+    const key = `${clipName}\n${boneNames.join(',')}`;
+    if (this.lows.has(key)) return this.lows.get(key);
+    const clip = this.clips.get(clipName);
+    let at: number | undefined;
+    if (clip && Number.isFinite(clip.duration) && clip.duration > 0) try {
+      const copy = this.root.clone(true), mixer = new AnimationMixer(copy);
+      const bones = boneNames.map(name => copy.getObjectByName(name)).filter((bone): bone is Object3D => !!bone);
+      if (bones.length) {
+        mixer.clipAction(clip).play();
+        let low = Infinity;
+        for (let t = 0; t <= clip.duration + 1e-6; t += 1 / 30) {
+          mixer.setTime(t); copy.updateMatrixWorld(true);
+          let high = -Infinity; for (const bone of bones) high = Math.max(high, bone.matrixWorld.elements[13]!);
+          if (high < low - 1e-6) { low = high; at = t; }
+        }
+      }
+      mixer.stopAllAction(); mixer.uncacheRoot(copy);
+    } catch { at = undefined; } // a model that cannot be copied or sampled: no strike, the slam plays at 1x
+    this.lows.set(key, at);
+    return at;
+  }
+  private readonly lows = new Map<string, number | undefined>();
   setForm(form?: 'front' | 'back'): void {
     if (this.form !== form) {
       this.form = form;
