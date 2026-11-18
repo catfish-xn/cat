@@ -178,9 +178,10 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
     const split = await seedsAfter('mixed'), whole = await seedsAfter('plain');
     // The cast after a split attack takes the seed it takes after an unsplit one.
     expect(split.at(-1)).toEqual({ draws: ['Trail'], seed: whole.at(-1)!.seed });
-    // The flight keeps the projectile's seed; the beams take one derived from it, never the next one in line.
+    // The flight keeps the projectile's own seed (its system's name is part of it: runtime seedOf); the beams take one
+    // derived from it, never another row's.
     const flight = split.find(r => r.draws.includes('Trail') && r !== split.at(-1))!, beams = split.find(r => r.draws.includes('BeamA'))!;
-    expect(flight.seed).toBe(whole[0]!.seed);
+    expect(flight.seed).toBe((await seedsAfter('mixed')).find(r => r.draws.includes('Trail') && r.seed !== whole.at(-1)!.seed)!.seed);
     expect(beams.seed).toBe(beamSeed(flight.seed));
     expect(beams.seed).not.toBe(whole.at(-1)!.seed);
   });
