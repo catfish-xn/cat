@@ -261,8 +261,10 @@ it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a r
   const first = stepLanded(state); state = first.state; // window: the holder's shot lands
   expect(first.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p' && e.outcome.hpDamage > 0)).toBe(contributed);
   expect(earned(state)).toEqual([]);
-  // Window: on to Sion's strike.
+  // Window: on to Sion's strike, which kills on exactly the tick his cooldown (2 + the holder's flight) runs out.
+  const sionCooldown = 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell));
   let second = stepCombat(state); for (let n = 0; n < 10 && !second.events.some(e => e.type === 'kill'); n++) second = stepCombat(second.state); state = second.state;
+  expect(second.state.tick).toBe(started.state.tick + sionCooldown);
   const lethal = second.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
   expect(lethal).toHaveLength(1);
   expect(lethal[0]).toMatchObject({ source: { ownerId: sion.id }, targetId: 'e', delivery: 'basic-attack' });

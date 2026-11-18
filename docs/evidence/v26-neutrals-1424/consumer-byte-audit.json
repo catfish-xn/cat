@@ -654,9 +654,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 41341,
+      "currentBytes": 41658,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "495eae1972cf49874e8c24a9525ef49d5fda0bce4154a0e506f28ce1481ef359",
+      "currentSha256": "0de1952e75d28bf03d2dd1935a87fff6b851d0d528f8141751a76963069abc9b",
       "firstDifferentByte": 9
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -1994,7 +1994,7 @@
       "previousBytes": 13403,
       "currentBytes": 19723,
       "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-      "currentSha256": "2046fd242af0abf721012d6fb9621a37efb7c3be2dbbd57f0b426601ed2dcacd",
+      "currentSha256": "ec9f6c36ca6c4f66e7dd1d1e0f342b15adb78c601b507c9d8b9e95968743157b",
       "firstDifferentByte": 527
     },
     "tests/m8-b8-live-transfer.test.ts": {
