@@ -4093,6 +4093,14 @@
       "currentSha256": "e5656f3b542c7742de3c314fc575c5c06356a1d0b54f09ae84f7e8109862801e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-malzahar-3star.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7109,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6bbe1efd2b97f755616f5501de2f68ee0016fc35f5c0e15be20ce83c90cd06cc",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-malzahar-gate.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
