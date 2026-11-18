@@ -61,7 +61,7 @@ describe('3D: Powder\'s monkey', () => {
   it('a monkey prepared on her cast is the one sent: the swap does not wait on a load', async () => {
     const scene = new Group(), lease = monkeyLease(); let loads = 0;
     const monkeys = createPowderMonkeys(scene, async () => { loads++; return lease; });
-    monkeys.prepare('pw'); await flush();
+    monkeys.prepare('pw', 0); await flush();
     monkeys.send('pw', new Vector3(10, 0, 0), 0, 0.5);
     await flush();
     monkeys.update(0.01, () => powderBody());
@@ -76,7 +76,7 @@ describe('3D: Powder\'s monkey', () => {
     expect(handMonkeyShown(body)).toBe(true);
     expect(handMonkeyShown(powderBody())).toBeUndefined();
     const monkeys = createPowderMonkeys(scene, async () => lease);
-    monkeys.prepare('pw'); await flush();
+    monkeys.prepare('pw', 0); await flush();
     // The predicted swap is long past, but the hand one still shows: no swap, no second monkey.
     monkeys.send('pw', new Vector3(40, 0, 0), 0, 1); await flush();
     monkeys.update(0.05, () => body);
@@ -87,5 +87,29 @@ describe('3D: Powder\'s monkey', () => {
     monkeys.update(0.05, () => body);
     expect(group.visible).toBe(true);
     expect(group.scale.x).toBeCloseTo(2);
+  });
+
+  it('the rules\' send a frame after the hide: the monkey is out already and runs on it; never sent, it goes; her death before the send takes it', async () => {
+    const material = new MeshBasicMaterial(); material.name = 'Monkey';
+    const withHand = () => { const body = powderBody(); const hand = new Mesh(new BoxGeometry(), material); body.add(hand); return { body, hand }; };
+    // Hidden on its frame, sent the next: out on the hide, then off to its cell.
+    { const scene = new Group(), monkeys = createPowderMonkeys(scene, async () => monkeyLease()), { body, hand } = withHand();
+      monkeys.prepare('pw', 0.1); await flush();
+      monkeys.update(0.05, () => body); hand.visible = false; monkeys.update(0.05, () => body);
+      const group = scene.getObjectByName('powder-monkey')!;
+      expect(group.visible).toBe(true);
+      monkeys.send('pw', new Vector3(40, 0, 0), 0, 0.5);
+      for (let t = 0; t < 0.6; t += 0.05) monkeys.update(0.05, () => body);
+      expect(group.position.x).toBeCloseTo(40); }
+    // Out but never sent (her cast undone): it goes.
+    { const scene = new Group(), monkeys = createPowderMonkeys(scene, async () => monkeyLease()), { body, hand } = withHand();
+      monkeys.prepare('pw', 0); await flush();
+      monkeys.update(0.05, () => body); hand.visible = false;
+      for (let t = 0; t < 0.5; t += 0.05) monkeys.update(0.05, () => body);
+      expect(monkeys.size).toBe(0); }
+    // She dies before the send: no monkey.
+    { const scene = new Group(), monkeys = createPowderMonkeys(scene, async () => monkeyLease());
+      monkeys.prepare('pw', 0.5); await flush(); monkeys.drop('pw');
+      expect(monkeys.size).toBe(0); expect(scene.children).toHaveLength(0); }
   });
 });

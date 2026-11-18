@@ -2611,9 +2611,9 @@
     "tests/rendering3d-powder-monkey.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5382,
+      "currentBytes": 7109,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "52c1daa4d533371d456047018e35116ce686f9307dc40c3088a2cffd8e79a170",
+      "currentSha256": "90773358ec8a1507707fc193a4659b369e3c3b9dc788dedc994fcb07ef77d8ec",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-presentation-lighting.test.ts": {
