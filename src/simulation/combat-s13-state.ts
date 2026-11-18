@@ -87,6 +87,11 @@ export function variable(unit: CombatUnit, name: string, fallback = 0): number {
   return unit.ability.kind === 's13' && Object.hasOwn(unit.ability.variables, name) ? unit.ability.variables[name] / 10000 : fallback;
 }
 export function champion(unit: Pick<CombatUnit, 'ability'>): string { return unit.ability.kind === 's13' ? unit.ability.championId : ''; }
+/** User-approved (2026-11-17): Renni holds her target until her slam lands; while that slam is still pending she does not move,
+ * attack or cast, even after a control on her has cancelled her channel. */
+export function renniHolding(u:S13Unit):boolean{
+  return champion(u)==='renni'&&u.tasks.some(t=>t.kind==='g23Physical'&&t.source.definitionId==='renni-ability'&&t.total>1&&t.ordinal===t.total-1);
+}
 export function mechanic(unit: CombatUnit, name: string, key: string, fallback = 0): number {
   let sum = 0;
   for (const m of unit.mechanics ?? []) if (m.mechanic === name) sum += m.values[key] ?? fallback;

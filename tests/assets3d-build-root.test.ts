@@ -47,8 +47,12 @@ async function snapshot(root: string) {
 
 it('accepts space/comma separated roots and repeated flags', () => {
   expect(buildArguments(['--roots', 'a,b', 'c', '--roots', 'd', '--out', 'e', '--force']))
-    .toEqual({ roots: ['a', 'b', 'c', 'd'], out: 'e', force: true });
+    .toEqual({ roots: ['a', 'b', 'c', 'd'], out: 'e', force: true, submeshSource: 'assets3d-local/trial/local' });
   expect(() => buildArguments(['--roots'])).toThrow();
+  // The submesh patch runs by default from the CLI; it takes another extraction cache, or is turned off for a root that
+  // is not a full rebuild.
+  expect(buildArguments(['--roots', 'a', '--out', 'e', '--submesh-source', 'cache']).submeshSource).toBe('cache');
+  expect(buildArguments(['--roots', 'a', '--out', 'e', '--no-submesh-patch']).submeshSource).toBeUndefined();
 });
 it('keeps board alignment and model in the same winning root, including merged inputs', async () => {
   const root = await workspace(), a = join(root, 'a'), b = join(root, 'b');
@@ -81,6 +85,8 @@ it('allows force for an empty directory and marked output from a previous build'
   await fixture(input); await mkdir(out);
   await buildAssetRoot({ roots: [input], out, force: true });
   expect((await json(out, 'merge-report.json')).generator).toBe('assets3d/build-asset-root');
+  // Without an extraction cache the submesh patch does not run, and the report says so.
+  expect((await json(out, 'merge-report.json')).submeshPatch).toEqual({ applied: false, reason: 'no-submesh-source' });
   const before = await snapshot(out);
   await put(out, 'stale.bin', 'old output');
   await buildAssetRoot({ roots: [input], out, force: true });

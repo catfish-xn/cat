@@ -1,7 +1,7 @@
 import { isAttackProxy, occupiesCell } from './anomalies/availability';
 import { getNeighbors, hexDistance, type Board, type HexCell } from './board';
 import { g23Bound } from './combat-g2-3-summons';
-import { active, range, type S13Unit } from './combat-s13-state';
+import { active, range, renniHolding, type S13Unit } from './combat-s13-state';
 import { g23Anomaly } from './g2-3-combat';
 import { hasEffectiveStatus } from './m8/status';
 import { uniformIndex } from './combat-targeting';
@@ -20,7 +20,7 @@ export function neverMoves(unit: S13Unit): boolean {
 /** Shared eligibility for ordinary movement and trait dashes; cooldown/range are caller-specific. */
 export function canMove(unit: S13Unit, tick: number): boolean {
   return unit.alive && unit.hp > 0 && !neverMoves(unit) && !(isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy)
-    && active(unit, tick, 'channel').length === 0 && !g23Anomaly(unit, 'deep-roots');
+    && active(unit, tick, 'channel').length === 0 && !renniHolding(unit) && !g23Anomaly(unit, 'deep-roots');
 }
 
 export interface MeleeApproachClaim { readonly targetId: string; readonly cell: HexCell }

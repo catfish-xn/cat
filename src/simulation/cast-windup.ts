@@ -42,11 +42,12 @@ export const RENNI_SLAM_AFTER_STUN_TICKS = 2;
 
 /**
  * Wind-up batch 3 (fitted, not original data): a pending landing that has already left its caster lands even if the caster
- * dies; one still in the wind-up does not. Powder's monkey walks once she has let it go (the arrival task is only made then);
- * Renata's missiles leave
- * RENATA_MISSILE_FLIGHT_TICKS before they land.
+ * dies; one still in the wind-up does not. Powder lets her monkey go on its release tick (g2PowderRelease): a death settled
+ * on that tick still lets it go, one before does not; once let go it walks on (g2PowderMonkey / v20Powder). Renata's missiles
+ * leave RENATA_MISSILE_FLIGHT_TICKS before they land.
  */
 export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string } }, tick: number): boolean {
   if (task.kind === 'g2PowderMonkey') return true;
+  if (task.kind === 'g2PowderRelease') return task.executeAtTick <= tick;
   return task.kind === 'g2Landing' && task.source.definitionId === 'renata-ability' && task.executeAtTick - RENATA_MISSILE_FLIGHT_TICKS <= tick;
 }

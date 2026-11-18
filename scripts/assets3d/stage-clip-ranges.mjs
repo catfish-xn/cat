@@ -33,6 +33,18 @@ async function walkFiles(root, dir = root) {
   return out;
 }
 
+/**
+ * The clips whose graph frame range is written as clipRanges: every cast-referenced clip, and the basic attack clip
+ * (`animations.attack`) of a model with no attackSequence, whose original swing plays only part of its anm. Any other
+ * non-cast clip is still recorded as a non-cast-action skip.
+ */
+export function rangedClipsFor(modelEntry = {}) {
+  const names = castClipsFor(modelEntry);
+  const attack = modelEntry.animations?.attack;
+  if (typeof attack === 'string' && attack && !modelEntry.attackSequence) names.add(sourceName(attack));
+  return names;
+}
+
 export function castClipsFor(modelEntry = {}) {
   const names = new Set();
   const add = value => {
@@ -206,7 +218,7 @@ export async function stageClipRanges({ assets, extracted, out }) {
       ? selectAnimations(graphInfo.clips, unitMap.$animationRules, unitMap[id]?.animations).decisions
       : {};
 
-    const castClips = castClipsFor(entry);
+    const castClips = rangedClipsFor(entry);
     const clipRanges = {};
     for (const clipName of glbClips) {
       const lowerName = clipName.toLowerCase();
