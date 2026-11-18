@@ -188,6 +188,7 @@ export function eventUnitId(event: LedgerCombatEvent): string | null {
     case 'effectTriggered': return event.targetId;
     case 'combatFinished': return null;
     case 'carryChanged': return event.holderId;
+    case 'attackLaunched': case 'attackLanded': return event.attackerId;
     default: return event.unitId;
   }
 }

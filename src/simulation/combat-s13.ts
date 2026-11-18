@@ -184,9 +184,10 @@ function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, s
   for (let i = ctx.packets.length - 1; i >= firstPacket; i--) if (ctx.packets[i]!.actionSeq === seq) packets.unshift(...ctx.packets.splice(i, 1));
   const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
   targets.forEach((targetId, ordinal) => {
-    const target = ctx.units.find(u => u.id === targetId)!;
+    const target = ctx.units.find(u => u.id === targetId)!, arrivalTick = ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit));
+    ctx.events.push({ type: 'attackLaunched', tick: ctx.tick, attackerId: unit.id, targetId, arrivalTick, projectile: 'flight' });
     unit.tasks.push({ key: JSON.stringify(['attack-landing', unit.id, seq, targetId]), kind: 'attackLanding', source: { ...origin(unit), sourceKind: 'attack' },
-      executeAtTick: ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit)), targetId, amount: 0, actionSeq: seq, ordinal, total: targets.length,
+      executeAtTick: arrivalTick, targetId, amount: 0, actionSeq: seq, ordinal, total: targets.length,
       cancellable: false, landing: { packets: packets.filter(p => p.targetId === targetId), effects: (shot?.effects ?? []).filter(e => e.targetId === targetId).map(e => e.effect) } });
   });
 }
@@ -507,6 +508,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         }
         unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
         if (rangedAttackLands(unit) && !instantBeam(unit)) { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
+        else if (rangedAttackLands(unit)) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: 'beam' });
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
         const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;

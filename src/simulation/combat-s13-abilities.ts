@@ -219,6 +219,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
  * tick's queue and its on-hit statuses apply; a target that died in flight takes nothing and no other one is picked. */
 function landAttack(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
   const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
+  ctx.events.push({ type: 'attackLanded', tick: ctx.tick, attackerId: unit.id, targetId: task.targetId!, hit: !!target });
   if (!target) return;
   for (const packet of task.landing!.packets) if (landDragonsoul(unit, packet)) ctx.packets.push({ ...structuredClone(packet), landed: true });
   for (const e of task.landing!.effects) {

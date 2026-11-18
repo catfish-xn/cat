@@ -1857,4 +1857,5 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 飞行拍数 = max(1, ⌈出手拍时出手者到目标的格数 × `RANGED_ATTACK_TICKS_PER_HEX`⌉)，可按英雄覆盖（`RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION`，第一版为空）。即时光束类为 0 拍（出手拍当拍结算）：第一版只有泽丽的强化那一发。
 - 飞行中：目标死亡，这一发作废、不另选目标；目标移动，照常命中、到达拍不变；出手者死亡或被控，照常命中。龙魂的"已命中目标"在到达拍登记，飞行中目标死亡则不登记。
 - 多目标的一发（锥形溅射、弹射等）按目标各自算格数和到达拍。
+- 只给显示用的事件（授权①）：出手拍 `attackLaunched`（目标、到达拍、弹道类型 flight / beam），到达拍 `attackLanded`（目标、是否命中：飞行中目标死亡为 false）。近战不发。
 - 实现：任务 `attackLanding`（带这一发的伤害包和状态，存读档校验所属英雄、来源、目标和包的形状）。测试 `tests/ranged-attack-landing.test.ts`。

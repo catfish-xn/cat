@@ -38,6 +38,13 @@ export type G23CombatEventData =
    */
   | { readonly type: 'carryChanged'; readonly tick: number; readonly holderId: string; readonly targetId: string; readonly carried: boolean }
   /**
+   * Display only, no rule effect (ranged attack landing): a ranged hero's attack sends a shot at targetId, landing on
+   * arrivalTick; projectile 'flight' flies there, 'beam' is an instant beam (arrivalTick is the attack tick).
+   */
+  | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam' }
+  /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
+  | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
+  /**
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
    * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.

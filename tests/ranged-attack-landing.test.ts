@@ -36,6 +36,11 @@ describe('ranged attack landing', () => {
     const attackStep = r.out.find(s => s.tick === first)!;
     expect(packets(attackStep.events).filter(x => x.source.ownerId === 'p')).toEqual([]);
     expect(attackStep.events.some(e => e.type === 'manaChanged' && JSON.stringify(e).includes('"p"'))).toBe(true);
+    // Display only: the launch on the attack tick names the arrival; the landing comes on it.
+    expect(attackStep.events.filter(e => e.type === 'attackLaunched').map(e => e.type === 'attackLaunched' && [e.attackerId, e.targetId, e.arrivalTick, e.projectile]))
+      .toEqual([['p', 'e', first + flight, 'flight']]);
+    expect(r.out.find(s => s.tick === first + flight)!.events.filter(e => e.type === 'attackLanded').map(e => e.type === 'attackLanded' && [e.attackerId, e.targetId, e.hit]))
+      .toEqual([['p', 'e', true]]);
   });
   it('a melee hero\'s attack still settles on its attack tick', () => {
     const r = run(battle([shooter('garen', 1), dummy('e', 3, 5)], { rngState: 42 }), 30);
@@ -51,6 +56,7 @@ describe('ranged attack landing', () => {
     const killed = structuredClone(atAttack); Object.assign(killed.units.find(u => u.id === aimed)!, { hp: 0 });
     const k = run(killed, flight + 1);
     expect(hitTicks(k.out, aimed)).toEqual([]);
+    expect(k.out.flatMap(x => x.events.filter(e => e.type === 'attackLanded' && e.targetId === aimed).map(e => e.type === 'attackLanded' && e.hit))).toEqual([false]);
     expect(hitTicks(k.out, other).filter(t => t <= first + flight)).toEqual([]);
     const moved = structuredClone(atAttack); Object.assign(moved.units.find(u => u.id === aimed)!, { cell: { col: 0, row: 0 } });
     expect(hitTicks(run(moved, flight + 1).out, aimed)[0]).toBe(first + flight);
@@ -133,4 +139,7 @@ it('Zeri\'s empowered shot is an instant beam: it settles on its attack tick; he
   const flight = rangedAttackFlightTicks(hexDistance({ col: 3, row: 6 }, { col: 3, row: 3 }), 'zeri');
   expect(attacks.length).toBeGreaterThan(n);
   attacks.forEach((t, i) => expect(hits.has((i + 1) % n === 0 ? t : t + flight), `attack ${i + 1} at ${t}`).toBe(true));
+  const beams = r.out.flatMap(x => x.events.filter(e => e.type === 'attackLaunched' && e.projectile === 'beam').map(e => e.type === 'attackLaunched' && [x.tick, e.arrivalTick]));
+  expect(beams.length).toBeGreaterThan(0);
+  for (const [tick, arrival] of beams as [number, number][]) expect(arrival).toBe(tick);
 });
