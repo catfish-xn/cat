@@ -5,6 +5,7 @@ import { createLtkParticles, unitAnchor, unitJoints } from '../src/rendering/thr
 import { ATTACHED_LAYER_CAP, createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { ATTACHED_SLOTS } from '../src/rendering/three-mode/vfx-ltk/rendering/components/AttachedMeshes';
 import { nameHash } from '../src/rendering/three-mode/vfx-ltk/binHash';
+import { EMITTERS_HELD_ON } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { VfxValue } from '../src/rendering/three-mode/vfx-ltk/bindings';
 import { struct, syntheticIndex, syntheticSystem } from './vfx-ltk-synthetic';
 
@@ -30,6 +31,18 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     expect(fx.attached).toHaveLength(ATTACHED_SLOTS);
     expect(fx.attached.every(draw => (draw.object as SkinnedMesh).geometry === weapon.geometry)).toBe(true);
     fx.update(0.1, new Camera()); expect(fx.attached.some(draw => draw.object.visible)).toBe(true);
+    fx.dispose(); library.dispose();
+  });
+  it('gives a part hidden at the start its overlay too, drawn only while the part is shown (a later body swap)', async () => {
+    const { library, prepared } = await prepare(attached({ mSubmeshesToDraw: parts('Alt', 'Body') }));
+    const root = new Group(), body = new Group(), alt = part('alt'), base = part('body'); root.add(body); body.add(base, alt);
+    alt.visible = false;
+    const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 1, seed: 1, attachment: { root, body } });
+    expect(fx.attached).toHaveLength(2 * ATTACHED_SLOTS);
+    const on = (host: SkinnedMesh) => fx.attached.some(draw => (draw.object as SkinnedMesh).geometry === host.geometry && draw.object.visible);
+    fx.update(0.1, new Camera()); expect(on(base)).toBe(true); expect(on(alt)).toBe(false);
+    alt.visible = true; base.visible = false;
+    fx.update(0.05, new Camera()); expect(on(alt)).toBe(true); expect(on(base)).toBe(false);
     fx.dispose(); library.dispose();
   });
   it('draws nothing and logs once when the host holds none of the named parts (no whole-body fallback)', async () => {
@@ -64,6 +77,24 @@ describe('attached-mesh part filter (mSubmeshesToDraw)', () => {
     fx.dispose(); library.dispose();
     return count;
   }
+  it('keeps a held-on emitter (EMITTERS_HELD_ON) emitting past its own lifetime for the run\'s whole life', async () => {
+    const shown = async (id: string) => {
+      const index = { ...syntheticIndex(), systems: { [id]: 'systems/held.json' }, skills: {} };
+      const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index
+        : syntheticSystem({ emitterName: { type: 'string', value: 'Avatar2' }, ...attached() }), readTexture: async () => new Texture() });
+      const prepared = await library.load(id);
+      const root = new Group(), body = new Group(); root.add(body); body.add(part('body'));
+      const fx = createLtkParticles(prepared, { anchor: unitAnchor(root, body), target: null, joints: unitJoints(root, body), duration: 3, seed: 1, attachment: { root, body } });
+      for (let i = 0; i < 30; i++) fx.update(0.05, new Camera());
+      const on = fx.attached.some(draw => draw.object.visible);
+      fx.dispose(); library.dispose();
+      return on;
+    };
+    // The synthetic emitter's own lifetime is 0.2 s and its particles live 0.5 s: at 1.5 s only the held-on one still shows.
+    expect(EMITTERS_HELD_ON['4caada37']).toEqual(['Avatar2']);
+    expect(await shown('4caada37')).toBe(true);
+    expect(await shown('0badc0de')).toBe(false);
+  });
   it('leaves a held-back attached emitter undrawn (ATTACHED_HELD_BACK), the system itself still loading', async () => {
     expect(await heldOverlays('8d9d784b', 'Avatar_Fresnel')).toBe(0);
   });

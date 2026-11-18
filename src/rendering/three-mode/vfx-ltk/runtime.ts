@@ -134,6 +134,8 @@ export interface LtkPlayOptions {
   /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
   skill?: string;
   board?: WorldPoint;
+  /** The point a `board` cue faces (Powder's explosion faces back the way her monkey came); without it, the world axes. */
+  boardFacing?: WorldPoint;
   /** Explicit board stage only, e.g. a confirmed storm after all recipients died. */
   boardOnly?: boolean;
   /**
@@ -169,6 +171,8 @@ export interface LtkPlayOptions {
   cancelWithSource?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
+  /** Its random seed, fixed when it was queued (seedOf). */
+  seed: number;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
   /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
@@ -310,7 +314,13 @@ export function beamSeconds(beam: PreparedVfx, flightSeconds: number): number {
   }
   return Math.min(PLAY_OUT_CAP, end);
 }
-/** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from the run counter's. */
+/** A run's random seed from stable names (FNV-1a, 32 bits; never 0): the same key gives the same seed in every recording. */
+export function hashSeed(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
+  return h >>> 0 || 1;
+}
+/** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from every other row's. */
 export function beamSeed(flight: number): number {
   return (Math.imul(flight, 0x9e3779b1) ^ 0x5bd1e995) >>> 0 || 1;
 }
@@ -330,13 +340,34 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   /** False hides every host-body overlay (attached mesh): reduced motion, `?skillfx=off`. Omitted means shown. */
   attachedLayers?: () => boolean;
   /** Tests only: a lower screen cap than ATTACHED_LAYER_CAP, to exercise what happens over it. */
-  layerCap?: number } = {}) {
-  let clock = 0, closed = false, seed = 1, plays = 0;
+  layerCap?: number;
+  /**
+   * The rule tick of the event the host is playing now (undefined outside one): part of every row's seed (seedOf), so a
+   * run's random shape depends on what it is and when the rules sent it, never on load order or what else played.
+   */
+  tick?: () => number | undefined } = {}) {
+  let clock = 0, closed = false, plays = 0;
+  /**
+   * Rows queued on the current tick by their seed key (seedOf), for the k-th of a key to differ from the first. Cleared when
+   * the tick changes and by clear().
+   */
+  const seedKeys = new Map<string, number>();
+  let seedTick: number | undefined;
+  /**
+   * A row's seed, taken when it is queued (not when it starts, which waits on room and loading): its system, its source,
+   * its target (or board point), the action, the host's event tick, and how many rows of that same key this tick queued
+   * before it (Fable 11-17: two hits of one system on one target on one tick must not look alike).
+   */
+  const seedOf = (spawn: TimelineSpawn) => {
+    const tick = options.tick?.();
+    if (tick !== seedTick) { seedKeys.clear(); seedTick = tick; }
+    const key = `${spawn.system}|${spawn.sourceId}|${spawn.targetId ?? spawn.point?.join(',') ?? ''}|${spawn.action ?? 'cast'}|${spawn.variant ?? ''}|${tick ?? '-'}`;
+    const n = seedKeys.get(key) ?? 0; seedKeys.set(key, n + 1);
+    return hashSeed(`${key}#${n}`);
+  };
   /**
    * The seed each started flight row (Waiting.part 'flight') took, by its together key, for its beam row to derive its
-   * own from. The split must not take a seed of its own: every later run's seed would move one on, and with it the
-   * random shape of whatever plays next (Fable 11-13 keyframes: Viktor's storm cast after a split attack came out with
-   * a different pattern).
+   * own from: the pair keeps one shape between its flight and its beams.
    */
   const flightSeeds = new Map<string, number>();
   const layerCap = options.layerCap ?? ATTACHED_LAYER_CAP;
@@ -430,7 +461,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const pruneFlightSeeds = () => { for (const key of flightSeeds.keys()) if (!waiting.some(row => row.together === key)) flightSeeds.delete(key); };
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
-    pruneFlightSeeds();
+    pruneFlightSeeds(); seedKeys.clear(); seedTick = undefined;
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
@@ -536,7 +567,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       if (!chosen.length) return refuse('nothing-left');
       if (waiting.length + chosen.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
-      for (const { spawn, snapshot, place, atPlace } of chosen) waiting.push({ at: clock + spawn.delay, spawn, library: catalog, group, ...(snapshot ? { snapshot } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
+      for (const { spawn, snapshot, place, atPlace } of chosen) waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, group, ...(snapshot ? { snapshot } : {}), ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}) });
       return true;
   };
   return {
@@ -589,13 +620,15 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const source = findUnit(sourceId);
       if (!cues) return refuse('not-ready');
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
+      const facing = context.boardFacing;
+      const faced = facing ? mapped.spawns.map(spawn => spawn.point && spawn.location === 'board' ? { ...spawn, facing } : spawn) : mapped.spawns;
       // A cue the timeline cannot map (timeline.ts unsupported) is played without; the rest of the cast plays (Fable 11-13:
       // one such cue sent the whole cast back to the host's own effect).
       const skipped = mapped.unsupported.map(({ cue, reason }) => ({ system: cue.system, reason: reason as LtkSkipReason }));
       // Targets: a living one is followed, a dead one whose unit is still there gets the cast's hits and projectiles at its
       // place, a gone one loses its rows (placeTargets). The cast is refused only when none of its targets is usable, or
       // nothing is left of it, or its caster is dead and it rides on the caster.
-      const spawns = placeTargets(mapped.spawns, !!context.snapshotTargets, skipped);
+      const spawns = placeTargets(faced, !!context.snapshotTargets, skipped);
       if (!spawns) return refuse('no-target');
       if (!spawns.length) return refuse('nothing-left');
       const independent = spawns.every(({ spawn: s }) => s.point && s.event !== 'projectile');
@@ -633,7 +666,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
-        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
+        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
@@ -869,7 +902,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
@@ -887,10 +920,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // unsplit projectile did. A beam row with no flight (a system of beams only) is the projectile and takes the next.
         const flightSeed = row.part === 'beam' && row.together ? flightSeeds.get(row.together) : undefined;
         if (flightSeed !== undefined) flightSeeds.delete(row.together!);
-        const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : seed++;
+        const runSeed = flightSeed !== undefined ? beamSeed(flightSeed) : row.seed;
         if (row.part === 'flight' && row.together) flightSeeds.set(row.together, runSeed);
         const nextOptions = { anchor, attachment,
-          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
+          target: held ? held.anchor : rowEnds ? pointAnchor(rowEnds[1]) : fixed ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : target ? unitAnchor(target.root, target.body, spawn.targetBone) : null,
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
