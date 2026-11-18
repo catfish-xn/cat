@@ -2935,9 +2935,9 @@
     },
     "tests/s13-anomalies-redirect.test.ts": {
       "previousBytes": 2417,
-      "currentBytes": 2510,
+      "currentBytes": 2498,
       "previousSha256": "599e6712a4d7acfc2655e54efdc5f3aa61d26a4302e645f0d3f42806d3537015",
-      "currentSha256": "d1b6bcddaa1a655e1d6da30da73f49e5c20c84d84a26ef6483ea105239cf2d6e",
+      "currentSha256": "75d5f0d44577fedcee3a25a208c75041213f3e7c79c3fd49c8abd18cd9391066",
       "firstDifferentByte": 9
     },
     "tests/s13-anomalies-restore-review.test.ts": {

@@ -2,7 +2,7 @@ import { stepLanded } from './helpers/landing';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
-import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
+import { createCombatWithEvents } from '../src/simulation/combat';
 import { validateG23State } from '../src/simulation/g2-3-combat';
 import { packets } from './helpers/replay2-views';
 it('a redirected One Thousand Cuts hit records one attack receipt and keeps30/42 damage progression without relaxing restoration', () => {
