@@ -63,6 +63,14 @@ export interface TimelineCue {
    */
   readonly ownLife?: boolean;
   /**
+   * One row for each receipt target after the first, in receipt order and repeats kept: one per projectile the rules sent
+   * (Ziggs's split bombs may strike one enemy twice, or his primary target again). Not with `others`, `primary` or `targetLimit`.
+   */
+  readonly everyReceipt?: boolean;
+  /** A projectile that starts where the play's primary target (its first receipt target) stands when the play comes, not at
+   * its caster: Ziggs's split bombs leave his main bomb's crater. It plays even once that target is gone. */
+  readonly fromPrimary?: boolean;
+  /**
    * A target cue the cast can do without: with no living recipient it is left out instead of
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
    */
@@ -137,6 +145,8 @@ export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
+  /** TimelineCue.fromPrimary: the unit whose place the projectile starts from. */
+  readonly fromId?: string;
 }
 export interface TimelineMapping {
   readonly spawns: readonly TimelineSpawn[];
@@ -160,10 +170,16 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
+    if (cue.everyReceipt) {
+      const each = targets.slice(1);
+      if (!each.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
+      for (const targetId of each) spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: targets[0] } : {}) });
+      continue;
+    }
     const pool = cue.others ? unique.slice(1) : unique;
     if (!pool.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     for (const targetId of cue.primary ? pool.slice(0, 1) : cue.targetLimit ? pool.slice(0, cue.targetLimit) : cue.event === 'projectile' ? pool.slice(0, 1) : pool) {
-      spawns.push({ ...cue, sourceId, targetId });
+      spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: unique[0] } : {}) });
     }
   }
   // A projectile from the caster to itself is left out (self-projectile). The hit on the caster that lands when it would have

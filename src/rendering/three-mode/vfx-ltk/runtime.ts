@@ -17,6 +17,8 @@ import { ATTACHED_SLOTS, ATTACHED_STATS, type AttachedDraw } from './rendering/c
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
   if (spawn.event === 'hit') return false;
+  // A projectile from its play's primary target (TimelineCue.fromPrimary) does not leave the caster.
+  if (spawn.fromId !== undefined) return false;
   return !(spawn.point && spawn.event !== 'projectile');
 }
 
@@ -173,7 +175,9 @@ export interface LtkPlayOptions {
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
 }
-interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
+interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint;
+  /** Where a projectile from its play's primary target starts (TimelineCue.fromPrimary), taken when the play came. */
+  from?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
   /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
@@ -706,7 +710,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
-        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) takes that place now: the main bomb that lands
+        // there may kill it first. Without that unit it does not play.
+        const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
+        const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
+        if (spawn.fromId !== undefined && !from) continue;
+        waiting.push({ at: clock + spawn.delay, spawn, library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
@@ -827,7 +836,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
         // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
         // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
-        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
+        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && !row.from && row.part !== 'beam';
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
         const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
@@ -847,7 +856,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
-        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        if (spawn.fromId !== undefined && !row.from) continue;
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) starts there, like a falling one starts above.
+        const dropFrom = row.from ?? (dropAt ? dropStart(dropAt, spawn.fromAbove!) : null);
         // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
         // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
         // on one spot, it does not play: it never falls back to a flight from the caster's bone.

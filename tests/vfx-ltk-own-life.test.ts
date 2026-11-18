@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ownSeconds, withOwnLife } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
+import type { DisplayCombatEvent } from '../src/presentation/combat-display';
+import { mapSkillTimeline, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 // Synthetic emitters only: the numbers here are made up, not read from any game file.
 type Emitter = { disabled?: boolean; singleParticle: boolean; lifetime: number | null; timeBeforeFirstEmission: number;
@@ -47,5 +49,43 @@ describe('C71 cues', () => {
     const ziggs = CUE_OVERRIDES.ziggs!;
     expect(ziggs.find(c => c.system === '52963b0a')).toMatchObject({ bone: 'buffbone_glb_weapon_1' });
     expect(ziggs.find(c => c.system === '04c3cba0')).toMatchObject({ primary: true, ownLife: true });
+  });
+});
+
+describe('Nocturne strike on every enemy his empowered swing bleeds (C71 option A)', () => {
+  const defs: Record<string, string> = { n: 'nocturne', f1: 'amumu', f2: 'amumu', f3: 'amumu' };
+  let seq = 0;
+  const cast = (tick: number) => ({ type: 'cast', sourceId: 'n', eventSeq: ++seq, tick, actionSeq: seq, completed: true, actualManaSpent: 40, refundedMana: 0,
+    targetIds: ['n'], completionCell: { col: 0, row: 0 } }) as unknown as DisplayCombatEvent;
+  const attack = (tick: number, targetId: string) => ({ type: 'attack', eventSeq: ++seq, tick, attackerId: 'n', targetId }) as unknown as DisplayCombatEvent;
+  const bleed = (tick: number, targetId: string) => ({ type: 'packetDamage', eventSeq: ++seq, tick, sourceId: 'n', targetId, damageType: 'physical',
+    sourceKind: 'ability', delivery: 'ability-periodic', raw: 5, actual: 5 }) as unknown as DisplayCombatEvent;
+  it('plays once on each other bled enemy at its first bleed tick, never on the swing target again, and again after the next swing', () => {
+    const planner = createBatch1VfxEvents(id => defs[id]);
+    const events = [cast(1), attack(10, 'f1'), bleed(15, 'f1'), bleed(15, 'f2'), bleed(15, 'f3'), bleed(20, 'f2'), bleed(20, 'f3'), attack(30, 'f2'), bleed(35, 'f2'), bleed(35, 'f3')];
+    const played = planner.batch(events).map(p => p.extra.map(x => [x.skill, x.targets]));
+    expect(played.flat()).toEqual([['nocturne-tar', ['f2']], ['nocturne-tar', ['f3']], ['nocturne-tar', ['f3']]]);
+  });
+  it('has the strike skill, played to its own end', () => {
+    expect(CUE_EXTRA_SKILLS['nocturne-tar']).toEqual([expect.objectContaining({ system: '6fb6c5e5', event: 'hit', ownLife: true })]);
+  });
+});
+
+describe('Ziggs split bombs: one row per bomb, from the primary target (C71)', () => {
+  it('maps every receipt target after the first, repeats kept, each from the primary', () => {
+    const cue: TimelineCue = { system: 'm', action: 'cast', event: 'projectile', everyReceipt: true, fromPrimary: true, delay: 0.8, duration: 0.5, travelSeconds: 0.5 };
+    const { spawns } = mapSkillTimeline([cue], 'z', ['p', 'a', 'p', 'a']);
+    expect(spawns.map(s => [s.targetId, s.fromId])).toEqual([['a', 'p'], ['p', 'p'], ['a', 'p']]);
+    expect(mapSkillTimeline([{ ...cue, optional: true }], 'z', ['p']).spawns).toEqual([]);
+  });
+  it('the main bomb and its burst are the primary target\'s; the split bombs follow the main bomb\'s landing', () => {
+    const ziggs = CUE_OVERRIDES.ziggs!;
+    const main = ziggs.find(c => c.system === '52963b0a' && !c.everyReceipt)!, burst = ziggs.find(c => c.system === '04c3cba0' && !c.everyReceipt)!;
+    const split = ziggs.find(c => c.system === '52963b0a' && c.everyReceipt)!, splitBurst = ziggs.find(c => c.system === '04c3cba0' && c.everyReceipt)!;
+    expect(burst.delay).toBeCloseTo(main.delay + main.travelSeconds!);
+    expect(split).toMatchObject({ fromPrimary: true, delay: burst.delay });
+    expect(splitBurst.delay).toBeCloseTo(split.delay + split.travelSeconds!);
+    // Our own display rhythm: a whole number of combat ticks.
+    expect(Math.abs(split.travelSeconds! * 20 - Math.round(split.travelSeconds! * 20))).toBeLessThan(1e-9);
   });
 });
