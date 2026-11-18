@@ -2459,6 +2459,14 @@
       "currentSha256": "7a2ba9acd9d2a0d647f767f2d65d37ce0282cc0ae3b2d01e2640f2ead170f8bd",
       "firstDifferentByte": 145
     },
+    "tests/rendering3d-carry.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 11008,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "61ecb80bc6d2726e1b3ffbc67872b160e2267542bd6d125f1a35cd048c94e006",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-cast-layer-masks.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
