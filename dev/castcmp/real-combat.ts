@@ -29,7 +29,10 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
   /** v-capture --items me=a+b,ally=c: completed or component items on `me`, `ally` and `ally2` (up to 3 each, slots in the
    * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: not yet (the one-sided
    * combat takes the enemy's items from the round's projection, round-enemies.ts, not from this list). */
-  items?: ItemSetup }
+  items?: ItemSetup;
+  /** v-capture --as-scale X (0.2–1): the caster's attack speed times X, recording only (parseAsScale). Lines using it are not
+   * acceptance clips (jobs-check says so) and their frames carry a corner tag. Without it nothing changes. */
+  asScale?: number }
 /** Item ids per unit of `me`'s team, in slot order. */
 export type ItemSetup = Partial<Record<ItemHolder, string[]>>;
 export type ItemHolder = 'me' | 'ally' | 'ally2';
@@ -181,14 +184,29 @@ export function lineClearance(a: Cell, b: Cell, c: Cell): number {
   return Math.abs((r.x - p.x) * dy - (r.y - p.y) * dx) / Math.sqrt(len2);
 }
 
+/** "0.6" (v-capture --as-scale) as a number in 0.2–1, or why it cannot be. */
+export function parseAsScale(text: string | null | undefined): { asScale: number } | { why: string } {
+  const value = Number(text);
+  return text && /^\d*\.?\d+$/.test(text) && value >= 0.2 && value <= 1 ? { asScale: value } : { why: `--as-scale wants a number from 0.2 to 1, got ${text}` };
+}
+/** The recording-only label of a slowed caster (--as-scale), or null at 1. */
+export function asScaleLabel(asScale: number | undefined): string | null {
+  return asScale !== undefined && asScale !== 1 ? `录制专用：攻速×${asScale}` : null;
+}
 /** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
  * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
-export function startRealCombat(units: any[], items: any[] = []): { state: any; events: any[] } {
+export function startRealCombat(units: any[], items: any[] = [], asScale = 1): { state: any; events: any[] } {
   const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
   const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items, temporaryEquipment: [],
     augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'castcmp', 42);
   // Self-check: a replay that skipped combat start would silently change who casts and when.
   if (!(started.state as any).startEffectsApplied) throw new Error('real combat: combat-start hooks not applied');
+  // --as-scale (recording only): the caster's base attack speed times asScale, after combat start. At 1 nothing is touched.
+  if (asScale !== 1) {
+    const me = (started.state as any).units.find((u: any) => u.id === 'me');
+    if (!me) throw new Error('--as-scale: no unit `me`');
+    me.baseAttackSpeedBps = Math.round((me.baseAttackSpeedBps ?? Math.round(200000 / me.attackIntervalTicks)) * asScale);
+  }
   return started as { state: any; events: any[] };
 }
 
@@ -196,8 +214,8 @@ export function startRealCombat(units: any[], items: any[] = []): { state: any; 
  * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
  * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = []) {
-  const started = startRealCombat(units, items);
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = [], asScale = 1) {
+  const started = startRealCombat(units, items, asScale);
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
