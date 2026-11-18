@@ -92,6 +92,11 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
   /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
   refused: {} as Record<string, number>,
   /**
+   * Running decorative runs ended for a newcomer (a hit, a body, a plain attack, a place's run: Fable 11-17), and plain attack
+   * hits ended for an attack's missile (Fable 11-18), by system; `yieldTimes` the runtime clock (s) of each, for picking frames.
+   */
+  yielded: {} as Record<string, number>, yieldTimes: [] as number[],
+  /**
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
    */
@@ -407,6 +412,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
     for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  const countYield = (system: string) => { LTK_RUN_STATS.yielded[system] = (LTK_RUN_STATS.yielded[system] ?? 0) + 1; if (LTK_RUN_STATS.yieldTimes.length < 500) LTK_RUN_STATS.yieldTimes.push(clock); };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -844,7 +850,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           let flourish: Running | undefined;
           for (const run of running) if (run.importance === 'decorative' && !run.atPlace && !run.persistent) { flourish = run; break; }
           if (!flourish) break;
-          leave(flourish);
+          countYield(flourish.system); leave(flourish);
         }
         while (!atPlace && blocked()) {
           // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
@@ -860,12 +866,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             if (importance === 'attack' && spawn.event === 'projectile') {
               let hit: Running | undefined;
               for (const run of running) if (run.importance === 'attack' && run.event === 'hit' && !run.persistent && !run.atPlace) { hit = run; break; }
-              if (hit) { leave(hit); continue; }
+              if (hit) { countYield(hit.system); leave(hit); continue; }
             }
             break;
           }
           const victim = [...running][decision.evict];
           if (!victim) break;
+          if (victim.importance === 'decorative') countYield(victim.system);
           leave(victim);
         }
         if (blocked()) {

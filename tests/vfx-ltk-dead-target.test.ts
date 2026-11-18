@@ -212,7 +212,7 @@ describe('vfx-ltk casts at dead targets', () => {
       const { runtime, scene, units, step, of } = await setup();
       for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
       step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
-      const first = of('glow')[0]!;
+      const first = of('glow')[0]!, yielded = LTK_RUN_STATS.yielded.glow ?? 0;
       if (newcomer === 'place') units.get('b')!.alive = false;
       if (newcomer === 'hit') expect(runtime.play('pair', 'caster', ['a'])).toBe(true);
       if (newcomer === 'attack') expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
@@ -220,6 +220,7 @@ describe('vfx-ltk casts at dead targets', () => {
       if (newcomer === 'flourish') expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
       step(1 / 60);
       const glows = of('glow').filter(entry => entry.fx.object.parent === scene);
+      expect((LTK_RUN_STATS.yielded.glow ?? 0) - yielded).toBe(newcomer === 'flourish' ? 0 : 1);
       if (newcomer === 'flourish') { expect(glows).toHaveLength(MAX_LTK_SYSTEMS); expect(first.fx.object.parent).toBe(scene); }
       else {
         expect(glows).toHaveLength(MAX_LTK_SYSTEMS - 1);
