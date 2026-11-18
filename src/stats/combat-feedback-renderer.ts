@@ -137,14 +137,17 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         return { item, anchor, half: item.measured };
       });
       for (const item of expired) release(item);
-      const slots = new Map<string, number>();
+      // Per unit, the right and left edges its numbers take so far: each next number goes right, then left, just past them.
+      const rows = new Map<string, { count: number; right: number; left: number }>();
       const occupied: { x: number; y: number; half: number; px: number; unit: string }[] = [];
       const critPx = Math.round(FONT_PX * CRIT_SCALE);
       for (const { item, anchor, half } of measured) {
-        // A unit's numbers in order: the first in the middle, then one number's width (and a small gap) to the right, to the
-        // left, and so on, so neighbours never cover each other (half a width let a crit hide most of the one beside it).
-        const slot = slots.get(item.unitId) ?? 0; slots.set(item.unitId, slot + 1);
-        const shift = slot === 0 ? 0 : (slot % 2 === 1 ? 1 : -1) * Math.ceil(slot / 2) * (2 * half + 4);
+        // A unit's numbers in order: the first in the middle, then the next just right of what is taken, the next just left,
+        // and so on, a small gap apart by their real widths, so neighbours never cover each other whatever their digits.
+        const row = rows.get(item.unitId);
+        const shift = !row ? 0 : row.count % 2 === 1 ? row.right + 4 + half : row.left - 4 - half;
+        if (!row) rows.set(item.unitId, { count: 1, right: half, left: -half });
+        else { row.count++; if (shift > 0) row.right = shift + half; else row.left = shift - half; }
         const age = Math.max(0, now - item.at);
         const bar = anchor.y - anchor.radius - BAR_CLEAR;
         // Above the overhead bar (BAR_CLEAR), rising a little with age, never above CEILING_CRITS crit heights over the bar.

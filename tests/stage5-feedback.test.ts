@@ -221,6 +221,14 @@ describe('stage5 floating text equivalence and DOM work', () => {
       // Never higher than 1.5 crit heights above the bar.
       for (const e of three) expect(280 - 44 - top(e)).toBeLessThanOrEqual(1.5 * px(e) + 1e-6);
     });
+    it('numbers of different widths side by side never cover each other (spaced by their real widths)', () => {
+      // The fake label measures 9 px a character (offsetWidth above); a label's half-width is at least 20.
+      const left = (e: { style: Record<string, string> }) => parseFloat(e.style.left), half = (e: { text: string }) => Math.max(20, 9 * e.text.length / 2);
+      const out = labels([crit(1, 'a', 123456), { ...crit(2, 'a', 4), eventSeq: 2 }, { ...crit(3, 'a', 7), eventSeq: 3 }], 400);
+      expect(out).toHaveLength(3);
+      const sorted = [...out].sort((a, b) => left(a) - left(b));
+      for (let i = 1; i < sorted.length; i++) expect(left(sorted[i]) - left(sorted[i - 1])).toBeGreaterThanOrEqual(half(sorted[i]) + half(sorted[i - 1]));
+    });
     it('past three numbers on a unit, the earliest fades out early instead of stacking', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
       for (let i = 0; i < 3; i++) renderer.push([{ ...damage(1 + i), eventSeq: 1 + i }], i * 50);
