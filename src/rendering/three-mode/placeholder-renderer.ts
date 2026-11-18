@@ -722,6 +722,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     return best;
   }
+  /** The rule tick of the event being played now (the last one between batches), for vfx-ltk's seeds (runtime seedOf). */
+  let ltkTick: number | undefined;
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
@@ -729,7 +731,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
-    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
@@ -1504,6 +1506,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const form of timedForms.advance(latest)) setForm(form);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
+      ltkTick = tickOf(event) ?? ltkTick;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
       if (planned.fadeCast) ltk?.fadeAction(planned.fadeCast, 'cast', SOFT_STOP_SECONDS);
