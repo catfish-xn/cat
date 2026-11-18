@@ -36,7 +36,7 @@ export function effectImportance(cue: { event?: string; anchor?: string; locatio
  * `full` means every live slot is taken. Any skill newcomer first replaces the earliest plain attack;
  * a critical or body one may otherwise replace the earliest decorative slot, and so may a plain attack (Fable 11-17: a
  * flourish that started on a quiet board gives way when the board fills; attacks never replace one another or anything
- * above a flourish); a critical one may finally
+ * above a flourish; the runtime shows an attack only the flourishes it may end, not a cast's own); a critical one may finally
  * replace the oldest body that has played at least `BODY_YIELD_SECONDS` and `BODY_YIELD_SHARE` of its `spans` entry
  * (its duration; omitted means no share is required). A decorative newcomer waits outside:
  * it never displaces damage, control feedback or a skill body.

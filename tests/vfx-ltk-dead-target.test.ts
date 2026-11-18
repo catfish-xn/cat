@@ -29,6 +29,8 @@ const skills: Record<string, TimelineCue[]> = {
   swing: [{ ...hit('spark', 0), action: 'attack' }],
   // A plain attack's missile.
   volley: [{ ...shot, action: 'attack' }],
+  // A cast's own short flourish (decorative by its length): the skill showing.
+  swipe: [{ system: 'flourish', action: 'cast', event: 'cast-start', delay: 0, duration: 0.9 }],
   // An attack and its empowered form (a variant), each landing 0.3 s in.
   bolt: [{ ...hit('spark', 0.3), action: 'attack' }, { ...hit('boom', 0.3), action: 'attack', variant: 'empowered' }],
   curse: [hit('curse', 0.3, { livingTarget: true }), hit('boom', 0.3)],
@@ -260,6 +262,26 @@ describe('vfx-ltk casts at dead targets', () => {
       expect(first.fx.object.parent === null).toBe(ends);
       if (fill !== newcomer) expect(of(newcomer === 'swing' ? 'spark' : 'shot').filter(entry => entry.fx.object.parent === scene)).toHaveLength(ends ? 1 : 0);
       else expect(of(filler).filter(entry => entry.fx.object.parent === scene)).toHaveLength(before);
+      runtime.dispose();
+    }
+  });
+
+  // Fable 11-18 (8 v 8 B, Ambessa's chain swipe): a cast's own short flourish is the skill showing; a plain attack or a place's
+  // run never ends it, a hit still may.
+  it('a cast\'s own short flourish on a full board: an attack or a place run ends none of them; a hit ends the earliest', async () => {
+    for (const newcomer of ['attack', 'place', 'hit'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('swipe', 'caster', [], 'cast')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      expect(of('flourish').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS);
+      const yielded = LTK_RUN_STATS.yielded.flourish ?? 0;
+      if (newcomer === 'attack') expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      if (newcomer === 'place') { units.get('b')!.alive = false; expect(runtime.play('pair', 'caster', ['b'])).toBe(true); }
+      if (newcomer === 'hit') expect(runtime.play('pair', 'caster', ['a'])).toBe(true);
+      step(1 / 60);
+      const ended = newcomer === 'hit' ? 1 : 0;
+      expect(of('flourish').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - ended);
+      expect((LTK_RUN_STATS.yielded.flourish ?? 0) - yielded).toBe(ended);
       runtime.dispose();
     }
   });

@@ -330,7 +330,7 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('lets a caster flourish replace a basic-attack hit on a full board, and a basic-attack hit replace a flourish (Fable 11-17)', async () => {
+  it('lets a caster flourish replace a basic-attack hit on a full board, never the other way round: a cast\'s flourish is the skill (Fable 11-18)', async () => {
     const { runtime, scene, camera } = await setup({ vi: [
       { system: 'blow', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 1 },
       { system: 'blow', event: 'hit' as const, delay: 0, duration: 1 },
@@ -347,8 +347,7 @@ describe('late-game effect budget', () => {
     fill(runtime, camera, 0.01);
     expect(runtime.play('vi', 'hitter-0', ['victim-0'], 'attack')).toBe(true);
     runtime.update(0.01, camera);
-    expect(shown(scene).filter(name => name === 'blow')).toHaveLength(1);
-    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(shown(scene)).not.toContain('blow');
     runtime.dispose();
   });
 
