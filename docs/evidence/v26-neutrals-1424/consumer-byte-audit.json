@@ -1301,10 +1301,10 @@
     },
     "tests/g2-1-skills.test.ts": {
       "previousBytes": 8625,
-      "currentBytes": 10801,
+      "currentBytes": 11138,
       "previousSha256": "20bcd6ee5e5f97f70f5314a0ecda687a9a2a8a962308c424d59e28e2ec10d389",
-      "currentSha256": "48eb637834bbcb3b7a7c35fdc29809235536ff3411f581f0928e52dfdc17bbba",
-      "firstDifferentByte": 406
+      "currentSha256": "bc2b8980ba458b2480077d091ef5f1c4e80e04a2c4d5f2f4507f2ccac23d6397",
+      "firstDifferentByte": 9
     },
     "tests/g2-2-skills.test.ts": {
       "previousBytes": 3718,
@@ -1449,10 +1449,10 @@
     },
     "tests/g2-augments-combat.test.ts": {
       "previousBytes": 23307,
-      "currentBytes": 23661,
+      "currentBytes": 24322,
       "previousSha256": "0ee0db9b4722c8980162e934801a6ee7474b6d0bdf87c0db7707857f1b10c6bd",
-      "currentSha256": "518133ba384ca6bf71fa37b82f1f2b228c6bf58c85a9f7da40a1c07b3ec9aba3",
-      "firstDifferentByte": 10899
+      "currentSha256": "2237089e85658cf4d54f1ff8eea7bab344f031bbb971dd7321a0e3f1045100fe",
+      "firstDifferentByte": 1870
     },
     "tests/g2-augments-static.test.ts": {
       "previousBytes": 23305,
