@@ -1,3 +1,4 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -15,6 +16,8 @@ import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
+// Ranged attack landing (window only): an attack on the dummy one hex away lands LANDING ticks later.
+const LANDING = rangedAttackFlightTicks(1);
 function hero(name: string, authorized: boolean): CombatUnit {
   const item = source('TFT_Item_InfinityEdge', 'i1', 'p');
   return unit('p', 'player', 1, 3, { definitionId: name, ability: resolveAbility(`${name}-ability`, 1),
@@ -40,9 +43,9 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // replay2: outcome.raw is the frozen pre-crit amount. Third column = the old post-crit event raw (still checked
   // as floor(raw×14000/10000)); fourth column = the pre-crit raw, i.e. the hand amount before ×1.4.
   it.each([
-    ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21, [504], [360]],
+    ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21 + LANDING, [504], [360]],
     ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1 + CAST_WINDUP_TICKS.tristana, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
-    ['leona', 61, [161], [115]], ['kogmaw', 21, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
+    ['leona', 61, [161], [115]], ['kogmaw', 21 + LANDING, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
     ['loris', 81, [210], [150]], ['nami', 1, [168], [120]], ['corki', 1, [57], [41]], ['garen', 1, [350], [250]], ['zoe', 1, [196], [140]], ['caitlyn', 1, [280, 392], [200, 280]],
   ] as const)('%s authorizes only its skill damage packets', (name, ticks, firstExpected, firstPreCrit) => {
     const initial = battle([hero(name, true), dummy()], { rngState: 42, rngDraws: 0 });
@@ -90,7 +93,7 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   it('Lux appended damage draws separately from the basic packet', () => {
     let first = stepCombat(battle([hero('lux', true), dummy()], { rngState: 42, rngDraws: 0 })).state;
     first = { ...first, units: first.units.map(u => u.id !== 'p' ? u : { ...u, spellCrit: { ...u.spellCrit!, chanceBps: 2500 } }) };
-    const result = advance(first, 20);
+    const result = advance(first, 20 + LANDING);
     // replay2 pre-crit raw on the critical packet: old post-crit 504 = floor(360×14000/10000).
     expect(packets(result.events).map(e => [e.raw, e.critical])).toEqual([[100, false], [360, true]]);
     expect(result.state.rngDraws).toBe(2);

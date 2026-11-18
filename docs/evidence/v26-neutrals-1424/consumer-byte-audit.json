@@ -874,6 +874,13 @@
       "currentSha256": "cca6a9580f8753947d519218c0751861740e2bc5deb9e583d890dbefb56e9a9c",
       "firstDifferentByte": 606
     },
+    "tests/d14-anomalies.test.ts": {
+      "previousBytes": 21716,
+      "currentBytes": 21764,
+      "previousSha256": "6feebcaabe4c75923a9e0a760aa91d2362ae0728fe0127d8792fc03ce3746492",
+      "currentSha256": "339b61f408fc76bf134bc9e98765d0c4b972e3a630ffdb46d7dc6db3b481bdba",
+      "firstDifferentByte": 9
+    },
     "tests/d14-wiring-match.test.ts": {
       "previousBytes": 17168,
       "currentBytes": 18857,
@@ -1315,10 +1322,10 @@
     },
     "tests/g2-2-skills.test.ts": {
       "previousBytes": 3718,
-      "currentBytes": 4375,
+      "currentBytes": 4528,
       "previousSha256": "7b64a4592789651488c8c2571fc853c890c5fbb37877d67eb5d765deb7add0b8",
-      "currentSha256": "58f6b60eecbfa263c3f1f71a61e2df73ee17d22edd1acdcc8f008d8cc2c51327",
-      "firstDifferentByte": 397
+      "currentSha256": "17a3c02bc73391c26084185122c1b15e5f8f726f24f1659dc40a8a1cd523d62b",
+      "firstDifferentByte": 9
     },
     "tests/g2-2-traits.test.ts": {
       "previousBytes": 5665,
@@ -1746,10 +1753,10 @@
     },
     "tests/m8-b3-integration.test.ts": {
       "previousBytes": 10077,
-      "currentBytes": 11054,
+      "currentBytes": 11304,
       "previousSha256": "7137c5fa232e745d1ffa59a06b23d63a3ebf612137e62b493f318227dad97917",
-      "currentSha256": "45a4d9d8e5f8f6f012582f0c89952757814f8b65b0b015e35b5e864a397a3f35",
-      "firstDifferentByte": 846
+      "currentSha256": "e5fff23d2f35a20fae6af8c3ac210ed23ca2ae53adab1ac3ce373ff2d854c0e1",
+      "firstDifferentByte": 9
     },
     "tests/m8-b3-periodic-integration.test.ts": {
       "previousBytes": 12626,
