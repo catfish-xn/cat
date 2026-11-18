@@ -313,19 +313,20 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   nocturne: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.3, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over a short fade
-    // (11-08 blind recheck of the empowered swing).
-    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
-    { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // The cleave disc and the strike on the target play their systems' whole own life (ownLife): only a rule event ends an
+    // effect early, and nothing in the rules ends these (Fable 11-18, C71). The disc lies under Nocturne's feet.
+    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 1, ownLife: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
-  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
-  // minibombs have no exported system.
+  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. It leaves his
+  // weapon buff bone: the skeleton has no bone named `weapon`, which fell back to his feet (C71). The explosion is the
+  // primary target's and plays its whole own life (its smoke clouds included, ownLife).
   ziggs: [
     { system: '7f403068', action: 'attack', event: 'projectile', bone: 'weapon', delay: 0.3333333333333333, duration: 1.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6333333333333333, duration: 1.5 },
-    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'weapon', delay: 0.3, duration: 0.5, travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '04c3cba0', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2 },
+    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'buffbone_glb_weapon_1', delay: 0.3, duration: 0.5, travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '04c3cba0', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2, ownLife: true, primary: true },
   ],
   // Sett's slam (11-15): the cast plays his whole E_cas (f7d4d344, the exported cue's E_cas_child twice plus its ground
   // lines and ground planes) in the child's place, from the cast itself (fitted: lines its bright light up with the
