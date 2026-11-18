@@ -30,7 +30,10 @@ function initial(grants:ReturnType<typeof compileD11Augment>['grants']=[],anomal
   })};
   return createCombatWithEvents(preparation,strategy,'d11-test',42).state;
 }
-function attack(s:CombatState){return stepCombat({...s,units:s.units.map(u=>({...u,mana:0,maxMana:0,moveCooldownTicks:2000,cooldownTicks:u.id==='p'?0:2000,attackDamage:100,attackDamageBase:100,attackDamagePercentBps:0,baseCritChanceBps:0,attackRange:20,armor:0}))});}
+// Ranged attack landing (window only): Lux's attack lands later; step on (her next attacks held) until it has, keeping all events.
+function attack(s:CombatState){let r=stepCombat({...s,units:s.units.map(u=>({...u,mana:0,maxMana:0,moveCooldownTicks:2000,cooldownTicks:u.id==='p'?0:2000,attackDamage:100,attackDamageBase:100,attackDamagePercentBps:0,baseCritChanceBps:0,attackRange:20,armor:0}))});const events=[...r.events];
+  while(!r.events.some(e=>e.type==='attackLanded'&&e.attackerId==='p')){r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:2000}:u)});events.push(...r.events);}
+  return {...r,events};}
 
 it('One For All I counts unique deployed one-cost champions; excludes bench, enemies and duplicate definitions',()=>{
   const board=[...roster,boardUnit('p2','lux'),boardUnit('p3','irelia'),boardUnit('p4','loris'),

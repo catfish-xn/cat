@@ -264,3 +264,36 @@ describe('ranged attack landing: attacker-side snapshot', () => {
     expect(shot.landing!.packets.every(p => typeof p.critical === 'boolean')).toBe(true);
   });
 });
+
+// ---- Match save tamper resistance for a pending attackLanding (as for other task kinds) ----
+import { itemMatch } from './fixtures/m8-b4-match';
+import { stepMatch } from '../src/simulation/match';
+import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
+describe('ranged attack landing: Match save with a shot in flight', () => {
+  function inFlight() {
+    let s = itemMatch('hand-of-justice', 'unit-3');
+    for (let n = 0; n < 200 && s.phase === 'combat' && !s.combat!.units.some(u => u.tasks?.some(t => t.kind === 'attackLanding')); n++) s = stepMatch(s).state;
+    expect(s.combat!.units.some(u => u.tasks?.some(t => t.kind === 'attackLanding')), 'premise: a shot is in flight at the save').toBe(true);
+    return s;
+  }
+  const tamper = (s: ReturnType<typeof inFlight>, edit: (task: any, tasks: any[]) => void) => {
+    const json = JSON.parse(serializeMatch(s));
+    const holder = json.combat.units.find((u: any) => u.tasks?.some((t: any) => t.kind === 'attackLanding'));
+    edit(holder.tasks.find((t: any) => t.kind === 'attackLanding'), holder.tasks);
+    return JSON.stringify(json);
+  };
+  it('restores exactly and continues identically', () => {
+    const s = inFlight(), restored = restoreMatch(serializeMatch(s));
+    expect(restored).toEqual(s);
+    expect(stepMatch(restored)).toEqual(stepMatch(s));
+  }, 60000);
+  it.each([
+    ['removed', (t: any, tasks: any[]) => tasks.splice(tasks.indexOf(t), 1)],
+    ['duplicated', (t: any, tasks: any[]) => tasks.push({ ...structuredClone(t), key: t.key + 'x' })],
+    ['arrival tick moved', (t: any) => { t.executeAtTick += 1; }],
+    ['snapshot amplifiers changed', (t: any) => { t.landing.packets[0].locked.attackDamage += 1; }],
+    ['packet raw changed', (t: any) => { t.landing.packets[0].raw += 1; }],
+  ])('a save with the pending shot %s is rejected', (_name, edit) => {
+    expect(() => restoreMatch(tamper(inFlight(), edit as never))).toThrow();
+  }, 60000);
+});

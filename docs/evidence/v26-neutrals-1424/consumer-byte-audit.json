@@ -832,6 +832,13 @@
       "currentSha256": "85eaffd013840adf7a1331c69122af4ec5809aa902486eed6fdf50a4b374bb6d",
       "firstDifferentByte": 0
     },
+    "tests/d11-fill-mechanics.test.ts": {
+      "previousBytes": 10897,
+      "currentBytes": 11272,
+      "previousSha256": "58a32417910cdcd724db7a3dac895661885dc4d0c306ca947adc58b0e60e9b11",
+      "currentSha256": "71d37957bfa73c04502522774c59cba8c5b3de3da357b5cc670f2cf2669cf0eb",
+      "firstDifferentByte": 2450
+    },
     "tests/d11-fill-source.test.ts": {
       "previousBytes": 4711,
       "currentBytes": 5022,
@@ -2365,9 +2372,9 @@
     "tests/ranged-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 21302,
+      "currentBytes": 23263,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9183a9c4120a70e56894792db48ff61820b7f7c012d03712099954a5cac5500d",
+      "currentSha256": "ac1ff64b5c2b4867762d92a9cd2e651ef7498297ed7a1a7df3a3b84a910088bb",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
@@ -3643,9 +3650,9 @@
     },
     "tests/task-mechanism-restore.test.ts": {
       "previousBytes": 32101,
-      "currentBytes": 32354,
+      "currentBytes": 32652,
       "previousSha256": "519a512569b7bf8f67aac1eb868284e373490e58477643b55f76057c7cbee9ff",
-      "currentSha256": "57a990da111cbc520b25b572105f7b4392f007276404e8b7ff5e250026f14fbb",
+      "currentSha256": "c1953c0809ab7662069fbbed48ed8594c2916b69962fb6345339800c5c45e0eb",
       "firstDifferentByte": 1721
     },
     "tests/team-planner-highlight.test.ts": {
