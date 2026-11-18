@@ -654,10 +654,10 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 39525,
+      "currentBytes": 41341,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "0bac598f2607453a35a56b6d6f3066979644475ce88910ed6acc845c7e666925",
-      "firstDifferentByte": 5077
+      "currentSha256": "495eae1972cf49874e8c24a9525ef49d5fda0bce4154a0e506f28ce1481ef359",
+      "firstDifferentByte": 9
     },
     "tests/c19-missed-pulse.test.ts": {
       "previousBytes": 8230,

@@ -1,3 +1,6 @@
+import { hexDistance } from '../src/simulation/board';
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { stepLanded } from './helpers/landing';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
@@ -87,7 +90,8 @@ beforeEach(() => {
 
 it('Lux kills two different targets in one root action and gains two +20 stacks', () => {
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
-  expect(after.combat!.tick).toBe(118);
+  // Ranged attack landing (pure-result re-pin): the double kill comes when Lux's hits land, the flight after tick 118.
+  expect(after.combat!.tick).toBe(118 + rangedAttackFlightTicks(1));
   expect(packets).toHaveLength(2);
   expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([18]));
   expect(new Set(packets.map(p => p.context.targetId)).size).toBe(2);
@@ -216,8 +220,10 @@ function earned(s: CombatState) {
   });
 }
 
+// Ranged attack landing (scene change, Fable 11-18): a ranged holder's shot no longer kills on its attack tick, so the same-tick
+// mutual kill needs a melee holder (Vi); the ranged version below records what happens now.
 it('S1: a holder and its target dying in the same tick award no stack to the dead holder', () => {
-  const { state } = attributionFight(['lux']);
+  const { state } = attributionFight(['vi']);
   const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
     attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
   const result = stepCombat(initial);
@@ -230,19 +236,33 @@ it('S1: a holder and its target dying in the same tick award no stack to the dea
   expect(combatUnit(result.state, 'p').runtime!.abilityPowerFlat).toBe(0);
 });
 
+it('S1 ranged holder: the target kills Lux on tick 1; her shot is still in flight when the fight ends, so nobody gets a stack', () => {
+  const { state } = attributionFight(['lux']);
+  const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
+    attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
+  const result = stepCombat(initial);
+  expect(result.events.filter(e => e.type === 'attackLaunched').map(e => e.type === 'attackLaunched' && e.attackerId)).toEqual(['p']);
+  const lethal = result.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
+  expect(lethal.map(p => [p.source.ownerId, p.targetId])).toEqual([['e', 'p']]);
+  expect(result.state.result).toBe('enemyWin');
+  expect(earned(result.state)).toEqual([]);
+});
+
 it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a real prior assist (%s)', contributed => {
   const started = attributionFight(['morgana', 'vladimir', 'cassiopeia'], true);
   const sion = started.state.units.find(u => u.definitionId === 'g23-sion')!;
   expect(sion).toBeDefined();
   expect(started.events).toContainEqual(expect.objectContaining({ type: 'unitSpawned', unitId: sion.id, definitionId: 'g23-sion' }));
   let state: CombatState = { ...started.state, units: started.state.units.map(u => u.id === sion.id
-    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2, attackDamage: 10000, attackDamageBase: 10000 }
+    // Ranged attack landing (scene change, Fable 11-18): Sion strikes 2 + the holder's flight ticks in, after her shot has landed.
+    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell)), attackDamage: 10000, attackDamageBase: 10000 }
     : u.id === 'e' ? { ...u, hp: 100, maxHp: 100 }
     : u.id === 'p' && contributed ? { ...u, cooldownTicks: 0 } : u) };
-  const first = stepCombat(state); state = first.state;
+  const first = stepLanded(state); state = first.state; // window: the holder's shot lands
   expect(first.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p' && e.outcome.hpDamage > 0)).toBe(contributed);
   expect(earned(state)).toEqual([]);
-  const second = stepCombat(state); state = second.state;
+  // Window: on to Sion's strike.
+  let second = stepCombat(state); for (let n = 0; n < 10 && !second.events.some(e => e.type === 'kill'); n++) second = stepCombat(second.state); state = second.state;
   const lethal = second.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
   expect(lethal).toHaveLength(1);
   expect(lethal[0]).toMatchObject({ source: { ownerId: sion.id }, targetId: 'e', delivery: 'basic-attack' });
