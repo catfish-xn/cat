@@ -499,8 +499,6 @@ export function validateMatchStructureForSerialization(state: MatchState): Match
     withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)))));
 }
 
-/** Runtime records are checked separately from frozen stats; restoring never executes them.
- * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
 /** A landing packet's attacker-side snapshot: exactly these fields, finite numbers, a boolean mirror flag. */
 function lockedShape(locked: unknown): boolean {
   if (!locked || typeof locked !== 'object') return false;
@@ -509,6 +507,8 @@ function lockedShape(locked: unknown): boolean {
     && [l.abilityPower, l.attackDamage, l.critMultiplierBps, l.weaknessBps].every(n => Number.isSafeInteger(n) && (n as number) >= 0 && (n as number) <= 100000000)
     && Array.isArray(l.amplifiers) && typeof l.mirrored === 'boolean' && !!l.holder && typeof l.holder === 'object';
 }
+/** Runtime records are checked separately from frozen stats; restoring never executes them.
+ * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
 export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number, abilityStatuses: ReadonlySet<string> = new Set()): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
