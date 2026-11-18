@@ -746,6 +746,16 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   '5afb9708': ['Avatar_Fresnel'],
 };
 
+/**
+ * Emitters that keep emitting for their run's whole life instead of stopping at their own `lifetime` (fitted, not
+ * original data): a form's look held at its first strength until the form ends (TIMED_FORM_STOPS stops the run).
+ * Dr. Mundo R_Buf Avatar2: its shell pulses (rate and size from the data) for the whole form, not only its first half
+ * second (Fable 11-18).
+ */
+export const EMITTERS_HELD_ON: Readonly<Record<string, readonly string[]>> = {
+  '4caada37': ['Avatar2'],
+};
+
 /** Systems a unit's timed form (timed-form-events.ts) ends when it turns off: the form's look ends with it. */
 export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
   drmundo: ['5443cd9f', '4caada37'],

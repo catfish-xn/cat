@@ -3788,9 +3788,9 @@
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 14272,
+      "currentBytes": 15671,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "bb6f7d223d23dbf6766917c390647b3b1455d37a16e307464ca69c389cc4771c",
+      "currentSha256": "581b33054dbaabe02846713297989af5deaffbb9431ca53e274dde1692d4ceeb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-anchor.test.ts": {
