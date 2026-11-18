@@ -52,8 +52,10 @@ const missingParts = new Set<string>();
 export function createAttachedMeshes(emitter: EmitterModel, sources: readonly Source[], samplers: EmitterSamplers,
   rank: number, parent: Object3D, attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean }): AttachedDraw[] {
   const skins: { source: SkinnedMesh; kept: boolean[] | null }[] = [];
+  // Every skinned part, shown or not: a part hidden now (a submesh a clip or a timed form shows later, such as Dr. Mundo's
+  // ultimate body) still gets its overlay, which draws only while the part itself is shown (update: source.visible).
   attachment?.body?.traverse(node => {
-    if (!(node as SkinnedMesh).isSkinnedMesh || !node.visible) return;
+    if (!(node as SkinnedMesh).isSkinnedMesh) return;
     const source = node as SkinnedMesh, kept = partsKept(source, emitter.attachedSubmeshes);
     if (!kept || kept.some(Boolean)) skins.push({ source, kept });
   });
