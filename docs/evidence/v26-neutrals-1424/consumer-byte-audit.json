@@ -63,9 +63,9 @@
     },
     "tests/assets3d-bin.test.ts": {
       "previousBytes": 12171,
-      "currentBytes": 43544,
+      "currentBytes": 42515,
       "previousSha256": "885adb1be19d992c48ecb9943a7c9a26e2608ee3ded1ce70726387486ea5d1b1",
-      "currentSha256": "9229a4671bee3ce1a93cbedccfca85f6ae1c164a3b6263b1727b504cb927721c",
+      "currentSha256": "30c4695dfb6d5803ac37d8b101b59b58e683058fa72099286e408fb6c718cbb0",
       "firstDifferentByte": 56
     },
     "tests/assets3d-boards-alignment.test.ts": {
@@ -744,6 +744,14 @@
       "currentBytes": 5150,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "562fff85d23d7acfbcd92726ad40604530c98afd1d56acdec022797ec7fa1ba8",
+      "firstDifferentByte": 0
+    },
+    "tests/castcmp-as-scale.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1669,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f9c8f4bd9c4473f8ddb9079b142d19ce3e511b32d79b4ea84186067e808b8081",
       "firstDifferentByte": 0
     },
     "tests/castcmp-catchup.test.ts": {
@@ -2348,6 +2356,14 @@
       "currentBytes": 7365,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "7435542dc624d69d127295b08c358d1020eb4a6c3b306a98b713368871f243f4",
+      "firstDifferentByte": 0
+    },
+    "tests/rendering3d-attack-hold.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2793,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "fae54e13bcddb1c9a5784cc49119e8f27665d00374d469794eb11a11e549931f",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-attack-release.test.ts": {

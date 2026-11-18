@@ -120,8 +120,7 @@ export function resolveUnitFormAnimations(animation, clips, config = {}, hasSour
 export function resolveUnitClipRanges(animation, clips, animationSources = [], config = {}) {
     const clipRanges = {}, clipRangeSkips = [];
     const castClips = castReferencedClips(animation.mapped?.cast, config.castSequence, config.castVariants);
-    // The basic attack clip's graph range too (a model without an attackSequence): the original swing plays only that part.
-    if (typeof animation.mapped?.attack === 'string' && animation.mapped.attack && !config.attackSequence) castClips.add(sourceName(animation.mapped.attack));
+    // The basic attack clip stays whole (stage-clip-ranges.mjs: its first segment and End sequence cover the anm).
     for (const [name] of Object.entries(animation.files)) {
         const graphHashes = Object.values(animation.decisions ?? {})
             .filter(d => d.path && sourceName(d.path) === name)
