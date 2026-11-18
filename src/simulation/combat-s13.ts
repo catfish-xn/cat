@@ -24,6 +24,7 @@ import { v19DominatorCast, smokeV19, sistersV19, roseAmpV19, chainblade, chainbl
 import { V19_MECHANICS } from './content/v19-mechanics';
 import { d11AvariceDamageAmpBps, d11HeadhunterAttackSpeedBps } from './d11-fill';
 import { UNIT_DEFINITIONS } from './units';
+import { G23_UNITS } from './content/g2-3-units';
 import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3Mechanic, settleP3Deaths } from './s13-p3-combat';
 import { p3Values } from './s13-p3-programs';
 import {splitTrenchHolders} from './combat-g2-4b-trench';
@@ -171,7 +172,9 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
  * and not six-cost Viktor — settle a basic attack when its shot arrives. Zeri's empowered shot is an instant beam (0 ticks). */
 function rangedAttackLands(unit: S13Unit): boolean {
   const definition = UNIT_DEFINITIONS[unit.definitionId];
-  return !!definition && !definition.summon && unit.unitKind !== 'neutral' && !unit.anomalySummon && unit.attackRange >= 2 && champion(unit) !== 'viktor';
+  // The hero's own (form's) attack range decides, not a combat bonus to it: a melee hero given range stays melee.
+  const own = unit.form === 'ranged' ? G23_UNITS[unit.definitionId + '-ranged']?.attackRange : definition?.attackRange;
+  return !!definition && !definition.summon && unit.unitKind !== 'neutral' && !unit.anomalySummon && (own ?? 0) >= 2 && champion(unit) !== 'viktor';
 }
 function instantBeam(unit: S13Unit): boolean {
   return champion(unit) === 'zeri' && unit.runtime.attackCount % variable(unit, 'NumOfAttacks') === 0;

@@ -1060,6 +1060,13 @@
       "currentSha256": "10355e45c2068a37c60dcbcf32dd91abca980670d7af5318e8a62b9e559df58b",
       "firstDifferentByte": 16171
     },
+    "tests/fixtures/m8-b4-items.ts": {
+      "previousBytes": 3582,
+      "currentBytes": 3938,
+      "previousSha256": "9f0587a1722cc871586e61370baec18f1fd2dd0c2cac4516ee97bbcb710f4d46",
+      "currentSha256": "9689358c40c9dc7eab35eb0d65162a07ceae51750da49a6a328f50f7545af998",
+      "firstDifferentByte": 370
+    },
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
@@ -1743,26 +1750,61 @@
       "currentSha256": "4d9b436b254a2af81db8f034a1b8983403e3fc4a3b0ee0c1ee0de14a3211fe6d",
       "firstDifferentByte": 86
     },
+    "tests/m8-b4-belt.test.ts": {
+      "previousBytes": 1065,
+      "currentBytes": 1081,
+      "previousSha256": "aa5c8ca1e8cbfa3ab56693e4d810d324e31b486b9723907f5a32235255b2c41d",
+      "currentSha256": "fe8ae2167420b90d8dea014d6ba00db842e303e08c188b67732e128765a65ab1",
+      "firstDifferentByte": 79
+    },
+    "tests/m8-b4-bow.test.ts": {
+      "previousBytes": 2909,
+      "currentBytes": 3176,
+      "previousSha256": "2c95ccdfeff4b78bdd8e980ebd01ffbc777f22adf77b9aa1ed56fd0a71ec9b84",
+      "currentSha256": "e52bb32386d9deba8e3f77a11977eaa163920fe9a3aa564e1ff3b2a3bcaff5b3",
+      "firstDifferentByte": 9
+    },
+    "tests/m8-b4-cloak.test.ts": {
+      "previousBytes": 1405,
+      "currentBytes": 1421,
+      "previousSha256": "814d82d3baa8d6b935f5dc321e73dc72bfab0d298829c9ea4e54d888ec3485d1",
+      "currentSha256": "21a5518ee980bb40044a2a8dd57bc54eb34b4227a663039cd3a1d3472d1e9331",
+      "firstDifferentByte": 85
+    },
+    "tests/m8-b4-gloves.test.ts": {
+      "previousBytes": 737,
+      "currentBytes": 755,
+      "previousSha256": "9a005a7dbd6cd08ec929ae90726f8b191953056c53d33caf31d0542640aa8a4a",
+      "currentSha256": "0c607b38b641ae9eec646b2771ce824cb59c9884d27e2c265d7522d249faed76",
+      "firstDifferentByte": 73
+    },
+    "tests/m8-b4-integration.test.ts": {
+      "previousBytes": 12264,
+      "currentBytes": 13170,
+      "previousSha256": "1520234edcd36414f7483b72118da9ba617fe945150b627e792a43dc7130b4ee",
+      "currentSha256": "b480276470cc350854b14fd31a68dd7b30698d1f9acc05a5e7457ded1e9bab68",
+      "firstDifferentByte": 232
+    },
     "tests/m8-b4-rod.test.ts": {
       "previousBytes": 2393,
-      "currentBytes": 2726,
+      "currentBytes": 2742,
       "previousSha256": "5daec54df36e3a902e2dbaf4366b77cdfee34730f4bbd33b9fa37a84b5336a27",
-      "currentSha256": "b1f0efbc8505d09904d9c4275760e2ed61023e230078bfbe79ca5de25165175a",
-      "firstDifferentByte": 275
+      "currentSha256": "d4e0f999fea88ee7084da6ccf00d56c5ddeecabf89c49b4fb0cca20b7622ecc0",
+      "firstDifferentByte": 79
     },
     "tests/m8-b4-sword.test.ts": {
       "previousBytes": 2764,
-      "currentBytes": 3382,
+      "currentBytes": 3436,
       "previousSha256": "266e9a2a53178295d3e4ab3c46ef9614c2fe560cfeff8123331e8cc03598fa42",
-      "currentSha256": "ae57f53863ccfbc128a3018b3f075ad230d83bea7dafacdb052b2649654a9dd5",
-      "firstDifferentByte": 212
+      "currentSha256": "5017beff030d72c125ec87bfd0c8a28d6644a622f4c3bf0f11499641a4636e73",
+      "firstDifferentByte": 85
     },
     "tests/m8-b4-tear.test.ts": {
       "previousBytes": 6092,
-      "currentBytes": 6539,
+      "currentBytes": 6557,
       "previousSha256": "b571e426d7ead9c5e19409fce5b4a968a7128533ceaccb6cdc7299dc35d770f2",
-      "currentSha256": "a94d8a412d3114b0a8477f56c21dbc3a2527f9d571700ff749e0dc5897f57fe9",
-      "firstDifferentByte": 330
+      "currentSha256": "0a9d0c16a6a031649e3ee19fe366c506f6a747a4a8d122f9831cab3c41dce93e",
+      "firstDifferentByte": 85
     },
     "tests/m8-b5-equipment-history.test.ts": {
       "previousBytes": 20393,
@@ -2323,9 +2365,9 @@
     "tests/ranged-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11561,
+      "currentBytes": 18575,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ece6e705764d558283e81a2b5a42fab1e38fc868907b7db0d4722345041661f3",
+      "currentSha256": "de6636e992c47e00717e114475b8ebfaf34bf7ec1964d78b74452398a2102508",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {

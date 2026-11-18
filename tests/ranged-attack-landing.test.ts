@@ -143,3 +143,87 @@ it('Zeri\'s empowered shot is an instant beam: it settles on its attack tick; he
   expect(beams.length).toBeGreaterThan(0);
   for (const [tick, arrival] of beams as [number, number][]) expect(arrival).toBe(tick);
 });
+
+// ---- In-flight save → restore → landing round trips (damage, on-hit status, Dragonsoul registration, dead target) ----
+import { validateMechanisms } from '../src/simulation/m8/restore';
+import { validateP3State } from '../src/simulation/s13-p3-combat';
+function matchCombat(champion: string, opts: { anomaly?: string; mechanics?: { mechanic: string; values: Record<string, number> }[] } = {}): CombatState {
+  const base = createMatch(42), round = 5;
+  const preparation = { ...base.preparation, units: [champion, 'garen'].map((definitionId, i) => ({ id: i ? 'e0' : 'p0', definitionId, starLevel: 1 as const,
+    team: i ? 'enemy' as const : 'player' as const, location: { kind: 'board' as const, cell: i ? { col: 3, row: 2 } : { col: 3, row: 5 } } })) };
+  const state = { ...base, round, preparation, anomalyBinding: opts.anomaly ? { definitionId: opts.anomaly, choiceId: 'anomaly', unitId: 'p0', boundRound: 1 } : null };
+  const strategy = buildStrategySnapshot(state);
+  const withMechanics = { ...strategy, units: strategy.units.map(u => u.unitId !== 'p0' ? u : ({ ...u, mechanics: [...u.mechanics ?? [], ...(opts.mechanics ?? []).map((m, i) => ({ ...m,
+    source: { ownerId: 'p0', sourceKind: 'augment' as const, definitionId: m.mechanic === 'blisteringStrikes' ? 'blistering-strikes' : m.mechanic, instanceId: 'choice-' + i, effectIndex: i } }))] })) };
+  const started = createCombatWithEvents(preparation, withMechanics, 'landing-roundtrip').state;
+  // p0 attacks at once (range kept from her own data), e0 stands still.
+  return { ...started, units: started.units.map(u => u.id === 'p0' ? { ...u, cooldownTicks: 0, moveCooldownTicks: 2000, mana: 0 } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
+}
+const pending = (s: CombatState) => s.units.find(u => u.id === 'p0')!.tasks?.filter(t => t.kind === 'attackLanding') ?? [];
+function roundTrip(start: CombatState) {
+  const launched = stepCombat(start).state, shot = pending(launched)[0]!;
+  expect(shot, 'premise: a shot is in flight').toBeDefined();
+  const restored = JSON.parse(JSON.stringify(launched)) as CombatState;
+  for (const u of restored.units) { validateMechanisms(u, restored.units, restored.tick, restored.combatId!, false, restored.nextActionSeq!); validateP3State(u, restored.units, restored.tick, restored.nextActionSeq!); }
+  const ids = new Set(restored.units.map(u => u.id)), same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  for (const u of restored.units) validateM5Runtime(u, restored.tick, ids, restored.units, restored.combatId!, new Set(), same, restored.nextActionSeq!);
+  let a = launched, b = restored; const events: CombatEvent[] = [];
+  while (a.tick < shot.executeAtTick) { const x = stepCombat(a), y = stepCombat(b); expect(y).toEqual(x); a = x.state; b = y.state; events.push(...x.events); }
+  return { shot, landed: a, events };
+}
+describe('ranged attack landing: in-flight save and restore', () => {
+  it('damage: the restored shot lands on the same tick with the same packet', () => {
+    const { shot, events } = roundTrip(matchCombat('ezreal'));
+    const hits = events.filter(e => e.type === 'packetDamage' && e.tick === shot.executeAtTick && e.outcome.context.source.ownerId === 'p0');
+    expect(hits.length).toBeGreaterThan(0);
+  });
+  it('on-hit status: Blistering Strikes rides the shot and applies when it lands', () => {
+    const start = matchCombat('lux', { mechanics: [{ mechanic: 'blisteringStrikes', values: { durationTicks: 100, burnBpsPerSecond: 100, woundBps: 3300 } }] });
+    const launched = stepCombat(start).state;
+    expect(pending(launched)[0]!.landing!.effects.length, 'premise: the statuses wait in the shot').toBe(2);
+    expect(launched.units.find(u => u.id === 'e0')!.mechanismState?.statuses.some(g => g.kind === 'burn')).toBe(false);
+    const { landed } = roundTrip(start);
+    expect(landed.units.find(u => u.id === 'e0')!.mechanismState!.statuses.map(g => g.kind).sort()).toEqual(['burn', 'wound']);
+  });
+  it('Dragonsoul: the target is registered when the shot lands, not on the attack', () => {
+    const start = matchCombat('ezreal', { anomaly: 'dragonsoul' });
+    const launched = stepCombat(start).state;
+    expect(launched.units.find(u => u.id === 'p0')!.s13P3?.dragonTargets ?? []).toEqual([]);
+    const { landed, events, shot } = roundTrip(start);
+    expect(landed.units.find(u => u.id === 'p0')!.s13P3!.dragonTargets).toEqual(['e0']);
+    expect(events.some(e => e.type === 'packetDamage' && e.tick === shot.executeAtTick && e.outcome.context.source.definitionId === 'dragonsoul')).toBe(true);
+  });
+  it('dead target: a restored shot whose target died in flight does nothing', () => {
+    const start = matchCombat('ezreal', { anomaly: 'dragonsoul' });
+    const launched = stepCombat(start).state, killed = structuredClone(launched);
+    Object.assign(killed.units.find(u => u.id === 'e0')!, { hp: 0 });
+    const shot = pending(killed)[0]!;
+    let a = killed, b = JSON.parse(JSON.stringify(killed)) as CombatState; const events: CombatEvent[] = [];
+    while (a.status === 'running' && a.tick < shot.executeAtTick) { const x = stepCombat(a), y = stepCombat(b); expect(y).toEqual(x); a = x.state; b = y.state; events.push(...x.events); }
+    expect(events.filter(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0')).toEqual([]);
+    expect(a.units.find(u => u.id === 'p0')!.s13P3?.dragonTargets ?? []).toEqual([]);
+  });
+});
+
+it('a melee hero given extra range still settles her attack on its attack tick (her own data range decides)', () => {
+  const r = run(battle([shooter('garen', 4), dummy('e', 3, 3)], { rngState: 42 }), 30);
+  expect(hitTicks(r.out)[0]).toBe(attackTicks(r.out)[0]);
+  expect(r.out.flatMap(s => s.events.filter(e => e.type === 'attackLaunched'))).toEqual([]);
+});
+describe('form heroes: the current form decides', () => {
+  for (const name of ['jayce', 'elise', 'gangplank']) {
+    it(`${name}: melee form settles on the attack tick, ranged form when the shot lands`, () => {
+      const melee = run(battle([shooter(name, 1, { form: 'melee' }), dummy('e', 3, 5)], { rngState: 42 }), 30);
+      expect(hitTicks(melee.out)[0]).toBe(attackTicks(melee.out)[0]);
+      const ranged = run(battle([shooter(name, 4, { form: 'ranged' }), dummy('e', 3, 3)], { rngState: 42 }), 30), first = attackTicks(ranged.out)[0]!;
+      expect(hitTicks(ranged.out)[0]).toBe(first + rangedAttackFlightTicks(3, name));
+    });
+  }
+  it('a shot already in flight finishes as launched when the form changes', () => {
+    const start = battle([shooter('jayce', 4, { form: 'ranged' }), dummy('e', 3, 3)], { rngState: 42 });
+    const pre = run(start, 30), first = attackTicks(pre.out)[0]!, landing = first + rangedAttackFlightTicks(3, 'jayce');
+    const swapped = structuredClone(run(start, first - start.tick).state);
+    Object.assign(swapped.units.find(u => u.id === 'p')!, { form: 'melee' });
+    expect(hitTicks(run(swapped, landing - swapped.tick).out)).toEqual([landing]);
+  });
+});

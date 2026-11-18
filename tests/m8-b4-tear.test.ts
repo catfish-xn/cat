@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
+import { wearing,enemy,run,packets,heals,LANDING } from './fixtures/m8-b4-items';
 import { stepCombat } from '../src/simulation/combat';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -43,5 +43,5 @@ describe('B4 tear recipes: hand vectors and real effects',()=>{
   const expiry=attack(beforeExpiry.state,'z');expect(expiry.state.tick).toBe(162);expect(packets(expiry.events)[0].hpDamage).toBe(115);
  });
  it('redemption:1150−650=500 missing;500×15%=75 at100;t100 damage stays100 before next-tick10% reduction',()=>{const r=run(wearing('redemption',{hp:650,cooldownTicks:1000}),100,[enemy('e',1,3,{cooldownTicks:100,attackDamage:100})]);expect(heals(r.events).filter(e=>e.unitId==='p')[0].actual).toBe(75);expect(packets(r.events,'e')[0].hpDamage).toBe(100);});
- it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}));expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});
+ it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}),1+LANDING);expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});
 });
