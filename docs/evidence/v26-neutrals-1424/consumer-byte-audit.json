@@ -1510,9 +1510,9 @@
     "tests/late-lag-effects.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23489,
+      "currentBytes": 23932,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9358c7ce595380c5d10804387a2f83f978edd3bb1d2c2d0fbce10fd1258569c4",
+      "currentSha256": "a2b328b9a17110c0f350e7ea4f3144a823478771882a8b4ce2c0c31c61fee6a1",
       "firstDifferentByte": 0
     },
     "tests/live-combat-inputs.test.ts": {
@@ -3970,9 +3970,9 @@
     "tests/vfx-ltk-dead-target.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 18242,
+      "currentBytes": 21084,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "95f0c13bf381654710e15a81da1fd3932395c70db679fd218622a6ec455477d4",
+      "currentSha256": "793fb921e49366f729aed0b4ac03793446372f966aa8d8f03721d837f332624c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {

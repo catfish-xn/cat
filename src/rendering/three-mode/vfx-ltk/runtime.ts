@@ -836,6 +836,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!tail) break;
           leave(tail);
         }
+        // A run at a dead target's place only takes free room, but a flourish gives way to it (Fable 11-17): it may end the
+        // earliest decorative run that is not itself at a place, never an attack, a body, damage or another place's run.
+        while (atPlace && crowded()) {
+          let flourish: Running | undefined;
+          for (const run of running) if (run.importance === 'decorative' && !run.atPlace && !run.persistent) { flourish = run; break; }
+          if (!flourish) break;
+          leave(flourish);
+        }
         while (!atPlace && blocked()) {
           // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
           let spare: Running | undefined;
