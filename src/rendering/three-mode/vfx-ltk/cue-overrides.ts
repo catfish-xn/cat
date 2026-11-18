@@ -660,6 +660,11 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // TEMPORARY departure from the data (Fable 11-18): the shared crit flash's two dark backing layers (alpha-blended dark grey
+  // and dark red) are authored to scale with the struck unit's size (scaleBirthScaleByBoundObjectSize), which the engine
+  // does not do yet; drawn at their fixed size they left a black-edged blot over the target. Restore them once the engine
+  // scales by the bound object (docs/S13_RULES_GAP.md, 2026-11-18).
+  '2436e086': ['flash2', 'flash3'],
 };
 
 /**
