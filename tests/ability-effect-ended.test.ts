@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
@@ -95,7 +95,11 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
       ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
       Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[]>).map(([a, l]) => [`${k} ${a}`, l]));
-    const lists = { ...CUE_END_STOPS, ...Object.fromEntries(ruleLists) };
+    // Dr. Mundo's heal end stops nothing: his systems end with his timed form (TIMED_FORM_STOPS), listed here instead.
+    expect(CUE_END_STOPS['drmundo-heal']).toEqual([]);
+    const endLists = Object.entries(CUE_END_STOPS).filter(([k]) => k !== 'drmundo-heal');
+    const lists = { ...Object.fromEntries(endLists), ...Object.fromEntries(ruleLists),
+      ...Object.fromEntries(Object.entries(TIMED_FORM_STOPS).map(([k, v]) => [`form ${k}`, v])) };
     for (const [effect, systems] of Object.entries(lists)) {
       expect(systems.length, effect).toBeGreaterThan(0);
       for (const system of systems) {

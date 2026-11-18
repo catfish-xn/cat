@@ -577,9 +577,10 @@ export async function stageAnimSequences({
   only = null,
   exclude = null,
   unitMapPath,
+  uncompressedFallbackRoot = '/home/aiapps/workspace/set13-worktrees/boards/assets3d-local/test-server-v7-uncompressed',
 } = {}) {
   if (!assetsRoot || !extractedRoot || !outDir) {
-    throw new Error('usage: --assets <dir> --extracted <dir> --metadata-root <dir> --out-dir <dir> [--only <ids>] [--exclude <id:action,...>]');
+    throw new Error('usage: --assets <dir> --extracted <dir> --metadata-root <dir> --out-dir <dir> [--only <ids>] [--exclude <id:action,...>] [--uncompressed-fallback <dir>]');
   }
   const resolvedAssets = resolve(assetsRoot);
   const resolvedOut = resolve(outDir);
@@ -692,7 +693,6 @@ export async function stageAnimSequences({
     return anmCache.get(full);
   }
 
-  const uncompressedFallbackRoot = '/home/aiapps/workspace/set13-worktrees/boards/assets3d-local/test-server-v7-uncompressed';
   const reportRows = [];
   const modifiedModels = new Map();
 
@@ -1328,6 +1328,8 @@ function parseCliArgs(argv) {
     else if (flag === '--only') options.only = value;
     else if (flag === '--exclude') options.exclude = value;
     else if (flag === '--unit-map') options.unitMapPath = value;
+    // The uncompressed model a compressed deployed one is rebuilt from when clips must be appended (same relative path).
+    else if (flag === '--uncompressed-fallback') options.uncompressedFallbackRoot = value;
     else throw new Error(`invalid-argument:${flag}`);
   }
   return options;

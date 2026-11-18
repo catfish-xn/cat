@@ -36,6 +36,7 @@ import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece,
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
+import { createTimedFormEvents } from './timed-form-events';
 import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
@@ -66,7 +67,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -704,6 +705,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pieces = new Map<string, PieceView>();
   const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.starLevel);
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
+  // A timed form (Dr. Mundo's ultimate body) follows its rule events over whatever clip plays (timed-form-events.ts).
+  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -1176,7 +1179,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); timedForms.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1493,6 +1496,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    // A form ends with its systems (cue-overrides.ts TIMED_FORM_STOPS).
+    const setForm = (form: { id: string; on: boolean }) => {
+      const view = pieces.get(form.id); view?.mixer?.setTimedForm(form.on);
+      if (!form.on && view) ltk?.stopSystems(form.id, TIMED_FORM_STOPS[view.definitionId] ?? []);
+    };
+    for (const form of timedForms.advance(latest)) setForm(form);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
@@ -1501,6 +1510,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A held status pose (Singed's shield while his damage reduction lasts) follows the same cast and status events.
       const pose = statusPoses.next(event);
       if (pose) pieces.get(pose.id)?.mixer?.setStatusPose(pose.on);
+      const form = timedForms.next(event);
+      if (form) setForm(form);
       if (currentEffect && !reducedMotion()) for (const fx of planned.extra) if (ltk) playBatch1Visual(ltk, fx);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
