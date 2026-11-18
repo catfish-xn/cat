@@ -293,7 +293,42 @@ describe('ranged attack landing: Match save with a shot in flight', () => {
     ['arrival tick moved', (t: any) => { t.executeAtTick += 1; }],
     ['snapshot amplifiers changed', (t: any) => { t.landing.packets[0].locked.attackDamage += 1; }],
     ['packet raw changed', (t: any) => { t.landing.packets[0].raw += 1; }],
+    ['snapshot shape broken', (t: any) => { delete t.landing.packets[0].locked.weaknessBps; }],
+    ['packet owner changed', (t: any) => { t.landing.packets[0].source = { ...t.landing.packets[0].source, ownerId: 'someone' }; }],
   ])('a save with the pending shot %s is rejected', (_name, edit) => {
     expect(() => restoreMatch(tamper(inFlight(), edit as never))).toThrow();
   }, 60000);
+});
+
+// ---- Another unit's trigger under this attack settles on the attack tick, by its own numbers ----
+import { trigger as itemTrigger, damage as itemDamage, enemies as itemEnemies } from '../src/simulation/content/item-programs';
+it('an ally\'s trigger on the shooter\'s attack settles on the attack tick with its owner\'s numbers; only her own shot flies', () => {
+  const proc = { ...itemTrigger({ id: 'ally-proc', listener: { subject: 'actor', relationToHolder: 'ally', withinHexes: null },
+    selector: itemEnemies({ candidates: 'event-target' }), effects: [itemDamage('magic', { flat: 50 })] }),
+    source: { ownerId: 'ally', sourceKind: 'item' as const, definitionId: 'test-ally-proc', instanceId: 'proc', effectIndex: 0, parentItemInstanceId: null } };
+  const holder = { ...dummy('ally', 6, 7), team: 'player' as const, mechanismDefinitions: { eventTriggers: [proc], periodicTasks: [], survivalTriggers: [], vamp: [] } } as unknown as CombatUnit;
+  const start = battle([shooter('ezreal', 4), holder, dummy('e', 3, 3)], { rngState: 42 });
+  const r = run(start, 30), first = attackTicks(r.out)[0]!, flight = rangedAttackFlightTicks(3, 'ezreal');
+  const at = (tick: number, owner: string) => r.out.filter(s => s.tick === tick).flatMap(s => packets(s.events).filter(x => x.source.ownerId === owner));
+  expect(at(first, 'ally').map(x => x.hpDamage)).toEqual([50]);
+  expect(at(first, 'p')).toEqual([]);
+  expect(at(first + flight, 'p').length).toBeGreaterThan(0);
+  // The shooter falling right after her attack does not undo the ally's proc (already settled) nor her shot.
+  const atAttack = run(start, first - start.tick - 1).state;
+  const launched = stepCombat(atAttack);
+  expect(packets(launched.events).filter(x => x.source.ownerId === 'ally').map(x => x.hpDamage)).toEqual([50]);
+});
+
+it('a target that dies in flight and is revived before the landing still takes nothing', () => {
+  // A second, far enemy keeps the fight running while e is down.
+  const start = battle([shooter('ezreal', 4), ally(), dummy('e', 3, 3), dummy('far', 6, 0)], { rngState: 42 });
+  const pre = run(start, 30), first = attackTicks(pre.out)[0]!, flight = hitTicks(pre.out)[0]! - first;
+  const atAttack = run(start, first - start.tick).state, killed = structuredClone(atAttack);
+  Object.assign(killed.units.find(u => u.id === 'e')!, { hp: 0 });
+  const dead = run(killed, 1).state;
+  expect(dead.units.find(u => u.id === 'e')!.alive, 'premise: it died in flight').toBe(false);
+  const revived = structuredClone(dead); Object.assign(revived.units.find(u => u.id === 'e')!, { alive: true, hp: 1000 });
+  const rest = run(revived, flight);
+  expect(hitTicks(rest.out)).toEqual([]);
+  expect(rest.out.flatMap(s => s.events.filter(e => e.type === 'attackLanded').map(e => e.type === 'attackLanded' && e.hit))).toEqual([false]);
 });

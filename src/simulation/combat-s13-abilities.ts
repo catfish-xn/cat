@@ -39,7 +39,7 @@ export interface AbilityContext {
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
   /** Set while a ranged hero's attack (actionSeq seq) is planned: its on-hit statuses wait for the shot to land. */
-  attackLanding?: { readonly seq: number; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
+  attackLanding?: { readonly seq: number; readonly attackerId: string; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
@@ -218,10 +218,14 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
 /** A ranged hero's shot lands (ranged attack landing): if its target still lives its packets (crits rolled on the attack) join this
  * tick's queue and its on-hit statuses apply; a target that died in flight takes nothing and no other one is picked. */
 function landAttack(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
-  const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
+  // A target that died while the shot flew (voided on its death, even if revived since) takes nothing.
+  const target = task.landing!.voided ? undefined : ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
   ctx.events.push({ type: 'attackLanded', tick: ctx.tick, attackerId: unit.id, targetId: task.targetId!, hit: !!target });
   if (!target) return;
-  for (const packet of task.landing!.packets) if (landDragonsoul(unit, packet)) ctx.packets.push(structuredClone(packet));
+  for (const packet of task.landing!.packets) {
+    if (packet.source.ownerId !== unit.id) throw new RangeError('attack landing packet owner');
+    if (landDragonsoul(unit, packet)) ctx.packets.push(structuredClone(packet));
+  }
   for (const e of task.landing!.effects) {
     const holder = ctx.units.find(u => u.id === e.holderId);
     if (holder) executeMechanismEffect(ctx, holder, e.source, target, e.effect, task.actionSeq, e.ordinal);

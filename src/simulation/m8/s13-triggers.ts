@@ -49,7 +49,8 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
       }
       // A ranged hero's shot carries its on-hit statuses to the target and applies them when it lands (ranged attack landing).
       const shot = ctx.attackLanding;
-      if (shot && context.event === 'attack-completed' && context.actionSeq === shot.seq && effect.kind === 'apply-status' && target.team !== holder.team) {
+      if (shot && context.event === 'attack-completed' && context.actionSeq === shot.seq && effect.kind === 'apply-status'
+        && holder.id === shot.attackerId && target.team !== holder.team) {
         shot.effects.push({ targetId, effect: { holderId: holder.id, source, effect, ordinal, area: invocation.targetIds.length > 1 } }); continue;
       }
       executeMechanismEffect(ctx,holder,source,target,effect,context.actionSeq,ctx.packets.length+100000,undefined,undefined,undefined,facts.brokenShield,

@@ -501,6 +501,14 @@ export function validateMatchStructureForSerialization(state: MatchState): Match
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.
  * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
+/** A landing packet's attacker-side snapshot: exactly these fields, finite numbers, a boolean mirror flag. */
+function lockedShape(locked: unknown): boolean {
+  if (!locked || typeof locked !== 'object') return false;
+  const l = locked as Record<string, unknown>;
+  return Object.keys(l).sort().join(',') === 'abilityPower,amplifiers,attackDamage,critMultiplierBps,holder,mirrored,weaknessBps'
+    && [l.abilityPower, l.attackDamage, l.critMultiplierBps, l.weaknessBps].every(n => Number.isSafeInteger(n) && (n as number) >= 0 && (n as number) <= 100000000)
+    && Array.isArray(l.amplifiers) && typeof l.mirrored === 'boolean' && !!l.holder && typeof l.holder === 'object';
+}
 export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number, abilityStatuses: ReadonlySet<string> = new Set()): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
@@ -637,7 +645,9 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
       const landing = task.landing; record(landing); list(landing!.packets); list(landing!.effects);
       requireValue(task.source.ownerId === unit.id && task.source.sourceKind === 'attack' && task.cancellable === false && task.amount === 0 && task.targetId !== null
         && landing!.packets.length + landing!.effects.length > 0
-        && landing!.packets.every(p => p.actionSeq === task.actionSeq && p.targetId === task.targetId && typeof p.critical === 'boolean' && Number.isSafeInteger(p.raw) && p.raw >= 0 && p.raw <= 100000000)
+        && (landing!.voided === undefined || landing!.voided === true)
+        && landing!.packets.every(p => p.actionSeq === task.actionSeq && p.targetId === task.targetId && p.source.ownerId === unit.id && typeof p.critical === 'boolean'
+          && Number.isSafeInteger(p.raw) && p.raw >= 0 && p.raw <= 100000000 && lockedShape(p.locked))
         && landing!.effects.every(e => combatUnits.some(u => u.id === e.holderId)), 'attack landing');
     } else requireValue(task.landing === undefined, 'attack landing');
     if (task.kind.startsWith('g2')) {

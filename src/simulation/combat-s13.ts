@@ -137,9 +137,13 @@ function chargedCritBps(owner: S13Unit, packet: S13Packet): number {
   }
   return bonus;
 }
+/** Sorcerer 8 weakness on the attacker: one outgoing multiplier, even when several sorcerers hit the same enemy. */
+function sorcererWeaknessBps(owner: S13Unit | undefined, tick: number): number {
+  return Math.max(0,...(owner?.mechanismState?.statuses??[]).flatMap(g=>g.contributions.filter(c=>c.source.sourceKind==='trait'&&c.source.definitionId==='sorcerer'&&isEffective(c,tick)).map(c=>c.application.magnitudeBps)));
+}
 /** The attacker's side of a packet's damage sample: her amplifiers, AD/AP, crit multiplier and HP sample. A ranged hero's
  * shot takes it on its attack tick (attackerSide in launchAttack, packet.locked) and lands with it. */
-export interface AttackerSide { readonly amplifiers: readonly StatModifier[]; readonly attackDamage: number; readonly abilityPower: number; readonly critMultiplierBps: number; readonly holder: DamageSample['holder'] }
+export interface AttackerSide { readonly amplifiers: readonly StatModifier[]; readonly attackDamage: number; readonly abilityPower: number; readonly critMultiplierBps: number; readonly holder: DamageSample['holder']; readonly weaknessBps: number; readonly mirrored: boolean }
 function attackerSide(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[]): AttackerSide {
   const amplifiers: StatModifier[] = [constantModifier('damageAmp', overtimeBonusBps(tick), 'bps'), ...(owner ? statusModifiers(owner, 'damageAmp', tick) : [])];
   if(owner?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))
@@ -156,6 +160,7 @@ function attackerSide(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   if (owner) for (const m of statusModifiers(owner, 'damageAmpPerHex', tick)) if (m.value.kind === 'constant')
     amplifiers.push(constantModifier('damageAmp', m.value.amount * hexDistance(owner.cell, target.cell), 'bps'));
   return { amplifiers, attackDamage: owner ? ad(owner) : 0, abilityPower: owner ? ap(owner, tick) : 0, holder: hpSample(owner ?? target),
+    weaknessBps: sorcererWeaknessBps(owner, tick), mirrored: !!owner?.r3Mirror,
     critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps };
 }
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
@@ -191,7 +196,13 @@ function shotKind(unit: S13Unit): 'flight' | 'beam' | undefined {
 function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, seq: number): void {
   const shot = ctx.attackLanding; ctx.attackLanding = undefined;
   const packets: S13Packet[] = [];
-  for (let i = ctx.packets.length - 1; i >= firstPacket; i--) if (ctx.packets[i]!.actionSeq === seq) packets.unshift(...ctx.packets.splice(i, 1));
+  // Only her own packets at enemies fly; another unit's packets planned under this attack (an ally's or enemy's trigger, a
+  // reflection at her) settle now.
+  const enemyIds = new Set(ctx.units.filter(u => u.team !== unit.team).map(u => u.id));
+  for (let i = ctx.packets.length - 1; i >= firstPacket; i--) {
+    const p = ctx.packets[i]!;
+    if (p.actionSeq === seq && p.source.ownerId === unit.id && enemyIds.has(p.targetId)) packets.unshift(...ctx.packets.splice(i, 1));
+  }
   // The attacker's side of each packet is taken now (her amplifiers, AD/AP, crit multiplier); the target's side on landing.
   for (const p of packets) { const target = ctx.units.find(u => u.id === p.targetId); if (target) p.locked = attackerSide(p, target, unit, ctx.tick, ctx.units); }
   const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
@@ -520,7 +531,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         }
         unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
         const shot = shotKind(unit);
-        if (shot === 'flight') { shotSeq = seq; ctx.attackLanding = { seq, effects: [] }; }
+        if (shot === 'flight') { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
         else if (shot) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot });
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
@@ -730,12 +741,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (damageType !== packet.damageType) packet = { ...packet, damageType };
       if (p3BurnRaw(owner, packet) !== packet.raw) packet = { ...packet, raw: p3BurnRaw(owner, packet) };
       // Sorcerer 8 weakness is one outgoing multiplier, even when several sorcerers hit the same enemy.
-      const weakness=Math.max(0,...(owner?.mechanismState?.statuses??[]).flatMap(g=>g.contributions.filter(c=>c.source.sourceKind==='trait'&&c.source.definitionId==='sorcerer'&&isEffective(c,tick)).map(c=>c.application.magnitudeBps)));
+      const weakness=packet.locked ? packet.locked.weaknessBps : sorcererWeaknessBps(owner,tick);
       const request = damageRequest(weakness&&!packet.inherited ? {...packet,raw:Math.floor(packet.raw*(10000-weakness)/10000)} : packet, state.combatId ?? 'standalone', tick);
       const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
       const basePrepared = prepareDamage(request, sample);
       // One target multiplier after existing amplification/mitigation, before shields/redirect. Never double-scale inherited packets.
-      const prepared = hallOfMirrorsDamage(owner,packet,roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,beforeMitigation:Math.floor(basePrepared.beforeMitigation*10800/10000),mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared);
+      const prepared = hallOfMirrorsDamage(packet.locked ? (packet.locked.mirrored ? { r3Mirror: {} as never } : undefined) : owner,packet,roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,beforeMitigation:Math.floor(basePrepared.beforeMitigation*10800/10000),mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared);
       if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
       if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
       if(packet.devour){
@@ -904,6 +915,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           && !holder.tasks.some(l => l.kind === 'g23RenniLift' && l.actionSeq === t.actionSeq) && (holder.id === unit.id || t.targetId === unit.id));
         if (pulse) events.push({ type: 'carryChanged', tick, holderId: holder.id, targetId: pulse.targetId!, carried: false });
       }
+      // A shot in flight at the dead unit does nothing on landing, even if the unit is revived meanwhile (it still lands, for display).
+      for (const holder of units) if (holder.tasks.some(t => t.kind === 'attackLanding' && t.targetId === unit.id))
+        holder.tasks = holder.tasks.map(t => t.kind === 'attackLanding' && t.targetId === unit.id && !t.landing!.voided ? { ...t, landing: { ...t.landing!, voided: true } } : t);
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce' || releasedLanding(t, tick)));
       events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit, killed.get(unit.id) ?? null,
         tracksCabalTakedowns(units)?sampleCabalTakedowns(units,unit.id,[...(killed.has(unit.id)?[killed.get(unit.id)!.ownerId]:[]),...(damageContributors[unit.id]??[])]):undefined, lootExplosionKills.get(unit.id)));

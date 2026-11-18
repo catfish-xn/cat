@@ -2387,9 +2387,9 @@
     "tests/ranged-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23263,
+      "currentBytes": 26315,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ac1ff64b5c2b4867762d92a9cd2e651ef7498297ed7a1a7df3a3b84a910088bb",
+      "currentSha256": "dfbcf197b925afbddceee6fd7ce4cab01fe733b6e76e82cfba7f8441aff9890c",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
