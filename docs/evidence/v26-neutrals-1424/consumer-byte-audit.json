@@ -1498,6 +1498,14 @@
       "currentSha256": "c72784da5371f726e901ca0715ec5e4b6e6d34d8de1c82add90d20a6f0b72ff1",
       "firstDifferentByte": 137
     },
+    "tests/helpers/landing.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1217,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7078b63bd1e8f4236894530a779218b2288ea201f2c7561def8ddf000333d953",
+      "firstDifferentByte": 0
+    },
     "tests/item-catalog-version.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -1559,10 +1567,10 @@
     },
     "tests/m5-combat.test.ts": {
       "previousBytes": 37429,
-      "currentBytes": 38954,
+      "currentBytes": 39156,
       "previousSha256": "4656efcd5b60f141e4c6c66849b8a7428be3177eeb45e609ddc92daf6b6faa96",
-      "currentSha256": "1e47840619f2e088811efeb43951920b8fbfef36da72e8687a0671b2e77a56fe",
-      "firstDifferentByte": 1376
+      "currentSha256": "21a713e49c298b2117bd5beb65c60c2f63350e74db3b6c321c9e68855f0fa330",
+      "firstDifferentByte": 9
     },
     "tests/m5-command-phases.test.ts": {
       "previousBytes": 2487,
@@ -3743,6 +3751,13 @@
       "previousSha256": "17c7ae9261b9e3660c4e8ec9f87c435a1a8bb0e9d9851db60f85aaf50df2e630",
       "currentSha256": "20a8f67e369b45d299b25dfc49640341d3704504c4206e597010f2368e66c1c6",
       "firstDifferentByte": 16249
+    },
+    "tests/v19-mechanics.test.ts": {
+      "previousBytes": 19355,
+      "currentBytes": 19718,
+      "previousSha256": "0742e15dcdabc59b75e4663e3c6821fc399cd245737fdce469f87846ed2010b4",
+      "currentSha256": "a4e64d9fd94ac5d7dcd1a87ebee12a5ef346281ecfcff0e3c4e284de67e50c49",
+      "firstDifferentByte": 9
     },
     "tests/v19-part2.test.ts": {
       "previousBytes": 31379,
