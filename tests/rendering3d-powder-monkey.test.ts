@@ -53,6 +53,17 @@ describe('3D: Powder\'s monkey', () => {
     expect(scene.children).toHaveLength(0);
   });
 
+  it('a sent monkey whose model never loads goes a second after its arrival, even with no arrive', async () => {
+    const scene = new Group(), monkeys = createPowderMonkeys(scene, null);
+    monkeys.prepare('pw', 0.5);
+    monkeys.send('pw', new Vector3(10, 0, 0), 0.5, 1.0); await flush();
+    for (let t = 0; t < 1.9; t += 0.1) monkeys.update(0.1, () => null);
+    expect(monkeys.size).toBe(1); // still waiting: its arrival (1 s) and a second more are not over
+    for (let t = 0; t < 0.3; t += 0.1) monkeys.update(0.1, () => null);
+    expect(monkeys.size).toBe(0);
+    expect(scene.children).toHaveLength(0);
+  });
+
   it('the drop eases out and is done in MONKEY_DROP_SECONDS', () => {
     expect(dropShare(0)).toBe(0); expect(dropShare(MONKEY_DROP_SECONDS)).toBe(1);
     expect(dropShare(MONKEY_DROP_SECONDS / 2)).toBeGreaterThan(0.5);

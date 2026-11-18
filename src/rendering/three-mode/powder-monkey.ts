@@ -112,13 +112,16 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
       for (const [key, m] of monkeys) {
         m.since += seconds;
         if (!m.started) {
+          // Never swapped in (its model did not load, or her hand was never seen): it goes a second after it would have
+          // arrived, or, not sent, a second after the hide.
+          if (m.since > m.hideAt + (m.runFor ?? 0) + 1) { remove(key, m); continue; }
           // While the hand one still shows, keep its last pose; the swap is the frame her clip hides it in (its submesh, read
           // after the mixers ran this frame) near the clip's hide time, or, on a body without that submesh, that time.
           const b = body(m.owner), shown = b ? handMonkeyShown(b) : undefined;
           if (shown) { const pose = handMonkeyPose(b!); if (pose) m.hand = pose; }
           const due = m.since >= m.hideAt - 0.06;
           const swap = shown === false ? !!m.hand && due : shown === undefined && m.since >= m.hideAt;
-          if (!swap) { if (!m.sent && m.since > m.hideAt + 1) remove(key, m); continue; }
+          if (!swap) continue;
           const lease = m.lease; if (!lease) continue; // swaps on the frame its model is in
           const hand = m.hand ?? (b ? handMonkeyPose(b) : null);
           // Its own root bone in model space (the group at rest), to match the hand's root bone point, turn and scale.

@@ -1529,8 +1529,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
-      // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's
-      // last tick or when either dies). A death also ends every carry it is part of at once, below.
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
       if (event.type === 'cast') {
@@ -1551,6 +1549,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           if (currentEffect && !reducedMotion()) ltk?.play('powder', event.unitId, [], 'passive', { skill: 'powder-arrive', board: [at.x, at.y, at.z] });
         }
       }
+      // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's
+      // last tick or when either dies). A death also ends every carry it is part of at once, below.
       if (event.type === 'carryChanged') {
         if (event.carried) startCarry(event.targetId, event.holderId); else endCarry(event.targetId);
         const holder = pieces.get(event.holderId);
