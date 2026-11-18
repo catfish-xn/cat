@@ -22,9 +22,8 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
  * badge drawn here; a damage-over-time tick is a small number. Sizes and colours are fitted, not original data.
  */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#5fd3ff', true: '#ffffff', heal: '#78efab', status: '#ff9d8a' };
-/** A crit's colour: physical gold (the user's 11-17 call: a gold, weapon-like big number; Fable 11-18 chose it over the
- * orange alternative), magic a bright blue. */
-const CRIT_COLORS = { physical: '#ffd23f', magic: '#2fa8ff', true: '#ffffff' } as const;
+/** A crit's colour: physical orange (the user's 11-19 choice), magic a bright blue. Our own colours, not original values. */
+const CRIT_COLORS = { physical: '#ff9a2e', magic: '#2fa8ff', true: '#ffffff' } as const;
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
 const FONT_PX = 14, CRIT_SCALE = 2.9, TICK_SCALE = 0.8;
@@ -45,8 +44,8 @@ const BAR_CLEAR = 44, RISE_PX = 12;
  * heights above the bar.
  */
 const SHOWN = 3, EARLY_FADE_MS = 200, CEILING_CRITS = 1.5;
-/** The gold crit's inner highlight: a light edge above the glyphs inside the black outline. */
-const GOLD_OUTLINE = `0 -1px 0 #fff3c4, ${OUTLINE}`;
+/** The physical crit's inner highlight: a light edge above the glyphs inside the black outline. */
+const CRIT_OUTLINE = `0 -1px 0 #fff3c4, ${OUTLINE}`;
 /** The crack badge left of a crit (drawn here: a split star with three rays), tinted with the number's colour. */
 const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l2.6 6.2L21 5l-3.6 5.6L23 13l-6.2 1.4L19 21l-5.8-3.6L12 23l-1.6-5.4L4 21l2.6-6.6L1 13l5.6-2.4L3 5l6.6 2.4z' fill='${color}' stroke='#000' stroke-width='1.2'/><path d='M12 6l-1 5 3 1-2 6' fill='none' stroke='#000' stroke-width='1.4'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
@@ -63,7 +62,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       : cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: kind === 'true' || cls === 'crit' ? '900' : '700',
-      textShadow: cls === 'crit' && kind === 'physical' ? GOLD_OUTLINE : OUTLINE,
+      textShadow: cls === 'crit' && kind === 'physical' ? CRIT_OUTLINE : OUTLINE,
       backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.9)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {

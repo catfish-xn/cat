@@ -213,9 +213,9 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const alone = labels([damage(1, 'a', 4)]);
       expect(labels([damage(1, 'a', 4), crit(1, 'a', 10)]).filter(e => e.text === '4')).toEqual(alone);
     });
-    it('a physical crit is gold with an inner highlight (Fable 11-18); magic crits are bright blue', () => {
+    it('a physical crit is orange with an inner highlight (user 11-19); magic crits are bright blue', () => {
       const [gold] = labels([crit(1)]), [magic] = labels([{ ...crit(1), damageType: 'magic' }]), [plain] = labels([damage(1)]);
-      expect(gold.style.color).toBe('#ffd23f'); expect(magic.style.color).toBe('#2fa8ff');
+      expect(gold.style.color).toBe('#ff9a2e'); expect(magic.style.color).toBe('#2fa8ff');
       expect(gold.style.textShadow).not.toBe(plain.style.textShadow);
     });
     it('every number has a dark ring all round, so a small light number reads on the bright board', () => {
