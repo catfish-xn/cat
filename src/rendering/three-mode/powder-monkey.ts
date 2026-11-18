@@ -11,7 +11,7 @@ import { AnimationMixer, Group, Quaternion, Vector3, type AnimationClip, type Ob
 /** How long the swapped-in monkey takes to come down from the hand to the floor while it starts to run (s, fitted). */
 export const MONKEY_DROP_SECONDS = 0.2;
 /** The hand monkey's bones in Powder's rig, and the standalone monkey's matching ones. */
-const HAND_ROOT = 'Monkey_Root', HAND_HEAD = 'Monkey_Head', ROOT = 'Root', HEAD = 'Head';
+const HAND_ROOT = 'Monkey_Root', ROOT = 'Root';
 
 export interface MonkeyLease { readonly scene: Object3D; readonly animations: readonly AnimationClip[]; readonly animationNames: { readonly move?: string }; release(): void; readonly placeholder?: boolean }
 interface Monkey {
@@ -21,18 +21,22 @@ interface Monkey {
   to: Vector3; from?: Vector3; size?: number; facing?: Quaternion; started: boolean; disposed: boolean;
   /** The standalone monkey's root bone in its own model space (unscaled), so the swap puts that bone where the hand's was. */
   offset?: Vector3;
+  /** The hand monkey as last seen while still in her hand (the frame before her clip hides it). */
+  hand?: { root: Vector3; size: number; turn: Quaternion } | null;
 }
 
 /**
- * Where a monkey stands and how big it is, read off the hand monkey's bones in the owner's posed body: its root's world
- * point, its root-to-head length (the size the ground monkey takes), and its world turn.
+ * Where the hand monkey stands and how big it is, read off its root bone in the owner's posed body: the bone's world
+ * point, world scale (her cast clip scales it, and her model's own fit is in it) and world turn. The ground monkey's root
+ * bone takes the same three (its rig and mesh are the hand one's). Its root-to-head length is no measure: the clip
+ * squashes and stretches the monkey's spring.
  */
 export function handMonkeyPose(body: Object3D): { root: Vector3; size: number; turn: Quaternion } | null {
-  const root = body.getObjectByName(HAND_ROOT), head = body.getObjectByName(HAND_HEAD);
-  if (!root || !head) return null;
+  const root = body.getObjectByName(HAND_ROOT);
+  if (!root) return null;
   body.updateMatrixWorld(true);
-  const at = root.getWorldPosition(new Vector3()), top = head.getWorldPosition(new Vector3());
-  return { root: at, size: at.distanceTo(top), turn: root.getWorldQuaternion(new Quaternion()) };
+  const scale = root.getWorldScale(new Vector3());
+  return { root: root.getWorldPosition(new Vector3()), size: (Math.abs(scale.x) + Math.abs(scale.y) + Math.abs(scale.z)) / 3, turn: root.getWorldQuaternion(new Quaternion()) };
 }
 
 /** The share of the drop done `t` seconds in (eased out), and of the run (linear in ground distance). */
@@ -40,6 +44,9 @@ export const dropShare = (t: number) => { const k = Math.min(1, Math.max(0, t / 
 
 export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Promise<MonkeyLease>) | null, model = 'tft13_blue_monkey') {
   const monkeys = new Map<string, Monkey>();
+  /** Models loaded on an owner's cast, ahead of its monkey (the swap must not wait for a load). */
+  const ready = new Map<string, Promise<MonkeyLease | null>>();
+  const fetch = () => load ? load(model).then(lease => lease.placeholder ? (lease.release(), null) : lease).catch(() => null) : Promise.resolve(null);
   const at = new Vector3(), ahead = new Vector3(), up = new Vector3(0, 1, 0), toward = new Quaternion();
   const remove = (key: string, m: Monkey) => {
     m.disposed = true; m.mixer?.stopAllAction(); if (m.lease) { m.mixer?.uncacheRoot(m.lease.scene); m.lease.release(); }
@@ -48,6 +55,8 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
   return {
     /** Live monkeys, by owner. */
     get size() { return monkeys.size; },
+    /** `owner` cast: load a monkey now, for the one it may send (a second cast before then reuses it). */
+    prepare(owner: string) { if (!ready.has(owner)) ready.set(owner, fetch()); },
     /**
      * The rules sent `owner`'s monkey: it swaps in `swapIn` seconds from now (when her cast clip hides the hand one) and
      * reaches `to` (its cell, on the floor) `arriveIn` seconds from now. Loads its model now so the swap is not late.
@@ -57,12 +66,14 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
       const root = new Group(); root.name = 'powder-monkey'; root.visible = false; root.userData.visualProxy = true;
       const m: Monkey = { owner, root, swapIn: Math.max(0, swapIn), runFor: Math.max(0.05, arriveIn - Math.max(0, swapIn)), ran: 0, to: to.clone(), started: false, disposed: false };
       monkeys.set(owner, m); scene.add(root);
-      void load?.(model).then(lease => {
-        if (m.disposed || lease.placeholder) { lease.release(); return; }
+      const pending = ready.get(owner) ?? fetch(); ready.delete(owner);
+      void pending.then(lease => {
+        if (!lease) return;
+        if (m.disposed) { lease.release(); return; }
         m.lease = lease; root.add(lease.scene); m.mixer = new AnimationMixer(lease.scene);
         const clip = lease.animations.find(c => c.name === lease.animationNames.move) ?? lease.animations[0];
         if (clip) m.mixer.clipAction(clip).play();
-      }).catch(() => undefined);
+      });
     },
     /** The rules' monkey arrived (or its owner's cast was undone): it goes; its cell's point, when it was out. */
     arrive(owner: string): Vector3 | null {
@@ -76,16 +87,18 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
     update(seconds: number, body: (owner: string) => Object3D | null) {
       for (const [key, m] of monkeys) {
         if (!m.started) {
+          // While the hand one still shows, keep its last pose: the swap frame is the one her clip has hidden it in.
+          if (m.swapIn > 0) { const b = body(m.owner); const pose = b ? handMonkeyPose(b) : null; if (pose) m.hand = pose; }
           m.swapIn -= seconds;
           if (m.swapIn > 0) continue;
           const lease = m.lease; if (!lease) continue; // swaps on the frame its model is in
-          const hand = (() => { const b = body(m.owner); return b ? handMonkeyPose(b) : null; })();
-          // Its own root bone in model space (the group at rest), to match the hand's root bone point, turn and length.
-          const own = lease.scene, rootBone = own.getObjectByName(ROOT), headBone = own.getObjectByName(HEAD);
+          const hand = m.hand ?? (() => { const b = body(m.owner); return b ? handMonkeyPose(b) : null; })();
+          // Its own root bone in model space (the group at rest), to match the hand's root bone point, turn and scale.
+          const own = lease.scene, rootBone = own.getObjectByName(ROOT);
           m.root.position.set(0, 0, 0); m.root.quaternion.identity(); m.root.scale.setScalar(1); m.root.updateMatrixWorld(true);
           const ownRoot = rootBone?.getWorldPosition(new Vector3()), ownTurn = rootBone?.getWorldQuaternion(new Quaternion());
-          const ownSize = ownRoot && headBone ? ownRoot.distanceTo(headBone.getWorldPosition(new Vector3())) : 0;
-          m.size = hand && ownSize > 0 ? hand.size / ownSize : 1;
+          const ownScale = rootBone ? (s => (Math.abs(s.x) + Math.abs(s.y) + Math.abs(s.z)) / 3)(rootBone.getWorldScale(new Vector3())) : 0;
+          m.size = hand && ownScale > 0 ? hand.size / ownScale : 1;
           m.from = hand ? hand.root.clone() : m.to.clone();
           m.facing = hand && ownTurn ? hand.turn.clone().multiply(ownTurn.invert()) : undefined;
           m.offset = hand && ownRoot ? ownRoot : new Vector3();
@@ -109,6 +122,10 @@ export function createPowderMonkeys(scene: Object3D, load: ((id: string) => Prom
       }
     },
     /** A combat reset or the board cleared. */
-    clear() { for (const [key, m] of monkeys) remove(key, m); },
+    clear() {
+      for (const [key, m] of monkeys) remove(key, m);
+      for (const pending of ready.values()) void pending.then(lease => lease?.release());
+      ready.clear();
+    },
   };
 }

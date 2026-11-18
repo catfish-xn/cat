@@ -1533,7 +1533,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // last tick or when either dies). A death also ends every carry it is part of at once, below.
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
-      if (event.type === 'cast') castAt.set(event.sourceId, clock);
+      if (event.type === 'cast') { castAt.set(event.sourceId, clock); if (pieces.get(event.sourceId)?.definitionId === 'powder' && currentEffect) monkeys.prepare(event.sourceId); }
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
         if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {
