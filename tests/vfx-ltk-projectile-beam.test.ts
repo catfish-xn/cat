@@ -13,7 +13,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { beamSeed, beamSeconds, beamSplit, createLtkRuntime, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { beamSeed, beamSeconds, beamSplit, createLtkRuntime, hashSeed, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { UNPINNED_BEAM_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
@@ -181,7 +181,7 @@ describe('vfx-ltk projectile beams (beamSplit)', () => {
     // The flight keeps the projectile's own seed (its system's name is part of it: runtime seedOf); the beams take one
     // derived from it, never another row's.
     const flight = split.find(r => r.draws.includes('Trail') && r !== split.at(-1))!, beams = split.find(r => r.draws.includes('BeamA'))!;
-    expect(flight.seed).toBe((await seedsAfter('mixed')).find(r => r.draws.includes('Trail') && r.seed !== whole.at(-1)!.seed)!.seed);
+    expect(flight.seed).toBe(hashSeed('mixed|caster|target|attack||-#0')); // its own key, no tick in this runtime
     expect(beams.seed).toBe(beamSeed(flight.seed));
     expect(beams.seed).not.toBe(whole.at(-1)!.seed);
   });
