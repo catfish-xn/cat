@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, MADDIE_SHOT_MIN_TICKS, MADDIE_SHOT_TICKS_PER_HEX } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, MADDIE_HIT_SCALE, MADDIE_SHOT_MIN_TICKS, MADDIE_SHOT_TICKS_PER_HEX } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { flightCells, flightTicksFor, hexDistance, withFlight } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { hexDistance as rulesHexDistance } from '../src/simulation/board';
 import { hexCenter } from '../src/rendering3d/picking';
@@ -17,6 +17,12 @@ describe('Maddie\'s shots follow their damage', () => {
   it('one shot per damage packet; attacks plan none', () => {
     const plans = createBatch1VfxEvents(id => definitions[id]).batch([damage(1, 5, 'f1'), damage(2, 9, 'f1'), damage(3, 12, 'f1', 'attack', 'basic-attack')]);
     expect(plans.map(p => p.extra.filter(x => x.skill === 'maddie-shot').map(x => x.targets))).toEqual([[['f1']], [['f1']], []]);
+  });
+  it('her shot\'s hit draws at MADDIE_HIT_SCALE and her shot itself keeps its size', () => {
+    const shot = CUE_EXTRA_SKILLS['maddie-shot']!;
+    expect(shot.find(c => c.system === 'b1b77889')!.scale).toBe(MADDIE_HIT_SCALE);
+    expect(MADDIE_HIT_SCALE).toBeGreaterThan(0); expect(MADDIE_HIT_SCALE).toBeLessThan(1);
+    expect(shot.find(c => c.system === 'f0aa0d95')!.scale).toBeUndefined();
   });
   it('her cast plays nothing (no fallback to the old placeholder cast effect)', () => {
     const cast = { type: 'cast', sourceId: 'md', eventSeq: 1, tick: 1, actionSeq: 1, completed: true, actualManaSpent: 60, refundedMana: 0,
