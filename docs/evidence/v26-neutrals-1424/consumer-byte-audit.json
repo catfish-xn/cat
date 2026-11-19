@@ -2459,9 +2459,17 @@
     "tests/ranged-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 26315,
+      "currentBytes": 26925,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dfbcf197b925afbddceee6fd7ce4cab01fe733b6e76e82cfba7f8441aff9890c",
+      "currentSha256": "10df1ebd0238b3d50286951b4130f82e67cd123cab992bd55af216ee5409dba3",
+      "firstDifferentByte": 0
+    },
+    "tests/ranged-attack-windup.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 9971,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "78f85a1087dc23b47d647b04bf71bf54247dde56bbdff77fb10a1693727dcd4b",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
