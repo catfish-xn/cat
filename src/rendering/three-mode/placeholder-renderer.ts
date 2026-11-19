@@ -30,12 +30,14 @@ import {
 } from 'three';
 import {
   ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, hexCenter,
-  type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
+  type ActionOutput, type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
+import { createTimedFormEvents } from './timed-form-events';
+import { createPowderMonkeys } from './powder-monkey';
 import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
@@ -61,18 +63,19 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
-/** The original spans a quad over twice its scale0 (a half-extent; vfx-ltk materials.ts REACH). */
+/** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -347,6 +350,12 @@ interface PieceView {
   hop: number | null;
   /** The world (x, z) the lunge has moved the body by (lungeOffset before it was turned into the body's frame). */
   lungeWorld: { x: number; z: number };
+  /** Held up by another piece (unit-control.ts CarryMotion; presentation only), its holder's id, and the body-local (x, z) it has put on `body`. */
+  readonly carry: CarryMotion;
+  /** As a holder (CARRY_HOLDS pose): its lift, held pose and slam over its own action while it holds someone up. */
+  readonly holdPose: HolderPose;
+  carryHolder: string | null;
+  carryApplied: { x: number; z: number };
   /** Where the drawn body has travelled from its spot (lunges; root motion and jumps on a League model): its bars follow it. */
   follow: OverheadFollow;
   /** The loaded model's manifest id: picks its cast clips that move the bars (overhead-follow.ts CAST_TRAVEL_CLIPS). */
@@ -697,6 +706,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const pieces = new Map<string, PieceView>();
   const ltkEvents = createBatch1VfxEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.starLevel);
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
+  // A timed form (Dr. Mundo's ultimate body) follows its rule events over whatever clip plays (timed-form-events.ts).
+  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -712,6 +723,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     return best;
   }
+  /** The rule tick of the event being played now (the last one between batches), for vfx-ltk's seeds (runtime seedOf). */
+  let ltkTick: number | undefined;
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
@@ -719,10 +732,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
-    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
+  // Powder's monkey on the board between her letting it go and its explosion (powder-monkey.ts); when each piece last cast.
+  const monkeys = createPowderMonkeys(scene, loadLit), castAt = new Map<string, number>();
   // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
   const anvilIdle = ltk ? createAnvilIdleLoop({
     play: (key, id) => ltk.play(key, id, [], 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
@@ -811,6 +826,37 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     applied.x = localX; applied.z = localZ; view.lungeWorld.x = x; view.lungeWorld.z = z;
   };
   function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
+  // A held body moves the same way, on its own applied offset so a lunge and a carry never undo each other.
+  const setCarryOffset = (view: PieceView, x: number, z: number) => {
+    const turn = view.root.rotation.y, cos = Math.cos(turn), sin = Math.sin(turn);
+    const localX = x * cos - z * sin, localZ = x * sin + z * cos, applied = view.carryApplied;
+    if (view.body) { view.body.position.x += localX - applied.x; view.body.position.z += localZ - applied.z; }
+    applied.x = localX; applied.z = localZ;
+  };
+  const gripPoint = new Vector3(), bonePoint = new Vector3(), gripBones = new WeakMap<object, readonly Object3D[]>();
+  /**
+   * Where the holder's grip wants the held body, as a world offset of its feet from the held piece's spot: the highest of
+   * the holder's grip bones (CARRY_HOLDS), raised for a body hung upside down from there (carryRise); the holder's
+   * chest height without the bones.
+   */
+  const gripOffset = (view: PieceView, holder: PieceView): CarryOffset => {
+    const body = holder.body, hold = CARRY_HOLDS[holder.definitionId];
+    let bones = body ? gripBones.get(body) : undefined;
+    if (body && bones === undefined) { bones = (hold?.bones ?? []).map(name => body.getObjectByName(name)).filter((bone): bone is Object3D => !!bone); gripBones.set(body, bones); }
+    if (bones?.length) {
+      gripPoint.set(0, -Infinity, 0);
+      for (const bone of bones) { bone.getWorldPosition(bonePoint); if (bonePoint.y > gripPoint.y) gripPoint.copy(bonePoint); }
+    } else gripPoint.copy(holder.root.position).setY(holder.root.position.y + (holder.starHeight - STAR_GAP) * 0.6);
+    return { x: gripPoint.x - view.root.position.x, z: gripPoint.z - view.root.position.z,
+      y: carryRise(gripPoint.y - view.root.position.y, view.starHeight - STAR_GAP, hold) };
+  };
+  /** A piece is held up by another (presentation only): it rises to the holder's grip and follows it until let go. */
+  const startCarry = (targetId: string, holderId: string) => {
+    const view = pieces.get(targetId), holder = pieces.get(holderId);
+    if (!view?.alive || !holder?.alive || view === holder) return;
+    view.carryHolder = holderId; view.carry.start();
+  };
+  const endCarry = (targetId: string, drop = false) => { pieces.get(targetId)?.carry.release(drop); };
   // Knock-ups lift the body the same way: a change from what was applied, never its fitted y.
   const setLiftOffset = (view: PieceView, y: number) => {
     if (view.body) view.body.position.y += y - view.liftOffset;
@@ -832,8 +878,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
     scene.add(flash.object); flashes.push({ flash, view });
   };
-  const placeFlash = (flash: HitFlash, view: PieceView) => flash.object.position.copy(view.root.position)
-    .setY(view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset);
+  // On the drawn body (hitFlashSpot): its chest or nearest torso bone moves with a clip that raises the body, a lunge or a
+  // carry (a lunged caster's flash was left at her legs, 11-17); a body without one keeps the old mid-height spot.
+  const torsoBones = new WeakMap<object, Object3D | null>();
+  const placeFlash = (flash: HitFlash, view: PieceView) => hitFlashSpot(view.body, view.root.position,
+    view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset, flash.object.position, torsoBones);
   /** Parked stun rings. Control feedback is never counted against the effect cap. */
   const spareHalos: StunHalo[] = [];
   const SPARE_HALOS = 16;
@@ -872,7 +921,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     lighting.detachBody(view);
     const request = Symbol(); attaching.set(view, request);
     const revision = ++view.bodyRevision;
-    cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0);
+    cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; view.starScale = 1; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
@@ -900,7 +949,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (measured) envelopes.set(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
-      cancelLunge(view); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
+      cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
@@ -997,9 +1046,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
-      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null };
+      lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), holdPose: new HolderPose(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
+    view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
+    view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
     return view;
   };
   // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
@@ -1010,7 +1061,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
+    view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0); view.holdPose.stop();
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
+    view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
+    view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
@@ -1051,6 +1105,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // dispose drops everything still queued, loading or playing.
   interface LiveEffect { fx: ParticleEffect; left: number; from?: Vector3; to?: Vector3; travel?: number; elapsed: number; importance: EffectImportance }
   let clock = 0, generation = 0;
+  /** The action a piece's mixer plays: its state's, through batch3's own poses and a holder's hold pose (HolderPose). */
+  const actionOf = (id: string, view: PieceView, output: ActionOutput): ActionOutput => {
+    const mapped = batch3?.animation(id, output) ?? output, clips = CARRY_HOLDS[view.definitionId]?.pose, mixer = view.mixer;
+    const bones = CARRY_HOLDS[view.definitionId]?.bones ?? [];
+    return clips && mixer ? view.holdPose.map(mapped, clock, clips, name => mixer.clipSeconds(name), mixer.lowestSeconds(clips.slam, bones)) : mapped;
+  };
   const queued: { at: number; generation: number; run: () => void }[] = [];
   const live = new Set<LiveEffect>();
   type BurstFx = ReturnType<typeof createReferenceBurst>;
@@ -1127,7 +1187,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); timedForms.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1153,7 +1213,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    // Sized the original's way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
+    // Sized the vfx-ltk way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
     // one held on the caster's weapon or hand bone, which keeps the body's (the vfx-ltk cueSize rule).
     const held = spec.anchor === 'source' && spec.bone !== undefined && WEAPON_BONE.test(spec.bone);
     const world = held ? source.modelScale ?? FX_SCALE : ARENA_UNIT_SCALE;
@@ -1296,7 +1356,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    feel.update(seconds); batch3?.update(seconds); anvilIdle?.update(seconds, anvilPieces(), reducedMotion()); ltk?.update(seconds, camera);
+    feel.update(seconds); batch3?.update(seconds); monkeys.update(seconds, id => { const view = pieces.get(id); return view?.alive && view.body ? view.body : null; }); anvilIdle?.update(seconds, anvilPieces(), reducedMotion()); ltk?.update(seconds, camera);
     for (const item of referenceEffects) { item.fx.update(seconds, camera); if (item.fx.finished) { referenceEffects.delete(item); recycleReference(item.fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -1458,14 +1518,23 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (owner && struck?.alive) ltk?.play(owner.definitionId, event.sourceId, [event.targetId], 'passive', { skill: CRIT_SKILL_HIT.skill(owner.definitionId), critFlash: true });
       }
     }
+    // A form ends with its systems (cue-overrides.ts TIMED_FORM_STOPS).
+    const setForm = (form: { id: string; on: boolean }) => {
+      const view = pieces.get(form.id); view?.mixer?.setTimedForm(form.on);
+      if (!form.on && view) ltk?.stopSystems(form.id, TIMED_FORM_STOPS[view.definitionId] ?? []);
+    };
+    for (const form of timedForms.advance(latest)) setForm(form);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
+      ltkTick = tickOf(event) ?? ltkTick;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
       if (planned.fadeCast) ltk?.fadeAction(planned.fadeCast, 'cast', SOFT_STOP_SECONDS);
       // A held status pose (Singed's shield while his damage reduction lasts) follows the same cast and status events.
       const pose = statusPoses.next(event);
       if (pose) pieces.get(pose.id)?.mixer?.setStatusPose(pose.on);
+      const form = timedForms.next(event);
+      if (form) setForm(form);
       if (currentEffect && !reducedMotion()) for (const fx of planned.extra) if (ltk) playBatch1Visual(ltk, fx);
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
@@ -1480,6 +1549,36 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
+      // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
+      // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
+      if (event.type === 'cast') {
+        castAt.set(event.sourceId, clock);
+        const caster = pieces.get(event.sourceId), hides = caster?.mixer?.castHides('Monkey');
+        if (caster?.definitionId === 'powder' && hides !== undefined && currentEffect && !reducedMotion()) monkeys.prepare(event.sourceId, hides);
+      }
+      if (event.type === 'death') monkeys.drop(event.unitId);
+      if (event.type === 'abilityMarker' && grid) {
+        const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
+        if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {
+          const hides = owner?.mixer?.castHides('Monkey'), cast = castAt.get(event.unitId);
+          const swapIn = hides !== undefined && cast !== undefined ? cast + hides - clock : 0;
+          monkeys.send(event.unitId, cell, swapIn, (event.arrivalTick - event.tick) / 20); // 20 rule ticks a second
+        }
+        if (event.marker === 'powder-monkey-arrived') {
+          // Her explosion faces back the way the monkey came (as it faced her when it played on each enemy hit).
+          const arrived = monkeys.arrive(event.unitId), at = arrived?.at ?? cell;
+          const from = arrived?.from ?? (owner?.alive ? owner.root.position : null);
+          if (currentEffect && !reducedMotion()) ltk?.play('powder', event.unitId, [], 'passive', { skill: 'powder-arrive', board: [at.x, at.y, at.z], ...(from ? { boardFacing: [from.x, from.y, from.z] as const } : {}) });
+        }
+      }
+      // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's
+      // last tick or when either dies). A death also ends every carry it is part of at once, below.
+      if (event.type === 'carryChanged') {
+        if (event.carried) startCarry(event.targetId, event.holderId); else endCarry(event.targetId);
+        const holder = pieces.get(event.holderId);
+        if (holder && CARRY_HOLDS[holder.definitionId]?.pose) { if (event.carried) holder.holdPose.lift(clock); else holder.holdPose.release(clock); }
+      }
+      if (event.type === 'death') for (const [id, view] of pieces) if (id === event.unitId || view.carryHolder === event.unitId) endCarry(id, true);
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
       // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
@@ -1520,12 +1619,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
-        if (current && planned.fresh) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
+        // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
+        // she holds (#737), and should one come it draws no swing.
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
         face(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh && !planned.noCastEffect) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
+        // A holder's cast is its lift: its hold pose runs from here until the rules let go (or no lift comes).
+        const caster = pieces.get(event.sourceId);
+        if (current && caster && CARRY_HOLDS[caster.definitionId]?.pose) caster.holdPose.cast(clock);
         // Vi holds her target up until her slam (rules: VI_SLAM_TICKS = GRAB_3D.viSlamTicks), where its damage and stun land.
         if (current && pieces.get(event.sourceId)?.definitionId === 'vi') { const held = pieces.get(event.targetIds[0]); if (held?.alive) held.control.grab(GRAB_3D.viSlamTicks / 20); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
@@ -1538,7 +1642,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
-    for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(batch3?.animation(id, view.state.output) ?? view.state.output);
+    for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(actionOf(id, view, view.state.output));
   };
   // Hover cards and combat floats: the drawn piece's fitted body bounds projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
@@ -1954,11 +2058,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       portal.apply(id);
       lighting.update(view, view.starHeight - STAR_GAP); // the contact shadow follows the drawn body
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
+      // Held up by another piece: it follows the holder's grip, and drops back at once if either of them dies.
+      let carryLift = 0, carryX = 0, carryZ = 0;
+      if (view.carry.active || view.carryApplied.x || view.carryApplied.z) {
+        const holder = view.carryHolder ? pieces.get(view.carryHolder) : undefined;
+        // Held, or on its way down while its holder slams: it follows the grip (a falling body without a living holder drops straight).
+        const toward = view.carry.active && view.alive && holder?.alive ? gripOffset(view, holder) : null;
+        const carried = view.carry.update(seconds, toward);
+        carryX = carried.x; carryZ = carried.z; carryLift = carried.y;
+        setCarryOffset(view, carryX, carryZ);
+        if (!view.carry.active) view.carryHolder = null;
+      }
       // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
       const height = view.starHeight - STAR_GAP;
       let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
+      lift = Math.max(lift, carryLift);
       releaseControl(view);
-      if (view.leanOffset || view.control.lean) setLean(view, view.control.lean);
+      // A body hung upside down turns over as it rises (about its feet, which carryRise put above the grip).
+      const flip = view.carryHolder && CARRY_HOLDS[pieces.get(view.carryHolder)?.definitionId ?? '']?.upsideDown ? view.carry.progress * Math.PI : 0;
+      if (view.leanOffset || view.control.lean || flip) setLean(view, Math.max(view.control.lean, flip));
       if (view.hop !== null) {
         view.hop += seconds;
         if (view.hop >= DISPLACEMENT_HOP.seconds) view.hop = null;
@@ -1977,7 +2095,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (hold !== undefined) { if (hold - seconds > 0) holds.set(view, hold - seconds); else holds.delete(view); }
         if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
-        if (view.dance !== 'clip') view.mixer.apply(batch3?.animation(id, output) ?? output); // a dance clip runs outside the action state
+        if (view.dance !== 'clip') view.mixer.apply(actionOf(id, view, output)); // a dance clip runs outside the action state
         if (view.body && (seen(view) || output.state !== 'idle' || view.dance))
           updateModelGrounding(view.body, output.state === 'idle' && !view.dance, seconds);
       }
@@ -1988,8 +2106,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // a cast changes nothing.
       const moving = output.state === 'cast' && castMovesBars(view.bodyModelId, output.playback?.clips);
       const travel = view.body ? view.follow.update(seconds, moving ? view.lungeWorld : null, height, moving) : null;
-      const overX = view.root.position.x + (travel?.x ?? 0), overZ = view.root.position.z + (travel?.z ?? 0);
-      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift,
+      const overX = view.root.position.x + (travel?.x ?? 0) + carryX, overZ = view.root.position.z + (travel?.z ?? 0) + carryZ;
+      // Bars over a held body follow it (x/z with the carry, y over its highest point once it hangs: heldBarLift).
+      const over = overheadHeights({ rootY: view.root.position.y, followY: travel?.y ?? 0, starHeight: view.starHeight, lift: heldBarLift(lift, height, flip),
         headHeight: height * CONTROL_3D.headShare, stars: !!view.stars, starSize: STAR_SIZE, starGap: STAR_GAP });
       // The client shows no bar over a benched piece during combat, and the star row must not stand in for it.
       const benchedInCombat = !!fighting && view.onBench;

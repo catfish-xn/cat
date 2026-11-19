@@ -1,7 +1,7 @@
 // v19: ordinary catalogue + 2 crafting inputs + 22 approved custom emblems.
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { beforeAll,describe,it,expect } from 'vitest';
-import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
+import { wearing,enemy,run,packets,LANDING } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -38,11 +38,11 @@ function seatFight(holderItem:string|null,luxItem:string|null,luxStars:1|2){
 
 describe('B4 composed consumers and restore rejection',()=>{
  it('IE+JG:25+35+35=95% chance,one redundant source makes multiplier1.5;135→202',()=>{
-  const r=run(wearing(['infinity-edge','jeweled-gauntlet']));expect(r.p.spellCrit).toMatchObject({chanceBps:9500,multiplierBps:15000,redundantItemBonusBps:1000});expect(packets(r.events)[0].hpDamage).toBe(202);
+  const r=run(wearing(['infinity-edge','jeweled-gauntlet']),1+LANDING);expect(r.p.spellCrit).toMatchObject({chanceBps:9500,multiplierBps:15000,redundantItemBonusBps:1000});expect(packets(r.events)[0].hpDamage).toBe(202);
  });
  it('renaming a programme source leaves Giant Slayer numbers and RNG unchanged',()=>{
   const a=wearing('giant-slayer'),b={...a,itemPrograms:a.itemPrograms!.map(p=>({...p,source:{...p.source,definitionId:'independent-unnamed-program'}}))};
-  const x=run(a),y=run(b);expect(packets(y.events)[0].hpDamage).toBe(156);expect(y.state.rngState).toBe(x.state.rngState);expect(y.state.rngDraws).toBe(x.state.rngDraws);
+  const x=run(a,1+LANDING),y=run(b,1+LANDING);expect(packets(y.events)[0].hpDamage).toBe(156);expect(y.state.rngState).toBe(x.state.rngState);expect(y.state.rngDraws).toBe(x.state.rngDraws);
  });
  it.each(['ionic-spark','evenshroud'])('%s moves into aura before current-tick damage;source death immediately withdraws only aura',id=>{
   const r=run(wearing(id,{attackRange:1,cell:{col:1,row:4}}),1,[enemy('e',1,1,{armor:100,magicResist:100})]);
@@ -86,7 +86,10 @@ describe('B4 composed consumers and restore rejection',()=>{
   s=stepMatch({...s,combat:{...s.combat,units:s.combat.units.map(u=>u.id==='unit-3'?{...u,hp:190,mana:0,cooldownTicks:1000}:u)}}).state;
   const low=s.combat!.units.find(u=>u.id==='unit-3')!;expect(low.hp*2).toBeLessThan(low.maxHp);expect(readCombatStats(low,s.combat!).abilityPower).toBe(115);expect(low.runtime!.nextAttackMagic).toBe(468);
   const attack=(state:typeof s)=>{if(state.phase!=='combat')throw new Error('combat required');return stepMatch({...state,combat:{...state.combat,units:state.combat.units.map(u=>u.id==='unit-3'?{...u,cooldownTicks:0}:u)}});};
-  const result=attack(s);expect(packetViews(result.events).filter(e=>e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.raw)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
+  // Ranged attack landing (window only): step on until Lux's shot lands (attackLanded), at most 20 ticks.
+  const launched=attack(s);let result={...launched,events:[...launched.events]};
+  for(let n=0;n<20&&!result.events.some(e=>e.type==='attackLanded'&&e.attackerId==='unit-3');n++){const next=stepMatch(result.state);result={...next,events:[...result.events,...next.events]};}
+  expect(packetViews(result.events).filter(e=>e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.raw)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
   // The patched HP/mana above is not a replayable save. Match save of a charge is
   // proven on a genuine fight: 1★ Lux samples 360×130%=468, then saves before its next attack.
   const fight=seatFight(null,'hand-of-justice',1);let n=fight.state;const lux=(state:typeof n)=>state.combat!.units.find(u=>u.id===fight.luxId)!;
@@ -96,6 +99,12 @@ describe('B4 composed consumers and restore rejection',()=>{
   while(n.phase==='combat'&&lux(n).runtime!.nextAttackMagic){
    const a=stepMatch(n),b=stepMatch(restored);expect(b).toEqual(a);n=a.state;restored=b.state;
    discharged.push(...packetViews(a.events).filter(e=>e.source.ownerId===fight.luxId&&e.source.sourceKind==='ability').map(e=>e.raw));
+  }
+  // Ranged attack landing (window only): the charged attack's shot lands after it; step on (restored alongside) until it does.
+  for(let landed=false,k=0;!landed&&k<20&&n.phase==='combat';k++){
+   const a=stepMatch(n),b=stepMatch(restored);expect(b).toEqual(a);n=a.state;restored=b.state;
+   discharged.push(...packetViews(a.events).filter(e=>e.source.ownerId===fight.luxId&&e.source.sourceKind==='ability').map(e=>e.raw));
+   landed=a.events.some(e=>e.type==='attackLanded'&&e.attackerId===fight.luxId);
   }
   expect(discharged).toEqual([468]);expect(lux(n).runtime!.nextAttackMagic).toBe(0);
  });

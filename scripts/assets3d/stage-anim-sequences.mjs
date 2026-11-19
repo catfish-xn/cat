@@ -22,17 +22,15 @@ export const DEFAULT_EXCLUDES = new Set([
 ]);
 
 /**
- * Casts whose SpellObject has an empty mAnimationName (the original spell script picks the clips).
- * The graph keys below were checked against gameplay video and the clips' own events:
- * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (gameplay footage); that is
- *   Spell3_In (carries the cast particle) + Spell3_Out (to the graph's own end frame). Spell2_* is the E blink
- *   with forward root motion, which made the model jump forward and snap back.
- * - warwick: TFT13_WarwickSpell is Blood Frenzy: he rears up in place and then claws (gameplay
- *   footage, no displacement). The graph key of howl.anm cracks to BloodFrenzy_Activate, the cast's own name. The clip
- *   we played, TFT13_Warwick_Spell_Dash, sits under the graph key Devour_Dash: the execute leap, not the cast.
- * - mel: TFT13_MissMageSpell dashes, then fires bolts (gameplay footage: the dash trail precedes the
- *   bolts). Spell1_Blast starts from the exact pose Spell_Dash holds, so the two chain as Spell_Dash then
- *   Spell1_Blast. (Spell2 is not used here: it carries a separate warning sound and is left out.)
+ * Casts whose spell data names no clip (a spell script picks them). The graph keys below were chosen against gameplay
+ * video and the clips' own events:
+ * - ezreal: his cast stands still, pulls back and fires; that is Spell3_In (it carries the cast particle) then
+ *   Spell3_Out (to the graph's own end frame). Another group of his clips is a movement, not this cast, so it is not
+ *   played.
+ * - warwick: his cast rears up in place and then claws, no displacement: BloodFrenzy_Activate. The clip we played
+ *   before was the dash-and-bite one, not this cast.
+ * - mel: her cast dashes, then fires bolts. Spell1_Blast starts from the pose Spell_Dash ends in, so the two chain as
+ *   Spell_Dash then Spell1_Blast. (Spell2 is left out: it carries a separate warning sound.)
  * Each list is played as a Sequencer, so the graph's own frame ranges still apply.
  */
 export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
@@ -42,9 +40,9 @@ export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
 });
 
 /**
- * Casts whose spell names a graph key that is not what the original plays. Darius: TFT13_DariusSpell names `Spell`
- * (Atomic Spell1, a short clip), but the original Q_Ring emitters wait longer than that and the 11-08 footage audit shows
- * the blade ring with the swing of the Sequencer 0x5463dad9 (Spell1_IN → Spell1) next to it in the same graph.
+ * Casts whose spell names a graph key whose clip does not match the cast as it shows. Darius: the key his spell names
+ * plays a short clip that ends before his blade ring shows; the 11-08 footage audit matched the ring with the longer
+ * swing under the key listed here (an uncracked hash, so written as one).
  * Values are graph keys (names or 0x hashes).
  */
 export const CAST_GRAPH_KEY_OVERRIDES = Object.freeze({
@@ -245,7 +243,7 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
     return { status: 'skipped', reason: '未解析' };
   }
   // IsMoving ConditionBool (e.g. Dr. Mundo Spell4: [true] run / [false] idle): our units stand still while
-  // casting, so the standing (false) branch is the clip the original plays.
+  // casting, so the standing (false) branch is the clip to play.
   if (node.kind === 'ConditionBool' && isMovingCondition(node) && node.branches?.false) {
     return planGraphAction(node.branches.false, { action, entry, otherUsedClips });
   }
@@ -401,7 +399,7 @@ export function planRotateEntry(node, { entry = {}, otherUsedClips = new Set() }
 }
 
 /**
- * Plans an existing `castVariants.hero` from the original `<Spell>Hero` SpellObject's graph node.
+ * Plans an existing `castVariants.hero` from the `<Spell>Hero` SpellObject's graph node.
  * Returns the next `castVariants` (undefined when empty); a hero variant equal to the default
  * cast sequence is dropped so the default path plays it. Ranged/segmented hero clips stay manual.
  */
@@ -558,9 +556,9 @@ function formatNodeSummary(node) {
 
 /**
  * Graph keys tried, in order, for a champion's cast when its spell data names nothing the graph has.
- * Swain's falls back to Spell2. Singed: TFT13_SingedSpell names "Spell1"; the graph spells it Spell_1 (a section of
- * Spell_3.anm: the canister swung round to the front and held up as a shield, the original's block). Spell2_Sequence
- * starts mid-swing and flips the canister within a few frames, which read as a twitch (user 11-11).
+ * Swain's falls back to Spell2. Singed's graph spells his cast key Spell_1 (the canister swung round to the front and
+ * held up as a shield); the other sequence of his starts mid-swing and flips the canister within a few frames, which
+ * read as a twitch (user 11-11).
  */
 export function castFallbackKeys(id) {
   const keys = ['Spell', 'Spell1', 'SpellCast'];
@@ -577,9 +575,10 @@ export async function stageAnimSequences({
   only = null,
   exclude = null,
   unitMapPath,
+  uncompressedFallbackRoot = '/home/aiapps/workspace/set13-worktrees/boards/assets3d-local/test-server-v7-uncompressed',
 } = {}) {
   if (!assetsRoot || !extractedRoot || !outDir) {
-    throw new Error('usage: --assets <dir> --extracted <dir> --metadata-root <dir> --out-dir <dir> [--only <ids>] [--exclude <id:action,...>]');
+    throw new Error('usage: --assets <dir> --extracted <dir> --metadata-root <dir> --out-dir <dir> [--only <ids>] [--exclude <id:action,...>] [--uncompressed-fallback <dir>]');
   }
   const resolvedAssets = resolve(assetsRoot);
   const resolvedOut = resolve(outDir);
@@ -692,7 +691,6 @@ export async function stageAnimSequences({
     return anmCache.get(full);
   }
 
-  const uncompressedFallbackRoot = '/home/aiapps/workspace/set13-worktrees/boards/assets3d-local/test-server-v7-uncompressed';
   const reportRows = [];
   const modifiedModels = new Map();
 
@@ -1034,7 +1032,7 @@ export async function stageAnimSequences({
       if (Object.keys(nextSegments).length > 0) entry.clipSegments = nextSegments;
     }
 
-    // 1b. Hero-augment cast variant: follow the original `<Spell>Hero` SpellObject's mAnimationName.
+    // 1b. Hero-augment cast variant: follow the `<Spell>Hero` SpellObject's mAnimationName.
     if (entry.castVariants?.hero && !excludeSet.has(`${id}:hero`)) {
       const heroObj = spellObjs.get(`${targetSpellScript}hero`.toLowerCase());
       const heroNode = heroObj?.anim ? await resolveNode(fnv1a(heroObj.anim)) : null;
@@ -1328,6 +1326,8 @@ function parseCliArgs(argv) {
     else if (flag === '--only') options.only = value;
     else if (flag === '--exclude') options.exclude = value;
     else if (flag === '--unit-map') options.unitMapPath = value;
+    // The uncompressed model a compressed deployed one is rebuilt from when clips must be appended (same relative path).
+    else if (flag === '--uncompressed-fallback') options.uncompressedFallbackRoot = value;
     else throw new Error(`invalid-argument:${flag}`);
   }
   return options;

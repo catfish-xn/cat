@@ -123,7 +123,9 @@ it('冰霜触摸: spell chills for 80 ticks; chilled enemy death stuns the neare
   const c = chilled.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.application.modifier?.stat === 'attackSpeed')!;
   expect(c.application.modifier!.value).toEqual({ kind: 'constant', amount: -2000 }); expect(c.expiresAtTick).toBe(81 + CAST_WINDUP_TICKS.tristana);
   expect(readCombatStats(chilled, r.state).attackIntervalTicks).toBeGreaterThan(readCombatStats(unit(initial(), 'e0'), initial()).attackIntervalTicks);
-  const killed = stepCombat(attack(patch(r.state, 'e0', { hp: 1, armor: 0 })));
+  // Ranged attack landing (window only): Tristana's attack kills e0 when its shot lands; step on until it does.
+  let killed = stepCombat(attack(patch(r.state, 'e0', { hp: 1, armor: 0 })));
+  for (let n = 0; n < 20 && !killed.events.some(e => e.type === 'attackLanded' && e.attackerId === 'p0'); n++) killed = stepCombat(killed.state);
   const stun = unit(killed.state, 'e1').mechanismState!.statuses.find(g => g.kind === 'stun')!.contributions[0];
   expect(stun.expiresAtTick! - stun.appliedAtTick).toBe(20); validate(killed.state);
 });

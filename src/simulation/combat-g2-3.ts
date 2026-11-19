@@ -1,5 +1,5 @@
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -144,14 +144,19 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
         later(ctx,u,x,'g23Physical',1,Math.floor(physical('ADPercent')*hero.chargeBps/10000),seq,0,1);t=pounce;}
       const main=hero?.mainBps??10000;
       const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=Math.floor(physical('ADPercent')*main/10000);
-      applyStatus(t,origin(u),'stun',0,n,ctx.tick,ctx.events);
-      // Display only: Renni lifts her target for the stun (put down with the stun's last pulse, executeG23Task).
-      ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:t.id,carried:true});
+      // Wind-up batch 4: she lifts the target (stun start) RENNI_LIFT_TICKS after the cast (g23RenniLift); the stun's per-tick
+      // damage and her self-heal move with it, and the closing slam on the target and its neighbours (taken now, wherever
+      // they are then) lands RENNI_SLAM_AFTER_STUN_TICKS after the stun ends. Amounts are taken now.
+      const w=RENNI_LIFT_TICKS;
+      // User-approved (2026-11-17): from her cast until the slam lands she holds the target and does not attack (channel: no
+      // move, attack or cast; a control on her cancels it), as Nunu and Sevika do. Nothing else changes.
+      applyStatus(u,origin(u),'channel',0,w+n+RENNI_SLAM_AFTER_STUN_TICKS,ctx.tick,ctx.events,true,'',seq);
+      later(ctx,u,t,'g23RenniLift',w,n,seq,0,1);
       for(let i=0;i<n;i++){
-        later(ctx,u,u,'g23Heal',i+1,split(healing,n,i),seq,i,n);
-        later(ctx,u,t,'g23Physical',i+1,split(damage,n,i),seq,i,n);
+        later(ctx,u,u,'g23Heal',w+i+1,split(healing,n,i),seq,i,n);
+        later(ctx,u,t,'g23Physical',w+i+1,split(damage,n,i),seq,i,n);
       }
-      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',n,Math.floor(physical('FinalADPercent')*main/10000),seq,n,n+1);break;
+      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',w+n+RENNI_SLAM_AFTER_STUN_TICKS,Math.floor(physical('FinalADPercent')*main/10000),seq,n,n+1);break;
     }
     case 'drmundo':{
       const total=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('PercentHealthHeal')}),initial=Math.floor(total*v('PercentofHealImmediately')),seconds=Math.round(v('Duration'));
@@ -254,6 +259,12 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
    leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+  }
+  // Renni's lift: the stun starts now on her target, if it still lives (display: she lifts it, carryChanged).
+  if(task.kind==='g23RenniLift'){
+   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
+   applyStatus(target,origin(u),'stun',0,task.amount,ctx.tick,ctx.events);
+   ctx.events.push({type:'carryChanged',tick:ctx.tick,holderId:u.id,targetId:target.id,carried:true});return;
   }
   // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
   if(task.kind==='g23Stab'){

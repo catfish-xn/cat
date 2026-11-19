@@ -58,6 +58,11 @@ export interface TimelineCue {
    */
   readonly scale?: number;
   /**
+   * It plays as long as its system does on its own (runtime.ts ownSeconds, read from the asset) and is not cut short:
+   * `duration` is only what it keeps where the asset gives no end. Never with `stopAfter`.
+   */
+  readonly ownLife?: boolean;
+  /**
    * A target cue the cast can do without: with no living recipient it is left out instead of
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
    */
@@ -121,6 +126,8 @@ export interface TimelineCue {
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** A board point's spawn faces this point, as a hit faces from its target toward the caster (LtkPlayOptions.boardFacing). */
+  readonly facing?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
 }

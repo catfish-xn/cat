@@ -11,6 +11,7 @@ import { anomalyCandidates } from '../src/simulation/content/anomalies';
 import { grantMechanicItem, grantMechanicConsumable, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { r2AnomalyAllowed } from '../src/simulation/augment-pool-batch5-r2-anomaly';
 import { readCombatStrategyInputs } from '../src/simulation/combat-input';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from '../src/simulation/battle-equipment';
@@ -115,8 +116,20 @@ it('B5-81 filters actual rerolls, grants the copy immediately and rejects replay
  expect(mine().items.find(i=>i.id===itemId)).toEqual({id:itemId,definitionId:PORTABLE_ANOMALY_PREFIX+chosen,location:{kind:'inventory'}});
  const beforeRetry=mine();expect(room.handle('s4',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:chosen}).ok).toBe(false);expect(mine()).toBe(beforeRetry);
  const failed=room.handle('s4',{type:'equip',itemId,unitId:original.id,slot:0});expect(failed).toMatchObject({ok:false,reason:'item-restricted'});expect(mine()).toBe(beforeRetry);
- const target=mine().preparation.units.find(u=>u.team==='player'&&u.definitionId!==original.definitionId&&u.location.kind==='board')!;expect(target).toBeDefined();copyUnit=target.id;
- const empty=[0,1,2].find(slot=>!mine().items.some(i=>i.location.kind==='unit'&&i.location.unitId===copyUnit&&i.location.slot===slot))!;expect(empty).toBeDefined();
+ // The intent here is copying onto a legal target: a board unit other than the original's champion that holds no
+ // slot-exclusive item (Thief's Gloves) and has an empty slot. Which units hold such items depends on the route's loot (since
+ // cast wind-up batch 4 one of them here does), so any such holder is checked to refuse the copy with exclusive-slots instead.
+ const exclusive=(unitId:string)=>mine().items.some(i=>i.location.kind==='unit'&&i.location.unitId===unitId&&ITEM_DEFINITIONS[i.definitionId]?.slotCost===3);
+ const freeSlot=(unitId:string)=>[0,1,2].find(slot=>!mine().items.some(i=>i.location.kind==='unit'&&i.location.unitId===unitId&&i.location.slot===slot));
+ const candidates=mine().preparation.units.filter(u=>u.team==='player'&&u.definitionId!==original.definitionId&&u.location.kind==='board');
+ for(const holder of candidates.filter(u=>exclusive(u.id))){
+  const slot=freeSlot(holder.id);if(slot===undefined)continue;
+  const kept=mine();expect(room.handle('s4',{type:'equip',itemId,unitId:holder.id,slot})).toMatchObject({ok:false,reason:'exclusive-slots'});expect(mine()).toBe(kept);
+ }
+ const target=candidates.find(u=>!exclusive(u.id)&&freeSlot(u.id)!==undefined)!;expect(target).toBeDefined();copyUnit=target.id;
+ // Premise, explicit: the copy target holds no slot-exclusive item and has an empty slot.
+ expect(exclusive(copyUnit)).toBe(false);
+ const empty=freeSlot(copyUnit)!;expect(empty).toBeDefined();
  expect(room.handle('s4',{type:'equip',itemId,unitId:copyUnit,slot:empty})).toMatchObject({ok:true});
  const projected=buildStrategySnapshot(mine()).units.find(u=>u.unitId===copyUnit)!;
  expect(projected.sources.filter(s=>s.source.sourceKind==='anomaly'&&s.source.sourceDefinitionId===chosen).map(s=>s.effect)).toEqual([

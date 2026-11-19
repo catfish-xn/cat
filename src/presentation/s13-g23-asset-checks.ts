@@ -1,6 +1,6 @@
 /*
  * G2-3 icon checks, imported only by tests/presentation/g2-3-display.test.ts so the hashes stay out of the runtime bundle
- * (s13-g23-manifest.ts G23_ICONS is the runtime list; the test asserts both lists match).
+ * (s13-g23-manifest.ts G23_ICONS and s13-g23-items.ts G23_ITEM_ICONS are the runtime lists; the test asserts they match these rows).
  * Asset checks: `bytes` and `sha256` are the length and SHA-256 of the PNG as bundled under public/<path>, and equal the
  * original file at `source`. CommunityDragon sits behind Cloudflare Polish, which may answer a plain request with a
  * recompressed copy (smaller, different hash; the `cf-polished: orig_size=` header gives the original length), so

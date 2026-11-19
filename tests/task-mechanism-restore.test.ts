@@ -74,7 +74,9 @@ it.each([
   // P0 retention moved the old kills at 255/225. v26 melee pathing moves the
   // contribution case to tick 410; public position vectors retain curse and +0/+15 checks.
   { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
+  // Ranged attack landing (#739): Morgana (6,7) no longer gives the contribution kill; Morgana (5,7) keeps the same
+  // Sion kill of enemy-r4-2 at tick 410 (same seed and Cassiopeia/Vladimir cells).
+  { contribution: true, seed: 5, cells: [{ col: 5, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.
@@ -157,7 +159,8 @@ function morganaCurseSave(twoOwners = false): MatchState {
   state = accepted(startMatchCombat(state));
   expect(state.combat!.units.some(u => u.definitionId === 'g23-sion')).toBe(false);
   while (state.phase === 'combat') {
-    if (state.combat!.units.some(u => u.tasks?.some(t => t.kind === 'g22Curse'))) return state;
+    // Ranged attack landing (window only): save on the first curse tick with no attack shot in flight.
+    if (state.combat!.units.some(u => u.tasks?.some(t => t.kind === 'g22Curse')) && !state.combat!.units.some(u => u.tasks?.some(t => t.kind === 'attackLanding'))) return state;
     state = stepMatch(state).state;
   }
   throw new Error('Public Morgana must schedule her curse');
@@ -180,7 +183,8 @@ function expectRejectedAtAllEntrances(bad: MatchState, reason: string) {
 it('rejects altered or invented target reave facts beside the legal seed 3151248 curse', () => {
   const state = morganaCurseSave();
   // v22 mana rules bring Morgana's first curse forward from 89 to 70; v26 melee pathing to 60.
-  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(60);
+  // Ranged attack landing (window only): the save moves one tick on, past Morgana's shot in flight on tick 60.
+  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(61);
   const target = state.combat!.units.find(u => u.id === 'enemy-r4-1')!;
   expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 260 });
   const owner = state.combat!.units.find(u => u.definitionId === 'morgana')!;

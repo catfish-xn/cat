@@ -327,6 +327,13 @@ describe('initial material and action binding', () => {
     expect(built.clipRangeSkips).toEqual([
       { name: 'unit_attack1', reason: 'non-cast-action', startFrame: null, endFrame: 9 },
     ]);
+    // The basic attack clip stays whole with or without an attackSequence: the original plays its first segment and then
+    // its End sequence from the same anm (11-18: ranging it cut off Sevika's and Vander's punch).
+    const sequenced = resolveUnitClipRanges(animation, clips, [], {
+      castSequence: { main: 'unit_spell1', out: 'unit_spell1_out' }, attackSequence: { in: 'unit_attack1' },
+    });
+    expect(sequenced.clipRanges).not.toHaveProperty('unit_attack1');
+    expect(sequenced.clipRangeSkips.map((skip: { name: string }) => skip.name)).toEqual(['unit_attack1']);
 
     const local = fileURLToPath(new URL('../assets3d-local/', import.meta.url));
     await mkdir(local, { recursive: true });

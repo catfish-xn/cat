@@ -203,12 +203,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415
+      205
     ],
-    "deathTick": 500,
-    "lastLivingPulse": 4
+    "deathTick": 366,
+    "lastLivingPulse": 2
   },
   {
     "seed": 639,
@@ -643,13 +641,12 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415,
-      532
+      212,
+      388,
+      505
     ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "deathTick": 565,
+    "lastLivingPulse": 4
   },
   {
     "seed": 4534,
@@ -1050,9 +1047,14 @@
   {
     "seed": 8284,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 216,
+    "firstPulse": 316,
+    "bracerTicks": [
+      270,
+      301,
+      412,
+      535
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1080,10 +1082,10 @@
     "grantTick": 194,
     "firstPulse": 294,
     "bracerTicks": [
-      235,
-      364,
-      481,
-      598
+      237,
+      366,
+      483,
+      606
     ],
     "deathTick": null,
     "lastLivingPulse": 0
@@ -1328,13 +1330,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415,
-      530
+      205
     ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "deathTick": 366,
+    "lastLivingPulse": 2
   },
   {
     "seed": 10638,
@@ -1369,10 +1368,12 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      201
+      203,
+      394,
+      476
     ],
-    "deathTick": 362,
-    "lastLivingPulse": 2
+    "deathTick": 534,
+    "lastLivingPulse": 4
   },
   {
     "seed": 10653,
@@ -1789,10 +1790,10 @@
     "grantTick": 97,
     "firstPulse": 197,
     "bracerTicks": [
-      222,
-      286,
-      404,
-      521
+      224,
+      288,
+      405,
+      528
     ],
     "deathTick": null,
     "lastLivingPulse": 0
@@ -1866,7 +1867,7 @@
     "grantTick": null,
     "firstPulse": null,
     "bracerTicks": [
-      264
+      266
     ],
     "deathTick": null,
     "lastLivingPulse": 0
@@ -1904,12 +1905,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415
+      205
     ],
-    "deathTick": 500,
-    "lastLivingPulse": 4
+    "deathTick": 366,
+    "lastLivingPulse": 2
   },
   {
     "seed": 16290,
@@ -1926,10 +1925,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      202,
-      284,
-      393,
-      502
+      204,
+      286,
+      395,
+      510
     ],
     "deathTick": null,
     "lastLivingPulse": 0
@@ -2444,13 +2443,12 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415,
-      532
+      234,
+      293,
+      410
     ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "deathTick": 482,
+    "lastLivingPulse": 3
   },
   {
     "seed": 22425,
@@ -2863,13 +2861,12 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      210,
-      298,
-      415,
-      532
+      212,
+      394,
+      511
     ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "deathTick": 565,
+    "lastLivingPulse": 4
   },
   {
     "seed": 24004,
@@ -3147,10 +3144,13 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      197
+      199,
+      287,
+      409,
+      532
     ],
-    "deathTick": 366,
-    "lastLivingPulse": 2
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 28522,
@@ -3209,14 +3209,9 @@
   {
     "seed": 28608,
     "accepted": false,
-    "grantTick": 226,
-    "firstPulse": 326,
-    "bracerTicks": [
-      264,
-      390,
-      410,
-      551
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -3519,481 +3514,14 @@
   },
   {
     "seed": 30095,
-    "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      210,
-      298,
-      415
-    ],
-    "deathTick": 500,
-    "lastLivingPulse": 4
-  },
-  {
-    "seed": 30101,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30102,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30109,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30148,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30149,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30156,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30157,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30164,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30172,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30179,
-    "reason": "Error: Public B8 equipment fixture: wrong-phase"
-  },
-  {
-    "seed": 30180,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30195,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30196,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30203,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 30204,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31493,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31494,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31501,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31502,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31509,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31510,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31517,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31525,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31532,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31533,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31540,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31541,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31548,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31549,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31619,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31626,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31627,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31633,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31634,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31641,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31642,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31649,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31657,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31658,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31680,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31681,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31688,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31689,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31696,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31697,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31704,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31705,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31712,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31719,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31720,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31727,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
-  },
-  {
-    "seed": 31728,
     "accepted": true,
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      197,
-      396
+      212,
+      388
     ],
-    "deathTick": 474,
+    "deathTick": 462,
     "lastLivingPulse": 3
   }
 ]

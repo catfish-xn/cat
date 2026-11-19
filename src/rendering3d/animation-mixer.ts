@@ -1,7 +1,7 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
 import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility } from './contracts';
-import { SubmeshSwitch } from './submesh-visibility';
+import { SUBMESH_EVENT_FPS, SubmeshSwitch, type TIMED_FORMS } from './submesh-visibility';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
 /**
@@ -124,10 +124,10 @@ export class UnitAnimationMixer {
   private submeshes?: SubmeshSwitch;
   /** Seconds the active play-once clip has held its last frame: its events keep their frame times past the clip's end. */
   private heldSeconds = 0;
-  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility } = {}) {
+  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string] } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
-    this.submeshes = SubmeshSwitch.create(root, metadata.submeshVisibility);
+    this.submeshes = SubmeshSwitch.create(root, metadata.submeshVisibility, metadata.timedForm);
     this.submeshes?.apply(undefined, 0);
   }
   /** The playing clip's submeshes at its current time; a parallel stage's split clips count as their source clip. */
@@ -135,6 +135,53 @@ export class UnitAnimationMixer {
     if (!this.submeshes) return;
     const action = this.active;
     this.submeshes.apply(action?.getClip().name.replace(/#.*$/, ''), (action?.time ?? 0) + this.heldSeconds);
+  }
+  /** A clip's own length in seconds, undefined when the model has no usable clip of that name. */
+  clipSeconds(name: string): number | undefined {
+    const clip = this.clips.get(name);
+    return clip && Number.isFinite(clip.duration) && clip.duration > 0 ? clip.duration : undefined;
+  }
+  /**
+   * When in a clip the highest of these bones is lowest (seconds, sampled at 30 per second on a copy of the model, so the
+   * live pose is untouched): where a downward swing strikes (a holder's slam, CARRY_HOLDS). Undefined without the clip
+   * or the bones. Cached per clip and bones.
+   */
+  lowestSeconds(clipName: string, boneNames: readonly string[]): number | undefined {
+    const key = `${clipName}\n${boneNames.join(',')}`;
+    if (this.lows.has(key)) return this.lows.get(key);
+    const clip = this.clips.get(clipName);
+    let at: number | undefined;
+    if (clip && Number.isFinite(clip.duration) && clip.duration > 0) try {
+      const copy = this.root.clone(true), mixer = new AnimationMixer(copy);
+      const bones = boneNames.map(name => copy.getObjectByName(name)).filter((bone): bone is Object3D => !!bone);
+      if (bones.length) {
+        mixer.clipAction(clip).play();
+        let low = Infinity;
+        for (let t = 0; t <= clip.duration + 1e-6; t += 1 / 30) {
+          mixer.setTime(t); copy.updateMatrixWorld(true);
+          let high = -Infinity; for (const bone of bones) high = Math.max(high, bone.matrixWorld.elements[13]!);
+          if (high < low - 1e-6) { low = high; at = t; }
+        }
+      }
+      mixer.stopAllAction(); mixer.uncacheRoot(copy);
+    } catch { at = undefined; } // a model that cannot be copied or sampled: no strike, the slam plays at 1x
+    this.lows.set(key, at);
+    return at;
+  }
+  private readonly lows = new Map<string, number | undefined>();
+  /**
+   * Seconds into its cast clip at which that clip hides submesh `name` after showing it (manifest submesh visibility; the
+   * frame the clip's own switch hides it, Powder's monkey leaving her hand), or undefined when it does not.
+   */
+  castHides(name: string): number | undefined {
+    const clip = typeof this.names.cast === 'string' ? this.names.cast : undefined;
+    const events = clip ? this.metadata.submeshVisibility?.events?.[clip.toLowerCase()] ?? this.metadata.submeshVisibility?.events?.[clip] : undefined;
+    let shown = false;
+    for (const event of [...(events ?? [])].sort((a, b) => a.frame - b.frame)) {
+      if (event.show.includes(name)) shown = true;
+      else if (shown && event.hide.includes(name)) return event.frame / SUBMESH_EVENT_FPS;
+    }
+    return undefined;
   }
   setForm(form?: 'front' | 'back'): void {
     if (this.form !== form) {
@@ -285,6 +332,12 @@ export class UnitAnimationMixer {
       this.pose = { on, fraction: 0, parts };
     }
     this.pose.on = on;
+  }
+  /** Turn the model's timed form (TIMED_FORMS) on or off; it shows over every clip until turned off. */
+  setTimedForm(on: boolean): void {
+    if (!this.submeshes) return;
+    this.submeshes.setForm(on);
+    this.switchSubmeshes();
   }
   /** The status pose's share of its bones right now (0 when there is none). */
   get statusPoseFraction(): number { return this.pose?.fraction ?? 0; }

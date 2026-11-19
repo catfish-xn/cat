@@ -86,8 +86,12 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const nunu = new Map<string, { ended: number; hit: Set<string> }>();
   /** Dr. Mundo since his last cast: the enemy his pulses hit, and the tick his heal ended (-1 before). */
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
-  /** Renni: her running cast's stun, until its final slam lands: the units stunned on her cast's tick, and which one she holds. */
-  const grabs = new Map<string, { candidates: readonly string[]; held: string | null }>();
+  /** Renni: the enemy she lifted, until her final slam lands, and the tick she set it down (-1 while held). */
+  const grabs = new Map<string, { held: string; down: number }>();
+  // Nocturne's last empowered swing: its tick and the enemies his strike already played on (its target, then each one bled).
+  const strikes = new Map<string, { tick: number; struck: Set<string> }>();
+  /** Smeech since his last cast: stabs drawn (his swing turns with each) and the enemy his last stab hit (a new one is a leap). */
+  const smeech = new Map<string, { stabs: number; target: string | undefined }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -95,7 +99,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -138,31 +142,28 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             shots.set(event.sourceId, { count: seen.count + 1, tick: event.tick });
           }
         }
-        // Renni (combat-g2-3.ts 'renni'): her cast stuns one enemy and mauls it every tick of the stun; on the stun's last
-        // tick the final slam strikes that enemy and every enemy next to it. Her cast event names no targets and a stun event
-        // names no source, so the grab is the stun applied on her cast's tick; should another stun land on that tick too,
-        // the held one is the first of them her ability-direct packets strike. The slam is the tick those packets strike the
-        // held enemy twice (its last maul and the slam): every enemy they strike that tick takes FinalSlam_Tar.
-        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') {
-          const candidates = [...new Set(events.filter(e => e.type === 'statusChanged' && e.tick === event.tick && e.kind === 'stun'
-            && e.reason === 'applied' && e.targetId !== event.sourceId).map(e => (e as { targetId: string }).targetId))];
-          const held = candidates.length === 1 ? candidates[0]! : null;
-          grabs.set(event.sourceId, { candidates, held });
-          if (held !== null) plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held], action: 'passive', skill: 'renni-grab' });
+        // Renni (combat-g2-3.ts 'renni'): RENNI_LIFT_TICKS after her cast she lifts one enemy (carryChanged true) and holds it
+        // stunned, mauling it every tick; she sets it down on the stun's last tick, or at once if either of them dies
+        // (carryChanged false). RENNI_SLAM_AFTER_STUN_TICKS later the final slam strikes the enemies taken on her cast:
+        // the first tick after the set-down's her ability-direct packets strike, every enemy struck that tick takes
+        // FinalSlam_Tar (the held one first). A new cast drops whatever the last one left.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'renni') grabs.delete(event.sourceId);
+        if (event.type === 'carryChanged' && definition(event.holderId) === 'renni') {
+          if (event.carried) {
+            grabs.set(event.holderId, { held: event.targetId, down: -1 });
+            plan.extra.push({ champion: 'renni', sourceId: event.holderId, targets: [event.targetId], action: 'passive', skill: 'renni-grab' });
+          } else {
+            const grab = grabs.get(event.holderId);
+            if (grab) grab.down = event.tick;
+          }
         }
         const grab = event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'renni' ? grabs.get(event.sourceId) : undefined;
-        if (grab && event.type === 'packetDamage') {
-          if (grab.held === null && grab.candidates.includes(event.targetId)) {
-            grab.held = event.targetId;
-            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'renni-grab' });
-          }
-          const held = grab.held;
-          const struck = events.filter(e => e.type === 'packetDamage' && e.tick === event.tick && e.sourceId === event.sourceId && isAbilityDirect(e)) as Extract<DisplayCombatEvent, { type: 'packetDamage' }>[];
-          if (held !== null && struck.filter(e => e.targetId === held).length >= 2) {
-            grabs.delete(event.sourceId);
-            plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: [held, ...new Set(struck.map(e => e.targetId).filter(id => id !== held))],
-              action: 'passive', skill: 'renni-slam', snapshotTargets: true });
-          }
+        if (grab && grab.down >= 0 && event.type === 'packetDamage' && event.tick > grab.down) {
+          grabs.delete(event.sourceId);
+          const struck = new Set((events.filter(e => e.type === 'packetDamage' && e.tick === event.tick && e.sourceId === event.sourceId && isAbilityDirect(e)) as
+            Extract<DisplayCombatEvent, { type: 'packetDamage' }>[]).map(e => e.targetId));
+          plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: struck.has(grab.held) ? [grab.held, ...[...struck].filter(id => id !== grab.held)] : [...struck],
+            action: 'passive', skill: 'renni-slam', snapshotTargets: true });
         }
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
         // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
@@ -182,6 +183,21 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Smeech: his cast names no target, so each stab's damage draws his stab's slash and its hit on the enemy stabbed; a
+        // stab on a new enemy (his cast's first, or after a leap) also draws the leap's trail to it.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'smeech') smeech.set(event.sourceId, { stabs: 0, target: undefined });
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'smeech') {
+          const seen = smeech.get(event.sourceId) ?? { stabs: 0, target: undefined };
+          if (seen.target !== event.targetId) plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-leap' });
+          plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-stab' });
+          smeech.set(event.sourceId, { stabs: seen.stabs + 1, target: event.targetId });
+        }
+        // Maddie: one shot per damage packet of her volley, to the enemy it hit.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
+          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
+        // Maddie: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather
+        // than falling back to the old placeholder cast effect.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'maddie') plan.noCastEffect = true;
         // Trundle's cast list holds only his bite's hit, which now comes with the bite's damage: his cast itself plays nothing.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'trundle') plan.noCastEffect = true;
         // Trundle, Zyra: their hits play when the skill's damage lands (cast-windup.ts), once per tick, on every enemy hit
@@ -275,6 +291,15 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
         if (!tracked) return plan;
+        // Nocturne's strike (P_tar) plays on every enemy his empowered swing bleeds: its own target with the swing's hit, each
+        // other one when its first bleed tick lands. The rules name no bleed targets at the swing (Fable 11-18, C71 option A).
+        if (event.type === 'packetDamage' && event.delivery === 'ability-periodic' && definition(event.sourceId) === 'nocturne') {
+          const strike = strikes.get(event.sourceId);
+          if (strike && event.tick > strike.tick && !strike.struck.has(event.targetId)) {
+            strike.struck.add(event.targetId);
+            plan.extra.push({ champion: 'nocturne', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nocturne-tar' });
+          }
+        }
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
           state.cast = true;
@@ -289,6 +314,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             || champion === 'lux' && state.luxAttack || champion === 'nocturne' && event.tick < state.nocturneUntil
             || champion === 'twitch' && state.twitchShots > 0) plan.variant = 'empowered';
           if (champion === 'lux') state.luxAttack = false;
+          if (champion === 'nocturne' && plan.variant === 'empowered') strikes.set(event.attackerId, { tick: event.tick, struck: new Set([event.targetId]) });
           if (champion === 'twitch' && state.twitchShots > 0) {
             state.twitchShots--;
             // The attack event retains the pre-replacement target; packets name the actual pierced enemies.

@@ -13,6 +13,8 @@
 // --ally2 X / --ally2star N / --ally2-cell R,C add a second unit of the caster's team; --items me=a+b,ally=c puts items on the
 // caster's side (checked ids; items not advised for acceptance rows are a warning, item-advice.cjs) and the line
 // prints them.
+// --as-scale X (real only, 0.2–1): the caster's attack speed times X for this recording; the line is marked 非验收片 (internal
+// evidence only, never an acceptance clip) and its frames carry a corner tag.
 // --ally-cell / --foe-cell / --foe2-cell R,C and --foe2 X / --foe2star N (real only) place those units (on the board, one per
 // cell; --foe2* need --nfoes 2+). With --ally the line prints "ally line D": how near (hex widths, cell centres) the ally came
 // to the caster->first target line in the window ("clear": never between them); under 0.5 is a WARN.
@@ -57,7 +59,7 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell', 'ally2', 'ally2star', 'ally2-cell', 'items'];
+  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell', 'ally2', 'ally2star', 'ally2-cell', 'items', 'as-scale'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
@@ -78,6 +80,7 @@ for (const line of lines) {
     ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell', 'ally2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
     // --items me=a+b,ally=c: known item ids on the caster's side only, at most 3 per unit (real-combat.ts parseItems).
     ...(o('items') !== undefined && 'why' in rc.parseItems(o('items')) ? [rc.parseItems(o('items')).why] : []),
+    ...(o('as-scale') !== undefined && 'why' in rc.parseAsScale(o('as-scale')) ? [rc.parseAsScale(o('as-scale')).why] : []),
     ...(o('foe-cell') !== undefined && o('foe-offset') !== undefined ? ['--foe-cell and --foe-offset: give one'] : []),
     // Rule (11-15): a real recording names the systems its gate judges (--systems), so a row whose effects never start fails.
     ...(o('systems') === undefined ? ['--systems is required for --real (the systems this row is about; none for a row that is about no system)'] : []),
@@ -94,13 +97,14 @@ for (const line of lines) {
     ...(o('foe2-cell') !== undefined ? { foe2Cell: rc.parseCell(o('foe2-cell')) } : {}),
     ...(o('ally2') !== undefined ? { ally2: o('ally2') } : {}), ...(o('ally2star') !== undefined ? { ally2star: Number(o('ally2star')) } : {}),
     ...(o('ally2-cell') !== undefined ? { ally2Cell: rc.parseCell(o('ally2-cell')) } : {}),
-    ...(o('items') !== undefined ? { items: rc.parseItems(o('items')).items } : {}) };
+    ...(o('items') !== undefined ? { items: rc.parseItems(o('items')).items } : {}),
+    ...(o('as-scale') !== undefined && Number(o('as-scale')) !== 1 ? { asScale: Number(o('as-scale')) } : {}) };
   const events = [], alive = [], cells = [];
   let run;
   try {
     run = rc.runRealCombat(rc.realUnits(setup), rc.afterTicksFor(ms, start), (state, shown) => {
       events.push(shown); alive.push(Object.fromEntries(state.units.map(u => [u.id, !!u.alive]))); cells.push(rc.cellsOf(state));
-    }, start.castNumber, anchor, rc.realItems(setup));
+    }, start.castNumber, anchor, rc.realItems(setup), setup.asScale ?? 1);
   } catch (e) { results.push({ name, unit, mode: 'real', ok: false, why: [String(e.message ?? e)] }); continue; }
   if (run.castIndex < 0) { results.push({ name, unit, mode: 'real', ok: false, why: [anchor.kind === 'cast' ? `never cast${start.castNumber !== 1 ? ` ${start.castNumber} times` : ''} in ${run.ticks} ticks` : `no ${rc.anchorName(anchor)}${start.castNumber !== 1 ? ` #${start.castNumber}` : ''} in ${run.ticks} ticks`] }); continue; }
   const a = rc.auditWindow(events, alive, run.castIndex, ms, rc.leadTicksFor(run.castIndex, start), anchor);
@@ -137,6 +141,8 @@ for (const line of lines) {
   const advice = itemAdvice(setup.items);
   if (advice.warn.length) warn.push(`items not advised for acceptance rows (item-advice.cjs): ${advice.warn.join(', ')}`);
   if (advice.tempo.length) warn.push(`items change attack/mana timing (caption says so): ${advice.tempo.join(', ')}`);
+  // --as-scale (Fable 11-18): a slowed caster is recording-only evidence, never an acceptance clip.
+  if (setup.asScale !== undefined) warn.push(`非验收片：${rc.asScaleLabel(setup.asScale)}（--as-scale），只作内部补证，不能上验收页`);
   // With an asked-for window the anchor cast may fall after it (fine when the attacks are the point): say so.
   if (custom && a.castTick > a.to) warn.push(`anchor cast (#${start.castNumber}) at tick ${a.castTick} is after the window (ticks ${a.from}-${a.to})`);
   results.push({ name, unit, mode: 'real', ok: !why.length, why, warn, anchorLabel: anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'attack-hit' : `event:${anchor.type}`, castTick: a.castTick, window: [a.from, a.to], targets: a.targets, myCasts: a.myCasts, ...modeTags, ...(setup.items ? { items: rc.itemsLabel(setup.items) } : {}), ...(setup.ally2 ? { ally2: setup.ally2 } : {}), ...(o('foe-offset') !== undefined ? { foeOffset: Number(o('foe-offset')) } : {}), ...(allyLine ? { allyLine: { ...allyLine, min: Number.isFinite(allyLine.min) ? +allyLine.min.toFixed(2) : null } } : {}), ...(custom ? { anchorCast: start.castNumber, anchor: o('anchor') ?? 'cast', windowStart: start.fromStart ? 'combat start' : `${start.leadMs ?? 500} ms before the anchor cast` } : {}) });

@@ -15,9 +15,17 @@ import { getMultiplayerRoundById } from '../../src/simulation/multiplayer-round'
  * Wind-up batch 2 (2026-11-16, scene change approved by Fable): seed 2's s2 no longer parks that orb. Searched seeds 0..135 for a
  * seat with the 5-7 orb [granted, carried]: 23 seats; most stay in past 6-2 or the room ends first; seed 9 s2 is the first
  * eliminated with the forge still waiting (in 6-1). The elimination check moves from 6-1's preparation to the room's end.
+ * Cast wind-up batch 4 (2026-11-17, scene change; premises and assertions unchanged): Powder's new release timing changes the
+ * route, so seed 9's s2 is out before 6-1. Searched seeds 0..47 (non-streamed rooms, every seat): seed 10 s3 is the first seat
+ * whose 5-7 orb is [granted, carried], still in at 6-1's preparation with that forge waiting (the only mixed orb), and the last
+ * seat out in 6-1 (the room ends there).
+ * #739 (ranged basic attacks settle when the shot lands; scene change approved by Fable, premises and assertions unchanged):
+ * seed 10's s3 no longer gets the [granted, carried] 4-7 orb. Searched seeds 0..199 (non-streamed rooms, every seat) with the
+ * same premises: seed 75 s0 is the first, still in at 6-1's preparation with that forge waiting (the only mixed orb), and
+ * the last seat out in 6-1 (the room ends there).
  */
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 9, combatStreaming: true });
-const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 75, combatStreaming: true });
+const seatId = 's0', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 const mixedOrbs = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(r => r.orbs).map(orb => ({ orb,
   statuses: orb.entries.map(e => state.m8.loot.direct.find(d => d.dropId === e.dropId)?.status) })).filter(o => new Set(o.statuses).size > 1);
@@ -65,7 +73,7 @@ it('premise: before the elimination the seat is still in and the same 4-7 forge 
   expect(state.m8.loot.carry?.some(row => row.deliverRoundId === '5-7'), 'premise: the carried row').toBe(true);
 });
 for (const tick of [1, 150, 300]) it(`streams 6-1 through tick ${tick}`, () => reach('6-1', 'settlement', tick));
-// s2 is the last seat out in 6-1, so the room ends there instead of reaching 6-2.
+// The seat is the last one out in 6-1, so the room ends there instead of reaching 6-2.
 it('plays 6-1 to the end of the room', () => {
   runUntilClaiming(room, clock, s => s.phase === 'ended', 5000);
   expect(room.state.phase).toBe('ended');

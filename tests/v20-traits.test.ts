@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { POWDER_MONKEY_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { createMatch, buyUnit } from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match-types';
 import type { Unit } from '../src/simulation/unit-types';
@@ -120,9 +121,12 @@ describe('v20-traits approved custom rules',()=>{
     expect(p.mechanics!.some(m=>m.mechanic==='family')).toBe(false);expect(unit(c,'violet').mechanics!.some(m=>m.mechanic==='family')).toBe(true);
     expect(p.mechanics!.some(m=>m.mechanic==='g23Trait'&&m.source.definitionId==='dominator')).toBe(true);
     expect(p.v20Traits?.silcoSample).toMatchObject({star,attacks:5,durationTicks:240,damage:star===1?36:55});
-    const a=stepCombat(idle(c,['powder']));
-    // Wind-up batch 3: the monkey explodes on reaching its landing cell (the Menaces detonation with it), even after Powder's death.
-    const sent=a.events.find(e=>e.type==='abilityMarker'&&e.marker==='powder-monkey-sent') as Extract<LedgerCombatEvent,{type:'abilityMarker'}>;
+    // Wind-up batches 3–4: once Powder has let the monkey go (powder-monkey-sent), it explodes on reaching its landing cell (the
+    // Menaces detonation with it), even after Powder's death.
+    let a=stepCombat(idle(c,['powder']));
+    const isSent=(e:{type:string;marker?:string})=>e.type==='abilityMarker'&&e.marker==='powder-monkey-sent';
+    for(let n=0;n<POWDER_MONKEY_RELEASE_TICKS&&!a.events.some(isSent);n++)a=stepCombat(a.state);
+    const sent=a.events.find(isSent) as Extract<LedgerCombatEvent,{type:'abilityMarker'}>;
     let dead:CombatState={...a.state,units:a.state.units.map(u=>['powder','silco'].includes(u.id)?{...u,hp:0,alive:false}:u)};
     while(dead.tick<sent.arrivalTick-1)dead=stepCombat(dead).state;
     const b=stepCombat(dead);

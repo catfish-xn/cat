@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import { describe, it, expect } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -89,21 +90,22 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     for(const target of [{...e,unitKind:'neutral' as const},{...e,definitionId:'g23-sion'},{...e,itemSummon:{} as never},{...e,anomalySummon:{} as never},{...e,team:u.team}])expect(chainbladeGoldTarget(u,target)).toBe(false);
     c={...c,units:[...c.units.map(x=>x.id==='lux'?{...x,maxMana:0,mana:0,attackRange:100,cooldownTicks:0}:x.id==='enemy'?{...x,maxHp:2000,hp:250,armor:0}:x),
       {...e,id:'second',hp:1000000,maxHp:1000000,cell:{col:5,row:0}}, {...e,id:'third',hp:1000000,maxHp:1000000,cell:{col:6,row:0}}]};
-    let r=stepCombat(c);const expiry=(c:CombatState)=>unit(c,'lux').mechanismState!.statuses.flatMap(g=>g.contributions).filter(x=>x.source.definitionId===V19_MECHANICS.chainblade.id);
-    expect(expiry(r.state).map(x=>x.expiresAtTick)).toEqual([201,201]);
+    let r=stepLanded(c);const expiry=(c:CombatState)=>unit(c,'lux').mechanismState!.statuses.flatMap(g=>g.contributions).filter(x=>x.source.definitionId===V19_MECHANICS.chainblade.id);
+    // Ranged attack landing (pure-result re-pin): the kill — and so the 200-tick buff — comes when Lux's shot lands (tick 1 + flight).
+    expect(expiry(r.state).map(x=>x.expiresAtTick)).toEqual([r.state.tick+200,r.state.tick+200]);
     c=ticks(idle(r.state),49).state;
-    r=stepCombat({...c,units:c.units.map(x=>x.id==='lux'?{...x,cooldownTicks:0}:x.id==='second'?{...x,hp:250,maxHp:2000,armor:0,cell:{col:0,row:3}}:x)});
+    r=stepLanded({...c,units:c.units.map(x=>x.id==='lux'?{...x,cooldownTicks:0}:x.id==='second'?{...x,hp:250,maxHp:2000,armor:0,cell:{col:0,row:3}}:x)});
     expect(r.state.itemGoldReceipts!.map(x=>x.gold)).toEqual([3,3]);
-    expect(expiry(r.state).map(x=>x.expiresAtTick)).toEqual([251,251]);
+    expect(expiry(r.state).map(x=>x.expiresAtTick)).toEqual([r.state.tick+200,r.state.tick+200]); // re-pin: refreshed on the second kill's landing
     expect(expiry(r.state).map(x=>x.application.modifier?.value)).toEqual([{kind:'constant',amount:2000},{kind:'constant',amount:2000}]);
     expect(expiry(ticks(idle(r.state),200).state)).toHaveLength(0);
   });
   it('Chainblade uses a strict post-hit 20% boundary and grants no execution reward for natural lethality',()=>{
     const s=army(['lux']),armed={...s,items:[{id:'item-1',definitionId:V19_MECHANICS.chainblade.id,location:{kind:'unit' as const,unitId:'lux',slot:0}}]};
     let c:CombatState=idle(start(armed).state,['lux']);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,maxMana:0,mana:0,attackRange:100,cooldownTicks:0}:u.id==='enemy'?{...u,maxHp:2000,hp:1000,armor:0}:u)};
-    const probe=stepCombat(c).events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='lux');
+    const probe=stepLanded(c).events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='lux');
     if(probe?.type!=='packetDamage')throw Error('missing attack');const damage=probe.outcome.hpDamage;
-    const at=(hp:number)=>stepCombat({...c,units:c.units.map(u=>u.id==='enemy'?{...u,hp}:u)});
+    const at=(hp:number)=>stepLanded({...c,units:c.units.map(u=>u.id==='enemy'?{...u,hp}:u)});
     const exact=at(400+damage);expect(exact.state.itemGoldReceipts).toEqual([]);expect(unit(exact.state,'enemy').hp).toBe(400);
     expect(at(399+damage).state.itemGoldReceipts!.map(r=>r.gold)).toEqual([3]);
     const lethal=at(damage);expect(lethal.state.itemGoldReceipts).toEqual([]);expect(lethal.events.filter(e=>e.type==='heal')).toEqual([]);
@@ -124,10 +126,10 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     c={...c,units:c.units.map(u=>u.id===actor?{...u,maxMana:0,mana:0,attackDamageBase:1000,attackDamage:1000,attackRange:100}:u.id==='enemy'?{...u,hp:1}:u)};
     // Leave another enemy alive so the timed effect can expire.
     c={...c,units:[...c.units,{...unit(c,'enemy'),id:'other',hp:100000,maxHp:100000,cell:{col:6,row:0}}]};
-    const first=stepCombat(c),p=unit(first.state,partner);
+    const first=stepLanded(c),p=unit(first.state,partner);
     const buff=p.mechanismState!.statuses.flatMap(g=>g.contributions).find(x=>x.source.definitionId==='sisters')!;
     expect(buff.application.modifier?.value).toEqual({kind:'constant',amount:actor==='jinx'?4000:7500});
-    expect(buff.expiresAtTick).toBe(1+(actor==='jinx'?140:100));
+    expect(buff.expiresAtTick).toBe(first.state.tick+(actor==='jinx'?140:100)); // re-pin: the takedown lands on first.state.tick (was 1)
     if(actor==='jinx')expect(ad(p)).toBeGreaterThan(p.attackDamage);
     const end=ticks(idle(first.state),actor==='jinx'?140:100).state;
     expect(unit(end,partner).mechanismState!.statuses.flatMap(g=>g.contributions).filter(x=>x.source.definitionId==='sisters')).toHaveLength(0);
@@ -136,8 +138,8 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     const s={...army(['jinx','vi','darius']),augments:[{definitionId:'sisters',choiceId:'sisters-1',acquiredRound:1}]};
     let c:CombatState=idle(start(s).state,['jinx']);c={...c,units:[...c.units.map(u=>u.id==='jinx'?{...u,maxMana:0,mana:0,attackRange:100,cooldownTicks:0}:u.id==='enemy'?{...u,maxHp:10000,hp:10000}:u),
       {...unit(c,'enemy'),id:'other',hp:100000,maxHp:100000,cell:{col:6,row:0}}]};
-    const first=stepCombat(c);expect(first.state.damageContributors?.enemy).toContain('jinx');
-    const second=stepCombat({...idle(first.state),units:idle(first.state).units.map(u=>u.id==='darius'?{...u,maxMana:0,mana:0,cooldownTicks:0,attackRange:100}:u.id==='enemy'?{...u,hp:1}:u)});
+    const first=stepLanded(c);expect(first.state.damageContributors?.enemy).toContain('jinx');
+    const second=stepLanded({...idle(first.state),units:idle(first.state).units.map(u=>u.id==='darius'?{...u,maxMana:0,mana:0,cooldownTicks:0,attackRange:100}:u.id==='enemy'?{...u,hp:1}:u)});
     const buff=unit(second.state,'vi').mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='sisters');
     expect(buff?.application.modifier?.value).toEqual({kind:'constant',amount:4000});
     expect(second.events.find(e=>e.type==='kill'&&e.unitId==='enemy')).toMatchObject({source:{ownerId:'darius'}});
@@ -158,8 +160,8 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     expect(attacked.events.some(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId===sion.id&&e.outcome.hpDamage>0)).toBe(true);
     expect(unit(attacked.state,'enemy').v19?.roseTeams).toBeUndefined();
     let c=idle(base,[sion.id]);c={...c,units:c.units.map(u=>u.id===sion.id?{...u,hp:Math.floor(u.maxHp/2),maxMana:0,mana:0}:u.id==='enemy'?{...u,hp:100000,maxHp:100000}:u)};
-    const marked=stepCombat(c).state;expect(unit(marked,'enemy').v19?.roseTeams).toEqual(['player']);
-    const probe=(mark:boolean)=>stepCombat({...idle(marked,['morgana']),units:idle(marked,['morgana']).units.map(u=>u.id===sion.id?{...u,alive:false,hp:0}:u.id==='morgana'?{...u,attackRange:100,maxMana:0,mana:0,cooldownTicks:0}:u.id==='enemy'?{...u,v19:mark?u.v19:undefined}:u)});
+    const marked=stepLanded(c).state;expect(unit(marked,'enemy').v19?.roseTeams).toEqual(['player']);
+    const probe=(mark:boolean)=>stepLanded({...idle(marked,['morgana']),units:idle(marked,['morgana']).units.map(u=>u.id===sion.id?{...u,alive:false,hp:0}:u.id==='morgana'?{...u,attackRange:100,maxMana:0,mana:0,cooldownTicks:0}:u.id==='enemy'?{...u,v19:mark?u.v19:undefined}:u)});
     const a=probe(false).events.find(e=>e.type==='packetDamage'),b=probe(true).events.find(e=>e.type==='packetDamage');
     expect(a?.type==='packetDamage'&&b?.type==='packetDamage'&&b.outcome.mitigated).toBe(a?.type==='packetDamage'?Math.floor(a.outcome.mitigated*10800/10000):0);
   });
@@ -167,7 +169,7 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     const s=army(['lux']);const round=getCatalogRoundById(pvp?'2-1':'1-2');
     const armed={...s,round:round.ordinal,items:[0,1].map(slot=>({id:'item-'+(slot+1),definitionId:V19_MECHANICS.chainblade.id,location:{kind:'unit' as const,unitId:'lux',slot}}))};
     let c=idle(start(armed).state,['lux']);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,hp:u.maxHp-400,maxMana:0,mana:0,attackRange:100,cooldownTicks:0}:u.id==='enemy'?{...u,hp:250,maxHp:2000,armor:0}:u)};
-    const r=stepCombat(c);expect(r.events.filter(e=>e.type==='kill')).toHaveLength(1);
+    const r=stepLanded(c);expect(r.events.filter(e=>e.type==='kill')).toHaveLength(1);
     expect(r.events.filter(e=>e.type==='heal').map(e=>e.type==='heal'&&e.outcome.actual)).toEqual([400]);
     expect(r.state.itemGoldReceipts).toHaveLength(pvp?1:0);
     if(pvp){const payout=itemGoldPayouts({streams:r.state.itemRandomStreams!,receipts:r.state.itemGoldReceipts!},new Set(['lux']));expect(payout[0].amount).toBe(3);

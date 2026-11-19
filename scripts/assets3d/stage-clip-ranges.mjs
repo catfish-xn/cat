@@ -206,6 +206,9 @@ export async function stageClipRanges({ assets, extracted, out }) {
       ? selectAnimations(graphInfo.clips, unitMap.$animationRules, unitMap[id]?.animations).decisions
       : {};
 
+    // Only cast clips are ranged. A basic attack clip plays whole: the original plays its first segment and then that
+    // swing's End sequence, cut from the same anm, which together cover it; ranging it to the first segment cut off the
+    // punch (Sevika, Vander, 11-18; #734 reverted).
     const castClips = castClipsFor(entry);
     const clipRanges = {};
     for (const clipName of glbClips) {
