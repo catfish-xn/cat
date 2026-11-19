@@ -756,6 +756,11 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // TEMPORARY departure from the data (Fable 11-18): the shared crit flash's two dark backing layers (alpha-blended dark grey
+  // and dark red) are authored to scale with the struck unit's size (scaleBirthScaleByBoundObjectSize), which the engine
+  // does not do yet; drawn at their fixed size they left a black-edged blot over the target. Restore them once the engine
+  // scales by the bound object (docs/S13_RULES_GAP.md, 2026-11-18).
+  '2436e086': ['flash2', 'flash3'],
 };
 
 /**
@@ -787,6 +792,30 @@ export interface PlayOut {
    */
   readonly hold?: boolean;
 }
+/**
+ * A basic attack that crits (the display's packetDamage: delivery basic-attack, critical) plays the shared crit flash in
+ * place of the shared attack hit, at the same bone and moment (a swap, never both). The binding per champion is the
+ * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
+ */
+export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string>;
+  /** A champion's own crit variants: `swap` replaces its attack systems on a crit, `flash` is its crit flash cue when its hit is its own. */
+  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
+  hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
+  own: {
+    // Warwick: his hit is his own slash, so the crit flash plays on the target beside it at the slash's moment. His own crit
+    // swipe (BA_Swipe_crit 94adb056 in place of 6b46d17d) waits for the original's footage (Fable 11-17): not swapped here.
+    warwick: { flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+  },
+};
+/**
+ * A skill's direct damage that crits (packetDamage: delivery ability-direct, critical) flashes the same crit system on its
+ * target, beside the skill's own hit (Fable 11-16: the original's binding for skill crits is inferred, not read). Every
+ * champion whose package has the system gets this display branch `<champion>-crit`; a periodic tick does not flash.
+ */
+export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue: TimelineCue }> = {
+  skill: champion => `${champion}-crit`,
+  cue: { system: '2436e086', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+};
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether

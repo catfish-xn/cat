@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -57,6 +57,25 @@ export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
  */
 export const OFF_SLOT_MAX = 8;
 export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
+/**
+ * Crit flashes (CRIT_ATTACK_HIT.crit) playing or waiting at once; a crit past them plays the plain hit. Crits come often in
+ * a brawl (a few in one tick): the flash only swaps a hit, so it takes no extra slot, and this keeps its own count small.
+ * A fitted value, not the original's.
+ */
+export const CRIT_FLASH_MAX = 4;
+/**
+ * An attack's cues as a crit plays them (CRIT_ATTACK_HIT): the champion's own crit variants swap in, and with `flash` the
+ * shared hit plays as the crit flash (not for keepHit champions), or the champion's own flash cue joins. A system `ready`
+ * does not have keeps the cue as it was.
+ */
+function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
+  const own = Object.hasOwn(CRIT_ATTACK_HIT.own, champion) ? CRIT_ATTACK_HIT.own[champion] : undefined;
+  const swap = (cue: TimelineCue, id: string | undefined) => id && ready(id) ? { ...cue, system: id } : cue;
+  const out = cues.map(cue => (cue.action ?? 'cast') !== 'attack' ? cue
+    : own?.swap && Object.hasOwn(own.swap, cue.system) ? swap(cue, own.swap[cue.system])
+    : flash && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit && !CRIT_ATTACK_HIT.keepHit.has(champion) ? swap(cue, CRIT_ATTACK_HIT.crit) : cue);
+  return flash && own?.flash && ready(own.flash.system) && cues.some(cue => (cue.action ?? 'cast') === 'attack') ? [...out, own.flash] : out;
+}
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -174,6 +193,10 @@ export interface LtkPlayOptions {
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
+  /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
+  crit?: boolean;
+  /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
+  critFlash?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
@@ -556,13 +579,22 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
+  const critFlashesOut = () => {
+    let out = 0;
+    for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
+    for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
+    return out;
+  };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
     const held = warming.get(champion); if (held) return held;
     const pending = library.champion(champion).then(async catalog => {
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
-      const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      const own = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      // A crit plays its attack as critAttack does (CRIT_ATTACK_HIT): those systems are loaded and measured with their cues.
+      const cues = [...own, ...critAttack(champion, own.filter(cue => (cue.action ?? 'cast') === 'attack'), true, id => !!catalog.index?.systems[id])
+        .filter(cue => !own.includes(cue))];
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
       // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
@@ -704,6 +736,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
+      // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
+      if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
         const shift = context.delay;
