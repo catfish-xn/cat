@@ -28,8 +28,10 @@ describe('Mordekaiser\'s grasp and empowered mace (Fable 11-19)', () => {
       expect([cue.action, cue.event]).toEqual(['cast', 'hit']);
       expect(effectImportance(cue)).toBe('critical');
     }
-    const mace = cues.find(cue => cue.system === '21bee60f')!;
-    expect([mace.action, mace.variant]).toEqual(['attack', 'empowered']);
-    expect(effectImportance(mace)).toBe('decorative');
+    for (const system of ['21bee60f', '04ae533c']) {
+      const mace = cues.filter(cue => cue.system === system);
+      expect(mace.map(cue => [cue.action, cue.variant])).toEqual([['attack', 'empowered']]);
+      expect(effectImportance(mace[0]!)).toBe('decorative');
+    }
   });
 });
