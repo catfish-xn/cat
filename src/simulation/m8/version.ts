@@ -31,6 +31,10 @@ export const LEGACY_M7_VERSION = {
   schemaVersion: 5, rulesVersion: 'm5-14.24b-v1', contentVersion: 's13-14.24b-slice-v1', saveFormatVersion: 1, replayFormatVersion: 1,
 } as const;
 
+/** v26 files written before #739's save/replay 10: same rules/content identity, older formats (save 8/9, replay 9). They cannot
+ * be replayed under ranged landing, so they are recognized as an old version (read-only export, start a new match). */
+export const LEGACY_V26_FORMATS = { saveFormatVersions: [8, 9], replayFormatVersion: 9 } as const;
+
 /** D8-A: prior M8 files remain original, read-only export material. */
 export const LEGACY_M8_VERSION = {
   schemaVersion:6,rulesVersion:'m8-14.24b-v1',contentVersion:'s13-14.24b-m8-v1',saveFormatVersion:2,replayFormatVersion:2,
