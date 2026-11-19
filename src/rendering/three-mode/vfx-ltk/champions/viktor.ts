@@ -9,7 +9,8 @@ export const viktorSkills: Record<string, readonly TimelineCue[]> = {
     { system: '37d3ac23', event: 'cast-start', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0, duration: 1.5, stopAfter: 1, fadeOut: true },
     // Board-wide warning: its own life, ended early only if the slam lands first (cue-overrides.ts CUE_RULE_STOPS).
     { system: '12ac9712', event: 'cast-start', location: 'board', delay: 0, duration: 1.62 },
-    { system: '26c2f2d9', event: 'hit', delay: 0, duration: 1.5, stopAfter: 1 },
+    // At its end it plays out (cue-overrides.ts PLAY_OUT_AT_DEADLINE, 0.5 s) instead of being cut while still thick (11-19 evidence).
+    { system: '26c2f2d9', event: 'hit', delay: 0, duration: 1.5, stopAfter: 1, playOut: 0.5 },
   ],
   'viktor-slam': [
     // The original board darkening holds about as long as this cue, then cuts at once (11-08 frame strip): stop there, no fade.

@@ -946,7 +946,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const tail = Math.min(0.25, runFor / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
-        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
+        // A cue that plays out at its end (TimelineCue.playOut) keeps full strength to it: its particles then finish on their own.
+        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && !spawn.playOut && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
         const rootRoom = roots.get(spawn.system);
@@ -980,8 +981,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
+          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || !!spawn.playOut || undefined,
+            playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;

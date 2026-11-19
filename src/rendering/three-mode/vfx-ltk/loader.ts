@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -164,6 +164,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.livingTarget !== undefined && (typeof cue.livingTarget !== 'boolean' || (cue.event !== 'hit' && cue.event !== 'projectile')))
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
         || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
+        || (cue.playOut !== undefined && (typeof cue.playOut !== 'number' || !(cue.playOut > 0) || cue.playOut > 2))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self', 'single'].includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
@@ -229,12 +230,16 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
   // Persistent layers held until their rule event (SUSTAIN_CAPS): the cue runs up to its cap, with no stop of its own; a
   // refreshed one replaces its last play on that target (SUSTAIN_REFRESH), a ranked one takes its rank (SUSTAIN_RANKS).
   const current = skills ?? index.skills;
+  // A system held in one skill only (SUSTAIN_SKILL_CAPS) is held, and refreshed, in that skill alone.
   for (const [key, cues] of Object.entries(current)) {
-    if (!cues?.some(cue => Object.hasOwn(SUSTAIN_CAPS, cue.system))) continue;
+    const only = Object.hasOwn(SUSTAIN_SKILL_CAPS, key) ? SUSTAIN_SKILL_CAPS[key]! : undefined;
+    const cap = (system: string) => Object.hasOwn(SUSTAIN_CAPS, system) ? SUSTAIN_CAPS[system] : only && Object.hasOwn(only, system) ? only[system] : undefined;
+    if (!cues?.some(cue => cap(cue.system) !== undefined)) continue;
     (skills ??= { ...index.skills })[key] = cues.map(cue => {
-      if (!Object.hasOwn(SUSTAIN_CAPS, cue.system)) return cue;
+      const seconds = cap(cue.system);
+      if (seconds === undefined) return cue;
       const { stopAfter: _stop, ...rest } = cue;
-      return { ...rest, duration: SUSTAIN_CAPS[cue.system]!, ...(SUSTAIN_REFRESH.has(cue.system) ? { refresh: true } : {}),
+      return { ...rest, duration: seconds, ...(SUSTAIN_REFRESH.has(cue.system) || !Object.hasOwn(SUSTAIN_CAPS, cue.system) ? { refresh: true } : {}),
         ...(Object.hasOwn(SUSTAIN_RANKS, cue.system) ? { rank: SUSTAIN_RANKS[cue.system] } : {}) };
     });
   }

@@ -52,6 +52,11 @@ export interface TimelineCue {
    */
   readonly selfFlight?: boolean;
   /**
+   * At its end the cue stops emitting and lets the particles already out finish their own lives, for at most this many
+   * seconds, instead of being cut there (cue-overrides.ts PLAY_OUT_AT_DEADLINE; per cue, Fable 11-19).
+   */
+  readonly playOut?: number;
+  /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
    * Multiplies the system's own offsets, particle size and velocity. It does not move the
