@@ -19,7 +19,7 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 /**
  * Damage floats (the user's 8 points, 11-19). Numbers only, coloured by damage type: physical orange, magic cyan-blue, true
  * damage white, heals green with "+"; a basic attack takes its type's colour too. A crit is the same colour, CRIT_SCALE larger,
- * with a block mark bursting downward on its left (CRIT_MARKS); a damage-over-time tick is a little smaller (a burn white). Every colour, size,
+ * with a block mark slammed in at its lower left (CRIT_MARKS); a damage-over-time tick is a little smaller (a burn white). Every colour, size,
  * scale and timing here is our own choice, not original data.
  */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84', status: '#ff9d8a' };
@@ -39,7 +39,7 @@ const OUTLINE = `1px 0 0 rgba(0,0,0,.9), -1px 0 0 rgba(0,0,0,.9), 0 1px 0 rgba(0
  */
 const POP_SCALE = 1.6, POP_MS = 160, RISE_PX = 28, FADE_MS = 300;
 /** A crit's scale over its first CRIT_POP_MS: 1.3 at once, 1.6 at 30 ms, 0.92 at 70 ms, 1 from 100 ms (own values, not original). */
-const CRIT_POP_MS = 100;
+const CRIT_POP_MS = 100, CRIT_SLAM = 0.25;
 const critPop = (age: number) => age >= CRIT_POP_MS ? 1 : age < 30 ? 1.3 + 0.3 * age / 30 : age < 70 ? 1.6 - 0.68 * (age - 30) / 40 : 0.92 + 0.08 * (age - 70) / 30;
 const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 900, crit: 900, tick: 700 };
 const PER_UNIT = 6, ALL = 40;
@@ -59,27 +59,32 @@ const BAR_SIDESTEP_GAP = 3;
 /** How far past its bar-free spot a number may step aside for other units' numbers, in its own widths (own value). */
 const NUMBER_SHIFT_WIDTHS = 1.5;
 /**
- * The crit mark left of a crit (自绘，非原版素材; shapes and sizes are our own): a thick block beside the number that bursts
- * downward, straight lines and hard corners only. E1: one solid block with a few short thick spikes downward; E2: the block
- * cracked into a few big shards falling down and out. Solid, darker and redder than the number, with its dark edge and the
- * same hard shadow. The block's top lines up with the digits' top; its spikes hang below them.
+ * The crit mark left of a crit (自绘，非原版素材; shapes, colours and sizes are our own): a heavy block slammed in at the
+ * bottom-right, against the number's lower left, with short thick spikes flung up-left behind it, so the whole reads as a
+ * thick arrow pointing down-right at the number. Straight lines and hard corners only. E3 is one piece; E4 has cracks
+ * between the block and its spikes. Two hard tones (lighter above, darker below), its dark edge and the same hard shadow.
+ * The block's bottom lines up with the digits' bottom.
  */
-interface CritMark { readonly path: string }
-const CRIT_MARKS: Readonly<Record<'E1' | 'E2', CritMark>> = {
-  E1: { path: 'M7 1L24 1 24 14 22.5 19.5 18 14 16.5 14 12.5 22.5 10 13 1 20 7 8Z' },
-  E2: { path: 'M7 1L24 1 24 12 18.5 10 14 12.5 10.5 8 7 8.5Z M8 10L13 13 10.5 19 2 21.5Z M14.5 14L20 12 19 18.5 15 23Z M21 13L24 14 24 19.5 21.5 18Z' },
+interface CritMark { readonly paths: readonly string[] }
+const CRIT_MARKS: Readonly<Record<'E3' | 'E4', CritMark>> = {
+  E3: { paths: ['M24 7L24 24 9 24 9 21 3 21 9 17.5 9 15 1 10.5 9.5 10 8 7.5 1 1 12 5.5 13 1.5 17 7Z'] },
+  E4: { paths: ['M24 7L24 24 9 24 9 10 11.5 7Z', 'M7.8 9L0.5 0.5 11 4.8 10 7.5Z', 'M12.5 6L13.5 1 17.5 6Z', 'M8 11L0.5 11 8 16.5Z', 'M8 18.5L2.5 21 8 23Z'] },
 };
-/** Mark height (em of the crit, its 24-unit box), the room above and below the line kept for it, and its top below the line's top; own values. */
-const MARK_EM = 1.25, MARK_PAD_EM = 0.42, MARK_TOP_EM = 0.11;
+/** Mark height (em of the crit, its 24-unit box), room kept above and below the line, the digits' bottom below the line's top, and the tone split (box units); own values. */
+const MARK_EM = 1.15, MARK_PAD_EM = 0.42, DIGITS_BOTTOM_EM = 0.93, TONE_SPLIT = 16.5;
 const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
-const tint = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.78 + 30, g * 0.62, b * 0.7]); };
+const lightTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.86 + 30, g * 0.7, b * 0.78]); };
+const darkTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.62 + 18, g * 0.46, b * 0.58]); };
 const markBox = 24 * (1 + HARD_SHADOW_EM / MARK_EM), markBoxEm = MARK_EM * markBox / 24;
 const badge = (color: string, mark: CritMark) => {
-  const shift = 24 * HARD_SHADOW_EM / MARK_EM;
-  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${markBox} ${markBox}'><path d='${mark.path}' fill='#000' transform='translate(${shift} ${shift})'/><path d='${mark.path}' fill='${tint(color)}' stroke='rgba(0,0,0,.9)' stroke-width='1'/></svg>`)}")`;
+  const shift = 24 * HARD_SHADOW_EM / MARK_EM, d = mark.paths.join(' ');
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${markBox} ${markBox}'><defs><clipPath id='lo'><rect x='0' y='${TONE_SPLIT}' width='${markBox}' height='${markBox}'/></clipPath></defs>`
+    + `<path d='${d}' fill='#000' transform='translate(${shift} ${shift})'/><path d='${d}' fill='${lightTone(color)}'/><path d='${d}' fill='${darkTone(color)}' clip-path='url(#lo)'/>`
+    + `<path d='${d}' fill='none' stroke='rgba(0,0,0,.9)' stroke-width='1'/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 };
-const critMark = () => CRIT_MARKS[(globalThis as { __critMark?: 'E1' | 'E2' }).__critMark ?? 'E1'] ?? CRIT_MARKS.E1;
+const critMark = () => CRIT_MARKS[(globalThis as { __critMark?: 'E3' | 'E4' }).__critMark ?? 'E3'] ?? CRIT_MARKS.E3;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
@@ -95,7 +100,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
       backgroundImage: cls === 'crit' ? badge(color, critMark()) : '', paddingLeft: cls === 'crit' ? `${markBoxEm.toFixed(3)}em` : '',
       // The room above matches the room below, so the digits stay on the label's centre while the spikes hang below them.
-      padding: cls === 'crit' ? `${MARK_PAD_EM}em` : '', backgroundPosition: cls === 'crit' ? `left 0 top ${(MARK_PAD_EM + MARK_TOP_EM).toFixed(3)}em` : '' };
+      padding: cls === 'crit' ? `${MARK_PAD_EM}em` : '', backgroundPosition: cls === 'crit' ? `left 0 top ${(MARK_PAD_EM + DIGITS_BOTTOM_EM - MARK_EM).toFixed(3)}em` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
@@ -211,7 +216,10 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
-          style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
+          // A crit slams in from up-left: it starts CRIT_SLAM of its size up and left and reaches its spot by CRIT_POP_MS (own values).
+          const slam = item.cls === 'crit' && age < CRIT_POP_MS ? -CRIT_SLAM * item.px * (1 - age / CRIT_POP_MS) : 0;
+          const moved = slam ? ` translate(${slam.toFixed(1)}px, ${slam.toFixed(1)}px)` : '';
+          style(item, 'transform', scale === 1 && !moved ? 'translate(-50%, -50%)' : `translate(-50%, -50%)${moved}${scale === 1 ? '' : ` scale(${scale.toFixed(3)})`}`);
           style(item, 'opacity', String(Number(fade.toFixed(3))));
         });
       }
