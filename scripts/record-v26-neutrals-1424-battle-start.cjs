@@ -21,7 +21,10 @@ async function main() {
   // (2026-11-02 carousel all-components: re-searched from 20261012, 20261013 no longer has a mirror.)
   // First seed from 20261012 whose real round-23 checkpoint has an odd alive
   // roster and at least seven fielded units per survivor (mirror and full-board tests).
-  const seed = 20261016, clock = new ManualClock();
+  // (2026-11-19 ranged attack wind-up: battle results moved, so seed 20261016 reaches round 23 with six seats alive and no
+  // mirror. Re-searched from 20261012: 20261012 faults at round 11 on the integration head too (resolver-error
+  // battle-validation:invalid-snapshot, reported separately), 20261013 has six alive; 20261014 has seven, all with full boards.)
+  const seed = 20261014, clock = new ManualClock();
   const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: i ? `bot-${i}` : 'seat-1', name: `s${i}`, kind: i ? 'bot' : 'human' }));
   const options = clock => ({ ...ROOM_TIMING_DEFAULTS, roomId: 'room-1', seed, clock,
     resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
