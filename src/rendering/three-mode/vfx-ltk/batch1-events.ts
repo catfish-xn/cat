@@ -181,6 +181,12 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
+        // Maddie: one shot per damage packet of her volley, to the enemy it hit.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
+          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
+        // Maddie: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather
+        // than falling back to the old placeholder cast effect.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'maddie') plan.noCastEffect = true;
         // Trundle's cast list holds only his bite's hit, which now comes with the bite's damage: his cast itself plays nothing.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'trundle') plan.noCastEffect = true;
         // Trundle, Zyra: their hits play when the skill's damage lands (cast-windup.ts), once per tick, on every enemy hit
