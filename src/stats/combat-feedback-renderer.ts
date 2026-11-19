@@ -9,7 +9,7 @@ type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
 type FloatClass = 'plain' | 'crit' | 'tick';
 type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
-interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number }
+interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number; lastX: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -124,7 +124,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: { reado
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
-    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, text, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px });
+    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, text, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px, lastX: Number.NaN });
   }
   return {
     push(events, at) {
@@ -184,7 +184,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: { reado
           // A canvas label or any unit's bar in the way: the number steps sideways (never up) to the nearest spot past an end
           // of one of them that no bar or label covers, so bars side by side are cleared together. Another unit's number
           // already placed is avoided the same way, over the NUMBER_TRIES nearest such spots; when none of those is free of
-          // numbers too, it takes the nearest bar-free one and may overlap a number a little (never a bar).
+          // numbers too, it takes the nearest bar-free one and may overlap a number a little (never a bar). Once moved aside,
+          // "nearest" is measured from where it stood last frame, so it does not hop across a pair of bars between frames.
           const fit = (at: number) => Math.max(w, Math.min(width - w, at));
           const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - y) < rect.h / 2 + size / 2;
           const hard = [...obstacles, ...bars.values()].filter(inRow);
@@ -193,11 +194,13 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: { reado
           const clearHard = free(hard), clearSoft = free(soft);
           let x = fit(anchor.x);
           if (!clearHard(x) || !clearSoft(x)) {
+            const from = Number.isNaN(item.lastX) ? anchor.x : item.lastX;
             const spots = [x, ...[...hard, ...soft].flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit)]
-              .filter(clearHard).sort((a, b) => Math.abs(a - anchor.x) - Math.abs(b - anchor.x)).slice(0, NUMBER_TRIES);
+              .filter(clearHard).sort((a, b) => Math.abs(a - from) - Math.abs(b - from)).slice(0, NUMBER_TRIES);
             if (spots.length) x = spots.find(clearSoft) ?? spots[0]!;
           }
           placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
+          item.lastX = x;
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
