@@ -32,21 +32,24 @@ async function main(){
  // 2026-11-16 (#693: Zyra's vines land CAST_WINDUP_TICKS.zyra after her cast) the old board lost its same-tick pairs. Seed 15972
  // after the lawful Leona/Loris swap and one public deploy of Zyra, as tests/m8-b8-live-reveal.test.ts: from (3,4) r02/r04 die in
  // the live tick-56 batch; from (4,7) r00/r01 die in the terminal tick-165 batch.
- const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:508},{unitId:bird('r04'),tick:56,eventSeq:509},{unitId:bird('r03'),tick:86,eventSeq:708},{unitId:bird('r01'),tick:128,eventSeq:920},{unitId:bird('r00'),tick:147,eventSeq:1030}];
+ // 2026-11-18 ranged attack landing (re-pin, same deaths, killers and order): display events (attackLaunched/attackLanded) move
+ // every later eventSeq; r01 dies at 130 (was 128) and, terminal branch, r02 at 131 (was 127) as ranged shots now land after
+ // their attack. Table in the #739 description.
+ const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:523},{unitId:bird('r04'),tick:56,eventSeq:524},{unitId:bird('r03'),tick:86,eventSeq:728},{unitId:bird('r01'),tick:130,eventSeq:964},{unitId:bird('r00'),tick:147,eventSeq:1068}];
  assert.deepEqual(branches.simultaneous.deaths,expectedDeaths);
  const sameTick=branches.simultaneous.deaths.slice(0,2);
  const batches=branches.simultaneous.batches;
  assert.deepEqual(batches.map(b=>b.deaths),[sameTick,expectedDeaths.slice(2,3),expectedDeaths.slice(3,4),expectedDeaths.slice(4)]);
  assert.deepEqual(batches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(batches[0].reveals,[508,508,509,509,509]);
+ assert.deepEqual(batches[0].reveals,[523,523,524,524,524]);
  assert.equal(branches.simultaneous.phase,'settlement');
- const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:447},{unitId:bird('r02'),tick:127,eventSeq:1219},{unitId:bird('r03'),tick:135,eventSeq:1273},{unitId:bird('r00'),tick:165,eventSeq:1502},{unitId:bird('r01'),tick:165,eventSeq:1503}];
+ const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:463},{unitId:bird('r02'),tick:131,eventSeq:1289},{unitId:bird('r03'),tick:135,eventSeq:1323},{unitId:bird('r00'),tick:165,eventSeq:1558},{unitId:bird('r01'),tick:165,eventSeq:1559}];
  assert.deepEqual(branches.terminal.deaths,expectedTerminalDeaths);
  const terminalBatch=branches.terminal.deaths.slice(3);
  const terminalBatches=branches.terminal.batches;
  assert.deepEqual(terminalBatches.map(b=>b.deaths),[expectedTerminalDeaths.slice(0,1),expectedTerminalDeaths.slice(1,2),expectedTerminalDeaths.slice(2,3),terminalBatch]);
  assert.deepEqual(terminalBatches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(terminalBatches[3].reveals,[1502,1502,1503]);
+ assert.deepEqual(terminalBatches[3].reveals,[1558,1558,1559]);
  assert.equal(branches.terminal.phase,'settlement');
  // Seed 54239 inventory Shojin/Gargoyle/Crownguard on bare two-star Loris: (6,7) kills only r04, (0,6) only r01.
  for(const [source,cell,deathTick,directReceipts,itemBirths,unitBirths] of [['r04',{col:6,row:7},520,2,0,1],['r01',{col:0,row:6},353,1,1,0]]){

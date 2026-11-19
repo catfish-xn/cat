@@ -3,8 +3,15 @@ import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { advanceItemMatchRoute, itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
+import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 
+// #739: ranged basic attacks settle when the shot lands, and seed 206's 2-1 result changed (win -> loss), so the
+// history-dependent 3-2 augment drifts (starry-night-plus -> shop-glitch, whose history proof makes restore replay the
+// match cold). Script the 3-2 card for the Lux route too (and let this route take it), to keep this fixture's scene.
+const LUX_OFFERS = ['crimson-pact', 'starry-night-plus'] as const;
+const offersFor = (id: string | readonly string[]) => typeof id !== 'string' ? ['pumping-up-iii', 'bronze-for-life-ii'] : id === 'hand-of-justice' ? [...LUX_OFFERS] : ['crimson-pact'];
 describe('B8 public equipment fixture provenance', () => {
   // Ordered hooks acquire one real round at a time before every consumer, also with -t or shuffle.
   for (const [id, last] of [['bloodthirster', 8], ['hand-of-justice', 15],
@@ -12,12 +19,12 @@ describe('B8 public equipment fixture provenance', () => {
     for (let round = 1; round <= last; round++) beforeAll(() => {
       // Another file in the run may already have published the finished acquisition.
       // Scripted three-card fixture; the public commands and independent loot vectors stay real.
-      const acquired = withB1Offers(typeof id === 'string' ? ['crimson-pact'] : ['pumping-up-iii', 'bronze-for-life-ii'],
-        () => advanceItemMatchRoute(id, round));
+      const acquired = withB1Offers(offersFor(id),
+        () => advanceItemMatchRoute(id, round, id === 'hand-of-justice' ? ['starry-night-plus'] : []));
       if (round === last) expect(acquired).toBe(true);
     });
   }
-  it('wins the real opening, receives its oracle-defined heroes and combines the two real opening components', () => withB1Offers(['crimson-pact'], () => {
+  it('wins the real opening, receives its oracle-defined heroes, combines the two real opening components and fields no Chem-Baron', () => withB1Offers(['crimson-pact'], () => {
     const state = itemMatch('bloodthirster');
     const expected=new Map(independentLootPlan(state.seed,state.round).rounds.flatMap(r=>r.encounterPlan.drops.map(d=>[d.dropId,d.payload] as const)));
     for(const receipt of state.m8.loot.receipts)expect(receipt.payload).toEqual(expected.get(receipt.dropId));
@@ -31,9 +38,14 @@ describe('B8 public equipment fixture provenance', () => {
     expect(state.resourceProvenance.entries.filter(entry=>entry.kind==='unit-acquired'&&['unit-1','unit-2','unit-3'].includes(entry.unitId)).map(entry=>entry.kind==='unit-acquired'?[entry.roundId,entry.unitId,entry.source.kind]:[])).toEqual([["1-2","unit-1","opening"],["1-2","unit-2","loot"],["1-3","unit-3","loot"]]);
     expect(state.m8.loot.receipts.filter(r=>r.payload.kind==='item').map(r=>[r.payload,r.grantedItemIds])).toEqual([[{"kind":"item","definitionId":"sword","quantity":1},["item-1"]],[{"kind":"item","definitionId":"cloak","quantity":1},["item-2"]],[{"kind":"item","definitionId":"sword","quantity":1},["item-3"]]]);
     // Scripted-card equality is a fixture self-check. The independent item/holder
-    // vector stays real; Crimson Pact cannot affect Irelia and Renni stays benched.
+    // vector stays real; Crimson Pact cannot affect Irelia.
     expect(state.augments.map(augment => augment.definitionId)).toEqual(['crimson-pact']);
-    expect(state.preparation.units.find(unit=>unit.team==='player'&&unit.definitionId==='renni')?.location.kind).toBe('bench');
+    // #739 (assertion changed, Fable-approved): was "Crimson Pact's gifted Renni stays benched". Seed 206's 2-1 result
+    // changed (win -> loss), so the route sells that Renni before 2-5. The intent is asserted directly: no player unit on
+    // the board or bench is a Chem-Baron, so no Chem-Baron trait (Crimson Pact's) reaches Irelia. That a benched
+    // Chem-Baron would not count is covered by tests/s13-trait-projection.test.ts (bench units never add membership).
+    expect(state.preparation.units.filter(unit => unit.team === 'player' && UNIT_DEFINITIONS[unit.definitionId]?.traits.includes('chem-baron'))).toEqual([]);
+    expect(deriveTraits(state.preparation, 'player').filter(trait => trait.traitId === 'chem-baron' && (trait.tier > 0 || trait.targetUnitIds.includes('unit-1')))).toEqual([]);
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"]]);
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-5","definitionId":"bloodthirster"}]);
     expect(state.items).toEqual([{"id":"item-3","definitionId":"sword","location":{"kind":"inventory"}},{"id":"item-4","definitionId":"sword","location":{"kind":"inventory"}},{"id":"item-5","definitionId":"bloodthirster","location":{"kind":"unit","unitId":"unit-1","slot":0}}]);
@@ -43,8 +55,9 @@ describe('B8 public equipment fixture provenance', () => {
     expect(stepMatch(restored)).toEqual(stepMatch(state));
   }));
 
-  it('equips the actual dropped Lux while preserving the original Irelia on the bench', () => withB1Offers(['crimson-pact'], () => {
-    const state = itemMatch('hand-of-justice', 'unit-3');
+  it('equips the actual dropped Lux while preserving the original Irelia on the bench', () => withB1Offers(LUX_OFFERS, () => {
+    const state = itemMatch('hand-of-justice', 'unit-3', ['starry-night-plus']);
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['crimson-pact', 'starry-night-plus']);
     expect(state.roundDefinitionId).toBe('3-5');
     expect(state.preparation.units.find(unit => unit.id === 'unit-1')).toMatchObject({ definitionId: 'irelia', location: { kind: 'bench' } });
     expect(state.preparation.units.find(unit => unit.id === 'unit-3')).toMatchObject({ definitionId: 'lux', location: { kind: 'board', cell: { col: 5, row: 4 } } });

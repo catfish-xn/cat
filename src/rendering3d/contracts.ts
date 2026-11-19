@@ -33,9 +33,9 @@ export interface CastVariants {
 export type FormAnimationActions = Partial<Record<'idle' | 'move' | 'attack', string>>;
 export interface FormAnimations { front?: FormAnimationActions; back?: FormAnimationActions }
 /**
- * Where the original basic attack lets go, from the client's attack spell (server-side manifest data, never in the repo):
- * `clipSeconds` is the release frame in the attack clip (castFrame / 30), `windupRatio` the share of the attack interval
- * before release (0.3 + delayCastOffsetPercent), `baseIntervalSeconds` the interval assumed before a second attack is seen.
+ * Where the basic attack lets go, from the asset manifest (server-side data, never in the repo): `clipSeconds` is the
+ * release time in the attack clip, `windupRatio` the share of the attack interval before release, `baseIntervalSeconds`
+ * the interval assumed before a second attack is seen.
  * Display only: the rules never read it. Without it the attack plays exactly as before.
  */
 export interface AttackRelease { clipSeconds: number; windupRatio: number; baseIntervalSeconds: number }
@@ -47,7 +47,7 @@ export interface AttackRelease { clipSeconds: number; windupRatio: number; baseI
  */
 export interface StatusPose { clip: string; atSeconds: number; mask: Readonly<Record<string, number>>; status: string; blendSeconds?: number }
 export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants; formAnimations?: FormAnimations; attackSequence?: CastSequence; attackRelease?: AttackRelease; statusPose?: StatusPose }
-/** Seconds after the attack starts at which the original releases, for the observed interval (else the base one). */
+/** Seconds after the attack starts at which it releases, for the observed interval (else the base one). */
 export function attackReleaseSeconds(release: AttackRelease | undefined, intervalSeconds?: number): number | undefined {
   if (!release) return undefined;
   const interval = intervalSeconds !== undefined && Number.isFinite(intervalSeconds) && intervalSeconds > 0 ? intervalSeconds : release.baseIntervalSeconds;

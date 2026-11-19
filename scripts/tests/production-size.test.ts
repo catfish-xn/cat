@@ -115,7 +115,8 @@ describe('production representation preserves runtime semantics', () => {
     // 塞维卡老虎机转完再出手 (2026-11-09): c7f0a2f3 → f37c6970, loot b53841c0 → 9c98c8ef.
     // 14.24b 七项英雄数值 (2026-11-12): f37c6970 → db6dc9b6.
     // 施法事件带 castIndex、回放格式 8→9 (2026-11-12, #628): db6dc9b6 → d94c78f1 (content-digest.ts covers replayFormatVersion).
-    expect(parsed.content).toBe('fnv1a32-utf16:d94c78f1');
+    // 远程普攻命中才结算、存档/回放格式 9→10 (2026-11-19, #739): d94c78f1 → cf212873 (content-digest.ts covers M8_VERSION).
+    expect(parsed.content).toBe('fnv1a32-utf16:cf212873');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

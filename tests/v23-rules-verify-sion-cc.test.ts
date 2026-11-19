@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import { describe, expect, it } from 'vitest';
 import { COMBAT_TICK_MS, createCombat, createCombatWithEvents, stepCombat, type CombatState, type CombatStep, type CombatUnit } from '../src/simulation/combat';
 import { createMatch } from '../src/simulation/match';
@@ -169,7 +170,7 @@ describe('v23 independent approved Sion and crowd-control rules', () => {
         attackDamagePercentBps: 0, baseCritChanceBps: 0 });
       // Keep exactly one candidate so target acquisition is independent of previous target locks.
       probe = { ...probe, units: probe.units.filter(x => x.team === 'player' || x.id === id) };
-      const hit = packets(stepCombat(probe), 'member-0');
+      const hit = packets(stepLanded(probe), 'member-0'); // window: the member's shot lands after the attack
       expect(hit).toHaveLength(1);
       expect(hit[0].hpDamage).toBe(expected);
     }
