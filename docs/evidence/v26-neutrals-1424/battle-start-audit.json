@@ -323,7 +323,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "67f5db5317884b5668c9cea913532e1f775d942c42b94a93d94b114c375fd406",
+    "src/simulation/content/identity-constants.ts": "a46733990fbed01eba7850b6d8aa988d3c70b77c30eab62278c24b053c71d8dc",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -475,7 +475,7 @@
     "src/simulation/m8/combat-item-grants.ts": "69d8daafb214f806ca9e2645ac66995010abc9f262b03ee2aa68fe0438c1f0a4",
     "src/simulation/m8/combat-item-programs.ts": "f0c7fa561177bc5728b93695694afaf4edd0975596b4e6ad6a2d8e01b93368d3",
     "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
-    "src/simulation/m8/contracts.ts": "fdfed7ef0f0d39757fb53e1255e60dfd2a740de97d8accb3e7e3cf92d76d21e8",
+    "src/simulation/m8/contracts.ts": "13d6ff1e17926d063b4501939a62adce44dd6a10a5f3936e143c01647b4e543a",
     "src/simulation/m8/crit.ts": "d33d59260051b80be2875a287174e1362241599a986169b2746c7b5b8e242472",
     "src/simulation/m8/damage.ts": "58140e89d2c2f30610fe8d50b33b04b8b5fac76fdd2b3a52a84c89c2d8d14bc8",
     "src/simulation/m8/equipment.ts": "5ee6fb3916fd3454666257d8beb729d2e67c558959c5068e7769d59172c113ac",
@@ -502,7 +502,7 @@
     "src/simulation/m8/triggers.ts": "611d8c15d4eca4c8496a7ce962e2f45840521e7ee35f37ee3e37ee697c6652cc",
     "src/simulation/m8/ui-contracts.ts": "178f754d533b83560e73bec1573c9a6994749809a726ed30d3e79e48a88b797d",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "8afe276aaf552db73e7cb97a286eb1ebfed399689cb47b3bf7ab1af6221b13d8",
+    "src/simulation/m8/version.ts": "57ab61cca627d3a968deb07ac351dc463e010c6b5e802565b690d437e47ddced",
     "src/simulation/masterwork-choice.ts": "52f9227528e0ac99ed6f79c6e8ff44c89a62b5c50b76c64e2b2b7a81ab8ca63e",
     "src/simulation/match-rules.ts": "e0ca00e28f6c79d7f978a61963ea7c2872517a81feb53b68fb1ada0500d9181b",
     "src/simulation/match-types.ts": "4fcaa7d7b39337638fe32917f4def50b96a745cd039a34e71275a5e42e29e31b",
@@ -645,14 +645,14 @@
   "previousBytes": 4979457,
   "currentBytes": 3324446,
   "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-  "currentSha256": "3154aae424ff61308b179166b6172726ff69528a26a6df87bc88bdb5fc554228",
+  "currentSha256": "906e329603547882879a5198fa261a0df16e2ade58144e97efc6b249ff6de3ad",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
       "round": 3,
       "time": 78750,
-      "initialHash": "e6f4cc951c9ce1b0d45c3be5b83a3ed91d4c7f9809519f827dd74c4e20188905",
-      "firstHash": "648eced58bd65da91f5154ed68c7a63cda43a61c2a37aa357268d1c872696553",
+      "initialHash": "d62fc63da03aaa9610caf93c7629ebf0c09d9a81b5ad215ad05b75f2ba360c88",
+      "firstHash": "f9028221832bfe206653d57386bbe8c418a008bb932887469171b1577bca9710",
       "boardCounts": [
         1,
         3,
@@ -668,8 +668,8 @@
     {
       "round": 9,
       "time": 416550,
-      "initialHash": "b719eaeff1d4345c761926c87d3257b79d7d2654a1908b6cd0fc323994030793",
-      "firstHash": "6d6cdcf065a44056a68757e0c12be3f6c7722c3d6e1c82449d95187823d11d71",
+      "initialHash": "853a0492146a44538b48053e3f6395a20357927c0790be9c0570b7677082735c",
+      "firstHash": "6102a8b0b1d85b21be8023b88c4c406c3e2ec78ae85b4af063bab83ba9250aeb",
       "boardCounts": [
         2,
         5,
@@ -685,8 +685,8 @@
     {
       "round": 23,
       "time": 1352400,
-      "initialHash": "7fcef5dbe18b1ba748b242ea923ed44ff85a6717810e50cecb74188a5b8aac7b",
-      "firstHash": "056eb5290170c40cc5553dee67cb005c9662898fc40763f14cd66cf7c9dbc67b",
+      "initialHash": "8cbe82b6ddc20416c7448b06c68c0476413974e7ef6db01b5fc671a2190151bb",
+      "firstHash": "496f4e557556a7c48765622ca53a2ce8624ff95e34581ef8b32fa0c357a5fd44",
       "boardCounts": [
         8,
         8,
