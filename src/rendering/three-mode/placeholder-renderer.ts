@@ -1,4 +1,4 @@
-import { projectedBox } from './description-pick';
+import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
 import { createStarUpFx } from './star-up-fx';
@@ -1636,6 +1636,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
     return root ? projectedBox(root, camera, viewport()) : undefined;
   };
+  // Combat floats keep clear of every overhead bar: its drawn bar sprites (the plain bar or the tier bar), camera-facing.
+  const barBox = (id: string): BoardScreenBox | undefined => {
+    const overhead = scout.active ? undefined : pieces.get(id)?.overhead.object;
+    if (!overhead?.visible) return;
+    const sprites = ['render3d-overhead-bar', 'render3d-overhead-tier'].map(name => overhead.getObjectByName(name)).filter((o): o is Sprite => !!o && (o as Sprite).isSprite);
+    return spritesScreenBox(sprites, camera, viewport());
+  };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   let carouselOngoing = false;
   const onCarousel = (view: Parameters<typeof stage.show>[0], active = view !== null) => {
@@ -1705,7 +1712,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!scout.active) return pickUnit(client, true) ?? undefined;
       const target = scout.descriptionAt(client, camera, viewport())?.target;
       return target?.kind === 'unit' ? target.id : undefined;
-    }, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
+    }, screenBox: id => !stage.active ? screenBox(id) : undefined, barBox: id => !stage.active ? barBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
