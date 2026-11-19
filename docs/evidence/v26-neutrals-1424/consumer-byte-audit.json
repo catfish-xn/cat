@@ -904,6 +904,14 @@
       "currentSha256": "1061f40d159fe054d26fb51c36d63f221e9283893210ff20dc02abbd4cc02160",
       "firstDifferentByte": 0
     },
+    "tests/departed-effect-source-restore.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2543,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "fcfb7d23aba0814afa6b439ae2074a22c9786f2d313decd54d1738da1e0c1040",
+      "firstDifferentByte": 0
+    },
     "tests/departed-effect-source.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
