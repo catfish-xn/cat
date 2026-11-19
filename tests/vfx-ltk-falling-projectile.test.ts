@@ -104,6 +104,7 @@ describe('Caitlyn Air Raid override', () => {
   it('applies over the exported list when every system is loaded', () => {
     const systems = Object.fromEntries([...CUE_OVERRIDES.caitlyn, { system: '92bbeaf7' }].map(cue => [cue.system, `systems/${cue.system}.json`]));
     const exported: TimelineCue[] = [{ system: '92bbeaf7', action: 'cast', event: 'cast-start', delay: 0.5, duration: 0.5 }];
-    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn).toEqual(CUE_OVERRIDES.caitlyn);
+    // The override list, with the explicit cast-start ranks of cue-ranks.ts on it (11-19).
+    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn!.map(({ rank: _rank, ...cue }) => cue)).toEqual(CUE_OVERRIDES.caitlyn);
   });
 });
