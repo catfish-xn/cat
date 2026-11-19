@@ -107,10 +107,13 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
-  // Powder: her blast's target burst and explosion play when its damage lands, on each enemy it hits (batch1-events.ts).
+  // Powder: her blast's target burst plays when its damage lands, on each enemy it hits (batch1-events.ts); its explosion
+  // plays once, on the cell her monkey arrives at ('powder-arrive', placeholder-renderer.ts powder-monkey-arrived).
   'powder-blast': [
     { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
-    { system: '805215e2', action: 'passive', event: 'hit', delay: 0, duration: 1.5 },
+  ],
+  'powder-arrive': [
+    { system: '805215e2', action: 'passive', event: 'hit', location: 'board', delay: 0, duration: 1.5 },
   ],
   // Nunu's blast (batch1-events.ts): R_hit_tar on each enemy the blast strikes, when its damage lands; 0.05 s after it, as the
   // splash followed the blast in his cast list, at the size it had there.

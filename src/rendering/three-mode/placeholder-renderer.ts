@@ -37,6 +37,7 @@ import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
 import { createTimedFormEvents } from './timed-form-events';
+import { createPowderMonkeys } from './powder-monkey';
 import type { TimelineVariant } from './vfx-ltk/timeline';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
@@ -62,7 +63,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -722,6 +723,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     return best;
   }
+  /** The rule tick of the event being played now (the last one between batches), for vfx-ltk's seeds (runtime seedOf). */
+  let ltkTick: number | undefined;
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
@@ -729,10 +732,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
-    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff() }) : null;
+    attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
+  // Powder's monkey on the board between her letting it go and its explosion (powder-monkey.ts); when each piece last cast.
+  const monkeys = createPowderMonkeys(scene, loadLit), castAt = new Map<string, number>();
   // Anvils keep their own idle particles running (the support anvil's blue glow tells it from the completed one).
   const anvilIdle = ltk ? createAnvilIdleLoop({
     play: (key, id) => ltk.play(key, id, [], 'passive'), playing: id => ltk.playing(id, 'passive'), stop: id => ltk.stopAction(id, 'passive'),
@@ -873,8 +878,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
     scene.add(flash.object); flashes.push({ flash, view });
   };
-  const placeFlash = (flash: HitFlash, view: PieceView) => flash.object.position.copy(view.root.position)
-    .setY(view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset);
+  // On the drawn body (hitFlashSpot): its chest or nearest torso bone moves with a clip that raises the body, a lunge or a
+  // carry (a lunged caster's flash was left at her legs, 11-17); a body without one keeps the old mid-height spot.
+  const torsoBones = new WeakMap<object, Object3D | null>();
+  const placeFlash = (flash: HitFlash, view: PieceView) => hitFlashSpot(view.body, view.root.position,
+    view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset, flash.object.position, torsoBones);
   /** Parked stun rings. Control feedback is never counted against the effect cap. */
   const spareHalos: StunHalo[] = [];
   const SPARE_HALOS = 16;
@@ -1179,7 +1187,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); timedForms.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); timedForms.clear(); batch2Vfx.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1348,7 +1356,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    feel.update(seconds); batch3?.update(seconds); anvilIdle?.update(seconds, anvilPieces(), reducedMotion()); ltk?.update(seconds, camera);
+    feel.update(seconds); batch3?.update(seconds); monkeys.update(seconds, id => { const view = pieces.get(id); return view?.alive && view.body ? view.body : null; }); anvilIdle?.update(seconds, anvilPieces(), reducedMotion()); ltk?.update(seconds, camera);
     for (const item of referenceEffects) { item.fx.update(seconds, camera); if (item.fx.finished) { referenceEffects.delete(item); recycleReference(item.fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -1504,6 +1512,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const form of timedForms.advance(latest)) setForm(form);
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
+      ltkTick = tickOf(event) ?? ltkTick;
       const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
       if (planned.stopCast) ltk?.stopAction(planned.stopCast, 'cast');
       if (planned.fadeCast) ltk?.fadeAction(planned.fadeCast, 'cast', SOFT_STOP_SECONDS);
@@ -1526,6 +1535,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
+      // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
+      // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
+      if (event.type === 'cast') {
+        castAt.set(event.sourceId, clock);
+        const caster = pieces.get(event.sourceId), hides = caster?.mixer?.castHides('Monkey');
+        if (caster?.definitionId === 'powder' && hides !== undefined && currentEffect && !reducedMotion()) monkeys.prepare(event.sourceId, hides);
+      }
+      if (event.type === 'death') monkeys.drop(event.unitId);
+      if (event.type === 'abilityMarker' && grid) {
+        const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
+        if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {
+          const hides = owner?.mixer?.castHides('Monkey'), cast = castAt.get(event.unitId);
+          const swapIn = hides !== undefined && cast !== undefined ? cast + hides - clock : 0;
+          monkeys.send(event.unitId, cell, swapIn, (event.arrivalTick - event.tick) / 20); // 20 rule ticks a second
+        }
+        if (event.marker === 'powder-monkey-arrived') {
+          // Her explosion faces back the way the monkey came (as it faced her when it played on each enemy hit).
+          const arrived = monkeys.arrive(event.unitId), at = arrived?.at ?? cell;
+          const from = arrived?.from ?? (owner?.alive ? owner.root.position : null);
+          if (currentEffect && !reducedMotion()) ltk?.play('powder', event.unitId, [], 'passive', { skill: 'powder-arrive', board: [at.x, at.y, at.z], ...(from ? { boardFacing: [from.x, from.y, from.z] as const } : {}) });
+        }
+      }
       // Held up by another unit (the rules' display-only carryChanged: carried when the holder lifts it, let go on the hold's
       // last tick or when either dies). A death also ends every carry it is part of at once, below.
       if (event.type === 'carryChanged') {

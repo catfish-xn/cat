@@ -39,7 +39,8 @@ import { OnlineApplication, mergeNotice } from './online/online-application';
 import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
 import type { SceneApplication } from './online/scene-application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
-import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
+import type { StatsPanel } from '../stats/stats-panel';
+import { lazyStatsPanel } from '../stats/stats-panel-loader';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
 import type { SessionChange } from '../m6/contracts';
 import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-view';
@@ -61,7 +62,7 @@ import { battleLoadout, battleLoadoutText, BATTLE_EQUIPMENT_SUBMITTED, EQUIPMENT
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
-import { itemDisplayName } from '../presentation/g23-display';
+import { itemDisplayName, prefetchG23Items } from '../presentation/g23-display';
 import { readUnitEquipment } from '../simulation/item-selectors';
 import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
@@ -322,7 +323,9 @@ export class BoardScene extends Phaser.Scene {
     const withdrawControls = provideBoardControls(this.boardControls());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.descriptionGeneration++; this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
     this.sync();
-    this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
+    // Item names and icons (g23-display.ts) come after the first screen, like the stats panel below.
+    prefetchG23Items();
+    this.statsPanel = lazyStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
       this.selectedId = id; this.syncSelection(); this.renderActiveStats();
     });

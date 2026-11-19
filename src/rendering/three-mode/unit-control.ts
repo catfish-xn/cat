@@ -8,7 +8,8 @@
  * dissolving ring, a flash) and its knock-up (an arc that lands when the control ends), drawn with our own textures
  * and sizes (11-10 side-by-side, ccvs-*). Nothing here reads original assets.
  */
-import { AdditiveBlending, CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial } from 'three';
+import { AdditiveBlending, CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, type Object3D, type Vector3 } from 'three';
+import { findCueBone } from './vfx-ltk/particles';
 import type { ActionOutput } from '../../rendering3d/animation-state';
 
 export type ControlKind = 'stun' | 'airborne';
@@ -139,6 +140,16 @@ export class HolderPose {
       : { clips: [clip], durationSeconds: length };
     return { ...output, state: 'cast', loop, revision: 7_000_000 + this.count * 4 + sub, playback };
   }
+}
+/**
+ * Where a hit flash goes on a unit: its model's chest locator, in world space; without one, over the unit's spot at
+ * `fallbackY` (its mid-height, as before). `cache` keeps each body's lookup.
+ */
+export function hitFlashSpot(body: Object3D | null, spot: Vector3, fallbackY: number, out: Vector3, cache?: WeakMap<object, Object3D | null>): Vector3 {
+  let bone = body ? cache?.get(body) : null;
+  if (body && bone === undefined) { bone = findCueBone(body, 'C_Buffbone_Glb_Chest_Loc')?.node ?? null; cache?.set(body, bone); }
+  if (bone) return bone.getWorldPosition(out);
+  return out.copy(spot).setY(fallbackY);
 }
 export interface CarryOffset { x: number; y: number; z: number }
 const smooth = (t: number) => t * t * (3 - 2 * t);
