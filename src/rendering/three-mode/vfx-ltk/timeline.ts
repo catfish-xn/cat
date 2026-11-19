@@ -49,9 +49,15 @@ export interface TimelineCue {
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
    * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that
    * leaves to the side and climbs before it turns onto its own target (`strikeCurve`). Designed display values, not original
-   * data. Entries naming the caster are left out.
+   * data. Entries naming the caster are left out. `shown` and `tickCap` bound how many projectile rows a volley draws.
    */
-  readonly perStrike?: { readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan };
+  readonly perStrike?: {
+    readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan;
+    /** A projectile row only for the first `shown` strikes of a cast; later strikes keep their other cues (a hit still lands). */
+    readonly shown?: number;
+    /** At most this many of this system's rows queued on one rule tick across every caster (runtime); the rest are left out. */
+    readonly tickCap?: number;
+  };
   /**
    * A projectile whose caster is its own target still flies (from its bone to its own targetBone), instead of being left
    * out with its landing hits moved to its release (the default for a self-projectile). Off unless set per cue.
@@ -181,7 +187,7 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (cue.perStrike && cue.event !== 'cast-start' && cue.location !== 'board') {
       const strikes = targets.filter(id => id !== sourceId), { staggerTicks, spreadTicks, fan } = cue.perStrike;
       if (!strikes.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-      strikes.forEach((targetId, k) => spawns.push({ ...cue, sourceId, targetId, strike: k,
+      strikes.forEach((targetId, k) => (cue.event === 'projectile' && cue.perStrike!.shown !== undefined && k >= cue.perStrike!.shown) || spawns.push({ ...cue, sourceId, targetId, strike: k,
         delay: cue.delay + strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks) * STRIKE_TICK_SECONDS,
         ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) }));
       continue;

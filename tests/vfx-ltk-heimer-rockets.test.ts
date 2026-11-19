@@ -43,6 +43,17 @@ describe('Heimerdinger rockets (perStrike)', () => {
     expect(strikeCurve(0, 1, { side: 0.9, lift: 0.6 }).control1[0]).toBe(0);
   });
 
+  it('draws at most HEIMER_ROCKETS.shown rockets a cast; the later strikes keep their hits on the same stagger', () => {
+    const targets = ['a', 'b', 'a', 'c', 'a', 'b', 'c'];
+    const { spawns } = mapSkillTimeline(cast, 'heimer', targets);
+    const rockets = spawns.filter(s => s.system === 'c8d6ee2e'), hits = spawns.filter(s => s.system === '07c9833a');
+    expect(rockets.map(s => s.strike)).toEqual([0, 1, 2, 3, 4]);
+    expect(hits.map(s => s.targetId)).toEqual(targets);
+    hits.forEach((hit, k) => close(hit.delay, heimerRocketLandTick(k, 7) * STRIKE_TICK_SECONDS));
+    expect(new Set(hits.map(h => h.delay)).size).toBe(7);
+    expect(rockets[0]!.perStrike?.tickCap).toBe(HEIMER_ROCKETS.tickCap);
+  });
+
   it('leaves out strike entries that name the caster and keeps other cues per distinct target', () => {
     const { spawns } = mapSkillTimeline(cast, 'heimer', ['heimer', 'a', 'a']);
     expect(spawns.filter(s => s.system === 'c8d6ee2e').map(s => s.targetId)).toEqual(['a', 'a']);

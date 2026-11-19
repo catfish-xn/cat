@@ -373,6 +373,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * the tick changes and by clear().
    */
   const seedKeys = new Map<string, number>();
+  /** perStrike tickCap: rows of each capped system queued on the current rule tick (capTick). */
+  let capTick: number | undefined; const capCounts = new Map<string, number>();
   let seedTick: number | undefined;
   /**
    * A row's seed, taken when it is queued (not when it starts, which waits on room and loading): its system, its source,
@@ -671,6 +673,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
           part: 'beam', together: split.flight ? together : undefined });
       }
+      // A perStrike projectile's tickCap (TimelineCue.perStrike): at most that many of its rows queued on one rule tick, across
+      // every caster; the strikes past it keep their hits but draw no flight. Left out on purpose, so not counted as drops.
+      const tick = options.tick?.();
+      if (tick !== capTick) { capCounts.clear(); capTick = tick; }
+      const capped = tick === undefined ? rows : rows.filter(({ spawn }) => {
+        const most = spawn.event === 'projectile' ? spawn.perStrike?.tickCap : undefined;
+        if (most === undefined) return true;
+        const used = capCounts.get(spawn.system) ?? 0;
+        if (used >= most) return false;
+        capCounts.set(spawn.system, used + 1); return true;
+      });
+      rows.splice(0, rows.length, ...capped);
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
