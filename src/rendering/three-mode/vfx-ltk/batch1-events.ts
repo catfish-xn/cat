@@ -1,5 +1,6 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { TimelineAction, TimelineVariant } from './timeline';
+import { SMEECH_SWINGS } from './cue-overrides';
 
 /** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
 export const SOFT_STOP_SECONDS = 0.6;
@@ -90,6 +91,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const grabs = new Map<string, { held: string; down: number }>();
   // Nocturne's last empowered swing: its tick and the enemies his strike already played on (its target, then each one bled).
   const strikes = new Map<string, { tick: number; struck: Set<string> }>();
+  /** Smeech since his last cast: stabs drawn (his swing turns with each) and the enemy his last stab hit (a new one is a leap). */
+  const smeech = new Map<string, { stabs: number; target: string | undefined }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -97,7 +100,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -180,6 +183,15 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             && definition(s.sourceId) === 'steb' && s.actual > 0);
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
+        }
+        // Smeech: his cast names no target, so each stab's damage draws his swing (one of four, in turn) and its hit on the
+        // enemy stabbed; a stab on a new enemy (his cast's first, or after a leap) also draws the leap's trail to it.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'smeech') smeech.set(event.sourceId, { stabs: 0, target: undefined });
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'smeech') {
+          const seen = smeech.get(event.sourceId) ?? { stabs: 0, target: undefined };
+          if (seen.target !== event.targetId) plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-leap' });
+          plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `smeech-stab-${seen.stabs % SMEECH_SWINGS.length}` });
+          smeech.set(event.sourceId, { stabs: seen.stabs + 1, target: event.targetId });
         }
         // Maddie: one shot per damage packet of her volley, to the enemy it hit.
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
