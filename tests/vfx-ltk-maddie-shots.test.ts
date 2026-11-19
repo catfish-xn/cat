@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, MADDIE_SHOT_MIN_TICKS, MADDIE_SHOT_TICKS_PER_HEX } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { flightTicksFor, withFlight } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { BOARD_CELL } from '../src/rendering/three-mode/vfx-ltk/fx-size';
 import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 
@@ -22,7 +24,10 @@ describe('Maddie\'s shots follow their damage', () => {
   });
   it('the shot lands with its hit; her cast list no longer plays them', () => {
     const [shot, hit] = CUE_EXTRA_SKILLS['maddie-shot']!;
-    expect(hit!.delay).toBeCloseTo(shot!.delay + shot!.travelSeconds!);
+    // Both are timed by the same flight by distance: the hit's delay counts from the landing.
+    expect(shot!.flightTicks).toEqual({ perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS });
+    expect(hit!.flightTicks).toEqual(shot!.flightTicks);
+    expect(hit!.delay).toBe(0);
     expect(CUE_OVERRIDES.maddie!.some(c => (c.action ?? 'cast') === 'cast')).toBe(false);
     expect(mapSkillTimeline(CUE_EXTRA_SKILLS['maddie-shot']!, 'md', ['f1']).unsupported).toEqual([]);
   });
@@ -40,5 +45,16 @@ describe('Maddie\'s shots follow their damage', () => {
     expect(cast).toBeGreaterThan(0);
     expect(shots).toEqual(hits);
     expect(shots.slice(0, 6)).toHaveLength(6);
+  });
+  it('a shot flies 2 ticks a cell, at least 4 (fitted; to import the rules\' constant once it lands)', () => {
+    // To be replaced by src/simulation/cast-windup.ts maddieShotFlightTicks once the rules carry it (L2).
+    expect([MADDIE_SHOT_TICKS_PER_HEX, MADDIE_SHOT_MIN_TICKS]).toEqual([2, 4]);
+    expect([0.5, 1, 2, 3, 4, 5].map(cells => flightTicksFor(cells, MADDIE_SHOT_TICKS_PER_HEX, MADDIE_SHOT_MIN_TICKS))).toEqual([4, 4, 4, 6, 8, 10]);
+    const [shot, hit] = CUE_EXTRA_SKILLS['maddie-shot']!;
+    const from = [0, 0, 0] as const, to = [4 * BOARD_CELL, 0, 0] as const;
+    const flown = withFlight(shot!, from, to), landed = withFlight(hit!, from, to);
+    expect(flown.travelSeconds).toBeCloseTo(0.4);
+    expect(flown.duration).toBeCloseTo(0.4 + shot!.duration - shot!.travelSeconds!);
+    expect(landed.delay).toBeCloseTo(0.4);
   });
 });

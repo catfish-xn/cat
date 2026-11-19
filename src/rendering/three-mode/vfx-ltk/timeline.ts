@@ -17,6 +17,13 @@ export interface TimelineCue {
   readonly branch?: string;
   readonly primary?: boolean;
   readonly travelSeconds?: number;
+  /**
+   * Flight by distance (fitted, not original data): the flight takes max(min, ceil(cells × perCell)) rule ticks of 50 ms,
+   * cells being the board distance between caster and target where they stand when the play starts. On a projectile it
+   * sets travelSeconds, keeping what the cue holds past its nominal flight; on a hit the cue's delay counts from that
+   * landing. A cue without a target, or whose caster or target is gone, keeps its own times.
+   */
+  readonly flightTicks?: { readonly perCell: number; readonly min: number };
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
