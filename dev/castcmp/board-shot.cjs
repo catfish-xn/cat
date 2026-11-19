@@ -41,7 +41,7 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
   const quiet = await waitQuiet(page, { maxMs: Number(opt('quiet-ms') ?? 30000) }); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
   await page.evaluate(() => window.__h.fresh());
   const run = (clear = false) => page.evaluate(async c => { const r = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_RUN_STATS;
-    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], refused: {}, skipped: {}, dropWhy: {} }); return JSON.parse(JSON.stringify(r)); }, clear);
+    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], refused: {}, skipped: {}, dropWhy: {}, dropScenes: [] }); return JSON.parse(JSON.stringify(r)); }, clear);
   await run(true);
   fs.mkdirSync(path.join(out, 'shots'), { recursive: true });
   let t = 0, t0 = null; const shots = []; const todo = [...at]; const yields = []; let yieldN = 0;
