@@ -4249,17 +4249,17 @@
     "tests/vfx-ltk-cue-ranks-coverage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3667,
+      "currentBytes": 5360,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "be35c56be1d77b8dc78e9dbe49e9cf78b14a81029a0831afa8a909e2bc33bed2",
+      "currentSha256": "4fc8480b08015e8ecfed729f38b8375140e009cd306247d886e20646f166aeb5",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-ranks.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3092,
+      "currentBytes": 3226,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e30737853b3f5151ed76f3fc219668ead1307889e0e333a18782c493b6770215",
+      "currentSha256": "4d11de08e0ffbbfcdac5008c6147b4b35960e842174812465ca484164ff22420",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
