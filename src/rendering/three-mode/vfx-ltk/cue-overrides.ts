@@ -262,7 +262,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 0.55, bone: chest, targetLimit: 3 },
     { system: 'f4a6240a', action: 'cast', event: 'cast-start', delay: 1.1, duration: 1.1, bone: chest },
   ],
-  // Mace glow only. E_floor's pit and its claw share one system, so emission stops before the pit. Ult enter stays out.
+  // His cast: the hand glow and trail, his grasp played whole along the struck line (its pit and walls held off in
+  // DISABLED_EMITTERS), its shockwave and flash on each enemy struck, and his aura. His empowered attacks carry the mace
+  // glow and charge. Ult enter stays out.
   mordekaiser: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
     { system: '5449dd85', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Mace_Loc' },
@@ -277,6 +279,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // empowered attack clip carries them (not his cast); decoration.
     { system: '21bee60f', action: 'attack', variant: 'empowered', event: 'cast-start', delay: 0, duration: 1, bone: 'Buffbone_Glb_Mace_Loc', rank: 'decorative' },
     { system: '04ae533c', action: 'attack', variant: 'empowered', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc', rank: 'decorative' },
+    // An empowered attack plays only the empowered cues (a play selects by variant), so it carries its own copy of the attack
+    // hit: without it his empowered attacks would show no hit at all. One hit per attack, not two.
     { system: '0f2af66b', action: 'attack', variant: 'empowered', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
     // The empowered aura on his mace, from his slam's damage (the rules strike at the cast tick: no CAST_WINDUP_TICKS entry)
     // until his empowered time ends (SUSTAIN_CAPS, CUE_END_STOPS). The skill's body: it never yields (Fable 11-19).
