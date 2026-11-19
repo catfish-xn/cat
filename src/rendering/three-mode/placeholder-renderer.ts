@@ -16,7 +16,7 @@ import { createStarUpFx } from './star-up-fx';
 import { createReferenceBurst, createRenataShield, renataShieldCaster, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
 import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_FLIGHT_SECONDS, RENATA_LAUNCH_DELAY } from './renata-missile';
-import { planActionEffects, type EffectPlayback } from './action-effect-plan';
+import { landingPlan, planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
@@ -64,10 +64,10 @@ import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights 
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
+import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
-import { createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
+import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
 import { attackKey, attackLandings } from './vfx-ltk/attack-landing';
 import { CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
@@ -1279,7 +1279,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
       attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
-      feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
+      // Reduced motion and champions without a timeline land here too: a ranged spark follows the rules' arrival.
+      feel.attack(attackFrom, attackTo, ranged, ranged ? tracerDelay(landing) : 0.18);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;
@@ -1323,7 +1324,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    const planned = castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback);
+    // The asset fallback (reduced motion, no timeline) times a ranged attack's projectile and hit by the rules' landing too.
+    for (const { id, playback: spec } of landing && action === 'attack' ? landingPlan(planned, landing, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS) : planned) {
       if (queued.length >= MAX_QUEUED) return;
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }

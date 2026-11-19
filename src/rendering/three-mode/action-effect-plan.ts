@@ -17,3 +17,22 @@ export function planActionEffects(unit: string, action: 'attack' | 'cast', effec
     return spec ? [{ id: entry.id, playback: spec }] : [];
   });
 }
+
+/**
+ * An attack's asset effects timed by the rules' landing (attackLaunched) instead of their fixed delays: a projectile leaves at
+ * its own delay and lands on the arrival, flying at least minFlight (its maxDuration is its flight); target-anchored effects (the
+ * hit) start when it lands. A beam (0 s) plays its projectile and hit on the attack event. Without a projectile the plan is
+ * returned as it is. Fitted, not original (the same rule as vfx-ltk landingCues).
+ */
+export function landingPlan(plan: readonly PlannedEffect[], landing: { readonly seconds: number; readonly beam?: boolean }, minFlight: number, beamFlight: number): PlannedEffect[] {
+  if (!plan.some(entry => entry.playback.anchor === 'projectile')) return [...plan];
+  const arrive = Math.max(0, landing.seconds);
+  let lands = arrive;
+  const moved = plan.map(entry => {
+    if (entry.playback.anchor !== 'projectile') return entry;
+    const delay = landing.beam ? arrive : entry.playback.delay, travel = landing.beam ? beamFlight : Math.max(minFlight, arrive - delay);
+    lands = Math.max(lands, landing.beam ? arrive : delay + travel);
+    return { id: entry.id, playback: { ...entry.playback, delay, maxDuration: travel } };
+  });
+  return moved.map(entry => entry.playback.anchor === 'target' ? { id: entry.id, playback: { ...entry.playback, delay: lands } } : entry);
+}

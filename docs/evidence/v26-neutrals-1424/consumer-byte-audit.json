@@ -2675,6 +2675,14 @@
       "currentSha256": "fa0140d126ca6a44b08303b4e99f6084fbcb41e352f5bf71e405050b0105e942",
       "firstDifferentByte": 7534
     },
+    "tests/rendering3d-landing-fallback.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2796,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "505a4683ce4939fb77c74098fd33a3889ecf7903dcc2c7016f20b2228f299c52",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-late-game-retention.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

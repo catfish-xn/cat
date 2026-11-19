@@ -79,7 +79,13 @@ export function windupEnvelope(age: number): { ring: number; opacity: number; gl
 }
 
 // 10-24 GPU review: the first tracer (6 units, two ghosts) was barely visible; twice the size with a four-step tail.
-const ATTACK_COLOR = 0xfff4e6, TRACER_SECONDS = 0.16, SPARK_SECONDS = 0.12, TRACER_SIZE = 12, SPARK_SIZE = 26, TRAIL = 4, TRAIL_GAP = 0.022;
+export const TRACER_SECONDS = 0.16;
+/** The tracer's start delay (SkillFeel.attack) for a ranged attack: its spark lands on the rules' arrival (attackLaunched), never
+ * sooner than one tracer flight; without a landing (a dummy, an old replay) the usual 0.1 s. Fitted, not original. */
+export function tracerDelay(landing: { readonly seconds: number } | undefined): number {
+  return landing ? Math.max(0, landing.seconds - TRACER_SECONDS) : 0.1;
+}
+const ATTACK_COLOR = 0xfff4e6, SPARK_SECONDS = 0.12, TRACER_SIZE = 12, SPARK_SIZE = 26, TRAIL = 4, TRAIL_GAP = 0.022;
 const IMPACT_SECONDS = 0.28;
 const SPRITES = 96, CHARGES = 8, IMPACTS = 8;
 
