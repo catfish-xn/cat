@@ -843,8 +843,12 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '8682c9ee': 1.8, // Vex opening area → her delayed second hit
   'eb9da1d5': 1.8,
 };
-/** Held layers whose next play on the same target replaces the last one (a refreshed mark), not a second layer over it. */
-export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(['5af49b76']);
+/**
+ * Held layers whose next play replaces the last one instead of drawing a second layer over it: Ekko's mark per target (a
+ * refreshed mark), and the all-fight layers on the caster that every recast would otherwise stack (Draven's axes, Kog'Maw's
+ * stacks).
+ */
+export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(['5af49b76', 'd86cc9bc', '6889455c', '9f805f6e']);
 /**
  * Held layers ranked below every skill body (Fable 11-19: Draven's axes and Kog'Maw's stacks, shown all fight long, are
  * decoration): any skill visual takes their slot, and they come back when room frees (SUSTAIN_READMIT).

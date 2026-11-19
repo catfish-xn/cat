@@ -96,8 +96,8 @@ describe('fallback caps of held layers (Fable 11-19)', () => {
   });
   it('Ekko\'s mark refreshes per target for 2 s; Draven\'s axes and Kog\'Maw\'s stacks are decoration that comes back', () => {
     expect(SUSTAIN_CAPS['5af49b76']).toBe(2);
-    expect([...SUSTAIN_REFRESH]).toEqual(['5af49b76']);
     const allFight = ['d86cc9bc', '6889455c', '9f805f6e'];
+    expect([...SUSTAIN_REFRESH]).toEqual(['5af49b76', ...allFight]);
     expect(SUSTAIN_RANKS).toEqual(Object.fromEntries(allFight.map(system => [system, 'decorative'])));
     expect([...SUSTAIN_READMIT]).toEqual(allFight);
     // Held all fight long: never quietly gone after a short cap.

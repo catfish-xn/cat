@@ -37,6 +37,15 @@ describe('held layers: refreshed marks and decoration that comes back (Fable 11-
     runtime.dispose(); library.dispose();
   });
 
+  it('Draven\'s axes are one layer however often he casts: a recast replaces them', async () => {
+    const { runtime, library, step, shown } = await board();
+    runtime.play('draven', 'draven', []); step(0.5);
+    runtime.play('draven', 'draven', []); step(0.5);
+    runtime.play('draven', 'draven', []); step(0.5);
+    expect(shown(AXES)).toHaveLength(1);
+    runtime.dispose(); library.dispose();
+  });
+
   it('Draven\'s axes give their slot to any skill visual and come back when room frees', async () => {
     const { runtime, library, step, shown } = await board();
     runtime.play('draven', 'draven', []); step(0.1);
