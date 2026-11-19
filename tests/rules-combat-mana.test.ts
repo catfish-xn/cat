@@ -1,3 +1,4 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -20,9 +21,16 @@ const hero = (id: string, team: CombatUnit['team'], col: number, patch: Partial<
   baseCritChanceBps: 0, mana: 0, maxMana: 10000, attackDamage: 0, cooldownTicks: 1000, moveCooldownTicks: 1000, ...patch,
 });
 const victim = (state: CombatState) => state.units.find(u => u.id === 'p')!;
-const hit = (damage: number, patch: Partial<CombatUnit> = {}, attackers = 1) => stepCombat(battle([
+/** Ranged attack landing (window only): the attackers are ranged heroes, so the damage — and p's damage mana — comes when the
+ * shots land. One step, then on (attackers held) until every shot launched in it has landed; the events are the landing step's. */
+function landed(first: ReturnType<typeof stepCombat>): ReturnType<typeof stepCombat> {
+  let r = first, launched = first.events.filter(e => e.type === 'attackLaunched').length, done = 0;
+  while (done < launched) { r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === 'p' ? u : { ...u, cooldownTicks: 1000 }) }); done += r.events.filter(e => e.type === 'attackLanded').length; }
+  return r;
+}
+const hit = (damage: number, patch: Partial<CombatUnit> = {}, attackers = 1) => landed(stepCombat(battle([
   hero('p', 'player', 1, patch), ...Array.from({ length: attackers }, (_, i) => hero(`e${i}`, 'enemy', i ? 2 : 0, { attackDamage: damage, cooldownTicks: 0 })),
-]));
+])));
 
 describe('10-23 approved combat mana and excess crit vectors', () => {
   it('pre200 + post100×3 =500 hundredths, including a fully absorbed hit', () => {
@@ -31,21 +39,21 @@ describe('10-23 approved combat mana and excess crit vectors', () => {
     expect(result.state.rngDraws).toBe(1);
   });
   it('100 crits to140, armor100 gives70: 140+3×70=350, remainder50', () => {
-    const result = stepCombat(battle([hero('p', 'player', 1, { armor: 100 }),
-      hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, baseCritChanceBps: 10000 })]));
+    const result = landed(stepCombat(battle([hero('p', 'player', 1, { armor: 100 }),
+      hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, baseCritChanceBps: 10000 })])));
     expect(victim(result.state)).toMatchObject({ hp: 9930, mana: 3, damageManaRemainderCenti: 50 });
     expect(result.state.rngDraws).toBe(1);
   });
   it('pre-mitigation includes outgoing amp: 100×1.2=120, armor100→60, mana3', () => {
-    const result = stepCombat(battle([hero('p', 'player', 1, { armor: 100 }),
-      hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, mechanics: [{ mechanic: 'damageAmp', source: { ownerId: 'e', sourceKind: 'augment', definitionId: 'amp', instanceId: 'amp', effectIndex: 0 }, values: { bps: 2000 } }] })]));
+    const result = landed(stepCombat(battle([hero('p', 'player', 1, { armor: 100 }),
+      hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, mechanics: [{ mechanic: 'damageAmp', source: { ownerId: 'e', sourceKind: 'augment', definitionId: 'amp', instanceId: 'amp', effectIndex: 0 }, values: { bps: 2000 } }] })])));
     expect(victim(result.state)).toMatchObject({ hp: 9940, mana: 3, damageManaRemainderCenti: 0 });
   });
   it('Loris splits pre600/post300 equally: each recipient gets7.50 without duplicate raw', () => {
     let state = battle([hero('p', 'player', 1, { armor: 100 }),
       hero('l', 'player', 2, { mana: 100, maxMana: 100, attackIntervalTicks: 1000, ability: resolveAbility('loris-ability', 1) }),
       hero('e', 'enemy', 0, { attackDamage: 600, cooldownTicks: 22 })]);
-    while (state.tick < 22) state = stepCombat(state).state;
+    while (state.tick < 22 + rangedAttackFlightTicks(1)) state = stepCombat(state).state; // window: e's tick-22 shot lands
     expect(victim(state).hp).toBe(9850);
     for (const u of state.units.filter(u => u.team === 'player')) expect(u).toMatchObject({ mana: 7, damageManaRemainderCenti: 50 });
   });
@@ -58,7 +66,8 @@ describe('10-23 approved combat mana and excess crit vectors', () => {
   it('Visionary scales hundredths before tick floor: 28×1.5=42, three ticks→1.26', () => {
     let state = battle([hero('p', 'player', 1, { mechanics: [{ mechanic: 'visionary', source: { ownerId: 'p', sourceKind: 'trait', definitionId: 'visionary', instanceId: 'v', effectIndex: 0 }, values: { manaBps: 5000 } }] }),
       hero('e', 'enemy', 0, { attackDamage: 7, cooldownTicks: 0, attackIntervalTicks: 1 })]);
-    for (let i = 0; i < 3; i++) state = stepCombat(state).state;
+    // Window: the shots of ticks 1–3 land rangedAttackFlightTicks(1) later.
+    for (let i = 0; i < 3 + rangedAttackFlightTicks(1); i++) state = stepCombat(state).state;
     expect(victim(state)).toMatchObject({ mana: 1, damageManaRemainderCenti: 26 });
   });
   it('caps EACH packet at42.50, so two large packets give85; no whole-tick cap', () => {
@@ -67,9 +76,11 @@ describe('10-23 approved combat mana and excess crit vectors', () => {
     expect(victim(hit(2000, {}, 2).state)).toMatchObject({ mana: 85, damageManaRemainderCenti: 0 });
   });
   it('two 7-damage packets give56 hundredths; next tick56 yields1 with12 carried', () => {
-    const first = stepCombat(battle([hero('p', 'player', 1),
+    // Window: each volley lands rangedAttackFlightTicks(1) after it; first = the first volley's landing step.
+    let first = stepCombat(battle([hero('p', 'player', 1),
       hero('e0', 'enemy', 0, { attackDamage: 7, cooldownTicks: 0, attackIntervalTicks: 1 }),
       hero('e1', 'enemy', 2, { attackDamage: 7, cooldownTicks: 0, attackIntervalTicks: 1 })]));
+    for (let i = 0; i < rangedAttackFlightTicks(1); i++) first = stepCombat(first.state);
     expect(victim(first.state)).toMatchObject({ mana: 0, damageManaRemainderCenti: 56 });
     const second = stepCombat(freeze(first.state));
     expect(victim(second.state)).toMatchObject({ mana: 1, damageManaRemainderCenti: 12 });
@@ -116,7 +127,7 @@ describe('10-23 approved combat mana and excess crit vectors', () => {
     let draws = 0;
     expect(rollCrit('basic', auth, () => { draws++; return 0xffffffff; })).toBe(true);
     expect(draws).toBe(1);
-    const result = stepCombat(battle([hero('p', 'player', 1), hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, baseCritChanceBps: 12500 })]));
+    const result = landed(stepCombat(battle([hero('p', 'player', 1), hero('e', 'enemy', 0, { attackDamage: 100, cooldownTicks: 0, baseCritChanceBps: 12500 })])));
     expect(victim(result.state).hp).toBe(9848);
     expect(result.state.rngDraws).toBe(1);
   });

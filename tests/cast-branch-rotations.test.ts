@@ -23,7 +23,12 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
   }
   return out;
 }
-const MIXED_DIGEST = '49e1d29a58fb069e6a6d2493b461bca599f21376d65379668018b2680a2976bc';
+// #739 (ranged basic attacks settle when the shot lands) re-pin, was 49e1d29a…: from #739 on this baseline includes ranged
+// landing. With landing on, the attackLaunched/attackLanded display events removed and eventSeq ignored, the first 17 events
+// are identical; the first difference is Jinx's first attack at tick 1 (its damage now lands at tick 9, four hexes at two
+// ticks per hex; the attack mana stays at tick 1), and the fight runs 294 -> 303 ticks. With landing switched off the digest
+// is 49e1d29a… again, so nothing but the landing rule moved.
+const MIXED_DIGEST = '66c3a9e462bb536683b06ae66d060bcb8407d0a6e6dd144f2f314c621a36cc5c';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

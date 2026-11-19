@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import { describe, expect, it } from 'vitest';
 import { room } from './tp-helpers';
 import { freeze } from './combat-helpers';
@@ -85,7 +86,7 @@ describe('D14 Ultimate Hero dedicated permanent promotion (independent API)',()=
   it('feeds the promoted AD to the actual combat damage pipeline',()=>{
     const f=setup();const s=advance(commit(f.state,f.a,f.command).state,f.a);let c=combat(s);
     c={...c,units:c.units.map(u=>({...u,baseCritChanceBps:0,mana:0,maxMana:100000}))};
-    const step=stepCombat(c),enemy=step.state.units.find(u=>u.id==='enemy')!;
+    const step=stepLanded(c),enemy=step.state.units.find(u=>u.id==='enemy')!;
     expect(100000-enemy.hp).toBe(174);
   });
   it('uses rank-four Singed coefficients with the explicit 14.24b 60% DR override',()=>{
@@ -151,7 +152,7 @@ describe('D14 Into the Unknown lifecycle (Q3 fallback where scripts unavailable)
     const projection=projectD14Unit(s,'seat-0',f.targetId,sources)!;
     expect(projection.stats.attack).toBe(68);expect(projection.abilityPower).toBe(175);
     let c=combat(s);c={...c,units:c.units.map(u=>({...u,baseCritChanceBps:0,mana:0,maxMana:100000}))};
-    expect(100000-stepCombat(c).state.units.find(u=>u.id==='enemy')!.hp).toBe(45);
+    expect(100000-stepLanded(c).state.units.find(u=>u.id==='enemy')!.hp).toBe(45);
   });
   it.each(['sell','equip','duplicate'] as const)('rejects %s while absent without consuming gold/items/tools or changing facts',kind=>{
     const f=setup('into-the-unknown');const s=commit(f.state,f.a,f.command).state;

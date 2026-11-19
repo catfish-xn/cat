@@ -50,6 +50,10 @@ const TERMINAL_SEED = 442;
     // #509 (melee retargeting: a walled-off razorbeak takes a reachable enemy) sends the large bird past Loris onto
     // Maddie at (2,7), and that pair kills nothing. Re-searched every Maddie/Loris cell pair on the same route: Maddie
     // at (6,7) and Loris at (4,4) kill exactly r04 then r01 (Illaoi + its drop, and the vest) and the board still loses.
+    // #739 (ranged basic attacks settle when the shot lands; a wiped board ends the battle and voids shots in flight): with
+    // Loris at (4,4) Maddie's last shot at r04 (139 HP left) launches at tick 145 and would land at 153, but the board is wiped
+    // at 151, so no bird dies. Re-searched every Maddie/Loris cell pair on the same route: only Maddie (6,7) with Loris (5,4)
+    // still kills exactly r04 then r01 and the board still loses (statuses granted / retained-terminal / granted).
     const players = state => state.preparation.units.filter(unit => unit.team === 'player');
     const bench = state => players(state).filter(unit => unit.location.kind === 'bench');
     function reserveExcept(initial, keep) {
@@ -136,7 +140,7 @@ const TERMINAL_SEED = 442;
     assert(maddie, `seed-${TERMINAL_SEED} public terminal roster keeps Maddie`);
     assert(loris, `seed-${TERMINAL_SEED} public terminal roster keeps Loris`);
     terminalState = accepted(api.deployMatchUnit(terminalState, maddie.id, { kind: 'board', cell: { col: 6, row: 7 } }));
-    terminalState = accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 4, row: 4 } }));
+    terminalState = accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 5, row: 4 } }));
     terminalState = fillBench(terminalState, terminalExcluded);
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);

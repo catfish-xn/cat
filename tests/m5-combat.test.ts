@@ -1,3 +1,5 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { stepLanded } from './helpers/landing';
 import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { B5_G4_SUMMON_UNITS } from '../src/simulation/content/augment-pool-batch5-g4';
 import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
@@ -87,11 +89,11 @@ describe('M5 independent finite combat rules', () => {
     expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2 + CAST_WINDUP_TICKS.zyra, expiresAtTick: 22 + CAST_WINDUP_TICKS.zyra });
   });
   it('Lux selects lowest current HP rather than percentage and buffs only the next attack', () => {
-    const result = stepCombat(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]));
+    const result = stepLanded(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]));
     expect(result.state.units.find(u => u.id === 'p2')!.shield).toBe(160);
     expect(result.state.units.find(u => u.id === 'p3')!.shield).toBe(0);
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(360);
-    const next = advance(result.state, 20);
+    const next = advance(result.state, 20 + rangedAttackFlightTicks(3)); // window: the charged attack's shot lands after it
     expect(packets(next.events).filter(p => p.source.definitionId === 'lux-ability' && p.source.sourceKind === 'ability')).toHaveLength(1);
     expect(next.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(0);
   });
@@ -205,7 +207,7 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.mitigated)).toEqual([77, 135]);
   });
   it('uses an explicit crit word for every planned attack including zero-probability neutrals', () => {
-    const result = stepCombat(battle([hero('lux', 'p', { mana: 0 }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })], { rngState: 42, rngDraws: 0 }));
+    const result = stepLanded(battle([hero('lux', 'p', { mana: 0 }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })], { rngState: 42, rngDraws: 0 }));
     expect(result.state.rngDraws).toBe(2);
     // replay2: outcome.raw is pre-crit, so Lux's critical raw is her 100 AD (was 140 = 100×140% after crit).
     expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => [p.source.ownerId, p.critical, p.raw])).toEqual([['e', false, 100], ['p', true, 100]]);
@@ -295,14 +297,14 @@ describe('M5 independent finite combat rules', () => {
   it('Sniper distance amplification and Watcher threshold use pre-damage HP with strict greater-than', () => {
     const attacker = hero('lux', 'p', { mana: 0, mechanics: [mechanic('p', 'sniper', { damageBpsPerHex: 700 })] });
     const watch = mechanic('e', 'watcher', { reductionBps: 1500, healthyReductionBps: 3000, thresholdBps: 5000 });
-    const atHalf = stepCombat(battle([attacker, dummy('e', 3, 3, { hp: 500, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
+    const atHalf = stepLanded(battle([attacker, dummy('e', 3, 3, { hp: 500, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
     // seed42 firstword1083814273 exceeds25% threshold, no crit: floor(100*1.14*.85)=96.
     expect(packets(atHalf.events)[0]).toMatchObject({ raw: 100, mitigated: 96 });
-    const above = stepCombat(battle([attacker, dummy('e', 3, 3, { hp: 501, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
+    const above = stepLanded(battle([attacker, dummy('e', 3, 3, { hp: 501, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
     expect(packets(above.events)[0].mitigated).toBe(79);
   });
   it('Artillery and Titanic each create one derived AoE without incrementing the primary counter', () => {
-    const result = stepCombat(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: [
+    const result = stepLanded(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: [
       mechanic('p', 'artillery', { everyN: 5, adBps: 12500, radius: 1 }), mechanic('p', 'titanic', { adBps: 4000, radius: 1 }),
     ] }), dummy(), dummy('e2', 3, 3)], { rngState: 42 }));
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.attackCount).toBe(5);
@@ -339,7 +341,7 @@ describe('M5 independent finite combat rules', () => {
     expect(caitlyn.state.units.find(u => u.id === 'e')!.statuses![0]).toMatchObject({ kind: 'resistanceFlat', amount: -20, startsAtTick: 2 });
   });
   it('Kog passive and Darius initial spin use distinct noncritical magic/physical coefficients', () => {
-    const kog = stepCombat(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
+    const kog = stepLanded(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
     const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700, targetId: 'e' }), dummy(), dummy('e2', 1, 2)])); // e/e2 are tied; pin e.
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
@@ -361,7 +363,7 @@ describe('M5 independent finite combat rules', () => {
   });
   it('derived AoE packet ordinals are unique and item enumeration cannot choose a different killer', () => {
     const mechanics = [mechanic('p', 'titanic', { adBps: 4000, radius: 1 }), mechanic('p', 'artillery', { everyN: 5, adBps: 12500, radius: 1 })];
-    const run = (list: CombatMechanic[]) => stepCombat(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: list }), dummy()], { rngState: 42 }));
+    const run = (list: CombatMechanic[]) => stepLanded(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: list }), dummy()], { rngState: 42 }));
     expect(run(mechanics).events).toEqual(run([...mechanics].reverse()).events);
     expect(packets(run(mechanics).events).map(p => p.packetOrdinal)).toEqual([0, 3, 4]);
   });
@@ -392,7 +394,7 @@ describe('M5 independent finite combat rules', () => {
     const start = applyCombatStart(hookState(false));
     expect(start.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ granted: 60, remaining: 60 })]);
     expect(applyCombatStart(start.state).events).toEqual([]);
-    const result = stepCombat(start.state);
+    const result = stepLanded(start.state);
     // replay2: the seed-42 Lux attack crits and outcome.raw is pre-crit: 100 AD (was 140 = 100×140% after crit).
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([100, 25]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.critical, p.mitigated])).toEqual([[true, 140], [false, 25]]);

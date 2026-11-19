@@ -1,3 +1,6 @@
+import { hexDistance } from '../src/simulation/board';
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { stepLanded } from './helpers/landing';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
@@ -87,7 +90,8 @@ beforeEach(() => {
 
 it('Lux kills two different targets in one root action and gains two +20 stacks', () => {
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
-  expect(after.combat!.tick).toBe(118);
+  // Ranged attack landing (pure-result re-pin): the double kill comes when Lux's hits land, the flight after tick 118.
+  expect(after.combat!.tick).toBe(118 + rangedAttackFlightTicks(1));
   expect(packets).toHaveLength(2);
   expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([18]));
   expect(new Set(packets.map(p => p.context.targetId)).size).toBe(2);
@@ -216,8 +220,10 @@ function earned(s: CombatState) {
   });
 }
 
+// Ranged attack landing (scene change, Fable 11-18): a ranged holder's shot no longer kills on its attack tick, so the same-tick
+// mutual kill needs a melee holder (Vi); the ranged version below records what happens now.
 it('S1: a holder and its target dying in the same tick award no stack to the dead holder', () => {
-  const { state } = attributionFight(['lux']);
+  const { state } = attributionFight(['vi']);
   const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
     attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
   const result = stepCombat(initial);
@@ -230,19 +236,35 @@ it('S1: a holder and its target dying in the same tick award no stack to the dea
   expect(combatUnit(result.state, 'p').runtime!.abilityPowerFlat).toBe(0);
 });
 
+it('S1 ranged holder: the target kills Lux on tick 1; her shot is still in flight when the fight ends, so nobody gets a stack', () => {
+  const { state } = attributionFight(['lux']);
+  const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
+    attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
+  const result = stepCombat(initial);
+  expect(result.events.filter(e => e.type === 'attackLaunched').map(e => e.type === 'attackLaunched' && e.attackerId)).toEqual(['p']);
+  const lethal = result.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
+  expect(lethal.map(p => [p.source.ownerId, p.targetId])).toEqual([['e', 'p']]);
+  expect(result.state.result).toBe('enemyWin');
+  expect(earned(result.state)).toEqual([]);
+});
+
 it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a real prior assist (%s)', contributed => {
   const started = attributionFight(['morgana', 'vladimir', 'cassiopeia'], true);
   const sion = started.state.units.find(u => u.definitionId === 'g23-sion')!;
   expect(sion).toBeDefined();
   expect(started.events).toContainEqual(expect.objectContaining({ type: 'unitSpawned', unitId: sion.id, definitionId: 'g23-sion' }));
   let state: CombatState = { ...started.state, units: started.state.units.map(u => u.id === sion.id
-    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2, attackDamage: 10000, attackDamageBase: 10000 }
+    // Ranged attack landing (scene change, Fable 11-18): Sion strikes 2 + the holder's flight ticks in, after her shot has landed.
+    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell)), attackDamage: 10000, attackDamageBase: 10000 }
     : u.id === 'e' ? { ...u, hp: 100, maxHp: 100 }
     : u.id === 'p' && contributed ? { ...u, cooldownTicks: 0 } : u) };
-  const first = stepCombat(state); state = first.state;
+  const first = stepLanded(state); state = first.state; // window: the holder's shot lands
   expect(first.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p' && e.outcome.hpDamage > 0)).toBe(contributed);
   expect(earned(state)).toEqual([]);
-  const second = stepCombat(state); state = second.state;
+  // Window: on to Sion's strike, which kills on exactly the tick his cooldown (2 + the holder's flight) runs out.
+  const sionCooldown = 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell));
+  let second = stepCombat(state); for (let n = 0; n < 10 && !second.events.some(e => e.type === 'kill'); n++) second = stepCombat(second.state); state = second.state;
+  expect(second.state.tick).toBe(started.state.tick + sionCooldown);
   const lethal = second.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
   expect(lethal).toHaveLength(1);
   expect(lethal[0]).toMatchObject({ source: { ownerId: sion.id }, targetId: 'e', delivery: 'basic-attack' });
@@ -420,14 +442,16 @@ describe('dead-holder public combat fixture', () => {
     // seed 306 has four cells that trade (first (1,4) at tick 465) but its bracer resistance buffs have run out by then, which
     // the death-cleanup assertions below need active; seed 338 at (0,7) meets every premise: Zyra kills enemy-r8-2 at tick 223
     // as enemy-r8-4 kills her (no longer a mutual trade; the premise is the holder's same-tick killing blow).
-    let state = frontRowRod(338);
+    // Ranged attack landing (#739): seed 338 no longer trades in any cell. Searched seeds 0..199 over all 28 cells with the
+    // same premises (one earlier kill, resistance buffs active); seed 149 at (4,6) trades at tick 300 (Zyra and enemy-r8-3 kill each other).
+    let state = frontRowRod(149);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 0, row: 7 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 6 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 222) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 299) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -436,13 +460,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 222);
+    const initial = copy.initial, before = stepTo(copy.before, 299);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r8-2';
-    expect(after.combat!.tick).toBe(223);
+    const targetId = 'enemy-r8-3';
+    expect(after.combat!.tick).toBe(300);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 223, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-4' }) }),
-      expect.objectContaining({ type: 'kill', tick: 223, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 300, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-3' }) }),
+      expect.objectContaining({ type: 'kill', tick: 300, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -473,8 +497,13 @@ describe.each([
   // lone Sion attack kill with the required contribution while Morgana is alive and has no bracer stack yet. Seed 2 (first from 0) keeps a clean boundary for both crests with the
   // same Cassiopeia (0,6) / Vladimir (4,7) cells: Morgana (5,7) without contribution, Sion kills enemy-r8-4 at tick 307;
   // Morgana (5,6) with contribution, Sion kills enemy-r8-1 at tick 278. (Were seed 5 tick 255 / seed 1 tick 225, enemy-r4-1.)
-  { contribution: false, seed: 2, cells: [{ col: 5, row: 7 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 307, targetId: 'enemy-r8-4' },
-  { contribution: true, seed: 2, cells: [{ col: 5, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 278, targetId: 'enemy-r8-1' },
+  // Ranged attack landing (#739): without contribution, seeds 0..80 give no lone Sion kill (with the Watcher Crest route) in
+  // any Morgana cell with Cassiopeia (0,6) / Vladimir (4,7). The task-mechanism-restore layout keeps it: seed 1, Morgana (6,7),
+  // Cassiopeia (0,4), Vladimir (3,4); Sion kills enemy-r4-1 at tick 323.
+  { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
+  // Ranged attack landing (#739): with contribution, Morgana (5,6) no longer gives the lone Sion kill; Morgana (4,6) does,
+  // Sion kills enemy-r8-1 at tick 224 (same seed and Cassiopeia/Vladimir cells).
+  { contribution: true, seed: 2, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 224, targetId: 'enemy-r8-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   // Script only the draw; the following equality checks the fixture, not real-RNG availability.
   let restoreOffers: () => void;
