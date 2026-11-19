@@ -36,6 +36,22 @@ node scripts/assets3d/replace-entry.mjs --manifest <清单文件的副本> --her
 
 见 `docs/ASSETS3D_DEPLOY_ROOT.md` 的"子网格补丁"一节。这个工具在合并入口里给模型加上 `submeshVisibility`，几何开关打开时还会追加初始隐藏的子网格。用在本地快照上时，只换改动过的模型和清单条目，不重写 packs：改动过的模型从对应包的文件列表里移出，`.bin` 不动，precache 只更新这几个文件。
 
+### 4. 用工具复现已部署模型（以蒙多为例）
+
+已部署的蒙多模型（384e1a99）不是从未压缩源整体打出来的，而是在压缩件上两次增量编辑的结果。要改它的几何（例如加上大招身体），先按原参数复现出逐字节一致的版本，再只换一个输入：
+
+1. 11-02 的普攻补丁（本地工具 `attackfix-server/patch-attack.mjs`，不在仓库里）。它的产出（cf89564e）会被第 2 步整个覆盖，对结果没有影响。
+2. 11-10 的 `scripts/assets3d/stage-anim-sequences.mjs`（代码 5f96edf6）：
+
+```sh
+node scripts/assets3d/stage-anim-sequences.mjs --assets <素材根> --extracted <解包缓存> --out-dir <目录> --only drmundo --unit-map <unit map> [--uncompressed-fallback <目录>]
+```
+
+- `--assets`：11-10 部署前的服务器清单，加上任一蒙多压缩件（放在清单里蒙多条目的路径上）。
+- 需要追加片段时，工具会从 `--uncompressed-fallback` 目录里同一相对路径取未压缩件重建模型；不写这个参数时用原来的默认目录。
+- 用"子网格几何关"的未压缩件作回退件，产出与已部署的 384e1a99 逐字节一致；换成"几何开"的未压缩件，得到带 BodyUlt 的 c76e9602（正式快照 7b3c / 0c59 已带上）。
+- 核对：对三步的输入和产出各打一次 sha256，和上面的值对上再往下做。
+
 ## 每次增量的验收（先报再上）
 
 1. 变动的文件正好是预期那几个，其余文件逐字节不变。
