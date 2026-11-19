@@ -4281,9 +4281,9 @@
     "tests/vfx-ltk-early-stop-a.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2007,
+      "currentBytes": 2063,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "aec5970c7916196a876be371ae30d392acf495edd2130ee40ccb94871446fa6a",
+      "currentSha256": "88ceff68f059145edb8900bebd04d3ae526c4f09824a052fa403478c40f3bf38",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-emission.test.ts": {
