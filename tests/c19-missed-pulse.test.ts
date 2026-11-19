@@ -57,8 +57,10 @@ describe('SR-C19-01 same-tick burn attachment', () => {
     const pulses = burnPackets(result.events);
     // Both first applications are at 40. v26 (targeting-p1): the recorder re-picks Ezreal's cell (4,7)->(4,5)
     // to keep that obligation (docs/evidence/v26-neutrals-1424/input-fixture-audit.json c19.placementSearch).
-    // Ezreal dies at 160: 60..160 = 6. Garen dies at 344: 60..340 = 15, despite a new source joining at 200.
-    for (const [unitId, deathTick, count] of [['unit-42', 160, 6], ['unit-48', 344, 15]] as const) {
+    // Ezreal dies at 161: 60..160 = 6 (#739: ranged basic attacks settle on landing, so the fight runs differently from the
+    // first ranged attack on and Caitlyn's ability kill lands one tick later; was 160; burn pulses unchanged).
+    // Garen dies at 344: 60..340 = 15, despite a new source joining at 200.
+    for (const [unitId, deathTick, count] of [['unit-42', 161, 6], ['unit-48', 344, 15]] as const) {
       const target = id('s3', unitId);
       expect(result.events.find(e => e.type === 'death' && e.unitId === target)?.tick).toBe(deathTick);
       const paid = pulses.filter(e => e.unitId === target);
