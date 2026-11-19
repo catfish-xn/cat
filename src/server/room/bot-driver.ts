@@ -224,7 +224,15 @@ export class BotDriver {
       self: { seatId: seat.seatId, hp: seat.hp, round: seat.match.round },
       ...(brain.lastFailure ? { lastFailure: brain.lastFailure } : {}),
     };
-    const decision = decideBotAction(seat.match, context, brain.rng);
+    let decision: ReturnType<typeof decideBotAction>;
+    // The policy only previews rules on a copy; an exception there must not escape the room's timer (the server exits
+    // on an uncaught error). The seat stops for this round, as after a refusal, and the phase timeouts act for it.
+    try { decision = decideBotAction(seat.match, context, brain.rng); }
+    catch {
+      brain.closed = true; brain.doneEntry = this.entry;
+      this.record(state, seat, brain, 'done', false, 'policy-error');
+      return;
+    }
     brain.rng = decision.rng;
     if (decision.action === 'done') {
       brain.doneEntry = this.entry;

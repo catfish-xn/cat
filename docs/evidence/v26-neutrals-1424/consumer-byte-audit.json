@@ -3349,6 +3349,14 @@
       "currentSha256": "42e9f9e55affa923ad74d9076ca075e7088ccbfd174054bd4e9c4d2929650431",
       "firstDifferentByte": 4245
     },
+    "tests/server/bot-driver-policy-error.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2228,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "698b5d6814569530d7be43be1529a4aec367d6a848ce913b63decb9c8255c839",
+      "firstDifferentByte": 0
+    },
     "tests/server/carousel-room.test.ts": {
       "previousBytes": 36000,
       "currentBytes": 36769,
@@ -3583,6 +3591,14 @@
       "currentBytes": 2011,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "3bcf98966704c3c6cbb6da36a97ce87d446c5c2d8728edb7a1a59e4af1562200",
+      "firstDifferentByte": 0
+    },
+    "tests/server/recombobulator-bot-preflight.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2686,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "be3a8414a714312fc3a71a27e738e5888c1369710f684713c81fa81916dbf7bd",
       "firstDifferentByte": 0
     },
     "tests/server/replay-tail.test.ts": {
