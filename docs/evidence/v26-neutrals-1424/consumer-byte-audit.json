@@ -3718,9 +3718,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6689,
+      "currentBytes": 8579,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "31de94c01d88483c2ac4e839e9080f7befb4f5879d3ea03f632593ab4b794922",
+      "currentSha256": "fee5f54426b8f9c2ed205b1c95289efa75e222893437679fc49920f6938ee4c1",
       "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {

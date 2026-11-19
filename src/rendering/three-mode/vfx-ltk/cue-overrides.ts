@@ -802,9 +802,10 @@ export const CUE_RULE_STOPS = {
   shredEnded: { systems: ['88a717e0'], on: 'target' },
   // A champion's own status from its cast ends (statusChanged on that unit, an end reason): Leona's damage reduction.
   ownStatusEnded: { systems: { leona: { kind: 'damage-reduction', systems: ['8d9a4ccc'] } }, on: 'source' },
-  // Jayce's back-form forge gives allies attack speed (a 'stat-buff' status): its gate glow goes with that status on the ally it
-  // was played for. Another stat buff on that ally ending first ends it too (the display event names no source).
-  allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'target' },
+  // Jayce's back-form forge gives allies attack speed (a 'stat-buff' status): its gate glow plays at his forge
+  // (`<jayce>:g23-forge`, batch2-bridge.ts) and goes when the buff his cast gave ends on an ally (sustain-stops.ts ties each
+  // buffed ally to its forge). Another stat buff on that ally ending first ends it too (the display event names no source).
+  allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
   // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
   vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
