@@ -513,18 +513,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // itself, so a full board keeps it like other receipt feedback instead of dropping it as a flourish (#546 review).
     { system: 'fdf79734', action: 'passive', event: 'hit', delay: 0, duration: 3, stopAfter: 2.7, fadeOut: true, bone: chest },
   ],
-  // 弹道发射骨骼按原版 mStartBoneName
+  // 弹道从下面写的骨骼出发（选骨骼看我们模型上的出手位置）
   corki: [
     { system: '4f6da7bc', action: 'attack', event: 'projectile', bone: 'gun', delay: 0.13999999364217122, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BuffBone_Glb_Center_Loc' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.43999999364217124, duration: 1.5 },
     { system: 'ee7fccd1', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, bone: 'R_missile_b', travelSeconds: 0.7 },
     { system: '444c30d5', action: 'cast', event: 'hit', delay: 0.8, duration: 1 },
-    // 022fe9ec 原版骨骼 Cstm_Buffbone_Gatling_Gun_Origin 在我们模型上位于机尾下方，复录更偏，保留 L_missile
+    // 022fe9ec 换过别的出手骨骼，在我们模型上位于机尾下方、复录更偏，所以保留 L_missile
     { system: '022fe9ec', action: 'cast', event: 'projectile', delay: 0.3, duration: 0.7, bone: 'L_missile', travelSeconds: 0.7 },
     { system: '0e89bea0', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
     { system: '4f440b84', action: 'cast', event: 'hit', delay: 0.9, duration: 1 },
   ],
-  // 弹道发射骨骼按原版 mStartBoneName
+  // 弹道从下面写的骨骼出发（选骨骼看我们模型上的出手位置）
   gangplank: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.3, duration: 1.5 },
     { system: '00c3621b', action: 'cast', event: 'hit', delay: 0, duration: 1 },
@@ -541,7 +541,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5d21d7bb', action: 'cast', event: 'hit', delay: 0.8, duration: 0.8 },
     { system: 'f9ead72c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
   ],
-  // 弹道发射骨骼按原版 mStartBoneName
+  // 弹道从下面写的骨骼出发（选骨骼看我们模型上的出手位置）
   nami: [
     { system: '952026ec', action: 'attack', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5833333333333333, duration: 1.5 },
@@ -632,7 +632,7 @@ function noteOverride(key: string, missing: readonly string[]): void {
 /**
  * Cues added to a champion's list (exported or replaced above), each only when its system is in the loaded index.
  * For a layer the export never cued, where copying the champion's whole list into CUE_OVERRIDES would freeze the rest.
- * Times are measured on the original, with 0 at the mana bar emptying.
+ * Times count from the mana bar emptying (0); each is a fitted display time, not original data.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
   // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The delay is fitted to a
