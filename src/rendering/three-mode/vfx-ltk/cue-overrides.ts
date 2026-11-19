@@ -30,9 +30,8 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
  */
 export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
 /**
- * Maddie's volley hit (b1b77889, her R target effect) drawn at this size: as exported it covered about a cell and a half on
- * every shot, much larger than the original's flash. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4),
- * not original data.
+ * Maddie's volley hit (b1b77889, her R target effect) drawn at this size: drawn as exported, every shot's flash was much
+ * larger than the original's. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4), not original data.
  */
 export const MADDIE_HIT_SCALE = 0.55;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
