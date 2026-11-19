@@ -1278,7 +1278,7 @@
       "previousBytes": 0,
       "currentBytes": 69614,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "36847425a28c56cbcf6f0f8afecae22af4a6e2404e900fb00c612ff56a935eff",
+      "currentSha256": "913031e0f57057139c9c76bae9becb175a547c51ffc2f8b88fd25992b1bced7d",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -3427,7 +3427,7 @@
       "previousBytes": 4979457,
       "currentBytes": 3324446,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "906e329603547882879a5198fa261a0df16e2ade58144e97efc6b249ff6de3ad",
+      "currentSha256": "b1a6c821269414bf51e591eb23092b72304e8fd2da86ea9b2cedca88e5a0ae85",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {
