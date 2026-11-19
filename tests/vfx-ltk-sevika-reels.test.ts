@@ -30,7 +30,7 @@ describe('Sevika slot reels (Slots_*_Mirrored, particleUVScrollRate over the ree
   });
   it('switches off the machine each result layer carries, which the board plays once on its own', async () => {
     const layers = ['flamethrower', 'punch', 'thrash', 'jackpot'].map(r => sevikaSkills[`sevika-slots-${r}`][0].system);
-    expect(Object.keys(DISABLED_EMITTERS).sort()).toEqual([...layers].sort());
+    expect(layers.every(layer => DISABLED_EMITTERS[layer]?.join() === 'Alpha_Boarder')).toBe(true);
     const index = { version: 1, systems: { [layers[3]]: 'systems/a.json', other: 'systems/b.json' }, assets: { 'synthetic.tex': 'textures/a.png' }, skills: {} };
     const library = createVfxLibrary('/r/', { readJson: async (url: string) => url.endsWith('index.json') ? index
       : syntheticSystem({ emitterName: { type: 'string', value: 'Alpha_Boarder' } }), readTexture: async () => new Texture() });

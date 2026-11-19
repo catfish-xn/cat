@@ -132,3 +132,10 @@ describe('a rule stop finds the runs it ends (Fable 11-19: Jayce\'s glow waited 
     expect(CUE_RULE_STOPS.allyStatusEnded.on).toBe('source');
   });
 });
+
+describe('LeBlanc\'s channel without its dark backdrop (Fable 11-19 known difference)', () => {
+  it('holds off only Alpha_Glow of acd84091; the rest of the system draws', async () => {
+    const { DISABLED_EMITTERS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    expect(DISABLED_EMITTERS['acd84091']).toEqual(['Alpha_Glow']);
+  });
+});
