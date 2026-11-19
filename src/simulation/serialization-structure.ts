@@ -383,6 +383,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
     }
+    if (combat.departedUnits !== undefined) {
+      list(combat.departedUnits); for (const unit of combat.departedUnits) record(unit);
+      requireValue(combat.departedUnits.length > 0 && combat.departedUnits.every(unit => typeof unit.id === 'string' && combat.removedUnitIds?.includes(unit.id))
+        && new Set(combat.departedUnits.map(unit => unit.id)).size === combat.departedUnits.length, 'departed combat units');
+    }
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     if(!verifiedDynamic)validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);

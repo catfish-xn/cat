@@ -904,6 +904,14 @@
       "currentSha256": "1061f40d159fe054d26fb51c36d63f221e9283893210ff20dc02abbd4cc02160",
       "firstDifferentByte": 0
     },
+    "tests/departed-effect-source.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2290,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "76e47c2a7cd15fe1f39dd46c46d435fafeec2ac3387f8d7b094fda051aee07d6",
+      "firstDifferentByte": 0
+    },
     "tests/displacement-control.test.ts": {
       "previousBytes": 10748,
       "currentBytes": 12335,
@@ -3409,6 +3417,14 @@
       "currentBytes": 102,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "fdc632a550643c425d191cc5c7060d9675ac6a311ac0cbe57a5494329062bccf",
+      "firstDifferentByte": 0
+    },
+    "tests/server/departed-effect-source-seeds.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2323,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "290fb05160b46c1d8aa2623bf39fc318a06e58a0616e0e55eaea7326334a43d0",
       "firstDifferentByte": 0
     },
     "tests/server/e2e/c19-full-match.mjs": {
