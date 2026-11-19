@@ -103,17 +103,16 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
   ],
+  // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
+  // high arc. Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
+  // unit dies (placeholder-renderer.ts).
+  'draven-return': [{ system: DRAVEN_AXE, action: 'passive', event: 'projectile', delay: 0, duration: DRAVEN_RETURN_SECONDS,
+    travelSeconds: DRAVEN_RETURN_SECONDS, bone: chest, targetBone: 'R_hand', arc: { gravity: 2200, targetOffset: 80 }, rank: 'decorative' }],
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
-  // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
-  // high arc.
-  // Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
-  // unit dies (placeholder-renderer.ts).
-  'draven-return': [{ system: DRAVEN_AXE, action: 'passive', event: 'projectile', delay: 0, duration: DRAVEN_RETURN_SECONDS,
-    travelSeconds: DRAVEN_RETURN_SECONDS, bone: chest, targetBone: 'R_hand', arc: { gravity: 2200, targetOffset: 80 }, rank: 'decorative' }],
   'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },

@@ -162,7 +162,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             action: 'passive', skill: 'renni-slam', snapshotTargets: true });
         }
         // Draven: an empowered axe that lands flies back up to his hand in an arc (CUE_EXTRA_SKILLS draven-return), from the
-        // enemy it hit; it goes with either of them dying (placeholder-renderer.ts, DRAVEN_RETURN_SYSTEMS).
+        // enemy it hit; it goes with either of them dying (placeholder-renderer.ts stops DRAVEN_AXE on a death).
         if (event.type === 'attackLanded' && event.hit && definition(event.attackerId) === 'draven' && unit(event.attackerId).cast)
           plan.extra.push({ champion: 'draven', sourceId: event.targetId, targets: [event.attackerId], action: 'passive', skill: 'draven-return' });
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
