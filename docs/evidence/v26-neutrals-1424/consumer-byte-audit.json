@@ -4367,9 +4367,9 @@
     "tests/vfx-ltk-maddie-shots.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5696,
+      "currentBytes": 6114,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "32cee3105f64f7dd1187cb74a800fafc363501fc92080b90e58f09ecc191273a",
+      "currentSha256": "56130fa01fdf8ddc73d39b556b03f8a835bfea17bae96f588a9cfe2c1b63d4c4",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-malzahar-gate.test.ts": {

@@ -29,6 +29,12 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
  * stand in for it, and are to be imported from there once it lands.
  */
 export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
+/**
+ * Maddie's volley hit (b1b77889, her R target effect) drawn at this size: as exported it covered about a cell and a half on
+ * every shot, much larger than the original's flash. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4),
+ * not original data.
+ */
+export const MADDIE_HIT_SCALE = 0.55;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
 export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -119,7 +125,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'maddie-shot': [
     { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC',
       flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC',
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: MADDIE_HIT_SCALE,
       flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
