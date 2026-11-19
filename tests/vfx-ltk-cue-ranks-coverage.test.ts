@@ -4,6 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { CAST_START_RANKS } from '../src/rendering/three-mode/vfx-ltk/cue-ranks';
 import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
+import { batch3Timelines } from '../src/rendering/three-mode/vfx-ltk/batch3';
+import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
+import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
+import { melSkills } from '../src/rendering/three-mode/vfx-ltk/champions/mel';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
+import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
+import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 // Every rank row must land on a cast-start of its branch, or the rank is silently lost (11-19: Smeech's swipes moved from his
@@ -11,6 +21,19 @@ import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 const rows = Object.entries(CAST_START_RANKS).flatMap(([key, ranks]) => Object.entries(ranks).map(([system, rank]) => ({ key, system, rank })));
 const rankedIn = (skills: Record<string, readonly TimelineCue[] | undefined>, key: string, system: string) =>
   (skills[key] ?? []).filter(cue => cue.system === system && cue.event === 'cast-start').map(cue => cue.rank);
+
+// Every rank key must name a branch the repository knows: a champion, or a branch some repository table defines (the
+// exported index is built from these tables). A key renamed or folded away in the code (11-19: Smeech's four stab branches
+// became one) fails here, where the check below would only skip a key it cannot build.
+describe('cast-start rank keys name known branches', () => {
+  const known = new Set<string>([
+    ...Object.keys(M5_UNIT_DEFINITIONS),
+    ...[CUE_OVERRIDES, CUE_EXTRA_SKILLS, CUE_ADDITIONS, BATCH1_TIMELINES, S13_TIMELINES,
+      jayceSkills, jinxSkills, melSkills, sevikaSkills, viktorSkills, warwickSkills].flatMap(table => Object.keys(table)),
+    ...Object.entries(batch3Timelines).flatMap(([hero, timelines]) => [hero, ...Object.keys(timelines)]),
+  ]);
+  it.each(Object.keys(CAST_START_RANKS))('%s', key => expect(known).toContain(key));
+});
 
 describe('cast-start ranks find their cues in the lists the repository builds', () => {
   // A branch whose list the repository builds (a replacement in CUE_OVERRIDES or a display branch in CUE_EXTRA_SKILLS) is
