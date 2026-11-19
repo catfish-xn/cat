@@ -811,21 +811,34 @@ export const CUE_RULE_STOPS = {
 
 /**
  * Persistent layers held until a rule event ends them (the stop tables above, or death through stopUnit) instead of the
- * short cue the index gives: each listed cue runs up to this many seconds, without stopAfter. The cap is the system's own
- * emission time where it has one; for layers that last until death or a form ends, a cap of our own (自定，非原版).
+ * short cue the index gives: each listed cue runs up to this many seconds, without stopAfter. The rule event ends them;
+ * the cap is only a fallback for a missed event (Fable 11-19): the rule's longest time for that state plus 1 s (自定，非原版;
+ * tests/sustain-stops.test.ts checks each against the ability data). A state without a time limit in the rules has a cap of
+ * our own, said per line.
  */
 export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
-  '2beb0657': 6.5, // Twitch volley buff → twitch-volley
-  '796b6af2': 20, // Swain demon form → swain-ascension (自定上限)
-  'ea21ae27': 5.1, // Garen shield → his shield layer ends
+  '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
+  '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
+  'ea21ae27': 5, // Garen shield → his shield layer ends
   'e22b48b0': 5, // Loris shield → his shield layer ends
-  '8d9a4ccc': 12, // Leona damage reduction → that status ends
-  'afb2ec69': 3, // Jayce forge attack speed → the ally's status ends
+  '8d9a4ccc': 4, // Leona damage reduction → that status ends
+  'afb2ec69': 4, // Jayce forge attack speed → the ally's status ends
   'd86cc9bc': 60, // Draven spinning axes: every attack stays empowered after his first cast → his death (自定上限)
   '56e6971e': 60, // Amumu passive → his death (自定上限)
   '6889455c': 8, // Kog'Maw attack speed stacks (no end in the rules) → his death
   '9f805f6e': 8,
-  '5af49b76': 60, // Ekko's mark on a target: the shred stays for the combat → that target's death (自定上限)
-  '8682c9ee': 4, // Vex opening area → her delayed second hit
-  'eb9da1d5': 4,
+  // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
+  // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
+  '5af49b76': 2,
+  '8682c9ee': 1.8, // Vex opening area → her delayed second hit
+  'eb9da1d5': 1.8,
 };
+/** Held layers whose next play on the same target replaces the last one (a refreshed mark), not a second layer over it. */
+export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(['5af49b76']);
+/**
+ * Held layers ranked below every skill body (Fable 11-19: Draven's axes, shown all fight long, are decoration): any skill
+ * visual takes their slot, and they come back when room frees (SUSTAIN_READMIT).
+ */
+export const SUSTAIN_RANKS: Readonly<Record<string, 'decorative'>> = { 'd86cc9bc': 'decorative' };
+/** Held layers that, evicted or kept out by a full board, wait for free room and play the rest of their time then. */
+export const SUSTAIN_READMIT: ReadonlySet<string> = new Set(['d86cc9bc']);

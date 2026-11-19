@@ -29,7 +29,7 @@ export interface Batch1EventPlan {
   /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
   noCastEffect?: boolean;
 }
-interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
+interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaFrom: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
 /** Presentation memory of observed events only. No resource, targeting or damage rules.
  * 14.24b visual forms: Zeri every third observed attack; Twitch eight bolts after cast;
@@ -91,7 +91,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
-    if (!state) { state = { attacks: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaUntil: -1, pulseTick: -1 }; units.set(id, state); }
+    if (!state) { state = { attacks: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaFrom: -1, pulseTick: -1 }; units.set(id, state); }
     return state;
   };
   return {
@@ -278,7 +278,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (champion === 'lux') { state.luxAttack = true; if (event.targetIds[0] === event.sourceId) plan.variant = 'self'; }
           if (champion === 'twitch') state.twitchShots = 8;
           if (champion === 'nocturne') { state.nocturneUntil = event.tick + 120; plan.stopCast = event.sourceId; }
-          if (champion === 'leona') { state.leonaUntil = event.tick + 60; plan.stopCast = event.sourceId; }
+          // Leona's W runs from her cast until the rules' damage reduction on her expires (its own event, not a fixed tick count).
+          if (champion === 'leona') { state.leonaFrom = event.tick; plan.stopCast = event.sourceId; }
         } else if (event.type === 'attack') {
           const champion = definition(event.attackerId), state = unit(event.attackerId);
           state.attacks++;
@@ -292,8 +293,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             plan.targets = packets.get(key(event.tick, event.attackerId, 'physical')) ?? [event.targetId];
           }
         } else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason === 'expired'
-          && definition(event.targetId) === 'leona' && unit(event.targetId).leonaUntil === event.tick) {
-          unit(event.targetId).leonaUntil = -1; plan.stopCast = event.targetId;
+          && definition(event.targetId) === 'leona' && unit(event.targetId).leonaFrom >= 0) {
+          unit(event.targetId).leonaFrom = -1; plan.stopCast = event.targetId;
           plan.extra.push({ champion: 'leona', sourceId: event.targetId, targets: [], action: 'end' });
           const targets = packets.get(key(event.tick, event.targetId, 'magic'));
           if (targets?.length) plan.extra.push({ champion: 'leona', sourceId: event.targetId, targets, action: 'passive' });
@@ -303,7 +304,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'amumu', sourceId: event.sourceId, targets: packets.get(key(event.tick, event.sourceId, 'magic'))!, action: 'passive' });
         } else if (event.type === 'death') {
           const state = units.get(event.unitId);
-          if (state) { state.leonaUntil = -1; state.nocturneUntil = -1; }
+          if (state) { state.leonaFrom = -1; state.nocturneUntil = -1; }
           if (definition(event.unitId) === 'leona' || definition(event.unitId) === 'nocturne') plan.stopCast = event.unitId;
         }
         return plan;
