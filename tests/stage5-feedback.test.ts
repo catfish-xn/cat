@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { CRIT_MARKS, createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
+import { createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
 import type { SceneCombatEvent } from '../src/presentation/combat-display';
 import { subscribeBoardFeed, type BoardFeedListener } from '../src/rendering/board-feed';
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
@@ -204,17 +204,14 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
       expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
     });
-    it('a crit is the same colour about 1.9 times as large (42 px), with a solid mark a shade darker and a dark edge, in its own label', () => {
+    it('a crit is the same colour about 1.9 times as large (42 px), with a solid mark darker and redder and a dark edge, in its own label', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
       expect(big.text).toBe(plain.text);
       expect(px(big) / px(plain)).toBeCloseTo(1.9, 1); expect(px(big)).toBe(42);
       expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
-      // The mark is solid, a shade darker than the number (orange and blue alike), with the number's dark edge.
-      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#c76c1c'"); expect(decodeURIComponent(blue.style.backgroundImage)).toContain("fill='#2a99c7'");
+      // The mark is solid, darker and redder than the number (orange and blue alike), with the number's dark edge.
+      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#e55619'"); expect(decodeURIComponent(blue.style.backgroundImage)).toContain("fill='#487ab3'");
       expect(decodeURIComponent(big.style.backgroundImage)).toContain("stroke='rgba(0,0,0,.9)'");
-      // Candidate D: darker and redder than the number.
-      setup(); const hd = host(), rd = createCombatFeedbackRenderer(hd, { critMark: CRIT_MARKS.D }); rd.push([crit(1)], 400); rd.render(400, new Map([['a', { x: 120, y: 300, radius: 20 }]]));
-      expect(decodeURIComponent(snapshot(hd)[0].children[0].style.backgroundImage)).toContain("fill='#e55619'"); rd.dispose();
       expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
     });
