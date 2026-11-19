@@ -105,7 +105,7 @@ const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
-const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal']);
+const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal', 'attackWindup', 'attackWindupCancelled']);
 /** CSS pixels before a press becomes a drag; BoardScene's own threshold is 6. */
 const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
