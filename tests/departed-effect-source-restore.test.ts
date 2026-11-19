@@ -3,7 +3,7 @@
  * departed snapshot; a save that drops or forges it is rejected. */
 import { expect, it, vi } from 'vitest';
 import { quietAugmentRound } from './match-helpers';
-import { createMatch, deployMatchUnit, equipItem, startMatchCombat, stepMatch } from '../src/simulation/match';
+import { deployMatchUnit, equipItem, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';

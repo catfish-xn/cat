@@ -907,9 +907,9 @@
     "tests/departed-effect-source-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2543,
+      "currentBytes": 2530,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fcfb7d23aba0814afa6b439ae2074a22c9786f2d313decd54d1738da1e0c1040",
+      "currentSha256": "2b8c91d13ba0299a8cd8103b56b7ef6d7c5d9e2aaa3d889f5d403d27613b59b5",
       "firstDifferentByte": 0
     },
     "tests/departed-effect-source.test.ts": {
