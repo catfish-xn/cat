@@ -437,6 +437,15 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
         integer(approach.cell.col); integer(approach.cell.row);
         requireValue(contains(combatPreparation.board, approach.cell), 'melee approach cell');
       }
+      if (unit.windup !== undefined) {
+        // A winding-up ranged attack (cast-windup.ts): a living unit, an enemy target, a launch within the wind-up bound.
+        const windup = unit.windup;
+        record(windup);
+        requireValue(Object.keys(windup).sort().join(',') === 'launchTick,targetId' && unit.alive, 'attack windup keys');
+        requireValue(combatIds.has(windup.targetId) && combat.units.find(other => other.id === windup.targetId)?.team !== unit.team, 'attack windup target');
+        integer(windup.launchTick);
+        requireValue(windup.launchTick > combat.tick && windup.launchTick <= combat.tick + 600, 'attack windup launch');
+      }
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }

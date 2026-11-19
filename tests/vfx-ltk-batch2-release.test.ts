@@ -28,4 +28,12 @@ describe('batch2 bridge: attack release timing', () => {
     b.action('attack', 'u', ['t']);
     for (const call of play.mock.calls) expect('release' in call[4]).toBe(false);
   });
+  it('a ranged attack carries the rules landing; a cast never does, and it does not leak', () => {
+    const { b, play } = bridge('jinx'), landing = { seconds: 0.4 }; // synthetic
+    b.action('attack', 'u', ['t'], undefined, timing, landing);
+    for (const call of play.mock.calls) expect(call[4].landing).toEqual(landing);
+    play.mockClear();
+    b.action('cast', 'u', ['t'], undefined, undefined, landing); b.action('attack', 'u', ['t']);
+    for (const call of play.mock.calls) expect('landing' in call[4]).toBe(false);
+  });
 });

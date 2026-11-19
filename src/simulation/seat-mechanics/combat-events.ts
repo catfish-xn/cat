@@ -42,6 +42,10 @@ export type G23CombatEventData =
    * arrivalTick; projectile 'flight' flies there, 'beam' is an instant beam (arrivalTick is the attack tick).
    */
   | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam' }
+  /** Display only, no rule effect: a ranged hero starts an attack on targetId (its animation); the shot launches on launchTick. */
+  | { readonly type: 'attackWindup'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly launchTick: number }
+  /** Display only, no rule effect: a winding-up ranged attack was cancelled (attacker controlled, target dead or out of range). */
+  | { readonly type: 'attackWindupCancelled'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
   /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
   | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
   /**
