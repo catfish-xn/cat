@@ -24,7 +24,10 @@ export function planActionEffects(unit: string, action: 'attack' | 'cast', effec
  * hit) start when it lands. A beam (0 s) plays its projectile and hit on the attack event. Without a projectile the plan is
  * returned as it is. Fitted, not original (the same rule as vfx-ltk landingCues).
  */
-export function landingPlan(plan: readonly PlannedEffect[], landing: { readonly seconds: number; readonly beam?: boolean }, minFlight: number, beamFlight: number): PlannedEffect[] {
+export function landingPlan(plan: readonly PlannedEffect[], landing: { readonly seconds: number; readonly beam?: boolean; readonly phase?: 'windup' | 'launch' }, minFlight: number, beamFlight: number): PlannedEffect[] {
+  // The rules' wind-up (11-19): the attack start plays the source effects only; the launch plays the shot and its hit, leaving now.
+  if (landing.phase === 'windup') return plan.filter(entry => entry.playback.anchor === 'source');
+  if (landing.phase === 'launch') plan = plan.filter(entry => entry.playback.anchor !== 'source').map(entry => entry.playback.anchor === 'projectile' ? { id: entry.id, playback: { ...entry.playback, delay: 0 } } : entry);
   if (!plan.some(entry => entry.playback.anchor === 'projectile')) return [...plan];
   const arrive = Math.max(0, landing.seconds);
   let lands = arrive;

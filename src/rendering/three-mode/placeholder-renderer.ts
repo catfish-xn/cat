@@ -1247,6 +1247,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
+  // Attacks winding up (attackWindup, the rules' wind-up 11-19): attacker → its launch tick, whose attack event only adds the shot.
+  const windups = new Map<string, number>();
   const releaseOf = (source: PieceView) => {
     const release = source.lease?.attackRelease, output = source.state.output;
     const played = output.state === 'attack' ? output.playback?.release : undefined;
@@ -1280,7 +1282,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
       // Reduced motion and champions without a timeline land here too: a ranged spark follows the rules' arrival.
-      feel.attack(attackFrom, attackTo, ranged, ranged ? tracerDelay(landing) : 0.18);
+      const tracer = ranged ? tracerDelay(landing) : 0.18;
+      if (tracer !== undefined) feel.attack(attackFrom, attackTo, ranged, tracer);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;
@@ -1593,7 +1596,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         continue;
       }
       // Observe even attacks covered by a cast's protected ending; the next visible swing needs their spacing.
-      if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      // The rules' wind-up (11-19): the swing starts on attackWindup; its attack event (the launch) only adds the shot.
+      if (event.type === 'attackWindup') { windups.set(event.attackerId, event.launchTick); pieces.get(event.attackerId)?.attackCadence.observe(event.tick); }
+      else if (event.type === 'attackWindupCancelled') { windups.delete(event.attackerId); if ((tickOf(event) ?? latest) > latest - EFFECT_TICKS) ltk?.stopAction(event.attackerId, 'attack'); }
+      const launch = event.type === 'attack' && windups.get(event.attackerId) === event.tick;
+      if (launch) windups.delete((event as { attackerId: string }).attackerId);
+      if (event.type === 'attack' && !launch) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
@@ -1607,15 +1615,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
-      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      if (event.type === 'attackWindup') { for (const view of pieces.values()) view.state.consume({ type: 'attack', attackerId: event.attackerId } as unknown as AnimationEvent); }
+      else if (!launch) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
+      if (event.type === 'attackWindup') {
+        face(event.attackerId, event.targetId);
+        if (current && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, event.targetId, [event.targetId],
+          { landing: { seconds: 0, phase: 'windup', windupSeconds: Math.max(0, event.launchTick - event.tick) / 20 } });
+      }
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
         if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
-          { variant: planned.variant, landing: landings.get(attackKey(event.attackerId, event.tick)) });
+          { variant: planned.variant, landing: launch ? { ...(landings.get(attackKey(event.attackerId, event.tick)) ?? { seconds: 0 }), phase: 'launch' }
+            : landings.get(attackKey(event.attackerId, event.tick)) });
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;

@@ -36,10 +36,40 @@ describe('asset fallback: landingPlan', () => {
 
 describe('skill-feel tracer: tracerDelay', () => {
   it('lands the spark on the arrival, never sooner than one tracer flight', () => {
-    expect(tracerDelay({ seconds: 0.4 }) + TRACER_SECONDS).toBeCloseTo(0.4, 10);
+    expect(tracerDelay({ seconds: 0.4 })! + TRACER_SECONDS).toBeCloseTo(0.4, 10);
     expect(tracerDelay({ seconds: 0.05 })).toBe(0);
   });
   it('keeps the old 0.1 s start without a landing (dummies, old replays)', () => {
     expect(tracerDelay(undefined)).toBe(0.1);
+  });
+});
+
+// ---- The rules' wind-up (attackWindup, 11-19): the swing on the attack start, the shot on the launch ----
+import { landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
+describe('wind-up phases', () => {
+  const cues = [
+    { action: 'attack' as const, event: 'cast-start' as const, delay: 0.1, duration: 0.3, system: 'muzzle' },
+    { action: 'attack' as const, event: 'projectile' as const, delay: 0.3, duration: 0.3, travelSeconds: 0.3, system: 'bullet' },
+    { action: 'attack' as const, event: 'hit' as const, delay: 0.6, duration: 0.45, system: '0f2af66b' },
+  ];
+  it('the attack start plays the swing\'s own cues and none of the shot', () => {
+    expect(landingCues(cues, { seconds: 0, phase: 'windup', windupSeconds: 0.3 }).map(c => [c.system, c.delay])).toEqual([['muzzle', 0.1]]);
+  });
+  it('a fire frame later than the launch is reached sooner: cues before it speed up', () => {
+    const out = landingCues(cues, { seconds: 0, phase: 'windup', windupSeconds: 0.15 });
+    expect(out.map(c => [c.system, c.delay])).toEqual([['muzzle', 0.05]]);
+  });
+  it('the launch plays only the shot: it leaves now and its hit lands on the arrival', () => {
+    const out = landingCues(cues, { seconds: 0.4, phase: 'launch' });
+    expect(out.map(c => [c.system, c.delay, c.event === 'projectile' ? c.travelSeconds : null])).toEqual([['bullet', 0, 0.4], ['0f2af66b', 0.4, null]]);
+    // Farther is later.
+    expect(landingCues(cues, { seconds: 0.2, phase: 'launch' }).find(c => c.event === 'hit')!.delay).toBe(0.2);
+  });
+  it('the fallbacks follow the same phases', () => {
+    expect(tracerDelay({ seconds: 0, phase: 'windup' })).toBeUndefined();
+    expect(tracerDelay({ seconds: 0.4, phase: 'launch' })! + TRACER_SECONDS).toBeCloseTo(0.4, 10);
+    expect(landingPlan(plan, { seconds: 0, phase: 'windup' }, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS).map(e => e.id)).toEqual(['muzzle']);
+    const launch = landingPlan(plan, { seconds: 0.4, phase: 'launch' }, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS);
+    expect(launch.map(e => [e.id, e.playback.delay])).toEqual([['bullet', 0], ['hit', 0.4]]);
   });
 });

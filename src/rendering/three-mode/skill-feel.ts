@@ -82,7 +82,9 @@ export function windupEnvelope(age: number): { ring: number; opacity: number; gl
 export const TRACER_SECONDS = 0.16;
 /** The tracer's start delay (SkillFeel.attack) for a ranged attack: its spark lands on the rules' arrival (attackLaunched), never
  * sooner than one tracer flight; without a landing (a dummy, an old replay) the usual 0.1 s. Fitted, not original. */
-export function tracerDelay(landing: { readonly seconds: number } | undefined): number {
+export function tracerDelay(landing: { readonly seconds: number; readonly phase?: 'windup' | 'launch' } | undefined): number | undefined {
+  // With the rules' wind-up the tracer belongs to the launch; the attack start draws none (undefined).
+  if (landing?.phase === 'windup') return undefined;
   return landing ? Math.max(0, landing.seconds - TRACER_SECONDS) : 0.1;
 }
 const ATTACK_COLOR = 0xfff4e6, SPARK_SECONDS = 0.12, TRACER_SIZE = 12, SPARK_SIZE = 26, TRAIL = 4, TRAIL_GAP = 0.022;

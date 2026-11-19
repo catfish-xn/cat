@@ -261,7 +261,12 @@ export function standingPoint(root: Object3D): WorldPoint {
 }
 /** A ranged attack's landing (LtkPlayOptions.landing): seconds from the attack event to the rules' arrival tick, and
  * whether the shot is an instant beam (the rules land it on the attack tick itself). */
-export interface AttackLanding { seconds: number; beam?: boolean }
+/**
+ * A ranged attack as the rules time it. With the rules' wind-up (attackWindup, 11-19) it plays in two phases: 'windup' on the
+ * attack start (the swing and its own cues, no shot; `windupSeconds` to the launch) and 'launch' on the attack itself (only the
+ * shot and its hit: the shot leaves now and lands `seconds` later). Without a phase (no wind-up), the whole attack as before.
+ */
+export interface AttackLanding { seconds: number; beam?: boolean; phase?: 'windup' | 'launch'; windupSeconds?: number }
 /** The shortest flight a projectile is drawn with, so a near shot never jumps across in one frame. Fitted (Fable 11-18),
  * not original: a target too near for it is hit up to this much after its damage number. */
 export const MIN_FLIGHT_SECONDS = 0.1;
@@ -280,6 +285,23 @@ export const LANDING_DEPART: 'release' | 'event' = 'release';
 export function landingCues<T extends Pick<TimelineCue, 'action' | 'event' | 'delay' | 'duration' | 'travelSeconds' | 'stationary'>>(cues: readonly T[], landing: AttackLanding,
   depart: 'release' | 'event' = LANDING_DEPART): T[] {
   const attack = (cue: T) => (cue.action ?? 'cast') === 'attack';
+  const shotCue = (cue: T) => attack(cue) && (cue.event === 'projectile' || cue.event === 'hit');
+  if (landing.phase === 'windup') {
+    // The swing's own cues, none of its shot; a fire frame later than the launch (more than the wind-up cap) is reached sooner:
+    // what comes before it speeds up so it fires on the launch tick (self-chosen, Fable 11-19).
+    const fire = cues.find(cue => attack(cue) && cue.event === 'projectile' && !cue.stationary)?.delay ?? 0;
+    const launch = Math.max(0, landing.windupSeconds ?? fire);
+    const map = (t: number) => fire > launch && fire > 0 ? (t < fire ? t * launch / fire : t - fire + launch) : t;
+    return cues.filter(cue => !shotCue(cue)).map(cue => attack(cue) ? { ...cue, delay: map(cue.delay) } : cue);
+  }
+  if (landing.phase === 'launch') {
+    // Only the shot: it leaves on the launch (the attack event) and lands on the arrival.
+    const shot = cues.filter(shotCue);
+    // A shot that does not fly (Viktor's standing beam) lights now and its hit lands on the arrival with it.
+    if (!shot.some(cue => cue.event === 'projectile' && !cue.stationary))
+      return shot.map(cue => ({ ...cue, delay: cue.event === 'hit' ? Math.max(0, landing.seconds) : 0 }));
+    return landingCues(shot, { seconds: landing.seconds, ...(landing.beam ? { beam: true } : {}) }, 'event');
+  }
   const arrive = Math.max(0, landing.seconds);
   if (landing.beam) {
     // A beam (stationary or drawn as a missile) and its hits go off on the arrival, the attack event itself.
