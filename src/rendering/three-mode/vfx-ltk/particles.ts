@@ -206,6 +206,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   arc?: { readonly gravity: number; readonly targetOffset: number };
   /** A perStrike projectile's curve (TimelineCue.perStrike.fan); it implies fixedTime. */
   curve?: StrikeCurve;
+  /** Each particle's red, green and blue times this when drawn (TimelineCue.brightness). Omitted means 1. */
+  brightness?: number;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
@@ -310,7 +312,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -337,7 +339,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
       const fade = (spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1) * (ending ? fadeAt(elapsed, ending.to, ending.from) : 1);
-      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
+      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); }, spec.brightness ?? 1);
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
   };

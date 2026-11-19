@@ -16,7 +16,7 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 // past it keep their hits (Fable 11-19, Heimerdinger hrB). Designed values.
 const strike = { staggerTicks: 1, spreadTicks: 9 };
 const skills: Record<string, TimelineCue[]> = { volley: [
-  { system: 'rocket', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.5, travelSeconds: 0.5, perStrike: { ...strike, fan: { side: 0.9, lift: 0.6 }, tickCap: 3 } },
+  { system: 'rocket', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.5, travelSeconds: 0.5, brightness: 1.7, perStrike: { ...strike, fan: { side: 0.9, lift: 0.6 }, tickCap: 3 } },
   { system: 'boom', action: 'cast', event: 'hit', delay: 0.7, duration: 0.6, perStrike: strike },
 ] };
 
@@ -44,6 +44,9 @@ describe('perStrike tickCap', () => {
     step(1.5);
     expect(flights()).toBe(3);
     expect(hits()).toBe(7);
+    // The cue's brightness reaches its rows' particles (TimelineCue.brightness); other cues draw at 1.
+    expect(built.filter(b => b.options.projectileSeconds !== undefined).every(b => b.options.brightness === 1.7)).toBe(true);
+    expect(built.filter(b => b.options.projectileSeconds === undefined).every(b => b.options.brightness === undefined)).toBe(true);
   });
 
   it('starts counting again on the next rule tick', async () => {

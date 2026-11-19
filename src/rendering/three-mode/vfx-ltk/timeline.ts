@@ -72,6 +72,11 @@ export interface TimelineCue {
    */
   readonly scale?: number;
   /**
+   * Each particle's red, green and blue times this when drawn, for this cue only (particleRead withDrawFade gain). Omitted
+   * means 1. A display choice per cue (Heimerdinger's rockets, Fable 11-19), never a value from the original.
+   */
+  readonly brightness?: number;
+  /**
    * It plays as long as its system does on its own (runtime.ts ownSeconds, read from the asset) and is not cut short:
    * `duration` is only what it keeps where the asset gives no end. Never with `stopAfter`.
    */

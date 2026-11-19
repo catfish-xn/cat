@@ -964,6 +964,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
+          brightness: spawn.brightness,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.

@@ -52,6 +52,8 @@ describe('Heimerdinger rockets (perStrike)', () => {
     hits.forEach((hit, k) => close(hit.delay, heimerRocketLandTick(k, 7) * STRIKE_TICK_SECONDS));
     expect(new Set(hits.map(h => h.delay)).size).toBe(7);
     expect(rockets[0]!.perStrike?.tickCap).toBe(HEIMER_ROCKETS.tickCap);
+    expect(rockets[0]!.scale).toBe(HEIMER_ROCKETS.rocketScale); expect(rockets[0]!.brightness).toBe(HEIMER_ROCKETS.rocketBrightness);
+    expect(hits[0]!.brightness).toBeUndefined();
   });
 
   it('leaves out strike entries that name the caster and keeps other cues per distinct target', () => {
