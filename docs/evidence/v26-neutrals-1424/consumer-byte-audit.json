@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11620,
+      "currentBytes": 14056,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3a0b0940728d549c291f649f5edabe425c90911e9a8421393e43679d43ad8fe7",
+      "currentSha256": "027ed553c0b7d24af77a5a2ef3e9d42ae4519f5bf1790de0fb9a2aad3549f175",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -2587,9 +2587,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 51533,
+      "currentBytes": 55472,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "8a442c71d098888ac6ac5b9f63f9328f0c94749b42be44a605f810e8e1f6eb19",
+      "currentSha256": "04c17556f5cd09d95e2582361bddb977adbb643bc2861cc8184866baa1d01c69",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -3714,6 +3714,14 @@
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
       "currentSha256": "8c4848f31d29e6385c5e0bb605e67a8345c5c1223696dd82fc0f77c1c45bfcae",
       "firstDifferentByte": 6912
+    },
+    "tests/sustain-stops.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4742,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "5b1e211bc3ffc1a53da205be1772b38870f145e257be6304ff107da63478513c",
+      "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {
       "previousBytes": 8062,

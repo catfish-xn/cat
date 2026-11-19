@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { SUSTAIN_CAPS, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -719,6 +719,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
+        // A layer held until a rule event (SUSTAIN_CAPS) shows a state of this unit: with the unit gone it goes now, never
+        // waiting out the long hold its cap gave it.
+        if (Object.hasOwn(SUSTAIN_CAPS, run.system)) run.until = clock;
         // A listed projectile (cue-overrides.ts PLAY_OUT_SYSTEMS) plays out from here too: a killing hit lands as its unit
         // dies, and the landed projectile's tail must not go whole with it. Only those: Vi's row shockwave, accepted as it
         // is (Fable 11-13), keeps its planned end with emission stopped when its caster or target goes.
