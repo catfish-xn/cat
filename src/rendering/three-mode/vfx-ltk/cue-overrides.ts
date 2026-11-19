@@ -747,9 +747,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
-  // Renni's final slam: its dark ground decal draws a near-black disc on our board where the slam lands (11-19 on/off
-  // comparison: with it off, the slam reads closer to the reference footage). Known difference (Fable 11-19):
-  // 个别深色地面贴片在我方比原版暗，原因未查明，已逐个停用（乐芙兰、莫德凯撒、荏妮）。The rest of the system draws.
+  // Renni's final slam: its dark ground decal draws a near-black disc on our board where the slam lands (Windows probe
+  // 11-19: only this emitter darkens that spot). Held off as a known difference like LeBlanc's and Mordekaiser's dark
+  // ground layers, cause not found (Fable 11-19); the rest of the system draws.
   '2f79da6f': ['onKill_GlowDecal'],
 };
 
