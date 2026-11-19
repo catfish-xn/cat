@@ -4446,9 +4446,9 @@
     "tests/vfx-ltk-projectile-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11988,
+      "currentBytes": 12354,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "51a747398a6dd66e3e1dfea1310f4f5a732f0a3e3457a8d53c8519c0823675bd",
+      "currentSha256": "8cfa051c025ae8a144d50c1932498acab9472778b3e2c11a87255a6bab3eb19e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-renni-q.test.ts": {
