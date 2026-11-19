@@ -138,6 +138,8 @@ export interface BoardFeedListener {
   unitAt?(client: { x: number; y: number }): string | undefined;
   /** CSS-pixel box of the drawn piece as the layer projects it; undefined when the piece is not drawn or off screen. */
   screenBox?(id: string): BoardScreenBox | undefined;
+  /** CSS-pixel box of the piece's overhead bar (and what rides on it) as the layer projects it; undefined when not drawn. */
+  barBox?(id: string): BoardScreenBox | undefined;
   /** Online 选秀 to draw, or null for the board side. `active` keeps board legends absent on either side. */
   carousel?(view: BoardCarousel | null, active?: boolean): void;
   /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
@@ -215,6 +217,9 @@ export function boardFeedUnitAt(client: { x: number; y: number }): string | unde
 /** null when no layer answers (2D places its own cards); otherwise where the layer drew the piece, if anywhere. */
 export function boardFeedScreenBox(id: string): BoardScreenBox | undefined | null {
   return listener?.screenBox ? listener.screenBox(id) : null;
+}
+export function boardFeedBarBox(id: string): BoardScreenBox | undefined | null {
+  return listener?.barBox ? listener.barBox(id) : null;
 }
 /** null when no layer walks to orbs (the orb dock claims itself); otherwise whether my legend set off for it. */
 export function boardFeedWalkToOrb(orbId: string): boolean | null {
