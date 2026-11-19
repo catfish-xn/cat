@@ -6,6 +6,7 @@
 // CAITLYN_SHOT_STATS: Caitlyn's shots and centre fallbacks).
 // A warm pass plays the combat once first so effect files and shaders are loaded; once every warm measure is in and the loads
 // have settled, the measured pass replays it from tick 0 out of a fresh combat (harness fresh()), as board-shot.cjs does.
+// Compare only runs whose report has quiet true and warmPending 0 (or null on builds without the warm-up counter).
 // Frame times are only comparable between builds on the same machine and --gl; SwiftShader is not a player's GPU.
 const { chromium } = require('playwright');
 const { launchOptions, timer, waitQuiet } = require('./common.cjs');
@@ -46,13 +47,11 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   // Same start on every run, as board-shot.cjs (11-19: Windows #769 reruns had rounds where effects barely started, 0–12
   // systems at once): wait until every champion warm has measured its systems and the loads have settled, then start a fresh
   // combat so nothing the warm pass left running, nor its seed counts, carries into the measured pass.
-  const warming = await page.evaluate(async () => {
-    const state = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_WARMING;
-    for (let i = 0; i < 300 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
-    return state.pending;
-  });
-  const quiet = await waitQuiet(page); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
-  await page.evaluate(() => window.__h.fresh()); await sync();
+  // waitQuiet (common.cjs) waits for the warm measures too, and reads null on builds without LTK_WARMING; a build without the
+  // harness's fresh() starts from reset() as before.
+  const quiet = await waitQuiet(page), warming = quiet.pending;
+  mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
+  await page.evaluate(() => (window.__h.fresh ?? window.__h.reset)()); await sync();
   // Admission counters (runtime.ts LTK_RUN_STATS) and Caitlyn's shot fallbacks (batch1-events.ts CAITLYN_SHOT_STATS) for the
   // measured pass only; absent on builds before them.
   const admission = (reset = false) => page.evaluate(async clear => {
