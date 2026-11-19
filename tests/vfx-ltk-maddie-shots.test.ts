@@ -51,7 +51,7 @@ describe('Maddie\'s shots follow their damage', () => {
     // Local until the rules' display event carries each shot's flight (arrivalTick, L2): then the renderer reads it and this goes.
     expect([MADDIE_SHOT_TICKS_PER_HEX, MADDIE_SHOT_MIN_TICKS]).toEqual([2, 4]);
     expect([0, 1, 2, 3, 4, 5].map(cells => flightTicksFor(cells, MADDIE_SHOT_TICKS_PER_HEX, MADDIE_SHOT_MIN_TICKS))).toEqual([4, 4, 4, 6, 8, 10]);
-    const board = { columns: 7, radius: 34, origin: { x: 0, y: 0 } };
+    const board = { columns: 7, rows: 8, radius: 34, origin: { x: 0, y: 0 } };
     const at = (col: number, row: number) => { const c = hexCenter({ col, row }, board); return [c.x, 0, c.z] as const; };
     // Straight along a row, and on a slant: 4 cells either way, as the rules count them (8 ticks).
     expect(flightCells(at(1, 3), at(5, 3), board)).toBe(4);
