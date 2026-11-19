@@ -4332,6 +4332,14 @@
       "currentSha256": "7256e325259ead9edb4c0f5c9ef35b020df6ce12ff3edff4188a05b580bd0980",
       "firstDifferentByte": 9
     },
+    "tests/vfx-ltk-heimer-rockets.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4659,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8f7dfd2e631c324556b9edeb5bf3a8f0da85be17fa7fa44222637c96b1854540",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-importance.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4543,6 +4551,14 @@
       "currentBytes": 2997,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "2130b3efe9221f8258ed0813f9c62a598ee661e01d368eed0251f415a0e857b5",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-strike-caps.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5218,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f53a9afe97bf6cee5fbd558a02c1ac3630456380fbf83e21255d8d43ecc2880f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
