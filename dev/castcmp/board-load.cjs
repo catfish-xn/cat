@@ -49,7 +49,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
     const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
     const events = await import('/src/rendering/three-mode/vfx-ltk/batch1-events.ts').catch(() => null);
     const run = runtime?.LTK_RUN_STATS, shots = events?.CAITLYN_SHOT_STATS;
-    if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {}, ...('dropWhy' in run ? { dropWhy: {}, dropScenes: [] } : {}) }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
+    if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {}, ...('dropWhy' in run ? { dropWhy: {}, dropScenes: [] } : {}), peakLive: 0 }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
     return { run: run ? JSON.parse(JSON.stringify(run)) : null, caitlynShots: shots ? { ...shots } : null };
   }, reset);
   await admission(true);
