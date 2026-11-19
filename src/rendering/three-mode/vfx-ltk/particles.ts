@@ -380,12 +380,14 @@ export function childRoomOf(measured: { room: number; live: number } | null): Ch
 /**
  * The most root particles a run of `prepared` holds at once: the same engine runs it, without drawing, for `seconds` at
  * 1/30 s steps (stopped at `stopAfter` when given). In place, or, given a projectile cue's `travelSeconds`, flown
- * MEASURE_FLIGHT over that time, as the cue flies it. What a first play reserves before any play was seen.
+ * MEASURE_FLIGHT over that time, as the cue flies it, at the cue's `scale`. What a first play reserves before any play was seen.
  */
-export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES, travelSeconds?: number): number {
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES, travelSeconds?: number, scale = 1): number {
   const anchor = pointAnchor([0, 0, 0]);
   const flies = travelSeconds !== undefined && travelSeconds > 0;
   const driver = createDriver(1, { capacity, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  // At the scale the cue runs at: a trail emitting by distance counts the flight in the system's own units (emit.ts rateOf).
+  driver.setScale(scale);
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: flies

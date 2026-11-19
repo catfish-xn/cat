@@ -1753,6 +1753,13 @@
       "currentSha256": "648fe54d5a408503d80cc63238631204106bd992de9ed9318ee6fd8583e39711",
       "firstDifferentByte": 0
     },
+    "tests/m6-stats-browser.cjs": {
+      "previousBytes": 7309,
+      "currentBytes": 7429,
+      "previousSha256": "24aa083a3ba77a23742ab925530c71b2a9f7557112c9d4feead84788c56a5cfa",
+      "currentSha256": "a7a2468340099864ce35062c2f1fb153eeaf231f3d27c8d174e76b898246d95d",
+      "firstDifferentByte": 6829
+    },
     "tests/m7-fx-plan.test.ts": {
       "previousBytes": 3096,
       "currentBytes": 3635,
@@ -2508,6 +2515,14 @@
       "currentBytes": 8936,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "c4c85a0487d32263ec469c3417a8a2515110dae37a7ff5f8f18056d161d67f02",
+      "firstDifferentByte": 0
+    },
+    "tests/rendering3d-bar-screen-box.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1899,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1b9bc86c05749a390349ed757cc58d44ff8a809b67adc6aeaf27a1ad126220fd",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-bench.test.ts": {
@@ -3710,10 +3725,10 @@
     },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
-      "currentBytes": 10338,
+      "currentBytes": 29744,
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
-      "currentSha256": "8c4848f31d29e6385c5e0bb605e67a8345c5c1223696dd82fc0f77c1c45bfcae",
-      "firstDifferentByte": 6912
+      "currentSha256": "839c6910ad1c7aec3e57776312714ffe345bf8180e14aadb3bdd168745232850",
+      "firstDifferentByte": 216
     },
     "tests/t10-combat-ops.test.ts": {
       "previousBytes": 8062,
@@ -4638,6 +4653,14 @@
       "currentBytes": 1395,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "106be1f0aced6fbce96bc882aab9641245aad8770a8b5cb33d1b1c3d9823435d",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-velocity-rate-units.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3600,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b63eb91949fd2ead528ce067277c44b04604ab1b8d49ab68a3d85125bc8b2fa8",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-vladimir-heal.test.ts": {
