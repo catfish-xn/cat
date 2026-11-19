@@ -320,6 +320,27 @@ export function hashSeed(key: string): number {
   for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
   return h >>> 0 || 1;
 }
+/**
+ * How long a system plays on its own, read from the asset: the latest any emitter's last particle dies (a single particle is
+ * born at its emitter's start, a stream emits until its emitter's end time). Null when an emitter never ends (a loop): such
+ * a system has no own end. At most 10 s, a cue's longest. A cue with `ownLife` plays this long.
+ */
+export function ownSeconds(prepared: Pick<PreparedVfx, 'model'>): number | null {
+  let end = 0;
+  for (const e of prepared.model.emitters) if (!e.disabled) {
+    const emits = e.singleParticle ? e.timeBeforeFirstEmission : e.lifetime;
+    if (emits === null) return null;
+    // A particle's life drawn from a probability table (a constant under a random multiplier) lives up to the table's most.
+    const table = e.particleLifetime.tables.filter(t => t.channel === 0).map(t => Math.max(t.single, ...t.keys.flatMap(k => k.values)));
+    end = Math.max(end, emits + peak(e.particleLifetime) * (table.length ? Math.max(...table) : 1));
+  }
+  return Math.min(10, end);
+}
+/** A cue with `ownLife` lasts its system's own time (ownSeconds) once the system is loaded; any other cue is unchanged. */
+export function withOwnLife<T extends Pick<TimelineCue, 'ownLife' | 'duration'>>(cue: T, prepared: Pick<PreparedVfx, 'model'> | undefined): T {
+  const own = cue.ownLife && prepared ? ownSeconds(prepared) : null;
+  return own === null || own <= 0 ? cue : { ...cue, duration: own };
+}
 /** The seed of a beam row split from a flight row seeded `flight`: fixed by it, and apart from every other row's. */
 export function beamSeed(flight: number): number {
   return (Math.imul(flight, 0x9e3779b1) ^ 0x5bd1e995) >>> 0 || 1;
@@ -479,7 +500,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         await new Promise(resolve => setTimeout(resolve, 0));
         const prepared = catalog.get(id);
         if (closed || needs.has(id) || !prepared || prepared.empty) continue;
-        const longest = cues.filter(cue => cue.system === id).reduce((best, cue) => cue.duration > best.duration ? cue : best);
+        const longest = cues.filter(cue => cue.system === id).map(cue => withOwnLife(cue, prepared)).reduce((best, cue) => cue.duration > best.duration ? cue : best);
         const stopAt = longest.fadeOut ? undefined : longest.stopAfter;
         // A missile stops emitting where it lands, so its children are measured stopped at its flight.
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
@@ -596,6 +617,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         && cue.variant === form
         && (cue.branch === undefined || cue.branch === context.branch)
         && (!context.boardOnly || cue.location === 'board'));
+      selected = selected?.map(cue => cue.ownLife ? withOwnLife(cue, catalog.get(cue.system)) : cue);
       if (context.channelSeconds !== undefined) {
         if (!Number.isFinite(context.channelSeconds) || context.channelSeconds <= 0 || context.channelSeconds > 10) return false;
         const end = context.channelSeconds;

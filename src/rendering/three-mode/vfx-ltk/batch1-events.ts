@@ -88,6 +88,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
   /** Renni: the enemy she lifted, until her final slam lands, and the tick she set it down (-1 while held). */
   const grabs = new Map<string, { held: string; down: number }>();
+  // Nocturne's last empowered swing: its tick and the enemies his strike already played on (its target, then each one bled).
+  const strikes = new Map<string, { tick: number; struck: Set<string> }>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -95,7 +97,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -272,6 +274,15 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
         if (!tracked) return plan;
+        // Nocturne's strike (P_tar) plays on every enemy his empowered swing bleeds: its own target with the swing's hit, each
+        // other one when its first bleed tick lands. The rules name no bleed targets at the swing (Fable 11-18, C71 option A).
+        if (event.type === 'packetDamage' && event.delivery === 'ability-periodic' && definition(event.sourceId) === 'nocturne') {
+          const strike = strikes.get(event.sourceId);
+          if (strike && event.tick > strike.tick && !strike.struck.has(event.targetId)) {
+            strike.struck.add(event.targetId);
+            plan.extra.push({ champion: 'nocturne', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'nocturne-tar' });
+          }
+        }
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
           state.cast = true;
@@ -286,6 +297,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             || champion === 'lux' && state.luxAttack || champion === 'nocturne' && event.tick < state.nocturneUntil
             || champion === 'twitch' && state.twitchShots > 0) plan.variant = 'empowered';
           if (champion === 'lux') state.luxAttack = false;
+          if (champion === 'nocturne' && plan.variant === 'empowered') strikes.set(event.attackerId, { tick: event.tick, struck: new Set([event.targetId]) });
           if (champion === 'twitch' && state.twitchShots > 0) {
             state.twitchShots--;
             // The attack event retains the pre-replacement target; packets name the actual pierced enemies.
