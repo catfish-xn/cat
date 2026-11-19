@@ -191,10 +191,11 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const [phys] = labels([damage(1)]), [magic] = labels([{ ...damage(1), damageType: 'magic' }]), [real] = labels([{ ...damage(1), damageType: 'true' }]), [healed] = labels([heal(1)]);
       expect([phys.text, magic.text, real.text, healed.text]).toEqual(['10', '10', '10', '+7']);
       expect([phys.style.color, magic.style.color, real.style.color, healed.style.color]).toEqual(['#ff8a24', '#36c4ff', '#ffffff', '#4fdc84']);
-      // A bold rounded sans-serif from the system, never a serif face; a thin dark edge and a light shadow.
+      // A bold rounded sans-serif from the system, never a serif face; a thin dark edge and a hard black shadow down-right, no blur.
       expect(phys.style.fontFamily).toMatch(/sans-serif$/); expect(phys.style.fontFamily).not.toMatch(/(^|[ ,"])serif/);
       expect(Number(phys.style.fontWeight)).toBe(900);
-      expect(phys.style.textShadow).toContain('rgba(0,0,0,.9)'); expect(phys.style.textShadow).toContain('0 2px 4px');
+      expect(phys.style.textShadow).toContain('rgba(0,0,0,.9)'); expect(phys.style.textShadow).toContain('0.065em 0.065em 0 #000');
+      expect(phys.style.textShadow).not.toMatch(/ \d+(\.\d+)?px rgba\(0,0,0,\.6\)/);
     });
     it('absorbed damage shows no number (the bar shows the shield)', () => {
       expect(labels([{ ...damage(1), hpDamage: 0, absorbed: 6 }])).toEqual([]);
@@ -204,14 +205,19 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
       expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
     });
-    it('a crit is the same colour about 1.9 times as large (42 px), with a solid mark darker and redder and a dark edge, in its own label', () => {
+    it('a crit is the same colour about 1.9 times as large (42 px), with the wedge mark (E5) in two hard tones and a dark edge, in its own label', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
       expect(big.text).toBe(plain.text);
       expect(px(big) / px(plain)).toBeCloseTo(1.9, 1); expect(px(big)).toBe(42);
       expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
-      // The mark is solid, darker and redder than the number (orange and blue alike), with the number's dark edge.
-      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#e55619'"); expect(decodeURIComponent(blue.style.backgroundImage)).toContain("fill='#487ab3'");
-      expect(decodeURIComponent(big.style.backgroundImage)).toContain("stroke='rgba(0,0,0,.9)'");
+      // The mark (the user's pick E5): two hard tones of the number's colour, split along the slam, its dark edge and a black hard shadow.
+      const mark = decodeURIComponent(big.style.backgroundImage), blueMark = decodeURIComponent(blue.style.backgroundImage);
+      expect(mark).toContain("fill='#f9611c'"); expect(mark).toContain("fill='#b03f15' clip-path='url(#lo)'");
+      expect(blueMark).toContain("fill='#4c89c7'"); expect(blueMark).toContain("fill='#335a94' clip-path='url(#lo)'");
+      expect(mark).toContain("<polygon points='-10,-8 40,42 -10,42'/>"); expect(mark).toContain("fill='#000' transform='translate(");
+      expect(mark).toContain("stroke='rgba(0,0,0,.9)'");
+      // Its wedge's bottom on the digits' bottom: as much room above the line as below, the mark box placed from there.
+      expect(big.style.paddingTop).toBe(big.style.paddingBottom); expect(big.style.paddingTop).not.toBe('');
       expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
     });
@@ -254,7 +260,8 @@ describe('stage5 floating text equivalence and DOM work', () => {
     it('a newly popped number pushes the older one up by its popped size', () => {
       const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
-      renderer.push([damage(1, 'a', 10)], 0); renderer.push([{ ...crit(2, 'a', 20), eventSeq: 2 }], 400); renderer.render(400, anchors);
+      // A crit peaks 30 ms after it comes (see the crit pop test below).
+      renderer.push([damage(1, 'a', 10)], 0); renderer.push([{ ...crit(2, 'a', 20), eventSeq: 2 }], 400); renderer.render(430, anchors);
       const [older, popped] = snapshot(h)[0].children;
       expect(scale(popped)).toBeCloseTo(1.6, 3);
       expect(top(popped) - top(older)).toBeGreaterThanOrEqual((px(popped) * scale(popped) + px(older) * scale(older)) / 2 - 1e-6);
@@ -341,6 +348,18 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.color).toBe('#ffffff');
       expect(labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 700)).toEqual([]);
       expect(labels([heal(1), crit(2, 'b')]).filter(e => e.text === '+7')).toEqual(labels([heal(1)]));
+    });
+    it('a crit slams in from up-left, pops past its size and settles within 100 ms, then holds still until it fades', () => {
+      const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
+      const slam = (e: { style: Record<string, string> }) => /translate\((-[\d.]+)px, (-[\d.]+)px\)/.exec(e.style.transform);
+      const at = (now: number) => labels([crit(1)], now)[0];
+      expect(scale(at(0))).toBeCloseTo(1.3, 3); expect(scale(at(30))).toBeCloseTo(1.6, 3); expect(scale(at(70))).toBeCloseTo(0.92, 3);
+      expect(at(100).style.transform).toBe('translate(-50%, -50%)');
+      // Up-left of its spot at first (a quarter of its size each way), on its spot from 100 ms.
+      const first = slam(at(0))!; expect(Number(first[1])).toBeCloseTo(-0.25 * px(at(0)), 1); expect(first[1]).toBe(first[2]);
+      expect(slam(at(100))).toBeNull();
+      // It does not rise: the same height from 100 ms until it fades.
+      expect(parseFloat(at(100).style.top)).toBe(parseFloat(at(800).style.top));
     });
     it('a new number pops in larger and drops back to its size within 160 ms, then rises', () => {
       expect(labels([damage(1)], 0)[0].style.transform).toBe('translate(-50%, -50%) scale(1.600)');
