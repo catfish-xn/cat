@@ -722,9 +722,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
-  // LeBlanc's channel: its dark ground-layer backdrop leaves a dark smudge beside her that the original does not show
-  // (Windows probe 11-19: only this emitter darkens that spot). A temporary departure held off until its look is checked
-  // (Fable 11-19, known difference); the rest of the system draws.
+  // LeBlanc's channel: its dark ground-layer backdrop draws a dark smudge beside her on our board (Windows probe 11-19: only
+  // this emitter darkens that spot). A temporary departure held off as a known difference until its look is checked
+  // (Fable 11-19); the rest of the system draws.
   'acd84091': ['Alpha_Glow'],
 };
 
