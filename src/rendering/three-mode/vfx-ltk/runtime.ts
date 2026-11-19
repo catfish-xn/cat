@@ -1006,7 +1006,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.ltkSystem = spawn.system;
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
-          if (options.budget) options.budget.live += own;
+          if (options.budget) { options.budget.live += own; (LTK_RUN_STATS as { peakLive?: number }).peakLive = Math.max((LTK_RUN_STATS as { peakLive?: number }).peakLive ?? 0, options.budget.live); }
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
             playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
