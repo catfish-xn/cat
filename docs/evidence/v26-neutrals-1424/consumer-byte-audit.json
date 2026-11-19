@@ -4663,6 +4663,14 @@
       "currentSha256": "106be1f0aced6fbce96bc882aab9641245aad8770a8b5cb33d1b1c3d9823435d",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-velocity-rate-units.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3600,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b63eb91949fd2ead528ce067277c44b04604ab1b8d49ab68a3d85125bc8b2fa8",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-vladimir-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

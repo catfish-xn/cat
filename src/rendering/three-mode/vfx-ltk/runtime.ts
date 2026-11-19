@@ -579,12 +579,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
         const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
-        const travel = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds)?.travelSeconds;
+        const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
+        const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);
-        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel), wide = rootRoomOf(unlimited, most);
+        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel, scale), wide = rootRoomOf(unlimited, most);
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
         // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
-        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel);
+        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel, scale);
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
