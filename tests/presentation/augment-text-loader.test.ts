@@ -21,15 +21,44 @@ it('loads only on demand, deduplicates slow requests, notifies open views and ca
   expect(redraw).toHaveBeenCalledTimes(1); expect(disposed).not.toHaveBeenCalled();
 });
 
-it('reports a failed import, never creates a redraw/retry loop, and permits explicit retry', async () => {
-  const request = vi.fn<() => Promise<typeof texts>>().mockRejectedValueOnce(Error('offline')).mockResolvedValue(texts);
-  const loader = createAugmentTextLoader(request);
+it('reports a failed import once, retries on its own (no redraw loop) and redraws when the text arrives', async () => {
+  // Old loaders gained lazy-chunk retries (11-19): the first failure still settles loadAugmentText, so awaiting callers
+  // never block while offline; the retry runs on its timer with the bottom notice line instead of asking for a reload.
+  const request = vi.fn<() => Promise<typeof texts>>().mockRejectedValueOnce(Error('offline')).mockRejectedValueOnce(Error('offline')).mockResolvedValue(texts);
+  const timers: (() => void)[] = [], notices: [string, boolean][] = [], redraw = vi.fn();
+  const loader = createAugmentTextLoader(request, '强化说明', { setTimer: callback => { timers.push(callback); }, notice: (label, retrying) => { notices.push([label, retrying]); } });
+  loader.onAugmentTextChanged(redraw);
   await loader.loadAugmentText();
-  expect(loader.augmentTextPlaceholder()).toContain('加载失败');
+  expect(loader.augmentTextPlaceholder()).toBe('强化说明加载失败，正在重试…');
   expect(loader.readAugmentText()).toBeUndefined();
   expect(request).toHaveBeenCalledTimes(1);
-  await loader.loadAugmentText();
-  expect(loader.readAugmentText()).toBe(texts);
+  expect(redraw).toHaveBeenCalledTimes(1);
+  // Reads and explicit loads while a retry waits start no extra request.
+  await loader.loadAugmentText(); loader.readAugmentText();
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(timers).toHaveLength(1);
+  timers.shift()!(); await vi.waitFor(() => expect(timers).toHaveLength(1));
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(redraw).toHaveBeenCalledTimes(1); // the second failure stays quiet
+  timers.shift()!(); await vi.waitFor(() => expect(loader.readAugmentText()).toBe(texts));
+  expect(request).toHaveBeenCalledTimes(3);
+  expect(redraw).toHaveBeenCalledTimes(2);
+  expect(loader.augmentTextPlaceholder()).toBe('强化说明加载中…');
+  expect(notices).toEqual([['强化说明', true], ['强化说明', true], ['强化说明', false]]);
+  expect(timers).toHaveLength(0);
+});
+
+it('the tooltip loader names its own chunk in the retry notice', async () => {
+  vi.resetModules();
+  vi.doMock('../../src/presentation/tooltip-text-data', () => { throw new Error('offline'); });
+  const lazy = await import('../../src/presentation/lazy-chunk');
+  const shown = vi.spyOn(lazy, 'showChunkNotice').mockImplementation(() => undefined);
+  try {
+    const tooltip = await import('../../src/presentation/tooltip-text-loader');
+    await tooltip.loadTooltipText();
+    expect(shown).toHaveBeenCalledWith('技能和装备说明', true);
+    expect(tooltip.tooltipTextPlaceholder()).toContain('加载失败，正在重试');
+  } finally { shown.mockRestore(); vi.doUnmock('../../src/presentation/tooltip-text-data'); vi.resetModules(); }
 });
 
 it('keeps the lazy team-up wording identical to the archived source tables', async () => {
