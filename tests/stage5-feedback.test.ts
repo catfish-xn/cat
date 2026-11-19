@@ -310,6 +310,15 @@ describe('stage5 floating text equivalence and DOM work', () => {
         for (const bar of [barL, barR]) expect(Math.abs(left(label) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + 20 - 1e-6);
       }
       r2.dispose();
+      // Moved aside past a pair of bars, then crowded there by another unit's number: it steps on from where it stood, not across the bars.
+      setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3), pair = new Map([['l', { x: 100, y: 307, w: 120, h: 16 }], ['r', { x: 220, y: 307, w: 120, h: 16 }]]);
+      r3.push([damage(1, 'a', 10)], 0); r3.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
+      r3.render(200, new Map([['b', { x: 162, y: 300, radius: 20 }]]), [], pair);
+      expect(left(snapshot(h3)[0].children.find(e => e.text === '20')!)).toBeGreaterThan(280);
+      r3.render(220, new Map([['a', { x: 320, y: 300, radius: 20 }], ['b', { x: 162, y: 300, radius: 20 }]]), [], pair);
+      const [ofA, ofB] = ['10', '20'].map(text => snapshot(h3)[0].children.find(e => e.text === text)!);
+      expect(left(ofB)).toBeGreaterThan(280); expect(Math.abs(left(ofB) - left(ofA))).toBeGreaterThanOrEqual(40 - 1e-6);
+      r3.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
