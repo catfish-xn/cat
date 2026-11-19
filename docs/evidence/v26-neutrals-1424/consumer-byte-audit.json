@@ -4332,6 +4332,14 @@
       "currentSha256": "7256e325259ead9edb4c0f5c9ef35b020df6ce12ff3edff4188a05b580bd0980",
       "firstDifferentByte": 9
     },
+    "tests/vfx-ltk-heimer-rockets.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3471,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2daef071f606fb7b3023bb4af278949c8d5eba07c31d5f4c7ad9f253449b84ea",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-importance.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

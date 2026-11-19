@@ -675,10 +675,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       countSkips(skipped);
       const play = ++plays;
       // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
-      // (OFF_SLOT_MAX).
+      // (OFF_SLOT_MAX). A perStrike cue's rows count one per strike, so strikes on one target fan out too.
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
-        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.strike !== undefined ? `${spawn.targetId}#${spawn.strike}` : spawn.targetId); }
       for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
         const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
@@ -949,6 +949,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
+          curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
