@@ -25,8 +25,8 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84', status: '#ff9d8a' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
-/** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit 1.6× it, a tick 0.8×. */
-const FONT_PX = 22, CRIT_SCALE = 1.6, TICK_SCALE = 0.8;
+/** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit about 1.9× it (42 px), a tick 0.8×. */
+const FONT_PX = 22, CRIT_SCALE = 1.9, TICK_SCALE = 0.8;
 /** A bold rounded sans-serif from the system (no font file is shipped), never a serif face. */
 const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuchet MS", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 /** A dark edge all round (eight directions) and a drop shadow, so the number holds on a bright floor. */
@@ -51,8 +51,14 @@ const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.1, STACK_GAP = 6, EARLY_FAD
  * the stack pushes into a bar, or that would stand on another unit's bar, steps sideways out past that bar's end.
  */
 const BAR_SIDESTEP_GAP = 3;
-/** The crit mark left of a crit: a spiky burst in the number's own colour with a thin darker edge (drawn here). */
-const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l1.9 6.3L19.8 4.2l-2.6 6.1L23 12l-5.8 1.7 2.6 6.1-5.9-3.1L12 23l-1.9-6.3-5.9 3.1 2.6-6.1L1 12l5.8-1.7L4.2 4.2l5.9 3.1z' fill='${color}' stroke='rgba(0,0,0,.6)' stroke-width='0.8' stroke-linejoin='round'/></svg>`)}")`;
+/**
+ * The crit mark left of a crit (自绘，非原版素材): an angular, lopsided impact shard with a few thick spikes, leaning
+ * towards the number; solid, a shade darker than the number, with the number's dark edge.
+ */
+export const CRIT_MARK_PATH = 'M6 7L4 1 11 5 23 1 17 10 23 17 14 16 10 23 7 15 1 12Z';
+const MARK_SHADE = 0.78;
+const shade = (color: string) => `#${[1, 3, 5].map(i => Math.round(parseInt(color.slice(i, i + 2), 16) * MARK_SHADE).toString(16).padStart(2, '0')).join('')}`;
+const badge = (color: string, path = CRIT_MARK_PATH) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='${path}' fill='${shade(color)}' stroke='rgba(0,0,0,.9)' stroke-width='1.4'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
@@ -66,14 +72,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.8)}px` : '' };
+      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.82)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
     if (!item) {
       const label = document.createElement('span');
       Object.assign(label.style, { position: 'absolute', fontSize: `${l.px}px`, fontWeight: l.fontWeight, fontFamily: FONT_FAMILY, whiteSpace: 'nowrap', textShadow: l.textShadow, color: l.color, pointerEvents: 'none',
-        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: '0.75em 0.75em', paddingLeft: l.paddingLeft });
+        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: '0.8em 0.8em', paddingLeft: l.paddingLeft });
       item = { label, styles: { color: l.color } };
     } else {
       // Match a fresh label even if it has no anchor, or cannot be placed on its first frame.
@@ -157,14 +163,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           above = y - size / 2;
           const scale = pop * shrink, w = half * scale;
           // A canvas label or any unit's bar in the way: the number steps sideways out past it (the nearer side), never up.
-          let x = Math.max(w, Math.min(width - w, anchor.x));
-          const blockers = [...obstacles, ...bars.values()];
-          for (let tries = 0; tries < 3; tries++) {
-            const hit = blockers.find(rect => Math.abs(rect.x - x) < rect.w / 2 + w && Math.abs(rect.y - y) < rect.h / 2 + size / 2);
-            if (!hit) break;
-            const right = hit.x + hit.w / 2 + w + BAR_SIDESTEP_GAP, left = hit.x - hit.w / 2 - w - BAR_SIDESTEP_GAP;
-            const pick = Math.abs(right - x) <= Math.abs(left - x) ? right : left;
-            x = Math.max(w, Math.min(width - w, pick));
+          // Bars side by side (or overlapping) are cleared together: the nearest spot past an end of any of them that no rect covers.
+          const fit = (at: number) => Math.max(w, Math.min(width - w, at));
+          const row = [...obstacles, ...bars.values()].filter(rect => Math.abs(rect.y - y) < rect.h / 2 + size / 2);
+          const clear = (at: number) => !row.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
+          let x = fit(anchor.x);
+          if (!clear(x)) {
+            const spots = row.flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit).filter(clear);
+            if (spots.length) x = spots.reduce((best, at) => Math.abs(at - anchor.x) < Math.abs(best - anchor.x) ? at : best);
           }
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
