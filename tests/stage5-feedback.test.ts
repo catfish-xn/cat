@@ -220,7 +220,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
     });
     it('a basic attack is no longer a small white number: it takes its damage type\'s colour at full size', () => {
       const [plain] = labels([damage(1)], 400);
-      expect(plain.style.color).not.toBe('#ffffff'); expect(px(plain)).toBe(20);
+      expect(plain.style.color).not.toBe('#ffffff'); expect(px(plain)).toBe(22);
     });
     it('every number has a thin dark edge and a light shadow (no heavy ring)', () => {
       const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
@@ -255,6 +255,25 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(scale(popped)).toBeCloseTo(1.6, 3);
       expect(top(popped) - top(older)).toBeGreaterThanOrEqual((px(popped) * scale(popped) + px(older) * scale(older)) / 2 - 1e-6);
       renderer.dispose();
+    });
+    it('a bright number never covers a unit\'s bar: below its own bar by half its height, faint over any bar', () => {
+      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
+      // A short unit: its body point (300 + 0.35 × 10) is just under its bar (centre 290, 16 tall, so its bottom is 298).
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 10 }], ['b', { x: 300, y: 300, radius: 20 }]]);
+      const bars = new Map([['a', { x: 120, y: 290, w: 60, h: 16 }], ['b', { x: 160, y: 300, w: 60, h: 16 }]]);
+      renderer.push([damage(1, 'a', 10)], 0);
+      for (const now of [0, 200, 600, 880]) {
+        renderer.render(now, anchors, [], bars);
+        const [label] = snapshot(h)[0].children, size = px(label) * Number(/scale\(([\d.]+)\)/.exec(label.style.transform)?.[1] ?? 1);
+        // Its top is at least half its height under its own bar's bottom (298), from its start to its end.
+        expect(top(label) - size / 2, `at ${now}`).toBeGreaterThanOrEqual(298 + size / 2 - 1e-6);
+      }
+      renderer.dispose();
+      // Standing over another unit's bar ('b' bar centred over 'a'), a number shows at half opacity at most.
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2);
+      r2.push([damage(1, 'a', 10)], 0); r2.render(200, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', { x: 160, y: 307, w: 80, h: 16 }]]));
+      expect(Number(snapshot(h2)[0].children[0].style.opacity)).toBeLessThanOrEqual(0.5);
+      r2.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);

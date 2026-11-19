@@ -24,7 +24,7 @@ import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
 import { DISPLACEMENT_SLIDE_2D, isDisplacement, unitControl, type ControlKind } from '../presentation/control-display';
-import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardMerges, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics, type BoardMergePoint } from './board-feed';
+import { boardFeedActive, boardFeedBarBox, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardMerges, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics, type BoardMergePoint } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -1299,15 +1299,18 @@ export class BoardScene extends Phaser.Scene {
     const { canvas, host, width } = this.boardScreen();
     if (boardFeedActive()) {
       // ?render=3d: anchor floats to each model as the 3D layer projects it; the 2D canvas and its fx labels are covered.
-      const anchors = new Map<string, { x: number; y: number; radius: number }>();
+      const anchors = new Map<string, { x: number; y: number; radius: number }>(), bars = new Map<string, { x: number; y: number; w: number; h: number }>();
       for (const [id, token] of this.tokens) {
         const box = token.visible ? boardFeedScreenBox(id) : undefined;
         if (!box) continue;
         // Radius is the model's half width (overlap test); y sits one radius below its top, so floats rise from the head.
         const radius = (box.right - box.left) / 2;
         anchors.set(id, { x: box.left + radius - host.left, y: box.top + radius - host.top, radius });
+        // Its overhead bar, which no number may cover while it is still bright.
+        const bar = boardFeedBarBox(id);
+        if (bar) bars.set(id, { x: (bar.left + bar.right) / 2 - host.left, y: (bar.top + bar.bottom) / 2 - host.top, w: bar.right - bar.left, h: bar.bottom - bar.top });
       }
-      this.feedback?.render(performance.now(), anchors);
+      this.feedback?.render(performance.now(), anchors, [], bars);
       return;
     }
     const scale = canvas.width / width;
