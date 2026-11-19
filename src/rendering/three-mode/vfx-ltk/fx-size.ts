@@ -4,9 +4,8 @@
  * Particles share the world with the arena: the default arena maps one League unit to √3·34 / (one cell in the asset's
  * own units) × 7.2 / (the board's width in cells at its locator's scale) board units (boards-plan alignmentScale, #526),
  * well under FX_SCALE's 0.44. Since 2026-11-12 the champion bodies take the same scale (CHAMPION_SOURCE_SCALE), so a
- * body-sized cue and an arena-sized one come out the same size. At 0.44 every system drew clearly larger than its
- * original size against the grid: Darius's Q ring 7.2 cells across, well wider than in the original footage, and
- * Viktor's board-wide R spilling over the bench. The earlier per-cue shrinks (Garen, Vex and Nunu, 11-03 and 11-06) were
+ * body-sized cue and an arena-sized one come out the same size. At 0.44 every system drew too large against the grid:
+ * Darius's Q ring 7.2 cells across and Viktor's board-wide R spilling over the bench. The earlier per-cue shrinks (Garen, Vex and Nunu, 11-03 and 11-06) were
  * the same mismatch.
  *
  * Kept free of the particle bundle so cue tables can import it.

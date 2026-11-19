@@ -1,4 +1,4 @@
-import { projectedBox } from './description-pick';
+import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
 import { createStarUpFx } from './star-up-fx';
@@ -76,7 +76,7 @@ import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
-/** The original spans a quad over twice its scale0 (a half-extent; vfx-ltk materials.ts REACH). */
+/** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -1216,7 +1216,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    // Sized the original's way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
+    // Sized the vfx-ltk way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
     // one held on the caster's weapon or hand bone, which keeps the body's (the vfx-ltk cueSize rule).
     const held = spec.anchor === 'source' && spec.bone !== undefined && WEAPON_BONE.test(spec.bone);
     const world = held ? source.modelScale ?? FX_SCALE : ARENA_UNIT_SCALE;
@@ -1641,6 +1641,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
     return root ? projectedBox(root, camera, viewport()) : undefined;
   };
+  // Combat floats keep clear of every overhead bar: its drawn bar sprites (the plain bar or the tier bar), camera-facing.
+  const barBox = (id: string): BoardScreenBox | undefined => {
+    const overhead = scout.active ? undefined : pieces.get(id)?.overhead.object;
+    if (!overhead?.visible) return;
+    const sprites = ['render3d-overhead-bar', 'render3d-overhead-tier'].map(name => overhead.getObjectByName(name)).filter((o): o is Sprite => !!o && (o as Sprite).isSprite);
+    return spritesScreenBox(sprites, camera, viewport());
+  };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   let carouselOngoing = false;
   const onCarousel = (view: Parameters<typeof stage.show>[0], active = view !== null) => {
@@ -1710,7 +1717,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!scout.active) return pickUnit(client, true) ?? undefined;
       const target = scout.descriptionAt(client, camera, viewport())?.target;
       return target?.kind === 'unit' ? target.id : undefined;
-    }, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
+    }, screenBox: id => !stage.active ? screenBox(id) : undefined, barBox: id => !stage.active ? barBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.

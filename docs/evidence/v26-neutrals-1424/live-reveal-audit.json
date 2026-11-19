@@ -11,7 +11,7 @@
     "scripts/record-v26-neutrals-1424-battle-start.cjs": "f30ae29342e18bb5737b8a1adcfcc66c2a39d7d3558071d1db112efa20b6c7c4",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
     "scripts/record-v26-neutrals-1424-live-reveal.cjs": "bdd04cc326ae4b44ac000ae0dbc7b26fb18421bd094cf1b324972a5c9ec7d60c",
-    "scripts/record-v26-neutrals-1424-release.cjs": "a997dc08d356e8eeb50b3df8131d56bf77cdff39ad23521542755bd7f945f6bb",
+    "scripts/record-v26-neutrals-1424-release.cjs": "2231b41a60126bb5943b4543cc3ab1f13c24b5a60eb55fdbffcec7ce20659d08",
     "scripts/record-v26-neutrals-1424-transfer.cjs": "62948d5cb84d2209d89087fe19b510ff316fd39f3b74f4a14c1f341fcf758ca9",
     "scripts/v26-neutrals-1424-fixture-audit.cjs": "72c6468d2315799a6944b813ca69f768ae301394fe04fbe008eb5137042c90ab",
     "scripts/v26-neutrals-1424-rageblade-route.cjs": "72dfab79c3330d0ecedc6f3970f4aa20f1bc5fa38ef9242c4b6d27b3af33c352",
