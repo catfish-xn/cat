@@ -17,20 +17,21 @@ describe('Heimerdinger rockets (perStrike)', () => {
     expect(heimerRocketLandTick(0, 1)).toBe(14);
   });
 
-  it('plays one rocket and one hit a strike, each on its own target, the hit when its rocket lands', () => {
+  it('plays one rocket a strike on its own target, and a hit when it lands, merged when the same target was hit just before', () => {
     const targets = ['a', 'a', 'b', 'c', 'a'];
     const { spawns, unsupported } = mapSkillTimeline(cast, 'heimer', targets);
     expect(unsupported).toEqual([]);
     const rockets = spawns.filter(s => s.system === 'c8d6ee2e'), hits = spawns.filter(s => s.system === '07c9833a');
     expect(rockets.map(s => s.targetId)).toEqual(targets);
-    expect(hits.map(s => s.targetId)).toEqual(targets);
     rockets.forEach((rocket, k) => {
       expect(rocket.strike).toBe(k);
       close(rocket.delay, (HEIMER_ROCKETS.launchTicks + strikeOffsetTicks(k, 5, 1, 9)) * STRIKE_TICK_SECONDS);
       close(rocket.delay + rocket.travelSeconds!, heimerRocketLandTick(k, 5) * STRIKE_TICK_SECONDS);
-      close(hits[k]!.delay, heimerRocketLandTick(k, 5) * STRIKE_TICK_SECONDS);
-      expect(hits[k]!.curve).toBeUndefined();
     });
+    // Strike 1 lands on 'a' one tick after strike 0 did (under hitMergeTicks): merged. Strike 4 is four ticks after: its own hit.
+    expect(hits.map(s => [s.targetId, s.strike])).toEqual([['a', 0], ['b', 2], ['c', 3], ['a', 4]]);
+    hits.forEach(hit => { close(hit.delay, heimerRocketLandTick(hit.strike!, 5) * STRIKE_TICK_SECONDS); expect(hit.curve).toBeUndefined(); expect(hit.rank).toBe('decorative'); });
+    expect(rockets[0]!.rank).toBe('body');
     expect(spawns.filter(s => s.system === 'c44d51d0')).toHaveLength(1);
   });
 
@@ -43,15 +44,14 @@ describe('Heimerdinger rockets (perStrike)', () => {
     expect(strikeCurve(0, 1, { side: 0.9, lift: 0.6 }).control1[0]).toBe(0);
   });
 
-  it('draws at most HEIMER_ROCKETS.shown rockets a cast; the later strikes keep their hits on the same stagger', () => {
-    const targets = ['a', 'b', 'a', 'c', 'a', 'b', 'c'];
+  it('plays neither rocket nor hit for the strikes past HEIMER_ROCKETS.shown', () => {
+    const targets = ['a', 'b', 'c', 'd', 'e', 'a', 'b'];
     const { spawns } = mapSkillTimeline(cast, 'heimer', targets);
     const rockets = spawns.filter(s => s.system === 'c8d6ee2e'), hits = spawns.filter(s => s.system === '07c9833a');
     expect(rockets.map(s => s.strike)).toEqual([0, 1, 2, 3, 4]);
-    expect(hits.map(s => s.targetId)).toEqual(targets);
-    hits.forEach((hit, k) => close(hit.delay, heimerRocketLandTick(k, 7) * STRIKE_TICK_SECONDS));
-    expect(new Set(hits.map(h => h.delay)).size).toBe(7);
-    expect(rockets[0]!.perStrike?.tickCap).toBe(HEIMER_ROCKETS.tickCap);
+    expect(hits.map(s => s.strike)).toEqual([0, 1, 2, 3, 4]);
+    hits.forEach(hit => close(hit.delay, heimerRocketLandTick(hit.strike!, 7) * STRIKE_TICK_SECONDS));
+    expect(rockets[0]!.perStrike?.tickCap).toBe(HEIMER_ROCKETS.tickCap); expect(hits[0]!.perStrike?.tickCap).toBe(HEIMER_ROCKETS.hitTickCap);
     expect(rockets[0]!.scale).toBe(HEIMER_ROCKETS.rocketScale); expect(rockets[0]!.brightness).toBe(HEIMER_ROCKETS.rocketBrightness);
     expect(hits[0]!.brightness).toBeUndefined();
   });

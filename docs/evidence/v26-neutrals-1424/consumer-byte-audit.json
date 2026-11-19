@@ -4335,9 +4335,9 @@
     "tests/vfx-ltk-heimer-rockets.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4372,
+      "currentBytes": 4659,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "07a97532daa6ab3a8b90bafdaddd99fe34fa543f00a61dc1594fce4461afd9aa",
+      "currentSha256": "8f7dfd2e631c324556b9edeb5bf3a8f0da85be17fa7fa44222637c96b1854540",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-importance.test.ts": {
@@ -4548,9 +4548,9 @@
     "tests/vfx-ltk-strike-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3786,
+      "currentBytes": 5218,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ccea1e9240dbd648a045fb5512ef67c1c32d20d92afce5534e2e0832956e344b",
+      "currentSha256": "f53a9afe97bf6cee5fbd558a02c1ac3630456380fbf83e21255d8d43ecc2880f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {

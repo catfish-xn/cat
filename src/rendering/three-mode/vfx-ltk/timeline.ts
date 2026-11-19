@@ -28,9 +28,10 @@ export interface TimelineCue {
   readonly main?: boolean;
   /**
    * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
-   * visual that must not crowd skill impacts out (Steb's heal share). A display priority decision, not original data.
+   * visual that must not crowd skill impacts out (Steb's heal share); 'decorative' for one that must give way to every skill and
+   * basic-attack visual (Heimerdinger's rocket hits, Fable 11-19). A display priority decision, not original data.
    */
-  readonly rank?: 'body';
+  readonly rank?: 'body' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
@@ -53,8 +54,10 @@ export interface TimelineCue {
    */
   readonly perStrike?: {
     readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan;
-    /** A projectile row only for the first `shown` strikes of a cast; later strikes keep their other cues (a hit still lands). */
+    /** Rows only for the first `shown` strikes of a cast; later strikes play nothing of this cue (their damage still shows). */
     readonly shown?: number;
+    /** A strike lands no row of this cue when an earlier strike of the same cast at the same target lands under this many ticks before. */
+    readonly mergeTicks?: number;
     /** At most this many of this system's rows queued on one rule tick across every caster (runtime); the rest are left out. */
     readonly tickCap?: number;
   };
@@ -192,9 +195,15 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (cue.perStrike && cue.event !== 'cast-start' && cue.location !== 'board') {
       const strikes = targets.filter(id => id !== sourceId), { staggerTicks, spreadTicks, fan } = cue.perStrike;
       if (!strikes.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-      strikes.forEach((targetId, k) => (cue.event === 'projectile' && cue.perStrike!.shown !== undefined && k >= cue.perStrike!.shown) || spawns.push({ ...cue, sourceId, targetId, strike: k,
-        delay: cue.delay + strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks) * STRIKE_TICK_SECONDS,
-        ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) }));
+      const { shown, mergeTicks } = cue.perStrike, landed = new Map<string, number>();
+      strikes.forEach((targetId, k) => {
+        if (shown !== undefined && k >= shown) return;
+        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks), last = landed.get(targetId);
+        if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return;
+        landed.set(targetId, at);
+        spawns.push({ ...cue, sourceId, targetId, strike: k, delay: cue.delay + at * STRIKE_TICK_SECONDS,
+          ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) });
+      });
       continue;
     }
     if (cue.location === 'board') {
