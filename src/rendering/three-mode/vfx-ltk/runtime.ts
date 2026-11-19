@@ -212,7 +212,9 @@ interface Running { reserved: number; system: string; stopped?: boolean;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
   together?: string;
   /** Its row's Waiting.fan. */
-  fan?: string }
+  fan?: string;
+  /** Its row came from a perStrike cue: past its fan's first run it takes no system slot at all (slotsNow), only budget. */
+  strike?: true }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
 const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /**
@@ -377,6 +379,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * the tick changes and by clear().
    */
   const seedKeys = new Map<string, number>();
+  /** perStrike tickCap: rows of each capped system queued on the current rule tick (capTick). */
+  let capTick: number | undefined; const capCounts = new Map<string, number>();
   let seedTick: number | undefined;
   /**
    * A row's seed, taken when it is queued (not when it starts, which waits on room and loading): its system, its source,
@@ -449,13 +453,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) {
       if (run.ending && run.playOutEnd?.hold) (off ??= []).push({ run, kind: 'tail' });
       else if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (off ??= []).push({ run, kind: 'long' });
-      else if (run.fan && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
+      else if (run.fan && !run.strike && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
     }
     return off ? new Map(off.sort((a, b) => a.run.started - b.run.started).slice(0, OFF_SLOT_MAX).map(({ run, kind }) => [run, kind])) : null;
   };
   /** `passes`: the count for LTK_PASS_DEGRADE_AT, where only hold tails stay out (long runs and fan-out rows count). */
   const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), off = offSlot();
+    let firstStrike: Map<string, Running> | undefined;
+    if (!passes) for (const run of running) if (run.strike && run.fan) { const at = (firstStrike ??= new Map()).get(run.fan); if (!at || run.started < at.started) firstStrike.set(run.fan, run); }
     for (const run of running) { const kind = off?.get(run); if (kind && (!passes || kind === 'tail')) continue;
+      // A perStrike cast's rows past its first take no slot (Fable 11-19): their number is bounded by the cue's shown and
+      // tickCap instead, and every one of them still needs particle room (crowded's budget check).
+      if (!passes && run.strike && run.fan && firstStrike!.get(run.fan) !== run) continue;
       if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
@@ -675,14 +684,26 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
           part: 'beam', together: split.flight ? together : undefined });
       }
+      // A perStrike cue's tickCap (TimelineCue.perStrike): at most that many of its rows queued on one rule tick, across every
+      // caster; the strikes past it play nothing of that cue. Left out on purpose, so not counted as drops.
+      const tick = options.tick?.();
+      if (tick !== capTick) { capCounts.clear(); capTick = tick; }
+      const capped = tick === undefined ? rows : rows.filter(({ spawn }) => {
+        const most = spawn.perStrike?.tickCap;
+        if (most === undefined) return true;
+        const used = capCounts.get(spawn.system) ?? 0;
+        if (used >= most) return false;
+        capCounts.set(spawn.system, used + 1); return true;
+      });
+      rows.splice(0, rows.length, ...capped);
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
       // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
-      // (OFF_SLOT_MAX).
+      // (OFF_SLOT_MAX). A perStrike cue's rows count one per strike, so strikes on one target fan out too.
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
-        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.strike !== undefined ? `${spawn.targetId}#${spawn.strike}` : spawn.targetId); }
       for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
         const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
@@ -861,7 +882,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
         // A row of a fan-out whose cast already runs takes no slot of its own while the off-slot room has space (OFF_SLOT_MAX).
         const slot = (row.together && [...running].some(run => run.together === row.together))
-          || (row.fan && [...running].some(run => run.fan === row.fan) && (offSlot()?.size ?? 0) < OFF_SLOT_MAX) ? 0 : 1;
+          || (row.fan && [...running].some(run => run.fan === row.fan) && (row.spawn.perStrike || (offSlot()?.size ?? 0) < OFF_SLOT_MAX)) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
         const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
@@ -953,6 +974,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
+          curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
+          brightness: spawn.brightness,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
@@ -970,7 +993,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);

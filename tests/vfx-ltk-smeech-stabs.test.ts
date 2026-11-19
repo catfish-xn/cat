@@ -34,4 +34,11 @@ describe('Smeech\'s stabs draw his swings and their hit (his cast names no targe
     expect(Object.keys(CUE_EXTRA_SKILLS).filter(key => key.startsWith('smeech-stab'))).toEqual(['smeech-stab']);
     expect(CUE_EXTRA_SKILLS['smeech-leap']!.map(cue => [cue.system, cue.event])).toEqual([['a664114c', 'projectile']]);
   });
+
+  it('his attack draws the horizontal swing of the attack clip we play, at the attack rank', async () => {
+    const { effectImportance } = await import('../src/rendering/three-mode/effect-budget');
+    const swing = CUE_OVERRIDES.smeech!.find(cue => cue.system === '343e410d')!;
+    expect([swing.action, swing.event]).toEqual(['attack', 'cast-start']);
+    expect(effectImportance(swing)).toBe('attack');
+  });
 });
