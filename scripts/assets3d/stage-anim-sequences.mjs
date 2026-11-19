@@ -22,7 +22,7 @@ export const DEFAULT_EXCLUDES = new Set([
 ]);
 
 /**
- * Casts whose SpellObject has an empty mAnimationName (the original spell script picks the clips).
+ * Casts whose SpellObject has an empty mAnimationName (a spell script picks the clips, which the data does not say).
  * The graph keys below were checked against gameplay video and the clips' own events:
  * - ezreal: TFT13_EzrealSpell stands still, pulls back and fires (gameplay footage); that is
  *   Spell3_In (carries the cast particle) + Spell3_Out (to the graph's own end frame). Spell2_* is the E blink
@@ -42,9 +42,9 @@ export const SCRIPT_CAST_GRAPH_KEYS = Object.freeze({
 });
 
 /**
- * Casts whose spell names a graph key that is not what the original plays. Darius: TFT13_DariusSpell names `Spell`
- * (Atomic Spell1, a short clip), but the original Q_Ring emitters wait longer than that and the 11-08 footage audit shows
- * the blade ring with the swing of the Sequencer 0x5463dad9 (Spell1_IN → Spell1) next to it in the same graph.
+ * Casts whose spell names a graph key whose clip does not match the cast as it shows. Darius: TFT13_DariusSpell names
+ * `Spell` (Atomic Spell1, a short clip), shorter than his Q_Ring effect's wait; the 11-08 footage audit matched the blade
+ * ring with the swing of the Sequencer 0x5463dad9 (Spell1_IN → Spell1) next to it in the same graph.
  * Values are graph keys (names or 0x hashes).
  */
 export const CAST_GRAPH_KEY_OVERRIDES = Object.freeze({
@@ -245,7 +245,7 @@ export function planGraphAction(node, { action = 'cast', entry = {}, otherUsedCl
     return { status: 'skipped', reason: '未解析' };
   }
   // IsMoving ConditionBool (e.g. Dr. Mundo Spell4: [true] run / [false] idle): our units stand still while
-  // casting, so the standing (false) branch is the clip the original plays.
+  // casting, so the standing (false) branch is the clip to play.
   if (node.kind === 'ConditionBool' && isMovingCondition(node) && node.branches?.false) {
     return planGraphAction(node.branches.false, { action, entry, otherUsedClips });
   }
@@ -401,7 +401,7 @@ export function planRotateEntry(node, { entry = {}, otherUsedClips = new Set() }
 }
 
 /**
- * Plans an existing `castVariants.hero` from the original `<Spell>Hero` SpellObject's graph node.
+ * Plans an existing `castVariants.hero` from the `<Spell>Hero` SpellObject's graph node.
  * Returns the next `castVariants` (undefined when empty); a hero variant equal to the default
  * cast sequence is dropped so the default path plays it. Ranged/segmented hero clips stay manual.
  */
@@ -559,7 +559,7 @@ function formatNodeSummary(node) {
 /**
  * Graph keys tried, in order, for a champion's cast when its spell data names nothing the graph has.
  * Swain's falls back to Spell2. Singed: TFT13_SingedSpell names "Spell1"; the graph spells it Spell_1 (a section of
- * Spell_3.anm: the canister swung round to the front and held up as a shield, the original's block). Spell2_Sequence
+ * Spell_3.anm: the canister swung round to the front and held up as a shield, the block). Spell2_Sequence
  * starts mid-swing and flips the canister within a few frames, which read as a twitch (user 11-11).
  */
 export function castFallbackKeys(id) {
@@ -1034,7 +1034,7 @@ export async function stageAnimSequences({
       if (Object.keys(nextSegments).length > 0) entry.clipSegments = nextSegments;
     }
 
-    // 1b. Hero-augment cast variant: follow the original `<Spell>Hero` SpellObject's mAnimationName.
+    // 1b. Hero-augment cast variant: follow the `<Spell>Hero` SpellObject's mAnimationName.
     if (entry.castVariants?.hero && !excludeSet.has(`${id}:hero`)) {
       const heroObj = spellObjs.get(`${targetSpellScript}hero`.toLowerCase());
       const heroNode = heroObj?.anim ? await resolveNode(fnv1a(heroObj.anim)) : null;
