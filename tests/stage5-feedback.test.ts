@@ -204,13 +204,14 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
       expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
     });
-    it('a crit is the same colour 1.6 times as large, with a same-coloured spiky mark, in its own label', () => {
+    it('a crit is the same colour about 1.9 times as large (42 px), with a solid mark a shade darker and a dark edge, in its own label', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
       expect(big.text).toBe(plain.text);
-      expect(px(big) / px(plain)).toBeCloseTo(1.6, 1);
+      expect(px(big) / px(plain)).toBeCloseTo(1.9, 1); expect(px(big)).toBe(42);
       expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
-      // The mark is drawn in the number's own colour, with no black fill.
-      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#ff8a24'"); expect(decodeURIComponent(big.style.backgroundImage)).not.toContain("fill='#000'");
+      // The mark is solid, a shade darker than the number (orange and blue alike), with the number's dark edge.
+      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#c76c1c'"); expect(decodeURIComponent(blue.style.backgroundImage)).toContain("fill='#2a99c7'");
+      expect(decodeURIComponent(big.style.backgroundImage)).toContain("stroke='rgba(0,0,0,.9)'");
       expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
     });
@@ -281,6 +282,13 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(Math.abs(left(moved) - other.x)).toBeGreaterThanOrEqual(other.w / 2 + w - 1e-6);
       expect(Number(moved.style.opacity)).toBe(1);
       r2.dispose();
+      // Two bars side by side across the number's spot: it clears both together (not back and forth between them), on the nearer end.
+      setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3), barA = { x: 100, y: 307, w: 120, h: 16 }, barB = { x: 210, y: 307, w: 120, h: 16 };
+      r3.push([damage(1, 'a', 10)], 0); r3.render(200, new Map([['a', { x: 165, y: 300, radius: 20 }]]), [], new Map([['b', barA], ['c', barB]]));
+      const [cleared] = snapshot(h3)[0].children, w3 = Math.max(20, 9 * cleared.text.length / 2) * scale(cleared);
+      for (const bar of [barA, barB]) expect(Math.abs(left(cleared) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + w3 - 1e-6);
+      expect(left(cleared)).toBeGreaterThan(barB.x);
+      r3.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
