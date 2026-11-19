@@ -1,4 +1,4 @@
-import { projectedBox } from './description-pick';
+import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
 import { createStarUpFx } from './star-up-fx';
@@ -1553,10 +1553,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
     return root ? projectedBox(root, camera, viewport()) : undefined;
   };
-  // Combat floats keep clear of every overhead bar: the drawn bar group (bar, tier, items on it) projected the same way.
+  // Combat floats keep clear of every overhead bar: its drawn bar sprites (the plain bar or the tier bar), camera-facing.
   const barBox = (id: string): BoardScreenBox | undefined => {
     const overhead = scout.active ? undefined : pieces.get(id)?.overhead.object;
-    return overhead?.visible ? projectedBox(overhead, camera, viewport()) : undefined;
+    if (!overhead?.visible) return;
+    const sprites = ['render3d-overhead-bar', 'render3d-overhead-tier'].map(name => overhead.getObjectByName(name)).filter((o): o is Sprite => !!o && (o as Sprite).isSprite);
+    return spritesScreenBox(sprites, camera, viewport());
   };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   let carouselOngoing = false;
