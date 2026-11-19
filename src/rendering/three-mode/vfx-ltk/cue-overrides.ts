@@ -110,7 +110,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // hit and the hit there (travel fitted, not original data).
   'maddie-shot': [
     { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // REC ONLY (claude/rec-maddie-hit-04, never merge): the hit flash at 0.4 size for a side-by-side pick.
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: 0.4 },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his slash and its hit
   // play with each stab's damage instead: one of his four swings per stab, in turn (自定，非原版: the original's choice is not
