@@ -787,7 +787,7 @@ export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
-  // Mordekaiser's ground aura while he is empowered; Swain's demon form (takedowns extend it in the rules).
+  // Mordekaiser's aura on his mace while he is empowered; Swain's demon form (takedowns extend it in the rules).
   'mordekaiser-empower': ['938c104f'],
   'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
