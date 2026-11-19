@@ -141,8 +141,9 @@ function bodyHeightAbove(root: Object3D, body: Object3D): number {
 /** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: the ground
  * locator's +Z faces forward on Zyra but backward on Irelia, Kog'Maw and Akali; Kog'Maw's head and chest locators face
  * backward too, Irelia's chest sideways), while bins author "in front" as the unit's facing. Weapon and named bones keep
- * their own axes (Kog'Maw's W mouth spray rides the weapon locator's +Y toward the target). */
-const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head)_loc$/i;
+ * their own axes (Kog'Maw's W mouth spray rides the weapon locator's +Y toward the target). The layout locator is one too
+ * (11-19: on Smeech its +Z faces backward, and his attack swing drew behind him, away from his target). */
+const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head|layout)_loc$/i;
 /**
  * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
  * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
