@@ -118,7 +118,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   // The game's own combat floats (damage by type, shield absorbed, heals, statuses), not a recording-only copy.
-  const numbers = params.get('numbers') !== '0' && real ? createGameFloats(host, id => listener.screenBox?.(id), () => real.frames[0]!.map((p: any) => p.id)) : null;
+  const numbers = params.get('numbers') !== '0' && real ? createGameFloats(host, id => listener.screenBox?.(id), () => real.frames[0]!.map((p: any) => p.id), id => listener.barBox?.(id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
     let at = 0, carry = 0;
@@ -292,19 +292,23 @@ const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col 
  * below its top, radius = half width). One float per event kind and unit per tick, as in the game: heals, shields and
  * statuses included, which the recording-only damage numbers before this left out.
  */
-function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[]) {
+function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[],
+  barBox: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined = () => undefined) {
   host.style.position = 'relative';
   const feedback = createCombatFeedbackRenderer(host);
   let now = 0;
   const render = () => {
-    const anchors = new Map<string, { x: number; y: number; radius: number }>();
+    const anchors = new Map<string, { x: number; y: number; radius: number }>(), bars = new Map<string, { x: number; y: number; w: number; h: number }>();
     const origin = host.getBoundingClientRect();
     for (const id of ids()) {
       const b = box(id); if (!b) continue;
       const radius = (b.right - b.left) / 2;
       anchors.set(id, { x: b.left + radius - origin.left, y: b.top + radius - origin.top, radius });
+      // Its overhead bar, as BoardScene passes it.
+      const bar = barBox(id);
+      if (bar) bars.set(id, { x: (bar.left + bar.right) / 2 - origin.left, y: (bar.top + bar.bottom) / 2 - origin.top, w: bar.right - bar.left, h: bar.bottom - bar.top });
     }
-    feedback.render(now, anchors);
+    feedback.render(now, anchors, [], bars);
   };
   return {
     add(events: any[]) { feedback.push(events, now); render(); },
