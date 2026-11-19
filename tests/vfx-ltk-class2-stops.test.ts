@@ -41,12 +41,14 @@ describe('class-2 stop timings checked against the original (3b-1)', () => {
     expect(cue(swain['swain-back'], '2a51ddb9')).toMatchObject({ delay: 0, duration: 1.8 });
   });
 
-  it('fades Nocturne\'s shadow disc from its stop and keeps Irelia\'s stance to its end (3b-2)', () => {
+  it('plays Nocturne\'s shadow disc to its own end (C71) and keeps Irelia\'s stance to its end (3b-2)', () => {
     const nocturne = CUE_OVERRIDES.nocturne?.filter(entry => entry.system === '3e224f4a') ?? [];
     // 11-15: the disc left his cast (the original's cast shows none); it stays on each empowered swing.
     expect(nocturne).toHaveLength(1);
     expect(nocturne.find(entry => entry.action === 'cast')).toBeUndefined();
-    expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', duration: 0.5, stopAfter: 0.1, fadeOut: true });
+    // 11-18 (C71): no stop and no fade; it plays as long as its system does (ownLife).
+    expect(nocturne.find(entry => entry.action === 'attack')).toMatchObject({ variant: 'empowered', ownLife: true });
+    expect(nocturne[0].stopAfter).toBeUndefined();
     const stance = cue(CUE_OVERRIDES.irelia, '67665513');
     // Was duration 1.6 (fixed); now stopped where the shield ends (batch1-events.ts), bounded only by a fallback.
     expect(stance).toMatchObject({ delay: 0, duration: IRELIA_STANCE_FALLBACK_SECONDS });

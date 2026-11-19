@@ -28,6 +28,10 @@ describe('Mordekaiser\'s grasp and empowered mace (Fable 11-19)', () => {
       expect([cue.action, cue.event]).toEqual(['cast', 'hit']);
       expect(effectImportance(cue)).toBe('critical');
     }
+    // A play selects cues by variant: a plain attack plays the plain hit, an empowered one only the empowered list, which
+    // carries the same hit once (else empowered attacks would show none).
+    for (const variant of [undefined, 'empowered'] as const)
+      expect(cues.filter(cue => cue.action === 'attack' && cue.variant === variant && cue.system === '0f2af66b')).toHaveLength(1);
     for (const system of ['21bee60f', '04ae533c']) {
       const mace = cues.filter(cue => cue.system === system);
       expect(mace.map(cue => [cue.action, cue.variant])).toEqual([['attack', 'empowered']]);
