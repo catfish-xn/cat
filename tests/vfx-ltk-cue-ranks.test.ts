@@ -4,12 +4,13 @@ import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
-// Explicit cast-start ranks (Fable 11-19): 61 rows, 33 body and 28 decorative, labels only.
+// Explicit cast-start ranks (Fable 11-19): 61 rows reviewed, 33 body and 28 decorative; Smeech's four swipes became one
+// (#765: only his vertical swipe plays with a stab), so 58 rows, 30 body and 28 decorative. Labels only.
 describe('cast-start ranks', () => {
   const rows = Object.values(CAST_START_RANKS).flatMap(ranks => Object.values(ranks));
-  it('lists 61 rows: 33 body, 28 decorative', () => {
-    expect(rows).toHaveLength(61);
-    expect(rows.filter(rank => rank === 'body')).toHaveLength(33);
+  it('lists 58 rows: 30 body, 28 decorative', () => {
+    expect(rows).toHaveLength(58);
+    expect(rows.filter(rank => rank === 'body')).toHaveLength(30);
     expect(rows.filter(rank => rank === 'decorative')).toHaveLength(28);
   });
   it("Ambessa's chain swipe is body; her wind-up and dust are decorative", () => {

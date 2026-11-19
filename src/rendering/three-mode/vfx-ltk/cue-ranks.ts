@@ -1,5 +1,5 @@
 /**
- * Explicit ranks for skill cast-starts (Fable 11-19, from the 61-row review of cast-starts the old rule ranked by length):
+ * Explicit ranks for skill cast-starts (Fable 11-19, from the review of cast-starts the old rule ranked by length):
  * 'body' for a cast-start that draws the skill itself (a swipe, a beam, a shield, a transformation, an area, a mark), which
  * nothing short of a hit or a projectile may end on a full board; 'decorative' for a muzzle flash, hand glow, charge dust
  * or trail, which a plain attack or a place's run may end. Keyed by skill branch, then system. Only the label changes:
@@ -44,12 +44,9 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   'heimerdinger': { 'c44d51d0': 'decorative' },
   // Rumble: rocket cast flash
   'rumble': { '7562ce09': 'decorative' },
-  // Smeech: jump-off dust on his cast; each of his four swipes plays with a stab (cue-overrides.ts CUE_EXTRA_SKILLS smeech-stab-*)
+  // Smeech: jump-off dust on his cast; his vertical swipe plays with each stab (cue-overrides.ts CUE_EXTRA_SKILLS smeech-stab)
   'smeech': { '17b8eb5c': 'decorative' },
-  'smeech-stab-0': { '16749c2e': 'body' },
-  'smeech-stab-1': { '343e410d': 'body' },
-  'smeech-stab-2': { '73020613': 'body' },
-  'smeech-stab-3': { '90b31f27': 'body' },
+  'smeech-stab': { '90b31f27': 'body' },
   // Twisted Fate: card cast
   'twistedfate': { '8740c168': 'body' },
   // Zoe: cast flash
