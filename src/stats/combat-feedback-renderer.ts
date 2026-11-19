@@ -7,7 +7,7 @@ export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent
 type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
 /** What a float shows (the damage-float table, Fable 11-17): a plain hit, a crit, or a damage-over-time tick. */
 type FloatClass = 'plain' | 'crit' | 'tick';
-type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'paddingTop' | 'paddingBottom' | 'backgroundPosition' | 'left' | 'top' | 'transform' | 'opacity';
+type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'paddingTop' | 'paddingBottom' | 'backgroundPosition' | 'backgroundSize' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
@@ -65,9 +65,11 @@ const NUMBER_SHIFT_WIDTHS = 1.5;
  * between the block and its spikes. Two hard tones (lighter above, darker below), its dark edge and the same hard shadow.
  * The block's bottom lines up with the digits' bottom.
  */
-interface CritMark { readonly paths: readonly string[] }
-const CRIT_MARKS: Readonly<Record<'E3' | 'E4', CritMark>> = {
+interface CritMark { readonly paths: readonly string[]; readonly em?: number; readonly diagonalTones?: boolean }
+const CRIT_MARKS: Readonly<Record<'E3' | 'E4' | 'E5', CritMark>> = {
   E3: { paths: ['M24 7L24 24 9 24 9 21 3 21 9 17.5 9 15 1 10.5 9.5 10 8 7.5 1 1 12 5.5 13 1.5 17 7Z'] },
+  // E5: E3 as a wedge (the block's top-left corner cut off), its main spike longer and thicker, a tenth larger, tones split diagonally.
+  E5: { paths: ['M24 9L24 24 11 24 11 22.5 6.5 22 11 20.5 11 17.5 4.5 16.5 11 15 11.5 14.5 1 1 16.2 9.8 17 9 18 9 18.5 4 21.5 9Z'], em: 1.27, diagonalTones: true },
   E4: { paths: ['M24 7L24 24 9 24 9 10 11.5 7Z', 'M7.8 9L0.5 0.5 11 4.8 10 7.5Z', 'M12.5 6L13.5 1 17.5 6Z', 'M8 11L0.5 11 8 16.5Z', 'M8 18.5L2.5 21 8 23Z'] },
 };
 /** Mark height (em of the crit, its 24-unit box), room kept above and below the line, the digits' bottom below the line's top, and the tone split (box units); own values. */
@@ -76,15 +78,18 @@ const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i
 const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
 const lightTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.86 + 30, g * 0.7, b * 0.78]); };
 const darkTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.62 + 18, g * 0.46, b * 0.58]); };
-const markBox = 24 * (1 + HARD_SHADOW_EM / MARK_EM), markBoxEm = MARK_EM * markBox / 24;
+const markEm = (mark: CritMark) => mark.em ?? MARK_EM;
+const markBox = (mark: CritMark) => 24 * (1 + HARD_SHADOW_EM / markEm(mark)), markBoxEm = (mark: CritMark) => markEm(mark) * markBox(mark) / 24;
 const badge = (color: string, mark: CritMark) => {
-  const shift = 24 * HARD_SHADOW_EM / MARK_EM, d = mark.paths.join(' ');
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${markBox} ${markBox}'><defs><clipPath id='lo'><rect x='0' y='${TONE_SPLIT}' width='${markBox}' height='${markBox}'/></clipPath></defs>`
+  const box = markBox(mark), shift = 24 * HARD_SHADOW_EM / markEm(mark), d = mark.paths.join(' ');
+  // The darker tone: below a level line, or (diagonalTones) below-left of a line along the slam, top-left to bottom-right.
+  const lower = mark.diagonalTones ? `<polygon points='-10,-8 40,42 -10,42'/>` : `<rect x='0' y='${TONE_SPLIT}' width='${box}' height='${box}'/>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${box} ${box}'><defs><clipPath id='lo'>${lower}</clipPath></defs>`
     + `<path d='${d}' fill='#000' transform='translate(${shift} ${shift})'/><path d='${d}' fill='${lightTone(color)}'/><path d='${d}' fill='${darkTone(color)}' clip-path='url(#lo)'/>`
     + `<path d='${d}' fill='none' stroke='rgba(0,0,0,.9)' stroke-width='1'/></svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 };
-const critMark = () => CRIT_MARKS[(globalThis as { __critMark?: 'E3' | 'E4' }).__critMark ?? 'E3'] ?? CRIT_MARKS.E3;
+const critMark = () => CRIT_MARKS[(globalThis as { __critMark?: 'E3' | 'E4' | 'E5' }).__critMark ?? 'E3'] ?? CRIT_MARKS.E3;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
@@ -98,16 +103,16 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color, critMark()) : '', paddingLeft: cls === 'crit' ? `${markBoxEm.toFixed(3)}em` : '',
+      backgroundImage: cls === 'crit' ? badge(color, critMark()) : '', paddingLeft: cls === 'crit' ? `${markBoxEm(critMark()).toFixed(3)}em` : '', backgroundSize: cls === 'crit' ? `auto ${markBoxEm(critMark()).toFixed(3)}em` : '',
       // The room above matches the room below, so the digits stay on the label's centre while the spikes hang below them.
-      padding: cls === 'crit' ? `${MARK_PAD_EM}em` : '', backgroundPosition: cls === 'crit' ? `left 0 top ${(MARK_PAD_EM + DIGITS_BOTTOM_EM - MARK_EM).toFixed(3)}em` : '' };
+      padding: cls === 'crit' ? `${MARK_PAD_EM}em` : '', backgroundPosition: cls === 'crit' ? `left 0 top ${(MARK_PAD_EM + DIGITS_BOTTOM_EM - markEm(critMark())).toFixed(3)}em` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
     if (!item) {
       const label = document.createElement('span');
       Object.assign(label.style, { position: 'absolute', fontSize: `${l.px}px`, fontWeight: l.fontWeight, fontFamily: FONT_FAMILY, whiteSpace: 'nowrap', textShadow: l.textShadow, color: l.color, pointerEvents: 'none',
-        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: l.backgroundPosition, backgroundSize: `auto ${markBoxEm.toFixed(3)}em`,
+        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: l.backgroundPosition, backgroundSize: l.backgroundSize,
         paddingTop: l.padding, paddingBottom: l.padding, paddingLeft: l.paddingLeft });
       item = { label, styles: { color: l.color } };
     } else {
@@ -117,7 +122,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       for (const key of ['left', 'top', 'transform', 'opacity'] as const) style(item, key, '');
       style(item, 'color', l.color); style(item, 'fontSize', `${l.px}px`); style(item, 'fontWeight', l.fontWeight); style(item, 'textShadow', l.textShadow);
       style(item, 'backgroundImage', l.backgroundImage); style(item, 'paddingLeft', l.paddingLeft); style(item, 'backgroundPosition', l.backgroundPosition);
-      style(item, 'paddingTop', l.padding); style(item, 'paddingBottom', l.padding);
+      style(item, 'paddingTop', l.padding); style(item, 'paddingBottom', l.padding); style(item, 'backgroundSize', l.backgroundSize);
     }
     root.append(item.label); return item;
   }
