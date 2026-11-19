@@ -4556,9 +4556,9 @@
     "tests/vfx-ltk-strike-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5218,
+      "currentBytes": 5789,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f53a9afe97bf6cee5fbd558a02c1ac3630456380fbf83e21255d8d43ecc2880f",
+      "currentSha256": "ae1aa4e761454b109586bcfc454c685d53e7cd194a673671e4643b5f73d11845",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
