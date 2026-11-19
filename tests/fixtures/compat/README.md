@@ -82,3 +82,8 @@ and `m8.loot.frozen.replayDigest` `a56b2c4a` → `b53841c0`; no other byte chang
 (content-digest.ts covers `replayFormatVersion`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed.
 Exported with `git show 808d16ae:src/simulation/g2-3-settlement.ts | node scripts/export-pre-spoils-compat.cjs <out>`, v24 gameplay
 check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce479df19d96456580682`.
+
+2026-11-19 远程普攻命中才结算、存档/回放格式 9→10 (#739): identity-only refresh, `contentDigest` (×2) `d94c78f1` → `cf212873`
+(content-digest.ts covers `M8_VERSION`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight
+fields only melee units). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file
+with that one substitution. SHA-256: `9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6`.

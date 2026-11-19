@@ -117,7 +117,8 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // from earlier combats where Tristana, Smeech, Dr. Mundo or Nunu fought). Were 107d51c6…, 9332c2b3…, 4a40a89b…, 5fcc287a….
     const before628 = JSON.parse(JSON.stringify(before690, castFields));
     before628.version = { ...before628.version, replayFormatVersion: 8 }; before628.eventHash = digestContent(before628.events);
-    const newer = JSON.stringify(before628).split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // #739 save/replay 9 -> 10: contentDigest d94c78f1 -> cf212873 in the record only; substitute it back first.
+    const newer = JSON.stringify(before628).split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('c274a68d0df96b243d893fc6945c4430097019382009e98e4a458db74d036271');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('870a558cc1d1febac6061a36a9b943777198b2e554f0afeaa0321b8f6673e2e4');
