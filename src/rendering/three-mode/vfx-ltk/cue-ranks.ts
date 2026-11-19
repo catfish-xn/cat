@@ -44,8 +44,12 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   'heimerdinger': { 'c44d51d0': 'decorative' },
   // Rumble: rocket cast flash
   'rumble': { '7562ce09': 'decorative' },
-  // Smeech: jump-off dust, then four swipes
-  'smeech': { '17b8eb5c': 'decorative', '16749c2e': 'body', '343e410d': 'body', '73020613': 'body', '90b31f27': 'body' },
+  // Smeech: jump-off dust on his cast; each of his four swipes plays with a stab (cue-overrides.ts CUE_EXTRA_SKILLS smeech-stab-*)
+  'smeech': { '17b8eb5c': 'decorative' },
+  'smeech-stab-0': { '16749c2e': 'body' },
+  'smeech-stab-1': { '343e410d': 'body' },
+  'smeech-stab-2': { '73020613': 'body' },
+  'smeech-stab-3': { '90b31f27': 'body' },
   // Twisted Fate: card cast
   'twistedfate': { '8740c168': 'body' },
   // Zoe: cast flash
