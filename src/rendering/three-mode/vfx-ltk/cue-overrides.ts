@@ -23,8 +23,8 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
-/** Smeech's four swings (diagonal, horizontal, dual, vertical): one per stab, in turn (CUE_EXTRA_SKILLS smeech-stab-*). */
-export const SMEECH_SWINGS = ['16749c2e', '343e410d', '73020613', '90b31f27'] as const;
+/** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
+export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
@@ -112,14 +112,14 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
-  // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his slash and its hit
-  // play with each stab's damage instead: one of his four swings per stab, in turn (自定，非原版: the original's choice is not
-  // known; Fable 11-19 known difference), and the hit on the enemy stabbed. Each leap's first stab also draws his leap's
-  // trail to that enemy, timed from the cast as the export gives it.
-  ...Object.fromEntries(SMEECH_SWINGS.map((system, at) => [`smeech-stab-${at}`, [
-    { system, action: 'passive', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+  // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
+  // hit play with each stab's damage: the thin vertical slash his skill's stab clips carry, and the hit on the enemy stabbed.
+  // His other three swings belong to his attack clips, not his skill. Each leap's first stab also draws his leap's trail to
+  // that enemy, timed from the cast as the export gives it.
+  'smeech-stab': [
+    { system: SMEECH_STAB_SWING, action: 'passive', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
     { system: '9acdae50', action: 'passive', event: 'hit', delay: 0, duration: 1 },
-  ]])) as Record<string, readonly TimelineCue[]>,
+  ],
   'smeech-leap': [{ system: 'a664114c', action: 'passive', event: 'projectile', delay: 0.4, duration: 0.8, travelSeconds: 0.8 }],
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
   'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
@@ -373,7 +373,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5333333333333333, duration: 1.5 },
   ],
   // Smeech: his swings, their hit and his leap's trail moved from his cast (which names no target) to his stabs' damage
-  // (CUE_EXTRA_SKILLS smeech-stab-*, smeech-leap); his cast keeps the launch and the trail on him.
+  // (CUE_EXTRA_SKILLS smeech-stab, smeech-leap); his cast keeps the launch and the trail on him.
   smeech: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.30833333333333335, duration: 1.5 },
     { system: '17b8eb5c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },

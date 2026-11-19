@@ -1,6 +1,5 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { TimelineAction, TimelineVariant } from './timeline';
-import { SMEECH_SWINGS } from './cue-overrides';
 
 /** A looping buff ended by game state eases out over this long rather than clearing in one frame. */
 export const SOFT_STOP_SECONDS = 0.6;
@@ -184,13 +183,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (share) plan.extra.push({ champion: 'steb', sourceId: share.sourceId!, targets: [event.targetId], action: 'passive',
             skill: event.targetId === share.sourceId ? 'steb-heal' : 'steb-share' });
         }
-        // Smeech: his cast names no target, so each stab's damage draws his swing (one of four, in turn) and its hit on the
-        // enemy stabbed; a stab on a new enemy (his cast's first, or after a leap) also draws the leap's trail to it.
+        // Smeech: his cast names no target, so each stab's damage draws his stab's slash and its hit on the enemy stabbed; a
+        // stab on a new enemy (his cast's first, or after a leap) also draws the leap's trail to it.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'smeech') smeech.set(event.sourceId, { stabs: 0, target: undefined });
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'smeech') {
           const seen = smeech.get(event.sourceId) ?? { stabs: 0, target: undefined };
           if (seen.target !== event.targetId) plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-leap' });
-          plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: `smeech-stab-${seen.stabs % SMEECH_SWINGS.length}` });
+          plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-stab' });
           smeech.set(event.sourceId, { stabs: seen.stabs + 1, target: event.targetId });
         }
         // Maddie: one shot per damage packet of her volley, to the enemy it hit.
