@@ -9,7 +9,7 @@ type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
 type FloatClass = 'plain' | 'crit' | 'tick';
 type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
-interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number; lastX: number }
+interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -51,8 +51,8 @@ const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.1, STACK_GAP = 6, EARLY_FAD
  * the stack pushes into a bar, or that would stand on another unit's bar, steps sideways out past that bar's end.
  */
 const BAR_SIDESTEP_GAP = 3;
-/** How many of the nearest bar-free spots a number tries for one also free of other units' numbers (own value). */
-const NUMBER_TRIES = 4;
+/** How far past its bar-free spot a number may step aside for other units' numbers, in its own widths (own value). */
+const NUMBER_SHIFT_WIDTHS = 1.5;
 /**
  * The crit mark left of a crit (自绘，非原版素材), drawn here as a vector: a slanted claw tear (about 35°, pointed at both
  * ends, a few notches on its lower edge), solid, darker and redder than the number, with the number's dark edge, about
@@ -115,7 +115,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
-    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, text, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px, lastX: Number.NaN });
+    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, text, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px });
   }
   return {
     push(events, at) {
@@ -172,26 +172,25 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
           above = y - size / 2;
           const scale = pop * shrink, w = half * scale;
-          // A canvas label or any unit's bar in the way: the number steps sideways (never up) to the nearest spot past an end
-          // of one of them that no bar or label covers, so bars side by side are cleared together. Another unit's number
-          // already placed is avoided the same way, over the NUMBER_TRIES nearest such spots; when none of those is free of
-          // numbers too, it takes the nearest bar-free one and may overlap a number a little (never a bar). Once moved aside,
-          // "nearest" is measured from where it stood last frame, so it does not hop across a pair of bars between frames.
+          // A canvas label or any unit's bar in the way: the number steps sideways (never up) to the spot nearest its unit past
+          // an end of one of them that no bar or label covers, so bars side by side are cleared together. Another unit's
+          // number already placed is then avoided too, but only within NUMBER_SHIFT_WIDTHS of its own width of that spot; past
+          // that it stays on the spot and may overlap that number a little (never a bar), so it keeps near its unit.
           const fit = (at: number) => Math.max(w, Math.min(width - w, at));
           const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - y) < rect.h / 2 + size / 2;
           const hard = [...obstacles, ...bars.values()].filter(inRow);
           const soft = placed.filter(other => other.unitId !== item.unitId && inRow(other.rect)).map(other => other.rect);
           const free = (rects: readonly FeedbackObstacle[]) => (at: number) => !rects.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
           const clearHard = free(hard), clearSoft = free(soft);
+          const ends = (rects: readonly FeedbackObstacle[]) => rects.flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit);
+          const nearest = (spots: readonly number[], to: number) => spots.reduce((best, at) => Math.abs(at - to) < Math.abs(best - to) ? at : best);
           let x = fit(anchor.x);
-          if (!clearHard(x) || !clearSoft(x)) {
-            const from = Number.isNaN(item.lastX) ? anchor.x : item.lastX;
-            const spots = [x, ...[...hard, ...soft].flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit)]
-              .filter(clearHard).sort((a, b) => Math.abs(a - from) - Math.abs(b - from)).slice(0, NUMBER_TRIES);
-            if (spots.length) x = spots.find(clearSoft) ?? spots[0]!;
+          if (!clearHard(x)) { const spots = ends(hard).filter(clearHard); if (spots.length) x = nearest(spots, anchor.x); }
+          if (!clearSoft(x)) {
+            const spots = ends([...hard, ...soft]).filter(at => clearHard(at) && clearSoft(at) && Math.abs(at - x) <= NUMBER_SHIFT_WIDTHS * 2 * w);
+            if (spots.length) x = nearest(spots, x);
           }
           placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
-          item.lastX = x;
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);

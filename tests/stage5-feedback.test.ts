@@ -307,7 +307,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
         for (const bar of [barL, barR]) expect(Math.abs(left(label) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + 20 - 1e-6);
       }
       r2.dispose();
-      // Moved aside past a pair of bars, then crowded there by another unit's number: it steps on from where it stood, not across the bars.
+      // Moved aside past a pair of bars, then crowded there by another unit's number: it steps a little further on, not across the bars.
       setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3), pair = new Map([['l', { x: 100, y: 307, w: 120, h: 16 }], ['r', { x: 220, y: 307, w: 120, h: 16 }]]);
       r3.push([damage(1, 'a', 10)], 0); r3.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
       r3.render(200, new Map([['b', { x: 162, y: 300, radius: 20 }]]), [], pair);
@@ -316,6 +316,14 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const [ofA, ofB] = ['10', '20'].map(text => snapshot(h3)[0].children.find(e => e.text === text)!);
       expect(left(ofB)).toBeGreaterThan(280); expect(Math.abs(left(ofB) - left(ofA))).toBeGreaterThanOrEqual(40 - 1e-6);
       r3.dispose();
+      // Hemmed in by numbers on both sides: it steps aside at most 1.5 of its widths, else stays by its unit and overlaps a little.
+      setup(); const h4 = host(), r4 = createCombatFeedbackRenderer(h4);
+      r4.push([damage(1, 'a', 10)], 0); r4.push([{ ...damage(2, 'c', 30), eventSeq: 2 }], 0); r4.push([{ ...damage(3, 'd', 40), eventSeq: 3 }], 0);
+      r4.push([{ ...damage(4, 'b', 20), eventSeq: 4 }], 0);
+      r4.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['c', { x: 243, y: 300, radius: 20 }], ['d', { x: 157, y: 300, radius: 20 }], ['b', { x: 205, y: 300, radius: 20 }]]));
+      const hemmed = snapshot(h4)[0].children.find(e => e.text === '20')!;
+      expect(Math.abs(left(hemmed) - 205)).toBeLessThanOrEqual(1.5 * 40 + 1e-6);
+      r4.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
