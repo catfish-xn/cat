@@ -3999,6 +3999,14 @@
       "currentSha256": "51b3634c8499c47c5463bc6378a56e88de3e334dc7d1c9d9ed5460cb2418cb7e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cue-bone.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3550,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "230834e7516fbdb8c34b4cf64ef71c1b2df740b8743d27b327a2602b2d32be40",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-cue-override-627.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
