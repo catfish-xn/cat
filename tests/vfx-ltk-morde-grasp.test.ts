@@ -46,6 +46,8 @@ describe('Mordekaiser\'s attack swing (Fable 11-19)', () => {
     const { Group } = await import('three');
     const swing = CUE_OVERRIDES.mordekaiser!.find(cue => cue.system === '867941e7')!;
     expect([swing.action, swing.variant, swing.event]).toEqual(['attack', undefined, 'cast-start']);
+    // Plain attacks only: his empowered attack clip has no swing.
+    expect(CUE_OVERRIDES.mordekaiser!.filter(cue => cue.system === '867941e7')).toHaveLength(1);
     expect(effectImportance(swing)).toBe('attack');
     // Its layout locator only lends its place (his points backward): the swing faces the way the unit faces.
     const root = new Group(), body = new Group(), layout = new Group();
