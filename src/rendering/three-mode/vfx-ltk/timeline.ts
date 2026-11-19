@@ -2,7 +2,8 @@
 export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
-export type TimelineVariant = 'empowered' | 'self' | 'single';
+/** `empowered-alt`: an empowered attack thrown from the other hand (Draven's every second empowered attack). */
+export type TimelineVariant = 'empowered' | 'empowered-alt' | 'self' | 'single';
 export interface TimelineCue {
   readonly system: string;
   readonly action?: TimelineAction;

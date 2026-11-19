@@ -23,6 +23,10 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/** Draven's empowered axe, thrown and (CUE_EXTRA_SKILLS draven-return) flying back. */
+export const DRAVEN_AXE = '5d31debe';
+/** Seconds his landed axe takes to fly back to his hand (自定，非原版). */
+const DRAVEN_RETURN_SECONDS = 1.2;
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
 const center = 'C_BUFFBONE_GLB_CENTER_LOC';
 
@@ -104,6 +108,12 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
+  // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
+  // high arc.
+  // Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
+  // unit dies (placeholder-renderer.ts).
+  'draven-return': [{ system: DRAVEN_AXE, action: 'passive', event: 'projectile', delay: 0, duration: DRAVEN_RETURN_SECONDS,
+    travelSeconds: DRAVEN_RETURN_SECONDS, bone: chest, targetBone: 'R_hand', arc: { gravity: 2200, targetOffset: 80 }, rank: 'decorative' }],
   'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
@@ -347,6 +357,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
+  // Draven: his index list, plus his other hand's axe for every second empowered attack (variant empowered-alt, chosen in
+  // batch1-events.ts), from his left hand, with the same hit.
+  draven: [
+    { action: 'attack', system: '617e850e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', system: '0f2af66b', event: 'hit', delay: .54, duration: .45, bone: chest, stopAfter: .1 },
+    { action: 'cast', system: '3381c8eb', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2, bone: 'R_Weapon' },
+    { action: 'cast', system: 'd86cc9bc', event: 'cast-start', delay: 0, duration: 1, stopAfter: .5, bone: 'L_Weapon' },
+    { action: 'attack', variant: 'empowered', system: DRAVEN_AXE, event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5a268f4e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'L_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
   ],
   // Powder: the target burst and explosion moved from fixed times after her cast to her blast's damage (CUE_EXTRA_SKILLS powder-blast).
   powder: [
