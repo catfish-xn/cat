@@ -148,7 +148,7 @@ async function unbind(page, tick, rebind) {
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     await g.frame(t);
     await page.waitForTimeout(t === times[0] ? 400 : 40);
-    const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]); if (process.env.FLOATS_DBG) fs.appendFileSync(path.join(out, 'floats-dbg.jsonl'), JSON.stringify({ t, dbg: await page.evaluate(() => ({ ...window.__floatsDbg, labels: [...document.querySelectorAll('.m6-combat-feedback span')].filter(d => d.offsetWidth).map(d => { const r = d.getBoundingClientRect(); return { text: d.textContent, l: r.left, t: r.top, r: r.right, b: r.bottom, op: getComputedStyle(d).opacity }; }) })) }) + '\n');
+    const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]); if (process.env.FLOATS_DBG) fs.appendFileSync(path.join(out, 'floats-dbg.jsonl'), JSON.stringify({ t, dbg: await page.evaluate(() => ({ ...window.__floatsDbg, labels: [...document.querySelectorAll('.m6-combat-feedback span')].filter(d => d.offsetWidth).map(d => { const r = d.getBoundingClientRect(); return { text: d.textContent, l: r.left, t: r.top, r: r.right, b: r.bottom, op: getComputedStyle(d).opacity, dbg: d.dataset.dbg }; }) })) }) + '\n');
   }
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
