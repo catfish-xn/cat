@@ -65,8 +65,9 @@ describe('Maddie\'s shots follow their damage', () => {
     // Caster or target gone: the hit still waits the shortest flight instead of landing at once.
     expect(withFlight(hit!, null).delay).toBeCloseTo(0.2);
   });
-  it('the local hex distance is the rules\' one', () => {
-    for (const [a, b] of [[{ col: 0, row: 0 }, { col: 6, row: 7 }], [{ col: 3, row: 1 }, { col: 2, row: 6 }], [{ col: 5, row: 2 }, { col: 1, row: 5 }]] as const)
-      expect(hexDistance(a, b)).toBe(rulesHexDistance(a, b));
+  it('the local hex distance is the rules\' one on every pair of cells of a 7 × 8 board', () => {
+    const cells = Array.from({ length: 8 }, (_, row) => Array.from({ length: 7 }, (_, col) => ({ col, row }))).flat();
+    const off = cells.flatMap(a => cells.filter(b => hexDistance(a, b) !== rulesHexDistance(a, b)).map(b => [a, b]));
+    expect(off).toEqual([]);
   });
 });
