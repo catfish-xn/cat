@@ -4521,6 +4521,14 @@
       "currentSha256": "95e0d388a3a724e431bd30d7f4431050be3b3e5d889be9cd0db432916f104c0f",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-smeech-stabs.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2872,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1964ac66c569b028d681df63970efecf4eccdb85f60eba6bd73492b36b49c06e",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-steb-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
