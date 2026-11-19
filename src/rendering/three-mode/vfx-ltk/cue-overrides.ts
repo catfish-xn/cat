@@ -722,13 +722,8 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
-  // LeBlanc's channel: its dark ground-layer backdrop draws a dark smudge beside her on our board (Windows probe 11-19: only
-  // this emitter darkens that spot). A temporary departure held off as a known difference until its look is checked
-  // (Fable 11-19); the rest of the system draws.
-  'acd84091': ['Alpha_Glow'],
-  // Mordekaiser's aura: its dark ground glow draws a dark red smudge beside him on our board (Windows probe 11-19: it is the
-  // main cause there). Held off as a known difference like LeBlanc's (Fable 11-19); the red glow, scorch and cracks draw.
-  '938c104f': ['Alpha_Glow_Dark'],
+  // REC ONLY (claude/rec-ground-premult, never merged): LeBlanc's acd84091 Alpha_Glow and Mordekaiser's 938c104f
+  // Alpha_Glow_Dark drawn again for the ground-darkening experiment (Fable 11-19).
 };
 
 /**

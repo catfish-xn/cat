@@ -28,7 +28,7 @@ import {
 import { FRAME_SLOTS } from "../../engine/simulation/pool";
 import { mirrorInto } from "../../engine/utils/basis";
 import type { EmitterSamplers } from "../hooks/useVfxTextures";
-import { fragmentTests, premultiplyInto, sortsBackToFront } from "../utils/blend";
+import { fragmentTests, premultiplyInto, sortsBackToFront, recBlendMode } from "../utils/blend";
 import {
   QUAD_LAYOUT,
   QUAD_STRIDE,
@@ -117,7 +117,7 @@ export function createQuads({
   const material = memo(
     () => {
       const material = quadMaterial(
-        emitter.blendMode,
+        recBlendMode(emitter),
         samplers.base,
         { bias: emitter.depthBias, pushPull: emitter.depthPushPull },
         orientation,

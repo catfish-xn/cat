@@ -36,7 +36,7 @@ import {
 import { FRAME_SLOTS, type Pool } from "../../engine/simulation/pool";
 import { beamInto, mirrorInto, standingInto, unscaleInto } from "../../engine/utils/basis";
 import type { EmitterSamplers } from "../hooks/useVfxTextures";
-import { fragmentTests, premultiplyInto } from "../utils/blend";
+import { fragmentTests, premultiplyInto, recBlendMode } from "../utils/blend";
 import {
   MESH_LAYOUT,
   MESH_STRIDE,
@@ -137,7 +137,7 @@ export function createMeshes({
   const depth = memo(() => depthOf(geometry), [geometry]);
   const material = memo(() => {
     const material = meshMaterial(
-      emitter.blendMode,
+      recBlendMode(emitter),
       samplers.base,
       emitter.depthBias,
       layersOf(emitter, samplers, DRAWS),

@@ -121,11 +121,22 @@ export function premultiplyInto(emitter: EmitterModel, color: Float32Array): voi
   if (emitter.customMaterial != null && !emitter.customMaterial.missing) {
     return;
   }
+  // REC ONLY (claude/rec-ground-premult, never merged): ?dgpremult=1 draws ground-layer alpha emitters as premultiplied.
+  if (groundPremult(emitter)) { for (let channel = 0; channel < 3; channel += 1) color[channel] *= color[3]; return; }
 
   if (distorts(emitter)) return;
   if (emitter.blendMode !== BLEND_MODE.add && emitter.blendMode !== BLEND_MODE.subtract) return;
   for (let channel = 0; channel < 3; channel += 1) color[channel] *= color[3];
   color[3] = 1;
+}
+
+/** REC ONLY (never merged): the ground-darkening experiment's switch, set from the page URL (?dgpremult=1) by the harness. */
+export function groundPremult(emitter: EmitterModel): boolean {
+  return (globalThis as { __DG_PREMULT?: boolean }).__DG_PREMULT === true && emitter.groundLayer && emitter.blendMode === BLEND_MODE.alpha;
+}
+/** REC ONLY (never merged): the blend mode the GPU state takes, premultiplied under the experiment's switch. */
+export function recBlendMode(emitter: EmitterModel): BlendMode {
+  return groundPremult(emitter) ? BLEND_MODE.premultipliedAlpha : emitter.blendMode;
 }
 
 /** The two tests a fragment passes before it blends. */
