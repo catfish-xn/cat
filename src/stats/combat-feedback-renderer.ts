@@ -19,7 +19,7 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 /**
  * Damage floats (the user's 8 points, 11-19). Numbers only, coloured by damage type: physical orange, magic cyan-blue, true
  * damage white, heals green with "+"; a basic attack takes its type's colour too. A crit is the same colour, CRIT_SCALE larger,
- * with a same-coloured spiky mark on its left; a damage-over-time tick is a little smaller (a burn white). Every colour, size,
+ * with a slanted claw-tear mark on its left (CRIT_MARK); a damage-over-time tick is a little smaller (a burn white). Every colour, size,
  * scale and timing here is our own choice, not original data.
  */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84', status: '#ff9d8a' };
@@ -54,30 +54,21 @@ const BAR_SIDESTEP_GAP = 3;
 /** How many of the nearest bar-free spots a number tries for one also free of other units' numbers (own value). */
 const NUMBER_TRIES = 4;
 /**
- * The crit mark left of a crit (自绘，非原版素材), drawn here as a vector: solid, a shade darker than the number (or darker
- * and redder), with the number's dark edge, about 0.8 of the digits' height, just left of the number.
- * Two candidates for the user to pick from: B2, a lopsided shard (thick on one side, three thin spikes towards the number);
- * D, a slanted claw tear (about 35°, pointed at both ends, a few notches on its lower edge).
+ * The crit mark left of a crit (自绘，非原版素材), drawn here as a vector: a slanted claw tear (about 35°, pointed at both
+ * ends, a few notches on its lower edge), solid, darker and redder than the number, with the number's dark edge, about
+ * 0.8 of the digits' height, just left of the number.
  */
-export interface CritMark { readonly path: string; readonly viewBox: readonly [number, number, number, number]; readonly tint: 'darker' | 'redder' }
-export const CRIT_MARKS: Readonly<Record<'B2' | 'D', CritMark>> = {
-  B2: { path: 'M1 8L6 5 9 7 22 1 13 10 21 13 12 15 17 23 7 18 3 20 2 15 0 12Z', viewBox: [-0.5, 0, 24, 24], tint: 'darker' },
-  D: { path: 'M0.5 19.5L6.3 12.5 12.9 8 23.5 3.5 20.4 9.7 17.2 8.9 16 12.7 12.8 11.9 11.6 15.7 8.4 14.9 6.6 17.8Z', viewBox: [-0.5, 2.5, 24.5, 17.5], tint: 'redder' },
-};
-export const CRIT_MARK: CritMark = CRIT_MARKS.B2;
+interface CritMark { readonly path: string; readonly viewBox: readonly [number, number, number, number] }
+const CRIT_MARK: CritMark = { path: 'M0.5 19.5L6.3 12.5 12.9 8 23.5 3.5 20.4 9.7 17.2 8.9 16 12.7 12.8 11.9 11.6 15.7 8.4 14.9 6.6 17.8Z', viewBox: [-0.5, 2.5, 24.5, 17.5] };
 /** The mark's height (em of the crit) and its gap to the digits; own values, not original. */
 const MARK_EM = 0.6, MARK_GAP_EM = 0.04;
 const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
-const tint = (color: string, how: CritMark['tint']) => {
-  const [r, g, b] = channels(color);
-  return how === 'darker' ? hex([r * 0.78, g * 0.78, b * 0.78]) : hex([r * 0.78 + 30, g * 0.62, b * 0.7]);
-};
+const tint = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.78 + 30, g * 0.62, b * 0.7]); };
 const markWidthEm = (mark: CritMark) => MARK_EM * mark.viewBox[2] / mark.viewBox[3];
-const badge = (color: string, mark: CritMark) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='${mark.viewBox.join(' ')}'><path d='${mark.path}' fill='${tint(color, mark.tint)}' stroke='rgba(0,0,0,.9)' stroke-width='1.4'/></svg>`)}")`;
+const badge = (color: string, mark: CritMark) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='${mark.viewBox.join(' ')}'><path d='${mark.path}' fill='${tint(color)}' stroke='rgba(0,0,0,.9)' stroke-width='1.4'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
-export function createCombatFeedbackRenderer(host: HTMLElement, options: { readonly critMark?: CritMark } = {}): CombatFeedbackRenderer {
-  const mark = options.critMark ?? CRIT_MARK;
+export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
@@ -89,7 +80,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: { reado
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color, mark) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * (markWidthEm(mark) + MARK_GAP_EM))}px` : '' };
+      backgroundImage: cls === 'crit' ? badge(color, CRIT_MARK) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * (markWidthEm(CRIT_MARK) + MARK_GAP_EM))}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
