@@ -295,6 +295,7 @@ function createGameFloats(host: HTMLElement, box: (id: string) => { left: number
   host.style.position = 'relative';
   // Recording only (rec branch): ?critmark=B2|D picks a crit mark candidate (自绘，非原版素材).
   const mark = new URLSearchParams(location.search).get('critmark') as keyof typeof CRIT_MARKS | null;
+  (globalThis as any).__floatsDbgOn = true;
   const feedback = createCombatFeedbackRenderer(host, mark && CRIT_MARKS[mark] ? { critMark: CRIT_MARKS[mark] } : {});
   let now = 0;
   const render = () => {

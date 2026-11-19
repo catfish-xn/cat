@@ -202,7 +202,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement, options: { reado
           placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
           item.lastX = x;
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
-          style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
+          style(item, 'left', `${x}px`); if ((globalThis as { __floatsDbgOn?: boolean }).__floatsDbgOn) item.label.dataset.dbg = `${item.unitId} p${place} a${Math.round(anchor.x)} y${Math.round(y)} s${size.toFixed(1)} w${w.toFixed(1)}`; style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
           style(item, 'opacity', String(Number(fade.toFixed(3))));
         });
