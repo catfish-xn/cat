@@ -1740,9 +1740,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 16425,
+      "currentBytes": 16454,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "2f013cb3b3f4c4d4ea1adbbeca4b81881ad340303e0d93e0fb9eedd74c10197d",
+      "currentSha256": "74f83f56da59ddce6bee9dbea282842cefed4055d3408ee500f562938d6656fd",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -2656,9 +2656,9 @@
     },
     "tests/rendering3d-isolation.test.ts": {
       "previousBytes": 11507,
-      "currentBytes": 15950,
+      "currentBytes": 15602,
       "previousSha256": "410858593844d8fd1f0c8aae9131239745a0cfaf8c73d0653312a53fe96be725",
-      "currentSha256": "c4684885b992718b0f1f0c237ee6767227ba7991202af389d23ac95f87e09c2b",
+      "currentSha256": "f2014eedf87ba875ed5ea2b72540e08c7f86287f4b8418c3cffcdad56a044342",
       "firstDifferentByte": 4868
     },
     "tests/rendering3d-jayce-forge.test.ts": {

@@ -123,9 +123,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('870a558cc1d1febac6061a36a9b943777198b2e554f0afeaa0321b8f6673e2e4');
     expect(bytesHash(JSON.parse(back))).toBe('c6f3f0bf3377f98e1b1eab9fc4bd20fefde366bade04facb30bfa61800785fd8');
-    // #739 save/replay 9 -> 10: record.version.replayFormatVersion is 10, so the record hash moves again (was 4a7302a1… with
-    // replay 9); the chain above already sets replayFormatVersion 8 itself, so its pins are unchanged.
-    expect(bytesHash(record)).toBe('1cd3074266aad55f6fe703b43f69d49b42f02e504e1996004ce1b3cc8e630c9f');
+    // #739 save/replay 9 -> 10: record.version carries replayFormatVersion 10 and contentDigest cf212873 (was d94c78f1), so the
+    // record hash moves again (was 4a7302a1… with replay 9 / d94c78f1); the chain above substitutes both back, so its pins hold.
+    expect(bytesHash(record)).toBe('7779cbcf9f25a3a92f3ebfbc61bb53994e504b00881b8124e58151c784dcd000');
     expect(bytesHash(record.events)).toBe('fef4eeabbd07c853e5299c744de3ffbcbd6323c2a2e5cb43ccb63c23a2726968');
     expect(bytesHash(expected.terminal)).toBe('075622f0a85f88babdf12130dc3c4a859de8ffd4205bad45b837ce7c18a4a805');
     // An external JSON record is cold on each constructor, like browser fixtures.
