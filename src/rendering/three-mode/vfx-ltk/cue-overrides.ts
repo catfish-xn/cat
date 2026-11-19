@@ -117,7 +117,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // His other three swings belong to his attack clips, not his skill. Each leap's first stab also draws his leap's trail to
   // that enemy, timed from the cast as the export gives it.
   'smeech-stab': [
-    { system: SMEECH_STAB_SWING, action: 'passive', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    // On his ground point, where his stab clips put it (the export's cue had his weapon).
+    { system: SMEECH_STAB_SWING, action: 'passive', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '9acdae50', action: 'passive', event: 'hit', delay: 0, duration: 1 },
   ],
   'smeech-leap': [{ system: 'a664114c', action: 'passive', event: 'projectile', delay: 0.4, duration: 0.8, travelSeconds: 0.8 }],
