@@ -1,4 +1,5 @@
 // node dev/castcmp/board-load.cjs <out.json> --board a,b,... [--foes c,d,...] [--star 3] [--port 5311] [--assetPort 5419] [--warm 1] [--gl gpu|swift]
+//   [--quiet-ms 30000] (the longest wait for the warm measures and loads to settle)
 // One whole real combat (up to 8 against 8, src/simulation) on the 3D renderer, for the host-body overlay load: per second of
 // combat, the wall time of its ~62 frames (GPU synced each second), the overlays on screen, and the cap counters of
 // vfx-ltk (runtime.ts ATTACHED_LAYER_STATS; absent on builds before it, which then report frame time only), and the measured
@@ -50,7 +51,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   // combat so nothing the warm pass left running, nor its seed counts, carries into the measured pass.
   // waitQuiet (common.cjs) waits for the warm measures too, and reads null on builds without LTK_WARMING; a build without the
   // harness's fresh() starts from reset() as before.
-  const quiet = await waitQuiet(page), warming = quiet.pending;
+  const quiet = await waitQuiet(page, { maxMs: Number(opt('quiet-ms') ?? 30000) }), warming = quiet.pending;
   mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
   await page.evaluate(() => (window.__h.fresh ?? window.__h.reset)()); await sync();
   // Admission counters (runtime.ts LTK_RUN_STATS) and Caitlyn's shot fallbacks (batch1-events.ts CAITLYN_SHOT_STATS) for the

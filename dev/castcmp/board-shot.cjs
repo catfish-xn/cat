@@ -1,5 +1,5 @@
 // node dev/castcmp/board-shot.cjs <unit> <outdir> --board a,b,... --foes c,d,... [--star 3] [--anchor SYSTEM --at 0,350,...]
-//   [--abs MS,MS,...] [--port 5311] [--assetPort 5419] [--gl gpu|swift]
+//   [--abs MS,MS,...] [--port 5311] [--assetPort 5419] [--gl gpu|swift] [--quiet-ms 30000]
 // One whole real combat of up to 8 against 8 (the board-load harness), a warm pass, then the measured pass stepped 50 ms at
 // a time. Shots: --at MS after the anchor system first starts (LTK_RUN_STATS.started), and --abs MS after the measured
 // pass began. Writes <outdir>/shots/*.jpg and stats.json: the admission counters of the measured pass (runtime.ts
@@ -38,7 +38,7 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
     for (let i = 0; i < 300 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
     return state.pending;
   });
-  const quiet = await waitQuiet(page); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
+  const quiet = await waitQuiet(page, { maxMs: Number(opt('quiet-ms') ?? 30000) }); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
   await page.evaluate(() => window.__h.fresh());
   const run = (clear = false) => page.evaluate(async c => { const r = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_RUN_STATS;
     if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], refused: {}, skipped: {} }); return JSON.parse(JSON.stringify(r)); }, clear);
