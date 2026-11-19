@@ -75,7 +75,7 @@ import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
-/** The original spans a quad over twice its scale0 (a half-extent; vfx-ltk materials.ts REACH). */
+/** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -1213,7 +1213,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
     const importance = effectImportance({ anchor: spec.anchor });
     if (live.size >= MAX_EFFECTS && !admitEffect([...live].map(effect => effect.importance), importance, true).admit) return;
-    // Sized the original's way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
+    // Sized the vfx-ltk way (B, 11-11): a quad spans twice its scale0 and the effect takes the arena's scale, except
     // one held on the caster's weapon or hand bone, which keeps the body's (the vfx-ltk cueSize rule).
     const held = spec.anchor === 'source' && spec.bone !== undefined && WEAPON_BONE.test(spec.bone);
     const world = held ? source.modelScale ?? FX_SCALE : ARENA_UNIT_SCALE;
