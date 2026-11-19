@@ -35,7 +35,7 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
  */
-export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+export const MAX_LTK_SYSTEMS = 24, MAX_LTK_QUEUED = 64; // recording-only branch: cap 24 for a frame-time and drop measurement (Fable 11-19), never merged
 /**
  * Runs that keep drawing without taking a system slot, at most OFF_SLOT_MAX of them at once (the earliest started); any
  * more hold a slot as before. All of them still hold their particles in the budget. Three kinds share this one room:
