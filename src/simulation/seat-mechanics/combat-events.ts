@@ -48,9 +48,9 @@ export type G23CombatEventData =
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
    * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended;
-   * 'swain-ascension': the demon form ran out (takedown extensions included).
+   * 'mordekaiser-empower': the cast's empowered time ran out; 'swain-ascension': the demon form ran out (takedown extensions included).
    */
-  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension'; readonly targetIds: readonly string[] };
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 

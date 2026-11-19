@@ -771,12 +771,14 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension', readonly string[]>> = {
-  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
-  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension', readonly string[]>> = {
+  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark;
+  // and her channel glow (acd84091, held for the chain: SUSTAIN_CAPS).
+  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
-  // Swain's demon form (takedowns extend it in the rules).
+  // Mordekaiser's ground aura while he is empowered; Swain's demon form (takedowns extend it in the rules).
+  'mordekaiser-empower': ['938c104f'],
   'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
@@ -816,6 +818,8 @@ export const CUE_RULE_STOPS = {
  */
 export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '2beb0657': 6.5, // Twitch volley buff → twitch-volley
+  'acd84091': 5.5, // LeBlanc channel → leblanc-chain
+  '938c104f': 5, // Mordekaiser empowered aura → mordekaiser-empower
   '796b6af2': 20, // Swain demon form → swain-ascension (自定上限)
   'ea21ae27': 5.1, // Garen shield → his shield layer ends
   'e22b48b0': 5, // Loris shield → his shield layer ends
