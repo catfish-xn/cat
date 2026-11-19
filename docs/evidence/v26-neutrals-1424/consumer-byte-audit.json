@@ -3718,9 +3718,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8579,
+      "currentBytes": 8647,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fee5f54426b8f9c2ed205b1c95289efa75e222893437679fc49920f6938ee4c1",
+      "currentSha256": "538268525a154ee9e01875b65577c851e0f7c5468c8e88abfa6df971dae67231",
       "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {
@@ -4532,9 +4532,9 @@
     "tests/vfx-ltk-sustain-runtime.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3883,
+      "currentBytes": 4255,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "88ccc5b05fe38ed2073d303895d8aa6cc0fabd494d8aee82ac0b35ec267cde91",
+      "currentSha256": "829a92fbe7d16332a67dc521753041f398cc85f0aca99fb8c6ee51fd7aaed04e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-tail-fade.test.ts": {

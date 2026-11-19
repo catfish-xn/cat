@@ -835,11 +835,12 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   'eb9da1d5': 1.8,
 };
 /**
- * Held layers whose next play replaces the last one instead of drawing a second layer over it: Ekko's mark per target (a
- * refreshed mark), and the all-fight layers on the caster that every recast would otherwise stack (Draven's axes, Kog'Maw's
- * stacks).
+ * Every held layer's next play replaces the last one instead of drawing a second layer over it: from the same caster, and
+ * for a hit cue on the same target (Ekko's mark). Held layers last seconds to a whole fight, so each recast or pulse would
+ * otherwise stack another (Draven's axes per cast; Amumu's passive per pulse filled 24 slots in a 1 v 2 by 10 s and pushed
+ * Draven's axes out: Node, 11-19).
  */
-export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(['5af49b76', 'd86cc9bc', '6889455c', '9f805f6e']);
+export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(Object.keys(SUSTAIN_CAPS));
 /**
  * Held layers ranked below every skill body (Fable 11-19: Draven's axes and Kog'Maw's stacks, shown all fight long, are
  * decoration): any skill visual takes their slot, and they come back when room frees (SUSTAIN_READMIT).

@@ -46,6 +46,13 @@ describe('held layers: refreshed marks and decoration that comes back (Fable 11-
     runtime.dispose(); library.dispose();
   });
 
+  it('a held layer replayed by every pulse stays one layer (Amumu\'s passive: 24 stacked runs pushed Draven\'s axes out)', async () => {
+    const { runtime, library, step, shown } = await board();
+    for (let n = 0; n < 10; n++) { runtime.play('draven', 'draven', []); step(1); }
+    expect(shown(AXES)).toHaveLength(1);
+    runtime.dispose(); library.dispose();
+  });
+
   it('Draven\'s axes give their slot to any skill visual and come back when room frees', async () => {
     const { runtime, library, step, shown } = await board();
     runtime.play('draven', 'draven', []); step(0.1);
