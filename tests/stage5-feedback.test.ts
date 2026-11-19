@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
+import { CRIT_MARKS, createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
 import type { SceneCombatEvent } from '../src/presentation/combat-display';
 import { subscribeBoardFeed, type BoardFeedListener } from '../src/rendering/board-feed';
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
@@ -212,6 +212,9 @@ describe('stage5 floating text equivalence and DOM work', () => {
       // The mark is solid, a shade darker than the number (orange and blue alike), with the number's dark edge.
       expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#c76c1c'"); expect(decodeURIComponent(blue.style.backgroundImage)).toContain("fill='#2a99c7'");
       expect(decodeURIComponent(big.style.backgroundImage)).toContain("stroke='rgba(0,0,0,.9)'");
+      // Candidate D: darker and redder than the number.
+      setup(); const hd = host(), rd = createCombatFeedbackRenderer(hd, { critMark: CRIT_MARKS.D }); rd.push([crit(1)], 400); rd.render(400, new Map([['a', { x: 120, y: 300, radius: 20 }]]));
+      expect(decodeURIComponent(snapshot(hd)[0].children[0].style.backgroundImage)).toContain("fill='#e55619'"); rd.dispose();
       expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
     });
@@ -289,6 +292,24 @@ describe('stage5 floating text equivalence and DOM work', () => {
       for (const bar of [barA, barB]) expect(Math.abs(left(cleared) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + w3 - 1e-6);
       expect(left(cleared)).toBeGreaterThan(barB.x);
       r3.dispose();
+    });
+    it('a number keeps clear of another unit\'s number already placed; packed in, it may overlap a number a little but never a bar', () => {
+      const left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
+      // Two units 10 px apart: the later unit's number steps sideways past the earlier one's.
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([damage(1, 'a', 10)], 0); renderer.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
+      renderer.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['b', { x: 210, y: 300, radius: 20 }]]));
+      const [first, second] = snapshot(h)[0].children;
+      expect(Math.abs(left(first) - left(second))).toBeGreaterThanOrEqual(40 - 1e-6);
+      renderer.dispose();
+      // Bars close in on both sides and the only bar-free spot is taken by another number: it overlaps that number, not a bar.
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), barL = { x: 100, y: 307, w: 160, h: 16 }, barR = { x: 300, y: 307, w: 160, h: 16 };
+      r2.push([damage(1, 'a', 10)], 0); r2.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
+      r2.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['b', { x: 200, y: 300, radius: 20 }]]), [], new Map([['l', barL], ['r', barR]]));
+      for (const label of snapshot(h2)[0].children) {
+        for (const bar of [barL, barR]) expect(Math.abs(left(label) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + 20 - 1e-6);
+      }
+      r2.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
