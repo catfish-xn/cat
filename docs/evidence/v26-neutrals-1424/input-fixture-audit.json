@@ -484,9 +484,9 @@
     "src/simulation/m8/status.ts": "216881a3d7ce33748a7ad6756b010571c092eebb387910a3f13b868133e167bc",
     "src/simulation/m8/targeting.ts": "ba3f66e910c1521cc03ddb7aa8889978111356ad5b7bed73715304023ab57b4c",
     "src/simulation/m8/triggers.ts": "611d8c15d4eca4c8496a7ce962e2f45840521e7ee35f37ee3e37ee697c6652cc",
-    "src/simulation/m8/ui-contracts.ts": "178f754d533b83560e73bec1573c9a6994749809a726ed30d3e79e48a88b797d",
+    "src/simulation/m8/ui-contracts.ts": "7e5035484cee1df3532b8406126deb5494a4e6d7cb73bac8eee22a32698ffe38",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "57ab61cca627d3a968deb07ac351dc463e010c6b5e802565b690d437e47ddced",
+    "src/simulation/m8/version.ts": "4e0fdde8d249a4656e220ef4330cace1103ff0e74abc6d900f420681cbadea4f",
     "src/simulation/masterwork-choice.ts": "52f9227528e0ac99ed6f79c6e8ff44c89a62b5c50b76c64e2b2b7a81ab8ca63e",
     "src/simulation/match-rules.ts": "e0ca00e28f6c79d7f978a61963ea7c2872517a81feb53b68fb1ada0500d9181b",
     "src/simulation/match-types.ts": "4fcaa7d7b39337638fe32917f4def50b96a745cd039a34e71275a5e42e29e31b",
@@ -714,7 +714,7 @@
       "previousBytes": 66919,
       "currentBytes": 69614,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "36847425a28c56cbcf6f0f8afecae22af4a6e2404e900fb00c612ff56a935eff",
+      "currentSha256": "fd6befe9f68c178c8c2faa99cf7275708b96905a6394a764d8a0a1c830509f90",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
