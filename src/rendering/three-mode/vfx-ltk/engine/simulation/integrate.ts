@@ -345,9 +345,11 @@ function settle(
   for (let at = 0; at < pool.count; at += 1) {
     if (pool.emitter[at] !== index) continue;
     if (pool.lingerFrom[at] === NOT_LINGERING) pool.lingerFrom[at] = state.finishedAt;
+    // REC ONLY (claude/rec-ground-premult, never merged): ?dglife=1 never lets the linger lengthen a particle's own life.
+    const fixed = step.now - pool.birthTime[at] + seconds;
     pool.lifetime[at] = capped
       ? Math.min(pool.lifetime[at], seconds)
-      : step.now - pool.birthTime[at] + seconds;
+      : (globalThis as { __DG_LIFE?: boolean }).__DG_LIFE ? Math.min(pool.lifetime[at], fixed) : fixed;
   }
 }
 
