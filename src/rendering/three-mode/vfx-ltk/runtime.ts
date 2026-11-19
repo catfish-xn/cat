@@ -102,6 +102,8 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
   yielded: {} as Record<string, number>, yieldTimes: [] as number[],
   /** REC ONLY (claude/rec-drop-why, never merged): each drop's reasons, by `${system}|${source}|${importance}|${why}`. */
   dropWhy: {} as Record<string, number>,
+  /** REC ONLY: the board at each drop other than the generic attack hit (who holds the slots, how much room is used). */
+  dropScenes: [] as unknown[],
   /**
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
@@ -935,6 +937,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           }
           else {
             const slotsFull = slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS, budgetFull = !!(options.budget && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
+            if (spawn.system !== '0f2af66b' && LTK_RUN_STATS.dropScenes.length < 80) LTK_RUN_STATS.dropScenes.push({ t: +clock.toFixed(3), system: spawn.system, source: spawn.sourceId, action: spawn.action ?? 'cast', importance, atPlace,
+              slotsFull, budgetFull, shared, slotsNow: slotsNow(), heldSlots, need, heldNeed, budgetLive: options.budget?.live, reserved: reservedNow(), budgetMax: options.budget?.max,
+              running: [...running].map(run => `${run.system}|${run.source}|${run.action}|${run.importance}${run.persistent ? '|P' : ''}${run.atPlace ? '|@' : ''}|${run.reserved}`) });
             recWhy(spawn, importance, `${slotsFull ? 'slots' : ''}${budgetFull ? (shared ? 'sharedBudget' : 'ltkBudget') : ''}${starts + partners.length >= 6 ? 'starts' : ''}${atPlace ? '@place' : ''}|live${slotsNow()}|need${need}`);
             countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); }
           }
