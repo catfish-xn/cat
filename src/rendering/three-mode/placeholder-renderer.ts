@@ -1553,6 +1553,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
     return root ? projectedBox(root, camera, viewport()) : undefined;
   };
+  // Combat floats keep clear of every overhead bar: the drawn bar group (bar, tier, items on it) projected the same way.
+  const barBox = (id: string): BoardScreenBox | undefined => {
+    const overhead = scout.active ? undefined : pieces.get(id)?.overhead.object;
+    return overhead?.visible ? projectedBox(overhead, camera, viewport()) : undefined;
+  };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   let carouselOngoing = false;
   const onCarousel = (view: Parameters<typeof stage.show>[0], active = view !== null) => {
@@ -1622,7 +1627,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!scout.active) return pickUnit(client, true) ?? undefined;
       const target = scout.descriptionAt(client, camera, viewport())?.target;
       return target?.kind === 'unit' ? target.id : undefined;
-    }, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
+    }, screenBox: id => !stage.active ? screenBox(id) : undefined, barBox: id => !stage.active ? barBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.

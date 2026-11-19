@@ -3,7 +3,7 @@ import { asDisplayEvents, type SceneCombatEvent } from '../presentation/combat-d
 export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
 /** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
 export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
-export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
+export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[], bars?: ReadonlyMap<string, FeedbackObstacle>): void; reset(): void; dispose(): void }
 type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
 /** What a float shows (the damage-float table, Fable 11-17): a plain hit, a crit, or a damage-over-time tick. */
 type FloatClass = 'plain' | 'crit' | 'tick';
@@ -25,8 +25,8 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff9a2e', magic: '#4fd0ff', true: '#ffffff', heal: '#6ee89a', status: '#ff9d8a' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
-/** Sizes (own choice): a plain number reads on both a close-up and the whole board; a crit 1.6× it, a tick 0.8×. */
-const FONT_PX = 20, CRIT_SCALE = 1.6, TICK_SCALE = 0.8;
+/** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit 1.6× it, a tick 0.8×. */
+const FONT_PX = 22, CRIT_SCALE = 1.6, TICK_SCALE = 0.8;
 /** A bold rounded sans-serif from the system (no font file is shipped), never a serif face. */
 const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuchet MS", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 /** A thin dark edge and a light drop shadow. */
@@ -44,7 +44,13 @@ const BODY_DROP = 0.35;
  * A unit's numbers at once: the newest on its body, each older one pushed up above the one after it, STACK_SHRINK smaller and
  * STACK_FADE fainter per place; at most SHOWN, and a newer one makes the earliest past that fade out within EARLY_FADE_MS.
  */
-const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.25, STACK_GAP = 2, EARLY_FADE_MS = 200;
+const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.25, STACK_GAP = 6, EARLY_FADE_MS = 200;
+/**
+ * Overhead bars (own rule, not original): a number above BAR_OPACITY never covers any unit's bar. It starts at least half its
+ * height below its own unit's bar (a short unit's body point moves down), rises no closer than that, and one pushed into a
+ * bar by the stack or standing over another unit's bar shows at BAR_OPACITY at most.
+ */
+const BAR_OPACITY = 0.5;
 /** The crit mark left of a crit: a spiky burst in the number's own colour with a thin darker edge (drawn here). */
 const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l1.9 6.3L19.8 4.2l-2.6 6.1L23 12l-5.8 1.7 2.6 6.1-5.9-3.1L12 23l-1.9-6.3-5.9 3.1 2.6-6.1L1 12l5.8-1.7L4.2 4.2l5.9 3.1z' fill='${color}' stroke='rgba(0,0,0,.6)' stroke-width='0.8' stroke-linejoin='round'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
@@ -111,7 +117,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event.tick, event.targetId, 'status', 1, at, status); }
       }
     },
-    render(now, anchors, obstacles = []) {
+    render(now, anchors, obstacles = [], bars = new Map()) {
       if (disposed) return;
       // Drop expired nodes only after this frame's geometry reads, so a removal cannot force layout before them.
       const expired: Float[] = [], active: Float[] = [];
@@ -144,7 +150,9 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           const pop = age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
           const shrink = Math.max(0.5, 1 - STACK_SHRINK * place), size = item.px * shrink * pop;
           const rise = age < POP_MS ? 0 : RISE_PX * Math.min(1, (age - POP_MS) / Math.max(1, item.life - POP_MS));
-          const own = anchor.y + anchor.radius * BODY_DROP - rise;
+          // Its own bar: the number's top stays at least half its height below the bar's bottom (start and rise alike).
+          const ownBar = bars.get(item.unitId), floor = ownBar ? ownBar.y + ownBar.h / 2 + size : -Infinity;
+          const own = Math.max(anchor.y + anchor.radius * BODY_DROP - rise, floor);
           const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
           above = y - size / 2;
           // A canvas label in the way moves the number to the side, never up.
@@ -153,7 +161,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
             const cx = Math.max(half, Math.min(width - half, anchor.x + dx));
             if (!obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - y) < rect.h / 2 + size / 2)) { x = cx; break; }
           }
-          const scale = pop * shrink, fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.25, 1 - STACK_FADE * place);
+          const scale = pop * shrink;
+          let fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.25, 1 - STACK_FADE * place);
+          // Over any unit's bar (its own, pushed up by the stack, or another's) it shows at BAR_OPACITY at most.
+          const w = half * scale;
+          for (const bar of bars.values()) if (Math.abs(bar.x - x) < bar.w / 2 + w && Math.abs(bar.y - y) < bar.h / 2 + size / 2) { fade = Math.min(fade, BAR_OPACITY); break; }
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
           style(item, 'opacity', String(Number(fade.toFixed(3))));
