@@ -57,12 +57,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 14.24b 七项英雄数值 (2026-11-12, b-patch-overrides.json): contentDigest f37c6970->db6dc9b6 only; loot replay unchanged
   // (was 6c5f207e…).
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
-  const back=save.split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
+  const back=save.split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('91a0760ce161675721ba5e9e3dd1ce74db40e9ada9a2231a89958b1a03e97f60');
+    .toBe('6dc0e5097ab0843434671cc5b4e6253a6eb73c5abb8d42e4673575f7f9a6d123'); // #739 digest d94c78f1 -> cf212873 (was 91a0760c…)
   expect(restoreMatch(save)).toEqual(started);
 });
 

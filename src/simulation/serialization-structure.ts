@@ -499,6 +499,14 @@ export function validateMatchStructureForSerialization(state: MatchState): Match
     withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)))));
 }
 
+/** A landing packet's attacker-side snapshot: exactly these fields, finite numbers, a boolean mirror flag. */
+function lockedShape(locked: unknown): boolean {
+  if (!locked || typeof locked !== 'object') return false;
+  const l = locked as Record<string, unknown>;
+  return Object.keys(l).sort().join(',') === 'abilityPower,amplifiers,attackDamage,critMultiplierBps,holder,mirrored,weaknessBps'
+    && [l.abilityPower, l.attackDamage, l.critMultiplierBps, l.weaknessBps].every(n => Number.isSafeInteger(n) && (n as number) >= 0 && (n as number) <= 100000000)
+    && Array.isArray(l.amplifiers) && typeof l.mirrored === 'boolean' && !!l.holder && typeof l.holder === 'object';
+}
 /** Runtime records are checked separately from frozen stats; restoring never executes them.
  * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
 export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number, abilityStatuses: ReadonlySet<string> = new Set()): void {
@@ -631,7 +639,17 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','attackLanding','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    // Ranged attack landing: one shot of its owner's attack to targetId, its packets and statuses taken on the attack tick.
+    if (task.kind === 'attackLanding') {
+      const landing = task.landing; record(landing); list(landing!.packets); list(landing!.effects);
+      requireValue(task.source.ownerId === unit.id && task.source.sourceKind === 'attack' && task.cancellable === false && task.amount === 0 && task.targetId !== null
+        && landing!.packets.length + landing!.effects.length > 0
+        && (landing!.voided === undefined || landing!.voided === true)
+        && landing!.packets.every(p => p.actionSeq === task.actionSeq && p.targetId === task.targetId && p.source.ownerId === unit.id && typeof p.critical === 'boolean'
+          && Number.isSafeInteger(p.raw) && p.raw >= 0 && p.raw <= 100000000 && lockedShape(p.locked))
+        && landing!.effects.every(e => combatUnits.some(u => u.id === e.holderId)), 'attack landing');
+    } else requireValue(task.landing === undefined, 'attack landing');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g2PowderRelease:'powder',g2PowderMonkey:'powder',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');

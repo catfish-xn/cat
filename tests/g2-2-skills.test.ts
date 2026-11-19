@@ -1,3 +1,4 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -28,7 +29,7 @@ it('Vex samples a fixed zone at source delay; Morgana preserves all 525 DOT dama
  const morgana=run(battle([hero('morgana',{baseAttackSpeedBps:1}),dummy()],{rngState:42}),201);
  expect(raw(morgana.events).reduce((a,b)=>a+b,0)).toBe(525);expect(morgana.state.units.find(x=>x.id==='e')!.g22?.reaveBps).toBe(5000);
 });
-it('Draven becomes an empowered basic attacker after casting; no cast damage invented',()=>{const r=run(battle([hero('draven'),dummy()],{rngState:42}),22);expect(raw(r.events)[0]).toBe(150);});
+it('Draven becomes an empowered basic attacker after casting; no cast damage invented',()=>{const r=run(battle([hero('draven'),dummy()],{rngState:42}),22+rangedAttackFlightTicks(1)); /* window: Draven's empowered shot lands after it */expect(raw(r.events)[0]).toBe(150);});
 it('Steb shares only actual healing to two nearest allies and does not recurse',()=>{const r=stepCombat(battle([hero('steb'),dummy(),hero('steb',{id:'ally',mana:0,hp:3000,cell:{col:0,row:3},cooldownTicks:1000})],{rngState:42}));expect(heals(r.events).filter(x=>x.unitId==='ally').map(x=>x.actual)).toEqual([67]);});
 it('Mordekaiser empowered attacks are magic and state is detached across steps',()=>{const first=stepCombat(battle([hero('mordekaiser'),dummy()],{rngState:42}));const saved=JSON.stringify(first.state);const r=run(freeze(first.state),22);expect(raw(r.events)).toContain(330);expect(JSON.stringify(first.state)).toBe(saved);});
 it('Ambessa alternates chains and fists without leaking stance counters',()=>{const r=stepCombat(battle([hero('ambessa',{runtime:{...EMPTY_RUNTIME,castCount:1}}),dummy()],{rngState:42}));expect(raw(r.events)).toEqual([500]);});

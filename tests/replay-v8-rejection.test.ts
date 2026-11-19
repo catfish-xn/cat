@@ -16,7 +16,7 @@ describe('replay format 9: pre-castIndex saves and archives', () => {
     expect([file.saveFormatVersion, file.replayFormatVersion, file.battles.length]).toEqual([9, 8, 1]);
     expect(file.match.rulesVersion).toBe(M8_VERSION.rulesVersion);
     expect(JSON.stringify(file)).not.toContain('"castIndex"');
-    expect(M8_VERSION.replayFormatVersion).toBe(9);
+    expect(M8_VERSION.replayFormatVersion).toBe(10); // #739: was 9; a replay-8 file is still an old version
   });
 
   it('is rejected as unsupported-version (the old version), not as damaged data', () => {
