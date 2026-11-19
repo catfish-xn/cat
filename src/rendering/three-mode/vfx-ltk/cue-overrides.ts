@@ -23,6 +23,12 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/**
+ * Maddie's volley shot flies this many rule ticks a cell, and at least MADDIE_SHOT_MIN_TICKS (fitted, not original data).
+ * The rules will time each shot's damage by the same flight (src/simulation/cast-windup.ts, coming): until then these
+ * stand in for it, and are to be imported from there once it lands.
+ */
+export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
 export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -131,11 +137,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
-  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a short shot from her gun to the enemy it
-  // hit and the hit there (travel fitted, not original data).
+  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a shot from her rifle's muzzle
+  // (Weapon_Shooter: our skeleton has no barrel-root bone) to the enemy it hit, flying MADDIE_SHOT_TICKS_PER_HEX ticks a
+  // cell and at least MADDIE_SHOT_MIN_TICKS, and the hit there when it lands (TimelineCue.flightTicks). Her damage numbers
+  // still show at the shot's start until the rules move them to its landing (known interim state, Fable 11-19).
   'maddie-shot': [
-    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC',
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC',
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
   // hit play with each stab's damage: the thin vertical slash his skill's stab clips carry, and the hit on the enemy stabbed.
