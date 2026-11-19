@@ -28,10 +28,11 @@ export interface TimelineCue {
   readonly main?: boolean;
   /**
    * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
-   * visual that must not crowd skill impacts out (Steb's heal share); or a cast-start body held at the critical rank so it
-   * never yields its slot (Mordekaiser's aura, LeBlanc's channel: Fable 11-19). A display priority decision, not original data.
+   * visual that must not crowd skill impacts out (Steb's heal share); or another decided rank: a cast-start body held at
+   * the critical rank so it never yields its slot (Mordekaiser's aura, LeBlanc's channel: Fable 11-19), or a layer shown
+   * all fight long as decoration (cue-overrides.ts SUSTAIN_RANKS). A display priority decision, not original data.
    */
-  readonly rank?: 'body' | 'critical';
+  readonly rank?: 'body' | 'critical' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
@@ -70,7 +71,8 @@ export interface TimelineCue {
   readonly hide?: readonly string[];
   /**
    * A cast-start buff that a recast refreshes rather than stacks: when this cue starts while the same system from the
-   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura).
+   * same source still runs, that run is retired at once and this one takes its place (Mordekaiser's empower aura). On a
+   * hit cue, only the run on the same target is replaced (Ekko's mark: SUSTAIN_REFRESH).
    */
   readonly refresh?: boolean;
   /**

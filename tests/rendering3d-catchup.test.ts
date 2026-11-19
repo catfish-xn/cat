@@ -265,7 +265,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   // event (within the stop's half second), and gone at once when the unit carrying it dies.
   const shield = (ability: string, tick: number): DisplayCombatEvent => ({ type: 'shieldLayerChanged', tick, eventSeq: tick, reason: 'expired', remaining: 0,
     targetId: 'a', key: JSON.stringify(['standalone', 'a', 'ability', ability, 'a', 0, null, 'a', 'source']) }) as unknown as DisplayCombatEvent;
-  const SUSTAIN_CASES: { champion: string; system: string; on: 'a' | 'b'; end?: (tick: number) => DisplayCombatEvent }[] = [
+  const SUSTAIN_CASES: { champion: string; system: string; on: 'a' | 'b'; end?: (tick: number) => DisplayCombatEvent; held?: number }[] = [
     { champion: 'leona', system: '8d9a4ccc', on: 'a', end: tick => ({ type: 'statusChanged', tick, eventSeq: tick, targetId: 'a', kind: 'damage-reduction', effectiveMagnitudeBps: 0, reason: 'expired' }) as unknown as DisplayCombatEvent },
     { champion: 'loris', system: 'e22b48b0', on: 'a', end: tick => shield('loris-ability', tick) },
     { champion: 'garen', system: 'ea21ae27', on: 'a', end: tick => shield('garen-ability', tick) },
@@ -274,14 +274,15 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     { champion: 'mordekaiser', system: '938c104f', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'mordekaiser-empower', targetIds: [] }) as unknown as DisplayCombatEvent },
     { champion: 'draven', system: 'd86cc9bc', on: 'a' },
     { champion: 'amumu', system: '56e6971e', on: 'a' },
-    { champion: 'ekko', system: '5af49b76', on: 'b' },
+    // Ekko's mark shows 2 s after its hit (SUSTAIN_REFRESH), past its 0.5 s cue.
+    { champion: 'ekko', system: '5af49b76', on: 'b', held: 1.5 },
   ];
-  const sustainBoard = async (champion: string) => {
+  const sustainBoard = async (champion: string, held = 3.5) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }, { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
     listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
     listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
     // Past every short cue the export gives these layers (the longest, Leona's, is 2.8 s).
-    for (let i = 0; i < 140; i++) await advance(25);
+    for (let i = 0; i < held * 40; i++) await advance(25);
   };
   const sustainShown = () => debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem as string);
   it.each(SUSTAIN_CASES.filter(c => c.end))('$champion $system: held past its short cue until its rule event ends it', async ({ champion, system, end }) => {
@@ -291,8 +292,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     for (let i = 0; i < 30; i++) await advance(25);
     expect(sustainShown()).not.toContain(system);
   });
-  it.each(SUSTAIN_CASES)('$champion $system: gone at once when the unit carrying it dies', async ({ champion, system, on }) => {
-    await sustainBoard(champion);
+  it.each(SUSTAIN_CASES)('$champion $system: gone at once when the unit carrying it dies', async ({ champion, system, on, held }) => {
+    await sustainBoard(champion, held);
     expect(sustainShown()).toContain(system);
     listener.events([{ type: 'death', tick: 80, eventSeq: 80, unitId: on } as unknown as DisplayCombatEvent]);
     await advance(25);

@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -169,9 +169,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
-        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || (cue.event !== 'cast-start' && cue.event !== 'hit')))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
-        || (cue.rank !== undefined && cue.rank !== 'body' && cue.rank !== 'critical')
+        || (cue.rank !== undefined && cue.rank !== 'body' && cue.rank !== 'critical' && cue.rank !== 'decorative')
         || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
         || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
           || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
@@ -226,14 +226,16 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
   }
-  // Persistent layers held until their rule event (SUSTAIN_CAPS): the cue runs up to its cap, with no stop of its own.
+  // Persistent layers held until their rule event (SUSTAIN_CAPS): the cue runs up to its cap, with no stop of its own; a
+  // refreshed one replaces its last play on that target (SUSTAIN_REFRESH), a ranked one takes its rank (SUSTAIN_RANKS).
   const current = skills ?? index.skills;
   for (const [key, cues] of Object.entries(current)) {
     if (!cues?.some(cue => Object.hasOwn(SUSTAIN_CAPS, cue.system))) continue;
     (skills ??= { ...index.skills })[key] = cues.map(cue => {
       if (!Object.hasOwn(SUSTAIN_CAPS, cue.system)) return cue;
       const { stopAfter: _stop, ...rest } = cue;
-      return { ...rest, duration: SUSTAIN_CAPS[cue.system] };
+      return { ...rest, duration: SUSTAIN_CAPS[cue.system]!, ...(SUSTAIN_REFRESH.has(cue.system) ? { refresh: true } : {}),
+        ...(Object.hasOwn(SUSTAIN_RANKS, cue.system) ? { rank: SUSTAIN_RANKS[cue.system] } : {}) };
     });
   }
   return skills ? { ...index, skills } : index;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
+import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { createSustainStops } from '../src/rendering/three-mode/vfx-ltk/sustain-stops';
-import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_READMIT, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAMILLE_KICK_TICKS as SIM_CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
 import { CAST_WINDUP_TICKS as SIM_CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
@@ -55,7 +56,8 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
       if (Array.isArray(systems)) return systems as string[];
       return Object.values(systems as Record<string, unknown>).flatMap(v => Array.isArray(v) ? v as string[] : (v as { systems: string[] }).systems);
     })]);
-    // Draven's spinning axe, Amumu's passive, Kog'Maw's stacks and Ekko's mark on the foe last until death or the fight's end.
+    // Draven's spinning axe, Amumu's passive and Kog'Maw's stacks last until death or the fight's end; Ekko's mark shows its
+    // own time after each hit (SUSTAIN_REFRESH).
     const untilDeath = ['d86cc9bc', '56e6971e', '6889455c', '9f805f6e', '5af49b76'];
     for (const system of Object.keys(SUSTAIN_CAPS)) expect(ended.has(system) || untilDeath.includes(system), system).toBe(true);
     for (const seconds of Object.values(SUSTAIN_CAPS)) expect(seconds).toBeGreaterThan(0);
@@ -78,5 +80,27 @@ describe('skill bodies that never yield their slot (Fable 11-19)', () => {
     // Mordekaiser's aura starts with his slam's damage, which the rules deal at the cast tick (no wind-up for him).
     expect(CUE_OVERRIDES.mordekaiser!.find(c => c.system === '938c104f')!.delay).toBe(0);
     expect(Object.hasOwn(SIM_CAST_WINDUP_TICKS, 'mordekaiser')).toBe(false);
+  });
+});
+
+describe('fallback caps of held layers (Fable 11-19)', () => {
+  // The rule's longest time for the state a layer shows, over every star, from the ability data.
+  const longest = (ability: string, variable: string) => Math.max(...(S13_ABILITY_DATA[ability] as unknown as { variables: Record<string, number[]> }).variables[variable]!);
+  it('a layer whose state has a time limit is capped at that limit plus 1 s, so the rule event always ends it first', () => {
+    const limited: [string, string, string][] = [['8d9a4ccc', 'leona-ability', 'Duration'], ['afb2ec69', 'jayce-ranged-ability', 'ASDuration'],
+      ['ea21ae27', 'garen-ability', 'ShieldDuration'], ['e22b48b0', 'loris-ability', 'Duration'], ['8682c9ee', 'vex-ability', 'DOTDuration'], ['eb9da1d5', 'vex-ability', 'DOTDuration'],
+      ['acd84091', 'leblanc-ability', 'ChainDuration'], ['938c104f', 'mordekaiser-ability', 'EmpowerDuration']];
+    for (const [system, ability, variable] of limited) expect(SUSTAIN_CAPS[system], system).toBeCloseTo(longest(ability, variable) + 1, 6);
+    // Swain's form also grows with each takedown: its cap is our own, above the base time plus 1 s.
+    expect(SUSTAIN_CAPS['796b6af2']).toBeGreaterThan(longest('swain-ability', 'Duration') + 1);
+  });
+  it('Ekko\'s mark refreshes per target for 2 s; Draven\'s axes and Kog\'Maw\'s stacks are decoration that comes back', () => {
+    expect(SUSTAIN_CAPS['5af49b76']).toBe(2);
+    expect([...SUSTAIN_REFRESH]).toEqual(['5af49b76']);
+    const allFight = ['d86cc9bc', '6889455c', '9f805f6e'];
+    expect(SUSTAIN_RANKS).toEqual(Object.fromEntries(allFight.map(system => [system, 'decorative'])));
+    expect([...SUSTAIN_READMIT]).toEqual(allFight);
+    // Held all fight long: never quietly gone after a short cap.
+    for (const system of [...allFight, '56e6971e']) expect(SUSTAIN_CAPS[system]).toBeGreaterThanOrEqual(60);
   });
 });
