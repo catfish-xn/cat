@@ -22,21 +22,21 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
  * with a same-coloured spiky mark on its left; a damage-over-time tick is a little smaller (a burn white). Every colour, size,
  * scale and timing here is our own choice, not original data.
  */
-const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff9a2e', magic: '#4fd0ff', true: '#ffffff', heal: '#6ee89a', status: '#ff9d8a' };
+const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84', status: '#ff9d8a' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
 /** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit 1.6× it, a tick 0.8×. */
 const FONT_PX = 22, CRIT_SCALE = 1.6, TICK_SCALE = 0.8;
 /** A bold rounded sans-serif from the system (no font file is shipped), never a serif face. */
 const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuchet MS", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
-/** A thin dark edge and a light drop shadow. */
-const OUTLINE = '1px 0 0 rgba(0,0,0,.85), -1px 0 0 rgba(0,0,0,.85), 0 1px 0 rgba(0,0,0,.85), 0 -1px 0 rgba(0,0,0,.85), 0 2px 3px rgba(0,0,0,.55)';
+/** A dark edge all round (eight directions) and a drop shadow, so the number holds on a bright floor. */
+const OUTLINE = '1px 0 0 rgba(0,0,0,.9), -1px 0 0 rgba(0,0,0,.9), 0 1px 0 rgba(0,0,0,.9), 0 -1px 0 rgba(0,0,0,.9), 1px 1px 0 rgba(0,0,0,.9), -1px 1px 0 rgba(0,0,0,.9), 1px -1px 0 rgba(0,0,0,.9), -1px -1px 0 rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.6)';
 /**
  * The motion (own rhythm, not original): a number pops in at POP_SCALE and drops back to its size over POP_MS, then rises
- * RISE_PX over the rest of its life and fades out over its last FADE_MS.
+ * RISE_PX over the rest of its life; it stays fully opaque until its last FADE_MS and only then fades out.
  */
 const POP_SCALE = 1.6, POP_MS = 160, RISE_PX = 28, FADE_MS = 300;
-const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 900, crit: 1100, tick: 700 };
+const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 900, crit: 900, tick: 700 };
 const PER_UNIT = 6, ALL = 40;
 /** Where a number appears: on its unit's body, chest to waist, BODY_DROP radii below the anchor (own fit). */
 const BODY_DROP = 0.35;
@@ -44,13 +44,13 @@ const BODY_DROP = 0.35;
  * A unit's numbers at once: the newest on its body, each older one pushed up above the one after it, STACK_SHRINK smaller and
  * STACK_FADE fainter per place; at most SHOWN, and a newer one makes the earliest past that fade out within EARLY_FADE_MS.
  */
-const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.25, STACK_GAP = 6, EARLY_FADE_MS = 200;
+const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.1, STACK_GAP = 6, EARLY_FADE_MS = 200;
 /**
- * Overhead bars (own rule, not original): a number above BAR_OPACITY never covers any unit's bar. It starts at least half its
- * height below its own unit's bar (a short unit's body point moves down), rises no closer than that, and one pushed into a
- * bar by the stack or standing over another unit's bar shows at BAR_OPACITY at most.
+ * Overhead bars (own rule, not original): a number never covers any unit's bar, by where it stands, never by fading. It starts
+ * at least half its height below its own unit's bar (a short unit's body point moves down) and rises no closer than that; one
+ * the stack pushes into a bar, or that would stand on another unit's bar, steps sideways out past that bar's end.
  */
-const BAR_OPACITY = 0.5;
+const BAR_SIDESTEP_GAP = 3;
 /** The crit mark left of a crit: a spiky burst in the number's own colour with a thin darker edge (drawn here). */
 const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l1.9 6.3L19.8 4.2l-2.6 6.1L23 12l-5.8 1.7 2.6 6.1-5.9-3.1L12 23l-1.9-6.3-5.9 3.1 2.6-6.1L1 12l5.8-1.7L4.2 4.2l5.9 3.1z' fill='${color}' stroke='rgba(0,0,0,.6)' stroke-width='0.8' stroke-linejoin='round'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
@@ -65,7 +65,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   const look = (kind: FloatKind, cls: FloatClass, burn: boolean) => {
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
-    return { color, px, fontWeight: cls === 'crit' ? '900' : '800', textShadow: OUTLINE,
+    return { color, px, fontWeight: '900', textShadow: OUTLINE,
       backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.8)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
@@ -155,17 +155,18 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           const own = Math.max(anchor.y + anchor.radius * BODY_DROP - rise, floor);
           const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
           above = y - size / 2;
-          // A canvas label in the way moves the number to the side, never up.
-          let x = Math.max(half, Math.min(width - half, anchor.x));
-          for (const dx of [0, half + 4, -half - 4]) {
-            const cx = Math.max(half, Math.min(width - half, anchor.x + dx));
-            if (!obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - y) < rect.h / 2 + size / 2)) { x = cx; break; }
+          const scale = pop * shrink, w = half * scale;
+          // A canvas label or any unit's bar in the way: the number steps sideways out past it (the nearer side), never up.
+          let x = Math.max(w, Math.min(width - w, anchor.x));
+          const blockers = [...obstacles, ...bars.values()];
+          for (let tries = 0; tries < 3; tries++) {
+            const hit = blockers.find(rect => Math.abs(rect.x - x) < rect.w / 2 + w && Math.abs(rect.y - y) < rect.h / 2 + size / 2);
+            if (!hit) break;
+            const right = hit.x + hit.w / 2 + w + BAR_SIDESTEP_GAP, left = hit.x - hit.w / 2 - w - BAR_SIDESTEP_GAP;
+            const pick = Math.abs(right - x) <= Math.abs(left - x) ? right : left;
+            x = Math.max(w, Math.min(width - w, pick));
           }
-          const scale = pop * shrink;
-          let fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.25, 1 - STACK_FADE * place);
-          // Over any unit's bar (its own, pushed up by the stack, or another's) it shows at BAR_OPACITY at most.
-          const w = half * scale;
-          for (const bar of bars.values()) if (Math.abs(bar.x - x) < bar.w / 2 + w && Math.abs(bar.y - y) < bar.h / 2 + size / 2) { fade = Math.min(fade, BAR_OPACITY); break; }
+          const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
           style(item, 'opacity', String(Number(fade.toFixed(3))));
