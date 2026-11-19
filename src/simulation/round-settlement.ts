@@ -30,11 +30,11 @@ import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
 import { applyLevelUpHealth } from './augment-xp';
 import { needsOpponentHp, drainSettlementGold } from './augment-settlement-gold';
-import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
 import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResult } from './match-types';
 import { validCombatGrowthDelta } from './persistent-growth';
+import { MAX_SIDE_SURVIVORS } from './survivor-bound';
 
 export type MultiplayerFailure = MatchFailure | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
   | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled' | 'seat-eliminated'
@@ -104,7 +104,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (r.version !== ROUND_SETTLEMENT_VERSION || !id(r.settlementId) || !id(r.battleId)
       || r.seatId !== state.multiplayer.seatId || r.settlementEligible !== true
       || !['win','loss','draw'].includes(r.result) || !integer(r.damage) || !integer(r.baseDamage)
-      || !integer(r.opposingSurvivors) || r.opposingSurvivors > MATCH_RULES.maxLevel || !integer(r.combatTicks) || r.combatTicks > MAX_COMBAT_TICKS
+      || !integer(r.opposingSurvivors) || r.opposingSurvivors > MAX_SIDE_SURVIVORS || !integer(r.combatTicks) || r.combatTicks > MAX_COMBAT_TICKS
       || !integer(r.combatEventCount,1) || !Array.isArray(r.growth)) return fail(state,'invalid-receipt');
     if (state.multiplayer.status === 'eliminated') return fail(state,'seat-eliminated');
     if (state.roundResults.some(old => old.round === r.round)

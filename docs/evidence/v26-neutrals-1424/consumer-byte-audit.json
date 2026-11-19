@@ -3638,6 +3638,14 @@
       "currentSha256": "63852c6ca997385f9d15ff9c727e51eeaf3a08a1452ca98750e38adb916f5249",
       "firstDifferentByte": 842
     },
+    "tests/server/survivor-bound-seed-200.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2413,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8cbff0cc71aec0d5cafe490a4900fa20956ce3f72f8824c133546be59cd395b0",
+      "firstDifferentByte": 0
+    },
     "tests/server/t10-combat-ops.test.ts": {
       "previousBytes": 20765,
       "currentBytes": 22677,
@@ -3802,6 +3810,13 @@
       "previousSha256": "fc0f9e3fcf00304889b1b12aff33a7d921793444d6e66ca7dff31867c2a2ca45",
       "currentSha256": "05eecb529dfafd432227a6ee251e1c7bda68f69f9104d08f8f8493a3132b8d3d",
       "firstDifferentByte": 9
+    },
+    "tests/t3-round-settlement.test.ts": {
+      "previousBytes": 13407,
+      "currentBytes": 14110,
+      "previousSha256": "36b30524f34c4165748aa6e85adb203093c67e1c41654c2ed975927e7c6eacfa",
+      "currentSha256": "a8e1a84d633585ea7c918b6b6dced5e43ae3f8e7409e292a868f3b68650cdd33",
+      "firstDifferentByte": 683
     },
     "tests/t5r-b7-integration.test.ts": {
       "previousBytes": 5450,
