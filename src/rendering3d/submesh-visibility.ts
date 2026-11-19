@@ -36,7 +36,7 @@ export function unswitchedClips(root: Object3D, visibility: SubmeshVisibility | 
 
 /**
  * Submeshes kept at their default per model: a clip that would show one of them switches nothing, and the geometry stays
- * in the model. drmundo: held at its default until a timed ultimate form exists (Fable 2026-11-17).
+ * in the model. drmundo: his ultimate body follows his timed form (TIMED_FORMS), not his clips (Fable 2026-11-17).
  */
 export const HELD_SUBMESHES: Readonly<Record<string, readonly string[]>> = { drmundo: ['BodyUlt'] };
 
@@ -46,6 +46,14 @@ export function withoutHeld(visibility: SubmeshVisibility | undefined, held: rea
   const events = Object.fromEntries(Object.entries(visibility.events).filter(([, list]) => !list.some(event => event.show.some(name => held.includes(name)))));
   return { ...visibility, events };
 }
+
+/**
+ * Timed forms per model: while one is on (rule events say when, see timed-form-events.ts) its submeshes are shown and
+ * hidden over whatever clip plays. drmundo: his ultimate body from his first heal to his closing blast (Fable 2026-11-17).
+ */
+export const TIMED_FORMS: Readonly<Record<string, { readonly show: readonly string[]; readonly hide: readonly string[] }>> = {
+  drmundo: { show: ['BodyUlt'], hide: ['BodyNormal'] },
+};
 
 /** Hide the submeshes a model starts without (a model that does not carry them is left as it is). */
 export function hideInitialSubmeshes(root: Object3D, visibility: SubmeshVisibility | undefined): void {
@@ -65,10 +73,12 @@ export class SubmeshSwitch {
   private readonly defaults: ReadonlySet<string>;
   private readonly events: Map<string, { seconds: number; show: readonly string[]; hide: readonly string[] }[]>;
   private shown = new Map<string, boolean>();
-  private constructor(root: Object3D, visibility: SubmeshVisibility) {
+  private form?: { readonly show: readonly string[]; readonly hide: readonly string[] };
+  private constructor(root: Object3D, visibility: SubmeshVisibility, form?: { readonly show: readonly string[]; readonly hide: readonly string[] }) {
     this.defaults = new Set(visibility.initiallyHidden ?? []);
     this.events = new Map();
-    this.meshes = meshesByName(root, namedIn(visibility));
+    this.formDef = form; this.formNames = form && [...form.show, ...form.hide];
+    this.meshes = meshesByName(root, new Set([...namedIn(visibility), ...(this.formNames ?? [])]));
     for (const [clip, list] of Object.entries(visibility.events ?? {})) {
       // A clip that shows a submesh this model lacks would only do half a swap (hide the body, show nothing): it
       // switches nothing until the model carries that submesh (see unswitchedClips).
@@ -78,11 +88,19 @@ export class SubmeshSwitch {
     }
   }
   /** A switch for this model, or undefined when the model carries none of the named submeshes. */
-  static create(root: Object3D, visibility: SubmeshVisibility | undefined): SubmeshSwitch | undefined {
-    if (!visibility) return undefined;
-    const created = new SubmeshSwitch(root, visibility);
+  static create(root: Object3D, visibility: SubmeshVisibility | undefined, form?: { readonly show: readonly string[]; readonly hide: readonly string[] }): SubmeshSwitch | undefined {
+    if (!visibility && !form) return undefined;
+    const created = new SubmeshSwitch(root, visibility ?? {}, form);
     return created.meshes.size ? created : undefined;
   }
+  /**
+   * Turn the model's timed form on or off; it overrides every clip while on. A form whose submeshes the model does not
+   * all carry stays off (no half a body).
+   */
+  setForm(on: boolean): void { this.form = on && this.formNames && this.formNames.every(name => this.meshes.has(name)) ? this.formDef : undefined; }
+  get formOn(): boolean { return this.form !== undefined; }
+  private formDef?: { readonly show: readonly string[]; readonly hide: readonly string[] };
+  private formNames?: readonly string[];
   /** Show each submesh as `clip` has it `seconds` into its playback (no clip: the model's default). Clip names compare
    * case-insensitively: the manifest keys clips by their lowercase source name. */
   apply(clip: string | undefined, seconds: number): void {
@@ -93,6 +111,8 @@ export class SubmeshSwitch {
       for (const name of event.show) if (shown.has(name)) shown.set(name, true);
       for (const name of event.hide) if (shown.has(name)) shown.set(name, false);
     }
+    for (const name of this.form?.show ?? []) shown.set(name, true);
+    for (const name of this.form?.hide ?? []) shown.set(name, false);
     for (const [name, visible] of shown) {
       if (this.shown.get(name) === visible) continue;
       for (const mesh of this.meshes.get(name)!) mesh.visible = visible;

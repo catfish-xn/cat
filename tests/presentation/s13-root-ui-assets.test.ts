@@ -14,6 +14,8 @@ let assets: typeof import('../../src/presentation/s13-assets');
 beforeEach(async () => {
   vi.resetModules(); // The production registry and one-shot promise are module-local.
   vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('unexpected-fetch'); }));
+  // Item icons are their own chunk (2D bundle split, 11-19): the fresh module graph loads them before reading any.
+  await (await import('../../src/presentation/g23-display')).loadG23Items();
   assets = await import('../../src/presentation/s13-assets');
 });
 afterEach(() => {

@@ -82,9 +82,16 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
   return geometry;
 }
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
-export function pointAnchor(point: readonly [number, number, number]): Anchor {
+export function pointAnchor(point: readonly [number, number, number], facing?: readonly [number, number, number]): Anchor {
+  // Facing a point, the effect turns as a unit on `point` looking at it would (unitAnchor's aim); else it keeps the world axes.
+  const dx = facing ? facing[0] - point[0] : 0, dz = facing ? facing[2] - point[2] : 0;
+  const turned = dx * dx + dz * dz > 1e-6 ? new Matrix4().makeRotationY(Math.atan2(dx, dz)).elements : null;
   return { originAt: () => [point[0] * AXIS_SIGN[0] / FX_SCALE, point[1] / FX_SCALE, point[2] / FX_SCALE],
-    basisInto(_time, out) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; } };
+    basisInto(_time, out) {
+      if (!turned) { out.set([1, 0, 0, 0, 1, 0, 0, 0, 1]); return out; }
+      for (let column = 0; column < 3; column++) for (let row = 0; row < 3; row++) out[row * 3 + column] = turned[column * 4 + row] * AXIS_SIGN[row] * AXIS_SIGN[column];
+      return out;
+    } };
 }
 /**
  * Share of the body's height a missing body locator stands in at (11-12: hits authored on the chest landed on the feet).
@@ -92,8 +99,30 @@ export function pointAnchor(point: readonly [number, number, number]): Anchor {
  */
 const MISSING_LOCATOR_SHARE: readonly [RegExp, number][] = [
   [/^c?_?buffbone_glb_chest_loc$/i, 0.6], [/^c?_?buffbone_glb_center_loc$/i, 0.5], [/^c?_?buffbone_glb_head_loc$/i, 0.9],
-  [/^c?_?buffbone_glb_overhead_loc$/i, 1],
+  [/^c?_?buffbone_glb_overhead_loc$/i, 1], [/^(spine\d*|chest)$/i, 0.6],
 ];
+/**
+ * A spine or chest bone a cue names that the target's skeleton lacks: that skeleton's own torso place, tried in this order,
+ * by name without case (without it, a cue on a torso bone most skeletons lack fell to the target's feet). Generic, never
+ * per champion. A missing chest or centre locator is not stood in for: it keeps its share of the body's height
+ * (MISSING_LOCATOR_SHARE), as before.
+ */
+const TORSO_BONE = /^(spine\d*|chest)$/i;
+const TORSO_FALLBACK = ['c_buffbone_glb_chest_loc', 'buffbone_glb_chest_loc', 'c_buffbone_glb_center_loc', 'buffbone_glb_center_loc', 'spine2', 'spine1', 'spine', 'chest'];
+/**
+ * The bone a cue's `bone` names on this body, by name without case; for a spine or chest bone the body lacks, the first
+ * of its own torso places (TORSO_FALLBACK) instead, flagged `standIn` (it lends its place, not its axes). Undefined when none.
+ */
+export function findCueBone(body: Object3D | null, bone: string): { node: Object3D; standIn: boolean } | undefined {
+  if (!body) return undefined;
+  const byName = new Map<string, Object3D>();
+  body.traverse(node => { const key = node.name.toLowerCase(); if (key && !byName.has(key)) byName.set(key, node); });
+  const exact = byName.get(bone.toLowerCase());
+  if (exact) return { node: exact, standIn: false };
+  if (!TORSO_BONE.test(bone)) return undefined;
+  for (const name of TORSO_FALLBACK) { const node = byName.get(name); if (node) return { node, standIn: true }; }
+  return undefined;
+}
 /**
  * Height above the unit's origin for a requested bone the model does not have. Body locators (chest, centre, head,
  * overhead) take their share of `bodyHeight`; any other missing bone (ground, a weapon) stays on the origin, as before.
@@ -119,8 +148,8 @@ const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head)_loc$/i;
  */
 export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string, aim?: () => Object3D | null): Anchor {
   const point = new Vector3(), toward = new Vector3(), matrix = new Matrix4();
-  let attachment: Object3D | undefined;
-  if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
+  // The named bone, or for a torso bone the skeleton lacks its own nearest torso bone (findCueBone).
+  const found = bone ? findCueBone(body, bone) : undefined, attachment: Object3D | undefined = found?.node;
   const node = () => attachment ?? root;
   // A body locator the model lacks stands in at its share of the body's height above the unit, not on the floor.
   const lift = !attachment && bone && body ? missingLocatorLift(bone, bodyHeightAbove(root, body)) : 0;
@@ -128,7 +157,8 @@ export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string,
     originAt() { node().getWorldPosition(point); point.y += lift; return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
       // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
-      const held = attachment && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
+      // A stand-in torso bone lends its place too, never its axes.
+      const held = attachment && !found?.standIn && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
       held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
       const aimed = held === root ? aim?.() : null;
       if (aimed) {

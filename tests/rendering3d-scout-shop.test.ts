@@ -33,9 +33,9 @@ describe('3D scouting shop availability', () => {
   let shutdown: (() => void) | undefined;
   const sceneMocks = ['../src/presentation/merge-fx-loader', 'phaser', '../src/rendering/online/mode', '../src/rendering/app-shell',
     '../src/rendering/strategy-panel', '../src/presentation/help-panel', '../src/presentation/s13-assets',
-    '../src/presentation/unit-view', '../src/stats/stats-panel', '../src/stats/combat-feedback-renderer',
+    '../src/presentation/unit-view', '../src/stats/stats-panel-loader', '../src/stats/combat-feedback-renderer',
     '../src/rendering/online/orb-dock', '../src/rendering/online/online-application'];
-  const mocked = ['lobby', 'players-sidebar', 'carousel-panel', 'battle-summary', 'economy-hint', 'left-panel-toggle', 'sound', 'ranking', 'battle-outcome'];
+  const mocked = ['lobby', 'players-sidebar', 'carousel-holding', 'carousel-panel-loader', 'battle-summary', 'economy-hint', 'left-panel-toggle', 'sound', 'ranking', 'battle-outcome'];
   beforeEach(() => {
     vi.resetModules(); root = new Node(); shop = new Node();
     const body = new Node();
@@ -50,7 +50,8 @@ describe('3D scouting shop availability', () => {
     }
     vi.doMock('../src/rendering/online/lobby', () => ({ Lobby: Widget }));
     vi.doMock('../src/rendering/online/players-sidebar', () => ({ PlayersSidebar: Widget }));
-    vi.doMock('../src/rendering/online/carousel-panel', () => ({ CarouselPanel: Widget, CarouselHoldingSlot: Widget, readHeldCarouselUnits: () => [] }));
+    vi.doMock('../src/rendering/online/carousel-holding', () => ({ CarouselHoldingSlot: Widget, readHeldCarouselUnits: () => [] }));
+    vi.doMock('../src/rendering/online/carousel-panel-loader', () => ({ LazyCarouselPanel: Widget }));
     vi.doMock('../src/rendering/online/battle-summary', () => ({ BattleSummaryPanel: Widget }));
     vi.doMock('../src/rendering/online/economy-hint', () => ({ EconomyHint: Widget }));
     vi.doMock('../src/rendering/online/left-panel-toggle', () => ({ LeftPanelToggle: Widget }));
@@ -258,7 +259,7 @@ describe('3D scouting shop availability', () => {
       }
       update() {} setAnomalies() {} setOverflow() {} setRing() {} resetMeters() {} drawCombat() {} destroy() { drawn.delete(this.unit.id); }
     } }));
-    vi.doMock('../src/stats/stats-panel', () => ({ createStatsPanel: () => ({ render() {}, dispose() {} }) }));
+    vi.doMock('../src/stats/stats-panel-loader', () => ({ lazyStatsPanel: () => ({ render() {}, dispose() {} }) }));
     vi.doMock('../src/stats/combat-feedback-renderer', () => ({ createCombatFeedbackRenderer: () => ({ reset() {}, dispose() {} }) }));
     vi.doMock('../src/rendering/online/orb-dock', async importOriginal => ({
       ...await importOriginal<typeof import('../src/rendering/online/orb-dock')>(), OrbDock: class { render() {} reset() {} },
