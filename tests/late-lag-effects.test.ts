@@ -19,10 +19,12 @@ describe('late-game effect budget', () => {
     expect(admitEffect(['critical', 'critical'], 'decorative', true)).toEqual({ admit: false, evict: -1 });
     expect(admitEffect(['critical', 'decorative', 'critical'], 'critical', true)).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['critical', 'critical'], 'critical', true)).toEqual({ admit: false, evict: -1 });
-    // A plain basic-attack visual is the lowest rank: any skill visual replaces it, and it never displaces one.
+    // A plain basic-attack visual is the lowest rank: any skill visual replaces it, and it displaces only a flourish
+    // (Fable 11-17), the earliest one, never another attack or anything above a flourish.
     expect(admitEffect(['critical', 'attack', 'attack'], 'decorative', true)).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['decorative', 'attack'], 'critical', true)).toEqual({ admit: true, evict: 1 });
-    expect(admitEffect(['decorative', 'critical'], 'attack', true)).toEqual({ admit: false, evict: -1 });
+    expect(admitEffect(['decorative', 'critical', 'decorative'], 'attack', true)).toEqual({ admit: true, evict: 0 });
+    expect(admitEffect(['attack', 'critical', 'body'], 'attack', true)).toEqual({ admit: false, evict: -1 });
   });
 
   it('ranks body between critical and decorative, yielding only the oldest body after 1 s', () => {
@@ -30,7 +32,8 @@ describe('late-game effect budget', () => {
     expect(admitEffect(['body', 'body', 'body'], 'critical', true, [1.2, 1.8, 0.5])).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['critical', 'decorative', 'body'], 'body', true, [2, 2, 2])).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['critical', 'critical'], 'body', true, [2, 2])).toEqual({ admit: false, evict: -1 });
-    expect(admitEffect(['body', 'decorative', 'attack'], 'attack', true, [2, 2, 2])).toEqual({ admit: false, evict: -1 });
+    expect(admitEffect(['body', 'decorative', 'attack'], 'attack', true, [2, 2, 2])).toEqual({ admit: true, evict: 1 });
+    expect(admitEffect(['body', 'critical', 'attack'], 'attack', true, [2, 2, 2])).toEqual({ admit: false, evict: -1 });
     // A body also has to play BODY_YIELD_SHARE (70%) of its own span: a 3.3 s cloud at 1.06 s stays, at 2.4 s it yields.
     expect(admitEffect(['body', 'body'], 'critical', true, [1.06, 1.06], [3.3, 1.2])).toEqual({ admit: true, evict: 1 });
     expect(admitEffect(['body'], 'critical', true, [1.06], [3.3])).toEqual({ admit: false, evict: -1 });
@@ -327,7 +330,7 @@ describe('late-game effect budget', () => {
     runtime.dispose();
   });
 
-  it('lets a caster flourish replace a basic-attack hit on a full board, never the other way round', async () => {
+  it('lets a caster flourish replace a basic-attack hit on a full board, never the other way round: a cast\'s flourish is the skill (Fable 11-18)', async () => {
     const { runtime, scene, camera } = await setup({ vi: [
       { system: 'blow', event: 'hit' as const, action: 'attack' as const, delay: 0, duration: 1 },
       { system: 'blow', event: 'hit' as const, delay: 0, duration: 1 },

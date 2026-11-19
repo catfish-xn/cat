@@ -27,8 +27,9 @@ export interface TimelineCue {
   /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
   readonly main?: boolean;
   /**
-   * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
-   * visual that must not crowd skill impacts out (Steb's heal share); 'decorative' for one that must give way to every skill and
+   * A decided rank instead of the event's own (effect-budget.ts effectImportance): 'body' for a hit or projectile that must
+   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'decorative' for a
+   * flourish a plain attack or a place's run may end (cue-ranks.ts), or a visual that must give way to every skill and
    * basic-attack visual (Heimerdinger's rocket hits, Fable 11-19). A display priority decision, not original data.
    */
   readonly rank?: 'body' | 'decorative';
