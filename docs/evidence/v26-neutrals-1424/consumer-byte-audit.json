@@ -4246,6 +4246,14 @@
       "currentSha256": "230834e7516fbdb8c34b4cf64ef71c1b2df740b8743d27b327a2602b2d32be40",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cue-bones.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 448,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "976f69d4f9ccda1c7b943c9f0379391d703194e4f3a70c14fb2aaf7327d5c63b",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-cue-override-627.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4378,6 +4386,14 @@
       "currentBytes": 5443,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e5656f3b542c7742de3c314fc575c5c06356a1d0b54f09ae84f7e8109862801e",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-maddie-shots.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3223,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2c4f2425d06ade9bd9762d486eb382dc1bbf77c9543d264ee0abb1db8a3116b7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-malzahar-gate.test.ts": {
