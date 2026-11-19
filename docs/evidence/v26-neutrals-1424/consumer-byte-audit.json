@@ -2166,9 +2166,9 @@
     "tests/nunu-cast-lock.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4888,
+      "currentBytes": 5124,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2d3ac43fd24c08787f6cf14c3d9085126e96c4a79f03d1ad17d7af679e27796d",
+      "currentSha256": "ee0c41de8787abafc6219ea887708b124a15a684218a2460369eb26ab9ca9bc8",
       "firstDifferentByte": 0
     },
     "tests/opening-encounter-ui.test.ts": {
@@ -4582,6 +4582,14 @@
       "currentBytes": 2443,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "95e0d388a3a724e431bd30d7f4431050be3b3e5d889be9cd0db432916f104c0f",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-smeech-stabs.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2934,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "88ac5bf554221e3c0f602bc5c9da911b03c8f0213044b7a2921b95a50fe0b8ec",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-steb-heal.test.ts": {
