@@ -25,3 +25,14 @@ describe('cast-start ranks', () => {
     expect(mine.map(c => effectImportance(c))).toEqual(['body', 'decorative', 'decorative', 'critical']);
   });
 });
+
+describe('the generic basic-attack hit holds its run only as long as it shows', () => {
+  it('a longer cue is cut to ATTACK_HIT_SECONDS, a shorter one keeps its length, other systems and skill hits are untouched', async () => {
+    const { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM } = await import('../src/rendering/three-mode/vfx-ltk/cue-ranks');
+    const hit = (system: string, duration: number, action: 'attack' | 'cast' = 'attack'): TimelineCue => ({ system, action, event: 'hit', delay: 0.5, duration });
+    const index = { version: 1, systems: { [ATTACK_HIT_SYSTEM]: 's.json', abcdabcd: 's.json' }, assets: {},
+      skills: { zzz: [hit(ATTACK_HIT_SYSTEM, 1.5), hit(ATTACK_HIT_SYSTEM, 0.45), hit('abcdabcd', 1.5), hit(ATTACK_HIT_SYSTEM, 1.5, 'cast')] } } as never;
+    const out = (withCueOverrides(index) as unknown as { skills: Record<string, TimelineCue[]> }).skills.zzz!;
+    expect(out.map(c => c.duration)).toEqual([ATTACK_HIT_SECONDS, 0.45, 1.5, 1.5]);
+  });
+});

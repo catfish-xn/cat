@@ -1,3 +1,4 @@
+import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM } from '../src/rendering/three-mode/vfx-ltk/cue-ranks';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
@@ -104,7 +105,7 @@ describe('Caitlyn Air Raid override', () => {
   it('applies over the exported list when every system is loaded', () => {
     const systems = Object.fromEntries([...CUE_OVERRIDES.caitlyn, { system: '92bbeaf7' }].map(cue => [cue.system, `systems/${cue.system}.json`]));
     const exported: TimelineCue[] = [{ system: '92bbeaf7', action: 'cast', event: 'cast-start', delay: 0.5, duration: 0.5 }];
-    // The override list, with the explicit cast-start ranks of cue-ranks.ts on it (11-19).
-    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn!.map(({ rank: _rank, ...cue }) => cue)).toEqual(CUE_OVERRIDES.caitlyn);
+    // The override list, with the explicit cast-start ranks and the basic-attack hit length of cue-ranks.ts on it (11-19).
+    expect(withCueOverrides(parseIndex({ version: 1, systems, assets: {}, skills: { caitlyn: exported } })).skills.caitlyn!.map(({ rank: _rank, ...cue }) => cue)).toEqual(CUE_OVERRIDES.caitlyn!.map(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' ? { ...cue, duration: Math.min(cue.duration, ATTACK_HIT_SECONDS) } : cue));
   });
 });

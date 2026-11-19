@@ -4069,9 +4069,9 @@
     "tests/vfx-ltk-cue-ranks.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2116,
+      "currentBytes": 3092,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d333a30b36f49e7ffe7dcd2ddb7cbd39dca325e3865e24dadbae962d4965d67b",
+      "currentSha256": "e30737853b3f5151ed76f3fc219668ead1307889e0e333a18782c493b6770215",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
@@ -4125,9 +4125,9 @@
     "tests/vfx-ltk-falling-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7351,
+      "currentBytes": 7632,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "80d023b85846a3cb1b4ea34147e740d4bfb97aa402bea5ba7026173898a7aa38",
+      "currentSha256": "816ef3457cfb8f0ceb4e2ee49695738c6f20222171ecf56525e1b60202aeac1f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-fan-out.test.ts": {
@@ -4336,9 +4336,9 @@
     "tests/vfx-ltk-steb-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9787,
+      "currentBytes": 10155,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30bf86c08509d2e8bcc7848e149b6011e3d1e3de2cc38068fd87854831989503",
+      "currentSha256": "b50c8981850668160603b6dfd97b03c6f6be20edb538e62ab6bba1dabdffb026",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-stop-first-emission.test.ts": {

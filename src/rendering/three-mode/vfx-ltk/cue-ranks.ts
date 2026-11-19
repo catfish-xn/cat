@@ -87,3 +87,13 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   // 9f8fe9f1 W_dash, e75b9fe8 Q_cas
   'mel': { '9f8fe9f1': 'body', 'e75b9fe8': 'decorative' },
 };
+
+/**
+ * The generic basic-attack hit (TFT_Global_BA_Hit, 0f2af66b) holds its run, and so a system slot and its particle room, only
+ * as long as its own flash and sparks show (Fable 11-19): it played 1.5 s per hit while its particles were long gone by
+ * then, so on a busy board the hits filled the room plain attacks may use and the next hits were dropped. Our own
+ * value, not the original's: it ends past the system's longest particle, so the run's closing fade (runtime.ts) never cuts
+ * the flash short. A cue already shorter keeps its own length.
+ */
+export const ATTACK_HIT_SYSTEM = '0f2af66b';
+export const ATTACK_HIT_SECONDS = 0.7;
