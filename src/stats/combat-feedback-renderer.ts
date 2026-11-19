@@ -7,7 +7,7 @@ export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent
 type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
 /** What a float shows (the damage-float table, Fable 11-17): a plain hit, a crit, or a damage-over-time tick. */
 type FloatClass = 'plain' | 'crit' | 'tick';
-type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'left' | 'top' | 'transform' | 'opacity';
+type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
@@ -17,37 +17,36 @@ function style(item: Label, key: LabelStyle, value: string): void {
 }
 function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden !== value) label.hidden = value; }
 /**
- * The damage-float table (Library 伤害飘字分类表, Fable 11-17). Numbers only, told apart by colour: physical orange, magic
- * cyan-blue, true damage white and bolder, heals green with "+". A crit is a larger, more saturated number with a crack
- * badge drawn here; a damage-over-time tick is a small number. Sizes and colours are fitted, not original data.
+ * Damage floats (the user's 8 points, 11-19). Numbers only, coloured by damage type: physical orange, magic cyan-blue, true
+ * damage white, heals green with "+"; a basic attack takes its type's colour too. A crit is the same colour, CRIT_SCALE larger,
+ * with a same-coloured spiky mark on its left; a damage-over-time tick is a little smaller (a burn white). Every colour, size,
+ * scale and timing here is our own choice, not original data.
  */
-const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#5fd3ff', true: '#ffffff', heal: '#78efab', status: '#ff9d8a' };
-/** A crit's colour: physical orange (the user's 11-19 choice), magic a bright blue. Our own colours, not original values. */
-const CRIT_COLORS = { physical: '#ff9a2e', magic: '#2fa8ff', true: '#ffffff' } as const;
+const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff9a2e', magic: '#4fd0ff', true: '#ffffff', heal: '#6ee89a', status: '#ff9d8a' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
-const FONT_PX = 14, CRIT_SCALE = 2.9, TICK_SCALE = 0.8;
-/** A new number pops at POP_SCALE where the hit lands and settles to its size over POP_MS while it rises. */
-const POP_SCALE = 1.5, POP_MS = 300;
-const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 850, crit: 1000, tick: 650 };
-const PER_UNIT = 5, ALL = 40;
-/** A dark ring around every number (eight directions and a soft edge) so a small light number reads on the bright board. */
-const OUTLINE = '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 0 3px #000, 0 1px 4px #000';
+/** Sizes (own choice): a plain number reads on both a close-up and the whole board; a crit 1.6× it, a tick 0.8×. */
+const FONT_PX = 20, CRIT_SCALE = 1.6, TICK_SCALE = 0.8;
+/** A bold rounded sans-serif from the system (no font file is shipped), never a serif face. */
+const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuchet MS", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+/** A thin dark edge and a light drop shadow. */
+const OUTLINE = '1px 0 0 rgba(0,0,0,.85), -1px 0 0 rgba(0,0,0,.85), 0 1px 0 rgba(0,0,0,.85), 0 -1px 0 rgba(0,0,0,.85), 0 2px 3px rgba(0,0,0,.55)';
 /**
- * Where numbers sit (fitted to recordings, Fable 11-18): a number's bottom clears the unit's overhead bar, BAR_CLEAR px above
- * the top of its body box; it rises at most RISE_PX over its life, so it stays over its own unit's head.
+ * The motion (own rhythm, not original): a number pops in at POP_SCALE and drops back to its size over POP_MS, then rises
+ * RISE_PX over the rest of its life and fades out over its last FADE_MS.
  */
-const BAR_CLEAR = 44, RISE_PX = 12;
+const POP_SCALE = 1.6, POP_MS = 160, RISE_PX = 28, FADE_MS = 300;
+const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 900, crit: 1100, tick: 700 };
+const PER_UNIT = 6, ALL = 40;
+/** Where a number appears: on its unit's body, chest to waist, BODY_DROP radii below the anchor (own fit). */
+const BODY_DROP = 0.35;
 /**
- * A unit's numbers at once (Fable 11-18): side by side, alternating right and left by half a number's width, never pushed up;
- * past SHOWN the earliest fades out early (over EARLY_FADE_MS). No number's centre is ever more than CEILING_CRITS crit
- * heights above the bar.
+ * A unit's numbers at once: the newest on its body, each older one pushed up above the one after it, STACK_SHRINK smaller and
+ * STACK_FADE fainter per place; at most SHOWN, and a newer one makes the earliest past that fade out within EARLY_FADE_MS.
  */
-const SHOWN = 3, EARLY_FADE_MS = 200, CEILING_CRITS = 1.5;
-/** The physical crit's inner highlight: a light edge above the glyphs inside the black outline. */
-const CRIT_OUTLINE = `0 -1px 0 #fff3c4, ${OUTLINE}`;
-/** The crack badge left of a crit (drawn here: a split star with three rays), tinted with the number's colour. */
-const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l2.6 6.2L21 5l-3.6 5.6L23 13l-6.2 1.4L19 21l-5.8-3.6L12 23l-1.6-5.4L4 21l2.6-6.6L1 13l5.6-2.4L3 5l6.6 2.4z' fill='${color}' stroke='#000' stroke-width='1.2'/><path d='M12 6l-1 5 3 1-2 6' fill='none' stroke='#000' stroke-width='1.4'/></svg>`)}")`;
+const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.25, STACK_GAP = 2, EARLY_FADE_MS = 200;
+/** The crit mark left of a crit: a spiky burst in the number's own colour with a thin darker edge (drawn here). */
+const badge = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1l1.9 6.3L19.8 4.2l-2.6 6.1L23 12l-5.8 1.7 2.6 6.1-5.9-3.1L12 23l-1.9-6.3-5.9 3.1 2.6-6.1L1 12l5.8-1.7L4.2 4.2l5.9 3.1z' fill='${color}' stroke='rgba(0,0,0,.6)' stroke-width='0.8' stroke-linejoin='round'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
@@ -58,19 +57,17 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   function release(item: Label): void { item.label.remove(); pool.push({ label: item.label, styles: item.styles }); }
   function reset(): void { for (const item of floats) release(item); floats = []; }
   const look = (kind: FloatKind, cls: FloatClass, burn: boolean) => {
-    const color = cls === 'crit' ? (kind === 'physical' ? CRIT_COLORS.physical : kind === 'magic' ? CRIT_COLORS.magic : kind === 'true' ? CRIT_COLORS.true : COLORS[kind])
-      : cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
+    const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
-    return { color, px, fontWeight: kind === 'true' || cls === 'crit' ? '900' : '700',
-      textShadow: cls === 'crit' && kind === 'physical' ? CRIT_OUTLINE : OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.9)}px` : '' };
+    return { color, px, fontWeight: cls === 'crit' ? '900' : '800', textShadow: OUTLINE,
+      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.8)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
     if (!item) {
       const label = document.createElement('span');
-      Object.assign(label.style, { position: 'absolute', fontSize: `${l.px}px`, fontWeight: l.fontWeight, whiteSpace: 'nowrap', textShadow: l.textShadow, color: l.color, pointerEvents: 'none',
-        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: '0.9em 0.9em', paddingLeft: l.paddingLeft });
+      Object.assign(label.style, { position: 'absolute', fontSize: `${l.px}px`, fontWeight: l.fontWeight, fontFamily: FONT_FAMILY, whiteSpace: 'nowrap', textShadow: l.textShadow, color: l.color, pointerEvents: 'none',
+        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: '0.75em 0.75em', paddingLeft: l.paddingLeft });
       item = { label, styles: { color: l.color } };
     } else {
       // Match a fresh label even if it has no anchor, or cannot be placed on its first frame.
@@ -92,7 +89,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const old = floats.find(item => item.key === key);
     if (old) { if (kind !== 'status') old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
-    // A fourth number on a unit: its earliest one fades out now, rather than the numbers stacking up.
+    // One number more than SHOWN on a unit: its earliest one fades out now.
     const showing = perUnit.filter(item => item.at + item.life > at);
     if (showing.length >= SHOWN) { const first = showing[0]; first.life = Math.min(first.life, Math.max(0, at - first.at) + EARLY_FADE_MS); }
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
@@ -136,38 +133,31 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         return { item, anchor, half: item.measured };
       });
       for (const item of expired) release(item);
-      // Per unit, the right and left edges its numbers take so far: each next number goes right, then left, just past them.
-      const rows = new Map<string, { count: number; right: number; left: number }>();
-      const occupied: { x: number; y: number; half: number; px: number; unit: string }[] = [];
-      const critPx = Math.round(FONT_PX * CRIT_SCALE);
-      for (const { item, anchor, half } of measured) {
-        // A unit's numbers in order: the first in the middle, then the next just right of what is taken, the next just left,
-        // and so on, a small gap apart by their real widths, so neighbours never cover each other whatever their digits.
-        const row = rows.get(item.unitId);
-        const shift = !row ? 0 : row.count % 2 === 1 ? row.right + 4 + half : row.left - 4 - half;
-        if (!row) rows.set(item.unitId, { count: 1, right: half, left: -half });
-        else { row.count++; if (shift > 0) row.right = shift + half; else row.left = shift - half; }
-        const age = Math.max(0, now - item.at);
-        const bar = anchor.y - anchor.radius - BAR_CLEAR;
-        // Above the overhead bar (BAR_CLEAR), rising a little with age, never above CEILING_CRITS crit heights over the bar.
-        const y0 = Math.max(12 + item.px / 2, bar - CEILING_CRITS * critPx, Math.min(height - 16, bar - item.px / 2 - Math.min(RISE_PX, age / 80)));
-        const x0 = Math.max(half, Math.min(width - half, anchor.x + shift));
-        // Another unit's number in the way moves this one to the side, never up.
-        const side = half + 4;
-        let x = x0;
-        const y = y0;
-        for (const dx of [0, side, -side]) {
-          const cx = Math.max(half, Math.min(width - half, x0 + dx));
-          const overlapsFloat = occupied.some(rect => rect.unit !== item.unitId && Math.abs(rect.x - cx) < rect.half + half + 3 && Math.abs(rect.y - y) < (rect.px + item.px) / 2 + 4);
-          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - y) < rect.h / 2 + 12);
-          if (!overlapsFloat && !overlapsLabel) { x = cx; break; }
-        }
-        // A crowded spot still shows the number over its unit rather than dropping it (it may touch another number).
-        occupied.push({ x, y, half, px: item.px, unit: item.unitId });
-        // A new number pops where the hit lands and settles over POP_MS.
-        const pop = age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
-        style(item, 'left', `${x}px`); style(item, 'top', `${y}px`); style(item, 'transform', pop === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${pop.toFixed(3)})`);
-        style(item, 'opacity', String(Math.min(1, (item.life - age) / 250)));
+      // Per unit, newest first: the newest number on the body, each older one above the one after it.
+      const byUnit = new Map<string, { item: Float; anchor: FeedbackAnchor; half: number }[]>();
+      for (const entry of measured) { const list = byUnit.get(entry.item.unitId); if (list) list.unshift(entry); else byUnit.set(entry.item.unitId, [entry]); }
+      for (const list of byUnit.values()) {
+        let above = Infinity;
+        list.forEach(({ item, anchor, half }, place) => {
+          const age = Math.max(0, now - item.at);
+          // Pop in, drop back, then rise; an older number also stays above the newer one below it (spaced by drawn sizes).
+          const pop = age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
+          const shrink = Math.max(0.5, 1 - STACK_SHRINK * place), size = item.px * shrink * pop;
+          const rise = age < POP_MS ? 0 : RISE_PX * Math.min(1, (age - POP_MS) / Math.max(1, item.life - POP_MS));
+          const own = anchor.y + anchor.radius * BODY_DROP - rise;
+          const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
+          above = y - size / 2;
+          // A canvas label in the way moves the number to the side, never up.
+          let x = Math.max(half, Math.min(width - half, anchor.x));
+          for (const dx of [0, half + 4, -half - 4]) {
+            const cx = Math.max(half, Math.min(width - half, anchor.x + dx));
+            if (!obstacles.some(rect => Math.abs(rect.x - cx) < rect.w / 2 + half + 2 && Math.abs(rect.y - y) < rect.h / 2 + size / 2)) { x = cx; break; }
+          }
+          const scale = pop * shrink, fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.25, 1 - STACK_FADE * place);
+          style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
+          style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
+          style(item, 'opacity', String(Number(fade.toFixed(3))));
+        });
       }
     },
     reset,
