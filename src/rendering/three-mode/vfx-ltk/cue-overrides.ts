@@ -751,6 +751,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+  // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
+  // difference (Fable 11-19); the rest of the hit draws.
+  '9acdae50': ['Alpha_BgGlow_GreenBrown'],
 };
 
 /**
