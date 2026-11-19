@@ -6,7 +6,7 @@
 // LTK_RUN_STATS: peak running, started, dropped, place rows, runs that gave way to a newcomer) and `yields`, the time of
 // each step a run gave way (for --abs). <unit> is only the job's label. Dev tool: it decides nothing.
 const { chromium } = require('playwright');
-const { launchOptions, timer } = require('./common.cjs');
+const { launchOptions, timer, waitQuiet } = require('./common.cjs');
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2); const out = path.resolve(args[1]);
 const opt = k => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : undefined; };
@@ -28,9 +28,19 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
   await page.evaluate(() => window.__h.reset());
   for (let s = 0; s < seconds * 4; s++) { await page.evaluate(() => window.__h.step(250)); await page.waitForTimeout(60); }
   mark('warm');
+  // Same start on every run (11-19: two runs of one head and snapshot counted 117/9 and 115/5): wait until every champion
+  // warm has measured its systems and the loads have settled, then start a fresh combat so nothing the warm pass left
+  // running, nor its seed counts, carries into the measured pass. The virtual clock stands still meanwhile.
+  const warming = await page.evaluate(async () => {
+    const state = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_WARMING;
+    for (let i = 0; i < 300 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
+    return state.pending;
+  });
+  const quiet = await waitQuiet(page); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
+  await page.evaluate(() => window.__h.fresh());
   const run = (clear = false) => page.evaluate(async c => { const r = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_RUN_STATS;
-    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [] }); return JSON.parse(JSON.stringify(r)); }, clear);
-  await page.evaluate(() => window.__h.reset()); await run(true);
+    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], dropWhy: {}, dropScenes: [] }); return JSON.parse(JSON.stringify(r)); }, clear);
+  await run(true);
   fs.mkdirSync(path.join(out, 'shots'), { recursive: true });
   let t = 0, t0 = null; const shots = []; const todo = [...at]; const yields = []; let yieldN = 0;
   const abs = (opt('abs') ?? '').split(',').filter(Boolean).map(Number).sort((a, b) => a - b);

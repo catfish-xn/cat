@@ -68,6 +68,9 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     listener.frame(frameOf(0));
     (window as any).__h = {
       step: boardStep, frame: () => listener.frame(frameOf(at)), reset() { at = 0; carry = 0; listener.frame(frameOf(0)); },
+      // A fresh combat (board-shot.cjs between its warm pass and the measured one): a frame out of combat ends every effect
+      // the warm pass left running and restarts the runtime's seed counts, as a new combat does in the game.
+      fresh() { at = 0; carry = 0; listener.frame({ ...frameOf(0), fighting: false }); step(50); listener.frame(frameOf(0)); },
       clock: () => clock, tick: () => at, status: r.status, detail: r.detail,
       board: { ticks: replay.frames.length, casts: replay.casts, result: replay.result, combatStart: replay.combatStart },
     };
