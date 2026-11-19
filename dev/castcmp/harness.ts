@@ -293,6 +293,9 @@ const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col 
 function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[],
   barBox: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined = () => undefined) {
   host.style.position = 'relative';
+  // Recording only (rec branch): ?critmark=E1|E2 picks a crit mark candidate (自绘，非原版素材).
+  const markParam = new URLSearchParams(location.search).get('critmark');
+  if (markParam === 'E1' || markParam === 'E2') (globalThis as { __critMark?: string }).__critMark = markParam;
   const feedback = createCombatFeedbackRenderer(host);
   let now = 0;
   const render = () => {
