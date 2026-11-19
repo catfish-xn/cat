@@ -377,6 +377,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // (CUE_EXTRA_SKILLS smeech-stab, smeech-leap); his cast keeps the launch and the trail on him.
   smeech: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.30833333333333335, duration: 1.5 },
+    // The horizontal swing his attack clip carries, with that clip (the one our renderer plays for his attacks), at its
+    // layout point: decoration at the attack rank (Fable 11-19).
+    { system: '343e410d', action: 'attack', event: 'cast-start', delay: 8 / 30, duration: 0.7, bone: 'C_Buffbone_Glb_Layout_Loc' },
     { system: '17b8eb5c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '5cde9f59', action: 'cast', event: 'cast-start', delay: 0.2, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
   ],
@@ -748,6 +751,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+  // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
+  // difference (Fable 11-19); the rest of the hit draws.
+  '9acdae50': ['Alpha_BgGlow_GreenBrown'],
 };
 
 /**

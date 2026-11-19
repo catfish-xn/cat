@@ -30,7 +30,8 @@ describe('Sevika slot reels (Slots_*_Mirrored, particleUVScrollRate over the ree
   });
   it('switches off the machine each result layer carries, which the board plays once on its own', async () => {
     const layers = ['flamethrower', 'punch', 'thrash', 'jackpot'].map(r => sevikaSkills[`sevika-slots-${r}`][0].system);
-    expect(Object.keys(DISABLED_EMITTERS).sort()).toEqual([...layers].sort());
+    // The reel layers, plus Smeech's stab-hit backdrop (held off as a known difference, Fable 11-19), and nothing else.
+    expect(DISABLED_EMITTERS).toEqual({ ...Object.fromEntries(layers.map(layer => [layer, ['Alpha_Boarder']])), '9acdae50': ['Alpha_BgGlow_GreenBrown'] });
     const index = { version: 1, systems: { [layers[3]]: 'systems/a.json', other: 'systems/b.json' }, assets: { 'synthetic.tex': 'textures/a.png' }, skills: {} };
     const library = createVfxLibrary('/r/', { readJson: async (url: string) => url.endsWith('index.json') ? index
       : syntheticSystem({ emitterName: { type: 'string', value: 'Alpha_Boarder' } }), readTexture: async () => new Texture() });
