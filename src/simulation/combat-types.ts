@@ -45,6 +45,8 @@ export interface CombatUnit {
   readonly targetEngaged?: true;
   /** Melee attack hex this unit is committed to. Kept until that hex is settled or the target changes. */
   readonly meleeApproach?: { readonly targetId: string; readonly cell: HexCell };
+  /** A ranged attack started and winding up (cast-windup.ts rangedAttackWindupTicks): its target and the launch tick. */
+  readonly windup?: { readonly targetId: string; readonly launchTick: number };
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
   readonly madChemist?: import('./augment-pool-batch5-r4').MadChemistRuntime;
   readonly batch5RebelPulseAtTick?: number;

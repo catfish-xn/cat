@@ -154,6 +154,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'abilityMarker': return { ...envelope, ...pick(event, ['type', 'unitId', 'marker', 'arrivalTick']), cell: cellView(event.cell) };
     case 'carryChanged': return { ...envelope, ...pick(event, ['type', 'holderId', 'targetId', 'carried']) };
     case 'attackLaunched': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'arrivalTick', 'projectile']) };
+    case 'attackWindup': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'launchTick']) };
+    case 'attackWindupCancelled': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'attackLanded': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'hit']) };
     case 'abilityEffectEnded': return { ...envelope, ...pick(event, ['type', 'unitId', 'effect']), targetIds: [...event.targetIds] };
   }
