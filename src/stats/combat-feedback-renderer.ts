@@ -51,16 +51,33 @@ const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.1, STACK_GAP = 6, EARLY_FAD
  * the stack pushes into a bar, or that would stand on another unit's bar, steps sideways out past that bar's end.
  */
 const BAR_SIDESTEP_GAP = 3;
+/** How many of the nearest bar-free spots a number tries for one also free of other units' numbers (own value). */
+const NUMBER_TRIES = 4;
 /**
- * The crit mark left of a crit (自绘，非原版素材): an angular, lopsided impact shard with a few thick spikes, leaning
- * towards the number; solid, a shade darker than the number, with the number's dark edge.
+ * The crit mark left of a crit (自绘，非原版素材), drawn here as a vector: solid, a shade darker than the number (or darker
+ * and redder), with the number's dark edge, about 0.8 of the digits' height, just left of the number.
+ * Two candidates for the user to pick from: B2, a lopsided shard (thick on one side, three thin spikes towards the number);
+ * D, a slanted claw tear (about 35°, pointed at both ends, a few notches on its lower edge).
  */
-export const CRIT_MARK_PATH = 'M6 7L4 1 11 5 23 1 17 10 23 17 14 16 10 23 7 15 1 12Z';
-const MARK_SHADE = 0.78;
-const shade = (color: string) => `#${[1, 3, 5].map(i => Math.round(parseInt(color.slice(i, i + 2), 16) * MARK_SHADE).toString(16).padStart(2, '0')).join('')}`;
-const badge = (color: string, path = CRIT_MARK_PATH) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='${path}' fill='${shade(color)}' stroke='rgba(0,0,0,.9)' stroke-width='1.4'/></svg>`)}")`;
+export interface CritMark { readonly path: string; readonly viewBox: readonly [number, number, number, number]; readonly tint: 'darker' | 'redder' }
+export const CRIT_MARKS: Readonly<Record<'B2' | 'D', CritMark>> = {
+  B2: { path: 'M1 8L6 5 9 7 22 1 13 10 21 13 12 15 17 23 7 18 3 20 2 15 0 12Z', viewBox: [-0.5, 0, 24, 24], tint: 'darker' },
+  D: { path: 'M0.5 19.5L6.3 12.5 12.9 8 23.5 3.5 20.4 9.7 17.2 8.9 16 12.7 12.8 11.9 11.6 15.7 8.4 14.9 6.6 17.8Z', viewBox: [-0.5, 2.5, 24.5, 17.5], tint: 'redder' },
+};
+export const CRIT_MARK: CritMark = CRIT_MARKS.B2;
+/** The mark's height (em of the crit) and its gap to the digits; own values, not original. */
+const MARK_EM = 0.6, MARK_GAP_EM = 0.04;
+const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
+const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
+const tint = (color: string, how: CritMark['tint']) => {
+  const [r, g, b] = channels(color);
+  return how === 'darker' ? hex([r * 0.78, g * 0.78, b * 0.78]) : hex([r * 0.78 + 30, g * 0.62, b * 0.7]);
+};
+const markWidthEm = (mark: CritMark) => MARK_EM * mark.viewBox[2] / mark.viewBox[3];
+const badge = (color: string, mark: CritMark) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='${mark.viewBox.join(' ')}'><path d='${mark.path}' fill='${tint(color, mark.tint)}' stroke='rgba(0,0,0,.9)' stroke-width='1.4'/></svg>`)}")`;
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
-export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
+export function createCombatFeedbackRenderer(host: HTMLElement, options: { readonly critMark?: CritMark } = {}): CombatFeedbackRenderer {
+  const mark = options.critMark ?? CRIT_MARK;
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
@@ -72,14 +89,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.82)}px` : '' };
+      backgroundImage: cls === 'crit' ? badge(color, mark) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * (markWidthEm(mark) + MARK_GAP_EM))}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
     if (!item) {
       const label = document.createElement('span');
       Object.assign(label.style, { position: 'absolute', fontSize: `${l.px}px`, fontWeight: l.fontWeight, fontFamily: FONT_FAMILY, whiteSpace: 'nowrap', textShadow: l.textShadow, color: l.color, pointerEvents: 'none',
-        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: '0.8em 0.8em', paddingLeft: l.paddingLeft });
+        backgroundImage: l.backgroundImage, backgroundRepeat: 'no-repeat', backgroundPosition: 'left center', backgroundSize: `auto ${MARK_EM}em`, paddingLeft: l.paddingLeft });
       item = { label, styles: { color: l.color } };
     } else {
       // Match a fresh label even if it has no anchor, or cannot be placed on its first frame.
@@ -148,6 +165,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       // Per unit, newest first: the newest number on the body, each older one above the one after it.
       const byUnit = new Map<string, { item: Float; anchor: FeedbackAnchor; half: number }[]>();
       for (const entry of measured) { const list = byUnit.get(entry.item.unitId); if (list) list.unshift(entry); else byUnit.set(entry.item.unitId, [entry]); }
+      // Numbers placed so far this frame, so a later unit's number keeps clear of an earlier unit's.
+      const placed: { unitId: string; rect: FeedbackObstacle }[] = [];
       for (const list of byUnit.values()) {
         let above = Infinity;
         list.forEach(({ item, anchor, half }, place) => {
@@ -162,16 +181,23 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
           above = y - size / 2;
           const scale = pop * shrink, w = half * scale;
-          // A canvas label or any unit's bar in the way: the number steps sideways out past it (the nearer side), never up.
-          // Bars side by side (or overlapping) are cleared together: the nearest spot past an end of any of them that no rect covers.
+          // A canvas label or any unit's bar in the way: the number steps sideways (never up) to the nearest spot past an end
+          // of one of them that no bar or label covers, so bars side by side are cleared together. Another unit's number
+          // already placed is avoided the same way, over the NUMBER_TRIES nearest such spots; when none of those is free of
+          // numbers too, it takes the nearest bar-free one and may overlap a number a little (never a bar).
           const fit = (at: number) => Math.max(w, Math.min(width - w, at));
-          const row = [...obstacles, ...bars.values()].filter(rect => Math.abs(rect.y - y) < rect.h / 2 + size / 2);
-          const clear = (at: number) => !row.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
+          const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - y) < rect.h / 2 + size / 2;
+          const hard = [...obstacles, ...bars.values()].filter(inRow);
+          const soft = placed.filter(other => other.unitId !== item.unitId && inRow(other.rect)).map(other => other.rect);
+          const free = (rects: readonly FeedbackObstacle[]) => (at: number) => !rects.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
+          const clearHard = free(hard), clearSoft = free(soft);
           let x = fit(anchor.x);
-          if (!clear(x)) {
-            const spots = row.flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit).filter(clear);
-            if (spots.length) x = spots.reduce((best, at) => Math.abs(at - anchor.x) < Math.abs(best - anchor.x) ? at : best);
+          if (!clearHard(x) || !clearSoft(x)) {
+            const spots = [x, ...[...hard, ...soft].flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit)]
+              .filter(clearHard).sort((a, b) => Math.abs(a - anchor.x) - Math.abs(b - anchor.x)).slice(0, NUMBER_TRIES);
+            if (spots.length) x = spots.find(clearSoft) ?? spots[0]!;
           }
+          placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
           const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
           style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
           style(item, 'transform', scale === 1 ? 'translate(-50%, -50%)' : `translate(-50%, -50%) scale(${scale.toFixed(3)})`);
