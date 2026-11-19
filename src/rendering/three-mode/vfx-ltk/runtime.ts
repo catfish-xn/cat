@@ -284,6 +284,39 @@ export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, 
   const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
   return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
 }
+/** Rule ticks a flight by distance takes (TimelineCue.flightTicks): `cells` is the hex distance, in cells. */
+export function flightTicksFor(cells: number, perCell: number, min: number): number {
+  return Math.max(min, Math.ceil(cells * perCell - 1e-9));
+}
+/** A board cell, as the rules name it (column, row). */
+export interface HexCell { readonly col: number; readonly row: number }
+/** The rules' hex distance between two cells (src/simulation/board.ts hexDistance; a test keeps the two equal). */
+export function hexDistance(a: HexCell, b: HexCell): number {
+  const aq = a.col - Math.floor(a.row / 2), bq = b.col - Math.floor(b.row / 2), dq = aq - bq, dr = a.row - b.row;
+  return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+}
+/** The board cell a world point stands on (hex-layout.ts: odd rows sit half a cell to the right). */
+export function cellAt(at: WorldPoint, board: RowBoard): HexCell {
+  const row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  return { row, col: Math.round((at[0] - board.origin.x) / (Math.sqrt(3) * board.radius) - (((row % 2) + 2) % 2) / 2) };
+}
+/**
+ * Cells between two standing points for a flight by distance: the rules' hex distance between the cells they stand on,
+ * or, with no board known, the straight distance in cells.
+ */
+export function flightCells(from: WorldPoint, to: WorldPoint, board: RowBoard | null): number {
+  return board ? hexDistance(cellAt(from, board), cellAt(to, board)) : Math.hypot(to[0] - from[0], to[2] - from[2]) / BOARD_CELL;
+}
+/**
+ * A cue with TimelineCue.flightTicks, its times set for a flight over `cells` cells (one rule tick = 50 ms). Null cells (its
+ * caster or target is gone) takes the shortest flight, so a hit still lands after a flight rather than at once.
+ */
+export function withFlight<T extends TimelineCue>(cue: T, cells: number | null): T {
+  if (!cue.flightTicks) return cue;
+  const { perCell, min } = cue.flightTicks, seconds = (cells === null ? min : flightTicksFor(cells, perCell, min)) * 0.05;
+  if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
+  return { ...cue, delay: cue.delay + seconds };
+}
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
@@ -764,7 +797,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
         let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.strike !== undefined ? `${spawn.targetId}#${spawn.strike}` : spawn.targetId); }
-      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+      for (const { spawn: cued, snapshot: taken, place, atPlace, part, together } of rows) {
+        let spawn = cued;
         const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
@@ -772,6 +806,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // so a cast that kills its target still draws its line (11-13, Gangplank's killing slash drew nothing).
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
+        }
+        // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
+        if (spawn.flightTicks) {
+          const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+          const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
+          spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
