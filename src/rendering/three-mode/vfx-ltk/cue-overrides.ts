@@ -86,6 +86,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // body on him and the zap on each enemy it hits.
   'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],
   'drmundo-zap': [{ system: '56c38cb9', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: chest }],
+  // Nocturne (batch1-events.ts): his strike on each other enemy his empowered swing bleeds, when its first bleed tick lands
+  // (the swing's own target takes it with the swing's hit). Played to its own end (ownLife), like the swing's (C71).
+  'nocturne-tar': [{ system: '6fb6c5e5', action: 'passive', event: 'hit', delay: 0, duration: 1, ownLife: true, bone: chest }],
   'drmundo-zap-body': [{ system: 'b8021b81', action: 'passive', event: 'cast-start', delay: 0, duration: 2, bone: chest }],
   // Trundle's bite and Zyra's vines (batch1-events.ts): their hits play when the damage lands, CAST_WINDUP_TICKS after the cast,
   // on every enemy hit that tick (Zyra's first is her primary target). Cues as in their cast lists before.
@@ -101,6 +104,12 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
+  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a short shot from her gun to the enemy it
+  // hit and the hit there (travel fitted, not original data).
+  'maddie-shot': [
+    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
   // ab66b54f on Blitzcrank himself when his shock's damage lands (was a hand-picked delay after the cast).
   'blitzcrank-shock-self': [{ system: 'ab66b54f', action: 'passive', event: 'cast-start', delay: 0, duration: 1.6, bone: center }],
   'blitzcrank-shock': [
@@ -318,10 +327,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   nocturne: [
     { action: 'attack', system: '0f2af66b', event: 'hit', delay: 0.3, duration: 0.45, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { action: 'cast', system: '97366927', event: 'cast-start', delay: 0, duration: 6, stopAfter: 5.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    // The shadow disc has no linger and was cleared in one frame at stopAfter; the original eases it out over a short fade
-    // (11-08 blind recheck of the empowered swing).
-    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 0.5, stopAfter: 0.1, fadeOut: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
-    { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 0.6, stopAfter: 0.1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // The cleave disc and the strike on the target play their systems' whole own life (ownLife): only a rule event ends an
+    // effect early, and nothing in the rules ends these (Fable 11-18, C71). The disc lies under Nocturne's feet.
+    { action: 'attack', variant: 'empowered', system: '3e224f4a', event: 'cast-start', delay: 0.3, duration: 1, ownLife: true, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
   // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
@@ -344,6 +353,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
+  // Maddie: her volley's shots and hits moved from one estimated time after her cast to each shot's damage (maddie-shot).
+  // Her attack shot leaves her rifle's Weapon_Shooter, as her volley's do: her skeleton has no C_Barrel_Root, which fell back
+  // to her feet (11-18 cue bone scan).
+  maddie: [
+    { system: 'ec4a03aa', action: 'attack', event: 'projectile', bone: 'Weapon_Shooter', delay: 0.23333333333333334, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5333333333333333, duration: 1.5 },
   ],
   // Powder: the target burst and explosion moved from fixed times after her cast to her blast's damage (CUE_EXTRA_SKILLS powder-blast).
   powder: [
