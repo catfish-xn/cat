@@ -32,7 +32,7 @@ const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
 import { AnimationMixer } from 'three';
-import { CRIT_MARKS, createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
+import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
 // Animation clocks (Fable 11-15): a unit that idles from its model's load (a dummy, a little legend, never recast) carried
 // a phase set by which loading step its model finished on, so separate recordings of one build drew those units in one of
 // two poses (GPU batches 11-15: max diff 96 on the units, 0 on the board). Every three.js mixer that updates is kept here;
@@ -293,10 +293,8 @@ const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col 
 function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[],
   barBox: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined = () => undefined) {
   host.style.position = 'relative';
-  // Recording only (rec branch): ?critmark=B2|D picks a crit mark candidate (自绘，非原版素材).
-  const mark = new URLSearchParams(location.search).get('critmark') as keyof typeof CRIT_MARKS | null;
   (globalThis as any).__floatsDbgOn = true;
-  const feedback = createCombatFeedbackRenderer(host, mark && CRIT_MARKS[mark] ? { critMark: CRIT_MARKS[mark] } : {});
+  const feedback = createCombatFeedbackRenderer(host);
   let now = 0;
   const render = () => {
     const anchors = new Map<string, { x: number; y: number; radius: number }>(), bars = new Map<string, { x: number; y: number; w: number; h: number }>();
