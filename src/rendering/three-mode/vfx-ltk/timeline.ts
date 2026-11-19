@@ -60,6 +60,11 @@ export interface TimelineCue {
    */
   readonly scale?: number;
   /**
+   * It plays as long as its system does on its own (runtime.ts ownSeconds, read from the asset) and is not cut short:
+   * `duration` is only what it keeps where the asset gives no end. Never with `stopAfter`.
+   */
+  readonly ownLife?: boolean;
+  /**
    * A target cue the cast can do without: with no living recipient it is left out instead of
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
    */
