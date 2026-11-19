@@ -121,7 +121,7 @@ export function premultiplyInto(emitter: EmitterModel, color: Float32Array): voi
   if (emitter.customMaterial != null && !emitter.customMaterial.missing) {
     return;
   }
-  // REC ONLY (claude/rec-ground-premult, never merged): ?dgpremult=1 draws ground-layer alpha emitters as premultiplied.
+  // REC ONLY (claude/rec-ground-premult, never merged): ?dgpremult=1 draws ground-layer alpha emitters as premultiplied, =2 every alpha emitter.
   if (groundPremult(emitter)) { for (let channel = 0; channel < 3; channel += 1) color[channel] *= color[3]; return; }
 
   if (distorts(emitter)) return;
@@ -132,7 +132,11 @@ export function premultiplyInto(emitter: EmitterModel, color: Float32Array): voi
 
 /** REC ONLY (never merged): the ground-darkening experiment's switch, set from the page URL (?dgpremult=1) by the harness. */
 export function groundPremult(emitter: EmitterModel): boolean {
-  return (globalThis as { __DG_PREMULT?: boolean }).__DG_PREMULT === true && emitter.groundLayer && emitter.blendMode === BLEND_MODE.alpha;
+  // 1: ground-layer alpha emitters only; 2: every alpha-blend emitter.
+  const mode = (globalThis as { __DG_PREMULT?: number }).__DG_PREMULT ?? 0;
+  // Quads and meshes only (their blend state follows recBlendMode); trails, beams, projections and attached overlays stay.
+  if (emitter.trail || emitter.beam || emitter.projection || emitter.attachedSubmeshes) return false;
+  return emitter.blendMode === BLEND_MODE.alpha && (mode === 2 || (mode === 1 && emitter.groundLayer));
 }
 /** REC ONLY (never merged): the blend mode the GPU state takes, premultiplied under the experiment's switch. */
 export function recBlendMode(emitter: EmitterModel): BlendMode {

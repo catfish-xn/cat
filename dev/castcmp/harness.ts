@@ -37,7 +37,7 @@ AnimationMixer.prototype.update = function (this: AnimationMixer, delta: number)
 (window as any).__resetClocks = () => { for (const m of mixers) m.setTime(0); frameAfter(0); return mixers.size; };
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
 // REC ONLY (claude/rec-ground-premult, never merged): the ground-darkening experiment's switch (vfx-ltk blend.ts groundPremult).
-(globalThis as { __DG_PREMULT?: boolean }).__DG_PREMULT = new URLSearchParams(location.search).get('dgpremult') === '1';
+(globalThis as { __DG_PREMULT?: number }).__DG_PREMULT = Number(new URLSearchParams(location.search).get('dgpremult') ?? 0);
 const probes = installProbes(() => clock);
 const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 (async () => {
