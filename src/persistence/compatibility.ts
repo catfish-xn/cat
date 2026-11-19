@@ -8,6 +8,12 @@ import { validateBattleCollectionSync } from '../replay/history';
 import { recordCombatTranscripts } from '../simulation/augment-history-restore';
 import { hasSaveCompressionMarkers } from './fact-prefix';
 
+/** What a v26 save or replay from before save/replay 10 tells the player (Fable 11-19 wording). */
+export const OLD_SAVE_TEXT = '这是旧版本的存档，不能继续游戏或回放。请开始新的一局；这份旧存档仍可以导出保存。';
+export const OLD_REPLAY_TEXT = '这是旧版本的回放，不能继续游戏或回放。请开始新的一局；这份旧回放仍可以导出保存。';
+/** A v26 file from before save/replay 10: legacy-preserved under the current rules name. */
+export const isOldV26 = (view: CompatibilityView | null | undefined): boolean =>
+  view?.status === 'legacy-preserved' && view.fileRulesVersion === view.currentRulesVersion;
 /** M8_UI_CONTRACT §6: format routing first, then the matching validator; a header alone is never a licence. */
 export type RejectedReason = Extract<CompatibilityView, { status: 'rejected' }>['reason'];
 export type RoutedFile = { readonly view: CompatibilityView; readonly envelope: null; readonly detail?: string } | { readonly view: null; readonly envelope: SaveEnvelope };

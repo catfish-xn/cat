@@ -1,3 +1,4 @@
+import { OLD_REPLAY_TEXT } from '../persistence/compatibility';
 import { MatchSession } from '../rendering/match-session';
 import { createMatch } from '../simulation/match';
 import type { BattleRecord, SaveEnvelope, SaveStatus, SessionChange, SlotToken } from './contracts';
@@ -109,7 +110,10 @@ export class MatchApplication {
       // N2-P2-5: archives enter the replay list only after version/content admission; bad ones are quarantined.
       const admission = admitArchives(envelopes, routeSaveFile), quarantined = [...unreadable, ...admission.quarantined];
       if (current()) { this.archives = admission.records; this.quarantinedArchives = quarantined; this.refreshRecords();
-        if (quarantined.length) this.hooks.status(`已隔离 ${quarantined.length} 个无法读取或版本、内容不兼容的归档，不进入回放列表。`); }
+        // v26 replays from before save/replay 10 say so in plain words (Fable 11-19); the rest keep the generic line.
+        const old = quarantined.filter(q => q.reason === OLD_REPLAY_TEXT).length, other = quarantined.length - old;
+        if (quarantined.length) this.hooks.status([...(old ? [old > 1 ? `${OLD_REPLAY_TEXT}（共 ${old} 份）` : OLD_REPLAY_TEXT] : []),
+          ...(other ? [`已隔离 ${other} 个无法读取或版本、内容不兼容的归档，不进入回放列表。`] : [])].join(' ')); }
     } catch (error) {
       // Handle failures in the same continuation as the identity check: a late
       // rejection must not report failure against a newly activated session.

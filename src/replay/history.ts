@@ -1,3 +1,5 @@
+import { OLD_REPLAY_TEXT, isOldV26 } from '../persistence/compatibility';
+import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { snapshotData } from './snapshot';
 import type { BattleRecord, SaveEnvelope, SessionChange } from '../m6/contracts';
 import type { MatchState } from '../simulation/match-types';
@@ -22,6 +24,8 @@ export function admitArchives(envelopes: readonly unknown[], route: (file: unkno
     const runId = file && typeof file === 'object' && typeof (file as { runId?: unknown }).runId === 'string' ? (file as { runId: string }).runId : '';
     try {
       const routed = route(file);
+      // A v26 replay from before save/replay 10 carries the plain old-version line (Fable 11-19) as its reason.
+      if (isOldV26(routed.view as CompatibilityView | null)) { quarantined.push({ runId, reason: OLD_REPLAY_TEXT }); continue; }
       check(routed.view === null && routed.envelope, '归档版本或内容不兼容');
       const envelope = routed.envelope!;
       check(Array.isArray(envelope.battles) && envelope.battles.every(record => record.runId === envelope.runId), '归档局身份');

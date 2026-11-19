@@ -29,7 +29,7 @@ describe('save/replay 10 (#739 ranged landing): v26 saves and replays written be
       canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
     expect(routeSaveFile(v9()).view).toMatchObject({ status: 'legacy-preserved', reason: 'new-match-required' });
     expect(routeSaveFile(v9()).envelope).toBeNull();
-    expect(compatibilityText(readCompatibility(v9()))).toBe('这是旧格式的存档（远程普攻改为命中才结算之前保存的），只能原样保全导出，不能继续或回放；请开始新局。');
+    expect(compatibilityText(readCompatibility(v9()))).toBe('这是旧版本的存档，不能继续游戏或回放。请开始新的一局；这份旧存档仍可以导出保存。');
   });
 
   it('only the v26 identity is an old version: a damaged header or a different identity is still refused', () => {
@@ -46,5 +46,6 @@ describe('save/replay 10 (#739 ranged landing): v26 saves and replays written be
     expect(admission.records).toEqual([]);
     expect(admission.quarantined).toHaveLength(1);
     expect(admission.quarantined[0]?.runId).toBe('compat-run');
+    expect(admission.quarantined[0]?.reason).toBe('这是旧版本的回放，不能继续游戏或回放。请开始新的一局；这份旧回放仍可以导出保存。');
   });
 });
