@@ -126,6 +126,9 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   // The game's own combat floats (damage by type, shield absorbed, heals, statuses), not a recording-only copy.
+  // Recording only (rec branch): ?critmark=A|B|C picks one of the crit mark candidates to compare (自绘，非原版素材).
+  const CRIT_MARKS: Record<string, string> = { A: 'M6 7L4 1 11 5 23 1 17 10 23 17 14 16 10 23 7 15 1 12Z', B: 'M3 8L12 7 23 2 17 11 23 20 12 16 3 22 7 14Z', C: 'M2 3L12 7 24 11 16 15 13 23 9 17 1 20 5 12Z' };
+  if (params.get('critmark')) (globalThis as { __critMark?: string }).__critMark = CRIT_MARKS[params.get('critmark')!];
   const numbers = params.get('numbers') !== '0' && real ? createGameFloats(host, id => listener.screenBox?.(id), () => real.frames[0]!.map((p: any) => p.id), id => listener.barBox?.(id)) : null;
   if (real) {
     const show = (i: number) => { listener.frame({ ...frame(true), pieces: real.frames[i]! }); };
@@ -306,7 +309,7 @@ function createGameFloats(host: HTMLElement, box: (id: string) => { left: number
       const bar = barBox(id);
       if (bar) bars.set(id, { x: (bar.left + bar.right) / 2 - origin.left, y: (bar.top + bar.bottom) / 2 - origin.top, w: bar.right - bar.left, h: bar.bottom - bar.top });
     }
-    feedback.render(now, anchors, [], bars);
+    feedback.render(now, anchors, [], bars); (window as any).__floatsDbg = { bars: [...bars], anchors: [...anchors] };
   };
   return {
     add(events: any[]) { feedback.push(events, now); render(); },

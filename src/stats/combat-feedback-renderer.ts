@@ -72,7 +72,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
     return { color, px, fontWeight: '900', textShadow: OUTLINE,
-      backgroundImage: cls === 'crit' ? badge(color) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.82)}px` : '' };
+      backgroundImage: cls === 'crit' ? badge(color, (globalThis as { __critMark?: string }).__critMark) : '', paddingLeft: cls === 'crit' ? `${Math.round(px * 0.82)}px` : '' };
   };
   function acquire(l: ReturnType<typeof look>): Label {
     let item = pool.pop();
