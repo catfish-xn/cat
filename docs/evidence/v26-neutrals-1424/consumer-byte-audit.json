@@ -3360,9 +3360,9 @@
     "tests/server/bot-driver-policy-error.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2228,
+      "currentBytes": 2706,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "698b5d6814569530d7be43be1529a4aec367d6a848ce913b63decb9c8255c839",
+      "currentSha256": "651da2cf5562e4ff5909bf765dd938b545d2d72697bc237c920baea66f12ede5",
       "firstDifferentByte": 0
     },
     "tests/server/carousel-room.test.ts": {

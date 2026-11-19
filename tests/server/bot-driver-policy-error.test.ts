@@ -22,7 +22,8 @@ describe('BotDriver policy exception', () => {
     const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: i ? `bot-${i}` : 'seat-1', name: `s${i}`, kind: i ? 'bot' as const : 'human' as const }));
     const room = new Room(seats, { ...ROOM_TIMING_DEFAULTS, roomId: 'policy-error', seed: 7, clock, resolver: new TwoSidedBattleResolver() });
     const steps: BotStepRecord[] = [];
-    const bots = new BotDriver(room, 7, { onStep: record => steps.push(record) });
+    const logged: { level: string; event: string; fields?: Record<string, unknown> }[] = [];
+    const bots = new BotDriver(room, 7, { onStep: record => steps.push(record), logger: (level, event, fields) => logged.push({ level, event, fields }) });
     try {
       room.start();
       for (let n = 0; room.state.round <= 3 && n < 50000; n++) {
@@ -35,6 +36,9 @@ describe('BotDriver policy exception', () => {
       expect(new Set(errors.map(s => s.round)).size).toBe(errors.length);
       expect(fault.thrown).toBe(errors.length);
       expect(steps.some(s => s.seatId !== fault.seatId && s.action !== 'done')).toBe(true);
+      expect(logged).toHaveLength(errors.length);
+      expect(logged.every(l => l.level === 'error' && l.event === 'bot.policy-error' && l.fields?.roomId === 'policy-error'
+        && l.fields?.seatId === fault.seatId && l.fields?.error === 'policy failure' && typeof l.fields?.stack === 'string')).toBe(true);
     } finally { bots.dispose(); room.dispose(); }
   }, 120_000);
 });
