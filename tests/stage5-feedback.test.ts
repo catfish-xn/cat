@@ -190,11 +190,11 @@ describe('stage5 floating text equivalence and DOM work', () => {
     it('numbers only, coloured by damage type (a basic attack too): physical orange, magic cyan-blue, true white, heals green with +', () => {
       const [phys] = labels([damage(1)]), [magic] = labels([{ ...damage(1), damageType: 'magic' }]), [real] = labels([{ ...damage(1), damageType: 'true' }]), [healed] = labels([heal(1)]);
       expect([phys.text, magic.text, real.text, healed.text]).toEqual(['10', '10', '10', '+7']);
-      expect([phys.style.color, magic.style.color, real.style.color, healed.style.color]).toEqual(['#ff9a2e', '#4fd0ff', '#ffffff', '#6ee89a']);
+      expect([phys.style.color, magic.style.color, real.style.color, healed.style.color]).toEqual(['#ff8a24', '#36c4ff', '#ffffff', '#4fdc84']);
       // A bold rounded sans-serif from the system, never a serif face; a thin dark edge and a light shadow.
       expect(phys.style.fontFamily).toMatch(/sans-serif$/); expect(phys.style.fontFamily).not.toMatch(/(^|[ ,"])serif/);
-      expect(Number(phys.style.fontWeight)).toBeGreaterThanOrEqual(800);
-      expect(phys.style.textShadow).toContain('rgba(0,0,0,.85)'); expect(phys.style.textShadow).toContain('0 2px 3px');
+      expect(Number(phys.style.fontWeight)).toBe(900);
+      expect(phys.style.textShadow).toContain('rgba(0,0,0,.9)'); expect(phys.style.textShadow).toContain('0 2px 4px');
     });
     it('absorbed damage shows no number (the bar shows the shield)', () => {
       expect(labels([{ ...damage(1), hpDamage: 0, absorbed: 6 }])).toEqual([]);
@@ -208,9 +208,9 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
       expect(big.text).toBe(plain.text);
       expect(px(big) / px(plain)).toBeCloseTo(1.6, 1);
-      expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#4fd0ff');
+      expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
       // The mark is drawn in the number's own colour, with no black fill.
-      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#ff9a2e'"); expect(decodeURIComponent(big.style.backgroundImage)).not.toContain("fill='#000'");
+      expect(decodeURIComponent(big.style.backgroundImage)).toContain("fill='#ff8a24'"); expect(decodeURIComponent(big.style.backgroundImage)).not.toContain("fill='#000'");
       expect(plain.style.backgroundImage ?? '').toBe('');
       expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
     });
@@ -222,10 +222,13 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const [plain] = labels([damage(1)], 400);
       expect(plain.style.color).not.toBe('#ffffff'); expect(px(plain)).toBe(22);
     });
-    it('every number has a thin dark edge and a light shadow (no heavy ring)', () => {
+    it('every number has a dark edge all round and a drop shadow, so it holds on a bright floor', () => {
       const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
-      for (const edge of ['1px 0 0', '-1px 0 0', '0 1px 0', '0 -1px 0']) expect(shadow).toContain(edge);
-      expect(shadow).not.toContain('1px 1px 0');
+      for (const edge of ['1px 0 0', '-1px 0 0', '0 1px 0', '0 -1px 0', '1px 1px 0', '-1px -1px 0']) expect(shadow).toContain(edge);
+    });
+    it('a number stays fully opaque until its last 300 ms (the newest of a stack too)', () => {
+      for (const now of [0, 300, 600]) expect(Number(labels([crit(1)], now)[0].style.opacity), `at ${now}`).toBe(1);
+      expect(Number(labels([damage(1)], 750)[0].style.opacity)).toBeCloseTo(0.5, 3);
     });
     it('a number appears on its unit\'s body (chest to waist), not above its bar, and rises a little as it fades', () => {
       const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
@@ -256,23 +259,27 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(top(popped) - top(older)).toBeGreaterThanOrEqual((px(popped) * scale(popped) + px(older) * scale(older)) / 2 - 1e-6);
       renderer.dispose();
     });
-    it('a bright number never covers a unit\'s bar: below its own bar by half its height, faint over any bar', () => {
-      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
+    it('a number never covers a unit\'s bar, by where it stands: below its own bar, sideways past another\'s, never faded', () => {
+      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
+      const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
       // A short unit: its body point (300 + 0.35 × 10) is just under its bar (centre 290, 16 tall, so its bottom is 298).
-      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 10 }], ['b', { x: 300, y: 300, radius: 20 }]]);
-      const bars = new Map([['a', { x: 120, y: 290, w: 60, h: 16 }], ['b', { x: 160, y: 300, w: 60, h: 16 }]]);
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 10 }]]);
+      const bars = new Map([['a', { x: 120, y: 290, w: 60, h: 16 }]]);
       renderer.push([damage(1, 'a', 10)], 0);
-      for (const now of [0, 200, 600, 880]) {
+      for (const now of [0, 200, 600]) {
         renderer.render(now, anchors, [], bars);
-        const [label] = snapshot(h)[0].children, size = px(label) * Number(/scale\(([\d.]+)\)/.exec(label.style.transform)?.[1] ?? 1);
-        // Its top is at least half its height under its own bar's bottom (298), from its start to its end.
+        const [label] = snapshot(h)[0].children, size = px(label) * scale(label);
+        // Its top is at least half its height under its own bar's bottom (298), and it is not faded to get there.
         expect(top(label) - size / 2, `at ${now}`).toBeGreaterThanOrEqual(298 + size / 2 - 1e-6);
+        expect(Number(label.style.opacity), `at ${now}`).toBe(1);
       }
       renderer.dispose();
-      // Standing over another unit's bar ('b' bar centred over 'a'), a number shows at half opacity at most.
-      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2);
-      r2.push([damage(1, 'a', 10)], 0); r2.render(200, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', { x: 160, y: 307, w: 80, h: 16 }]]));
-      expect(Number(snapshot(h2)[0].children[0].style.opacity)).toBeLessThanOrEqual(0.5);
+      // Another unit's bar where the number would stand: it steps sideways past the bar's end, at full opacity.
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), other = { x: 160, y: 307, w: 80, h: 16 };
+      r2.push([damage(1, 'a', 10)], 0); r2.render(200, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', other]]));
+      const [moved] = snapshot(h2)[0].children, w = Math.max(20, 9 * moved.text.length / 2) * scale(moved);
+      expect(Math.abs(left(moved) - other.x)).toBeGreaterThanOrEqual(other.w / 2 + w - 1e-6);
+      expect(Number(moved.style.opacity)).toBe(1);
       r2.dispose();
     });
     it('past four numbers on a unit, the earliest fades out early', () => {
