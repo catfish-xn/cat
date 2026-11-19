@@ -9,6 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
+import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
 import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
@@ -228,6 +229,17 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
     if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
+  }
+  // The generic basic-attack hit holds its run only as long as it shows (cue-ranks.ts ATTACK_HIT_SECONDS).
+  for (const [key, cues] of Object.entries(skills ?? index.skills)) {
+    if (!cues?.some(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' && cue.event === 'hit' && cue.duration > ATTACK_HIT_SECONDS)) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' && cue.event === 'hit' && cue.duration > ATTACK_HIT_SECONDS ? { ...cue, duration: ATTACK_HIT_SECONDS } : cue);
+  }
+  // Explicit cast-start ranks (cue-ranks.ts): a label on each listed cast-start of each listed branch.
+  for (const [key, ranks] of Object.entries(CAST_START_RANKS)) {
+    const cues = (skills ?? index.skills)[key];
+    if (!cues?.some(cue => cue.event === 'cast-start' && Object.hasOwn(ranks, cue.system))) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => cue.event === 'cast-start' && Object.hasOwn(ranks, cue.system) ? { ...cue, rank: ranks[cue.system] } : cue);
   }
   return skills ? { ...index, skills } : index;
 }

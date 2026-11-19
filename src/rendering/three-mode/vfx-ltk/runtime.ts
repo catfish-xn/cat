@@ -96,6 +96,11 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
   /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
   refused: {} as Record<string, number>,
   /**
+   * Running decorative runs ended for a newcomer (a hit, a body, a plain attack, a place's run: Fable 11-17), and plain attack
+   * hits ended for an attack's missile (Fable 11-18), by system; `yieldTimes` the runtime clock (s) of each, for picking frames.
+   */
+  yielded: {} as Record<string, number>, yieldTimes: [] as number[],
+  /**
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
    */
@@ -190,6 +195,10 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** One play() call's cue on several targets, a row each (`${play}:${system}`): its rows after the first take no slot (OFF_SLOT_MAX). */
   fan?: string }
 interface Running { reserved: number; system: string; stopped?: boolean;
+  /** Its cue's event (a plain attack's missile may end a plain attack's hit: see the admission loop). */
+  event?: TimelineCue['event'];
+  /** Its cue asked for the decorative rank (TimelineCue.rank): a flourish a plain attack or a place's run may end. */
+  ranked?: boolean;
   /** fadeAction is easing it out: it no longer counts as playing. */
   fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
@@ -466,10 +475,29 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // tickCap instead, and every one of them still needs particle room (crowded's budget check).
       if (!passes && run.strike && run.fan && firstStrike!.get(run.fan) !== run) continue;
       if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /**
+   * The runs whose end frees no system slot: the off-slot room (OFF_SLOT_MAX) and the rows of a perStrike fan while two or
+   * more are left. A newcomer short of slots never ends one to get in (Fable 11-19: Heimerdinger's decorative rocket hits
+   * would be ended for nothing).
+   */
+  const slotFree = () => { const free = new Set<Running>(offSlot()?.keys() ?? []);
+    // A perStrike fan holds its one slot while any of its rows is left: ending any row of a fan with two or more frees
+    // nothing (ending its first only hands the slot to the next one, and a newcomer would end them all for no room).
+    const strikes = new Map<string, Running[]>();
+    for (const run of running) if (run.strike && run.fan) (strikes.get(run.fan) ?? strikes.set(run.fan, []).get(run.fan)!).push(run);
+    for (const rows of strikes.values()) if (rows.length > 1) for (const run of rows) free.add(run);
+    return free; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
     for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /**
+   * A decorative run a plain attack or a place's run may end (Fable 11-18): one its cue ranked decorative (Malzahar's 3-star
+   * edges) or one that is not a cast's (a passive glow). A cast's own short flourish (Ambessa's chain swipe, a cast-start
+   * under CAST_BODY_SECONDS) is the skill showing: only a hit or a body may still end it, as before.
+   */
+  const yieldsToAttack = (run: Running) => run.importance === 'decorative' && !run.persistent && (!!run.ranked || run.action !== 'cast');
+  const countYield = (system: string) => { LTK_RUN_STATS.yielded[system] = (LTK_RUN_STATS.yielded[system] ?? 0) + 1; if (LTK_RUN_STATS.yieldTimes.length < 500) LTK_RUN_STATS.yieldTimes.push(clock); };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -885,7 +913,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           || (row.fan && [...running].some(run => run.fan === row.fan) && (row.spawn.perStrike || (offSlot()?.size ?? 0) < OFF_SLOT_MAX)) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
-        const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
+        const slotsFull = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS;
+        const crowded = () => slotsFull() || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
@@ -916,17 +945,41 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!tail) break;
           leave(tail);
         }
+        // A run at a dead target's place only takes free room, but a flourish gives way to it (Fable 11-17): it may end the
+        // earliest decorative run that is not itself at a place, never an attack, a body, damage or another place's run.
+        while (atPlace && crowded()) {
+          let flourish: Running | undefined;
+          // Short of slots, only a run that holds one may give way (slotFree); short of budget alone, any flourish may.
+          const free = slotsFull() ? slotFree() : null;
+          for (const run of running) if (yieldsToAttack(run) && !run.atPlace && !free?.has(run)) { flourish = run; break; }
+          if (!flourish) break;
+          countYield(flourish.system); leave(flourish);
+        }
         while (!atPlace && blocked()) {
           // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
           let spare: Running | undefined;
           for (const run of running) if (run.atPlace && (!spare || run.started < spare.started)) spare = run;
           if (spare && crowded()) { leave(spare); continue; }
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
-          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
+          // A plain attack weighs only the flourishes it may end (yieldsToAttack): a skill's own cast flourish counts as a body.
+          // Short of slots, a run that holds none (slotFree) is never the one to end: it would free nothing.
+          const free = slotsFull() ? slotFree() : null;
+          const decision = admitEffect([...running].map(run => run.persistent || free?.has(run) ? 'critical'
+            : importance === 'attack' && run.importance === 'decorative' && !yieldsToAttack(run) ? 'body' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
-          if (!decision.admit) break;
+          if (!decision.admit) {
+            // A plain attack's missile with no flourish left to end ends the earliest plain attack's hit (Fable 11-18): a
+            // dropped missile shows damage with nothing flying to it. Missiles never end missiles, hits never end hits.
+            if (importance === 'attack' && spawn.event === 'projectile') {
+              let hit: Running | undefined;
+              for (const run of running) if (run.importance === 'attack' && run.event === 'hit' && !run.persistent && !run.atPlace) { hit = run; break; }
+              if (hit) { countYield(hit.system); leave(hit); continue; }
+            }
+            break;
+          }
           const victim = [...running][decision.evict];
           if (!victim) break;
+          if (victim.importance === 'decorative') countYield(victim.system);
           leave(victim);
         }
         if (blocked()) {
@@ -992,7 +1045,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
             playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
