@@ -24,10 +24,17 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
     expect(stops.next(status('leona', 'damage-reduction', 'dispelled'))).toEqual([{ by: 'source', id: 'leona', systems: ['8d9a4ccc'] }]);
   });
 
-  it('Jayce\'s hexgate attack speed ends on the ally whose buff ran out, whoever cast it', () => {
+  it('Jayce\'s forge glow ends with the attack speed his cast gave, at his forge (where it plays), not on the ally', () => {
     const stops = createSustainStops(id => DEFS[id]);
+    const jayceCast = { type: 'cast', tick: 10, eventSeq: 10, sourceId: 'jayce', targetIds: ['foe'] } as unknown as DisplayCombatEvent;
+    expect(stops.next(jayceCast)).toEqual([]);
     expect(stops.next(status('ally', 'stat-buff', 'applied'))).toEqual([]);
-    expect(stops.next(status('ally', 'stat-buff', 'expired'))).toEqual([{ by: 'target', id: 'ally', systems: ['afb2ec69'] }]);
+    expect(stops.next(status('jayce', 'stat-buff', 'applied'))).toEqual([]);
+    expect(stops.next(status('ally', 'stat-buff', 'expired', 70))).toEqual([{ by: 'source', id: 'jayce:g23-forge', systems: ['afb2ec69'] }]);
+    // Once per buffed unit; a buff no forge gave (applied on another tick) ends nothing.
+    expect(stops.next(status('ally', 'stat-buff', 'expired', 71))).toEqual([]);
+    expect(stops.next(status('foe', 'stat-buff', 'applied', 30))).toEqual([]);
+    expect(stops.next(status('foe', 'stat-buff', 'expired', 90))).toEqual([]);
   });
 
   it('Vex\'s area waits for her second direct hit on that target, and a death forgets the first', () => {
@@ -102,5 +109,26 @@ describe('fallback caps of held layers (Fable 11-19)', () => {
     expect([...SUSTAIN_READMIT]).toEqual(allFight);
     // Held all fight long: never quietly gone after a short cap.
     for (const system of [...allFight, '56e6971e']) expect(SUSTAIN_CAPS[system]).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe('a rule stop finds the runs it ends (Fable 11-19: Jayce\'s glow waited for its cap)', () => {
+  it('a stop keyed by target only lists systems played on their target (hit cues); a cast-start run has none', () => {
+    const cues = Object.values(CUE_OVERRIDES).flat();
+    for (const [name, rule] of Object.entries(CUE_RULE_STOPS) as [string, { systems: unknown; on: string }][]) {
+      if (rule.on !== 'target') continue;
+      const systems = Array.isArray(rule.systems) ? rule.systems as string[]
+        : Object.values(rule.systems as Record<string, unknown>).flatMap(v => Array.isArray(v) ? v as string[] : (v as { systems: string[] }).systems);
+      for (const system of systems) {
+        const played = cues.filter(cue => cue.system === system);
+        expect(played.length, `${name} ${system}`).toBeGreaterThan(0);
+        for (const cue of played) expect(cue.event, `${name} ${system}`).toBe('hit');
+      }
+    }
+  });
+  it('Jayce\'s forge glow is stopped at the source the bridge plays it from', async () => {
+    const { jayceForgeSource } = await import('../src/rendering/three-mode/vfx-ltk/sustain-stops');
+    expect(jayceForgeSource('j')).toBe('j:g23-forge');
+    expect(CUE_RULE_STOPS.allyStatusEnded.on).toBe('source');
   });
 });

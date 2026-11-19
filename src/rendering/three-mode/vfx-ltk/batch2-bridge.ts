@@ -1,3 +1,4 @@
+import { jayceForgeSource } from './sustain-stops';
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { BoardFrame } from '../../board-feed';
 import type { LtkPlayOptions } from './runtime';
@@ -85,7 +86,7 @@ export function createBatch2VfxBridge(host: Host) {
           // beneficial status receipts, not a second nearest-allies selection.
           const recipients = effects.filter(e => e.type === 'statusChanged' && e.kind === 'stat-buff' && (e.reason === 'applied' || e.reason === 'refreshed'))
             .flatMap(e => e.type === 'statusChanged' ? [e.targetId] : []);
-          if (unit.form === 'back' && recipients.length) play(champion, `${source}:g23-forge`, recipients, 'jayce-forge-back');
+          if (unit.form === 'back' && recipients.length) play(champion, jayceForgeSource(source), recipients, 'jayce-forge-back');
         }
         return handled;
       }
