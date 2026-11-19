@@ -86,11 +86,23 @@ export const LTK_WARMING = { pending: 0 };
  * its warm pass: the most systems running at once, and starts and drops by system. A drop is a cue that missed its
  * moment (overdue) or found no room and could not wait. Counting only; nothing reads them to decide.
  */
+const recWhy = (spawn: { system: string; sourceId: string; action?: string }, importance: string, why: string) => {
+  const key = `${spawn.system}|${spawn.sourceId}|${spawn.action ?? 'cast'}|${importance}|${why}`;
+  LTK_RUN_STATS.dropWhy[key] = (LTK_RUN_STATS.dropWhy[key] ?? 0) + 1;
+};
 export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, number>, dropped: {} as Record<string, number>,
   /** Cues a cast played without, by `${system} ${reason}` (LtkSkipReason): the rest of that cast still played. */
   skipped: {} as Record<string, number>,
   /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
   refused: {} as Record<string, number>,
+  /**
+   * REC ONLY baseline: no yields on this head (decor-yields not in); kept for board-shot.cjs, always empty.
+   */
+  yielded: {} as Record<string, number>, yieldTimes: [] as number[],
+  /** REC ONLY (claude/rec-drop-why, never merged): each drop's reasons, by `${system}|${source}|${importance}|${why}`. */
+  dropWhy: {} as Record<string, number>,
+  /** REC ONLY: the board at each drop other than the generic attack hit (who holds the slots, how much room is used). */
+  dropScenes: [] as unknown[],
   /**
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
@@ -817,7 +829,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
           && [...running].every(run => run.together !== row.together || run.atPlace)));
         const countMiss = atPlace ? countPlaceDrop : countDrop;
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
+        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); recWhy(spawn, importance, 'overdue'); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
@@ -927,7 +939,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             if (row.waitingSince < clock && !heldRoom.some(wait => wait.key === groupKey)) heldRoom.push({ rank, key: groupKey, need });
             waiting.splice(at, 0, row); at++;
           }
-          else { countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } }
+          else {
+            const slotsFull = slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS, budgetFull = !!(options.budget && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
+            if (spawn.system !== '0f2af66b' && LTK_RUN_STATS.dropScenes.length < 80) LTK_RUN_STATS.dropScenes.push({ t: +clock.toFixed(3), system: spawn.system, source: spawn.sourceId, action: spawn.action ?? 'cast', importance, atPlace,
+              slotsFull, budgetFull, shared, slotsNow: slotsNow(), heldSlots, need, heldNeed, budgetLive: options.budget?.live, reserved: reservedNow(), budgetMax: options.budget?.max,
+              running: [...running].map(run => `${run.system}|${run.source}|${run.action}|${run.importance}${run.persistent ? '|P' : ''}${run.atPlace ? '|@' : ''}|${run.reserved}`) });
+            recWhy(spawn, importance, `${slotsFull ? 'slots' : ''}${budgetFull ? (shared ? 'sharedBudget' : 'ltkBudget') : ''}${starts + partners.length >= 6 ? 'starts' : ''}${atPlace ? '@place' : ''}|live${slotsNow()}|need${need}`);
+            countMiss(spawn.system); for (const other of partners) { countMiss(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); }
+          }
           continue;
         }
         const host = spawn.event === 'hit' ? target : source;
