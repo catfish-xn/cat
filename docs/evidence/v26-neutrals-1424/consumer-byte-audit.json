@@ -4524,9 +4524,9 @@
     "tests/vfx-ltk-smeech-stabs.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2872,
+      "currentBytes": 2934,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1964ac66c569b028d681df63970efecf4eccdb85f60eba6bd73492b36b49c06e",
+      "currentSha256": "88ac5bf554221e3c0f602bc5c9da911b03c8f0213044b7a2921b95a50fe0b8ec",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-steb-heal.test.ts": {
