@@ -1881,3 +1881,10 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - 依据：原版里来源离场后已挂上的持续效果的去留，没有找到干净依据；这里按"照常跳完、归属原来源"处理（推断），不是原版对照结果。
 - 存读档：`departedUnits` 只会出现在壕沟和异常这两类按整局重放校验的战斗里，别的战斗带这个字段直接判无效；校验器里按 id 找来源的地方改成找不到就判存档无效（以前是直接报错）。
 - 实现：`src/simulation/effect-source.ts`。测试 `tests/departed-effect-source.test.ts`、`tests/server/departed-effect-source-seeds.test.ts`。
+
+## 房间有几项状态不在 RoomState 里（2026-11-19 登记，不改）
+
+- 房间对象里有几项私有字段不在 RoomState 中：本回合备战开始时刻、是否已采样过备战时钟、本阶段原始截止时刻、战斗中换装的流水号、每个席位上一场战斗的记录（强化获取时要用）。
+- 线上目前没有"从状态恢复房间"的路径，房间只在内存里一路跑下去，所以玩家不受影响。
+- 只有录制脚本和测试用"新建房间 + 直接设置 current"恢复检查点；这些字段丢了会和真房间不一样（例：种子 20261014 第 23 回合检查点恢复后备战时长算成整局时长，报 seat-stuck augment-clock:invalid-pool）。检查点现在额外带上这些字段（`tests/server/room-checkpoint.ts`，录制脚本同步）。
+- 以后如果做断线重连、服务重启后重建房间，这些字段必须先进 RoomState。

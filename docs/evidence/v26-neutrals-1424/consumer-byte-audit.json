@@ -3353,10 +3353,10 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 13741,
+      "currentBytes": 14096,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "d2c6f261bf046e5d1ccf8f18e29c47b2b377669351119051c9c5ec49d7db0834",
-      "firstDifferentByte": 809
+      "currentSha256": "3ddbb177f0b508d2214e4b174833b59750d7eb46aa8a1e87c39ca0ded56fafe0",
+      "firstDifferentByte": 623
     },
     "tests/server/bot-driver-helper.ts": {
       "previousBytes": 17124,
@@ -3631,6 +3631,22 @@
       "previousSha256": "46b20a81fd6a3ffdc94b76bfdfa095feb662236f54bee8dee5b659473361a34d",
       "currentSha256": "0274c0c3e0403f481fab8bc55d3b5efae5893b292ac54cf023350fc3fe4660dc",
       "firstDifferentByte": 2288
+    },
+    "tests/server/room-checkpoint-seed-20261014.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3802,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8060fd4056a4759ea5916973cb474de9945498deecabbcad7ba8f6e71d3e3190",
+      "firstDifferentByte": 0
+    },
+    "tests/server/room-checkpoint.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2040,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "baabe3a77bb0e157cd0261d00e1c296c988ffab00e54fbba807dbb6e8fd1bd0d",
+      "firstDifferentByte": 0
     },
     "tests/server/room-streak-ledger.test.ts": {
       "previousExists": false,
