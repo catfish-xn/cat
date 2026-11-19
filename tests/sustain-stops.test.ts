@@ -3,6 +3,7 @@ import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createSustainStops } from '../src/rendering/three-mode/vfx-ltk/sustain-stops';
 import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAMILLE_KICK_TICKS as SIM_CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
+import { CAST_WINDUP_TICKS as SIM_CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 const status = (targetId: string, kind: string, reason: string, tick = 10) =>
   ({ type: 'statusChanged', tick, eventSeq: tick, targetId, kind, effectiveMagnitudeBps: 0, reason }) as unknown as DisplayCombatEvent;
@@ -63,5 +64,19 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
   it('Camille\'s heal layer waits for her kick, the same ticks the simulation waits', () => {
     expect(CAMILLE_KICK_TICKS).toBe(SIM_CAMILLE_KICK_TICKS);
     expect(CUE_OVERRIDES.camille!.find(cue => cue.system === '174f1125')!.delay).toBe(CAMILLE_KICK_TICKS / 20);
+  });
+});
+
+describe('skill bodies that never yield their slot (Fable 11-19)', () => {
+  it('Mordekaiser\'s aura and LeBlanc\'s channel are played at the critical rank', async () => {
+    const { effectImportance } = await import('../src/rendering/three-mode/effect-budget');
+    for (const [champion, system] of [['mordekaiser', '938c104f'], ['leblanc', 'acd84091']] as const) {
+      const cue = CUE_OVERRIDES[champion]!.find(c => c.system === system)!;
+      expect(cue.rank).toBe('critical');
+      expect(effectImportance(cue)).toBe('critical');
+    }
+    // Mordekaiser's aura starts with his slam's damage, which the rules deal at the cast tick (no wind-up for him).
+    expect(CUE_OVERRIDES.mordekaiser!.find(c => c.system === '938c104f')!.delay).toBe(0);
+    expect(Object.hasOwn(SIM_CAST_WINDUP_TICKS, 'mordekaiser')).toBe(false);
   });
 });

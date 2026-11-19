@@ -28,9 +28,10 @@ export interface TimelineCue {
   readonly main?: boolean;
   /**
    * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
-   * visual that must not crowd skill impacts out (Steb's heal share). A display priority decision, not original data.
+   * visual that must not crowd skill impacts out (Steb's heal share); or a cast-start body held at the critical rank so it
+   * never yields its slot (Mordekaiser's aura, LeBlanc's channel: Fable 11-19). A display priority decision, not original data.
    */
-  readonly rank?: 'body';
+  readonly rank?: 'body' | 'critical';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */

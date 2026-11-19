@@ -29,7 +29,7 @@ const SUSTAIN_INDEX: Record<string, TimelineCue[]> = {
   amumu: [{ system: '56e6971e', event: 'cast-start', delay: 0, duration: 0.9, stopAfter: 0.7 }],
   ekko: [{ system: '5af49b76', event: 'hit', delay: 0, duration: 0.5 }],
 };
-const SUSTAIN_OVERRIDDEN = ['twitch', 'garen'];
+const SUSTAIN_OVERRIDDEN = ['twitch', 'garen', 'mordekaiser'];
 const SINGED_BUFF = 'singed_tft13_singed_base_w_ally_buf';
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -270,6 +270,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     { champion: 'loris', system: 'e22b48b0', on: 'a', end: tick => shield('loris-ability', tick) },
     { champion: 'garen', system: 'ea21ae27', on: 'a', end: tick => shield('garen-ability', tick) },
     { champion: 'twitch', system: '2beb0657', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'twitch-volley', targetIds: [] }) as unknown as DisplayCombatEvent },
+    { champion: 'leblanc', system: 'acd84091', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'leblanc-chain', targetIds: ['b'] }) as unknown as DisplayCombatEvent },
+    { champion: 'mordekaiser', system: '938c104f', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'mordekaiser-empower', targetIds: [] }) as unknown as DisplayCombatEvent },
     { champion: 'draven', system: 'd86cc9bc', on: 'a' },
     { champion: 'amumu', system: '56e6971e', on: 'a' },
     { champion: 'ekko', system: '5af49b76', on: 'b' },
