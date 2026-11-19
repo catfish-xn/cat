@@ -72,7 +72,7 @@ export interface UnclaimedOrbView {
 }
 export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }
-  | { readonly status: 'legacy-preserved'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: 'm5-14.24b-v1'|'m8-14.24b-v1'; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: true; readonly reason: 'new-match-required' }
+  | { readonly status: 'legacy-preserved'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: 'm5-14.24b-v1'|'m8-14.24b-v1'|M8Version['rulesVersion']; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: true; readonly reason: 'new-match-required' }
   | { readonly status: 'rejected'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: string | null; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: boolean; readonly reason: 'unsupported-version' | 'digest-mismatch' | 'invalid-data' | 'capacity-exceeded' };
 /** R3: domain-resolved current effects; UI never evaluates AbilityPlan. */
 export interface CombatStatusesView {

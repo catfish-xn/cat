@@ -3,11 +3,17 @@ import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { CONTENT_DIGEST } from '../simulation/content';
 import { validateMatchStructure } from '../simulation/serialization-structure';
-import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION, PRIOR_M8_SAVE_FORMAT_VERSION } from '../simulation/m8/version';
+import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, LEGACY_V26_FORMATS, M8_VERSION, PRIOR_M8_SAVE_FORMAT_VERSION } from '../simulation/m8/version';
 import { validateBattleCollectionSync } from '../replay/history';
 import { recordCombatTranscripts } from '../simulation/augment-history-restore';
 import { hasSaveCompressionMarkers } from './fact-prefix';
 
+/** What a v26 save or replay from before save/replay 10 tells the player (Fable 11-19 wording). */
+export const OLD_SAVE_TEXT = '这是旧版本的存档，不能继续游戏或回放。请开始新的一局；这份旧存档仍可以导出保存。';
+export const OLD_REPLAY_TEXT = '这是旧版本的回放，不能继续游戏或回放。请开始新的一局；这份旧回放仍可以导出保存。';
+/** A v26 file from before save/replay 10: legacy-preserved under the current rules name. */
+export const isOldV26 = (view: CompatibilityView | null | undefined): boolean =>
+  view?.status === 'legacy-preserved' && view.fileRulesVersion === view.currentRulesVersion;
 /** M8_UI_CONTRACT §6: format routing first, then the matching validator; a header alone is never a licence. */
 export type RejectedReason = Extract<CompatibilityView, { status: 'rejected' }>['reason'];
 export type RoutedFile = { readonly view: CompatibilityView; readonly envelope: null; readonly detail?: string } | { readonly view: null; readonly envelope: SaveEnvelope };
@@ -19,7 +25,7 @@ const plain = (value: unknown): value is Record<string, unknown> =>
 
 export const currentView = (): CompatibilityView => ({ status: 'current', currentRulesVersion: M8_VERSION.rulesVersion,
   fileRulesVersion: M8_VERSION.rulesVersion, canResume: true, canReplay: true, canExportOriginal: true, reason: null });
-const legacyView = (version:typeof LEGACY_M7_VERSION|typeof LEGACY_M8_VERSION=LEGACY_M7_VERSION): CompatibilityView => ({ status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion,
+const legacyView = (version:{ readonly rulesVersion: typeof LEGACY_M7_VERSION.rulesVersion|typeof LEGACY_M8_VERSION.rulesVersion|typeof M8_VERSION.rulesVersion }=LEGACY_M7_VERSION): CompatibilityView => ({ status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion,
   fileRulesVersion: version.rulesVersion, canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
 /** A parsed file holds no stored original bytes, so a rejected file is never offered for export here. */
 export const rejectedView = (reason: RejectedReason, fileRulesVersion: string | null): CompatibilityView => ({ status: 'rejected',
@@ -49,6 +55,13 @@ export function routeSaveFile(input: unknown): RoutedFile {
   }
   const saveFormat = input.saveFormatVersion;
   const replayFormat = input.replayFormatVersion;
+  // v26 saves/replays from before #739's format 10 (same identity, older format): an old version, not damaged data.
+  if ((LEGACY_V26_FORMATS.saveFormatVersions as readonly unknown[]).includes(saveFormat) && replayFormat === LEGACY_V26_FORMATS.replayFormatVersion
+    && match && MATCH_HEADER.every(key => match[key] === M8_VERSION[key])) {
+    const valid = Object.keys(input).sort().join('|') === KEYS && typeof input.runId === 'string' && typeof input.createdAt === 'string'
+      && Array.isArray(input.battles) && (input.currentBattle === null || plain(input.currentBattle));
+    return valid ? { view: legacyView(M8_VERSION), envelope: null } : reject('invalid-data', fileRules);
+  }
   if (saveFormat !== M8_VERSION.saveFormatVersion && saveFormat !== PRIOR_M8_SAVE_FORMAT_VERSION) return reject('unsupported-version', fileRules);
   if (replayFormat !== M8_VERSION.replayFormatVersion) return reject('unsupported-version', fileRules);
   if (saveFormat === PRIOR_M8_SAVE_FORMAT_VERSION && hasSaveCompressionMarkers(input)) return reject('invalid-data', fileRules);

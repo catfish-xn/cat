@@ -1,3 +1,4 @@
+import { OLD_SAVE_TEXT, isOldV26 } from './compatibility';
 import type { SaveStatus } from '../m6/contracts';
 import type { CompatibilityView, LegacyListResult, LegacyRecord, M8SaveControlsCallbacks } from '../simulation/m8/ui-contracts';
 import { parseSeed } from './seed';
@@ -31,6 +32,8 @@ const LEGACY_FAILURE: Record<string, string> = {
 export function compatibilityText(view: CompatibilityView | null | undefined): string {
   if (!view) return '';
   if (view.status === 'current') return `存档版本 ${view.fileRulesVersion}：可继续对局与回放。`;
+  // v26 files from before save/replay 10 share the current rules name: plain wording, no version string.
+  if (isOldV26(view)) return OLD_SAVE_TEXT;
   if (view.status === 'legacy-preserved') return `这是旧版（${view.fileRulesVersion}）对局，只能原样保全导出，不能继续或回放；请开始新局。`;
   return `未导入：${REJECTED[view.reason]}（文件规则 ${view.fileRulesVersion ?? '未知'}，当前 ${view.currentRulesVersion}）。当前对局保持不变。`;
 }
