@@ -88,6 +88,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const mundo = new Map<string, { target: string | undefined; ended: number }>();
   /** Renni: the enemy she lifted, until her final slam lands, and the tick she set it down (-1 while held). */
   const grabs = new Map<string, { held: string; down: number }>();
+  /** Mordekaisers whose cast's empowered time is running (from the cast to the rules' mordekaiser-empower end). */
+  const empoweredMorde = new Set<string>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -95,7 +97,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); empoweredMorde.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -271,6 +273,11 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // Mordekaiser: his attacks while his cast's empowered time runs are his empowered ones (the mace glow, CUE_OVERRIDES).
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'mordekaiser') empoweredMorde.add(event.sourceId);
+        if (event.type === 'abilityEffectEnded' && event.effect === 'mordekaiser-empower') empoweredMorde.delete(event.unitId);
+        if (event.type === 'death') empoweredMorde.delete(event.unitId);
+        if (event.type === 'attack' && empoweredMorde.has(event.attackerId)) plan.variant = 'empowered';
         if (!tracked) return plan;
         if (event.type === 'cast' && event.completed !== false) {
           const champion = definition(event.sourceId), state = unit(event.sourceId);
