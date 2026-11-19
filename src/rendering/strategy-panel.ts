@@ -59,7 +59,7 @@ import { forgeProgressText, masterworkOffer, type MasterworkOptionDisplay, type 
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
-import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
+import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, g23ItemsReady, itemDisplayName, loadG23Items, onG23ItemsChanged } from '../presentation/g23-display';
 import { counted, g23RewardIcons, g23RewardLines } from '../presentation/g23-reward-text';
 import { rewardItemMarkHtml } from '../presentation/reward-item-mark';
 import { readG23Progress } from '../simulation/g2-3-state';
@@ -176,6 +176,7 @@ const starMark = (star: number) => element('span', starText(star), `star-mark st
 export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => itemDisplayName(id);
+export const G23_ITEMS_LOADING_TEXT = '物品信息加载中…';
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? (ITEM_DEFINITIONS[id] ? itemDisplayName(id) : undefined) ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? (ANOMALY_DEFINITIONS[id] ? anomalyDisplayName(id) : undefined) ?? '未知来源';
@@ -290,7 +291,7 @@ export class StrategyPanel {
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
-    this.disposers.push(attachItemPopover(this.root, 'item-popover', isOnline() ? { pin: true, longPress: hoverAction } : {}), onAugmentTextChanged(() => this.render()), onTooltipTextChanged(() => {
+    this.disposers.push(attachItemPopover(this.root, 'item-popover', isOnline() ? { pin: true, longPress: hoverAction } : {}), onAugmentTextChanged(() => this.render()), onG23ItemsChanged(() => { this.choiceToken = ''; this.render(); }), onTooltipTextChanged(() => {
       const state = this.actions.state();
       if (state.augments.length || state.pendingChoice?.kind === 'augment') this.render();
     }));
@@ -1116,6 +1117,13 @@ export class StrategyPanel {
       return;
     }
     this.clearChoiceDismissal();
+    // Item names and descriptions show for the first time only once their chunk is here (2D bundle split, g23-display.ts):
+    // it is prefetched after the first screen, so this line shows only on a slow or failing network.
+    if (choice.kind !== 'augment' && choice.kind !== 'anomaly' && !g23ItemsReady()) {
+      this.choiceToken = ''; this.modal.hidden = false;
+      this.modal.replaceChildren(element('p', G23_ITEMS_LOADING_TEXT, 'choice-loading'));
+      void loadG23Items(); return;
+    }
     const values = choice.kind === 'augment' ? this.dynamicValues(state) : {};
     const anomalyTargets = choice.kind === 'anomaly' && choice.step === 'target' ? anomalyTargetUnits(state) : [];
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : choice.targetId}:${anomalyTargets.map(unit => unit.id).join(',')}`;

@@ -119,8 +119,17 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     console.info('solo JS gzip-9:', soloChunks.reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
     const uiChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/ui/'));
     expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
+    // 2D bundle split (11-19): the stats and carousel panels are UI chunks of their own code; they may import only what the
+    // static entry already holds, and never rules or simulation code.
+    const PANEL_CHUNK = /\/src\/(?:stats\/stats-panel|rendering\/online\/carousel-panel)\.ts$/;
     for (const chunk of uiChunks) {
       expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
+      if (chunk.moduleIds.some(id => PANEL_CHUNK.test(normalize(id)))) {
+        expect(chunk.imports.filter(name => !staticPaths.has(name)), 'a split panel may only import chunks already in the static entry graph').toEqual([]);
+        expect(chunk.moduleIds.map(normalize).filter(id => /\/src\/simulation\//.test(id)), 'a split panel must not take rules code along').toEqual([]);
+        expect(allPaths.has(chunk.fileName), 'a split panel must be reachable on demand').toBe(true);
+        continue;
+      }
       if (chunk.moduleIds.some(id => /\/team-planner\//.test(normalize(id)))) {
         expect(chunk.imports.filter(name => !staticPaths.has(name)),
           'planner may only import chunks already in the static entry graph').toEqual([]);
@@ -130,6 +139,11 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
       expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
     }
+    for (const module of ['/src/stats/stats-panel.ts', '/src/rendering/online/carousel-panel.ts', '/src/presentation/s13-g23-items.ts']) {
+      const owner = chunks.filter(chunk => chunk.moduleIds.some(id => normalize(id).endsWith(module)));
+      expect(owner.map(chunk => chunk.fileName.startsWith('assets/ui/')), `${module} must be in one on-demand UI chunk`).toEqual([true]);
+    }
+    expect(staticModuleIds.filter(id => id.endsWith('/src/rendering/online/carousel-holding.ts')).length, 'the holding slot stays in the main bundle').toBe(1);
     const confiscation = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/src/presentation/confiscation-display.ts')));
     expect(confiscation, 'confiscation display must be in an on-demand UI chunk').toBeDefined();
     console.info('2D JS gzip-9:', chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
@@ -160,10 +174,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
     console.info('2D entry JS gzip-9:', gzip2d);
-    // Ranged attack landing (2026-11-18, Fable-approved one-off raise of this number only): the rule's simulation code and its
-    // display events grow the 2D entry by about 0.75 KB gzip (636 414 → 637 159); the limit moves from 637 144 by 2 KB.
-    // No rendering3d module enters the 2D entry (the isolation assertions above are unchanged).
-    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(639_192);
+    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))

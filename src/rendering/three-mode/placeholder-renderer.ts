@@ -63,7 +63,7 @@ import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CARRY_HOLDS, CarryMotion, CONTROL_3D, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
+import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
@@ -878,8 +878,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const flash = spareFlashes.pop() ?? createHitFlash(); flash.reset();
     scene.add(flash.object); flashes.push({ flash, view });
   };
-  const placeFlash = (flash: HitFlash, view: PieceView) => flash.object.position.copy(view.root.position)
-    .setY(view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset);
+  // On the drawn body (hitFlashSpot): its chest or nearest torso bone moves with a clip that raises the body, a lunge or a
+  // carry (a lunged caster's flash was left at her legs, 11-17); a body without one keeps the old mid-height spot.
+  const torsoBones = new WeakMap<object, Object3D | null>();
+  const placeFlash = (flash: HitFlash, view: PieceView) => hitFlashSpot(view.body, view.root.position,
+    view.root.position.y + (view.starHeight - STAR_GAP) * 0.55 + view.liftOffset, flash.object.position, torsoBones);
   /** Parked stun rings. Control feedback is never counted against the effect cap. */
   const spareHalos: StunHalo[] = [];
   const SPARE_HALOS = 16;
