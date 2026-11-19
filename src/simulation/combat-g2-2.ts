@@ -195,6 +195,9 @@ export function startG22Traits(ctx:AbilityContext):void {
   }
 }
 export function advanceG22Traits(ctx:AbilityContext):void {
+  // Display only: Mordekaiser's empowered time ran out (it lasts while mordeUntilTick > tick).
+  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))if(champion(u)==='mordekaiser'&&(u.g22?.mordeUntilTick??0)>0&&u.g22!.mordeUntilTick===ctx.tick)
+    ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'mordekaiser-empower',targetIds:[]});
   for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))for(const m of u.mechanics??[]){
     if(m.mechanic==='enforcer'){
       const state=g22(u),count=state.wanted.filter(id=>ctx.units.some(x=>x.id===id&&!x.alive)).length;

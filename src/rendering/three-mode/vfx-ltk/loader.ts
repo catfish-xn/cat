@@ -9,7 +9,7 @@ import type { TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -225,6 +225,16 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
     if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
+  }
+  // Persistent layers held until their rule event (SUSTAIN_CAPS): the cue runs up to its cap, with no stop of its own.
+  const current = skills ?? index.skills;
+  for (const [key, cues] of Object.entries(current)) {
+    if (!cues?.some(cue => Object.hasOwn(SUSTAIN_CAPS, cue.system))) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => {
+      if (!Object.hasOwn(SUSTAIN_CAPS, cue.system)) return cue;
+      const { stopAfter: _stop, ...rest } = cue;
+      return { ...rest, duration: SUSTAIN_CAPS[cue.system] };
+    });
   }
   return skills ? { ...index, skills } : index;
 }
