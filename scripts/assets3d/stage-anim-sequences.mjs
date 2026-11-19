@@ -25,10 +25,10 @@ export const DEFAULT_EXCLUDES = new Set([
  * Casts whose spell data names no clip (a spell script picks them). The graph keys below were chosen against gameplay
  * video and the clips' own events:
  * - ezreal: his cast stands still, pulls back and fires; that is Spell3_In (it carries the cast particle) then
- *   Spell3_Out (to the graph's own end frame). The Spell2_* keys are the blink, whose forward root motion made the
- *   model jump forward and snap back.
+ *   Spell3_Out (to the graph's own end frame). Another group of his clips is a movement, not this cast, so it is not
+ *   played.
  * - warwick: his cast rears up in place and then claws, no displacement: BloodFrenzy_Activate. The clip we played
- *   before, under the key Devour_Dash, is the execute leap, not the cast.
+ *   before was the dash-and-bite one, not this cast.
  * - mel: her cast dashes, then fires bolts. Spell1_Blast starts from the pose Spell_Dash ends in, so the two chain as
  *   Spell_Dash then Spell1_Blast. (Spell2 is left out: it carries a separate warning sound.)
  * Each list is played as a Sequencer, so the graph's own frame ranges still apply.

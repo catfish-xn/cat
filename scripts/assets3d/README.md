@@ -389,7 +389,7 @@ unit map 条目可配置 `formAnimations`（`front` / `back` 下按 `idle` / `mo
 已部署的资产根可用 `node scripts/assets3d/stage-form-animations.mjs --assets <已部署根> --model <id> --donor <未压缩 glb> --form-animations '<json>' --out-dir <目录>` 补齐缺失的形态动作片段并重新压缩输出 `<out-dir>/models/<id>/model.glb` 与 `<out-dir>/manifest.json`（不写回原目录）。
 已部署的资产根还可用 `node scripts/assets3d/stage-anim-sequences.mjs --assets <已部署根> --extracted <解包根> --metadata-root <元数据根> --out-dir <目录>` 按解包出来的动画图（`Atomic` / `Sequencer` / `Parallel`）自动生成 `castSequence`、多段普攻 `attackSequence`、并行层 `layers` 与同源多段裁切别名 `clipSegments`，并将缺失的 `.anm` 动作片段转换追加至 `<out-dir>/models/<id>/model.glb`。已有 `castVariants.hero` 的英雄按 `<施法>Hero` 技能数据里指向的片段重解析（与默认施法相同则删去 hero 变体；数据里没写片段、带帧区间或与 `clipRanges` 冲突则保留现状，可用 `--exclude <id>:hero` 跳过）。
 
-技能数据里没写片段（由技能脚本选片段）的施法，动画图里看不出顺序；核对过视频的英雄写在脚本的 `SCRIPT_CAST_GRAPH_KEYS`（按图键列出，按 Sequencer 播，图里的帧区间照常生效）。目前只有伊泽瑞尔：`Spell3_In` → `Spell3_Out`（原地抬手发射；`Spell2_*` 是 E 闪现，带前冲根位移）。
+技能数据里没写片段（由技能脚本选片段）的施法，动画图里看不出顺序；核对过视频的英雄写在脚本的 `SCRIPT_CAST_GRAPH_KEYS`（按图键列出，按 Sequencer 播，图里的帧区间照常生效）。目前只有伊泽瑞尔：`Spell3_In` → `Spell3_Out`（原地抬手发射；另一组片段是位移动作，不属于该技能，故不播）。
 
 真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。
 
