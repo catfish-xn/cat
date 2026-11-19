@@ -76,8 +76,8 @@ export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 
 /**
  * Heimerdinger's rockets, one a rule strike (combat-g2-2.ts strikes once per rocket, all on the cast tick today): the k-th of
  * n leaves HEIMER_ROCKETS.launchTicks plus its stagger after the mana bar empties and lands flightTicks later, so it lands at
- * cast tick + heimerRocketLandTick(k, n). 4 + 10 = 14 ticks (0.7 s) keeps the exported cue's launch at 0.2 s, flight 0.5 s and
- * hit at 0.7 s for the first rocket. Stagger 1 tick a rocket, the whole volley squeezed into 9 ticks (0.45 s) when it has
+ * cast tick + heimerRocketLandTick(k, n). The first rocket keeps the launch, flight and hit of the exported cue; the
+ * stagger is 1 tick a rocket, the whole volley squeezed into 9 ticks (0.45 s) when it has
  * more than 10 rockets. All designed display values (Fable 11-19), not original data.
  * This is the one definition of when each rocket lands. When the rules move each rocket's damage to its landing
  * (Fable 11-19 (b), L2), the rules side gets a copy in src/simulation/cast-windup.ts beside CAST_WINDUP_TICKS, and a test
@@ -586,8 +586,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   warwick: warwickSkills.warwick,
   // Exported to the asset index (0c59) and repeated as exported, but for the cast's W_Mis rocket and W_Tar hit: one each
   // per rule strike (perStrike), staggered by HEIMER_ROCKETS and each flying its own side-then-in curve to its own target,
-  // where the export flew one rocket to the first target and hit every target at once (11-19 original Aub1UkT6uYM: 10-20
-  // rockets in the air). The rockets are body rank (Fable 11-19). Curve sizes are designed, not traced from the original.
+  // where the export flew one rocket to the first target and hit every target at once (the original footage, Aub1UkT6uYM,
+  // shows many rockets in the air at once). The rockets are body rank (Fable 11-19). Curve sizes are designed, not traced
+  // from the original.
   heimerdinger: [
     { system: '9ad2672c', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.20078125, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.50078125, duration: 1.5 },
