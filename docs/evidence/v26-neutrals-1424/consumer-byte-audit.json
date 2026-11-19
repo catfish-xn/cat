@@ -1753,6 +1753,13 @@
       "currentSha256": "648fe54d5a408503d80cc63238631204106bd992de9ed9318ee6fd8583e39711",
       "firstDifferentByte": 0
     },
+    "tests/m6-stats-browser.cjs": {
+      "previousBytes": 7309,
+      "currentBytes": 7429,
+      "previousSha256": "24aa083a3ba77a23742ab925530c71b2a9f7557112c9d4feead84788c56a5cfa",
+      "currentSha256": "a7a2468340099864ce35062c2f1fb153eeaf231f3d27c8d174e76b898246d95d",
+      "firstDifferentByte": 6829
+    },
     "tests/m7-fx-plan.test.ts": {
       "previousBytes": 3096,
       "currentBytes": 3635,
