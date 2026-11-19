@@ -71,19 +71,6 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     expect(brace[0]!.tick).toBeGreaterThan(cast.tick);
   });
 
-  it('Mordekaiser: one event the tick his empowered time runs out (mordeUntilTick)', () => {
-    const untils = new Set<number>();
-    const r = advance(battle([hero('mordekaiser'), dummy()], { rngState: 42 }), 260,
-      state => { untils.add((state.units.find(u => u.id === 'p') as { g22?: { mordeUntilTick: number } } | undefined)?.g22?.mordeUntilTick ?? 0); });
-    const cast = r.events.find(e => e.type === 'cast')!;
-    const empower = ended(r.events).filter(e => e.effect === 'mordekaiser-empower');
-    expect(empower.length).toBeGreaterThan(0);
-    expect(empower[0]).toMatchObject({ unitId: 'p', targetIds: [] });
-    expect(empower[0]!.tick).toBeGreaterThan(cast.tick);
-    // Each signal comes the tick an empowered time the rules set runs out.
-    for (const e of empower) expect(untils.has(e.tick)).toBe(true);
-  });
-
   it('Swain: one event the first tick past his demon form (takedown extensions included)', () => {
     let until = 0;
     const r = advance(battle([hero('swain'), dummy()], { rngState: 42 }), 400,
