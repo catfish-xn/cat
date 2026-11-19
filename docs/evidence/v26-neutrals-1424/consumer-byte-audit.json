@@ -3102,9 +3102,9 @@
     "tests/save9-replay9-rejection.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2521,
+      "currentBytes": 3606,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "755a481c76a0b308bfd5a46104971bcf98b3d9c94113f0834ef9bf7da3b330b6",
+      "currentSha256": "7f6688bdfaec4033c3b0b1ff9d0889a20daf91706badfc00c3a87a0f40333123",
       "firstDifferentByte": 0
     },
     "tests/scout-minimap.test.ts": {
