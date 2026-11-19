@@ -2292,6 +2292,13 @@
       "currentSha256": "9c0f5f1f64ee286929aeb199ea62aa28f3e29dd2cb648be81367f86455f8e3c8",
       "firstDifferentByte": 0
     },
+    "tests/presentation/augment-text-loader.test.ts": {
+      "previousBytes": 5834,
+      "currentBytes": 7930,
+      "previousSha256": "88a21226bf66ed7addc64b0d5e011ecfc6f23f6559a1e7ebf5d52a34307d8978",
+      "currentSha256": "c3f1cfc4ef8136a206884445b3e44bca72627c3f801e83bd21141c75d398a1c0",
+      "firstDifferentByte": 1235
+    },
     "tests/presentation/choice-fallback.test.ts": {
       "previousBytes": 8401,
       "currentBytes": 8431,
