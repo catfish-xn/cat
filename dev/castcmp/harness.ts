@@ -36,6 +36,8 @@ const mixerUpdate = AnimationMixer.prototype.update;
 AnimationMixer.prototype.update = function (this: AnimationMixer, delta: number) { mixers.add(this); return mixerUpdate.call(this, delta); };
 (window as any).__resetClocks = () => { for (const m of mixers) m.setTime(0); frameAfter(0); return mixers.size; };
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
+// REC ONLY (claude/rec-degrade-ab, never merged): ?degrade=N|off sets the LTK pass degrade threshold (runtime.ts ltkRenderNeeds).
+{ const d = new URLSearchParams(location.search).get('degrade'); if (d) (globalThis as { __LTK_DEGRADE_AT?: number }).__LTK_DEGRADE_AT = d === 'off' ? Infinity : Number(d); }
 const probes = installProbes(() => clock);
 const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 (async () => {

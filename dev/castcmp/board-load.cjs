@@ -21,7 +21,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   const errors = [], warnings = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); else if (m.type() === 'warning' && m.text().startsWith('vfx-ltk')) warnings.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?board=${board}&foes=${foes}&star=${star}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?board=${board}&foes=${foes}&star=${star}${opt('degrade') ? `&degrade=${opt('degrade')}` : ''}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 180000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   const info = await page.evaluate(() => window.__h.board); if (!info.combatStart) throw new Error('board combat without combat start'); mark(`harness ready: ${info.ticks} ticks, ${info.casts} casts`);
@@ -50,7 +50,9 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
     const events = await import('/src/rendering/three-mode/vfx-ltk/batch1-events.ts').catch(() => null);
     const run = runtime?.LTK_RUN_STATS, shots = events?.CAITLYN_SHOT_STATS;
     if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {} }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
-    return { run: run ? JSON.parse(JSON.stringify(run)) : null, caitlynShots: shots ? { ...shots } : null };
+    // REC ONLY: the degrade counts (runtime.ts LTK_DEGRADE_STATS), cleared with the rest.
+    const degrade = runtime?.LTK_DEGRADE_STATS; if (clear && degrade) Object.assign(degrade, { frames: 0, atThreshold: 0, degraded: 0 });
+    return { run: run ? JSON.parse(JSON.stringify(run)) : null, caitlynShots: shots ? { ...shots } : null, degrade: degrade ? { ...degrade } : null };
   }, reset);
   await admission(true);
   const perSecond = [];
@@ -63,7 +65,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   const frame = perSecond.map(r => r.frameMs).sort((a, b) => a - b);
   const final = await stats();
   const counters = await admission();
-  const report = { board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
+  const report = { degradeAt: opt('degrade') ?? 'code', board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
     frameMs: { mean: +(frame.reduce((a, b) => a + b, 0) / frame.length).toFixed(1), median: frame[frame.length >> 1], p95: frame[Math.floor(frame.length * 0.95)], max: frame[frame.length - 1] },
     afterWarm, final, admission: counters, perSecond, warnings: [...new Set(warnings)], errors };
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2));

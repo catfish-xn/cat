@@ -18,7 +18,7 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
   const browser = await chromium.launch(launch.options);
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?board=${board}&foes=${foes}&star=${star}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?board=${board}&foes=${foes}&star=${star}${opt('degrade') ? `&degrade=${opt('degrade')}` : ''}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 180000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   const info = await page.evaluate(() => window.__h.board); mark(`ready ${info.ticks} ticks`);

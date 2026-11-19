@@ -121,12 +121,21 @@ export const MIN_RESERVE = 24;
  */
 export const LTK_PASS_DEGRADE_AT = 4;
 export interface LtkPassFlags { readonly early: boolean; readonly late: boolean; readonly soft: boolean }
+/** REC ONLY (claude/rec-degrade-ab, never merged): per-frame degrade counts, read by dev/castcmp board-load.cjs. */
+export const LTK_DEGRADE_STATS = { frames: 0, atThreshold: 0, degraded: 0 };
 export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags }[], slots = systems.length): { early: boolean; late: boolean; soft: boolean } {
   const needs = { early: false, late: false, soft: false };
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
+  // REC ONLY: ?degrade=N|off (dev/castcmp harness sets __LTK_DEGRADE_AT) overrides the threshold for the experiment.
+  const at = (globalThis as { __LTK_DEGRADE_AT?: number }).__LTK_DEGRADE_AT ?? LTK_PASS_DEGRADE_AT;
+  LTK_DEGRADE_STATS.frames++;
+  if (slots >= at) {
+    LTK_DEGRADE_STATS.atThreshold++;
+    if (needs.late || needs.soft) LTK_DEGRADE_STATS.degraded++;
+    return { early: needs.early, late: false, soft: false };
+  }
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
