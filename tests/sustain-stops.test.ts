@@ -138,5 +138,7 @@ describe('LeBlanc\'s channel without its dark backdrop (Fable 11-19 known differ
   it('holds off only Alpha_Glow of acd84091; the rest of the system draws', async () => {
     const { DISABLED_EMITTERS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
     expect(DISABLED_EMITTERS['acd84091']).toEqual(['Alpha_Glow']);
+    // Mordekaiser's aura: only its dark ground glow (Fable 11-19).
+    expect(DISABLED_EMITTERS['938c104f']).toEqual(['Alpha_Glow_Dark']);
   });
 });

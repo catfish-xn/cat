@@ -3718,9 +3718,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10056,
+      "currentBytes": 10196,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "544a16e3222f0e7dfe8b8b810b1434f9b55e73c67a33bd4b6898d742aa0b0e86",
+      "currentSha256": "b9b9d4ef7be1abc43bf4cf9a41fb7cfb54fcccaf9a52e3d815c4e46465d9248f",
       "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {
@@ -4500,9 +4500,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4722,
+      "currentBytes": 4755,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6425ec82a587040b2d0e26c9331eb64e641a765f29eeffb76c4aaee46afc7332",
+      "currentSha256": "87db81e750582eb9b649f229588fcb94ee1ad167b818e1de3f6c820a86fa6c26",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {

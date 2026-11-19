@@ -726,6 +726,9 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // this emitter darkens that spot). A temporary departure held off as a known difference until its look is checked
   // (Fable 11-19); the rest of the system draws.
   'acd84091': ['Alpha_Glow'],
+  // Mordekaiser's aura: its dark ground glow draws a dark red smudge beside him on our board (Windows probe 11-19: it is the
+  // main cause there). Held off as a known difference like LeBlanc's (Fable 11-19); the red glow, scorch and cracks draw.
+  '938c104f': ['Alpha_Glow_Dark'],
 };
 
 /**
