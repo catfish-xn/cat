@@ -74,7 +74,9 @@ it.each([
   // P0 retention moved the old kills at 255/225. v26 melee pathing moves the
   // contribution case to tick 410; public position vectors retain curse and +0/+15 checks.
   { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
+  // Ranged attack landing (#739): Morgana (6,7) no longer gives the contribution kill; Morgana (5,7) keeps the same
+  // Sion kill of enemy-r4-2 at tick 410 (same seed and Cassiopeia/Vladimir cells).
+  { contribution: true, seed: 5, cells: [{ col: 5, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.

@@ -160,13 +160,15 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   // v26 14.24 neutrals (568eeea4): the five restored 4-7 razorbeaks kill the lone paid Tristana before her
   // first lethal bounce on every route scanned. Buy ordinary shop units with the remaining gold and field
   // them in the front row; only Tristana grows, so the growth assertions are unchanged.
+  // #739 (ranged basic attacks settle on landing): with that row-4 screen the player now loses 4-7 and is eliminated (8 -> 0
+  // HP), so the Continue below has no next round. The same units in the same column order one row back (row 5) win 4-7.
   for(let slot=0;slot<state.shop.slots.length;slot++){
    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=state.level)break;
    const offer=state.shop.slots[slot];if(offer.status!=='available'||offer.definitionId==='tristana')continue;
    const bought=api.buyUnit(state,slot,state.shop.generation);if(!bought.ok)continue;state=bought.state;
    const unit=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId===offer.definitionId).at(-1);if(!unit)continue;
-   const col=[3,2,4,1,5,0,6].find(col=>!state.preparation.units.some(x=>x.location.kind==='board'&&x.location.cell.col===col&&x.location.cell.row===4))!;
-   state=accepted(api.deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:4}}));
+   const col=[3,2,4,1,5,0,6].find(col=>!state.preparation.units.some(x=>x.location.kind==='board'&&x.location.cell.col===col&&x.location.cell.row===5))!;
+   state=accepted(api.deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:5}}));
   }
   return {initial:state,unitId};
  });

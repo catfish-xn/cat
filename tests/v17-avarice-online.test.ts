@@ -77,9 +77,15 @@ it('acquired online Avarice uses combat-time trading samples for damage and repr
   expect(live.sampleBankGold('A', bank.gold)).toBe(false);
   const result = live.advance(1201)!, control = fixed.advance(1201)!;
   expect(result.bankSamples).toEqual([{ tick: 1, team: 'player', liveGold: spent }, { tick: 1, team: 'player', liveGold: bank.gold }]);
-  const attack = (r: BattleResult) => r.events.find(e => e.type === 'packetDamage' && e.tick > 1
-    && e.outcome.context.source.ownerId === input.preparation.units.find(u => u.team === 'player')!.id
-    && e.outcome.context.source.sourceKind === 'attack');
+  // #739: the player's Lux is ranged, so her basic attack settles when the shot lands with her side (Avarice amplifier
+  // included) taken on the attack tick. The shot launched at tick 1 carries the gold of that tick in both runs; take the
+  // first shot launched after the tick-1 samples (was: the first attack damage after tick 1).
+  const attack = (r: BattleResult) => {
+    const ownerId = input.preparation.units.find(u => u.team === 'player')!.id;
+    const shot = r.events.find(e => e.type === 'attackLaunched' && e.attackerId === ownerId && e.tick > 1);
+    return shot?.type === 'attackLaunched' ? r.events.find(e => e.type === 'packetDamage' && e.tick === shot.arrivalTick
+      && e.outcome.context.source.ownerId === ownerId && e.outcome.context.source.sourceKind === 'attack') : undefined;
+  };
   const low = attack(result), high = attack(control);
   expect(low?.type).toBe('packetDamage'); expect(high?.type).toBe('packetDamage');
   if (low?.type !== 'packetDamage' || high?.type !== 'packetDamage') throw new Error('Missing real attack');

@@ -32,6 +32,7 @@ const stripAssetChecks: Plugin = {
   },
 };
 // 3D 单独加载模式：three.js 和 3D 渲染代码只经 three-loader.ts 动态 import，统一落在 assets/3d/。
+// 2D 拆包（11-19）：统计面板、选秀面板、G2-3 物品名表各自按需加载，落在 assets/ui/，首屏后空闲预取（presentation/lazy-chunk.ts）。
 // scripts/m7-budget.cjs 统计 assets/ 顶层的 JS；按需 3D、单人应用分别单列。
 // application-loader.ts 只在单人模式动态加载 application.ts，在线启动不请求 assets/solo/。
 // augment-dynamic-values 的客户端计算只供单机显示，由强化文本 loader 按需加载。
@@ -69,7 +70,7 @@ export default defineConfig(({ mode }) => ({
   build: { rollupOptions: { output: {
     // One build key: a second one silently replaced this whole block and dropped the Phaser chunk (v16 trim).
     manualChunks: id => (AUGMENT_UI_DATA.test(id) ? 'augment-text' : TOOLTIP_UI_DATA.test(id) ? 'tooltip-text' : THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
-    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel', 'pvp-damage', 'team-planner', 'confiscation-display', 'merge-fx'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    chunkFileNames: chunk => (['application', 'augment-dynamic-values'].includes(chunk.name) ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text', 'unit-panel', 'pvp-damage', 'team-planner', 'confiscation-display', 'merge-fx', 'stats-panel', 'carousel-panel', 's13-g23-items'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
     // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
     assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },

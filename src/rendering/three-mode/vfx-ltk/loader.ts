@@ -9,7 +9,7 @@ import { withAttackFlight, type TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -273,9 +273,10 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id];
-      const model = disabled || whole ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
-        : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null } : e) } : parsed;
+      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
+      const model = disabled || whole || heldOn ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+        : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
+        : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null } : e) } : parsed;
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.

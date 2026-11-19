@@ -18,7 +18,8 @@ import { ANOMALY_SELL_BLOCKED } from '../strategy-panel';
 import { anomalyDisplayName } from '../../presentation/g23-display';
 import { augmentDisplayName } from '../../presentation/augment-display';
 import type { ReplaySnapshot } from '../../replay';
-import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
+import { CarouselHoldingSlot, readHeldCarouselUnits } from './carousel-holding';
+import { LazyCarouselPanel } from './carousel-panel-loader';
 import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishPlayerDamage, publishScout, setBoardLegends, setBoardWarmHints } from '../board-feed';
 import type { PvpDamageFeedback } from '../../presentation/pvp-damage';
 import { readLegendChoice } from '../legend-choice';
@@ -94,7 +95,7 @@ export class OnlineApplication implements SceneApplication {
   private minimap: ScoutMinimap;
   /** TFT: the opponent's chosen augments on their side of the board during my PvP battle (lazy chunk). */
   private opponentAugments: import('./opponent-augment-strip').OpponentAugmentStrip | null = null;
-  private carousel: CarouselPanel;
+  private carousel: LazyCarouselPanel;
   private carouselHolding: CarouselHoldingSlot;
   /** G5: battle ranking (right column) and the preparation economy hint. */
   private summary: BattleSummaryPanel;
@@ -156,7 +157,7 @@ export class OnlineApplication implements SceneApplication {
       this.opponentAugments = new module.OpponentAugmentStrip(document.getElementById('board-root') ?? frame);
       this.syncOpponentAugments();
     }).catch(() => undefined);
-    this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot), () => this.syncCarouselMode());
+    this.carousel = new LazyCarouselPanel(frame, slot => this.pickCarousel(slot), () => this.syncCarouselMode(), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
     this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });

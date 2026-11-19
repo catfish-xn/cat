@@ -1,10 +1,10 @@
 import { loadTooltipText } from '../../src/presentation/tooltip-text-loader';
 import { beforeAll } from 'vitest';
 import { loadAugmentText } from '../../src/presentation/augment-text-loader';
-beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText(), loadG23Items()]));
 import { describe, expect, it } from 'vitest';
 import { genericOffer, isShopChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
-import { itemDisplayName } from '../../src/presentation/g23-display';
+import { itemDisplayName, loadG23Items } from '../../src/presentation/g23-display';
 import { itemDescriptions } from '../../src/presentation/item-codex';
 import { G24_FORGE_POOLS } from '../../src/simulation/content/g2-4-forges';
 import { G24_ARTIFACT_ITEMS } from '../../src/simulation/content/g2-4-artifacts';
