@@ -32,7 +32,7 @@ const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
 import { AnimationMixer } from 'three';
-import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
+import { CRIT_MARKS, createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
 // Animation clocks (Fable 11-15): a unit that idles from its model's load (a dummy, a little legend, never recast) carried
 // a phase set by which loading step its model finished on, so separate recordings of one build drew those units in one of
 // two poses (GPU batches 11-15: max diff 96 on the units, 0 on the board). Every three.js mixer that updates is kept here;
@@ -293,7 +293,9 @@ const hexOf = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col 
 function createGameFloats(host: HTMLElement, box: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined, ids: () => readonly string[],
   barBox: (id: string) => { left: number; top: number; right: number; bottom: number } | null | undefined = () => undefined) {
   host.style.position = 'relative';
-  const feedback = createCombatFeedbackRenderer(host);
+  // Recording only (rec branch): ?critmark=B2|D picks a crit mark candidate (自绘，非原版素材).
+  const mark = new URLSearchParams(location.search).get('critmark') as keyof typeof CRIT_MARKS | null;
+  const feedback = createCombatFeedbackRenderer(host, mark && CRIT_MARKS[mark] ? { critMark: CRIT_MARKS[mark] } : {});
   let now = 0;
   const render = () => {
     const anchors = new Map<string, { x: number; y: number; radius: number }>(), bars = new Map<string, { x: number; y: number; w: number; h: number }>();
@@ -306,7 +308,7 @@ function createGameFloats(host: HTMLElement, box: (id: string) => { left: number
       const bar = barBox(id);
       if (bar) bars.set(id, { x: (bar.left + bar.right) / 2 - origin.left, y: (bar.top + bar.bottom) / 2 - origin.top, w: bar.right - bar.left, h: bar.bottom - bar.top });
     }
-    feedback.render(now, anchors, [], bars);
+    feedback.render(now, anchors, [], bars); (window as any).__floatsDbg = { bars: [...bars], anchors: [...anchors] };
   };
   return {
     add(events: any[]) { feedback.push(events, now); render(); },
