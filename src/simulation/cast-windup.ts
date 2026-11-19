@@ -61,3 +61,21 @@ export const RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION: Readonly<Record<string, nu
 export function rangedAttackFlightTicks(hexes: number, championId = ''): number {
   return Math.max(1, Math.ceil(hexes * (RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION[championId] ?? RANGED_ATTACK_TICKS_PER_HEX)));
 }
+
+/** Ranged attack wind-up (fitted / self-chosen, not original data; user-approved 11-19): ticks from a ranged hero's attack start (its
+ * animation and cooldown) to the launch of its shot, our animation's fire frame (the attack projectile cue) / 50 ms, rounded, at most
+ * RANGED_ATTACK_WINDUP_MAX (self-chosen: a later fire frame is shown with the swing sped up so it fires on the launch tick). Never
+ * more than half the current attack interval; not scaled by attack speed in this first version. docs/S13_RULES_GAP.md (远程普攻前摇). */
+export const RANGED_ATTACK_WINDUP_MAX = 7;
+export const RANGED_ATTACK_WINDUP_DEFAULT = 5;
+export const RANGED_ATTACK_WINDUP_TICKS: Readonly<Record<string, number>> = Object.freeze({
+  lux: 5, zyra: 7, tristana: 4, urgot: 5, kogmaw: 5, ezreal: 6, nami: 6, corki: 3, caitlyn: 6, leblanc: 5, powder: 5, twitch: 5,
+  zeri: 5, draven: 5, jinx: 6, morgana: 5, vex: 5, ziggs: 7, renata: 5, cassiopeia: 6, mel: 6, jayce: 5,
+  maddie: 5, zoe: 6, heimerdinger: 4, twistedfate: 5, silco: 6, elise: 6, gangplank: 5, swain: 5,
+  // Fire frames later than the maximum take it (Fable 11-19): Malzahar's and Viktor's beam.
+  malzahar: 7, viktor: 7,
+});
+export function rangedAttackWindupTicks(championId: string, intervalTicks: number): number {
+  const ticks = Math.min(RANGED_ATTACK_WINDUP_TICKS[championId] ?? RANGED_ATTACK_WINDUP_DEFAULT, RANGED_ATTACK_WINDUP_MAX);
+  return Math.max(0, Math.min(ticks, Math.floor(intervalTicks / 2)));
+}
