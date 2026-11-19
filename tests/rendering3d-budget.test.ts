@@ -18,6 +18,7 @@ interface BudgetReport {
   jsGzipBytes: { base: number; current: number };
   js3dGzipBytes: number;
   jsSoloGzipBytes: number; jsSoloPreloadedByIndex: boolean;
+  jsUiGzipBytes: number; jsUiPreloadedByIndex: boolean;
   jsRatio: number; jsBudget: number;
   interactiveMs: { base: number[]; current: number[]; baseMedian: number; currentMedian: number };
   interactiveRatio: number; interactiveBudget: number; passed: boolean;
@@ -176,6 +177,28 @@ describe('on-demand solo gzip reporting', () => {
         'index.html': html, 'assets/main.js': payload, 'assets/solo/restore.js': payload,
       } });
       expect(report.jsSoloPreloadedByIndex).toBe(true);
+      expect(report.passed).toBe(false); expect(exitCode).toBe(1);
+    });
+});
+
+// 2D bundle split (11-19): on-demand UI chunks (assets/ui/: stats, carousel, item names) are reported on their own and
+// fail the build only when index.html preloads them, as solo and 3D code do.
+describe('on-demand UI gzip reporting', () => {
+  it('reports UI bytes separately without changing the 2D limit', async () => {
+    const { report, exitCode } = await runBudget({ current: {
+      'assets/main.js': payload, 'assets/ui/stats-panel.js': payload.repeat(50),
+    } });
+    expect(report.jsGzipBytes.current).toBe(gzipBytes(payload));
+    expect(report.jsUiGzipBytes).toBe(gzipBytes(payload.repeat(50)));
+    expect(report.jsUiPreloadedByIndex).toBe(false); expect(exitCode).toBe(0);
+  });
+  it.each(['<link rel="modulepreload" href="./assets/ui/stats-panel.js">',
+    '<script type="module" src="./assets/ui/stats-panel.js"></script>'])(
+    'rejects a UI chunk referenced by index.html: %s', async html => {
+      const { report, exitCode } = await runBudget({ current: {
+        'index.html': html, 'assets/main.js': payload, 'assets/ui/stats-panel.js': payload,
+      } });
+      expect(report.jsUiPreloadedByIndex).toBe(true);
       expect(report.passed).toBe(false); expect(exitCode).toBe(1);
     });
 });

@@ -2,7 +2,7 @@
 // bundled icon manifests (G2-3 and the #122 augment icons) checked byte-for-byte against the files under public/.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ANOMALY_DEFINITIONS } from '../../src/simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../../src/simulation/content/traits';
@@ -15,15 +15,18 @@ import { G23_SPECIAL_ITEMS } from '../../src/simulation/content/g2-3-item-regist
 import { displayUnitName } from '../../src/rendering/display-names';
 import {
   G23_HERO_IDS, G23_HERO_STYLE, G23_HERO_TRAITS, anomalyDisplayName, anomalyIconUrl, g23AnomalyApiName, g23ChampionApiName,
-  g23TraitApiName, itemDisplayName, lootEntry, radiantItem,
+  g23TraitApiName, itemDisplayName, loadG23Items, lootEntry, radiantItem,
 } from '../../src/presentation/g23-display';
-import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, g23IconPath } from '../../src/presentation/s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_TRAITS, g23IconPath } from '../../src/presentation/s13-g23-manifest';
+import { G23_ITEM_ICONS, G23_LOOT, G23_RADIANT_ITEMS } from '../../src/presentation/s13-g23-items';
 import { G23_ASSETS } from '../../src/presentation/s13-g23-asset-checks';
 import { S13_AUGMENT_ASSETS } from '../../src/presentation/s13-augment-asset-manifest';
 import { G22_HERO_STYLE, HERO_STYLE, heroTraitTags, traitDisplayName } from '../../src/presentation/hero-identity';
 import { s13AssetUrl } from '../../src/presentation/s13-assets';
 
 const file = (path: string) => readFileSync(new URL(`../../public/${path}`, import.meta.url));
+// Item names and icons are their own chunk (2D bundle split, 11-19); these tables read them once it is here.
+beforeAll(() => loadG23Items());
 
 describe('bundled icon manifests match the files on disk', () => {
   for (const [name, assets] of [['G2-3', G23_ASSETS], ['augments (#122)', S13_AUGMENT_ASSETS]] as const) {
@@ -42,7 +45,7 @@ describe('bundled icon manifests match the files on disk', () => {
     expect(new Set(G23_ASSETS.map(asset => `${asset.kind}:${asset.apiName}`)).size).toBe(G23_ASSETS.length);
   });
   it('G2-3 runtime icon list is exactly the checked rows, at the derived path', () => {
-    const runtime = Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`));
+    const runtime = Object.entries({ ...G23_ICONS, ...G23_ITEM_ICONS }).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`));
     expect(runtime.sort()).toEqual(G23_ASSETS.map(asset => `${asset.kind}:${asset.apiName}`).sort());
     for (const asset of G23_ASSETS) expect(g23IconPath(asset.kind, asset.apiName)).toBe(asset.path);
   });

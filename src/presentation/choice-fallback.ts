@@ -10,8 +10,7 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { baseCatalogEntry, catalogEntry, itemDescriptions } from './item-codex';
-import { itemDisplayName, lootEntry } from './g23-display';
-import { G23_LOOT } from './s13-g23-manifest';
+import { g23LootName, itemDisplayName, lootEntry } from './g23-display';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
 import { augmentDisplayName, augmentEffectText, augmentPlayerDescription } from './augment-display';
 import { isAnvilArmory } from './anvil-display';
@@ -121,7 +120,7 @@ const JUNKER_API: Readonly<Record<string, string>> = {
 };
 const junkerName = (id: string): string | undefined => {
   const api = Object.hasOwn(JUNKER_API, id) ? JUNKER_API[id] : undefined;
-  return api ? G23_LOOT.find(row => row.apiName === api)?.zh ?? undefined : undefined;
+  return api ? g23LootName(api) : undefined;
 };
 /**
  * What each upgrade does, written from the rules' own effects (g2-3-junker, combat-g2-3-junker); the amounts live inline in
