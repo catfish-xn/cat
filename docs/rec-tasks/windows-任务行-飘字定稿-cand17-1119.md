@@ -49,5 +49,5 @@ node dev/castcmp/board-frames.cjs <输出>/brawl --board jinx,caitlyn,ambessa,vi
   - 治疗和受伤数字同摞不叠；
   - 普通字 22 px，在全景下也读得清；
   - 暴击字约为普通字的 1.9 倍，左边是斜劈撕痕标（不是星星）；
-  - 不同单位的数字不互相压住，也不在血条两边来回跳。
+  - 不同单位的数字尽量不互相压住；挤不开时允许轻叠，但数字留在自己单位旁边，不远跑、不来回跳。
 - 文件放 `win-out/`，前缀 `win-floatsD__`，附 SHA256SUMS。
