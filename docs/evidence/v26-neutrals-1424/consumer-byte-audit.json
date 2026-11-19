@@ -2253,6 +2253,14 @@
       "currentSha256": "04800eae851ce85dd7161bf82e520bc1bead9075871483852b8bae7749ffba5b",
       "firstDifferentByte": 5269
     },
+    "tests/persistent-growth-sources.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10330,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b88fb4373d0dd1726e44428cb83d4012bc7c11446ac5dbd418857d9105efb899",
+      "firstDifferentByte": 0
+    },
     "tests/phaser-camera-noeffect.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3522,6 +3530,14 @@
       "previousSha256": "ed17836b652246f3343c94adee0a251a8fe9ecc3b1123a5c68ec7845b9711e67",
       "currentSha256": "a5e849b5864638584d3fa5645722e0b261487f27133c5b58eaedc80ce6ad72d6",
       "firstDifferentByte": 223
+    },
+    "tests/server/persistent-growth-seed-20261012.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2600,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e356069c957f43c7756a7e979ae7f5110a7b2de58ae1e8a0ed19da35e15bf11d",
+      "firstDifferentByte": 0
     },
     "tests/server/placeholder-augment-history.test.ts": {
       "previousExists": false,

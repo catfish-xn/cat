@@ -34,6 +34,7 @@ import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
 import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResult } from './match-types';
+import { validCombatGrowthDelta } from './persistent-growth';
 
 export type MultiplayerFailure = MatchFailure | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
   | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled' | 'seat-eliminated'
@@ -152,8 +153,8 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const seen = new Set<string>();
     for (const delta of r.growth) {
       const unit = state.preparation.units.find(u => u.id === delta?.unitId);
-      if (!unit || unit.team !== 'player' || unit.location.kind !== 'board' || unit.definitionId !== 'tristana'
-        || seen.has(delta.unitId) || !integer(delta.attackDamageBps,125) || delta.attackDamageBps % 125 !== 0
+      if (!unit || unit.team !== 'player' || unit.location.kind !== 'board'
+        || seen.has(delta.unitId) || !integer(delta.attackDamageBps,1) || !validCombatGrowthDelta(delta.attackDamageBps,unit.definitionId,state.augments.map(a=>a.definitionId))
         || Object.keys(delta).some(key => key !== 'unitId' && key !== 'attackDamageBps')) return fail(state,'invalid-receipt');
       seen.add(delta.unitId);
       const next = (growth.get(delta.unitId) ?? 0) + delta.attackDamageBps;
