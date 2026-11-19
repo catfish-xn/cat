@@ -4532,9 +4532,9 @@
     "tests/vfx-ltk-sustain-runtime.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4255,
+      "currentBytes": 5052,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "829a92fbe7d16332a67dc521753041f398cc85f0aca99fb8c6ee51fd7aaed04e",
+      "currentSha256": "43b562b439d01dfa58b3734e85b59d0b3b0724be13b91e82bd3a6abf244f85e2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-tail-fade.test.ts": {
