@@ -71,7 +71,8 @@ describe('batch 1 observed forms and passive/end triggers', () => {
     const events = createBatch1VfxEvents(id => id);
     const plans = events.batch([attack('draven', 1), cast('draven', 2), attack('draven', 3), attack('draven', 4),
       cast('lux', 5), attack('lux', 6), attack('lux', 7), cast('lux', 8, ['ally']), attack('lux', 9)]);
-    expect(plans.map(p => p.variant)).toEqual([undefined, undefined, 'empowered', 'empowered', 'self', 'empowered', undefined, undefined, 'empowered']);
+    // Draven's second empowered axe comes from his other hand (empowered-alt).
+    expect(plans.map(p => p.variant)).toEqual([undefined, undefined, 'empowered', 'empowered-alt', 'self', 'empowered', undefined, undefined, 'empowered']);
     for (const name of ['draven', 'kogmaw', 'twitch', 'nocturne', 'leona'] as const) {
       const mapped = mapSkillTimeline(select(name, 'cast'), name, name === 'leona' ? [] : [name]);
       expect(mapped.unsupported).toEqual([]); expect(mapped.spawns.length).toBeGreaterThan(0);

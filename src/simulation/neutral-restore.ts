@@ -65,8 +65,9 @@ export function validateNeutralCombat(combat: CombatState, preparation: GameStat
         : r.status==='cancelled' && (!owner.alive || combat.status==='finished'), 'companion lifecycle');
     }
     // The surviving holder necessarily observed each dead member. No pending/death receipt can be removed to replay it.
-    for(const b of expected.bindings) if(combat.units.find(u=>u.id===b.source.ownerId)!.alive)
-      for(const id of b.members) if(!combat.units.find(u=>u.id===id)!.alive)
+    const bound=(id:string)=>{const unit=combat.units.find(u=>u.id===id);check(unit,'companion binding unit');return unit;};
+    for(const b of expected.bindings) if(bound(b.source.ownerId).alive)
+      for(const id of b.members) if(!bound(id).alive)
         check(state.reactions.some(r=>r.targetId===b.source.ownerId && r.deadUnitId===id), 'lost death consumption');
   } else check(combat.companionState===undefined, 'unexpected companion state');
   for(const receipt of receipts?.controls ?? []) {
