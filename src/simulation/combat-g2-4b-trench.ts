@@ -60,7 +60,7 @@ export function initializeBornUnits(ctx:AbilityContext,born:readonly CombatUnit[
 
 /** Threshold eligibility freezes at the surviving-damage barrier. Membership
  * commits after old actors' tick bookkeeping; fresh bodies act next tick. */
-export function splitTrenchHolders(ctx:AbilityContext,state:CombatState,eligible:ReadonlyMap<string,number>):Pick<CombatState,'removedUnitIds'|'trenchSplits'> {
+export function splitTrenchHolders(ctx:AbilityContext,state:CombatState,eligible:ReadonlyMap<string,number>):Pick<CombatState,'removedUnitIds'|'trenchSplits'|'departedUnits'> {
  if(!eligible.size)return {};
  let membership:CombatState={...state,units:ctx.units};
  const receipts=[...state.trenchSplits??[]];
@@ -83,5 +83,5 @@ export function splitTrenchHolders(ctx:AbilityContext,state:CombatState,eligible
   receipts.push({ownerId:holder.id,itemInstanceId:item.source.instanceId,tick:ctx.tick,maxHp:maximum,permanentAdBps:holder.runtime?.permanentAdBps??0,copyIds:copies.map(c=>c.id),...(holder.g23?{g23:{conquestTakedowns:[...holder.g23.conquestTakedowns],highRoller:structuredClone(holder.g23.highRoller)}}:{})});
  }
  ctx.units.splice(0,ctx.units.length,...membership.units as S13Unit[]);
- return {...(membership.removedUnitIds?{removedUnitIds:membership.removedUnitIds}:{}),...(receipts.length?{trenchSplits:receipts}:{})};
+ return {...(membership.removedUnitIds?{removedUnitIds:membership.removedUnitIds}:{}),...(membership.departedUnits?{departedUnits:membership.departedUnits}:{}),...(receipts.length?{trenchSplits:receipts}:{})};
 }

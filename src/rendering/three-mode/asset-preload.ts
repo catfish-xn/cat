@@ -151,6 +151,8 @@ export class AssetPreloader {
   private readonly failedPaths = new Set<string>();
   /** True while packs download: a read then starts its own file at once instead of waiting for a pack. */
   private packing = false;
+  /** Workers draining the queue now (work()). With none, a job put back on the queue would never run. */
+  private workers = 0;
   private downloadedFiles = 0; private downloadedBytes = 0; private retried = 0; private startedAt = 0; private elapsedMs: number | null = null;
   private disposed = false;
 
@@ -236,9 +238,12 @@ export class AssetPreloader {
     const job = this.jobs.get(path) ?? (file ? this.enqueue(file) : undefined);
     if (job) {
       if (!job.started) {
-        this.queue.splice(this.queue.indexOf(job), 1);
-        // The board needs it now: checking and packs must not block a foreground file.
-        if (this.state === 'checking' || this.packing || this.state === 'done' || this.state === 'partial') void this.runJob(job);
+        const at = this.queue.indexOf(job);
+        if (at >= 0) this.queue.splice(at, 1);
+        // The board needs it now: checking and packs must not block a foreground file. With no worker left to drain the
+        // queue (they leave once it is empty, while start() still waits on running jobs), it runs here too: put back on the
+        // queue it would never run, and this read would wait for good (11-19, cold cache after a restart).
+        if (this.state === 'checking' || this.packing || this.state === 'done' || this.state === 'partial' || this.workers === 0) void this.runJob(job);
         else this.queue.unshift(job);
       }
       try { return await job.promise; } catch { /* fall through to one plain network read */ }
@@ -246,7 +251,12 @@ export class AssetPreloader {
     return this.download(path);
   }
 
-  dispose(): void { this.disposed = true; this.abort.abort(); this.queue.length = 0; this.listeners.clear(); }
+  dispose(): void {
+    this.disposed = true; this.abort.abort();
+    // Queued jobs never start now: settle them, so a read waiting on one falls through instead of waiting for good.
+    for (const job of this.queue.splice(0)) { this.jobs.delete(job.file.path); job.reject(new Error('preload-disposed')); }
+    this.listeners.clear();
+  }
 
   private enqueue(file: PrecacheFile): Job {
     let resolve!: (blob: Blob) => void, reject!: (error: unknown) => void;
@@ -263,7 +273,9 @@ export class AssetPreloader {
   }
 
   private async work(): Promise<void> {
-    for (let job = this.queue.shift(); job && !this.disposed; job = this.queue.shift()) await this.runJob(job);
+    this.workers++;
+    try { for (let job = this.queue.shift(); job && !this.disposed; job = this.queue.shift()) await this.runJob(job); }
+    finally { this.workers--; }
   }
   private async runJob(job: Job): Promise<void> {
     job.started = true;
@@ -341,7 +353,8 @@ export class AssetPreloader {
       const job = this.jobs.get(part.path);
       if (!job || job.started || this.disposed) continue;
       job.started = true;
-      this.queue.splice(this.queue.indexOf(job), 1);
+      const at = this.queue.indexOf(job);
+      if (at >= 0) this.queue.splice(at, 1);
       const slice = blob.slice(part.offset, part.offset + part.bytes);
       try { await this.verify(job.file, slice); await this.keep(job, slice); }
       catch { job.started = false; this.queue.push(job); }

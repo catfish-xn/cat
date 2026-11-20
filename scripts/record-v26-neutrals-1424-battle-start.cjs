@@ -27,10 +27,16 @@ async function main() {
     resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
     sliceNow: () => 0, assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
   const room = new Room(seats, options(clock)), bots = new BotDriver(room, seed), checkpoints = [];
+  // Room fields outside RoomState that a room restored by assigning `current` needs to behave like the original
+  // (same list and reasons as tests/server/room-checkpoint.ts). Without the preparation start, a restored room
+  // measured the whole match as this preparation and an augment clock check rejected it.
+  const roomPrivate = r => structuredClone({ augmentPreparationStartedAt: r.augmentPreparationStartedAt,
+    augmentPreparationObserved: r.augmentPreparationObserved, phaseDeadline: r.phaseDeadline,
+    battleEquipmentSeq: r.battleEquipmentSeq, previousAugmentBattles: [...r.previousAugmentBattles] });
   const freeze = room.freezeAndResolve.bind(room);
   room.freezeAndResolve = () => {
     if ([3, 9, 23].includes(room.state.round)) {
-      checkpoints.push({ seed, time: clock.now(), state: structuredClone(room.state) });
+      checkpoints.push({ seed, time: clock.now(), state: structuredClone(room.state), roomPrivate: roomPrivate(room) });
       console.log(JSON.stringify({ captured: room.state.round, time: clock.now() }));
     }
     freeze();
@@ -59,6 +65,10 @@ async function main() {
   function replay(cp, synchronous) {
     const c = new ManualClock(cp.time), r = new Room(cp.state.seats, options(c));
     r.current = structuredClone(cp.state);
+    const saved = structuredClone(cp.roomPrivate);
+    Object.assign(r, { augmentPreparationStartedAt: saved.augmentPreparationStartedAt, augmentPreparationObserved: saved.augmentPreparationObserved,
+      phaseDeadline: saved.phaseDeadline, battleEquipmentSeq: saved.battleEquipmentSeq });
+    for (const [seatId, battle] of saved.previousAugmentBattles) r.previousAugmentBattles.set(seatId, battle);
     // Drain the very same initialization generator in one call; scheduler yields
     // carry no state changes. Compare all state/input/frame/ledger bytes below.
     if (synchronous) {

@@ -32,6 +32,7 @@ import { readRoundEnemyProjection } from './round-enemies';
 import { grantsTemporaryEquipment } from './temporary-equipment';
 import { projectTemporaryEquipment } from './m8/equipment';
 import { nextRandom, validateSeed } from './rng';
+import { validLedgerGrowth } from './persistent-growth';
 
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
@@ -199,7 +200,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   const growthIds = new Set<string>();
   for (const growth of input.persistentGrowth) {
     record(growth); integer(growth.attackDamageBps,1);
-    requireBasis(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId)); growthIds.add(growth.unitId);
+    requireBasis(units.has(growth.unitId) && validLedgerGrowth(growth.attackDamageBps, units.get(growth.unitId)!.definitionId, input.augments.map(a => a.definitionId), authority.round) && !growthIds.has(growth.unitId)); growthIds.add(growth.unitId);
   }
   const history = authority.roundResults.filter(result => result.round < authority.round);
   const pump = input.augments.find(augment => augment.definitionId === 'pumping-up-i');

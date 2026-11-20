@@ -39,6 +39,8 @@ describe('cues that play out at their end (Fable 11-19 cut-off evidence)', () =>
     const index = withCueOverrides({ version: 1, systems: { '2f1f3b60': 'r.json' }, assets: {},
       skills: { loris: [ring], 'loris-retaliation': [{ ...ring, delay: 0, duration: 0.7 }] } });
     expect(index.skills.loris).toEqual([{ ...ring, duration: longest + 1, refresh: true }]);
-    expect(index.skills['loris-retaliation']).toEqual([{ ...ring, delay: 0, duration: 0.7 }]);
+    // The blast's ring keeps its short cue (cue-ranks.ts may label its rank; not checked here).
+    expect(index.skills['loris-retaliation']).toMatchObject([{ ...ring, delay: 0, duration: 0.7 }]);
+    expect(index.skills['loris-retaliation']![0]!.refresh).toBeUndefined();
   });
 });

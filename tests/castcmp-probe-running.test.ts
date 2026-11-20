@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { installProbes } from '../dev/castcmp/probes';
+import { restoreProbeGlobalsAfterAll } from './fixtures/castcmp-probe-globals';
+
+restoreProbeGlobalsAfterAll();
 
 // The running-systems probe counts the runtime's own running set only: passing sets the runtime builds of the same records
 // (new Set(...) calls add) are neither starts nor keep a gone run live (11-14: the play-out branch's slot sets did both).
