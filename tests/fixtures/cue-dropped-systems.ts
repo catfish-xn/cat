@@ -38,6 +38,5 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
   scar: {
     '95d62c6a': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },
     '4a8b0fd3': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },
-    '9f028364': { status: 'pending', reason: 'not checked against the original yet (11-21 scan)' },
   },
 };
