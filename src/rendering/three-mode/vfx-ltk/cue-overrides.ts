@@ -307,9 +307,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // An empowered attack plays only the empowered cues (a play selects by variant), so it carries its own copy of the attack
     // hit: without it his empowered attacks would show no hit at all. One hit per attack, not two.
     { system: '0f2af66b', action: 'attack', variant: 'empowered', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
-    // The empowered aura on his mace, from his slam's damage (the rules strike at the cast tick: no CAST_WINDUP_TICKS entry)
-    // until his empowered time ends (SUSTAIN_CAPS, CUE_END_STOPS). The skill's body: it never yields (Fable 11-19).
-    { system: '938c104f', action: 'cast', event: 'cast-start', delay: 0, duration: 1.5, bone: 'Buffbone_Glb_Mace_Loc', rank: 'critical' },
+    // His slam's red ground burst: once on each empowered attack's hit, on the ground at its main target, for the asset's own
+    // time (ownLife); nothing held between hits (Fable 11-20, from the original's slams). The enemies the slam splashes get no
+    // burst of their own. Its dark ground glow stays held off (DISABLED_EMITTERS).
+    { system: '938c104f', action: 'attack', variant: 'empowered', event: 'hit', bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 0.6, duration: 1.5, ownLife: true, primary: true },
   ],
   // The index list without Q_tar: her hit plays at her kick's damage event instead, by damage type (CUE_EXTRA_SKILLS camille-q-*).
   camille: [
@@ -843,8 +844,8 @@ export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
-  // Mordekaiser's aura on his mace while he is empowered; Swain's demon form (takedowns extend it in the rules).
-  'mordekaiser-empower': ['938c104f'],
+  // Swain's demon form (takedowns extend it in the rules). Mordekaiser's slam burst plays per hit and holds nothing to end.
+  'mordekaiser-empower': [],
   'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
@@ -888,7 +889,6 @@ export const CUE_RULE_STOPS = {
 export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
   'acd84091': 6, // LeBlanc channel → leblanc-chain
-  '938c104f': 11, // Mordekaiser empowered aura → mordekaiser-empower
   '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
   'ea21ae27': 5, // Garen shield → his shield layer ends
   'e22b48b0': 5, // Loris shield → his shield layer ends
