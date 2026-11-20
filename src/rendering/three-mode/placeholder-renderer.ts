@@ -1,4 +1,4 @@
-import { projectedBox } from './description-pick';
+import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
 import { createStarUpFx } from './star-up-fx';
@@ -69,7 +69,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -1254,12 +1254,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined) => {
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, crit: boolean) => {
     const release = releaseOf(source);
-    return release ? { variant, release } : variant;
+    return release || crit ? { variant, ...(release ? { release } : {}), ...(crit ? { crit } : {}) } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }, crit = false) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
@@ -1267,8 +1267,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, action === 'attack' && crit)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1507,6 +1507,20 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
+    const crits = new Set<string>();
+    for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
+    // A skill's direct damage that crits flashes the crit system on its target (CRIT_SKILL_HIT). Only CRIT_FLASH_MAX are out at
+    // once, so the batch's crits go hardest first (then by target id), never by chance: a recording replays the same flashes.
+    if (!reducedMotion()) {
+      const skillCrits = events.flatMap(event => event.type === 'packetDamage' && event.critical && event.delivery === 'ability-direct' && event.hit
+        && event.hpDamage + event.absorbed > 0 && (tickOf(event) ?? latest) > latest - EFFECT_TICKS ? [event] : [])
+        .sort((a, b) => (b.hpDamage + b.absorbed) - (a.hpDamage + a.absorbed) || (a.targetId < b.targetId ? -1 : a.targetId > b.targetId ? 1 : 0));
+      for (const event of skillCrits) {
+        const owner = pieces.get(event.sourceId), struck = pieces.get(event.targetId);
+        if (owner && struck?.alive) ltk?.play(owner.definitionId, event.sourceId, [event.targetId], 'passive', { skill: CRIT_SKILL_HIT.skill(owner.definitionId), critFlash: true });
+      }
+    }
     // A form ends with its systems (cue-overrides.ts TIMED_FORM_STOPS).
     const setForm = (form: { id: string; on: boolean }) => {
       const view = pieces.get(form.id); view?.mixer?.setTimedForm(form.on);
@@ -1537,6 +1551,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
+      // Draven's axe flying back (CUE_EXTRA_SKILLS draven-return) goes where it is when the enemy it left or Draven dies; only
+      // his returning axes have an enemy as their source or Draven as their target. Before stopUnit, which would fly it on.
+      // A Draven who dies may also be the enemy another Draven's axe left: both of his sides stop.
+      if (event.type === 'death') {
+        if (pieces.get(event.unitId)?.definitionId === 'draven') ltk?.stopSystemsOn(event.unitId, [DRAVEN_AXE]);
+        ltk?.stopSystems(event.unitId, [DRAVEN_AXE]);
+      }
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
@@ -1612,7 +1633,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
-        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant);
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
@@ -1640,6 +1661,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const screenBox = (id: string): BoardScreenBox | undefined => {
     const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
     return root ? projectedBox(root, camera, viewport()) : undefined;
+  };
+  // Combat floats keep clear of every overhead bar: its drawn bar sprites (the plain bar or the tier bar), camera-facing.
+  const barBox = (id: string): BoardScreenBox | undefined => {
+    const overhead = scout.active ? undefined : pieces.get(id)?.overhead.object;
+    if (!overhead?.visible) return;
+    const sprites = ['render3d-overhead-bar', 'render3d-overhead-tier'].map(name => overhead.getObjectByName(name)).filter((o): o is Sprite => !!o && (o as Sprite).isSprite);
+    return spritesScreenBox(sprites, camera, viewport());
   };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   let carouselOngoing = false;
@@ -1710,7 +1738,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!scout.active) return pickUnit(client, true) ?? undefined;
       const target = scout.descriptionAt(client, camera, viewport())?.target;
       return target?.kind === 'unit' ? target.id : undefined;
-    }, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
+    }, screenBox: id => !stage.active ? screenBox(id) : undefined, barBox: id => !stage.active ? barBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.

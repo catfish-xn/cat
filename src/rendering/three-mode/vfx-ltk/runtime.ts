@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -17,6 +17,8 @@ import { ATTACHED_SLOTS, ATTACHED_STATS, type AttachedDraw } from './rendering/c
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
   if (spawn.event === 'hit') return false;
+  // A projectile from its play's primary target (TimelineCue.fromPrimary) does not leave the caster.
+  if (spawn.fromId !== undefined) return false;
   return !(spawn.point && spawn.event !== 'projectile');
 }
 
@@ -34,8 +36,12 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
  * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
+ *
+ * 28 since 11-19 (user-approved value change; 24 if weak machines cannot hold it). With the shared budget at 2250, the
+ * 11-19 Windows runs (8 v 8, cap 20 against 24, frame time unchanged) dropped about half the rows cap 20 refused, all of
+ * those for the system count. The budget, OFF_SLOT_MAX and LTK_PASS_DEGRADE_AT are unchanged.
  */
-export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+export const MAX_LTK_SYSTEMS = 28, MAX_LTK_QUEUED = 64;
 /**
  * Runs that keep drawing without taking a system slot, at most OFF_SLOT_MAX of them at once (the earliest started); any
  * more hold a slot as before. All of them still hold their particles in the budget. Three kinds share this one room:
@@ -57,6 +63,25 @@ export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
  */
 export const OFF_SLOT_MAX = 8;
 export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
+/**
+ * Crit flashes (CRIT_ATTACK_HIT.crit) playing or waiting at once; a crit past them plays the plain hit. Crits come often in
+ * a brawl (a few in one tick): the flash only swaps a hit, so it takes no extra slot, and this keeps its own count small.
+ * A fitted value, not the original's.
+ */
+export const CRIT_FLASH_MAX = 4;
+/**
+ * An attack's cues as a crit plays them (CRIT_ATTACK_HIT): the champion's own crit variants swap in, and with `flash` the
+ * shared hit plays as the crit flash (not for keepHit champions), or the champion's own flash cue joins. A system `ready`
+ * does not have keeps the cue as it was.
+ */
+function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
+  const own = Object.hasOwn(CRIT_ATTACK_HIT.own, champion) ? CRIT_ATTACK_HIT.own[champion] : undefined;
+  const swap = (cue: TimelineCue, id: string | undefined) => id && ready(id) ? { ...cue, system: id } : cue;
+  const out = cues.map(cue => (cue.action ?? 'cast') !== 'attack' ? cue
+    : own?.swap && Object.hasOwn(own.swap, cue.system) ? swap(cue, own.swap[cue.system])
+    : flash && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit && !CRIT_ATTACK_HIT.keepHit.has(champion) ? swap(cue, CRIT_ATTACK_HIT.crit) : cue);
+  return flash && own?.flash && ready(own.flash.system) && cues.some(cue => (cue.action ?? 'cast') === 'attack') ? [...out, own.flash] : out;
+}
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -91,6 +116,11 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
   skipped: {} as Record<string, number>,
   /** Casts play() or playVariant() left whole to the host's own effect, by reason. */
   refused: {} as Record<string, number>,
+  /**
+   * Running decorative runs ended for a newcomer (a hit, a body, a plain attack, a place's run: Fable 11-17), and plain attack
+   * hits ended for an attack's missile (Fable 11-18), by system; `yieldTimes` the runtime clock (s) of each, for picking frames.
+   */
+  yielded: {} as Record<string, number>, yieldTimes: [] as number[],
   /**
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
@@ -169,10 +199,16 @@ export interface LtkPlayOptions {
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
+  /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
+  crit?: boolean;
+  /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
+  critFlash?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
   seed: number;
+  /** Where a projectile from its play's primary target starts (TimelineCue.fromPrimary), taken when the play came. */
+  from?: WorldPoint;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
   /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
@@ -188,6 +224,10 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** A held layer that waits for free room instead of being dropped (cue-overrides.ts SUSTAIN_READMIT). */
   readmit?: boolean }
 interface Running { reserved: number; system: string; stopped?: boolean;
+  /** Its cue's event (a plain attack's missile may end a plain attack's hit: see the admission loop). */
+  event?: TimelineCue['event'];
+  /** Its cue asked for the decorative rank (TimelineCue.rank): a flourish a plain attack or a place's run may end. */
+  ranked?: boolean;
   /** The row it started from, for a held layer that comes back after it is evicted (SUSTAIN_READMIT). */
   again?: Waiting;
   /** fadeAction is easing it out: it no longer counts as playing. */
@@ -212,7 +252,9 @@ interface Running { reserved: number; system: string; stopped?: boolean;
   /** Its row's Waiting.together: the runs of one group take one system slot and leave together. */
   together?: string;
   /** Its row's Waiting.fan. */
-  fan?: string }
+  fan?: string;
+  /** Its row came from a perStrike cue: past its fan's first run it takes no system slot at all (slotsNow), only budget. */
+  strike?: true }
 /** Importance as a rank, for which waiting group a freed slot goes to first. */
 const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, decorative: 1, attack: 0 };
 /**
@@ -253,6 +295,39 @@ export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, 
   if (!(length > 1e-3)) return null;
   const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
   return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
+}
+/** Rule ticks a flight by distance takes (TimelineCue.flightTicks): `cells` is the hex distance, in cells. */
+export function flightTicksFor(cells: number, perCell: number, min: number): number {
+  return Math.max(min, Math.ceil(cells * perCell - 1e-9));
+}
+/** A board cell, as the rules name it (column, row). */
+export interface HexCell { readonly col: number; readonly row: number }
+/** The rules' hex distance between two cells (src/simulation/board.ts hexDistance; a test keeps the two equal). */
+export function hexDistance(a: HexCell, b: HexCell): number {
+  const aq = a.col - Math.floor(a.row / 2), bq = b.col - Math.floor(b.row / 2), dq = aq - bq, dr = a.row - b.row;
+  return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+}
+/** The board cell a world point stands on (hex-layout.ts: odd rows sit half a cell to the right). */
+export function cellAt(at: WorldPoint, board: RowBoard): HexCell {
+  const row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  return { row, col: Math.round((at[0] - board.origin.x) / (Math.sqrt(3) * board.radius) - (((row % 2) + 2) % 2) / 2) };
+}
+/**
+ * Cells between two standing points for a flight by distance: the rules' hex distance between the cells they stand on,
+ * or, with no board known, the straight distance in cells.
+ */
+export function flightCells(from: WorldPoint, to: WorldPoint, board: RowBoard | null): number {
+  return board ? hexDistance(cellAt(from, board), cellAt(to, board)) : Math.hypot(to[0] - from[0], to[2] - from[2]) / BOARD_CELL;
+}
+/**
+ * A cue with TimelineCue.flightTicks, its times set for a flight over `cells` cells (one rule tick = 50 ms). Null cells (its
+ * caster or target is gone) takes the shortest flight, so a hit still lands after a flight rather than at once.
+ */
+export function withFlight<T extends TimelineCue>(cue: T, cells: number | null): T {
+  if (!cue.flightTicks) return cue;
+  const { perCell, min } = cue.flightTicks, seconds = (cells === null ? min : flightTicksFor(cells, perCell, min)) * 0.05;
+  if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
+  return { ...cue, delay: cue.delay + seconds };
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
@@ -377,6 +452,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
    * the tick changes and by clear().
    */
   const seedKeys = new Map<string, number>();
+  /** perStrike tickCap: rows of each capped system queued on the current rule tick (capTick). */
+  let capTick: number | undefined; const capCounts = new Map<string, number>();
   let seedTick: number | undefined;
   /**
    * A row's seed, taken when it is queued (not when it starts, which waits on room and loading): its system, its source,
@@ -449,18 +526,42 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) {
       if (run.ending && run.playOutEnd?.hold) (off ??= []).push({ run, kind: 'tail' });
       else if (!run.ending && run.span >= LONG_RUN_SECONDS && clock - run.started >= LONG_RUN_OPEN) (off ??= []).push({ run, kind: 'long' });
-      else if (run.fan && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
+      else if (run.fan && !run.strike && first!.get(run.fan) !== run) (off ??= []).push({ run, kind: 'fan' });
     }
     return off ? new Map(off.sort((a, b) => a.run.started - b.run.started).slice(0, OFF_SLOT_MAX).map(({ run, kind }) => [run, kind])) : null;
   };
   /** `passes`: the count for LTK_PASS_DEGRADE_AT, where only hold tails stay out (long runs and fan-out rows count). */
   const slotsNow = (passes = false) => { let n = 0; const groups = new Set<string>(), off = offSlot();
+    let firstStrike: Map<string, Running> | undefined;
+    if (!passes) for (const run of running) if (run.strike && run.fan) { const at = (firstStrike ??= new Map()).get(run.fan); if (!at || run.started < at.started) firstStrike.set(run.fan, run); }
     for (const run of running) { const kind = off?.get(run); if (kind && (!passes || kind === 'tail')) continue;
+      // A perStrike cast's rows past its first take no slot (Fable 11-19): their number is bounded by the cue's shown and
+      // tickCap instead, and every one of them still needs particle room (crowded's budget check).
+      if (!passes && run.strike && run.fan && firstStrike!.get(run.fan) !== run) continue;
       if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /**
+   * The runs whose end frees no system slot: the off-slot room (OFF_SLOT_MAX) and the rows of a perStrike fan while two or
+   * more are left. A newcomer short of slots never ends one to get in (Fable 11-19: Heimerdinger's decorative rocket hits
+   * would be ended for nothing).
+   */
+  const slotFree = () => { const free = new Set<Running>(offSlot()?.keys() ?? []);
+    // A perStrike fan holds its one slot while any of its rows is left: ending any row of a fan with two or more frees
+    // nothing (ending its first only hands the slot to the next one, and a newcomer would end them all for no room).
+    const strikes = new Map<string, Running[]>();
+    for (const run of running) if (run.strike && run.fan) (strikes.get(run.fan) ?? strikes.set(run.fan, []).get(run.fan)!).push(run);
+    for (const rows of strikes.values()) if (rows.length > 1) for (const run of rows) free.add(run);
+    return free; };
   /** A run that gives way or is evicted takes the rest of its together group with it: half a pair never stays. */
   // Slots held by runs at a dead target's place, counted as slotsNow() counts them (a together group is one slot).
   const spareSlots = () => { let n = 0; const groups = new Set<string>();
     for (const run of running) if (run.atPlace) { if (run.together) { if (groups.has(run.together)) continue; groups.add(run.together); } n++; } return n; };
+  /**
+   * A decorative run a plain attack or a place's run may end (Fable 11-18): one its cue ranked decorative (Malzahar's 3-star
+   * edges) or one that is not a cast's (a passive glow). A cast's own short flourish (Ambessa's chain swipe, a cast-start
+   * under CAST_BODY_SECONDS) is the skill showing: only a hit or a body may still end it, as before.
+   */
+  const yieldsToAttack = (run: Running) => run.importance === 'decorative' && !run.persistent && (!!run.ranked || run.action !== 'cast');
+  const countYield = (system: string) => { LTK_RUN_STATS.yielded[system] = (LTK_RUN_STATS.yielded[system] ?? 0) + 1; if (LTK_RUN_STATS.yieldTimes.length < 500) LTK_RUN_STATS.yieldTimes.push(clock); };
   const leave = (run: Running) => { for (const other of [...running]) if (other === run || (run.together && other.together === run.together)) { release(other); running.delete(other); } };
   const passes = options.renderer ? createVfxPasses(options.renderer, options.floors) : null;
   /** Finished systems wait here, keyed like their next cast, instead of rebuilding buffers. */
@@ -487,8 +588,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
     pruneFlightSeeds(); seedKeys.clear(); seedTick = undefined;
+    // The perStrike tick caps count per rule tick; a new combat restarts its ticks, so a count from the last one never carries.
+    capCounts.clear(); capTick = undefined;
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
+  };
+  const critFlashesOut = () => {
+    let out = 0;
+    for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
+    for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
+    return out;
   };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
@@ -496,7 +605,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     const pending = library.champion(champion).then(async catalog => {
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
-      const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      const own = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      // A crit plays its attack as critAttack does (CRIT_ATTACK_HIT): those systems are loaded and measured with their cues.
+      const cues = [...own, ...critAttack(champion, own.filter(cue => (cue.action ?? 'cast') === 'attack'), true, id => !!catalog.index?.systems[id])
+        .filter(cue => !own.includes(cue))];
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
       // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
@@ -514,12 +626,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
         const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
-        const travel = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds)?.travelSeconds;
+        const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
+        const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);
-        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel), wide = rootRoomOf(unlimited, most);
+        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel, scale), wide = rootRoomOf(unlimited, most);
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
         // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
-        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel);
+        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel, scale);
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
@@ -637,6 +750,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
+      // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
+      if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
         const shift = context.delay;
@@ -675,15 +791,28 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         rows.push({ ...placed, spawn: { ...spawn, duration: beamSeconds(split.beam, spawn.travelSeconds ?? spawn.duration), stopAfter: undefined, fadeOut: undefined },
           part: 'beam', together: split.flight ? together : undefined });
       }
+      // A perStrike cue's tickCap (TimelineCue.perStrike): at most that many of its rows queued on one rule tick, across every
+      // caster; the strikes past it play nothing of that cue. Left out on purpose, so not counted as drops.
+      const tick = options.tick?.();
+      if (tick !== capTick) { capCounts.clear(); capTick = tick; }
+      const capped = tick === undefined ? rows : rows.filter(({ spawn }) => {
+        const most = spawn.perStrike?.tickCap;
+        if (most === undefined) return true;
+        const used = capCounts.get(spawn.system) ?? 0;
+        if (used >= most) return false;
+        capCounts.set(spawn.system, used + 1); return true;
+      });
+      rows.splice(0, rows.length, ...capped);
       if (waiting.length + rows.length > MAX_LTK_QUEUED) return refuse('queue-full');
       countSkips(skipped);
       const play = ++plays;
       // One cue on several targets (a row each, two targets or more) is a fan-out: its rows after the first take no system slot
-      // (OFF_SLOT_MAX).
+      // (OFF_SLOT_MAX). A perStrike cue's rows count one per strike, so strikes on one target fan out too.
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
-        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.targetId); }
-      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+        let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.strike !== undefined ? `${spawn.targetId}#${spawn.strike}` : spawn.targetId); }
+      for (const { spawn: cued, snapshot: taken, place, atPlace, part, together } of rows) {
+        let spawn = cued;
         const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
@@ -692,7 +821,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
-        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) takes that place now: the main bomb that lands
+        // there may kill it first. Without that unit it does not play.
+        const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
+        const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
+        if (spawn.fromId !== undefined && !from) continue;
+        // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
+        if (spawn.flightTicks) {
+          const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+          const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
+          spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
+        }
+        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
@@ -819,7 +959,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
         // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
         // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
-        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
+        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && !row.from && row.part !== 'beam';
         const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
         const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
@@ -840,7 +980,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
-        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        if (spawn.fromId !== undefined && !row.from) continue;
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) starts there, like a falling one starts above.
+        const dropFrom = row.from ?? (dropAt ? dropStart(dropAt, spawn.fromAbove!) : null);
         // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
         // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
         // on one spot, it does not play: it never falls back to a flight from the caster's bone.
@@ -868,10 +1010,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const groupKey: unknown = row.together ?? row, rank = ADMIT_RANK[importance];
         // A row of a fan-out whose cast already runs takes no slot of its own while the off-slot room has space (OFF_SLOT_MAX).
         const slot = (row.together && [...running].some(run => run.together === row.together))
-          || (row.fan && [...running].some(run => run.fan === row.fan) && (offSlot()?.size ?? 0) < OFF_SLOT_MAX) ? 0 : 1;
+          || (row.fan && [...running].some(run => run.fan === row.fan) && (row.spawn.perStrike || (offSlot()?.size ?? 0) < OFF_SLOT_MAX)) ? 0 : 1;
         let heldSlots = 0, heldNeed = 0;
         for (const wait of heldRoom) if (wait.key !== groupKey && wait.rank >= rank) { heldSlots++; heldNeed += wait.need; }
-        const crowded = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS || !!(options.budget
+        const slotsFull = () => slotsNow() + slot + heldSlots > MAX_LTK_SYSTEMS;
+        const crowded = () => slotsFull() || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
@@ -902,17 +1045,41 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (!tail) break;
           leave(tail);
         }
+        // A run at a dead target's place only takes free room, but a flourish gives way to it (Fable 11-17): it may end the
+        // earliest decorative run that is not itself at a place, never an attack, a body, damage or another place's run.
+        while (atPlace && crowded()) {
+          let flourish: Running | undefined;
+          // Short of slots, only a run that holds one may give way (slotFree); short of budget alone, any flourish may.
+          const free = slotsFull() ? slotFree() : null;
+          for (const run of running) if (yieldsToAttack(run) && !run.atPlace && !free?.has(run)) { flourish = run; break; }
+          if (!flourish) break;
+          countYield(flourish.system); leave(flourish);
+        }
         while (!atPlace && blocked()) {
           // A run at a dead target's place gives way first, to any row, a plain attack included: it only ever had spare room.
           let spare: Running | undefined;
           for (const run of running) if (run.atPlace && (!spare || run.started < spare.started)) spare = run;
           if (spare && crowded()) { leave(spare); continue; }
           // Overdue, ages are withheld so no skill body yields to a cue that has already missed its moment.
-          const decision = admitEffect([...running].map(run => run.persistent ? 'critical' : run.importance), importance, true,
+          // A plain attack weighs only the flourishes it may end (yieldsToAttack): a skill's own cast flourish counts as a body.
+          // Short of slots, a run that holds none (slotFree) is never the one to end: it would free nothing.
+          const free = slotsFull() ? slotFree() : null;
+          const decision = admitEffect([...running].map(run => run.persistent || free?.has(run) ? 'critical'
+            : importance === 'attack' && run.importance === 'decorative' && !yieldsToAttack(run) ? 'body' : run.importance), importance, true,
             overdue ? undefined : [...running].map(run => clock - run.started), [...running].map(run => run.span));
-          if (!decision.admit) break;
+          if (!decision.admit) {
+            // A plain attack's missile with no flourish left to end ends the earliest plain attack's hit (Fable 11-18): a
+            // dropped missile shows damage with nothing flying to it. Missiles never end missiles, hits never end hits.
+            if (importance === 'attack' && spawn.event === 'projectile') {
+              let hit: Running | undefined;
+              for (const run of running) if (run.importance === 'attack' && run.event === 'hit' && !run.persistent && !run.atPlace) { hit = run; break; }
+              if (hit) { countYield(hit.system); leave(hit); continue; }
+            }
+            break;
+          }
           const victim = [...running][decision.evict];
           if (!victim) break;
+          if (victim.importance === 'decorative') countYield(victim.system);
           // A held layer that comes back waits for room with the rest of its time (Fable 11-19: Draven's axes).
           if (victim.again && victim.until > clock) waiting.push({ ...victim.again, at: clock, readmit: true, waitingSince: undefined,
             spawn: { ...victim.again.spawn, delay: 0, duration: victim.until - clock, stopAfter: undefined } });
@@ -964,6 +1131,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           joints: rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? () => anchor : unitJoints(host!.root, host!.body),
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
+          curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
+          brightness: spawn.brightness,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
@@ -980,8 +1149,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
